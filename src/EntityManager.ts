@@ -18,13 +18,28 @@ export class EntityManager {
 
     const results: T[] = [];
 
+    const meta = entityMeta[type.name]!;
     rows.forEach(row => {
-      const t = new Author();
-      t.id = row["id"];
-      t.firstName = row["first_name"];
-      results.push((t as any) as T);
+      const t = (new meta.cstr() as any) as T;
+      meta.columns.forEach(c => {
+        const { fieldName, columnName } = c;
+        (t as any)[fieldName] = row[columnName];
+      });
+      results.push(t);
     });
 
     return results;
   }
 }
+
+const authorMeta = {
+  cstr: Author,
+  columns: [
+    { fieldName: "id", columnName: "id" },
+    { fieldName: "firstName", columnName: "first_name" },
+  ],
+};
+
+const entityMeta: Record<string, typeof authorMeta> = {
+  Author: authorMeta,
+};

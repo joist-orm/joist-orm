@@ -1,5 +1,5 @@
 
-class Author {
+export class Author {
   id!: string;
 
   firstName!: string;

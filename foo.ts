@@ -1,12 +1,12 @@
 
 /** Default view of a collection that requires a promise. */
 interface ManyToOneCollection<T> {
-  loadItems(): Promise<T[]>
+  load(): Promise<T[]>
 }
 
 /** A populated view of a collection, only available by explicitly calling `populate`. */
 interface PopulatedManyToOneCollection<T> extends ManyToOneCollection<T> {
-  items: T[];
+  get: T[];
   [Symbol.iterator](): IterableIterator<T>;
 }
 
@@ -41,20 +41,20 @@ function populate<T, H extends LoadHint<T>>(entity: T, key: H): Loaded<T, H> {
 }
 
 async function somethingAuthor(author: Author): Promise<void> {
-  (await author.posts.loadItems()).length;
+  (await author.posts.load()).length;
   const author2 = await populate(author, 'posts');
-  author2.posts.items.length;
+  author2.posts.get.length;
 }
 
 async function somethingAuthor2(author: Author): Promise<void> {
   const author2 = await populate(author, ['posts', 'comments']);
-  author2.posts.items.length;
-  author2.comments.items.length;
+  author2.posts.get.length;
+  author2.comments.get.length;
 }
 
 async function somethingAuthor3(author: Author): Promise<void> {
   const author3 = await populate(author, { posts: { comments: 'votes' } } as const);
-  author3.posts.items[0].comments.items.length;
+  author3.posts.get[0].comments.get.length;
   for (const post of author3.posts) {
     for (const comment of post.comments) {
     }
@@ -86,6 +86,9 @@ interface Post {
 // Author.posts
 // Author.comments
 // Post.author
+
+type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {};
+
 
 // Repro of why `as const` is needed
 type P<T> = {

@@ -4,15 +4,11 @@ import { knex } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can find", async () => {
-    try {
-      // knex("author").insert({ firstName: "f" }).returning("*").;
-      await knex.insert({ first_name: "f" }).from("author");
+    // knex("author").insert({ firstName: "f" }).returning("*").;
+    await knex.insert({ first_name: "f" }).from("author");
 
-      const em = new EntityManager(knex);
-      const authors = await em.find(Author, { id: 1 });
-      expect(authors.length).toEqual(1);
-    } finally {
-      await knex.destroy();
-    }
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { id: 1 });
+    expect(authors.length).toEqual(1);
   });
 });

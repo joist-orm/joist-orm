@@ -11,14 +11,10 @@ export class EntityManager {
   constructor(private knex: Knex) {}
 
   async find<T>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
-    console.log(type.name);
-
-    const rows = await this.knex.select("*").from("author");
-    console.log(rows);
+    const meta = entityMeta[type.name];
+    const rows = await this.knex.select("*").from(meta.tableName);
 
     const results: T[] = [];
-
-    const meta = entityMeta[type.name]!;
     rows.forEach(row => {
       const t = (new meta.cstr() as any) as T;
       meta.columns.forEach(c => {
@@ -27,13 +23,13 @@ export class EntityManager {
       });
       results.push(t);
     });
-
     return results;
   }
 }
 
 const authorMeta = {
   cstr: Author,
+  tableName: "author",
   columns: [
     { fieldName: "id", columnName: "id" },
     { fieldName: "firstName", columnName: "first_name" },

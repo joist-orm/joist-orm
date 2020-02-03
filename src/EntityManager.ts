@@ -26,13 +26,13 @@ export class EntityManager {
   }
 }
 
-interface Meta {
+interface EntityMetadata {
   cstr: EntityConstructor<any>;
   tableName: string;
   columns: Array<{ fieldName: string; columnName: string }>;
 }
 
-const authorMeta: Meta = {
+const authorMeta: EntityMetadata = {
   cstr: Author,
   tableName: "authors",
   columns: [
@@ -41,7 +41,7 @@ const authorMeta: Meta = {
   ],
 };
 
-const bookMeta: Meta = {
+const bookMeta: EntityMetadata = {
   cstr: Book,
   tableName: "books",
   columns: [
@@ -50,7 +50,7 @@ const bookMeta: Meta = {
   ],
 };
 
-const entityMeta: Record<string, Meta> = {
+const entityMeta: Record<string, EntityMetadata> = {
   Author: authorMeta,
   Book: bookMeta,
 };

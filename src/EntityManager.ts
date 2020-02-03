@@ -1,3 +1,4 @@
+import DataLoader from "dataloader";
 import Knex from "knex";
 import { Author } from "../integration/Author";
 import { Book } from "../integration/Book";
@@ -8,21 +9,39 @@ interface EntityConstructor<T> {
 
 type FilterQuery<T> = any;
 
+type Key = { Entity: string; where: number };
+
 export class EntityManager {
   constructor(private knex: Knex) {}
 
-  async find<T>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
-    const meta = entityMeta[type.name];
-    const rows = await this.knex.select("*").from(meta.tableName);
+  private loaders: Record<string, DataLoader<any, any>> = {};
 
-    return rows.map(row => {
-      const t = (new meta.cstr() as any) as T;
-      meta.columns.forEach(c => {
-        const { fieldName, columnName } = c;
-        (t as any)[fieldName] = row[columnName];
+  async find<T>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
+    return this.loaderForEntity(type).load(1);
+  }
+
+  async load<T>(type: EntityConstructor<T>, id: string): Promise<T> {
+    return this.loaderForEntity(type).load(id);
+  }
+
+  private loaderForEntity<T>(type: EntityConstructor<T>) {
+    let loader = this.loaders[type.name];
+    if (!loader) {
+      loader = new DataLoader(async keys => {
+        const meta = entityMeta[type.name];
+        const rows = await this.knex.select("*").from(meta.tableName);
+        return rows.map(row => {
+          const t = (new meta.cstr() as any) as T;
+          meta.columns.forEach(c => {
+            const { fieldName, columnName } = c;
+            (t as any)[fieldName] = row[columnName];
+          });
+          return t;
+        });
       });
-      return t;
-    });
+      this.loaders[type.name] = loader;
+    }
+    return loader;
   }
 }
 

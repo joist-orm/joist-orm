@@ -1,5 +1,6 @@
 import Knex from "knex";
 import { Author } from "../integration/Author";
+import { Book } from "../integration/Book";
 
 interface EntityConstructor<T> {
   new (): T;
@@ -14,28 +15,42 @@ export class EntityManager {
     const meta = entityMeta[type.name];
     const rows = await this.knex.select("*").from(meta.tableName);
 
-    const results: T[] = [];
-    rows.forEach(row => {
+    return rows.map(row => {
       const t = (new meta.cstr() as any) as T;
       meta.columns.forEach(c => {
         const { fieldName, columnName } = c;
         (t as any)[fieldName] = row[columnName];
       });
-      results.push(t);
+      return t;
     });
-    return results;
   }
 }
 
-const authorMeta = {
+interface Meta {
+  cstr: EntityConstructor<any>;
+  tableName: string;
+  columns: Array<{ fieldName: string; columnName: string }>;
+}
+
+const authorMeta: Meta = {
   cstr: Author,
-  tableName: "author",
+  tableName: "authors",
   columns: [
     { fieldName: "id", columnName: "id" },
     { fieldName: "firstName", columnName: "first_name" },
   ],
 };
 
-const entityMeta: Record<string, typeof authorMeta> = {
+const bookMeta: Meta = {
+  cstr: Book,
+  tableName: "books",
+  columns: [
+    { fieldName: "id", columnName: "id" },
+    { fieldName: "title", columnName: "title" },
+  ],
+};
+
+const entityMeta: Record<string, Meta> = {
   Author: authorMeta,
+  Book: bookMeta,
 };

@@ -3,7 +3,10 @@ import { createEntityTable, createUpdatedAtFunction } from "./utils";
 
 export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);
-  createEntityTable(b, "author", {
+  createEntityTable(b, "authors", {
     first_name: "varchar(255)",
+  });
+  createEntityTable(b, "books", {
+    title: "varchar(255)",
   });
 }

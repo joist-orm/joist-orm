@@ -4,6 +4,8 @@ import Knex from "knex";
 
 export let knex: Knex;
 
+export let numberOfQueries = 0;
+
 beforeAll(async () => {
   knex = Knex({
     client: "pg",
@@ -14,13 +16,18 @@ beforeAll(async () => {
       password: "local",
       database: "joist",
     },
-  });
+  }).on("query", () => numberOfQueries++);
 });
 
 beforeEach(async () => {
   await knex.select(knex.raw("flush_database()"));
+  resetQueryCount();
 });
 
 afterAll(async () => {
   await knex.destroy();
 });
+
+export function resetQueryCount() {
+  numberOfQueries = 0;
+}

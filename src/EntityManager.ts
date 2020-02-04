@@ -32,10 +32,7 @@ export class EntityManager {
         const rows = await this.knex.select("*").from(meta.tableName);
         return rows.map(row => {
           const t = (new meta.cstr() as any) as T;
-          meta.columns.forEach(c => {
-            const { fieldName, columnName } = c;
-            (t as any)[fieldName] = row[columnName];
-          });
+          meta.columns.forEach(c => c.serde.set(t, row));
           return t;
         });
       });
@@ -45,18 +42,30 @@ export class EntityManager {
   }
 }
 
+interface ColumnSerde {
+  set(entity: any, row: any): void;
+}
+
+class SimpleSerde implements ColumnSerde {
+  constructor(private fieldName: string, private columnName: string) {}
+
+  set(entity: any, row: any): void {
+    entity[this.fieldName] = row[this.columnName];
+  }
+}
+
 interface EntityMetadata {
   cstr: EntityConstructor<any>;
   tableName: string;
-  columns: Array<{ fieldName: string; columnName: string }>;
+  columns: Array<{ fieldName: string; columnName: string; serde: ColumnSerde }>;
 }
 
 const authorMeta: EntityMetadata = {
   cstr: Author,
   tableName: "authors",
   columns: [
-    { fieldName: "id", columnName: "id" },
-    { fieldName: "firstName", columnName: "first_name" },
+    { fieldName: "id", columnName: "id", serde: new SimpleSerde("id", "id") },
+    { fieldName: "firstName", columnName: "first_name", serde: new SimpleSerde("firstName", "first_name") },
   ],
 };
 
@@ -64,8 +73,8 @@ const bookMeta: EntityMetadata = {
   cstr: Book,
   tableName: "books",
   columns: [
-    { fieldName: "id", columnName: "id" },
-    { fieldName: "title", columnName: "title" },
+    { fieldName: "id", columnName: "id", serde: new SimpleSerde("id", "id") },
+    { fieldName: "title", columnName: "title", serde: new SimpleSerde("title", "title") },
   ],
 };
 

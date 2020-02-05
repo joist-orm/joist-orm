@@ -62,4 +62,19 @@ describe("EntityManager", () => {
     const rows = await knex.select("*").from("books");
     expect(rows.length).toEqual(2);
   });
+
+  it("updates a book", async () => {
+    const em = new EntityManager(knex);
+    const book = new Book(em);
+    book.title = "t1";
+    await em.flush();
+    expect(book.id).toEqual(1);
+
+    book.title = "t2";
+    await em.flush();
+    expect(book.id).toEqual(1);
+
+    const row = (await knex.select("*").from("books"))[0];
+    expect(row["title"]).toEqual("t2");
+  });
 });

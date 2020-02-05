@@ -11,7 +11,7 @@ interface EntityConstructor<T> {
 interface Entity {
   id: string;
 
-  __meta: { type: string; data: Record<any, any> };
+  __meta: { type: string; data: Record<any, any>; dirty?: boolean };
 }
 
 type FilterQuery<T> = any;
@@ -35,20 +35,53 @@ export class EntityManager {
     list.push(entity);
   }
 
-  markDirty(entity: Entity): void {}
+  markDirty(entity: Entity): void {
+    entity.__meta.dirty = true;
+  }
 
   async flush(): Promise<void> {
     const ps = Object.values(this.entities).map(async list => {
       const meta = entityMeta[list[0].__meta.type];
 
-      const rows = list.map(entity => {
-        const row = {};
-        meta.columns.forEach(c => c.serde.setOnRow(entity.__meta.data, row));
-        return row;
+      const newEntities: Entity[] = [];
+      const updateEntities: Entity[] = [];
+
+      list.forEach(entity => {
+        if (!entity.__meta.data["id"]) {
+          newEntities.push(entity);
+        } else if (entity.__meta.dirty) {
+          updateEntities.push(entity);
+        }
       });
 
-      const ids = await this.knex.batchInsert(meta.tableName, rows).returning("id");
-      console.log("Inserted", ids);
+      // Do a batch insert
+      if (newEntities.length > 0) {
+        const rows = newEntities.map(entity => {
+          const row = {};
+          meta.columns.forEach(c => c.serde.setOnRow(entity.__meta.data, row));
+          return row;
+        });
+        const ids = await this.knex.batchInsert(meta.tableName, rows).returning("id");
+        for (let i = 0; i < newEntities.length; i++) {
+          list[i].__meta.data["id"] = ids[i];
+        }
+        console.log("Inserted", ids);
+      }
+
+      // Do a batch update
+      if (updateEntities.length > 0) {
+        const bindings: any[][] = meta.columns.map(() => []);
+        for (const entity of updateEntities) {
+          meta.columns.forEach((c, i) => bindings[i].push(c.serde.getFromEntity(entity)));
+        }
+        // Use a pg-specific syntax to issue a bulk update
+        await this.knex.raw(cleanSql(`
+          UPDATE ${meta.tableName}
+          SET ${meta.columns.map(c => `${c.fieldName} = data.${c.fieldName}`).join(", ")}
+          FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.fieldName}`).join(", ")}) as data
+          WHERE ${meta.tableName}.id = data.id
+        `), bindings);
+      }
     });
     await Promise.all(ps);
   }
@@ -74,6 +107,7 @@ export class EntityManager {
 interface ColumnSerde {
   setOnEntity(entity: any, row: any): void;
   setOnRow(entity: any, row: any): void;
+  getFromEntity(entity: any): any;
 }
 
 class SimpleSerde implements ColumnSerde {
@@ -86,20 +120,25 @@ class SimpleSerde implements ColumnSerde {
   setOnRow(entity: any, row: any): void {
     row[this.columnName] = entity[this.fieldName];
   }
+
+  getFromEntity(entity: any) {
+    return entity[this.fieldName];
+  }
 }
 
 interface EntityMetadata {
   cstr: EntityConstructor<any>;
   tableName: string;
-  columns: Array<{ fieldName: string; columnName: string; serde: ColumnSerde }>;
+  // Eventually our dbType should go away to support N-column fields
+  columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
 }
 
 const authorMeta: EntityMetadata = {
   cstr: Author,
   tableName: "authors",
   columns: [
-    { fieldName: "id", columnName: "id", serde: new SimpleSerde("id", "id") },
-    { fieldName: "firstName", columnName: "first_name", serde: new SimpleSerde("firstName", "first_name") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
+    { fieldName: "firstName", columnName: "first_name", dbType: "varchar", serde: new SimpleSerde("firstName", "first_name") },
   ],
 };
 
@@ -107,8 +146,8 @@ const bookMeta: EntityMetadata = {
   cstr: Book,
   tableName: "books",
   columns: [
-    { fieldName: "id", columnName: "id", serde: new SimpleSerde("id", "id") },
-    { fieldName: "title", columnName: "title", serde: new SimpleSerde("title", "title") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
+    { fieldName: "title", columnName: "title", dbType: "varchar", serde: new SimpleSerde("title", "title") },
   ],
 };
 
@@ -116,3 +155,7 @@ const entityMeta: Record<string, EntityMetadata> = {
   Author: authorMeta,
   Book: bookMeta,
 };
+
+function cleanSql(sql: string): string {
+  return sql.trim().replace("\n", "").replace(/  +/, " ");
+}

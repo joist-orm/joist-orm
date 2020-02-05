@@ -16,6 +16,7 @@ beforeAll(async () => {
       password: "local",
       database: "joist",
     },
+    debug: false,
   }).on("query", () => numberOfQueries++);
 });
 

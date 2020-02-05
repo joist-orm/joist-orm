@@ -29,4 +29,23 @@ describe("EntityManager", () => {
     expect(book2.title).toEqual("t2");
     expect(numberOfQueries).toEqual(1);
   });
+
+  it("maintains a single book instance", async () => {
+    await knex.insert({ title: "t1" }).from("books");
+
+    const em = new EntityManager(knex);
+    const book1a = await em.load(Book, "1");
+    const book1b = await em.load(Book, "1");
+    expect(book1a).toStrictEqual(book1b);
+  });
+
+  it("inserts a new book", async () => {
+    const em = new EntityManager(knex);
+    const book = new Book(em);
+    book.title = "t1";
+    await em.flush();
+
+    const rows = await knex.select("*").from("books");
+    expect(rows.length).toEqual(1);
+  });
 });

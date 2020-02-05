@@ -11,7 +11,7 @@ interface EntityConstructor<T> {
 interface Entity {
   id: string;
 
-  __meta: { type: string; data: Record<any, any>; dirty?: boolean };
+  __orm: { metadata: EntityMetadata; data: Record<any, any>; dirty?: boolean };
 }
 
 type FilterQuery<T> = any;
@@ -31,25 +31,25 @@ export class EntityManager {
   }
 
   register(entity: Entity): void {
-    const list = getOrSet(this.entities, entity.__meta.type, []);
+    const list = getOrSet(this.entities, entity.__orm.metadata.tableName, []);
     list.push(entity);
   }
 
   markDirty(entity: Entity): void {
-    entity.__meta.dirty = true;
+    entity.__orm.dirty = true;
   }
 
   async flush(): Promise<void> {
     const ps = Object.values(this.entities).map(async list => {
-      const meta = entityMeta[list[0].__meta.type];
+      const meta = list[0].__orm.metadata;
 
       const newEntities: Entity[] = [];
       const updateEntities: Entity[] = [];
 
       list.forEach(entity => {
-        if (!entity.__meta.data["id"]) {
+        if (!entity.__orm.data["id"]) {
           newEntities.push(entity);
-        } else if (entity.__meta.dirty) {
+        } else if (entity.__orm.dirty) {
           updateEntities.push(entity);
         }
       });
@@ -58,12 +58,12 @@ export class EntityManager {
       if (newEntities.length > 0) {
         const rows = newEntities.map(entity => {
           const row = {};
-          meta.columns.forEach(c => c.serde.setOnRow(entity.__meta.data, row));
+          meta.columns.forEach(c => c.serde.setOnRow(entity.__orm.data, row));
           return row;
         });
         const ids = await this.knex.batchInsert(meta.tableName, rows).returning("id");
         for (let i = 0; i < newEntities.length; i++) {
-          list[i].__meta.data["id"] = ids[i];
+          list[i].__orm.data["id"] = ids[i];
         }
         console.log("Inserted", ids);
       }
@@ -90,11 +90,11 @@ export class EntityManager {
     let loader = this.loaders[type.name];
     if (!loader) {
       loader = new DataLoader(async keys => {
-        const meta = entityMeta[type.name];
+        const meta = (type as any).metadata as EntityMetadata;
         const rows = await this.knex.select("*").from(meta.tableName);
         return rows.map(row => {
           const entity = (new meta.cstr(this) as any) as T;
-          meta.columns.forEach(c => c.serde.setOnEntity(entity.__meta.data, row));
+          meta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
           return entity;
         });
       });
@@ -104,13 +104,13 @@ export class EntityManager {
   }
 }
 
-interface ColumnSerde {
+export interface ColumnSerde {
   setOnEntity(entity: any, row: any): void;
   setOnRow(entity: any, row: any): void;
   getFromEntity(entity: any): any;
 }
 
-class SimpleSerde implements ColumnSerde {
+export class SimpleSerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string) {}
 
   setOnEntity(entity: any, row: any): void {
@@ -126,35 +126,12 @@ class SimpleSerde implements ColumnSerde {
   }
 }
 
-interface EntityMetadata {
+export interface EntityMetadata {
   cstr: EntityConstructor<any>;
   tableName: string;
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
 }
-
-const authorMeta: EntityMetadata = {
-  cstr: Author,
-  tableName: "authors",
-  columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
-    { fieldName: "firstName", columnName: "first_name", dbType: "varchar", serde: new SimpleSerde("firstName", "first_name") },
-  ],
-};
-
-const bookMeta: EntityMetadata = {
-  cstr: Book,
-  tableName: "books",
-  columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
-    { fieldName: "title", columnName: "title", dbType: "varchar", serde: new SimpleSerde("title", "title") },
-  ],
-};
-
-const entityMeta: Record<string, EntityMetadata> = {
-  Author: authorMeta,
-  Book: bookMeta,
-};
 
 function cleanSql(sql: string): string {
   return sql.trim().replace("\n", "").replace(/  +/, " ");

@@ -11,7 +11,7 @@ interface EntityConstructor<T> {
 interface Entity {
   id: string;
 
-  __meta: { type: string };
+  __meta: { type: string; data: Record<any, any> };
 }
 
 type FilterQuery<T> = any;
@@ -22,11 +22,11 @@ export class EntityManager {
   private loaders: Record<string, DataLoader<any, any>> = {};
   private entities: Record<string, Entity[]> = {};
 
-  async find<T>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
+  async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     return this.loaderForEntity(type).load(1);
   }
 
-  async load<T>(type: EntityConstructor<T>, id: string): Promise<T> {
+  async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {
     return this.loaderForEntity(type).load(id);
   }
 
@@ -35,33 +35,34 @@ export class EntityManager {
     list.push(entity);
   }
 
+  markDirty(entity: Entity): void {}
+
   async flush(): Promise<void> {
     const ps = Object.values(this.entities).map(async list => {
-      const ps = list.map(async entity => {
-        const meta = entityMeta[entity.__meta.type];
+      const meta = entityMeta[list[0].__meta.type];
+
+      const rows = list.map(entity => {
         const row = {};
-        meta.columns.forEach(c => c.serde.setOnRow(entity, row));
-        const r = await this.knex
-          .insert(row)
-          .into(meta.tableName)
-          .returning("id");
-        console.log("Got", r);
+        meta.columns.forEach(c => c.serde.setOnRow(entity.__meta.data, row));
+        return row;
       });
-      await Promise.all(ps);
+
+      const ids = await this.knex.batchInsert(meta.tableName, rows).returning("id");
+      console.log("Inserted", ids);
     });
     await Promise.all(ps);
   }
 
-  private loaderForEntity<T>(type: EntityConstructor<T>) {
+  private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
     let loader = this.loaders[type.name];
     if (!loader) {
       loader = new DataLoader(async keys => {
         const meta = entityMeta[type.name];
         const rows = await this.knex.select("*").from(meta.tableName);
         return rows.map(row => {
-          const t = (new meta.cstr(this) as any) as T;
-          meta.columns.forEach(c => c.serde.setOnEntity(t, row));
-          return t;
+          const entity = (new meta.cstr(this) as any) as T;
+          meta.columns.forEach(c => c.serde.setOnEntity(entity.__meta.data, row));
+          return entity;
         });
       });
       this.loaders[type.name] = loader;

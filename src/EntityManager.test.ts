@@ -48,4 +48,18 @@ describe("EntityManager", () => {
     const rows = await knex.select("*").from("books");
     expect(rows.length).toEqual(1);
   });
+
+  it("inserts multiple books in bulk", async () => {
+    const em = new EntityManager(knex);
+    const book1 = new Book(em);
+    book1.title = "t1";
+    const book2 = new Book(em);
+    book2.title = "t2";
+    await em.flush();
+
+    // 3 = begin, insert, commit
+    expect(numberOfQueries).toEqual(3);
+    const rows = await knex.select("*").from("books");
+    expect(rows.length).toEqual(2);
+  });
 });

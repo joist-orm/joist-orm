@@ -1,13 +1,22 @@
 import { EntityManager } from "../src/EntityManager";
 
 export class Author {
-  constructor(em: EntityManager) {
+  readonly __meta = { type: "Author", data: {} as Record<any, any> };
+
+  constructor(private em: EntityManager) {
     em.register(this);
   }
 
-  id!: string;
+  get id(): string {
+    return this.__meta.data["id"];
+  }
 
-  firstName!: string;
+  get firstName(): string {
+    return this.__meta.data["firstName"];
+  }
 
-  readonly __meta = { type: "Author" };
+  set firstName(firstName: string) {
+    this.__meta.data["firstName"] = firstName;
+    this.em.markDirty(this);
+  }
 }

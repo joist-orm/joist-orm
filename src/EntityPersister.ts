@@ -31,6 +31,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata, entities: Entity[])
   const ids = await knex.batchInsert(meta.tableName, rows).returning("id");
   for (let i = 0; i < entities.length; i++) {
     entities[i].__orm.data["id"] = ids[i];
+    entities[i].__orm.dirty = false;
   }
   console.log("Inserted", ids);
 }
@@ -50,6 +51,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata, entities: Entity[])
    `),
     bindings,
   );
+  entities.forEach(entity => entity.__orm.dirty = false);
 }
 
 function cleanSql(sql: string): string {

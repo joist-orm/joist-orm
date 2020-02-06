@@ -41,6 +41,19 @@ describe("EntityManager", () => {
     expect(rows.length).toEqual(1);
   });
 
+  it("inserts then updates new author", async () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em);
+    author.firstName = "a1";
+    await em.flush();
+    author.firstName = "a2";
+    await em.flush();
+
+    const rows = await knex.select("*").from("authors");
+    expect(rows.length).toEqual(1);
+    expect(rows[0].first_name).toEqual("a2");
+  });
+
   it("inserts multiple authors in bulk", async () => {
     const em = new EntityManager(knex);
     const author1 = new Author(em);
@@ -68,5 +81,32 @@ describe("EntityManager", () => {
 
     const row = (await knex.select("*").from("authors"))[0];
     expect(row["first_name"]).toEqual("a2");
+  });
+
+  it("does not update inserted-then-unchanged entities", async () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em);
+    author.firstName = "a1";
+    await em.flush();
+
+    resetQueryCount();
+    await em.flush();
+
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("does not update updated-then-unchanged entities", async () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em);
+    author.firstName = "a1";
+    await em.flush();
+
+    author.firstName = "a2";
+    await em.flush();
+
+    resetQueryCount();
+    await em.flush();
+
+    expect(numberOfQueries).toEqual(0);
   });
 });

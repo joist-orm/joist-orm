@@ -2,7 +2,8 @@
   "name": "orm-playground",
   "version": "1.0.0",
   "scripts": {
-    "migrate": "ts-node-dev -r tsconfig-paths/register migrations/migrate.ts"
+    "migrate": "ts-node-dev -r tsconfig-paths/register migrations/migrate.ts",
+    "test": "jest --runInBand"
   },
   "dependencies": {
     "dataloader": "^2.0.0",

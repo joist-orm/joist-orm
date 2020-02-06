@@ -1,9 +1,10 @@
-import { EntityManager, EntityMetadata, SimpleSerde } from "../src/EntityManager";
+import { Entity, EntityManager, EntityMetadata, EntityOrmField, SimpleSerde } from "../src/EntityManager";
 
-export class Author {
-  readonly __orm = { metadata: authorMeta, data: {} as Record<any, any> };
+export class Author implements Entity {
+  readonly __orm: EntityOrmField;
 
-  constructor(private em: EntityManager) {
+  constructor(em: EntityManager) {
+    this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };
     em.register(this);
   }
 
@@ -18,7 +19,7 @@ export class Author {
 
   set firstName(firstName: string) {
     this.__orm.data["firstName"] = firstName;
-    this.em.markDirty(this);
+    this.__orm.em.markDirty(this);
   }
 }
 
@@ -28,7 +29,12 @@ const authorMeta: EntityMetadata = {
   tableName: "authors",
   columns: [
     { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
-    { fieldName: "firstName", columnName: "first_name", dbType: "varchar", serde: new SimpleSerde("firstName", "first_name") },
+    {
+      fieldName: "firstName",
+      columnName: "first_name",
+      dbType: "varchar",
+      serde: new SimpleSerde("firstName", "first_name"),
+    },
   ],
 };
 

@@ -1,17 +1,22 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
-import { Author } from "../integration/Author";
-import { Book } from "../integration/Book";
 import { getOrSet } from "./utils";
 
-interface EntityConstructor<T> {
+export interface EntityConstructor<T> {
   new (em: EntityManager): T;
 }
 
-interface Entity {
+export interface EntityOrmField {
+  metadata: EntityMetadata;
+  data: Record<any, any>;
+  dirty?: boolean;
+  em: EntityManager;
+}
+
+export interface Entity {
   id: string;
 
-  __orm: { metadata: EntityMetadata; data: Record<any, any>; dirty?: boolean };
+  __orm: EntityOrmField;
 }
 
 type FilterQuery<T> = any;
@@ -75,12 +80,15 @@ export class EntityManager {
           meta.columns.forEach((c, i) => bindings[i].push(c.serde.getFromEntity(entity)));
         }
         // Use a pg-specific syntax to issue a bulk update
-        await this.knex.raw(cleanSql(`
-          UPDATE ${meta.tableName}
-          SET ${meta.columns.map(c => `${c.columnName} = data.${c.columnName}`).join(", ")}
-          FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.columnName}`).join(", ")}) as data
-          WHERE ${meta.tableName}.id = data.id
-        `), bindings);
+        await this.knex.raw(
+          cleanSql(`
+            UPDATE ${meta.tableName}
+            SET ${meta.columns.map(c => `${c.columnName} = data.${c.columnName}`).join(", ")}
+            FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.columnName}`).join(", ")}) as data
+            WHERE ${meta.tableName}.id = data.id
+        `),
+          bindings,
+        );
       }
     });
     await Promise.all(ps);
@@ -134,5 +142,8 @@ export interface EntityMetadata {
 }
 
 function cleanSql(sql: string): string {
-  return sql.trim().replace("\n", "").replace(/  +/, " ");
+  return sql
+    .trim()
+    .replace("\n", "")
+    .replace(/  +/, " ");
 }

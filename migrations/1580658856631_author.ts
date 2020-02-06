@@ -8,5 +8,6 @@ export function up(b: MigrationBuilder): void {
   });
   createEntityTable(b, "books", {
     title: "varchar(255)",
+    author_id: { type: "integer", references: "authors", notNull: true },
   });
 }

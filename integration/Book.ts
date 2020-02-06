@@ -1,9 +1,27 @@
-import { EntityManager, EntityMetadata, SimpleSerde } from "../src/EntityManager";
+import {
+  Entity,
+  EntityConstructor,
+  EntityManager,
+  EntityMetadata,
+  EntityOrmField,
+  SimpleSerde,
+} from "../src/EntityManager";
+import { Author } from "./Author";
+
+class Relation<T extends Entity, U extends Entity> {
+  constructor(private entity: T, private otherType: EntityConstructor<U>, columnName: string) {}
+
+  load(): Promise<U> {
+    return this.entity.__orm.em.load(this.otherType, "1");
+  }
+}
 
 export class Book {
-  readonly __orm = { metadata: bookMeta, data: {} as Record<any, any> };
+  readonly __orm: EntityOrmField;
+  readonly author = new Relation(this, Author, "author_id");
 
-  constructor(private em: EntityManager) {
+  constructor(em: EntityManager) {
+    this.__orm = { metadata: bookMeta, data: {} as Record<any, any>, em };
     em.register(this);
   }
 
@@ -18,7 +36,7 @@ export class Book {
 
   set title(title: string) {
     this.__orm.data["title"] = title;
-    this.em.markDirty(this);
+    this.__orm.em.markDirty(this);
   }
 }
 

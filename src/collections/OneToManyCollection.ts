@@ -24,4 +24,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
   load(): Promise<U[]> {
     return this.__orm.entity.__orm.em.loadCollection(this);
   }
+
+  add(other: U): void {
+    const { otherFieldName, entity } = this.__orm;
+    (other as any)[otherFieldName].set(entity);
+  }
 }

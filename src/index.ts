@@ -8,4 +8,6 @@ export interface Reference<T extends Entity, U extends Entity> {
 
 export interface Collection<T extends Entity, U extends Entity> {
   load(): Promise<U[]>;
+
+  add(other: U): void;
 }

@@ -151,15 +151,15 @@ export class PrimaryKeySerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = String(row[this.columnName]);
+    data[this.fieldName] = keyToString(row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
-    row[this.columnName] = maybeNumber(data[this.fieldName]);
+    row[this.columnName] = keyToNumber(data[this.fieldName]);
   }
 
   getFromEntity(data: any) {
-    return maybeNumber(data[this.fieldName]);
+    return keyToNumber(data[this.fieldName]);
   }
 }
 
@@ -167,17 +167,17 @@ export class ForeignKeySerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = String(row[this.columnName]);
+    data[this.fieldName] = keyToString(row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
     this.maybeResolveReferenceToId(data);
-    row[this.columnName] = maybeNumber(data[this.fieldName]);
+    row[this.columnName] = keyToNumber(data[this.fieldName]);
   }
 
   getFromEntity(data: any) {
     this.maybeResolveReferenceToId(data);
-    return maybeNumber(data[this.fieldName]);
+    return keyToNumber(data[this.fieldName]);
   }
 
   // Before a referred-to object is saved, we keep its instance in our data
@@ -201,10 +201,11 @@ export interface EntityMetadata {
 }
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */
-function maybeNumber(value: any): number | undefined {
+function keyToNumber(value: any): number | undefined {
   return value === undefined ? undefined : Number(value);
 }
 
+/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
 function keyToString(key: any): string | undefined {
   return key === undefined ? undefined : String(key);
 }

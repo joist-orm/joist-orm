@@ -2,13 +2,12 @@ import {
   EntityManager,
   EntityMetadata,
   EntityOrmField,
-  ForeignKeySerde,
-  PrimaryKeySerde,
-  SimpleSerde,
+
 } from "../src/EntityManager";
 import { Author } from "./Author";
 import { ManyToOneReference } from "../src/collections/ManyToOneReference";
 import { Reference } from "../src";
+import { ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "../src/serde";
 
 export class Book {
   readonly __orm: EntityOrmField;

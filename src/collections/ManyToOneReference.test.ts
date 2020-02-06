@@ -3,7 +3,7 @@ import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Book } from "../../integration/Book";
 import { Author } from "../../integration/Author";
 
-describe("relationships", () => {
+describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
     await knex.insert({ first_name: "f" }).into("authors");
     await knex.insert({ title: "t", author_id: 1 }).into("books");

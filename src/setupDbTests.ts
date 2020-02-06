@@ -1,7 +1,6 @@
-// Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
-
 import Knex from "knex";
 
+// Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
 
 export let numberOfQueries = 0;

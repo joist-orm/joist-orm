@@ -3,6 +3,7 @@ import Knex from "knex";
 import { flushEntities } from "./EntityPersister";
 import { getOrSet } from "./utils";
 import { OneToManyCollection } from "./collections/OneToManyCollection";
+import { ColumnSerde, keyToString } from "./serde";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager): T;
@@ -124,73 +125,6 @@ export class EntityManager {
   }
 }
 
-export interface ColumnSerde {
-  setOnEntity(data: any, row: any): void;
-  setOnRow(data: any, row: any): void;
-  getFromEntity(data: any): any;
-}
-
-export class SimpleSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
-
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = row[this.columnName];
-  }
-
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName];
-  }
-
-  getFromEntity(data: any) {
-    return data[this.fieldName];
-  }
-}
-
-/** Maps integer primary keys ot strings "because GraphQL". */
-export class PrimaryKeySerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
-
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(row[this.columnName]);
-  }
-
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(data[this.fieldName]);
-  }
-
-  getFromEntity(data: any) {
-    return keyToNumber(data[this.fieldName]);
-  }
-}
-
-export class ForeignKeySerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
-
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(row[this.columnName]);
-  }
-
-  setOnRow(data: any, row: any): void {
-    this.maybeResolveReferenceToId(data);
-    row[this.columnName] = keyToNumber(data[this.fieldName]);
-  }
-
-  getFromEntity(data: any) {
-    this.maybeResolveReferenceToId(data);
-    return keyToNumber(data[this.fieldName]);
-  }
-
-  // Before a referred-to object is saved, we keep its instance in our data
-  // map, and then assume it will be persisted before we're asked to persist
-  // ourselves, at which point we'll resolve it to an id.
-  private maybeResolveReferenceToId(data: any) {
-    const value = data[this.fieldName];
-    if (value.id) {
-      data[this.fieldName] = value.id;
-    }
-  }
-}
-
 export interface EntityMetadata {
   cstr: EntityConstructor<any>;
   type: string;
@@ -198,14 +132,4 @@ export interface EntityMetadata {
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   order: number;
-}
-
-/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
-function keyToNumber(value: any): number | undefined {
-  return value === undefined ? undefined : Number(value);
-}
-
-/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
-function keyToString(key: any): string | undefined {
-  return key === undefined ? undefined : String(key);
 }

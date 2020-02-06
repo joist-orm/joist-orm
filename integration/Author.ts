@@ -1,17 +1,12 @@
-import {
-  Entity,
-  EntityManager,
-  EntityMetadata,
-  EntityOrmField,
-  PrimaryKeySerde,
-  SimpleSerde,
-} from "../src/EntityManager";
-import { Collection, Relation } from "../src/collections/relationships";
+import { Entity, EntityManager, EntityMetadata, EntityOrmField } from "../src/EntityManager";
 import { Book, bookMeta } from "./Book";
+import { PrimaryKeySerde, SimpleSerde } from "../src/serde";
+import { Collection } from "../src";
+import { OneToManyCollection } from "../src/collections/OneToManyCollection";
 
 export class Author implements Entity {
   readonly __orm: EntityOrmField;
-  readonly books = new Collection(this, bookMeta, "books", "author", "author_id");
+  readonly books: Collection<Author, Book> = new OneToManyCollection(this, bookMeta, "books", "author", "author_id");
 
   constructor(em: EntityManager, opts?: Partial<{ firstName: string }>) {
     this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };

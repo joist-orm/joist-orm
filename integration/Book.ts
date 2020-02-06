@@ -4,6 +4,7 @@ import {
   EntityManager,
   EntityMetadata,
   EntityOrmField,
+  ForeignKeySerde,
   SimpleSerde,
 } from "../src/EntityManager";
 import { Author } from "./Author";
@@ -14,6 +15,10 @@ class Relation<T extends Entity, U extends Entity> {
   load(): Promise<U> {
     const id = this.entity.__orm.data[this.fieldName];
     return this.entity.__orm.em.load(this.otherType, id);
+  }
+
+  set(other: U): void {
+    this.entity.__orm.data[this.fieldName] = other.id || other;
   }
 }
 
@@ -48,8 +53,14 @@ const bookMeta: EntityMetadata = {
   columns: [
     { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
     { fieldName: "title", columnName: "title", dbType: "varchar", serde: new SimpleSerde("title", "title") },
-    { fieldName: "author", columnName: "author_id", dbType: "int", serde: new SimpleSerde("author", "author_id") },
+    {
+      fieldName: "author",
+      columnName: "author_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("author", "author_id"),
+    },
   ],
+  order: 2,
 };
 
 (Book as any).metadata = bookMeta;

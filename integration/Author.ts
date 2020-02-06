@@ -36,6 +36,7 @@ const authorMeta: EntityMetadata = {
       serde: new SimpleSerde("firstName", "first_name"),
     },
   ],
+  order: 1,
 };
 
 (Author as any).metadata = authorMeta;

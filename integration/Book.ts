@@ -39,6 +39,7 @@ export class Book {
 // TODO Codegen
 export const bookMeta: EntityMetadata = {
   cstr: Book,
+  type: "Book",
   tableName: "books",
   columns: [
     { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },

@@ -87,14 +87,22 @@ export class EntityManager {
         const rows = await this.knex
           .select("*")
           .from(otherMeta.tableName)
-          .whereIn(collection.__orm.otherColumnName, keys as string[]);
+          .whereIn(collection.__orm.otherColumnName, keys as string[])
+          .orderBy("id");
 
         const rowsById = new Map<string, U[]>();
 
         rows.forEach(row => {
-          // TODO See if this is already in our UoW
-          const entity = (new otherMeta.cstr(this) as any) as U;
-          otherMeta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
+          const id = keyToString(row["id"])!;
+
+          // See if this is already in our UoW
+          let entity = this.findExistingInstance(otherMeta.type, id) as U;
+
+          // If not create it.
+          if (!entity) {
+            entity = (new otherMeta.cstr(this) as any) as U;
+            otherMeta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
+          }
 
           // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
           const ownerId = entity.__orm.data[collection.__orm.otherFieldName];
@@ -110,6 +118,11 @@ export class EntityManager {
         return keys.map(k => rowsById.get(k) || []);
       });
     });
+  }
+
+  // Handles our Unit of Work-style look up / deduplication of entity instances.
+  private findExistingInstance(type: string, id: string): Entity | undefined {
+    return this.entities.find(e => e.__orm.metadata.type === type && e.id === id);
   }
 }
 
@@ -182,6 +195,7 @@ export class ForeignKeySerde implements ColumnSerde {
 
 export interface EntityMetadata {
   cstr: EntityConstructor<any>;
+  type: string;
   tableName: string;
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
@@ -191,4 +205,8 @@ export interface EntityMetadata {
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */
 function maybeNumber(value: any): number | undefined {
   return value === undefined ? undefined : Number(value);
+}
+
+function keyToString(key: any): string | undefined {
+  return key === undefined ? undefined : String(key);
 }

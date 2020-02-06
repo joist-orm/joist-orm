@@ -39,6 +39,7 @@ export class Author implements Entity {
 // TODO Codegen
 const authorMeta: EntityMetadata = {
   cstr: Author,
+  type: "Author",
   tableName: "authors",
   columns: [
     { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },

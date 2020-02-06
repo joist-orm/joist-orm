@@ -1,7 +1,17 @@
-import { Entity, EntityManager, EntityMetadata, EntityOrmField, SimpleSerde } from "../src/EntityManager";
+import {
+  Entity,
+  EntityManager,
+  EntityMetadata,
+  EntityOrmField,
+  PrimaryKeySerde,
+  SimpleSerde,
+} from "../src/EntityManager";
+import { Collection, Relation } from "../src/relationships";
+import { Book, bookMeta } from "./Book";
 
 export class Author implements Entity {
   readonly __orm: EntityOrmField;
+  readonly books = new Collection(this, bookMeta, "books", "author", "author_id");
 
   constructor(em: EntityManager, opts?: Partial<{ firstName: string }>) {
     this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };
@@ -31,7 +41,7 @@ const authorMeta: EntityMetadata = {
   cstr: Author,
   tableName: "authors",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
     {
       fieldName: "firstName",
       columnName: "first_name",

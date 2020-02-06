@@ -39,4 +39,15 @@ describe("relationships", () => {
     expect(a2.firstName).toEqual("a2");
     expect(numberOfQueries).toEqual(1);
   });
+
+  it("loads collections", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ title: "t1", author_id: 1 }).into("books");
+    await knex.insert({ title: "t2", author_id: 1 }).into("books");
+
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const books = await a1.books.load();
+    expect(books.length).toEqual(2);
+  });
 });

@@ -1,6 +1,7 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities } from "./EntityPersister";
+import { Collection } from "./relationships";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager): T;
@@ -35,6 +36,10 @@ export class EntityManager {
     return this.loaderForEntity(type).load(id);
   }
 
+  async loadCollection<T extends Entity, U extends Entity>(collection: Collection<T, U>): Promise<U[]> {
+    return this.loaderForCollection(collection).load(collection.__orm.entity.id);
+  }
+
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(entity: Entity): void {
     this.entities.push(entity);
@@ -63,12 +68,51 @@ export class EntityManager {
         rows.forEach(row => {
           const entity = (new meta.cstr(this) as any) as T;
           meta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
-          rowsById.set(String(entity.id!), entity);
+          rowsById.set(entity.id!, entity);
         });
 
         return keys.map(k => rowsById.get(k) || new Error(`${type.name}#${k} not found`));
       });
       this.loaders[type.name] = loader;
+    }
+    return loader;
+  }
+
+  private loaderForCollection<T extends Entity, U extends Entity>(collection: Collection<T, U>) {
+    // The metadata for the entity that contains the collection
+    const meta = collection.__orm.entity.__orm.metadata;
+    const loaderName = `${meta.tableName}.${collection.__orm.fieldName}`;
+    let loader = this.loaders[loaderName];
+    if (!loader) {
+      loader = new DataLoader<string, U[]>(async keys => {
+        const otherMeta = collection.__orm.otherMeta;
+
+        const rows = await this.knex
+          .select("*")
+          .from(otherMeta.tableName)
+          .whereIn(collection.__orm.otherColumnName, keys as string[]);
+
+        const rowsById = new Map<string, U[]>();
+
+        rows.forEach(row => {
+          // TODO See if this is already in our UoW
+          const entity = (new otherMeta.cstr(this) as any) as U;
+          otherMeta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
+
+          // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
+          const ownerId = entity.__orm.data[collection.__orm.otherFieldName];
+          if (ownerId === undefined) {
+            throw new Error("Could not find ownerId in other entity");
+          }
+          if (!rowsById.has(ownerId)) {
+            rowsById.set(ownerId, []);
+          }
+          rowsById.get(ownerId)!.push(entity);
+        });
+
+        return keys.map(k => rowsById.get(k) || []);
+      });
+      this.loaders[loaderName] = loader;
     }
     return loader;
   }
@@ -96,21 +140,38 @@ export class SimpleSerde implements ColumnSerde {
   }
 }
 
+/** Maps integer primary keys ot strings "because GraphQL". */
+export class PrimaryKeySerde implements ColumnSerde {
+  constructor(private fieldName: string, private columnName: string) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = String(row[this.columnName]);
+  }
+
+  setOnRow(data: any, row: any): void {
+    row[this.columnName] = maybeNumber(data[this.fieldName]);
+  }
+
+  getFromEntity(data: any) {
+    return maybeNumber(data[this.fieldName]);
+  }
+}
+
 export class ForeignKeySerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = row[this.columnName];
+    data[this.fieldName] = String(row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
     this.maybeResolveReferenceToId(data);
-    row[this.columnName] = data[this.fieldName];
+    row[this.columnName] = maybeNumber(data[this.fieldName]);
   }
 
   getFromEntity(data: any) {
     this.maybeResolveReferenceToId(data);
-    return data[this.fieldName];
+    return maybeNumber(data[this.fieldName]);
   }
 
   // Before a referred-to object is saved, we keep its instance in our data
@@ -132,3 +193,7 @@ export interface EntityMetadata {
   order: number;
 }
 
+/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
+function maybeNumber(value: any): number | undefined {
+  return value === undefined ? undefined : Number(value);
+}

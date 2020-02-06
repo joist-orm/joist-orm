@@ -3,6 +3,7 @@ import {
   EntityMetadata,
   EntityOrmField,
   ForeignKeySerde,
+  PrimaryKeySerde,
   SimpleSerde,
 } from "../src/EntityManager";
 import { Author } from "./Author";
@@ -36,11 +37,11 @@ export class Book {
 }
 
 // TODO Codegen
-const bookMeta: EntityMetadata = {
+export const bookMeta: EntityMetadata = {
   cstr: Book,
   tableName: "books",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
     { fieldName: "title", columnName: "title", dbType: "varchar", serde: new SimpleSerde("title", "title") },
     {
       fieldName: "author",

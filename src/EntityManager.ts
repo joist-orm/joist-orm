@@ -99,7 +99,10 @@ export class EntityManager {
     if (!loader) {
       loader = new DataLoader(async keys => {
         const meta = (type as any).metadata as EntityMetadata;
-        const rows = await this.knex.select("*").from(meta.tableName);
+        const rows = await this.knex
+          .select("*")
+          .from(meta.tableName)
+          .whereIn("id", keys as string[]);
         return rows.map(row => {
           const entity = (new meta.cstr(this) as any) as T;
           meta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));

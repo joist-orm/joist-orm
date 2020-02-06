@@ -2,6 +2,7 @@ import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities } from "./EntityPersister";
 import { Collection } from "./relationships";
+import { getOrSet } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager): T;
@@ -54,9 +55,8 @@ export class EntityManager {
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
-    let loader = this.loaders[type.name];
-    if (!loader) {
-      loader = new DataLoader<string, T>(async keys => {
+    return getOrSet(this.loaders, type.name, () => {
+      return new DataLoader<string, T>(async keys => {
         const meta = (type as any).metadata as EntityMetadata;
 
         const rows = await this.knex
@@ -73,18 +73,15 @@ export class EntityManager {
 
         return keys.map(k => rowsById.get(k) || new Error(`${type.name}#${k} not found`));
       });
-      this.loaders[type.name] = loader;
-    }
-    return loader;
+    });
   }
 
   private loaderForCollection<T extends Entity, U extends Entity>(collection: Collection<T, U>) {
     // The metadata for the entity that contains the collection
     const meta = collection.__orm.entity.__orm.metadata;
     const loaderName = `${meta.tableName}.${collection.__orm.fieldName}`;
-    let loader = this.loaders[loaderName];
-    if (!loader) {
-      loader = new DataLoader<string, U[]>(async keys => {
+    return getOrSet(this.loaders, loaderName, () => {
+      return new DataLoader<string, U[]>(async keys => {
         const otherMeta = collection.__orm.otherMeta;
 
         const rows = await this.knex
@@ -112,9 +109,7 @@ export class EntityManager {
 
         return keys.map(k => rowsById.get(k) || []);
       });
-      this.loaders[loaderName] = loader;
-    }
-    return loader;
+    });
   }
 }
 

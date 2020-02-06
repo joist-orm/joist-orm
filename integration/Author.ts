@@ -3,9 +3,12 @@ import { Entity, EntityManager, EntityMetadata, EntityOrmField, SimpleSerde } fr
 export class Author implements Entity {
   readonly __orm: EntityOrmField;
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, opts?: Partial<{ firstName: string }>) {
     this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };
     em.register(this);
+    if (opts) {
+      Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
+    }
   }
 
   // TODO Codegen

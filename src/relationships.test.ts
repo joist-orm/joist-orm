@@ -16,9 +16,8 @@ describe("relationships", () => {
 
   it("can save a foreign key", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em);
-    author.firstName = "a1";
-    const book = new Book(em);
+    const author = new Author(em, { firstName: "a1" });
+    const book = new Book(em, { title: "t1" });
     book.author.set(author);
     await em.flush();
 

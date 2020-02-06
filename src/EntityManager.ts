@@ -1,6 +1,5 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
-import { getOrSet } from "./utils";
 import { flushEntities } from "./EntityPersister";
 
 export interface EntityConstructor<T> {
@@ -127,3 +126,4 @@ export interface EntityMetadata {
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   order: number;
 }
+

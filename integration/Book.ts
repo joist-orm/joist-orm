@@ -7,7 +7,7 @@ import {
   SimpleSerde,
 } from "../src/EntityManager";
 import { Author } from "./Author";
-import { Relation } from "../src/relationships";
+import { Relation } from "../src/collections/relationships";
 
 export class Book {
   readonly __orm: EntityOrmField;

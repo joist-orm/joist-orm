@@ -1,7 +1,7 @@
-import { EntityManager } from "./EntityManager";
-import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
-import { Book } from "../integration/Book";
-import { Author } from "../integration/Author";
+import { EntityManager } from "../EntityManager";
+import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { Book } from "../../integration/Book";
+import { Author } from "../../integration/Author";
 
 describe("relationships", () => {
   it("can load a foreign key", async () => {

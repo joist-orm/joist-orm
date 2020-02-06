@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities } from "./EntityPersister";
-import { Collection } from "./relationships";
+import { Collection } from "./collections/relationships";
 import { getOrSet } from "./utils";
 
 export interface EntityConstructor<T> {

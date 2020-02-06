@@ -6,7 +6,7 @@ import {
   PrimaryKeySerde,
   SimpleSerde,
 } from "../src/EntityManager";
-import { Collection, Relation } from "../src/relationships";
+import { Collection, Relation } from "../src/collections/relationships";
 import { Book, bookMeta } from "./Book";
 
 export class Author implements Entity {

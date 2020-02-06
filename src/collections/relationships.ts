@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, EntityMetadata } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata } from "../EntityManager";
 
 export class Relation<T extends Entity, U extends Entity> {
   constructor(private entity: T, private otherType: EntityConstructor<U>, private fieldName: string) {}

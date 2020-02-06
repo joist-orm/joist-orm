@@ -22,6 +22,16 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(1);
   });
 
+  it("can load multiple authors in the right order", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ first_name: "a2" }).from("authors");
+
+    const em = new EntityManager(knex);
+    const [author2, author1] = await Promise.all([em.load(Author, "2"), em.load(Author, "1")]);
+    expect(author1.firstName).toEqual("a1");
+    expect(author2.firstName).toEqual("a2");
+  });
+
   it("maintains a single author instance", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
 

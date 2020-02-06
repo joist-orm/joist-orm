@@ -51,17 +51,22 @@ export class EntityManager {
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
     let loader = this.loaders[type.name];
     if (!loader) {
-      loader = new DataLoader(async keys => {
+      loader = new DataLoader<string, T>(async keys => {
         const meta = (type as any).metadata as EntityMetadata;
+
         const rows = await this.knex
           .select("*")
           .from(meta.tableName)
           .whereIn("id", keys as string[]);
-        return rows.map(row => {
+
+        const rowsById = new Map<string, T>();
+        rows.forEach(row => {
           const entity = (new meta.cstr(this) as any) as T;
           meta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
-          return entity;
+          rowsById.set(String(entity.id!), entity);
         });
+
+        return keys.map(k => rowsById.get(k) || new Error(`${type.name}#${k} not found`));
       });
       this.loaders[type.name] = loader;
     }

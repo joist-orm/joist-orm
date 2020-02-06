@@ -9,16 +9,17 @@ import {
 import { Author } from "./Author";
 
 class Relation<T extends Entity, U extends Entity> {
-  constructor(private entity: T, private otherType: EntityConstructor<U>, columnName: string) {}
+  constructor(private entity: T, private otherType: EntityConstructor<U>, private fieldName: string) {}
 
   load(): Promise<U> {
-    return this.entity.__orm.em.load(this.otherType, "1");
+    const id = this.entity.__orm.data[this.fieldName];
+    return this.entity.__orm.em.load(this.otherType, id);
   }
 }
 
 export class Book {
   readonly __orm: EntityOrmField;
-  readonly author = new Relation(this, Author, "author_id");
+  readonly author = new Relation(this, Author, "author");
 
   constructor(em: EntityManager) {
     this.__orm = { metadata: bookMeta, data: {} as Record<any, any>, em };
@@ -47,6 +48,7 @@ const bookMeta: EntityMetadata = {
   columns: [
     { fieldName: "id", columnName: "id", dbType: "int", serde: new SimpleSerde("id", "id") },
     { fieldName: "title", columnName: "title", dbType: "varchar", serde: new SimpleSerde("title", "title") },
+    { fieldName: "author", columnName: "author_id", dbType: "int", serde: new SimpleSerde("author", "author_id") },
   ],
 };
 

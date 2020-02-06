@@ -35,7 +35,7 @@ export class EntityManager {
   }
 
   async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {
-    return this.loaderForEntity(type).load(id);
+    return this.findExistingInstance((type as any).metadata.type, id) || this.loaderForEntity(type).load(id);
   }
 
   async loadCollection<T extends Entity, U extends Entity>(collection: OneToManyCollection<T, U>): Promise<U[]> {
@@ -44,6 +44,9 @@ export class EntityManager {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(entity: Entity): void {
+    if (entity.id && this.findExistingInstance(entity.__orm.metadata.type, entity.id) !== undefined) {
+      throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
+    }
     this.entities.push(entity);
   }
 

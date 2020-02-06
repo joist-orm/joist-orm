@@ -1,8 +1,8 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities } from "./EntityPersister";
-import { Collection } from "./collections/relationships";
 import { getOrSet } from "./utils";
+import { OneToManyCollection } from "./collections/OneToManyCollection";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager): T;
@@ -37,7 +37,7 @@ export class EntityManager {
     return this.loaderForEntity(type).load(id);
   }
 
-  async loadCollection<T extends Entity, U extends Entity>(collection: Collection<T, U>): Promise<U[]> {
+  async loadCollection<T extends Entity, U extends Entity>(collection: OneToManyCollection<T, U>): Promise<U[]> {
     return this.loaderForCollection(collection).load(collection.__orm.entity.id);
   }
 
@@ -76,7 +76,7 @@ export class EntityManager {
     });
   }
 
-  private loaderForCollection<T extends Entity, U extends Entity>(collection: Collection<T, U>) {
+  private loaderForCollection<T extends Entity, U extends Entity>(collection: OneToManyCollection<T, U>) {
     // The metadata for the entity that contains the collection
     const meta = collection.__orm.entity.__orm.metadata;
     const loaderName = `${meta.tableName}.${collection.__orm.fieldName}`;

@@ -7,11 +7,12 @@ import {
   SimpleSerde,
 } from "../src/EntityManager";
 import { Author } from "./Author";
-import { Relation } from "../src/collections/relationships";
+import { ManyToOneReference } from "../src/collections/ManyToOneReference";
+import { Reference } from "../src";
 
 export class Book {
   readonly __orm: EntityOrmField;
-  readonly author = new Relation(this, Author, "author");
+  readonly author: Reference<Book, Author> = new ManyToOneReference(this, Author, "author");
 
   constructor(em: EntityManager, opts?: Partial<{ title: string }>) {
     this.__orm = { metadata: bookMeta, data: {} as Record<any, any>, em };

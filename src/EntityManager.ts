@@ -77,8 +77,8 @@ export class EntityManager {
         // Use a pg-specific syntax to issue a bulk update
         await this.knex.raw(cleanSql(`
           UPDATE ${meta.tableName}
-          SET ${meta.columns.map(c => `${c.fieldName} = data.${c.fieldName}`).join(", ")}
-          FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.fieldName}`).join(", ")}) as data
+          SET ${meta.columns.map(c => `${c.columnName} = data.${c.columnName}`).join(", ")}
+          FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.columnName}`).join(", ")}) as data
           WHERE ${meta.tableName}.id = data.id
         `), bindings);
       }

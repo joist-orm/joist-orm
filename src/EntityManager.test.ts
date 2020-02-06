@@ -11,70 +11,63 @@ describe("EntityManager", () => {
     expect(author.firstName).toEqual("f");
   });
 
-  it("can load book", async () => {
-    await knex.insert({ title: "f" }).from("books");
-    const em = new EntityManager(knex);
-    const book = await em.load(Book, "1");
-    expect(book.title).toEqual("f");
-  });
-
-  it("can load multiple books with one query", async () => {
-    await knex.insert({ title: "t1" }).from("books");
-    await knex.insert({ title: "t2" }).from("books");
+  it("can load multiple authors with one query", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ first_name: "a2" }).from("authors");
     resetQueryCount();
 
     const em = new EntityManager(knex);
-    const [book1, book2] = await Promise.all([em.load(Book, "1"), em.load(Book, "2")]);
-    expect(book1.title).toEqual("t1");
-    expect(book2.title).toEqual("t2");
+    const [author1, author2] = await Promise.all([em.load(Author, "1"), em.load(Author, "2")]);
+    expect(author1.firstName).toEqual("a1");
+    expect(author2.firstName).toEqual("a2");
     expect(numberOfQueries).toEqual(1);
   });
 
-  it("maintains a single book instance", async () => {
-    await knex.insert({ title: "t1" }).from("books");
+  it("maintains a single author instance", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
 
     const em = new EntityManager(knex);
-    const book1a = await em.load(Book, "1");
-    const book1b = await em.load(Book, "1");
-    expect(book1a).toStrictEqual(book1b);
+    const author1a = await em.load(Author, "1");
+    const author1b = await em.load(Author, "1");
+    expect(author1a).toStrictEqual(author1b);
   });
 
-  it("inserts a new book", async () => {
+  it("inserts a new author", async () => {
     const em = new EntityManager(knex);
-    const book = new Book(em);
-    book.title = "t1";
+    const author = new Author(em);
+    author.firstName = "a1";
     await em.flush();
 
-    const rows = await knex.select("*").from("books");
+    const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(1);
   });
 
-  it("inserts multiple books in bulk", async () => {
+  it("inserts multiple authors in bulk", async () => {
     const em = new EntityManager(knex);
-    const book1 = new Book(em);
-    book1.title = "t1";
-    const book2 = new Book(em);
-    book2.title = "t2";
+    const author1 = new Author(em);
+    author1.firstName = "a1";
+    const author2 = new Author(em);
+    author2.firstName = "a2";
     await em.flush();
 
     // 3 = begin, insert, commit
     expect(numberOfQueries).toEqual(3);
-    const rows = await knex.select("*").from("books");
+    const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(2);
   });
 
-  it("updates a book", async () => {
+  it("updates an author", async () => {
     const em = new EntityManager(knex);
-    const book = new Book(em);
-    book.title = "t1";
+    const author = new Author(em);
+    author.firstName = "a1";
     await em.flush();
-    expect(book.id).toEqual(1);
+    expect(author.id).toEqual(1);
 
-    book.title = "t2";
+    author.firstName = "a2";
     await em.flush();
-    expect(book.id).toEqual(1);
+    expect(author.id).toEqual(1);
 
-    const row = (await knex.select("*").from("books"))[0];
-    expect(row["title"]).toEqual("t2");
+    const row = (await knex.select("*").from("authors"))[0];
+    expect(row["first_name"]).toEqual("a2");
   });
 });

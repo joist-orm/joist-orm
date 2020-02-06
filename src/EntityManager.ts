@@ -90,7 +90,7 @@ export class EntityManager {
           .whereIn(collection.__orm.otherColumnName, keys as string[])
           .orderBy("id");
 
-        const rowsById = new Map<string, U[]>();
+        const rowsById: Record<string, U[]> = {};
 
         rows.forEach(row => {
           const id = keyToString(row["id"])!;
@@ -109,13 +109,11 @@ export class EntityManager {
           if (ownerId === undefined) {
             throw new Error("Could not find ownerId in other entity");
           }
-          if (!rowsById.has(ownerId)) {
-            rowsById.set(ownerId, []);
-          }
-          rowsById.get(ownerId)!.push(entity);
+
+          getOrSet(rowsById, ownerId, []).push(entity);
         });
 
-        return keys.map(k => rowsById.get(k) || []);
+        return keys.map(k => rowsById[k] || []);
       });
     });
   }

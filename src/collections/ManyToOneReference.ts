@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, Lazy } from "../EntityManager";
+import { Entity, EntityConstructor } from "../EntityManager";
 import { Reference } from "../index";
 
 export class ManyToOneReference<T extends Entity, U extends Entity> implements Reference<T, U> {

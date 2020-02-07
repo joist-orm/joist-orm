@@ -57,7 +57,7 @@ export class EntityManager {
   }
 
   async loadCollection<T extends Entity, U extends Entity>(collection: OneToManyCollection<T, U>): Promise<U[]> {
-    return this.loaderForCollection(collection).load(collection.__orm.entity.id);
+    return this.loaderForCollection(collection).load(collection.entity.id);
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
@@ -100,16 +100,16 @@ export class EntityManager {
 
   private loaderForCollection<T extends Entity, U extends Entity>(collection: OneToManyCollection<T, U>) {
     // The metadata for the entity that contains the collection
-    const meta = collection.__orm.entity.__orm.metadata;
-    const loaderName = `${meta.tableName}.${collection.__orm.fieldName}`;
+    const meta = collection.entity.__orm.metadata;
+    const loaderName = `${meta.tableName}.${collection.fieldName}`;
     return getOrSet(this.loaders, loaderName, () => {
       return new DataLoader<string, U[]>(async keys => {
-        const otherMeta = collection.__orm.otherMeta;
+        const otherMeta = collection.otherMeta;
 
         const rows = await this.knex
           .select("*")
           .from(otherMeta.tableName)
-          .whereIn(collection.__orm.otherColumnName, keys as string[])
+          .whereIn(collection.otherColumnName, keys as string[])
           .orderBy("id");
 
         const rowsById: Record<string, U[]> = {};
@@ -127,7 +127,7 @@ export class EntityManager {
           }
 
           // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
-          const ownerId = entity.__orm.data[collection.__orm.otherFieldName];
+          const ownerId = entity.__orm.data[collection.otherFieldName];
           if (ownerId === undefined) {
             throw new Error("Could not find ownerId in other entity");
           }

@@ -6,7 +6,7 @@ import { ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "../src/serde";
 
 export class Book {
   readonly __orm: EntityOrmField;
-  readonly author: Reference<Book, Author> = new ManyToOneReference(this, Author, "author");
+  readonly author: Reference<Book, Author> = new ManyToOneReference(this, Author, "author", "books");
 
   constructor(em: EntityManager, opts?: Partial<{ title: string }>) {
     this.__orm = { metadata: bookMeta, data: {} as Record<any, any>, em };
@@ -29,10 +29,14 @@ export class Book {
     this.__orm.data["title"] = title;
     this.__orm.em.markDirty(this);
   }
+
+  toString(): string {
+    return `Book#${this.id}`;
+  }
 }
 
 // TODO Codegen
-export const bookMeta: EntityMetadata = {
+export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
   tableName: "books",

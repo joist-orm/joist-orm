@@ -11,7 +11,7 @@ export interface EntityConstructor<T> {
 }
 
 export interface EntityOrmField {
-  metadata: EntityMetadata;
+  metadata: EntityMetadata<any>;
   data: Record<any, any>;
   dirty?: boolean;
   em: EntityManager;
@@ -79,7 +79,7 @@ export class EntityManager {
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
     return getOrSet(this.loaders, type.name, () => {
       return new DataLoader<string, T>(async keys => {
-        const meta = (type as any).metadata as EntityMetadata;
+        const meta = (type as any).metadata as EntityMetadata<T>;
 
         const rows = await this.knex
           .select("*")
@@ -146,11 +146,15 @@ export class EntityManager {
   }
 }
 
-export interface EntityMetadata {
-  cstr: EntityConstructor<any>;
+export interface EntityMetadata<T extends Entity> {
+  cstr: EntityConstructor<T>;
   type: string;
   tableName: string;
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   order: number;
+}
+
+export function isEntity(e: any): e is Entity {
+  return e !== undefined && "id" in e && "__orm" in e;
 }

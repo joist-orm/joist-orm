@@ -1,8 +1,14 @@
-import { Entity, EntityConstructor } from "../EntityManager";
+import { Entity, EntityConstructor, isEntity } from "../EntityManager";
 import { Reference } from "../index";
+import { OneToManyCollection } from "./OneToManyCollection";
 
 export class ManyToOneReference<T extends Entity, U extends Entity> implements Reference<T, U> {
-  constructor(private entity: T, private otherType: EntityConstructor<U>, private fieldName: string) {}
+  constructor(
+    private entity: T,
+    private otherType: EntityConstructor<U>,
+    private fieldName: keyof T,
+    private otherFieldName: keyof U,
+  ) {}
 
   async load(): Promise<U> {
     // This will be a string id unless we've already loaded it.
@@ -16,7 +22,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
   }
 
   set(other: U): void {
-    this.entity.__orm.data[this.fieldName] = other;
+    this.setImpl(other);
   }
 
   get(): U {
@@ -26,5 +32,22 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
       throw new Error(`${maybeId} should have been an object`);
     }
     return maybeId as U;
+  }
+
+  // Internal method used by OneToManyCollection
+  setImpl(other: U): void {
+    // If had an existing value, remove us from its collection
+    const current = this.current();
+    if (isEntity(current)) {
+      const previousOther = current;
+      const previousCollection = (previousOther[this.otherFieldName] as any) as OneToManyCollection<any, U>;
+      previousCollection.removeIfLoaded(previousOther);
+    }
+    // TODO need to mark dirty
+    this.entity.__orm.data[this.fieldName] = other;
+  }
+
+  current(): undefined | number | U {
+    return this.entity.__orm.data[this.fieldName];
   }
 }

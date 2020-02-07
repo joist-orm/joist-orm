@@ -58,8 +58,11 @@ describe("relationships", () => {
     const b1 = em.create(Book, { title: "b1" });
     const a1 = em.create(Author, { firstName: "a1" });
     const a2 = em.create(Author, { firstName: "a2" });
+
     // When we add it to the 1st
     a1.books.add(b1);
+    expect(a1.books.get()).toContain(b1);
+
     // But then add it to teh 2nd
     a2.books.add(b1);
     // Then the book is associated with only the 2nd author

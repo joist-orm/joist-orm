@@ -2,7 +2,7 @@ import { Entity, EntityMetadata } from "./EntityManager";
 import Knex from "knex";
 
 interface Todo {
-  metadata: EntityMetadata;
+  metadata: EntityMetadata<any>;
   inserts: Entity[];
   updates: Entity[];
 }
@@ -22,7 +22,7 @@ export async function flushEntities(knex: Knex, entities: Entity[]): Promise<voi
   }
 }
 
-async function batchInsert(knex: Knex, meta: EntityMetadata, entities: Entity[]): Promise<void> {
+async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const rows = entities.map(entity => {
     const row = {};
     meta.columns.forEach(c => c.serde.setOnRow(entity.__orm.data, row));
@@ -37,7 +37,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata, entities: Entity[])
 }
 
 // Uses a pg-specific syntax to issue a bulk update
-async function batchUpdate(knex: Knex, meta: EntityMetadata, entities: Entity[]): Promise<void> {
+async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const bindings: any[][] = meta.columns.map(() => []);
   for (const entity of entities) {
     meta.columns.forEach((c, i) => bindings[i].push(c.serde.getFromEntity(entity)));

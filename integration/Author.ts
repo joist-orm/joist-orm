@@ -29,10 +29,14 @@ export class Author implements Entity {
     this.__orm.data["firstName"] = firstName;
     this.__orm.em.markDirty(this);
   }
+
+  toString(): string {
+    return `Author#${this.id}`;
+  }
 }
 
 // TODO Codegen
-const authorMeta: EntityMetadata = {
+const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
   tableName: "authors",

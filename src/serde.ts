@@ -47,24 +47,19 @@ export class ForeignKeySerde implements ColumnSerde {
   }
 
   setOnRow(data: any, row: any): void {
-    this.maybeResolveReferenceToId(data);
-    row[this.columnName] = keyToNumber(data[this.fieldName]);
+    row[this.columnName] = keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
   }
 
   getFromEntity(data: any) {
-    this.maybeResolveReferenceToId(data);
-    return keyToNumber(data[this.fieldName]);
+    return keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
   }
+}
 
-  // Before a referred-to object is saved, we keep its instance in our data
-  // map, and then assume it will be persisted before we're asked to persist
-  // ourselves, at which point we'll resolve it to an id.
-  private maybeResolveReferenceToId(data: any) {
-    const value = data[this.fieldName];
-    if (value.id) {
-      data[this.fieldName] = value.id;
-    }
-  }
+// Before a referred-to object is saved, we keep its instance in our data
+// map, and then assume it will be persisted before we're asked to persist
+// ourselves, at which point we'll resolve it to an id.
+function maybeResolveReferenceToId(value: any) {
+  return value.id || value;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */

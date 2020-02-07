@@ -42,9 +42,30 @@ describe("relationships", () => {
 
   it("can add to collection", async () => {
     const em = new EntityManager(knex);
-    const b1 = new Book(em, { title: "b1" });
-    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1" });
+    const a1 = em.create(Author, { firstName: "a1" });
     a1.books.add(b1);
+    expect(b1.author.get()).toEqual(a1);
+    await em.flush();
+
+    const rows = await knex.select("*").from("books");
+    expect(rows[0].author_id).toEqual(1);
+  });
+
+  it("can add to one collection and remove from other", async () => {
+    // Given a book that has two potential authors
+    const em = new EntityManager(knex);
+    const b1 = em.create(Book, { title: "b1" });
+    const a1 = em.create(Author, { firstName: "a1" });
+    const a2 = em.create(Author, { firstName: "a2" });
+    // When we add it to the 1st
+    a1.books.add(b1);
+    // But then add it to teh 2nd
+    a2.books.add(b1);
+    // Then the book is associated with only the 2nd author
+    expect(b1.author.get()).toEqual(a2);
+    expect(a1.books.get().length).toEqual(0);
+    expect(a2.books.get().length).toEqual(1);
     await em.flush();
 
     const rows = await knex.select("*").from("books");

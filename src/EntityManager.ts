@@ -4,9 +4,10 @@ import { flushEntities } from "./EntityPersister";
 import { getOrSet } from "./utils";
 import { OneToManyCollection } from "./collections/OneToManyCollection";
 import { ColumnSerde, keyToString } from "./serde";
+import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
 
 export interface EntityConstructor<T> {
-  new (em: EntityManager): T;
+  new (em: EntityManager, opts?: Partial<T>): T;
 }
 
 export interface EntityOrmField {
@@ -24,6 +25,18 @@ export interface Entity {
 
 type FilterQuery<T> = any;
 
+/** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
+type MarkLoaded<T extends Entity, P extends keyof T> = T[P] extends Reference<T, infer U>
+  ? LoadedReference<T, U>
+  : T[P] extends Collection<T, infer U>
+  ? LoadedCollection<T, U>
+  : T[P];
+
+/** Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities. */
+export type Loaded<T extends Entity> = {
+  [P in keyof T]: MarkLoaded<T, P>;
+};
+
 export class EntityManager {
   constructor(private knex: Knex) {}
 
@@ -32,6 +45,11 @@ export class EntityManager {
 
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     return this.loaderForEntity(type).load(1);
+  }
+
+  /** Creates a new `type` and marks it as loaded, i.e. we know it's collections are all safe to access in memory. */
+  create<T extends Entity>(type: EntityConstructor<T>, opts?: Partial<T>): Loaded<T> {
+    return new type(this, opts) as Loaded<T>;
   }
 
   async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {

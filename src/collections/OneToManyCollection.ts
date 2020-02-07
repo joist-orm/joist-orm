@@ -1,4 +1,4 @@
-import { Entity, EntityMetadata } from "../EntityManager";
+import { Entity, EntityMetadata, Lazy } from "../EntityManager";
 import { Collection } from "../";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
@@ -11,6 +11,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     otherColumnName: string;
   };
 
+  private loaded: U[] | undefined;
+
   constructor(
     entity: T,
     otherMeta: EntityMetadata,
@@ -21,12 +23,31 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     this.__orm = { entity, otherMeta, fieldName, otherFieldName, otherColumnName };
   }
 
-  load(): Promise<U[]> {
-    return this.__orm.entity.__orm.em.loadCollection(this);
+  async load(): Promise<U[]> {
+    if (this.loaded === undefined) {
+      if (this.__orm.entity.id === undefined) {
+        this.loaded = [];
+      } else {
+        this.loaded = await this.__orm.entity.__orm.em.loadCollection(this);
+      }
+    }
+    return this.loaded;
   }
 
   add(other: U): void {
     const { otherFieldName, entity } = this.__orm;
     (other as any)[otherFieldName].set(entity);
+  }
+
+  get(): U[] {
+    if (this.loaded === undefined) {
+      if (this.__orm.entity.id === undefined) {
+        this.loaded = [];
+      } else {
+        // This should only be callable in the type system if we've already resolved this to an instance
+        throw new Error("get() was called when not preloaded");
+      }
+    }
+    return this.loaded;
   }
 }

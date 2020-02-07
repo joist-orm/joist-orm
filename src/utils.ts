@@ -8,3 +8,7 @@ export function getOrSet<T extends Record<keyof unknown, unknown>>(
   }
   return record[key];
 }
+
+export function fail(message?: string): never {
+  throw new Error(message || "Failed");
+}

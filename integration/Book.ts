@@ -1,9 +1,4 @@
-import {
-  EntityManager,
-  EntityMetadata,
-  EntityOrmField,
-
-} from "../src/EntityManager";
+import { EntityManager, EntityMetadata, EntityOrmField, Loaded } from "../src/EntityManager";
 import { Author } from "./Author";
 import { ManyToOneReference } from "../src/collections/ManyToOneReference";
 import { Reference } from "../src";

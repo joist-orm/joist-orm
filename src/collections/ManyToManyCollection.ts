@@ -1,7 +1,6 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
 import { Collection } from "../index";
-import { Entity, EntityConstructor, LoaderCache } from "../EntityManager";
+import { Entity, EntityConstructor } from "../EntityManager";
 import { getOrSet } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 
@@ -26,20 +25,16 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     // TODO This is basically a reference
     // TODO Unsaved entities should never get here
     const key = `${this.columnName}=${this.entity.id}`;
-    return loaderForJoinTable(em.knex, em.loaders, this).load(key);
+    return loaderForJoinTable(this).load(key);
   }
 
   add(other: U): void {}
 }
 
-function loaderForJoinTable<T extends Entity, U extends Entity>(
-  knex: Knex,
-  loaders: LoaderCache,
-  collection: ManyToManyCollection<T, U>,
-) {
+function loaderForJoinTable<T extends Entity, U extends Entity>(collection: ManyToManyCollection<T, U>) {
   const { joinTableName } = collection;
   const { em } = collection.entity.__orm;
-  return getOrSet(loaders, joinTableName, () => {
+  return getOrSet(em.loaders, joinTableName, () => {
     return new DataLoader<string, Entity[]>(async keys => {
       // Break out `column_id=string` keys out
       const columns: Record<string, string[]> = {};
@@ -49,7 +44,7 @@ function loaderForJoinTable<T extends Entity, U extends Entity>(
       });
 
       // Or together `where tag_id in (...)` and `book_id in (...)`
-      let query = knex.select("*").from(joinTableName);
+      let query = em.knex.select("*").from(joinTableName);
       Object.entries(columns).forEach(([columnId, values]) => {
         query = query.orWhereIn(
           columnId,

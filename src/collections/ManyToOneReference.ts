@@ -27,11 +27,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
 
   get(): U {
     // This should only be callable in the type system if we've already resolved this to an instance
-    const maybeId = this.entity.__orm.data[this.fieldName];
-    if (!("id" in maybeId)) {
-      throw new Error(`${maybeId} should have been an object`);
+    const current = this.current();
+    if (!isEntity(current)) {
+      throw new Error(`${current} should have been an object`);
     }
-    return maybeId as U;
+    return current;
   }
 
   // Internal method used by OneToManyCollection

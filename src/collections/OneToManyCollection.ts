@@ -1,7 +1,9 @@
 import { Entity, EntityMetadata } from "../EntityManager";
 import { Collection } from "../";
-import { remove } from "../utils";
+import { getOrSet, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
+import DataLoader from "dataloader";
+import { keyToString } from "../serde";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
   private loaded: U[] | undefined;
@@ -21,7 +23,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
       if (this.entity.id === undefined) {
         this.loaded = [];
       } else {
-        this.loaded = await this.entity.__orm.em.loadCollection(this);
+        this.loaded = await loaderForCollection(this).load(this.entity.id);
       }
       this.maybeAppendAddedBeforeLoaded();
     }
@@ -69,4 +71,49 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
       this.addedBeforeLoaded = [];
     }
   }
+}
+
+function loaderForCollection<T extends Entity, U extends Entity>(
+  collection: OneToManyCollection<T, U>,
+): DataLoader<string, U[]> {
+  const { em } = collection.entity.__orm;
+  // The metadata for the entity that contains the collection
+  const meta = collection.entity.__orm.metadata;
+  const loaderName = `${meta.tableName}.${collection.fieldName}`;
+  return getOrSet(em.loaders, loaderName, () => {
+    return new DataLoader<string, U[]>(async keys => {
+      const otherMeta = collection.otherMeta;
+
+      const rows = await em.knex
+        .select("*")
+        .from(otherMeta.tableName)
+        .whereIn(collection.otherColumnName, keys as string[])
+        .orderBy("id");
+
+      const rowsById: Record<string, U[]> = {};
+
+      rows.forEach(row => {
+        const id = keyToString(row["id"])!;
+
+        // See if this is already in our UoW
+        let entity = em.findExistingInstance(otherMeta.type, id) as U;
+
+        // If not create it.
+        if (!entity) {
+          entity = (new otherMeta.cstr(em) as any) as U;
+          otherMeta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
+        }
+
+        // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
+        const ownerId = entity.__orm.data[collection.otherFieldName];
+        if (ownerId === undefined) {
+          throw new Error("Could not find ownerId in other entity");
+        }
+
+        getOrSet(rowsById, ownerId, []).push(entity);
+      });
+
+      return keys.map(k => rowsById[k] || []);
+    });
+  });
 }

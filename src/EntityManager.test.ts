@@ -49,6 +49,7 @@ describe("EntityManager", () => {
 
     const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(1);
+    expect(author.id).toEqual("1");
   });
 
   it("inserts then updates new author", async () => {
@@ -83,11 +84,11 @@ describe("EntityManager", () => {
     const author = new Author(em);
     author.firstName = "a1";
     await em.flush();
-    expect(author.id).toEqual(1);
+    expect(author.id).toEqual("1");
 
     author.firstName = "a2";
     await em.flush();
-    expect(author.id).toEqual(1);
+    expect(author.id).toEqual("1");
 
     const row = (await knex.select("*").from("authors"))[0];
     expect(row["first_name"]).toEqual("a2");

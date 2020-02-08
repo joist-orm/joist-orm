@@ -156,5 +156,5 @@ export interface EntityMetadata<T extends Entity> {
 }
 
 export function isEntity(e: any): e is Entity {
-  return e !== undefined && "id" in e && "__orm" in e;
+  return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
 }

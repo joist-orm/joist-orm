@@ -1,5 +1,6 @@
 import { Entity, EntityMetadata } from "./EntityManager";
 import Knex from "knex";
+import { keyToString } from "./serde";
 
 interface Todo {
   metadata: EntityMetadata<any>;
@@ -30,7 +31,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   });
   const ids = await knex.batchInsert(meta.tableName, rows).returning("id");
   for (let i = 0; i < entities.length; i++) {
-    entities[i].__orm.data["id"] = ids[i];
+    entities[i].__orm.data["id"] = keyToString(ids[i]);
     entities[i].__orm.dirty = false;
   }
   console.log("Inserted", ids);
@@ -40,7 +41,9 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const bindings: any[][] = meta.columns.map(() => []);
   for (const entity of entities) {
-    meta.columns.forEach((c, i) => bindings[i].push(c.serde.getFromEntity(entity)));
+    meta.columns.forEach((c, i) => {
+      bindings[i].push(c.serde.getFromEntity(entity.__orm.data));
+    });
   }
   await knex.raw(
     cleanSql(`
@@ -51,7 +54,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
    `),
     bindings,
   );
-  entities.forEach(entity => entity.__orm.dirty = false);
+  entities.forEach(entity => (entity.__orm.dirty = false));
 }
 
 function cleanSql(sql: string): string {

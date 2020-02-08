@@ -39,4 +39,19 @@ describe("ManyToOneReference", () => {
     expect(a2.firstName).toEqual("a2");
     expect(numberOfQueries).toEqual(1);
   });
+
+  it("can save changes to a foreign key", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ first_name: "a2" }).into("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+
+    const em = new EntityManager(knex);
+    const a2 = await em.load(Author, "2");
+    const b1 = await em.load(Book, "1");
+    b1.author.set(a2);
+    await em.flush();
+
+    const rows = await knex.select("*").from("books");
+    expect(rows[0].author_id).toEqual(2);
+  });
 });

@@ -39,12 +39,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
     // If had an existing value, remove us from its collection
     const current = this.current();
     if (isEntity(current)) {
-      const previousOther = current;
-      const previousCollection = (previousOther[this.otherFieldName] as any) as OneToManyCollection<any, U>;
-      previousCollection.removeIfLoaded(previousOther);
+      const previousCollection = (current[this.otherFieldName] as any) as OneToManyCollection<any, T>;
+      previousCollection.removeIfLoaded(this.entity);
     }
-    // TODO need to mark dirty
     this.entity.__orm.data[this.fieldName] = other;
+    this.entity.__orm.dirty = true;
   }
 
   current(): undefined | number | U {

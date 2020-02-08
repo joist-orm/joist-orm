@@ -7,7 +7,7 @@ import { keyToNumber, keyToString } from "../serde";
 export class ManyToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
   constructor(
     public joinTableName: string,
-    // I.e. with entity = Book:
+    // I.e. when entity = Book:
     // fieldName == tags, because it's our collection to tags
     // columnName = book_id, what we use as the `where book_id = us` to find our join table rows
     // otherFieldName = books, how tags points to us
@@ -21,7 +21,6 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
   ) {}
 
   async load(): Promise<ReadonlyArray<U>> {
-    const em = this.entity.__orm.em;
     // TODO This is basically a reference
     // TODO Unsaved entities should never get here
     const key = `${this.columnName}=${this.entity.id}`;
@@ -30,6 +29,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
 
   add(other: U): void {}
 }
+
+type JoinRow = { id: number; created_at: Date } & { [column: string]: number | Entity };
 
 function loaderForJoinTable<T extends Entity, U extends Entity>(collection: ManyToManyCollection<T, U>) {
   const { joinTableName } = collection;
@@ -58,22 +59,21 @@ function loaderForJoinTable<T extends Entity, U extends Entity>(collection: Many
       const rowsByKey: Record<string, JoinRow[]> = {};
 
       // Each join table row might have some promises to load the other entity. Eventually
-      // We should just pull the other side in via the ^ query.
+      // we should just pull the other side in via the ^ query (even if some of the rows
+      // might already be in our UoW).
       const p = rows.map(async row => {
         // For this join table row, resolve the entities both of foreign keys. For now
-        // we're using the EntityManager.load to do this in batch for this, but eventually
-        // we should pull those into the row itself.
+        // we're using the EntityManager.load to do this for this (in batch so it is N+1 safe),
+        // but eventually we should pull those into the row itself.
         const p = Object.entries(row).map(async entry => {
           const [column, value] = entry;
           if (column === "id" || column === "created_at") {
             return;
           }
 
-          // We'll do this twice per join table row, but in batch.
           const cstr = (column === collection.columnName
             ? collection.entity.__orm.metadata.cstr
             : collection.otherType) as EntityConstructor<any>;
-
           row[column] = await em.load(cstr, keyToString(value)!);
 
           // Put this row into the map for both join table columns, i.e. `book_id=2` and `tag_id=3`
@@ -84,6 +84,7 @@ function loaderForJoinTable<T extends Entity, U extends Entity>(collection: Many
       });
       await Promise.all(p);
 
+      // Map the requested keys, i.e. book_id=2 back to "the tags for book 2".
       return keys.map(key => {
         const [column] = key.split("=");
         const joinRows = rowsByKey[key] || [];
@@ -93,5 +94,3 @@ function loaderForJoinTable<T extends Entity, U extends Entity>(collection: Many
     });
   });
 }
-
-type JoinRow = { id: number; created_at: Date } & { [column: string]: number | Entity };

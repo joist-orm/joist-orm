@@ -108,4 +108,24 @@ describe("relationships", () => {
     const rows = await knex.select("*").from("books");
     expect(rows[0].author_id).toEqual(keyToNumber(a2_2.id));
   });
+
+  it("combines both pre-loaded and post-loaded entities", async () => {
+    // Given an author with one book
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    // And we load the author
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+
+    // When we give the author a new book
+    const b2 = em.create(Book, { title: "b2" });
+    a1.books.add(b2);
+    // And load the books collection
+    const books = await a1.books.load();
+
+    // Then the collection has both books in it
+    expect(books.length).toEqual(2);
+    expect(books[0].id).toEqual(undefined);
+    expect(books[1].id).toEqual("1");
+  });
 });

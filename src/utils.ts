@@ -19,3 +19,7 @@ export function remove<T>(array: T[], t: T): void {
     array.splice(index, 1);
   }
 }
+
+export function zeroTo(n: number): number[] {
+  return [...Array(n).keys()];
+}

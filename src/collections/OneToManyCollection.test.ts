@@ -4,7 +4,7 @@ import { Book } from "../../integration/Book";
 import { Author } from "../../integration/Author";
 import { keyToNumber, keyToString } from "../serde";
 
-describe("relationships", () => {
+describe("OneToManyCollection", () => {
   it("loads collections", async () => {
     await knex.insert({ first_name: "a1" }).into("authors");
     await knex.insert({ title: "t1", author_id: 1 }).into("books");

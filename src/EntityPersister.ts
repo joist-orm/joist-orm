@@ -39,6 +39,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 
 // Uses a pg-specific syntax to issue a bulk update
 async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  // This currently assumes a 1-to-1 field-to-column mapping.
   const bindings: any[][] = meta.columns.map(() => []);
   for (const entity of entities) {
     meta.columns.forEach((c, i) => {
@@ -60,11 +61,17 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 function cleanSql(sql: string): string {
   return sql
     .trim()
-    .replace("\n", "")
-    .replace(/  +/, " ");
+    .replace(/\n/g, "")
+    .replace(/  +/g, " ");
 }
 
-/** Scans `entities` for new/updated entities and arranges them per-entity in entity order. */
+/**
+ * Scans `entities` for new/updated entities and arranges them per-type in entity order.
+ *
+ * This currently assumes the entity types in the schema can be topographically sorted
+ * and have no cycles, i.e. `books` always depend on `authors` (due to the `books.author_id`
+ * foreign key), but `authors` never (via a required foreign key) depend on `books`.
+ */
 function sortEntities(entities: Entity[]): Todo[] {
   const todos: Todo[] = [];
   for (const entity of entities) {

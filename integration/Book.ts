@@ -1,12 +1,23 @@
-import { EntityManager, EntityMetadata, EntityOrmField, Loaded } from "../src/EntityManager";
-import { Author } from "./Author";
+import { EntityManager, EntityMetadata, EntityOrmField } from "../src/EntityManager";
 import { ManyToOneReference } from "../src/collections/ManyToOneReference";
-import { Reference } from "../src";
+import { ManyToManyCollection } from "../src/collections/ManyToManyCollection";
+import { Collection, Reference } from "../src";
 import { ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "../src/serde";
+import { Author } from "./Author";
+import { Tag } from "./Tag";
 
 export class Book {
   readonly __orm: EntityOrmField;
   readonly author: Reference<Book, Author> = new ManyToOneReference(this, Author, "author", "books");
+  readonly tags: Collection<Book, Tag> = new ManyToManyCollection(
+    "books_to_tags",
+    this,
+    "tags",
+    "book_id",
+    Tag,
+    "books",
+    "tag_id",
+  );
 
   constructor(em: EntityManager, opts?: Partial<{ title: string }>) {
     this.__orm = { metadata: bookMeta, data: {} as Record<any, any>, em };

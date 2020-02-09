@@ -33,7 +33,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     return this.loaded as ReadonlyArray<U>;
   }
 
-  add(other: U): void {
+  add(other: U, percolated = false): void {
     if (this.loaded !== undefined) {
       if (this.loaded.includes(other)) {
         return;
@@ -46,10 +46,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
       this.addedBeforeLoaded.push(other);
     }
 
-    const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
-    getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []).push(joinRow);
-
-    ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity);
+    if (!percolated) {
+      const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
+      getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []).push(joinRow);
+      ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity, true);
+    }
   }
 
   get(): U[] {

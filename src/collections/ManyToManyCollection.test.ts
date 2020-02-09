@@ -109,5 +109,9 @@ describe("ManyToManyCollection", () => {
     book.author.set(author);
     book.tags.add(tag);
     expect(tag.books.get()).toContain(book);
+
+    await em.flush();
+
+    expect((await knex.count().from("books_to_tags"))[0]).toEqual({ count: "1" });
   });
 });

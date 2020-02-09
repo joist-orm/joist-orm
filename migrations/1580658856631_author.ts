@@ -23,4 +23,5 @@ export function up(b: MigrationBuilder): void {
     tag_id: { type: "integer", references: "tags", notNull: true },
     created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
   });
+  b.createIndex("books_to_tags", ["book_id", "tag_id"], { unique: true });
 }

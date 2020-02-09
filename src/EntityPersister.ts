@@ -35,7 +35,6 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     entities[i].__orm.data["id"] = keyToString(ids[i]);
     entities[i].__orm.dirty = false;
   }
-  console.log("Inserted", ids);
 }
 
 // Uses a pg-specific syntax to issue a bulk update

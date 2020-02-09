@@ -1,6 +1,6 @@
 import { EntityManager } from "./EntityManager";
 import { Author } from "../integration/Author";
-import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import { knex } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can find all authors", async () => {
@@ -9,5 +9,7 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const authors = await em.find(Author, {});
     expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
   });
 });

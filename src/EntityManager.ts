@@ -58,7 +58,7 @@ export class EntityManager {
       .from(meta.tableName)
       .orderBy("id");
 
-    return this.loaderForEntity(type).load("1");
+    return rows.map(row => this.hydrateOrLookup(meta, row));
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */

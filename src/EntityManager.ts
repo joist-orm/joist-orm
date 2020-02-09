@@ -5,6 +5,7 @@ import { fail, getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
+import { buildQuery } from "./QueryBuilder";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts?: Partial<T>): T;
@@ -24,7 +25,7 @@ export interface Entity {
   __orm: EntityOrmField;
 }
 
-type FilterQuery<T extends Entity> = {
+export type FilterQuery<T extends Entity> = {
   [P in keyof T]?: T[P];
 };
 
@@ -54,18 +55,7 @@ export class EntityManager {
 
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     const meta = getMetadata(type);
-
-    let query = this.knex({ t: meta.tableName })
-      .select("t.*")
-      .orderBy("t.id");
-
-    Object.entries(where).forEach(([key, value]) => {
-      const column = meta.columns.find(c => c.fieldName === key) || fail();
-      query = query.where(column.columnName, value);
-    });
-
-    const rows = await query;
-
+    const rows = await buildQuery(this.knex, type, where);
     return rows.map(row => this.hydrateOrLookup(meta, row));
   }
 

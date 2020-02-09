@@ -1,6 +1,6 @@
 import { Entity, EntityMetadata } from "../EntityManager";
 import { Collection } from "../";
-import { getOrSet, remove } from "../utils";
+import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
 import DataLoader from "dataloader";
 import { keyToString } from "../serde";
@@ -94,30 +94,26 @@ function loaderForCollection<T extends Entity, U extends Entity>(
         .whereIn(collection.otherColumnName, keys as string[])
         .orderBy("id");
 
-      const rowsById: Record<string, U[]> = {};
-
-      rows.forEach(row => {
+      const entities = rows.map(row => {
         const id = keyToString(row["id"])!;
-
         // See if this is already in our UoW
         let entity = em.findExistingInstance(otherMeta.type, id) as U;
-
-        // If not create it.
         if (!entity) {
           entity = (new otherMeta.cstr(em) as any) as U;
           otherMeta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
         }
+        return entity;
+      });
 
+      const rowsById = groupBy(entities, entity => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
         const ownerId = entity.__orm.data[collection.otherFieldName];
         if (ownerId === undefined) {
           throw new Error("Could not find ownerId in other entity");
         }
-
-        getOrSet(rowsById, ownerId, []).push(entity);
+        return ownerId;
       });
-
-      return keys.map(k => rowsById[k] || []);
+      return keys.map(k => rowsById.get(k) || []);
     });
   });
 }

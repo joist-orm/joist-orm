@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
-import Knex, { JoinRaw } from "knex";
+import Knex from "knex";
 import { flushEntities, flushJoinTables } from "./EntityPersister";
-import { getOrSet } from "./utils";
+import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
@@ -10,6 +10,7 @@ export interface EntityConstructor<T> {
   new (em: EntityManager, opts?: Partial<T>): T;
 }
 
+/** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
   metadata: EntityMetadata<Entity>;
   data: Record<any, any>;
@@ -53,11 +54,12 @@ export class EntityManager {
     return this.loaderForEntity(type).load(1);
   }
 
-  /** Creates a new `type` and marks it as loaded, i.e. we know it's collections are all safe to access in memory. */
+  /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   create<T extends Entity>(type: EntityConstructor<T>, opts?: Partial<T>): Loaded<T> {
     return new type(this, opts) as Loaded<T>;
   }
 
+  /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
   async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
@@ -92,13 +94,15 @@ export class EntityManager {
           .from(meta.tableName)
           .whereIn("id", keys as string[]);
 
-        const rowsById = new Map<string, T>();
-        rows.forEach(row => {
+        const entities = rows.map(row => {
+          // It's safe to make entities here b/c we're only called by `EntityManager.load`
+          // which checks for existing instances of this id in our Unit of Work.
           const entity = (new meta.cstr(this) as any) as T;
           meta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
-          rowsById.set(entity.id!, entity);
+          return entity;
         });
 
+        const rowsById = indexBy(entities, e => e.id!);
         return keys.map(k => rowsById.get(k) || new Error(`${type.name}#${k} not found`));
       });
     });

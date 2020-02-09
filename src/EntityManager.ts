@@ -51,7 +51,7 @@ export class EntityManager {
   joinRows: Record<string, JoinRow[]> = {};
 
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
-    const meta = (type as any).metadata as EntityMetadata<T>;
+    const meta = getMetadata(type);
 
     const rows = await this.knex
       .select("*")
@@ -71,7 +71,7 @@ export class EntityManager {
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
     }
-    return this.findExistingInstance((type as any).metadata.type, id) || this.loaderForEntity(type).load(id);
+    return this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id);
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
@@ -94,7 +94,7 @@ export class EntityManager {
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
     return getOrSet(this.loaders, type.name, () => {
       return new DataLoader<string, T>(async keys => {
-        const meta = (type as any).metadata as EntityMetadata<T>;
+        const meta = getMetadata(type);
 
         const rows = await this.knex
           .select("*")
@@ -102,9 +102,8 @@ export class EntityManager {
           .whereIn("id", keys as string[]);
 
         const entities = rows.map(row => this.hydrateOrLookup(meta, row));
-
-        const rowsById = indexBy(entities, e => e.id!);
-        return keys.map(k => rowsById.get(k) || new Error(`${type.name}#${k} not found`));
+        const entitiesById = indexBy(entities, e => e.id!);
+        return keys.map(k => entitiesById.get(k) || new Error(`${type.name}#${k} not found`));
       });
     });
   }
@@ -139,4 +138,8 @@ export interface EntityMetadata<T extends Entity> {
 
 export function isEntity(e: any): e is Entity {
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
+}
+
+export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T> {
+  return (type as any).metadata as EntityMetadata<T>;
 }

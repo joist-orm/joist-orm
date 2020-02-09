@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities, flushJoinTables } from "./EntityPersister";
-import { getOrSet, indexBy } from "./utils";
+import { fail, getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
@@ -24,7 +24,9 @@ export interface Entity {
   __orm: EntityOrmField;
 }
 
-type FilterQuery<T> = any;
+type FilterQuery<T extends Entity> = {
+  [P in keyof T]?: T[P];
+};
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
 type MarkLoaded<T extends Entity, P extends keyof T> = T[P] extends Reference<T, infer U>
@@ -53,10 +55,16 @@ export class EntityManager {
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     const meta = getMetadata(type);
 
-    const rows = await this.knex
-      .select("*")
-      .from(meta.tableName)
-      .orderBy("id");
+    let query = this.knex({ t: meta.tableName })
+      .select("t.*")
+      .orderBy("t.id");
+
+    Object.entries(where).forEach(([key, value]) => {
+      const column = meta.columns.find(c => c.fieldName === key) || fail();
+      query = query.where(column.columnName, value);
+    });
+
+    const rows = await query;
 
     return rows.map(row => this.hydrateOrLookup(meta, row));
   }

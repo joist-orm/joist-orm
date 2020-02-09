@@ -1,3 +1,5 @@
+import { EntityMetadata } from "./EntityManager";
+
 export interface ColumnSerde {
   setOnEntity(data: any, row: any): void;
 
@@ -40,7 +42,8 @@ export class PrimaryKeySerde implements ColumnSerde {
 }
 
 export class ForeignKeySerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
+  // TODO EntityMetadata being in here is weird.
+  constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(row[this.columnName]);

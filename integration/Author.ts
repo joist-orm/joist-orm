@@ -36,7 +36,7 @@ export class Author implements Entity {
 }
 
 // TODO Codegen
-const authorMeta: EntityMetadata<Author> = {
+export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
   tableName: "authors",

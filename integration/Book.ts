@@ -3,7 +3,7 @@ import { ManyToOneReference } from "../src/collections/ManyToOneReference";
 import { ManyToManyCollection } from "../src/collections/ManyToManyCollection";
 import { Collection, Reference } from "../src";
 import { ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "../src/serde";
-import { Author } from "./Author";
+import { Author, authorMeta } from "./Author";
 import { Tag } from "./Tag";
 
 export class Book {
@@ -58,7 +58,7 @@ export const bookMeta: EntityMetadata<Book> = {
       fieldName: "author",
       columnName: "author_id",
       dbType: "int",
-      serde: new ForeignKeySerde("author", "author_id"),
+      serde: new ForeignKeySerde("author", "author_id", () => authorMeta),
     },
   ],
   order: 2,

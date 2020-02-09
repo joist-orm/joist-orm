@@ -1,6 +1,6 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
-import { Entity, EntityConstructor, FilterQuery, getMetadata } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, FilterQuery, getMetadata } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
 
 /**
@@ -17,23 +17,42 @@ export function buildQuery<T extends Entity>(
 ): QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
 
+  const aliases: Record<string, number> = {};
+  function getAlias(tableName: string): string {
+    const i = aliases["t"] || 0;
+    aliases["t"] = i + 1;
+    // TODO change some_table_name --> stn
+    return `t${i}`;
+  }
+
+  const alias = getAlias(meta.tableName);
   let query: QueryBuilder<any, any> = knex
-    .select<unknown>("t.*")
-    .from("books AS t")
-    .orderBy("t.id");
+    .select<unknown>(`${alias}.*`)
+    .from(`${meta.tableName} AS ${alias}`)
+    .orderBy(`${alias}.id`);
 
-  query = query.innerJoin("authors AS a", "t.author_id", "a.id");
-  query = query.where("a.first_name", "=", "a2");
+  // Define a function for recursively adding joins & filters
+  function addClauses(meta: EntityMetadata<any>, alias: string, where: FilterQuery<any>): void {
+    Object.entries(where).forEach(([key, value]) => {
+      const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
+      if (column.serde instanceof ForeignKeySerde) {
+        // Add a join for this column
+        const otherMeta = column.serde.otherMeta();
+        const otherAlias = getAlias(otherMeta.tableName);
+        query = query.innerJoin(
+          `${otherMeta.tableName} AS ${otherAlias}`,
+          `${alias}.${column.columnName}`,
+          `${otherAlias}.id`,
+        );
+        // Then recurse to add its conditions to the query
+        addClauses(otherMeta, otherAlias, (where as any)[key]);
+      } else {
+        query = query.where(column.columnName, value);
+      }
+    });
+  }
 
-  // Object.entries(where).forEach(([key, value]) => {
-  //   const column = meta.columns.find(c => c.fieldName === key) || fail();
-  //   if (column.serde instanceof ForeignKeySerde) {
-  //     const subQuery = (where as any)[key];
-  //     query = buildQuery<T>(knex, type, subQuery) as any;
-  //   } else {
-  //     query = query.where(column.columnName, value);
-  //   }
-  // });
+  addClauses(meta, alias, where);
 
   return query as QueryBuilder<{}, unknown[]>;
 }

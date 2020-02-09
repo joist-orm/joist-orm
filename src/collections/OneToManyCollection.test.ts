@@ -109,6 +109,14 @@ describe("OneToManyCollection", () => {
     expect(rows[0].author_id).toEqual(keyToNumber(a2_2.id));
   });
 
+  it("can add to collection from the other side", async () => {
+    const em = new EntityManager(knex);
+    const b1 = em.create(Book, { title: "b1" });
+    const a1 = em.create(Author, { firstName: "a1" });
+    b1.author.set(a1);
+    expect(a1.books.get()).toContain(b1);
+  });
+
   it("combines both pre-loaded and post-loaded entities", async () => {
     // Given an author with one book
     await knex.insert({ first_name: "a1" }).into("authors");

@@ -32,9 +32,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
 
   add(other: U): void {
     if (this.loaded === undefined) {
-      this.addedBeforeLoaded.push(other);
+      if (!this.addedBeforeLoaded.includes(other)) {
+        this.addedBeforeLoaded.push(other);
+      }
     } else {
-      this.loaded.push(other);
+      if (!this.loaded.includes(other)) {
+        this.loaded.push(other);
+      }
     }
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T>).set(this.entity);
   }

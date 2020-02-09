@@ -38,12 +38,20 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
   setImpl(other: U): void {
     // If had an existing value, remove us from its collection
     const current = this.current();
+    if (other === current) {
+      return;
+    }
+
     if (isEntity(current)) {
-      const previousCollection = (current[this.otherFieldName] as any) as OneToManyCollection<any, T>;
+      const previousCollection = (current[this.otherFieldName] as any) as OneToManyCollection<U, T>;
       previousCollection.removeIfLoaded(this.entity);
     }
+
     this.entity.__orm.data[this.fieldName] = other;
     this.entity.__orm.dirty = true;
+
+    const newCollection = (other[this.otherFieldName] as any) as OneToManyCollection<U, T>;
+    newCollection.add(this.entity);
   }
 
   current(): undefined | number | U {

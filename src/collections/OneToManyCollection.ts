@@ -50,8 +50,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
   get(): U[] {
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
-        this.loaded = [];
-        this.maybeAppendAddedBeforeLoaded();
+        return this.addedBeforeLoaded;
       } else {
         // This should only be callable in the type system if we've already resolved this to an instance
         throw new Error("get() was called when not preloaded");

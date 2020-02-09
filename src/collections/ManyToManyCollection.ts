@@ -49,7 +49,19 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
     getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []).push(joinRow);
 
-    // TODO Add to other side
+    ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity);
+  }
+
+  get(): U[] {
+    if (this.loaded === undefined) {
+      if (this.entity.id === undefined) {
+        return this.addedBeforeLoaded;
+      } else {
+        // This should only be callable in the type system if we've already resolved this to an instance
+        throw new Error("get() was called when not preloaded");
+      }
+    }
+    return this.loaded;
   }
 }
 

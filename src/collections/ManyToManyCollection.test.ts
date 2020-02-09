@@ -3,6 +3,7 @@ import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Book } from "../../integration/Book";
 import { zeroTo } from "../utils";
 import { Tag } from "../../integration/Tag";
+import { Author } from "../../integration/Author";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {
@@ -97,5 +98,16 @@ describe("ManyToManyCollection", () => {
 
     const rows = await knex.select("*").from("books_to_tags");
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
+  });
+
+  it("can add a new tag to a new book", async () => {
+    const em = new EntityManager(knex);
+    const author = em.create(Author, { firstName: "a1" });
+    const book = em.create(Book, { title: "b1" });
+    const tag = em.create(Tag, { name: "t3" });
+
+    book.author.set(author);
+    book.tags.add(tag);
+    expect(tag.books.get()).toContain(book);
   });
 });

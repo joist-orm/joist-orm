@@ -2,7 +2,7 @@ import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities, flushJoinTables } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
-import { ColumnSerde } from "./serde";
+import { ColumnSerde, keyToString } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 
@@ -51,7 +51,14 @@ export class EntityManager {
   joinRows: Record<string, JoinRow[]> = {};
 
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
-    return this.loaderForEntity(type).load(1);
+    const meta = (type as any).metadata as EntityMetadata<T>;
+
+    const rows = await this.knex
+      .select("*")
+      .from(meta.tableName)
+      .orderBy("id");
+
+    return this.loaderForEntity(type).load("1");
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
@@ -94,13 +101,7 @@ export class EntityManager {
           .from(meta.tableName)
           .whereIn("id", keys as string[]);
 
-        const entities = rows.map(row => {
-          // It's safe to make entities here b/c we're only called by `EntityManager.load`
-          // which checks for existing instances of this id in our Unit of Work.
-          const entity = (new meta.cstr(this) as any) as T;
-          meta.columns.forEach(c => c.serde.setOnEntity(entity.__orm.data, row));
-          return entity;
-        });
+        const entities = rows.map(row => this.hydrateOrLookup(meta, row));
 
         const rowsById = indexBy(entities, e => e.id!);
         return keys.map(k => rowsById.get(k) || new Error(`${type.name}#${k} not found`));
@@ -112,6 +113,18 @@ export class EntityManager {
   // TODO Hide private impl
   public findExistingInstance(type: string, id: string): Entity | undefined {
     return this.entities.find(e => e.__orm.metadata.type === type && e.id === id);
+  }
+
+  // TOOD Hide private
+  public hydrateOrLookup<T extends Entity>(meta: EntityMetadata<T>, row: any): T {
+    const id = keyToString(row["id"])!;
+    // See if this is already in our UoW
+    let entity = this.findExistingInstance(meta.type, id) as T;
+    if (!entity) {
+      entity = (new meta.cstr(this) as any) as T;
+      meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
+    }
+    return entity;
   }
 }
 

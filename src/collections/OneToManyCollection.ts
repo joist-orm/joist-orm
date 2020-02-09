@@ -1,8 +1,8 @@
+import DataLoader from "dataloader";
 import { Entity, EntityMetadata } from "../EntityManager";
 import { Collection } from "../";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
-import DataLoader from "dataloader";
 import { keyToString } from "../serde";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
@@ -94,16 +94,7 @@ function loaderForCollection<T extends Entity, U extends Entity>(
         .whereIn(collection.otherColumnName, keys as string[])
         .orderBy("id");
 
-      const entities = rows.map(row => {
-        const id = keyToString(row["id"])!;
-        // See if this is already in our UoW
-        let entity = em.findExistingInstance(otherMeta.type, id) as U;
-        if (!entity) {
-          entity = (new otherMeta.cstr(em) as any) as U;
-          otherMeta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
-        }
-        return entity;
-      });
+      const entities = rows.map(row => em.hydrateOrLookup(otherMeta, row));
 
       const rowsById = groupBy(entities, entity => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.

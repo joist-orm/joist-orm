@@ -1,12 +1,15 @@
 import { Entity, EntityManager, EntityMetadata, EntityOrmField } from "../src/EntityManager";
 import { Book, bookMeta } from "./Book";
-import { PrimaryKeySerde, SimpleSerde } from "../src/serde";
-import { Collection } from "../src";
+import { ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "../src/serde";
+import { Collection, Reference } from "../src";
 import { OneToManyCollection } from "../src/collections/OneToManyCollection";
+import { ManyToOneReference } from "../src/collections/ManyToOneReference";
+import { Publisher, publisherMeta } from "./Publisher";
 
 export class Author implements Entity {
   readonly __orm: EntityOrmField;
   readonly books: Collection<Author, Book> = new OneToManyCollection(this, bookMeta, "books", "author", "author_id");
+  readonly publisher: Reference<Author, Publisher> = new ManyToOneReference(this, Publisher, "publisher", "authors");
 
   constructor(em: EntityManager, opts?: Partial<{ firstName: string }>) {
     this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };
@@ -47,6 +50,12 @@ export const authorMeta: EntityMetadata<Author> = {
       columnName: "first_name",
       dbType: "varchar",
       serde: new SimpleSerde("firstName", "first_name"),
+    },
+    {
+      fieldName: "publisher",
+      columnName: "publisher_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
     },
   ],
   order: 1,

@@ -36,4 +36,18 @@ describe("EntityManager", () => {
     expect(books[0].title).toEqual("b2");
     expect(books[1].title).toEqual("b3");
   });
+
+  it("can find books by publisher name", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+    await knex.insert({ name: "p2" }).from("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
+    await knex.insert({ first_name: "a2", publisher_id: 2 }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await knex.insert({ title: "b2", author_id: 2 }).from("books");
+
+    const em = new EntityManager(knex);
+    const books = await em.find(Book, { author: { publisher: { name: "p2" } } });
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+  });
 });

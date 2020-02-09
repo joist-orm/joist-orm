@@ -4,8 +4,13 @@ import { createEntityTable, createUpdatedAtFunction } from "./utils";
 export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);
 
+  createEntityTable(b, "publishers", {
+    name: { type: "varchar(255)", notNull: true },
+  });
+
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
+    publisher_id: { type: "integer", references: "publishers" }, // keep nullable for existing test data
   });
 
   createEntityTable(b, "books", {

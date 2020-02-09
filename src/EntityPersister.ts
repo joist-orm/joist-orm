@@ -1,6 +1,7 @@
 import { Entity, EntityMetadata } from "./EntityManager";
 import Knex from "knex";
-import { keyToString } from "./serde";
+import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
+import { JoinRow } from "./collections/ManyToManyCollection";
 
 interface Todo {
   metadata: EntityMetadata<any>;
@@ -92,4 +93,26 @@ function sortEntities(entities: Entity[]): Todo[] {
     }
   }
   return todos;
+}
+
+export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinRow[]>): Promise<void> {
+  for await (const [joinTableName, rows] of Object.entries(joinRows)) {
+    const newRows = rows.filter(r => r.id === undefined);
+    const ids = await knex
+      .batchInsert(
+        joinTableName,
+        newRows.map(row => {
+          // The rows in EntityManager.joinRows point to entities, change those to ints
+          const { id, created_at, ...fkColumns } = row;
+          Object.keys(fkColumns).forEach(key => {
+            fkColumns[key] = keyToNumber(maybeResolveReferenceToId(fkColumns[key]));
+          });
+          return fkColumns;
+        }),
+      )
+      .returning("id");
+    for (let i = 0; i < ids.length; i++) {
+      newRows[i].id = ids[i];
+    }
+  }
 }

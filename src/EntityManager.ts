@@ -1,9 +1,10 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
-import { flushEntities } from "./EntityPersister";
+import Knex, { JoinRaw } from "knex";
+import { flushEntities, flushJoinTables } from "./EntityPersister";
 import { getOrSet } from "./utils";
 import { ColumnSerde } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
+import { JoinRow } from "./collections/ManyToManyCollection";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts?: Partial<T>): T;
@@ -42,9 +43,11 @@ export class EntityManager {
   /// TODO Hide impl
   constructor(public knex: Knex) {}
 
-  // Make private
+  // TODO make private
   loaders: LoaderCache = {};
   private entities: Entity[] = [];
+  // TODO make private
+  joinRows: Record<string, JoinRow[]> = {};
 
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     return this.loaderForEntity(type).load(1);
@@ -76,6 +79,7 @@ export class EntityManager {
 
   async flush(): Promise<void> {
     await flushEntities(this.knex, this.entities);
+    await flushJoinTables(this.knex, this.joinRows);
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {

@@ -58,7 +58,7 @@ export class ForeignKeySerde implements ColumnSerde {
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
 // ourselves, at which point we'll resolve it to an id.
-function maybeResolveReferenceToId(value: any) {
+export function maybeResolveReferenceToId(value: any) {
   return value.id || value;
 }
 

@@ -40,6 +40,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
         this.loaded.push(other);
       }
     }
+    // This will no-op and mark other dirty if necessary
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T>).set(this.entity);
   }
 

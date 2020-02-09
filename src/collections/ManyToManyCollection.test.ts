@@ -66,4 +66,36 @@ describe("ManyToManyCollection", () => {
     // 1 query to the join table, 1 query to the tags table (for t2-5), and 1 query to the books table (for b2-3)
     expect(numberOfQueries).toEqual(3);
   });
+
+  it("can add a new tag to a book", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: `t1` }).into("tags");
+
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "2");
+    const tag = await em.load(Tag, "3");
+
+    book.tags.add(tag);
+    await em.flush();
+
+    const rows = await knex.select("*").from("books_to_tags");
+    expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
+  });
+
+  it("can add a new book to a tag", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: `t1` }).into("tags");
+
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "2");
+    const tag = await em.load(Tag, "3");
+
+    tag.books.add(book);
+    await em.flush();
+
+    const rows = await knex.select("*").from("books_to_tags");
+    expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
+  });
 });

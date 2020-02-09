@@ -5,6 +5,9 @@ import { getOrSet } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 
 export class ManyToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
+  private loaded: U[] | undefined;
+  private addedBeforeLoaded: U[] = [];
+
   constructor(
     public joinTableName: string,
     // I.e. when entity = Book:
@@ -21,16 +24,40 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
   ) {}
 
   async load(): Promise<ReadonlyArray<U>> {
-    // TODO This is basically a reference
-    // TODO Unsaved entities should never get here
-    const key = `${this.columnName}=${this.entity.id}`;
-    return loaderForJoinTable(this).load(key);
+    if (this.loaded === undefined) {
+      // TODO This is basically a reference
+      // TODO Unsaved entities should never get here
+      const key = `${this.columnName}=${this.entity.id}`;
+      this.loaded = await loaderForJoinTable(this).load(key);
+    }
+    return this.loaded as ReadonlyArray<U>;
   }
 
-  add(other: U): void {}
+  add(other: U): void {
+    if (this.loaded !== undefined) {
+      if (this.loaded.includes(other)) {
+        return;
+      }
+      this.loaded.push(other);
+    } else {
+      if (this.addedBeforeLoaded.includes(other)) {
+        return;
+      }
+      this.addedBeforeLoaded.push(other);
+    }
+
+    const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
+    getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []).push(joinRow);
+
+    // TODO Add to other side
+  }
 }
 
-type JoinRow = { id: number; created_at: Date } & { [column: string]: number | Entity };
+export type JoinRow = {
+  id: number | undefined;
+  created_at?: Date;
+  [column: string]: number | Entity | undefined | Date;
+};
 
 function loaderForJoinTable<T extends Entity, U extends Entity>(collection: ManyToManyCollection<T, U>) {
   const { joinTableName } = collection;
@@ -73,6 +100,9 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   // we should just pull the other side in via the ^ query (even if some of the rows
   // might already be in our UoW).
   const p = rows.map(async row => {
+    // Keep a reference to our row to track updates/deletes
+    getOrSet(em.joinRows, joinTableName, []).push(row);
+
     // For this join table row, resolve the entities both of foreign keys. For now
     // we're using the EntityManager.load to do this for this (in batch so it is N+1 safe),
     // but eventually we should pull those into the row itself.

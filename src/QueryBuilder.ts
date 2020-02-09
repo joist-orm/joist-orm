@@ -1,6 +1,7 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
 import { Entity, EntityConstructor, FilterQuery, getMetadata } from "./EntityManager";
+import { ForeignKeySerde } from "./serde";
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -16,14 +17,23 @@ export function buildQuery<T extends Entity>(
 ): QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
 
-  let query = knex({ t: meta.tableName })
-    .select("t.*")
+  let query: QueryBuilder<any, any> = knex
+    .select<unknown>("t.*")
+    .from("books AS t")
     .orderBy("t.id");
 
-  Object.entries(where).forEach(([key, value]) => {
-    const column = meta.columns.find(c => c.fieldName === key) || fail();
-    query = query.where(column.columnName, value);
-  });
+  query = query.innerJoin("authors AS a", "t.author_id", "a.id");
+  query = query.where("a.first_name", "=", "a2");
+
+  // Object.entries(where).forEach(([key, value]) => {
+  //   const column = meta.columns.find(c => c.fieldName === key) || fail();
+  //   if (column.serde instanceof ForeignKeySerde) {
+  //     const subQuery = (where as any)[key];
+  //     query = buildQuery<T>(knex, type, subQuery) as any;
+  //   } else {
+  //     query = query.where(column.columnName, value);
+  //   }
+  // });
 
   return query as QueryBuilder<{}, unknown[]>;
 }

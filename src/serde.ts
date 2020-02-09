@@ -62,7 +62,7 @@ export class ForeignKeySerde implements ColumnSerde {
 // map, and then assume it will be persisted before we're asked to persist
 // ourselves, at which point we'll resolve it to an id.
 export function maybeResolveReferenceToId(value: any) {
-  return value.id || value;
+  return value?.id || value;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */

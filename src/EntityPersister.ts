@@ -43,7 +43,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   const bindings: any[][] = meta.columns.map(() => []);
   for (const entity of entities) {
     meta.columns.forEach((c, i) => {
-      bindings[i].push(c.serde.getFromEntity(entity.__orm.data));
+      bindings[i].push(c.serde.getFromEntity(entity.__orm.data) || null);
     });
   }
   await knex.raw(

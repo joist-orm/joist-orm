@@ -16,6 +16,7 @@ beforeAll(async () => {
       database: "joist",
     },
     debug: false,
+    asyncStackTraces: true,
   }).on("query", () => {
     numberOfQueries++;
   });

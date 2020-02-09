@@ -5,16 +5,16 @@ export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);
 
   createEntityTable(b, "authors", {
-    first_name: "varchar(255)",
+    first_name: { type: "varchar(255)", notNull: true },
   });
 
   createEntityTable(b, "books", {
-    title: "varchar(255)",
+    title: { type: "varchar(255)", notNull: true },
     author_id: { type: "integer", references: "authors", notNull: true },
   });
 
   createEntityTable(b, "tags", {
-    name: "varchar(255)",
+    name: { type: "varchar(255)", notNull: true },
   });
 
   b.createTable("books_to_tags", {

@@ -28,7 +28,7 @@ export class Book {
   }
 
   // TODO Codegen
-  get id(): string {
+  get id(): string | undefined {
     return this.__orm.data["id"];
   }
 

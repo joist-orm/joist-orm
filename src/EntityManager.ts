@@ -55,7 +55,8 @@ export class EntityManager {
 
   async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     const meta = getMetadata(type);
-    const rows = await buildQuery(this.knex, type, where);
+    const query = buildQuery(this.knex, type, where);
+    const rows = await query;
     return rows.map(row => this.hydrateOrLookup(meta, row));
   }
 

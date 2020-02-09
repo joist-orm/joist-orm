@@ -19,10 +19,10 @@ export function buildQuery<T extends Entity>(
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
-    const i = aliases["t"] || 0;
-    aliases["t"] = i + 1;
-    // TODO change some_table_name --> stn
-    return `t${i}`;
+    const abbrev = abbreviation(tableName);
+    const i = aliases[abbrev] || 0;
+    aliases[abbrev] = i + 1;
+    return `${abbrev}${i}`;
   }
 
   const alias = getAlias(meta.tableName);
@@ -55,4 +55,11 @@ export function buildQuery<T extends Entity>(
   addClauses(meta, alias, where);
 
   return query as QueryBuilder<{}, unknown[]>;
+}
+
+function abbreviation(tableName: string): string {
+  return tableName
+    .split("_")
+    .map(w => w[0])
+    .join();
 }

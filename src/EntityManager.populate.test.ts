@@ -29,10 +29,8 @@ describe("EntityManager", () => {
     await knex.insert({ title: "b1", author_id: 1 }).from("books");
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
-    const pubHint: LoadHint<Author> = "publisher";
-    const pubHint2: LoadHint<Author> = {};
-    const bookHint: LoadHint<Book> = { author: { publisher: {} } };
-    const bookb = await em.populate(booka, bookHint);
+    // TODO This doesn't seem to be working.
+    const bookb = await em.populate(booka, { author: "publisher" });
     expect(bookb.author.get().firstName).toEqual("a1");
     expect(bookb.author.get().publisher.get()).toEqual("p1");
   });

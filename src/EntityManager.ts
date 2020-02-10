@@ -56,12 +56,18 @@ type Loaded<T extends Entity, H extends LoadHint<T>> = {
     : T[K];
 };
 
+/** From any non-`Relations` field in `T`, i.e. for loader hints. */
+type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
+
+// https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
+type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
+
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
 export type LoadHint<T extends Entity> =
-  | keyof T
-  | Array<keyof T>
+  | keyof RelationsIn<T>
+  | Array<keyof RelationsIn<T>>
   | {
-      [K in keyof T]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
+      [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
     };
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;

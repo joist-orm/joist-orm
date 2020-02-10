@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities, flushJoinTables } from "./EntityPersister";
-import { fail, getOrSet, indexBy } from "./utils";
+import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
@@ -30,15 +30,41 @@ export type FilterQuery<T extends Entity> = {
 };
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P extends keyof T> = T[P] extends Reference<T, infer U>
-  ? LoadedReference<T, U>
-  : T[P] extends Collection<T, infer U>
-  ? LoadedCollection<T, U>
-  : T[P];
+type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U>
+  ? LoadedReference<T, Loaded<U, H>>
+  : P extends Collection<T, infer U>
+  ? LoadedCollection<T, Loaded<U, H>>
+  : P;
 
 /** Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities. */
-export type Loaded<T extends Entity> = {
-  [P in keyof T]: MarkLoaded<T, P>;
+export type AllLoaded<T extends Entity> = {
+  [P in keyof T]: MarkLoaded<T, T[P]>;
+};
+
+/** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
+type Loaded<T extends Entity, H extends LoadHint<T>> = {
+  [K in keyof T]: H extends NestedHint<T>
+    ? K extends keyof H
+      ? MarkLoaded<T, T[K], H[K]>
+      : T[K] //
+    : H extends Array<infer U>
+    ? K extends U
+      ? MarkLoaded<T, T[K]>
+      : T[K] //
+    : K extends H
+    ? MarkLoaded<T, T[K]> //
+    : T[K];
+};
+
+// We accept load hints as a string, or a string[], or a hash of { key: nested };
+type LoadHint<T extends Entity> = keyof T | Array<keyof T> | NestedHint<T>;
+
+type NestedHint<T extends Entity> = {
+  [K in keyof T]?: T[K] extends Collection<T, infer U>
+    ? LoadHint<U>
+    : T[K] extends Reference<T, infer U>
+    ? LoadHint<U>
+    : never;
 };
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
@@ -53,7 +79,7 @@ export class EntityManager {
   // TODO make private
   joinRows: Record<string, JoinRow[]> = {};
 
-  async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
+  public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
     const meta = getMetadata(type);
     const query = buildQuery(this.knex, type, where);
     const rows = await query;
@@ -61,16 +87,20 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  create<T extends Entity>(type: EntityConstructor<T>, opts?: Partial<T>): Loaded<T> {
-    return new type(this, opts) as Loaded<T>;
+  public create<T extends Entity>(type: EntityConstructor<T>, opts?: Partial<T>): AllLoaded<T> {
+    return (new type(this, opts) as any) as AllLoaded<T>;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
-  async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {
+  public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
     }
     return this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id);
+  }
+
+  public populate<T extends Entity, H extends LoadHint<T>>(entity: T, key: H): Loaded<T, H> {
+    return undefined as any;
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */

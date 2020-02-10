@@ -3,7 +3,7 @@ import Knex from "knex";
 import { flushEntities, flushJoinTables } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString } from "./serde";
-import { Collection, LoadedCollection, LoadedReference, Reference } from "./index";
+import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 
@@ -57,15 +57,12 @@ type Loaded<T extends Entity, H extends LoadHint<T>> = {
 };
 
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
-type LoadHint<T extends Entity> = keyof T | Array<keyof T> | NestedHint<T>;
-
-type NestedHint<T extends Entity> = {
-  [K in keyof T]?: T[K] extends Collection<T, infer U>
-    ? LoadHint<U>
-    : T[K] extends Reference<T, infer U>
-    ? LoadHint<U>
-    : never;
-};
+export type LoadHint<T extends Entity> =
+  | keyof T
+  | Array<keyof T>
+  | {
+      [K in keyof T]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
+    };
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
@@ -99,8 +96,20 @@ export class EntityManager {
     return this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id);
   }
 
-  public populate<T extends Entity, H extends LoadHint<T>>(entity: T, key: H): Loaded<T, H> {
-    return undefined as any;
+  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, key: H): Promise<Loaded<T, H>> {
+    let ps: Promise<any>[] = [];
+
+    if (typeof key === "string") {
+      ps.push((entity as any)[key].load());
+    } else if (Array.isArray(key)) {
+      (key as string[]).forEach(key => {
+        ps.push((entity as any)[key].load());
+      });
+    }
+
+    await Promise.all(ps);
+
+    return entity as any;
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */

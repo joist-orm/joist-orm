@@ -94,6 +94,6 @@ type Narrowable = string | number | boolean | symbol | object | undefined | void
 type P<T> = {
   [K in keyof T]? : T[K] extends ManyToOneCollection<infer U> ? keyof U : never;
 }
-const p = { posts: "comments" } as const;
+const p = { posts: "comments" };
 type PA = P<Author>;
 type Z = typeof p extends PA ? number : string;

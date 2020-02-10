@@ -9,13 +9,8 @@ compile:
 build:
 	docker-compose build
 
-# the database and applies migrations; assumes we're not in docker.
+# Create/recreate the database for applying migrations from scratch.
 db:
-	docker-compose up -d db
-	env STAGE=local npm run migrate
-
-# Recreate the database for applying migrations from scratch.
-redb:
 	docker-compose up -d db
 	docker-compose exec db ./reset-database.sh
 	env STAGE=local npm run migrate

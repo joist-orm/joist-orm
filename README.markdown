@@ -21,6 +21,13 @@ An opinionated ORM for TypeScript/node.
 * Anything-but-Postgres support at this point.
 * Browser/client-side support
 
+### Building
+
+After checkout:
+
+* Run `make db` to boot up a Docker postgres instance w/the integration test schema.
+* Run `npm test` to run the tests.
+
 ### Todo
 
 * Codegen
@@ -31,5 +38,8 @@ An opinionated ORM for TypeScript/node.
 * Delete from many-to-manys
 * Constructor opts should match required fields
 * `EntityManager.find`
+  * Support non-string types
+  * Support user-defined types
 * `EntityManager.populate`
+  * WIP
 

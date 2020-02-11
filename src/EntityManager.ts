@@ -114,8 +114,11 @@ export class EntityManager {
       Object.entries(hint).forEach(([key, nestedHint]) => {
         promises.push(
           (entity as any)[key].load().then((result: any) => {
-            // TODO Handle result being a list for one-to-many/many-to-many
-            return this.populate(result, nestedHint);
+            if (Array.isArray(result)) {
+              return Promise.all(result.map(result => this.populate(result, nestedHint)));
+            } else {
+              return this.populate(result, nestedHint);
+            }
           }),
         );
       });

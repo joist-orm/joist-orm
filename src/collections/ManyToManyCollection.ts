@@ -53,13 +53,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     }
   }
 
-  get(): U[] {
+  get get(): U[] {
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         return this.addedBeforeLoaded;
       } else {
         // This should only be callable in the type system if we've already resolved this to an instance
-        throw new Error("get() was called when not preloaded");
+        throw new Error("get was called when not preloaded");
       }
     }
     return this.loaded;

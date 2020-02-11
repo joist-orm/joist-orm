@@ -108,7 +108,7 @@ describe("ManyToManyCollection", () => {
 
     book.author.set(author);
     book.tags.add(tag);
-    expect(tag.books.get()).toContain(book);
+    expect(tag.books.get).toContain(book);
 
     await em.flush();
 

@@ -47,13 +47,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
   // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
   // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
 
-  get(): U[] {
+  get get(): U[] {
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         return this.addedBeforeLoaded;
       } else {
         // This should only be callable in the type system if we've already resolved this to an instance
-        throw new Error("get() was called when not preloaded");
+        throw new Error("get was called when not preloaded");
       }
     }
     return this.loaded;

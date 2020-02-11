@@ -46,7 +46,7 @@ describe("OneToManyCollection", () => {
     const b1 = em.create(Book, { title: "b1" });
     const a1 = em.create(Author, { firstName: "a1" });
     a1.books.add(b1);
-    expect(b1.author.get()).toEqual(a1);
+    expect(b1.author.get).toEqual(a1);
     await em.flush();
 
     const rows = await knex.select("*").from("books");
@@ -62,15 +62,15 @@ describe("OneToManyCollection", () => {
 
     // When we add it to the 1st
     a1.books.add(b1);
-    expect(a1.books.get()).toContain(b1);
+    expect(a1.books.get).toContain(b1);
 
     // But then add it to the 2nd author
     a2.books.add(b1);
 
     // Then the book is associated with only the 2nd author
-    expect(b1.author.get()).toEqual(a2);
-    expect(a1.books.get().length).toEqual(0);
-    expect(a2.books.get().length).toEqual(1);
+    expect(b1.author.get).toEqual(a2);
+    expect(a1.books.get.length).toEqual(0);
+    expect(a2.books.get.length).toEqual(1);
 
     // And the book association to a2 is persisted to the database.
     await em.flush();
@@ -114,7 +114,7 @@ describe("OneToManyCollection", () => {
     const b1 = em.create(Book, { title: "b1" });
     const a1 = em.create(Author, { firstName: "a1" });
     b1.author.set(a1);
-    expect(a1.books.get()).toContain(b1);
+    expect(a1.books.get).toContain(b1);
   });
 
   it("combines both pre-loaded and post-loaded entities", async () => {

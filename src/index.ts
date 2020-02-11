@@ -21,9 +21,9 @@ export interface Reference<T extends Entity, U extends Entity> extends Relation<
   set(other: U): void;
 }
 
-/** Adds a known-safe `get()` method. */
+/** Adds a known-safe `get` accessor. */
 export interface LoadedReference<T extends Entity, U extends Entity> extends Reference<T, U> {
-  get(): U;
+  get: U;
 }
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
@@ -33,7 +33,7 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
   add(other: U): void;
 }
 
-/** Adds a known-safe `get()` method. */
+/** Adds a known-safe `get` accessor. */
 export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
-  get(): ReadonlyArray<U>;
+  get: ReadonlyArray<U>;
 }

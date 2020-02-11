@@ -10,7 +10,7 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, "author");
-    expect(bookb.author.get().firstName).toEqual("a1");
+    expect(bookb.author.get.firstName).toEqual("a1");
   });
 
   it("can populate many-to-one with multiple keys", async () => {
@@ -19,8 +19,8 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, ["author", "tags"]);
-    expect(bookb.author.get().firstName).toEqual("a1");
-    expect(bookb.tags.get().length).toEqual(0);
+    expect(bookb.author.get.firstName).toEqual("a1");
+    expect(bookb.tags.get.length).toEqual(0);
   });
 
   it("can populate many-to-one with nested keys", async () => {
@@ -30,8 +30,8 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, { author: "publisher" } as const);
-    expect(bookb.author.get().firstName).toEqual("a1");
-    expect(bookb.author.get().publisher.get().name).toEqual("p1");
+    expect(bookb.author.get.firstName).toEqual("a1");
+    expect(bookb.author.get.publisher.get.name).toEqual("p1");
   });
 
   it("can populate one-to-many with nested keys", async () => {
@@ -48,8 +48,8 @@ describe("EntityManager", () => {
     resetQueryCount();
     const pub = await em.populate(asyncPub, { authors: "books" } as const);
     expect(numberOfQueries).toEqual(2);
-    expect(pub.authors.get().length).toEqual(2);
-    expect(pub.authors.get()[0].books.get().length).toEqual(2);
-    expect(pub.authors.get()[1].books.get().length).toEqual(2);
+    expect(pub.authors.get.length).toEqual(2);
+    expect(pub.authors.get[0].books.get.length).toEqual(2);
+    expect(pub.authors.get[1].books.get.length).toEqual(2);
   });
 });

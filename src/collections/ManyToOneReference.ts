@@ -25,7 +25,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
     this.setImpl(other);
   }
 
-  get(): U {
+  get get(): U {
     // This should only be callable in the type system if we've already resolved this to an instance
     const current = this.current();
     if (!isEntity(current)) {

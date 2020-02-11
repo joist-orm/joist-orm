@@ -42,8 +42,8 @@ export type AllLoaded<T extends Entity> = {
 };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
-type Loaded<T extends Entity, H extends LoadHint<T>> = {
-  [K in keyof T]: H extends NestedHint<T>
+export type Loaded<T extends Entity, H extends LoadHint<T>> = {
+  [K in keyof T]: H extends NestedLoadHint<T>
     ? LoadedIfInNestedHint<T, K, H>
     : H extends Array<infer U>
     ? LoadedIfInKeyHint<T, K, U>
@@ -63,12 +63,11 @@ type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
 type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
 
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
-export type LoadHint<T extends Entity> =
-  | keyof RelationsIn<T>
-  | Array<keyof RelationsIn<T>>
-  | {
-      [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
-    };
+type LoadHint<T extends Entity> = keyof RelationsIn<T> | Array<keyof RelationsIn<T>> | NestedLoadHint<T>;
+
+type NestedLoadHint<T extends Entity> = {
+  [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
+};
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
@@ -102,15 +101,25 @@ export class EntityManager {
     return this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id);
   }
 
-  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, key: H): Promise<Loaded<T, H>> {
+  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>> {
     let ps: Promise<any>[] = [];
 
-    if (typeof key === "string") {
-      ps.push((entity as any)[key].load());
-    } else if (Array.isArray(key)) {
-      (key as string[]).forEach(key => {
+    if (typeof hint === "string") {
+      ps.push((entity as any)[hint].load());
+    } else if (Array.isArray(hint)) {
+      (hint as string[]).forEach(key => {
         ps.push((entity as any)[key].load());
       });
+    } else if (typeof hint === "object") {
+      Object.entries(hint).forEach(([key, nestedHint]) => {
+        ps.push(
+          (entity as any)[key].load().then((r: any) => {
+            return this.populate(r, nestedHint);
+          }),
+        );
+      });
+    } else {
+      throw new Error("Unexpected key");
     }
 
     await Promise.all(ps);

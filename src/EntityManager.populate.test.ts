@@ -28,9 +28,8 @@ describe("EntityManager", () => {
     await knex.insert({ title: "b1", author_id: 1 }).from("books");
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
-    // TODO This doesn't seem to be working.
-    const bookb = await em.populate(booka, { author: "publisher" });
+    const bookb = await em.populate(booka, { author: "publisher" } as const);
     expect(bookb.author.get().firstName).toEqual("a1");
-    expect(bookb.author.get().publisher.get()).toEqual("p1");
+    expect(bookb.author.get().publisher.get().name).toEqual("p1");
   });
 });

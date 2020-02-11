@@ -44,17 +44,17 @@ export type AllLoaded<T extends Entity> = {
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 type Loaded<T extends Entity, H extends LoadHint<T>> = {
   [K in keyof T]: H extends NestedHint<T>
-    ? K extends keyof H
-      ? MarkLoaded<T, T[K], H[K]>
-      : T[K] //
+    ? LoadedIfInNestedHint<T, K, H>
     : H extends Array<infer U>
-    ? K extends U
-      ? MarkLoaded<T, T[K]>
-      : T[K] //
-    : K extends H
-    ? MarkLoaded<T, T[K]> //
-    : T[K];
+    ? LoadedIfInKeyHint<T, K, U>
+    : LoadedIfInKeyHint<T, K, H>;
 };
+
+type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
+  ? MarkLoaded<T, T[K], H[K]>
+  : T[K];
+
+type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : T[K];
 
 /** From any non-`Relations` field in `T`, i.e. for loader hints. */
 type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;

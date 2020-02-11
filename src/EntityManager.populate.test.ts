@@ -1,7 +1,6 @@
 import { knex } from "./setupDbTests";
-import { LoadHint, EntityManager } from "./EntityManager";
+import { EntityManager } from "./EntityManager";
 import { Book } from "../integration/Book";
-import { Author } from "../integration/Author";
 
 describe("EntityManager", () => {
   it("can populate many-to-one", async () => {

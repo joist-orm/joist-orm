@@ -101,29 +101,28 @@ export class EntityManager {
     return this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id);
   }
 
+  /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>> {
-    let ps: Promise<any>[] = [];
-
+    let promises: Promise<void>[] = [];
     if (typeof hint === "string") {
-      ps.push((entity as any)[hint].load());
+      promises.push((entity as any)[hint].load());
     } else if (Array.isArray(hint)) {
       (hint as string[]).forEach(key => {
-        ps.push((entity as any)[key].load());
+        promises.push((entity as any)[key].load());
       });
     } else if (typeof hint === "object") {
       Object.entries(hint).forEach(([key, nestedHint]) => {
-        ps.push(
-          (entity as any)[key].load().then((r: any) => {
-            return this.populate(r, nestedHint);
+        promises.push(
+          (entity as any)[key].load().then((result: any) => {
+            // TODO Handle result being a list for one-to-many/many-to-many
+            return this.populate(result, nestedHint);
           }),
         );
       });
     } else {
-      throw new Error("Unexpected key");
+      throw new Error(`Unexpected hint ${hint}`);
     }
-
-    await Promise.all(ps);
-
+    await Promise.all(promises);
     return entity as any;
   }
 

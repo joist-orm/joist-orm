@@ -1,5 +1,5 @@
 import { EntityManager } from "./EntityManager";
-import { Author } from "../integration/Author";
+import { Author } from "../integration";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {

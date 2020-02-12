@@ -1,7 +1,6 @@
 import { EntityManager } from "../EntityManager";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
-import { Book } from "../../integration/Book";
-import { Author } from "../../integration/Author";
+import { Author, Book } from "../../integration";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {

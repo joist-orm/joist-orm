@@ -1,9 +1,8 @@
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 import { EntityManager } from "./EntityManager";
-import { Book } from "../integration/Book";
-import { Publisher } from "../integration/Publisher";
+import { Book, Publisher } from "../integration";
 
-describe("EntityManager", () => {
+describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ title: "b1", author_id: 1 }).from("books");

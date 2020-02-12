@@ -1,9 +1,8 @@
 import { EntityManager } from "./EntityManager";
-import { Author } from "../integration/Author";
+import { Author, Book } from "../integration";
 import { knex } from "./setupDbTests";
-import { Book } from "../integration/Book";
 
-describe("EntityManager", () => {
+describe("EntityManager.queries", () => {
   it("can find all authors", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");

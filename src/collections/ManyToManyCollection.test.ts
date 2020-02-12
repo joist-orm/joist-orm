@@ -1,9 +1,7 @@
 import { EntityManager } from "../EntityManager";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
-import { Book } from "../../integration/Book";
+import { Author, Book, Tag } from "../../integration";
 import { zeroTo } from "../utils";
-import { Tag } from "../../integration/Tag";
-import { Author } from "../../integration/Author";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {

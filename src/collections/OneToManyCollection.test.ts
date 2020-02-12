@@ -1,8 +1,7 @@
 import { EntityManager } from "../EntityManager";
 import { knex } from "../setupDbTests";
-import { Book } from "../../integration/Book";
-import { Author } from "../../integration/Author";
-import { keyToNumber, keyToString } from "../serde";
+import { Author, Book } from "../../integration/";
+import { keyToNumber } from "../serde";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {

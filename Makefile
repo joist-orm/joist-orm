@@ -14,7 +14,7 @@ db:
 	docker-compose up -d db
 	docker-compose exec db ./reset-database.sh
 	env STAGE=local npm run migrate
-#	env STAGE=local npm run entity-codegen
+	env STAGE=local npm run codegen
 
 psql:
 	docker-compose exec db ./console.sh

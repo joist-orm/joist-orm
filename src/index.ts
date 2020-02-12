@@ -1,5 +1,7 @@
 import { Entity } from "./EntityManager";
 
+export * from "./EntityManager";
+
 const F = Symbol();
 const G = Symbol();
 

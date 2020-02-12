@@ -10,7 +10,7 @@ An opinionated ORM for TypeScript/node.
 * Async/Await All Relations (with a synchronous escape hatch) 
 * Best-in-class Performance (all select/insert/update operations are bulk)
 * Fast Unit Tests (for downstream projects, baseline is 10-20ms/test case)
-* Unit of Work
+* Unit of Work (navigate between entities as a consistent graph)
 * Small & simple codebase (maintainable by a single engineer if needed)
 
 (See below for more in-depth descriptions of each bullet.)
@@ -43,3 +43,8 @@ After checkout:
 * `EntityManager.populate`
   * WIP
 
+## History
+
+[Joist](https://github.com/stephenh/joist) is also the name for a Java-based ORM I wrote circa 2008.
+
+ts-joist has many of the same ideas, just applied to TypeScript, and leveraging DataLoader.

@@ -1,7 +1,7 @@
-import { Entity, EntityManager } from "../src";
+import { EntityManager } from "../src";
 import { AuthorCodegen } from "./entities";
 
-export class Author extends AuthorCodegen implements Entity {
+export class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts?: Partial<{ firstName: string }>) {
     super(em);
     if (opts) {

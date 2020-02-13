@@ -1,7 +1,7 @@
-import { Entity, EntityManager } from "../src";
+import { EntityManager } from "../src";
 import { PublisherCodegen } from "./entities";
 
-export class Publisher extends PublisherCodegen implements Entity {
+export class Publisher extends PublisherCodegen {
   constructor(em: EntityManager, opts?: Partial<{ name: string }>) {
     super(em);
     if (opts) {

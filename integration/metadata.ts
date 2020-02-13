@@ -15,6 +15,18 @@ export const authorMeta: EntityMetadata<Author> = {
       dbType: "character varying",
       serde: new SimpleSerde("firstName", "first_name"),
     },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
 
     {
       fieldName: "publisher",
@@ -40,6 +52,18 @@ export const bookMeta: EntityMetadata<Book> = {
       columnName: "title",
       dbType: "character varying",
       serde: new SimpleSerde("title", "title"),
+    },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
     },
 
     {
@@ -67,6 +91,18 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       dbType: "character varying",
       serde: new SimpleSerde("name", "name"),
     },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
   ],
   order: 1,
 };
@@ -85,6 +121,18 @@ export const tagMeta: EntityMetadata<Tag> = {
       columnName: "name",
       dbType: "character varying",
       serde: new SimpleSerde("name", "name"),
+    },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
     },
   ],
   order: 0,

@@ -191,7 +191,7 @@ function generateMetadata(sortedEntities: string[], table: Table): Code {
   `;
 
   const primitives = table.columns
-    .filter(c => !c.isPrimaryKey && !c.isForeignKey && !readOnlyFields.includes(camelCase(c.name)))
+    .filter(c => !c.isPrimaryKey && !c.isForeignKey)
     .map(column => {
       const fieldName = camelCase(column.name);
       return code`
@@ -235,7 +235,7 @@ function generateMetadata(sortedEntities: string[], table: Table): Code {
   `;
 }
 
-const readOnlyFields = ["createdAt", "updatedAt"];
+const ormMaintainedFields = ["createdAt", "updatedAt"];
 
 /** Creates the base class with the boilerplate annotations. */
 function generateEntityCodegenFile(table: Table, entityName: string): Code {
@@ -258,7 +258,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
           this.__orm.em.markDirty(this);
         }
       `;
-      return code`${getter} ${!readOnlyFields.includes(fieldName) ? setter : ""}`;
+      return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
     });
 
   // Add ManyToOne

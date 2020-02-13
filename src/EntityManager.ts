@@ -134,6 +134,9 @@ export class EntityManager {
     if (entity.id && this.findExistingInstance(entity.__orm.metadata.type, entity.id) !== undefined) {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
+    // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
+    entity.__orm.data["createdAt"] = new Date();
+    entity.__orm.data["updatedAt"] = new Date();
     this.entities.push(entity);
   }
 

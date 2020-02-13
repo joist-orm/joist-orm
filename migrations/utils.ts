@@ -5,27 +5,42 @@ export function createEntityTable(b: MigrationBuilder, tableName: string, column
   b.createTable(tableName, {
     id: "id",
     ...columns,
-    created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
-    updated_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
+    created_at: { type: "timestamptz", notNull: true },
+    updated_at: { type: "timestamptz", notNull: true },
   });
-  createUpdatedAtTrigger(b, tableName);
+  createTriggers(b, tableName);
 }
 
 /** Makes a trigger to update the `updated_at` column. */
-export function createUpdatedAtTrigger(b: MigrationBuilder, tableName: string): void {
+export function createTriggers(b: MigrationBuilder, tableName: string): void {
+  b.createTrigger(tableName, `${tableName}_created_at`, {
+    when: "BEFORE",
+    operation: "INSERT",
+    level: "ROW",
+    function: "trigger_maybe_set_created_at",
+  });
   b.createTrigger(tableName, `${tableName}_updated_at`, {
     when: "BEFORE",
     operation: "UPDATE",
     level: "ROW",
-    function: "trigger_set_updated_at",
+    function: "trigger_maybe_set_updated_at",
   });
 }
 
 export function createUpdatedAtFunction(b: MigrationBuilder): void {
   b.createFunction(
-    "trigger_set_updated_at",
+    "trigger_maybe_set_updated_at",
     [],
     { replace: true, language: "plpgsql", returns: "TRIGGER" },
-    "BEGIN NEW.updated_at = NOW(); RETURN NEW; END;",
+    "BEGIN IF NEW.updated_at = OLD.updated_at THEN NEW.updated_at = NOW(); END IF; RETURN NEW; END;",
+  );
+}
+
+export function createCreatedAtFunction(b: MigrationBuilder): void {
+  b.createFunction(
+    "trigger_maybe_set_created_at",
+    [],
+    { replace: true, language: "plpgsql", returns: "TRIGGER" },
+    "BEGIN IF NEW.created_at IS NULL THEN NEW.created_at = NOW(); END IF; IF NEW.updated_at IS NULL THEN NEW.updated_at = NOW(); END IF; RETURN NEW; END;",
   );
 }

@@ -10,6 +10,7 @@ interface Todo {
 }
 
 export async function flushEntities(knex: Knex, entities: Entity[]): Promise<void> {
+  const updatedAt = new Date();
   const todos = sortEntities(entities);
   for await (const todo of todos) {
     if (todo) {
@@ -18,6 +19,7 @@ export async function flushEntities(knex: Knex, entities: Entity[]): Promise<voi
         await batchInsert(knex, meta, todo.inserts);
       }
       if (todo.updates.length > 0) {
+        todo.updates.forEach(e => (e.__orm.data["updatedAt"] = updatedAt));
         await batchUpdate(knex, meta, todo.updates);
       }
     }

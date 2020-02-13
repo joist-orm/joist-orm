@@ -1,8 +1,9 @@
 import { MigrationBuilder } from "node-pg-migrate";
-import { createEntityTable, createUpdatedAtFunction } from "./utils";
+import { createCreatedAtFunction, createEntityTable, createUpdatedAtFunction } from "./utils";
 
 export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);
+  createCreatedAtFunction(b);
 
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },

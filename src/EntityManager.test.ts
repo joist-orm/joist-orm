@@ -120,4 +120,38 @@ describe("EntityManager", () => {
 
     expect(numberOfQueries).toEqual(0);
   });
+
+  it("createdAt / updatedAt are always non-null", async () => {
+    const em = new EntityManager(knex);
+    const author = em.create(Author);
+    expect(author.createdAt).not.toBeUndefined();
+    expect(author.updatedAt).not.toBeUndefined();
+  });
+
+  it("createdAt does not change", async () => {
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1" });
+    await em.flush();
+
+    const em2 = new EntityManager(knex);
+    const a2 = await em2.load(Author, "1");
+    expect(a2.createdAt).toEqual(a1.createdAt);
+  });
+
+  it("updatedAt does change", async () => {
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1" });
+    await em.flush();
+
+    await new Promise(resolve => setTimeout(resolve, 10));
+
+    const em2 = new EntityManager(knex);
+    const a2 = await em2.load(Author, "1");
+    a2.firstName = "a2";
+    await em2.flush();
+
+    const em3 = new EntityManager(knex);
+    const a3 = await em3.load(Author, "1");
+    expect(a3.updatedAt).not.toEqual(a1.updatedAt);
+  });
 });

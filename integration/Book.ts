@@ -1,11 +1,8 @@
-import { EntityManager } from "../src/EntityManager";
-import { ManyToOneReference } from "../src/collections/ManyToOneReference";
+import { Collection, EntityManager } from "../src";
 import { ManyToManyCollection } from "../src/collections/ManyToManyCollection";
-import { Collection, Reference } from "../src";
-import { Author, BookCodegen, Tag } from "./entities";
+import { BookCodegen, Tag } from "./entities";
 
 export class Book extends BookCodegen {
-  readonly author: Reference<Book, Author> = new ManyToOneReference(this, Author, "author", "books");
   readonly tags: Collection<Book, Tag> = new ManyToManyCollection(
     "books_to_tags",
     this,

@@ -1,10 +1,12 @@
-import { EntityOrmField, EntityManager, Collection, OneToManyCollection } from "../src";
-import { authorMeta, Author, Book, bookMeta } from "./entities";
+import { EntityOrmField, EntityManager, Collection, OneToManyCollection, Reference, ManyToOneReference } from "../src";
+import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 
 export class AuthorCodegen {
   readonly __orm: EntityOrmField;
 
   readonly books: Collection<Author, Book> = new OneToManyCollection(this, bookMeta, "books", "author", "author_id");
+
+  readonly publisher: Reference<Author, Publisher> = new ManyToOneReference(this, Publisher, "publisher", "authors");
 
   constructor(em: EntityManager) {
     this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };

@@ -16,7 +16,6 @@ import {
 } from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { newPgConnectionConfig } from "../env";
-import entity from "pg-structure/dist/pg-structure/base/entity";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
@@ -26,7 +25,9 @@ const EntityOrmField = imp("EntityOrmField@../src");
 const EntityManager = imp("EntityManager@../src");
 const EntityMetadata = imp("EntityMetadata@../src");
 const PrimaryKeySerde = imp("PrimaryKeySerde@../src/serde");
+const ManyToOneReference = imp("ManyToOneReference@../src");
 const ForeignKeySerde = imp("ForeignKeySerde@../src/serde");
+const Reference = imp("Reference@../src");
 const SimpleSerde = imp("SimpleSerde@../src/serde");
 
 export interface CodeGenFile {
@@ -182,6 +183,7 @@ function mapType(tableName: string, columnName: string, dbColumnType: string): C
 function generateMetadata(sortedEntities: string[], table: Table): Code {
   const entityName = tableToEntityName(table);
   const entity = imp(`${entityName}@./entities`);
+  const metaName = `${paramCase(entityName)}Meta`;
 
   const primaryKey = code`
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}("id", "id") },
@@ -215,8 +217,6 @@ function generateMetadata(sortedEntities: string[], table: Table): Code {
     `;
   });
 
-  const metaName = `${paramCase(entityName)}Meta`;
-
   return code`
     export const ${metaName}: ${EntityMetadata}<${entity}> = {
       cstr: ${entity},
@@ -238,46 +238,39 @@ const readOnlyFields = ["createdAt", "updatedAt"];
 
 /** Creates the base class with the boilerplate annotations. */
 function generateBaseSpec(table: Table, entityName: string): Code {
+  const entityType = imp(`${entityName}@./entities`);
+
   // Add the primitives
   const primitives = table.columns
     .filter(c => !c.isPrimaryKey && !c.isForeignKey)
     .map(column => {
-      const name = camelCase(column.name);
+      const fieldName = camelCase(column.name);
       const type = mapType(table.name, column.name, column.type.shortName!);
       const getter = code`
-        get ${name}(): ${type.fieldType} {
-          return this.__orm.data["${name}"];
+        get ${fieldName}(): ${type.fieldType} {
+          return this.__orm.data["${fieldName}"];
         }
      `;
       const setter = code`
-        set ${name}(${name}: ${type.fieldType}) {
-          this.__orm.data["${name}"] = ${name};
+        set ${fieldName}(${fieldName}: ${type.fieldType}) {
+          this.__orm.data["${fieldName}"] = ${fieldName};
           this.__orm.em.markDirty(this);
         }
       `;
-      return code`${getter} ${!readOnlyFields.includes(name) ? setter : ""}`;
+      return code`${getter} ${!readOnlyFields.includes(fieldName) ? setter : ""}`;
     });
 
-  // // Add ManyToOne
-  // const m2o = table.m2oRelations.map(r => {
-  //   const column = r.foreignKey.columns[0];
-  //   const name = camelCase(column.name.replace("_id", ""));
-  //   const targetEntity = tableToEntityName(r.targetTable);
-  //   const targetType = imp(`${targetEntity}@@src/entities/entities`);
-  //   if (isEnumTable(r.targetTable)) {
-  //     const enumConverterType = imp(`${targetEntity}Type@@src/entities/entities`);
-  //     return code`
-  //       @${Enum}({ type: ${enumConverterType}, fieldName: "${column.name}" })
-  //       ${name}!: ${targetType};
-  //     `;
-  //   } else {
-  //     return code`
-  //       @${ManyToOne}({ entity: () => ${targetEntity}, wrappedReference: true, cascade: [] })
-  //       ${name}: ${IdentifiedReference}<${targetType}>;
-  //     `;
-  //   }
-  // });
-  //
+  // Add ManyToOne
+  const m2o = table.m2oRelations.map(r => {
+    const column = r.foreignKey.columns[0];
+    const fieldName = camelCase(column.name.replace("_id", ""));
+    const otherEntityName = tableToEntityName(r.targetTable);
+    const otherEntityType = imp(`${otherEntityName}@./entities`);
+    const otherFieldName = camelCase(pluralize(entityName));
+    return code`
+      readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}> = new ${ManyToOneReference}(this, ${otherEntityType}, "${fieldName}", "${otherFieldName}");
+    `;
+  });
 
   // Add OneToMany
   const o2m = table.o2mRelations
@@ -287,7 +280,6 @@ function generateBaseSpec(table: Table, entityName: string): Code {
       const column = r.foreignKey.columns[0];
       // source == parent i.e. the reference of the foreign key column
       // target == child i.e. the table with the foreign key column in it
-      const entityType = imp(`${entityName}@./entities`);
       const otherEntityName = tableToEntityName(r.targetTable);
       const otherEntityType = imp(`${otherEntityName}@./entities`);
       const otherMeta = imp(`${paramCase(otherEntityName)}Meta@./entities`);
@@ -336,7 +328,7 @@ function generateBaseSpec(table: Table, entityName: string): Code {
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
       
-      ${[o2m]}
+      ${[o2m, m2o]}
       
       constructor(em: ${EntityManager}) {
         this.__orm = { metadata: ${metadata}, data: {} as Record<any, any>, em };

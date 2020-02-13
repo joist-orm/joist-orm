@@ -9,7 +9,7 @@ export class AuthorCodegen {
   readonly publisher: Reference<Author, Publisher> = new ManyToOneReference(this, Publisher, "publisher", "authors");
 
   constructor(em: EntityManager) {
-    this.__orm = { metadata: authorMeta, data: {} as Record<any, any>, em };
+    this.__orm = { metadata: authorMeta, data: {}, em };
     em.register(this);
     //if (opts) {
     //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));

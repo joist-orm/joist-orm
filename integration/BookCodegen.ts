@@ -17,7 +17,7 @@ export class BookCodegen {
   );
 
   constructor(em: EntityManager) {
-    this.__orm = { metadata: bookMeta, data: {} as Record<any, any>, em };
+    this.__orm = { metadata: bookMeta, data: {}, em };
     em.register(this);
     //if (opts) {
     //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));

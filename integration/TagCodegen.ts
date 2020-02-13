@@ -15,7 +15,7 @@ export class TagCodegen {
   );
 
   constructor(em: EntityManager) {
-    this.__orm = { metadata: tagMeta, data: {} as Record<any, any>, em };
+    this.__orm = { metadata: tagMeta, data: {}, em };
     em.register(this);
     //if (opts) {
     //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));

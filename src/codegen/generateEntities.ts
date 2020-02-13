@@ -26,6 +26,7 @@ const EntityManager = imp("EntityManager@../src");
 const EntityMetadata = imp("EntityMetadata@../src");
 const PrimaryKeySerde = imp("PrimaryKeySerde@../src/serde");
 const ManyToOneReference = imp("ManyToOneReference@../src");
+const ManyToManyCollection = imp("ManyToManyCollection@../src");
 const ForeignKeySerde = imp("ForeignKeySerde@../src/serde");
 const Reference = imp("Reference@../src");
 const SimpleSerde = imp("SimpleSerde@../src/serde");
@@ -291,36 +292,35 @@ function generateBaseSpec(table: Table, entityName: string): Code {
       `;
     });
 
-  //
-  // // Add ManyToMany
-  // const m2m = table.m2mRelations
-  //   // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
-  //   // that has a foreign key to us, and a foreign key to something else, is automatically
-  //   // considered as a join table/m2m between "us" and "something else". Filter these out
-  //   // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
-  //   .filter(r => isJoinTable(r.joinTable))
-  //   .map(r => {
-  //     const { foreignKey, targetForeignKey, targetTable } = r;
-  //     const ownerBasedOnCascade = foreignKey.onDelete === "CASCADE" || targetForeignKey.onDelete === "CASCADE";
-  //     const isOwner = ownerBasedOnCascade
-  //       ? foreignKey.onDelete === "CASCADE"
-  //       : foreignKey.columns[0].name < targetForeignKey.columns[0].name;
-  //     const targetEntity = tableToEntityName(targetTable);
-  //     const targetType = imp(`${targetEntity}@@src/entities/entities`);
-  //     const name = camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", "")));
-  //     const mappedBy = camelCase(pluralize(foreignKey.columns[0].name.replace("_id", "")));
-  //     return code`
-  //       @${ManyToMany}({
-  //         entity: () => ${targetEntity},
-  //         pivotTable: "${r.joinTable.name}",
-  //         joinColumn: "${foreignKey.columns[0].name}",
-  //         inverseJoinColumn: "${targetForeignKey.columns[0].name}",
-  //         ${isOwner ? `owner: true` : `mappedBy: "${mappedBy}"`},
-  //         cascade: [],
-  //       })
-  //       ${name}: ${Collection}<${targetType}> = new Collection(this);
-  //     `;
-  //   });
+  // Add ManyToMany
+  const m2m = table.m2mRelations
+    // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
+    // that has a foreign key to us, and a foreign key to something else, is automatically
+    // considered as a join table/m2m between "us" and "something else". Filter these out
+    // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
+    .filter(r => isJoinTable(r.joinTable))
+    .map(r => {
+      const { foreignKey, targetForeignKey, targetTable } = r;
+      // const ownerBasedOnCascade = foreignKey.onDelete === "CASCADE" || targetForeignKey.onDelete === "CASCADE";
+      // const isOwner = ownerBasedOnCascade
+      //   ? foreignKey.onDelete === "CASCADE"
+      //   : foreignKey.columns[0].name < targetForeignKey.columns[0].name;
+      const otherEntityName = tableToEntityName(targetTable);
+      const otherEntityType = imp(`${otherEntityName}@./entities`);
+      const fieldName = camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", "")));
+      const otherFieldName = camelCase(pluralize(foreignKey.columns[0].name.replace("_id", "")));
+      return code`
+        readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${ManyToManyCollection}(
+          "${r.joinTable.name}",
+          this,
+          "${fieldName}",
+          "${foreignKey.columns[0].name}",
+          ${otherEntityType},
+          "${otherFieldName}",
+          "${targetForeignKey.columns[0].name}",
+        );
+      `;
+    });
 
   const metadata = imp(`${paramCase(entityName)}Meta@./entities`);
 
@@ -328,7 +328,7 @@ function generateBaseSpec(table: Table, entityName: string): Code {
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
       
-      ${[o2m, m2o]}
+      ${[o2m, m2o, m2m]}
       
       constructor(em: ${EntityManager}) {
         this.__orm = { metadata: ${metadata}, data: {} as Record<any, any>, em };

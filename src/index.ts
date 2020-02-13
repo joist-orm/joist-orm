@@ -3,6 +3,7 @@ import { Entity } from "./EntityManager";
 export * from "./EntityManager";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
+export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 
 const F = Symbol();
 const G = Symbol();

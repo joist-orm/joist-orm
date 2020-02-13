@@ -1,8 +1,18 @@
-import { EntityOrmField, EntityManager } from "../src";
-import { tagMeta } from "./entities";
+import { EntityOrmField, EntityManager, Collection, ManyToManyCollection } from "../src";
+import { tagMeta, Tag, Book } from "./entities";
 
 export class TagCodegen {
   readonly __orm: EntityOrmField;
+
+  readonly books: Collection<Tag, Book> = new ManyToManyCollection(
+    "books_to_tags",
+    this,
+    "books",
+    "tag_id",
+    Book,
+    "tags",
+    "book_id",
+  );
 
   constructor(em: EntityManager) {
     this.__orm = { metadata: tagMeta, data: {} as Record<any, any>, em };

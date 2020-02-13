@@ -30,18 +30,19 @@ After checkout:
 
 ### Todo
 
-* Codegen
+* Enum table support
 * Deleting entities
   * Cascading deletions
   * Removing entity from non-cascaded references/collections
 * Delete from one-to-manys
 * Delete from many-to-manys
 * Constructor opts should match required fields
-* `EntityManager.find`
+* `EntityManager.find` (1st pass done)
   * Support non-string types
   * Support user-defined types
-* `EntityManager.populate`
-  * WIP
+  * Add `populate` overload
+* `EntityManager.populate` (1st pass done)
+  * Support populating lists of entities
 
 ## History
 

@@ -78,7 +78,7 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
         {
           path: entitiesDirectory,
           name: `${entityName}Codegen.ts`,
-          contents: generateBaseSpec(table, entityName),
+          contents: generateEntityCodegenFile(table, entityName),
           overwrite: true,
         },
         // {
@@ -238,7 +238,7 @@ function generateMetadata(sortedEntities: string[], table: Table): Code {
 const readOnlyFields = ["createdAt", "updatedAt"];
 
 /** Creates the base class with the boilerplate annotations. */
-function generateBaseSpec(table: Table, entityName: string): Code {
+function generateEntityCodegenFile(table: Table, entityName: string): Code {
   const entityType = imp(`${entityName}@./entities`);
 
   // Add the primitives

@@ -1,6 +1,7 @@
 import { Entity } from "./EntityManager";
 
 export * from "./EntityManager";
+export { OneToManyCollection } from "./collections/OneToManyCollection";
 
 const F = Symbol();
 const G = Symbol();

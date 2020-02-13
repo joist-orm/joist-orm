@@ -15,9 +15,10 @@ export function isEnumTable(t: Table): boolean {
 export function isJoinTable(t: Table): boolean {
   const { columns } = t;
   return (
-    columns.length === 3 &&
+    columns.length === 4 &&
     columns.filter(c => c.isPrimaryKey).length === 1 &&
-    columns.filter(c => c.isForeignKey).length === 2
+    columns.filter(c => c.isForeignKey).length === 2 &&
+    columns.filter(c => c.name === "created_at").length === 1
   );
 }
 
@@ -59,4 +60,3 @@ export async function trueIfResolved(p: Promise<unknown>): Promise<boolean> {
     () => false,
   );
 }
-

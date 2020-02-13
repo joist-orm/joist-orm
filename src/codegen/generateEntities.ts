@@ -1,15 +1,27 @@
 import pgStructure, { Db, Table } from "pg-structure";
 import { camelCase, constantCase, paramCase, pascalCase } from "change-case";
 import { promises as fs } from "fs";
-import { code, Code, imp } from "ts-poet";
 import { Client } from "pg";
-import { isEntityTable, isEnumTable, mapSimpleDbType, merge, tableToEntityName, trueIfResolved } from "./utils";
+import pluralize from "pluralize";
+import { code, Code, imp } from "ts-poet";
+import TopologicalSort from "topological-sort";
+import {
+  isEntityTable,
+  isEnumTable,
+  isJoinTable,
+  mapSimpleDbType,
+  merge,
+  tableToEntityName,
+  trueIfResolved,
+} from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { newPgConnectionConfig } from "../env";
-import TopologicalSort from "topological-sort";
+import entity from "pg-structure/dist/pg-structure/base/entity";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
+const Collection = imp("Collection@../src");
+const OneToManyCollection = imp("OneToManyCollection@../src");
 const EntityOrmField = imp("EntityOrmField@../src");
 const EntityManager = imp("EntityManager@../src");
 const EntityMetadata = imp("EntityMetadata@../src");
@@ -266,24 +278,27 @@ function generateBaseSpec(table: Table, entityName: string): Code {
   //   }
   // });
   //
-  // // Add OneToMany
-  // const o2m = table.o2mRelations
-  //   // ManyToMany join tables also show up as OneToMany tables in pg-structure
-  //   .filter(r => !isJoinTable(r.targetTable))
-  //   .map(r => {
-  //     const column = r.foreignKey.columns[0];
-  //     // source == parent i.e. the reference of the foreign key column
-  //     // target == child i.e. the table with the foreign key column in it
-  //     const targetEntity = tableToEntityName(r.targetTable);
-  //     const targetType = imp(`${targetEntity}@@src/entities/entities`);
-  //     // i.e. if child.project_id, use children
-  //     const name = camelCase(pluralize(targetEntity));
-  //     const mappedBy = camelCase(column.name.replace("_id", ""));
-  //     return code`
-  //       @${OneToMany}({ entity: () => ${targetEntity}, mappedBy: "${mappedBy}", cascade: [] })
-  //       ${name}: ${Collection}<${targetType}> = new Collection(this);
-  //     `;
-  //   });
+
+  // Add OneToMany
+  const o2m = table.o2mRelations
+    // ManyToMany join tables also show up as OneToMany tables in pg-structure
+    .filter(r => !isJoinTable(r.targetTable))
+    .map(r => {
+      const column = r.foreignKey.columns[0];
+      // source == parent i.e. the reference of the foreign key column
+      // target == child i.e. the table with the foreign key column in it
+      const entityType = imp(`${entityName}@./entities`);
+      const otherEntityName = tableToEntityName(r.targetTable);
+      const otherEntityType = imp(`${otherEntityName}@./entities`);
+      const otherMeta = imp(`${paramCase(otherEntityName)}Meta@./entities`);
+      // I.e. if the other side is `child.project_id`, use children
+      const fieldName = camelCase(pluralize(otherEntityName));
+      const otherFieldName = camelCase(column.name.replace("_id", ""));
+      return code`
+       readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${OneToManyCollection}(this, ${otherMeta}, "${fieldName}", "${otherFieldName}", "${column.name}");
+      `;
+    });
+
   //
   // // Add ManyToMany
   // const m2m = table.m2mRelations
@@ -321,6 +336,8 @@ function generateBaseSpec(table: Table, entityName: string): Code {
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
       
+      ${[o2m]}
+      
       constructor(em: ${EntityManager}) {
         this.__orm = { metadata: ${metadata}, data: {} as Record<any, any>, em };
         em.register(this);
@@ -333,7 +350,7 @@ function generateBaseSpec(table: Table, entityName: string): Code {
         return this.__orm.data["id"];
       }
       
-      ${[primitives]}
+      ${primitives}
       
       toString(): string {
         return "${entityName}#" + this.id;
@@ -358,15 +375,20 @@ export async function contentToString(content: Code | string, fileName: string):
   return await content.toStringWithImports(fileName);
 }
 
+/**
+ * For now, we insert entities in a deterministic order based on FK dependencies.
+ *
+ * This will only work with a subset of schemas, so we'll work around that later.
+ */
 function sortByRequiredForeignKeys(db: Db): string[] {
   const tables = db.tables.filter(isEntityTable);
   const ts = new TopologicalSort<string, Table>(new Map());
-  tables.forEach(t => {
-    ts.addNode(t.name, t);
-  });
+  tables.forEach(t => ts.addNode(t.name, t));
   tables.forEach(t => {
     t.m2oRelations.forEach(m2o => {
-      ts.addEdge(m2o.targetTable.name, t.name);
+      if (m2o.foreignKey.columns.every(c => c.notNull)) {
+        ts.addEdge(m2o.targetTable.name, t.name);
+      }
     });
   });
   return Array.from(ts.sort().values()).map(v => tableToEntityName(v.node));

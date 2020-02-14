@@ -41,8 +41,6 @@ After checkout:
   * Support non-string types
   * Support user-defined types
   * Add `populate` overload
-* `EntityManager.populate` (1st pass done)
-  * Support populating lists of entities
 
 ## History
 

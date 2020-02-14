@@ -51,4 +51,14 @@ describe("EntityManager.populate", () => {
     expect(pub.authors.get[0].books.get.length).toEqual(2);
     expect(pub.authors.get[1].books.get.length).toEqual(2);
   });
+
+  it("can populate via load", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "1", ["author", "tags"]);
+    expect(book.author.get.firstName).toEqual("a1");
+    expect(book.tags.get.length).toEqual(0);
+  });
 });

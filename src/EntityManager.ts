@@ -94,11 +94,21 @@ export class EntityManager {
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
-  public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T> {
+  public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T>;
+  public async load<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    id: string,
+    populate: H,
+  ): Promise<Loaded<T, H>>;
+  async load<T extends Entity>(type: EntityConstructor<T>, id: string, hint?: any): Promise<T> {
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
     }
-    return this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id);
+    const entity = await (this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id));
+    if (hint) {
+      await this.populate(entity, hint);
+    }
+    return entity;
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */

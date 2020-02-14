@@ -73,4 +73,19 @@ describe("EntityManager.populate", () => {
     expect(b1.author.get.firstName).toEqual("a1");
     expect(b2.author.get.firstName).toEqual("a1");
   });
+
+  it("batches across separate populate calls", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await knex.insert({ title: "b2", author_id: 1 }).from("books");
+
+    const em = new EntityManager(knex);
+    const _b1 = await em.load(Book, "1");
+    const _b2 = await em.load(Book, "1");
+    resetQueryCount();
+    const [b1, b2] = await Promise.all([em.populate(_b1, "author"), em.populate(_b2, "author")]);
+    expect(b1.author.get.firstName).toEqual("a1");
+    expect(b2.author.get.firstName).toEqual("a1");
+    expect(numberOfQueries).toEqual(1);
+  });
 });

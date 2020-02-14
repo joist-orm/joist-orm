@@ -43,8 +43,7 @@ describe("EntityManager", () => {
 
   it("inserts a new author", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em);
-    author.firstName = "a1";
+    const author = new Author(em, { firstName: "a1" });
     await em.flush();
 
     const rows = await knex.select("*").from("authors");
@@ -54,8 +53,7 @@ describe("EntityManager", () => {
 
   it("inserts then updates new author", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em);
-    author.firstName = "a1";
+    const author = new Author(em, { firstName: "a1"});
     await em.flush();
     author.firstName = "a2";
     await em.flush();
@@ -67,10 +65,8 @@ describe("EntityManager", () => {
 
   it("inserts multiple authors in bulk", async () => {
     const em = new EntityManager(knex);
-    const author1 = new Author(em);
-    author1.firstName = "a1";
-    const author2 = new Author(em);
-    author2.firstName = "a2";
+    const author1 = new Author(em, { firstName: "a1" });
+    const author2 = new Author(em, { firstName: "a2" });
     await em.flush();
 
     // 3 = begin, insert, commit
@@ -81,8 +77,7 @@ describe("EntityManager", () => {
 
   it("updates an author", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em);
-    author.firstName = "a1";
+    const author = new Author(em, { firstName: "a1" });
     await em.flush();
     expect(author.id).toEqual("1");
 
@@ -96,8 +91,7 @@ describe("EntityManager", () => {
 
   it("does not update inserted-then-unchanged entities", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em);
-    author.firstName = "a1";
+    const author = new Author(em, { firstName: "a1" });
     await em.flush();
 
     resetQueryCount();
@@ -108,8 +102,7 @@ describe("EntityManager", () => {
 
   it("does not update updated-then-unchanged entities", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em);
-    author.firstName = "a1";
+    const author = new Author(em, { firstName: "a1" });
     await em.flush();
 
     author.firstName = "a2";
@@ -123,7 +116,7 @@ describe("EntityManager", () => {
 
   it("createdAt / updatedAt are always non-null", async () => {
     const em = new EntityManager(knex);
-    const author = em.create(Author);
+    const author = em.create(Author, { firstName: "author" });
     expect(author.createdAt).not.toBeUndefined();
     expect(author.updatedAt).not.toBeUndefined();
   });

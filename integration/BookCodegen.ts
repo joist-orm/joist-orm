@@ -1,6 +1,10 @@
 import { EntityOrmField, EntityManager, Reference, ManyToOneReference, Collection, ManyToManyCollection } from "../src";
 import { bookMeta, Book, Author, Tag } from "./entities";
 
+export interface BookOpts {
+  title: string;
+}
+
 export class BookCodegen {
   readonly __orm: EntityOrmField;
 
@@ -16,12 +20,10 @@ export class BookCodegen {
     "tag_id",
   );
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, opts: BookOpts) {
     this.__orm = { metadata: bookMeta, data: {}, em };
     em.register(this);
-    //if (opts) {
-    //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
-    //}
+    Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
   }
 
   get id(): string | undefined {

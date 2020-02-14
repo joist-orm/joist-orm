@@ -1,6 +1,10 @@
 import { EntityOrmField, EntityManager, Collection, OneToManyCollection } from "../src";
 import { publisherMeta, Publisher, Author, authorMeta } from "./entities";
 
+export interface PublisherOpts {
+  name: string;
+}
+
 export class PublisherCodegen {
   readonly __orm: EntityOrmField;
 
@@ -12,12 +16,10 @@ export class PublisherCodegen {
     "publisher_id",
   );
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, opts: PublisherOpts) {
     this.__orm = { metadata: publisherMeta, data: {}, em };
     em.register(this);
-    //if (opts) {
-    //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
-    //}
+    Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
   }
 
   get id(): string | undefined {

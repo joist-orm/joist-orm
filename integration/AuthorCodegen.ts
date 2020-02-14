@@ -1,6 +1,10 @@
 import { EntityOrmField, EntityManager, Collection, OneToManyCollection, Reference, ManyToOneReference } from "../src";
 import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 
+export interface AuthorOpts {
+  firstName: string;
+}
+
 export class AuthorCodegen {
   readonly __orm: EntityOrmField;
 
@@ -8,12 +12,10 @@ export class AuthorCodegen {
 
   readonly publisher: Reference<Author, Publisher> = new ManyToOneReference(this, Publisher, "publisher", "authors");
 
-  constructor(em: EntityManager) {
+  constructor(em: EntityManager, opts: AuthorOpts) {
     this.__orm = { metadata: authorMeta, data: {}, em };
     em.register(this);
-    //if (opts) {
-    //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
-    //}
+    Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
   }
 
   get id(): string | undefined {

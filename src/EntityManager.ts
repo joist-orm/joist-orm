@@ -8,7 +8,7 @@ import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 
 export interface EntityConstructor<T> {
-  new (em: EntityManager, opts?: Partial<T>): T;
+  new (em: EntityManager, opts: any): T;
 }
 
 /** The `__orm` metadata field we track on each instance. */
@@ -89,7 +89,7 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<T extends Entity>(type: EntityConstructor<T>, opts?: Partial<T>): AllLoaded<T> {
+  public create<T extends Entity, O>(type: new (em: EntityManager, opts: O) => T, opts: O): AllLoaded<T> {
     return (new type(this, opts) as any) as AllLoaded<T>;
   }
 
@@ -178,7 +178,7 @@ export class EntityManager {
     // See if this is already in our UoW
     let entity = this.findExistingInstance(meta.type, id) as T;
     if (!entity) {
-      entity = (new meta.cstr(this) as any) as T;
+      entity = (new meta.cstr(this, {}) as any) as T;
       meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
     }
     return entity;

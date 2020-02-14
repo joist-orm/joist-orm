@@ -322,20 +322,35 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       `;
     });
 
+  // Make our opts type
+  const optsFields = table.columns
+    .filter(c => !c.isPrimaryKey && !c.isForeignKey)
+    .map(column => {
+      const fieldName = camelCase(column.name);
+      if (ormMaintainedFields.includes(fieldName)) {
+        return "";
+      }
+      const type = mapType(table.name, column.name, column.type.shortName!);
+      const maybeOptional = column.notNull ? "" : "?";
+      return code`${fieldName}${maybeOptional}: ${type.fieldType}`;
+    });
+
   const metadata = imp(`${paramCase(entityName)}Meta@./entities`);
 
   return code`
+    export interface ${entityName}Opts {
+      ${optsFields}
+    }
+  
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
       
       ${[o2m, m2o, m2m]}
       
-      constructor(em: ${EntityManager}) {
+      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         this.__orm = { metadata: ${metadata}, data: {}, em };
         em.register(this);
-        //if (opts) {
-        //  Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
-        //}
+        Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
       }
         
       get id(): string | undefined {

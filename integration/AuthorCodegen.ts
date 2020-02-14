@@ -1,9 +1,17 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection, Reference } from "../src";
+import {
+  EntityOrmField,
+  EntityManager,
+  ManyToOneReference,
+  Public,
+  Collection,
+  OneToManyCollection,
+  Reference,
+} from "../src";
 import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 
 export interface AuthorOpts {
   firstName: string;
-  publisher?: Publisher;
+  publisher?: Public<Publisher>;
 }
 
 export class AuthorCodegen {

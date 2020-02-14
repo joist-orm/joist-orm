@@ -1,5 +1,5 @@
 import { Entity, EntityConstructor, isEntity } from "../EntityManager";
-import { Reference } from "../index";
+import { Public, Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 
 export class ManyToOneReference<T extends Entity, U extends Entity> implements Reference<T, U> {
@@ -10,7 +10,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
     private otherFieldName: keyof U,
   ) {}
 
-  async load(): Promise<U> {
+  async load(): Promise<Public<U>> {
     // This will be a string id unless we've already loaded it.
     const maybeId = this.entity.__orm.data[this.fieldName];
     if (maybeId.id) {

@@ -15,30 +15,34 @@ export interface Relation<T extends Entity, U extends Entity> {
   // inference inside of `LoadHint` to go beyond "this generic T of Entity has id and __orm"
   // to "no really this generic T has fields firstName, title, etc.".
   // See https://stackoverflow.com/questions/53448100/generic-type-of-extended-interface-not-inferred
-  [F]?: T;
-  [G]?: U;
+  [F]?: Public<T>;
+  [G]?: Public<U>;
 }
 
 /** A many-to-one / foreign key from `T` to `U`. */
 export interface Reference<T extends Entity, U extends Entity> extends Relation<T, U> {
-  load(): Promise<U>;
+  load(): Promise<Public<U>>;
 
   set(other: U): void;
 }
 
 /** Adds a known-safe `get` accessor. */
 export interface LoadedReference<T extends Entity, U extends Entity> extends Reference<T, U> {
-  get: U;
+  get: Public<U>;
 }
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
-  load(): Promise<ReadonlyArray<U>>;
+  load(): Promise<ReadonlyArray<Public<U>>>;
 
   add(other: U): void;
 }
 
 /** Adds a known-safe `get` accessor. */
 export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
-  get: ReadonlyArray<U>;
+  get: ReadonlyArray<Public<U>>;
+}
+
+export type Public<T> = {
+  [K in keyof T]: T[K];
 }

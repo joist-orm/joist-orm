@@ -271,6 +271,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
      `;
       const setter = code`
         set ${fieldName}(${fieldName}: ${type.fieldType}) {
+          this.ensureNotDeleted();
           this.__orm.data["${fieldName}"] = ${fieldName};
           this.__orm.em.markDirty(this);
         }
@@ -293,6 +294,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
      `;
       const setter = code`
         set ${fieldName}(${fieldName}: ${otherEntityType}) {
+          this.ensureNotDeleted();
           this.__orm.data["${fieldName}"] = ${fieldName};
           this.__orm.em.markDirty(this);
         }
@@ -323,7 +325,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const fieldName = camelCase(pluralize(otherEntityName));
       const otherFieldName = camelCase(column.name.replace("_id", ""));
       return code`
-       readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${OneToManyCollection}(this, ${otherMeta}, "${fieldName}", "${otherFieldName}", "${column.name}");
+        readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${OneToManyCollection}(this, ${otherMeta}, "${fieldName}", "${otherFieldName}", "${column.name}");
       `;
     });
 
@@ -410,6 +412,12 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       
       toString(): string {
         return "${entityName}#" + this.id;
+      }
+
+      private ensureNotDeleted() {
+        if (this.__orm.deleted) {
+          throw new Error(this.toString() + " is marked as deleted");
+        }
       }
     }
   `;

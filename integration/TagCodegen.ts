@@ -39,6 +39,7 @@ export class TagCodegen {
   }
 
   set name(name: string) {
+    this.ensureNotDeleted();
     this.__orm.data["name"] = name;
     this.__orm.em.markDirty(this);
   }
@@ -53,5 +54,11 @@ export class TagCodegen {
 
   toString(): string {
     return "Tag#" + this.id;
+  }
+
+  private ensureNotDeleted() {
+    if (this.__orm.deleted) {
+      throw new Error(this.toString() + " is marked as deleted");
+    }
   }
 }

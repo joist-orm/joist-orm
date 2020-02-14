@@ -38,6 +38,7 @@ export class PublisherCodegen {
   }
 
   set name(name: string) {
+    this.ensureNotDeleted();
     this.__orm.data["name"] = name;
     this.__orm.em.markDirty(this);
   }
@@ -55,11 +56,18 @@ export class PublisherCodegen {
   }
 
   set size(size: PublisherSize) {
+    this.ensureNotDeleted();
     this.__orm.data["size"] = size;
     this.__orm.em.markDirty(this);
   }
 
   toString(): string {
     return "Publisher#" + this.id;
+  }
+
+  private ensureNotDeleted() {
+    if (this.__orm.deleted) {
+      throw new Error(this.toString() + " is marked as deleted");
+    }
   }
 }

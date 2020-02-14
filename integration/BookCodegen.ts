@@ -42,6 +42,7 @@ export class BookCodegen {
   }
 
   set title(title: string) {
+    this.ensureNotDeleted();
     this.__orm.data["title"] = title;
     this.__orm.em.markDirty(this);
   }
@@ -56,5 +57,11 @@ export class BookCodegen {
 
   toString(): string {
     return "Book#" + this.id;
+  }
+
+  private ensureNotDeleted() {
+    if (this.__orm.deleted) {
+      throw new Error(this.toString() + " is marked as deleted");
+    }
   }
 }

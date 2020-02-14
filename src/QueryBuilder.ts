@@ -47,6 +47,7 @@ export function buildQuery<T extends Entity>(
         // Then recurse to add its conditions to the query
         addClauses(otherMeta, otherAlias, (where as any)[key]);
       } else {
+        // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
         query = query.where(column.columnName, column.serde.mapToDb(value));
       }
     });

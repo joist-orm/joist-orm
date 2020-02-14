@@ -47,6 +47,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity> implements R
       previousCollection.removeIfLoaded(this.entity);
     }
 
+    (this.entity as any).ensureNotDeleted();
     this.entity.__orm.data[this.fieldName] = other;
     this.entity.__orm.dirty = true;
 

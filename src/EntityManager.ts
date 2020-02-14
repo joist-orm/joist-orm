@@ -16,6 +16,7 @@ export interface EntityOrmField {
   metadata: EntityMetadata<Entity>;
   data: Record<any, any>;
   dirty?: boolean;
+  deleted?: boolean;
   em: EntityManager;
 }
 
@@ -170,6 +171,12 @@ export class EntityManager {
     entity.__orm.data["createdAt"] = new Date();
     entity.__orm.data["updatedAt"] = new Date();
     this.entities.push(entity);
+  }
+
+  /** Marks an instance to be deleted. */
+  delete(entity: Entity): void {
+    // TODO Remove from any collections
+    entity.__orm.deleted = true;
   }
 
   markDirty(entity: Entity): void {

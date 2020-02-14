@@ -160,4 +160,25 @@ describe("EntityManager", () => {
     const p2 = await em2.load(Publisher, "1");
     expect(p2.size).toEqual(PublisherSize.Large);
   });
+
+  it("can delete an antity", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    em.delete(p1);
+    await em.flush();
+
+    const rows = await knex.select("*").from("publishers");
+    expect(rows.length).toEqual(0);
+  });
+
+  it("cannot modify a deleted entity", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    em.delete(p1);
+    expect(() => (p1.name = "p2")).toThrow("Publisher#1 is marked as deleted");
+  });
 });

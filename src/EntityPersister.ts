@@ -7,6 +7,7 @@ interface Todo {
   metadata: EntityMetadata<any>;
   inserts: Entity[];
   updates: Entity[];
+  deletes: Entity[];
 }
 
 export async function flushEntities(knex: Knex, entities: Entity[]): Promise<void> {
@@ -15,6 +16,9 @@ export async function flushEntities(knex: Knex, entities: Entity[]): Promise<voi
   for await (const todo of todos) {
     if (todo) {
       const meta = todo.metadata;
+      if (todo.deletes.length > 0) {
+        await batchDelete(knex, meta, todo.deletes);
+      }
       if (todo.inserts.length > 0) {
         await batchInsert(knex, meta, todo.inserts);
       }
@@ -60,6 +64,13 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   entities.forEach(entity => (entity.__orm.dirty = false));
 }
 
+async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  await knex.raw(
+    `DELETE FROM ${meta.tableName} WHERE id IN (?);`,
+    entities.filter(e => e.id !== undefined).map(e => e.id!),
+  );
+}
+
 function cleanSql(sql: string): string {
   return sql
     .trim()
@@ -80,14 +91,17 @@ function sortEntities(entities: Entity[]): Todo[] {
     const order = entity.__orm.metadata.order;
     const isNew = entity.id === undefined;
     const isDirty = !isNew && entity.__orm.dirty;
-    if (isNew || isDirty) {
+    const isDelete = !isNew && entity.__orm.deleted;
+    if (isNew || isDirty || isDelete) {
       let todo = todos[order];
       if (!todo) {
-        todo = { metadata: entity.__orm.metadata, inserts: [], updates: [] };
+        todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [] };
         todos[order] = todo;
       }
       if (isNew) {
         todo.inserts.push(entity);
+      } else if (isDelete) {
+        todo.deletes.push(entity);
       } else {
         todo.updates.push(entity);
       }

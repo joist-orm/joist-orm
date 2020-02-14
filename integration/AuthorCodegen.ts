@@ -34,6 +34,7 @@ export class AuthorCodegen {
   }
 
   set firstName(firstName: string) {
+    this.ensureNotDeleted();
     this.__orm.data["firstName"] = firstName;
     this.__orm.em.markDirty(this);
   }
@@ -48,5 +49,11 @@ export class AuthorCodegen {
 
   toString(): string {
     return "Author#" + this.id;
+  }
+
+  private ensureNotDeleted() {
+    if (this.__orm.deleted) {
+      throw new Error(this.toString() + " is marked as deleted");
+    }
   }
 }

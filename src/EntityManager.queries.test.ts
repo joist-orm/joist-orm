@@ -1,5 +1,5 @@
 import { EntityManager } from "./EntityManager";
-import { Author, Book } from "../integration";
+import { Author, Book, Publisher, PublisherSize } from "../integration";
 import { knex } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -48,5 +48,15 @@ describe("EntityManager.queries", () => {
     const books = await em.find(Book, { author: { publisher: { name: "p2" } } });
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
+  });
+
+  it("can find by enums", async () => {
+    await knex.insert({ name: "p1", size_id: 1 }).from("publishers");
+    await knex.insert({ name: "p2", size_id: 2 }).from("publishers");
+
+    const em = new EntityManager(knex);
+    const pubs = await em.find(Publisher, { size: PublisherSize.Large });
+    expect(pubs.length).toEqual(1);
+    expect(pubs[0].name).toEqual("p2");
   });
 });

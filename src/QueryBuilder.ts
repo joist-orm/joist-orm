@@ -47,7 +47,7 @@ export function buildQuery<T extends Entity>(
         // Then recurse to add its conditions to the query
         addClauses(otherMeta, otherAlias, (where as any)[key]);
       } else {
-        query = query.where(column.columnName, value);
+        query = query.where(column.columnName, column.serde.mapToDb(value));
       }
     });
   }

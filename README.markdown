@@ -30,7 +30,6 @@ After checkout:
 
 ### Todo
 
-* Enum table support
 * Deleting entities
   * Cascading deletions
   * Removing entity from non-cascaded references/collections

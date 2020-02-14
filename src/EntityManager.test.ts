@@ -124,6 +124,7 @@ describe("EntityManager", () => {
   it("createdAt does not change", async () => {
     const em = new EntityManager(knex);
     const a1 = em.create(Author, { firstName: "a1" });
+    a1.firstName = "a2";
     await em.flush();
 
     const em2 = new EntityManager(knex);

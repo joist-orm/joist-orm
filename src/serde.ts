@@ -1,5 +1,4 @@
 import { EntityMetadata } from "./EntityManager";
-import { fail } from "./utils";
 
 export interface ColumnSerde {
   setOnEntity(data: any, row: any): void;
@@ -7,6 +6,8 @@ export interface ColumnSerde {
   setOnRow(data: any, row: any): void;
 
   getFromEntity(data: any): any;
+
+  mapToDb(value: any): any;
 }
 
 export class SimpleSerde implements ColumnSerde {
@@ -22,6 +23,10 @@ export class SimpleSerde implements ColumnSerde {
 
   getFromEntity(data: any) {
     return data[this.fieldName];
+  }
+
+  mapToDb(value: any) {
+    return value;
   }
 }
 
@@ -40,6 +45,10 @@ export class PrimaryKeySerde implements ColumnSerde {
   getFromEntity(data: any) {
     return keyToNumber(data[this.fieldName]);
   }
+
+  mapToDb(value: any) {
+    return value;
+  }
 }
 
 export class ForeignKeySerde implements ColumnSerde {
@@ -57,6 +66,10 @@ export class ForeignKeySerde implements ColumnSerde {
   getFromEntity(data: any) {
     return keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
   }
+
+  mapToDb(value: any) {
+    return keyToNumber(maybeResolveReferenceToId(value));
+  }
 }
 
 export class EnumFieldSerde implements ColumnSerde {
@@ -72,6 +85,10 @@ export class EnumFieldSerde implements ColumnSerde {
 
   getFromEntity(data: any) {
     return data[this.fieldName]?.id;
+  }
+
+  mapToDb(value: any) {
+    return value?.id;
   }
 }
 

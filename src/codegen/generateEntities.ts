@@ -31,7 +31,6 @@ const EnumFieldSerde = imp("EnumFieldSerde@../src/serde");
 const ForeignKeySerde = imp("ForeignKeySerde@../src/serde");
 const Reference = imp("Reference@../src");
 const SimpleSerde = imp("SimpleSerde@../src/serde");
-const Public = imp("Public@../src");
 
 export interface CodeGenFile {
   path: string;
@@ -378,7 +377,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     const otherEntityName = tableToEntityName(r.targetTable);
     const otherEntityType = imp(`${otherEntityName}@./entities`);
     const maybeOptional = column.notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${Public}<${otherEntityName}>`;
+    return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
   });
 
   const metadata = imp(`${paramCase(entityName)}Meta@./entities`);

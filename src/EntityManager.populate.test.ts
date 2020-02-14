@@ -55,10 +55,22 @@ describe("EntityManager.populate", () => {
   it("can populate via load", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ title: "b1", author_id: 1 }).from("books");
-
     const em = new EntityManager(knex);
     const book = await em.load(Book, "1", ["author", "tags"]);
     expect(book.author.get.firstName).toEqual("a1");
     expect(book.tags.get.length).toEqual(0);
+  });
+
+  it("can populate a list", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await knex.insert({ title: "b2", author_id: 1 }).from("books");
+
+    const em = new EntityManager(knex);
+    const _b1 = await em.load(Book, "1");
+    const _b2 = await em.load(Book, "1");
+    const [b1, b2] = await em.populate([_b1, _b2], "author");
+    expect(b1.author.get.firstName).toEqual("a1");
+    expect(b2.author.get.firstName).toEqual("a1");
   });
 });

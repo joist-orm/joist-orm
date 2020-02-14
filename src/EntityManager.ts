@@ -112,31 +112,39 @@ export class EntityManager {
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
-  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>> {
+  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T[], hint: H): Promise<Loaded<T, H>[]>;
+  async populate<T extends Entity, H extends LoadHint<T>>(
+    entityOrList: T | T[],
+    hint: H,
+  ): Promise<Loaded<T, H> | Array<Loaded<T, H>>> {
     let promises: Promise<void>[] = [];
-    if (typeof hint === "string") {
-      promises.push((entity as any)[hint].load());
-    } else if (Array.isArray(hint)) {
-      (hint as string[]).forEach(key => {
-        promises.push((entity as any)[key].load());
-      });
-    } else if (typeof hint === "object") {
-      Object.entries(hint).forEach(([key, nestedHint]) => {
-        promises.push(
-          (entity as any)[key].load().then((result: any) => {
-            if (Array.isArray(result)) {
-              return Promise.all(result.map(result => this.populate(result, nestedHint)));
-            } else {
-              return this.populate(result, nestedHint);
-            }
-          }),
-        );
-      });
-    } else {
-      throw new Error(`Unexpected hint ${hint}`);
-    }
+    const list: T[] = Array.isArray(entityOrList) ? entityOrList : [entityOrList];
+    list.forEach(entity => {
+      if (typeof hint === "string") {
+        promises.push((entity as any)[hint].load());
+      } else if (Array.isArray(hint)) {
+        (hint as string[]).forEach(key => {
+          promises.push((entity as any)[key].load());
+        });
+      } else if (typeof hint === "object") {
+        Object.entries(hint).forEach(([key, nestedHint]) => {
+          promises.push(
+            (entity as any)[key].load().then((result: any) => {
+              if (Array.isArray(result)) {
+                return Promise.all(result.map(result => this.populate(result, nestedHint)));
+              } else {
+                return this.populate(result, nestedHint);
+              }
+            }),
+          );
+        });
+      } else {
+        throw new Error(`Unexpected hint ${hint}`);
+      }
+    });
     await Promise.all(promises);
-    return entity as any;
+    return entityOrList as any;
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */

@@ -101,7 +101,7 @@ describe("ManyToManyCollection", () => {
   it("can add a new tag to a new book", async () => {
     const em = new EntityManager(knex);
     const author = em.create(Author, { firstName: "a1" });
-    const book = em.create(Book, { title: "b1" });
+    const book = em.create(Book, { title: "b1", author });
     const tag = em.create(Tag, { name: "t3" });
 
     book.author.set(author);

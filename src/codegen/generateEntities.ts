@@ -369,36 +369,39 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const maybeOptional = column.notNull ? "" : "?";
       return code`${fieldName}${maybeOptional}: ${type.fieldType}`;
     });
-  const optsEnumFields = table.m2oRelations
-    .filter(r => isEnumTable(r.targetTable))
-    .map(r => {
-      const column = r.foreignKey.columns[0];
-      const fieldName = camelCase(column.name.replace("_id", ""));
-      const otherEntityName = tableToEntityName(r.targetTable);
-      const otherEntityType = imp(`${otherEntityName}@./entities`);
-      const maybeOptional = column.notNull ? "" : "?";
-      return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
-    });
+  const optsRelationFields = table.m2oRelations.map(r => {
+    const column = r.foreignKey.columns[0];
+    const fieldName = camelCase(column.name.replace("_id", ""));
+    const otherEntityName = tableToEntityName(r.targetTable);
+    const otherEntityType = imp(`${otherEntityName}@./entities`);
+    const maybeOptional = column.notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
+  });
 
   const metadata = imp(`${paramCase(entityName)}Meta@./entities`);
 
   return code`
     export interface ${entityName}Opts {
       ${optsFields}
-      ${optsEnumFields}
+      ${optsRelationFields}
     }
   
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
-      
       ${[o2m, m2o, m2m]}
       
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        this.__orm = { metadata: ${metadata}, data: {}, em };
+        this.__orm = { em, metadata: ${metadata}, data: {} };
         em.register(this);
-        Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
+        Object.entries(opts).forEach(([key, value]) => {
+          if ((this as any)[key] instanceof ${ManyToOneReference}) {
+            (this as any)[key].set(value);
+          } else {
+            (this as any)[key] = value;
+          }
+        });
       }
-        
+
       get id(): string | undefined {
         return this.__orm.data["id"];
       }

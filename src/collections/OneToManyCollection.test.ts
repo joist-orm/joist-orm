@@ -42,7 +42,7 @@ describe("OneToManyCollection", () => {
 
   it("can add to collection", async () => {
     const em = new EntityManager(knex);
-    const b1 = em.create(Book, { title: "b1" });
+    const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing .add
     const a1 = em.create(Author, { firstName: "a1" });
     a1.books.add(b1);
     expect(b1.author.get).toEqual(a1);
@@ -55,7 +55,7 @@ describe("OneToManyCollection", () => {
   it("can add to one collection and remove from other", async () => {
     // Given a book that has two potential authors as all new objects.
     const em = new EntityManager(knex);
-    const b1 = em.create(Book, { title: "b1" });
+    const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing add
     const a1 = em.create(Author, { firstName: "a1" });
     const a2 = em.create(Author, { firstName: "a2" });
 
@@ -81,7 +81,7 @@ describe("OneToManyCollection", () => {
     // Given a book that has two potential authors as already persisted entities
     {
       const em = new EntityManager(knex);
-      const b1 = em.create(Book, { title: "b1" });
+      const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing add
       const a1 = em.create(Author, { firstName: "a1" });
       em.create(Author, { firstName: "a2" });
       b1.author.set(a1);
@@ -110,7 +110,7 @@ describe("OneToManyCollection", () => {
 
   it("can add to collection from the other side", async () => {
     const em = new EntityManager(knex);
-    const b1 = em.create(Book, { title: "b1" });
+    const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing set
     const a1 = em.create(Author, { firstName: "a1" });
     b1.author.set(a1);
     expect(a1.books.get).toContain(b1);
@@ -125,8 +125,7 @@ describe("OneToManyCollection", () => {
     const a1 = await em.load(Author, "1");
 
     // When we give the author a new book
-    const b2 = em.create(Book, { title: "b2" });
-    a1.books.add(b2);
+    const b2 = em.create(Book, { title: "b2", author: a1 });
     // And load the books collection
     const books = await a1.books.load();
 

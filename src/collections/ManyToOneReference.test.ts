@@ -16,8 +16,7 @@ describe("ManyToOneReference", () => {
   it("can save a foreign key", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
-    const book = new Book(em, { title: "t1" });
-    book.author.set(author);
+    new Book(em, { title: "t1", author });
     await em.flush();
 
     const rows = await knex.select("*").from("books");

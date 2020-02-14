@@ -1,4 +1,4 @@
-import { EntityOrmField, EntityManager, Collection, ManyToManyCollection } from "../src";
+import { EntityOrmField, EntityManager, ManyToOneReference, Collection, ManyToManyCollection } from "../src";
 import { tagMeta, Tag, Book } from "./entities";
 
 export interface TagOpts {
@@ -19,9 +19,15 @@ export class TagCodegen {
   );
 
   constructor(em: EntityManager, opts: TagOpts) {
-    this.__orm = { metadata: tagMeta, data: {}, em };
+    this.__orm = { em, metadata: tagMeta, data: {} };
     em.register(this);
-    Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
+    Object.entries(opts).forEach(([key, value]) => {
+      if ((this as any)[key] instanceof ManyToOneReference) {
+        (this as any)[key].set(value);
+      } else {
+        (this as any)[key] = value;
+      }
+    });
   }
 
   get id(): string | undefined {

@@ -1,4 +1,4 @@
-import { EntityOrmField, EntityManager, Collection, OneToManyCollection } from "../src";
+import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection } from "../src";
 import { publisherMeta, PublisherSize, Publisher, Author, authorMeta } from "./entities";
 
 export interface PublisherOpts {
@@ -18,9 +18,15 @@ export class PublisherCodegen {
   );
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    this.__orm = { metadata: publisherMeta, data: {}, em };
+    this.__orm = { em, metadata: publisherMeta, data: {} };
     em.register(this);
-    Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
+    Object.entries(opts).forEach(([key, value]) => {
+      if ((this as any)[key] instanceof ManyToOneReference) {
+        (this as any)[key].set(value);
+      } else {
+        (this as any)[key] = value;
+      }
+    });
   }
 
   get id(): string | undefined {

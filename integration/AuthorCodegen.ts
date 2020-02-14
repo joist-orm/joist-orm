@@ -1,8 +1,9 @@
-import { EntityOrmField, EntityManager, Collection, OneToManyCollection, Reference, ManyToOneReference } from "../src";
+import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection, Reference } from "../src";
 import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 
 export interface AuthorOpts {
   firstName: string;
+  publisher?: Publisher;
 }
 
 export class AuthorCodegen {
@@ -13,9 +14,15 @@ export class AuthorCodegen {
   readonly publisher: Reference<Author, Publisher> = new ManyToOneReference(this, Publisher, "publisher", "authors");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
-    this.__orm = { metadata: authorMeta, data: {}, em };
+    this.__orm = { em, metadata: authorMeta, data: {} };
     em.register(this);
-    Object.entries(opts).forEach(([key, value]) => ((this as any)[key] = value));
+    Object.entries(opts).forEach(([key, value]) => {
+      if ((this as any)[key] instanceof ManyToOneReference) {
+        (this as any)[key].set(value);
+      } else {
+        (this as any)[key] = value;
+      }
+    });
   }
 
   get id(): string | undefined {

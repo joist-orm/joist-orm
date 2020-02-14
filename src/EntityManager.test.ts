@@ -1,5 +1,5 @@
 import { EntityManager } from "./EntityManager";
-import { Author } from "../integration";
+import { Author, Publisher, PublisherSize } from "../integration";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -53,7 +53,7 @@ describe("EntityManager", () => {
 
   it("inserts then updates new author", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em, { firstName: "a1"});
+    const author = new Author(em, { firstName: "a1" });
     await em.flush();
     author.firstName = "a2";
     await em.flush();
@@ -146,5 +146,17 @@ describe("EntityManager", () => {
     const em3 = new EntityManager(knex);
     const a3 = await em3.load(Author, "1");
     expect(a3.updatedAt).not.toEqual(a1.updatedAt);
+  });
+
+  it("can save enums", async () => {
+    const em = new EntityManager(knex);
+    em.create(Publisher, { name: "a1", size: PublisherSize.Large });
+    await em.flush();
+    const rows = await knex.select("*").from("publishers");
+    expect(rows[0].size_id).toEqual(2);
+
+    const em2 = new EntityManager(knex);
+    const p2 = await em2.load(Publisher, "1");
+    expect(p2.size).toEqual(PublisherSize.Large);
   });
 });

@@ -1,4 +1,5 @@
 import { EntityMetadata } from "./EntityManager";
+import { fail } from "./utils";
 
 export interface ColumnSerde {
   setOnEntity(data: any, row: any): void;
@@ -55,6 +56,22 @@ export class ForeignKeySerde implements ColumnSerde {
 
   getFromEntity(data: any) {
     return keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
+  }
+}
+
+export class EnumFieldSerde implements ColumnSerde {
+  constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = Object.values(this.enumObject).find((v: any) => v.id === row[this.columnName]);
+  }
+
+  setOnRow(data: any, row: any): void {
+    row[this.columnName] = data[this.fieldName]?.id;
+  }
+
+  getFromEntity(data: any) {
+    return data[this.fieldName]?.id;
   }
 }
 

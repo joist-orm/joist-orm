@@ -1,6 +1,6 @@
 import { EntityMetadata } from "../src";
-import { Author, Book, Publisher, Tag } from "./entities";
-import { PrimaryKeySerde, SimpleSerde, ForeignKeySerde } from "../src/serde";
+import { Author, Book, Publisher, Tag, PublisherSize } from "./entities";
+import { PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "../src/serde";
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
@@ -102,6 +102,13 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+
+    {
+      fieldName: "size",
+      columnName: "size_id",
+      dbType: "int",
+      serde: new EnumFieldSerde("size", "size_id", PublisherSize),
     },
   ],
   order: 1,

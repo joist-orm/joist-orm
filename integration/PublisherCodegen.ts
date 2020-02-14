@@ -1,8 +1,9 @@
 import { EntityOrmField, EntityManager, Collection, OneToManyCollection } from "../src";
-import { publisherMeta, Publisher, Author, authorMeta } from "./entities";
+import { publisherMeta, PublisherSize, Publisher, Author, authorMeta } from "./entities";
 
 export interface PublisherOpts {
   name: string;
+  size?: PublisherSize;
 }
 
 export class PublisherCodegen {
@@ -41,6 +42,15 @@ export class PublisherCodegen {
 
   get updatedAt(): Date {
     return this.__orm.data["updatedAt"];
+  }
+
+  get size(): PublisherSize {
+    return this.__orm.data["size"];
+  }
+
+  set size(size: PublisherSize) {
+    this.__orm.data["size"] = size;
+    this.__orm.em.markDirty(this);
   }
 
   toString(): string {

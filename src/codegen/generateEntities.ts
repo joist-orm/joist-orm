@@ -1,5 +1,5 @@
 import pgStructure, { Db, Table } from "pg-structure";
-import { camelCase, constantCase, paramCase, pascalCase } from "change-case";
+import { camelCase, paramCase, pascalCase } from "change-case";
 import { promises as fs } from "fs";
 import { Client } from "pg";
 import pluralize from "pluralize";
@@ -27,6 +27,7 @@ const EntityMetadata = imp("EntityMetadata@../src");
 const PrimaryKeySerde = imp("PrimaryKeySerde@../src/serde");
 const ManyToOneReference = imp("ManyToOneReference@../src");
 const ManyToManyCollection = imp("ManyToManyCollection@../src");
+const EnumFieldSerde = imp("EnumFieldSerde@../src/serde");
 const ForeignKeySerde = imp("ForeignKeySerde@../src/serde");
 const Reference = imp("Reference@../src");
 const SimpleSerde = imp("SimpleSerde@../src/serde");
@@ -98,7 +99,7 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
         {
           path: entitiesDirectory,
           name: `${enumName}.ts`,
-          contents: generateEnumSpec(table, enumRows, enumName),
+          contents: generateEnumFile(table, enumRows, enumName),
           overwrite: true,
         },
       ];
@@ -144,15 +145,19 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
   return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile];
 }
 
-function generateEnumSpec(table: Table, enumRows: EnumRows, enumName: string): Code {
+function generateEnumFile(table: Table, enumRows: EnumRows, enumName: string): Code {
   return code`
-    export enum ${enumName} {
+    export const ${enumName} = {
       ${enumRows[table.name]
         .map(row => {
-          return `${pascalCase(row.code)} = '${constantCase(row.code)}'`;
+          return `${pascalCase(row.code)}: { id: ${row.id}, code: '${row.code}', name: '${row.name}' }`;
         })
         .join(",")}
-    }
+    };
+    
+    export type ${enumName} =
+      ${enumRows[table.name].map(row => `typeof ${enumName}.${pascalCase(row.code)}`).join(" | ")}
+    ;
   `;
 }
 
@@ -208,14 +213,26 @@ function generateMetadata(sortedEntities: string[], table: Table): Code {
     const fieldName = camelCase(column.name.replace("_id", ""));
     const otherEntity = tableToEntityName(r.targetTable);
     const otherMeta = `${paramCase(otherEntity)}Meta`;
-    return code`
-      {
-        fieldName: "${fieldName}",
-        columnName: "${column.name}",
-        dbType: "int",
-        serde: new ${ForeignKeySerde}("${fieldName}", "${column.name}", () => ${otherMeta}),
-      },
-    `;
+    if (isEnumTable(r.targetTable)) {
+      const otherEntityType = imp(`${otherEntity}@./entities`);
+      return code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${column.name}",
+          dbType: "int",
+          serde: new ${EnumFieldSerde}("${fieldName}", "${column.name}", ${otherEntityType}),
+        },
+      `;
+    } else {
+      return code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${column.name}",
+          dbType: "int",
+          serde: new ${ForeignKeySerde}("${fieldName}", "${column.name}", () => ${otherMeta}),
+        },
+      `;
+    }
   });
 
   return code`
@@ -268,9 +285,27 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     const otherEntityName = tableToEntityName(r.targetTable);
     const otherEntityType = imp(`${otherEntityName}@./entities`);
     const otherFieldName = camelCase(pluralize(entityName));
-    return code`
-      readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}> = new ${ManyToOneReference}(this, ${otherEntityType}, "${fieldName}", "${otherFieldName}");
-    `;
+    if (isEnumTable(r.targetTable)) {
+      const getter = code`
+        get ${fieldName}(): ${otherEntityType} {
+          return this.__orm.data["${fieldName}"];
+        }
+     `;
+      const setter = code`
+        set ${fieldName}(${fieldName}: ${otherEntityType}) {
+          this.__orm.data["${fieldName}"] = ${fieldName};
+          this.__orm.em.markDirty(this);
+        }
+      `;
+      // Group enums as primitives
+      primitives.push(getter);
+      primitives.push(setter);
+      return code``;
+    } else {
+      return code`
+        readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}> = new ${ManyToOneReference}(this, ${otherEntityType}, "${fieldName}", "${otherFieldName}");
+      `;
+    }
   });
 
   // Add OneToMany
@@ -334,12 +369,23 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const maybeOptional = column.notNull ? "" : "?";
       return code`${fieldName}${maybeOptional}: ${type.fieldType}`;
     });
+  const optsEnumFields = table.m2oRelations
+    .filter(r => isEnumTable(r.targetTable))
+    .map(r => {
+      const column = r.foreignKey.columns[0];
+      const fieldName = camelCase(column.name.replace("_id", ""));
+      const otherEntityName = tableToEntityName(r.targetTable);
+      const otherEntityType = imp(`${otherEntityName}@./entities`);
+      const maybeOptional = column.notNull ? "" : "?";
+      return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
+    });
 
   const metadata = imp(`${paramCase(entityName)}Meta@./entities`);
 
   return code`
     export interface ${entityName}Opts {
       ${optsFields}
+      ${optsEnumFields}
     }
   
     export class ${entityName}Codegen {

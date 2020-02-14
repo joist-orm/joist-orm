@@ -11,6 +11,38 @@ export function createEntityTable(b: MigrationBuilder, tableName: string, column
   createTriggers(b, tableName);
 }
 
+export function createEnumTable(b: MigrationBuilder, tableName: string, values: Array<[string, string]>): void {
+  b.createTable(tableName, {
+    id: "id",
+    code: { type: "text", notNull: true },
+    name: { type: "text", notNull: true },
+  });
+  b.addConstraint(tableName, `${tableName}_unique_enum_code_constraint`, "UNIQUE (code)");
+  values.forEach(value => addEnumValue(b, tableName, value));
+}
+export function addEnumValue(b: MigrationBuilder, tableName: string, value: [string, string]): void {
+  const [code, name] = value;
+  validateEnumCode(code);
+  b.sql(`INSERT INTO ${tableName} (code, name) VALUES ('${code}', '${name.replace("'", "''")}');`);
+}
+
+export function updateEnumValue(
+  b: MigrationBuilder,
+  tableName: string,
+  previousCode: string,
+  value: [string, string],
+): void {
+  const [code, name] = value;
+  validateEnumCode(code);
+  b.sql(`UPDATE ${tableName} SET code ='${code}', name = '${name.replace("'", "''")}' WHERE code = '${previousCode}';`);
+}
+
+function validateEnumCode(code: string): void {
+  const codeRegex = /^[A-Z0-9_]+$/;
+  if (!codeRegex.test(code))
+    throw `ERROR: Invalid enum code specified: ${code}. Codes must match the regex: ${codeRegex}`;
+}
+
 /** Makes a trigger to update the `updated_at` column. */
 export function createTriggers(b: MigrationBuilder, tableName: string): void {
   b.createTrigger(tableName, `${tableName}_created_at`, {

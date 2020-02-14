@@ -40,7 +40,6 @@ After checkout:
 * `EntityManager.find` (1st pass done)
   * Support non-string types
   * Support user-defined types
-  * Add `populate` overload
 
 ## History
 

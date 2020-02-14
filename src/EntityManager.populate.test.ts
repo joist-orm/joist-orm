@@ -88,4 +88,17 @@ describe("EntityManager.populate", () => {
     expect(b2.author.get.firstName).toEqual("a1");
     expect(numberOfQueries).toEqual(1);
   });
+
+  it("can populate from a find call", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ first_name: "a2" }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await knex.insert({ title: "b2", author_id: 2 }).from("books");
+    const em = new EntityManager(knex);
+    resetQueryCount();
+    const books = await em.find(Book, {}, { populate: "author" });
+    expect(books[0].author.get.firstName).toEqual("a1");
+    expect(books[1].author.get.firstName).toEqual("a2");
+    expect(numberOfQueries).toEqual(2);
+  });
 });

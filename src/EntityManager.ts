@@ -81,11 +81,25 @@ export class EntityManager {
   // TODO make private
   joinRows: Record<string, JoinRow[]> = {};
 
-  public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]> {
+  public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]>;
+  public async find<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: FilterQuery<T>,
+    options: { populate: H },
+  ): Promise<Loaded<T, H>[]>;
+  async find<T extends Entity>(
+    type: EntityConstructor<T>,
+    where: FilterQuery<T>,
+    options?: { populate: any },
+  ): Promise<T[]> {
     const meta = getMetadata(type);
     const query = buildQuery(this.knex, type, where);
     const rows = await query;
-    return rows.map(row => this.hydrateOrLookup(meta, row));
+    const result = rows.map(row => this.hydrateOrLookup(meta, row));
+    if (options?.populate) {
+      await this.populate(result, options.populate);
+    }
+    return result;
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */

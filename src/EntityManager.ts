@@ -10,7 +10,7 @@ import {
   ManyToOneReference,
   OneToManyCollection,
   Reference,
-  Relation
+  Relation,
 } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
@@ -129,7 +129,10 @@ export class EntityManager {
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
     }
-    const entity = await (this.findExistingInstance(getMetadata(type).type, id) || this.loaderForEntity(type).load(id));
+    const entity = this.findExistingInstance(getMetadata(type).cstr, id) || (await this.loaderForEntity(type).load(id));
+    if (!entity) {
+      throw new Error(`${type.name}#${id} was not found`);
+    }
     if (hint) {
       await this.populate(entity, hint);
     }
@@ -174,7 +177,7 @@ export class EntityManager {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(entity: Entity): void {
-    if (entity.id && this.findExistingInstance(entity.__orm.metadata.type, entity.id) !== undefined) {
+    if (entity.id && this.findExistingInstance(getMetadata(entity).cstr, entity.id) !== undefined) {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
@@ -194,7 +197,7 @@ export class EntityManager {
         if (otherId) {
           // const other = this.findExistingInstance(v.otherType, otherId);
           // if (other) {
-            // const otherCollection = (other as any)[v.otherFieldName];
+          // const otherCollection = (other as any)[v.otherFieldName];
           // }
         }
       } else if (v instanceof OneToManyCollection) {
@@ -202,7 +205,7 @@ export class EntityManager {
         others.forEach(other => {
           // TODO What if other.otherFieldName is required/not-null?
           (other[v.otherFieldName] as ManyToOneReference<any, any, any>).set(undefined);
-        })
+        });
       }
     });
 
@@ -218,19 +221,15 @@ export class EntityManager {
     await flushJoinTables(this.knex, this.joinRows);
   }
 
-  private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
+  private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {
     return getOrSet(this.loaders, type.name, () => {
       return new DataLoader<string, T | undefined>(async keys => {
         const meta = getMetadata(type);
 
-        const nonNullKeys = keys.filter(k => k !== undefined) as string[];
-        const rows =
-          nonNullKeys.length === 0
-            ? []
-            : await this.knex
-                .select("*")
-                .from(meta.tableName)
-                .whereIn("id", nonNullKeys);
+        const rows = await this.knex
+          .select("*")
+          .from(meta.tableName)
+          .whereIn("id", keys as string[]);
 
         const entities = rows.map(row => this.hydrateOrLookup(meta, row));
         const entitiesById = indexBy(entities, e => e.id!);
@@ -241,15 +240,15 @@ export class EntityManager {
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // TODO Hide private impl
-  public findExistingInstance(type: string, id: string): Entity | undefined {
-    return this.entities.find(e => e.__orm.metadata.type === type && e.id === id);
+  public findExistingInstance<T extends Entity>(type: EntityConstructor<T>, id: string): T | undefined {
+    return this.entities.find(e => getMetadata(e).cstr === type && e.id === id) as T | undefined;
   }
 
   // TOOD Hide private
   public hydrateOrLookup<T extends Entity>(meta: EntityMetadata<T>, row: any): T {
     const id = keyToString(row["id"])!;
     // See if this is already in our UoW
-    let entity = this.findExistingInstance(meta.type, id) as T;
+    let entity = this.findExistingInstance(meta.cstr, id) as T;
     if (!entity) {
       entity = (new meta.cstr(this, {}) as any) as T;
       meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));

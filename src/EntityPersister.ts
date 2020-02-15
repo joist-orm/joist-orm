@@ -13,6 +13,9 @@ interface Todo {
 export async function flushEntities(knex: Knex, entities: Entity[]): Promise<void> {
   const updatedAt = new Date();
   const todos = sortEntities(entities);
+  if (todos.length === 0) {
+    return;
+  }
   await knex.transaction(async tx => {
     for await (const todo of todos) {
       if (todo) {

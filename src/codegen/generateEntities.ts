@@ -91,7 +91,7 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
   const sortedEntities = sortByRequiredForeignKeys(db);
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
-    contents: code`${entities.map(table => generateMetadata(sortedEntities, table))}`,
+    contents: code`${entities.map(table => generateMetadataFile(sortedEntities, table))}`,
     overwrite: true,
   };
 
@@ -157,7 +157,7 @@ function mapType(tableName: string, columnName: string, dbColumnType: string): C
   );
 }
 
-function generateMetadata(sortedEntities: string[], table: Table): Code {
+function generateMetadataFile(sortedEntities: string[], table: Table): Code {
   const entityName = tableToEntityName(table);
   const entity = imp(`${entityName}@./entities`);
   const metaName = `${paramCase(entityName)}Meta`;

@@ -13,14 +13,14 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   async load(): Promise<U | N> {
     // This will be a string id unless we've already loaded it.
-    const maybeId = this.entity.__orm.data[this.fieldName];
-    if (maybeId && maybeId.id) {
-      return maybeId as U;
+    const current = this.current();
+    if (isEntity(current)) {
+      return current as U;
     }
-    if (maybeId === undefined) {
+    if (current === undefined) {
       return undefined as N;
     }
-    const other = ((await this.entity.__orm.em.load(this.otherType, maybeId as string)) as any) as U;
+    const other = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
     this.entity.__orm.data[this.fieldName] = other;
     return other;
   }
@@ -61,7 +61,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  current(): U | undefined | number {
+  current(): U | undefined | string {
     return this.entity.__orm.data[this.fieldName];
   }
 }

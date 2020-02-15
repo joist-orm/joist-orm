@@ -2,6 +2,13 @@ import { Entity, EntityConstructor, isEntity } from "../EntityManager";
 import { Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 
+/**
+ * Manages a foreign key from one entity to another, i.e. `Book.author --> Author`.
+ *
+ * We keep the current `author` / `author_id` value in the `__orm.data` hash, where the
+ * current value could be either the (string) author id from the database, or an entity
+ * `Author` that the user has set.
+ */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   implements Reference<T, U, N> {
   constructor(

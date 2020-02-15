@@ -1,6 +1,6 @@
 import { EntityManager } from "../EntityManager";
 import { knex } from "../setupDbTests";
-import { Author, Book, Publisher } from "../../integration/";
+import { Author, Book } from "../../integration/";
 import { keyToNumber } from "../serde";
 
 describe("OneToManyCollection", () => {
@@ -135,18 +135,15 @@ describe("OneToManyCollection", () => {
     expect(books[1].id).toEqual("1");
   });
 
-  it.skip("removes deleted entities from collections", async () => {
+  it("removes deleted entities from other collections", async () => {
+    // Given an author with a publisher
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-
     const em = new EntityManager(knex);
-    const a1 = await em.load(Author, "1", "publisher");
-    const p1 = a1.publisher.get!;
-    em.delete(p1);
-    expect(a1.publisher);
-    await em.flush();
-
-    const rows = await knex.select("*").from("publishers");
-    expect(rows.length).toEqual(0);
+    const a1 = await em.load(Author, "1", { publisher: "authors" } as const);
+    // When we delete the author
+    em.delete(a1);
+    // Then it's removed from the Publisher.authors collection
+    expect(a1.publisher.get!.authors.get.length).toEqual(0);
   });
 });

@@ -29,6 +29,7 @@ After checkout:
 
 ### Todo
 
+- Lifecycle hooks for validation rules/derived values
 - Deleting entities
   - Cascading deletions
   - Removing entity from non-cascaded references/collections

@@ -27,12 +27,12 @@ export interface Entity {
 }
 
 export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U> ? FilterQuery<U> : T[P];
+  [P in keyof T]?: T[P] extends Reference<T, infer U> ? FilterQuery<Exclude<U, undefined>> : T[P];
 };
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
 type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U>
-  ? LoadedReference<T, Loaded<U, H>>
+  ? LoadedReference<T, Loaded<Exclude<U, undefined>, H>>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
   : P;
@@ -40,7 +40,8 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U>
 /** Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities. */
 export type AllLoaded<T extends Entity> = {
   [P in keyof T]: MarkLoaded<T, T[P]>;
-} & T;
+} &
+  T;
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = {
@@ -49,7 +50,8 @@ export type Loaded<T extends Entity, H extends LoadHint<T>> = {
     : H extends Array<infer U>
     ? LoadedIfInKeyHint<T, K, U>
     : LoadedIfInKeyHint<T, K, H>;
-} & T;
+} &
+  T;
 
 type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
   ? MarkLoaded<T, T[K], H[K]>
@@ -67,7 +69,7 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 type LoadHint<T extends Entity> = keyof RelationsIn<T> | Array<keyof RelationsIn<T>> | NestedLoadHint<T>;
 
 type NestedLoadHint<T extends Entity> = {
-  [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
+  [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<Exclude<U, undefined>> : never;
 };
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
@@ -190,17 +192,21 @@ export class EntityManager {
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>) {
     return getOrSet(this.loaders, type.name, () => {
-      return new DataLoader<string, T>(async keys => {
+      return new DataLoader<string, T | undefined>(async keys => {
         const meta = getMetadata(type);
 
-        const rows = await this.knex
-          .select("*")
-          .from(meta.tableName)
-          .whereIn("id", keys as string[]);
+        const nonNullKeys = keys.filter(k => k !== undefined) as string[];
+        const rows =
+          nonNullKeys.length === 0
+            ? []
+            : await this.knex
+                .select("*")
+                .from(meta.tableName)
+                .whereIn("id", nonNullKeys);
 
         const entities = rows.map(row => this.hydrateOrLookup(meta, row));
         const entitiesById = indexBy(entities, e => e.id!);
-        return keys.map(k => entitiesById.get(k) || new Error(`${type.name}#${k} not found`));
+        return keys.map(k => entitiesById.get(k));
       });
     });
   }

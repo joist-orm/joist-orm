@@ -30,7 +30,7 @@ describe("EntityManager.populate", () => {
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, { author: "publisher" } as const);
     expect(bookb.author.get.firstName).toEqual("a1");
-    expect(bookb.author.get.publisher.get.name).toEqual("p1");
+    expect(bookb.author.get.publisher.get!.name).toEqual("p1");
   });
 
   it("can populate one-to-many with nested keys", async () => {

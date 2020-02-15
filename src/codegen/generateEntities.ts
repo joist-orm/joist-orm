@@ -286,14 +286,15 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     const otherEntityName = tableToEntityName(r.targetTable);
     const otherEntityType = imp(`${otherEntityName}@./entities`);
     const otherFieldName = camelCase(pluralize(entityName));
+    const maybeOptional = column.notNull ? "" : " | undefined";
     if (isEnumTable(r.targetTable)) {
       const getter = code`
-        get ${fieldName}(): ${otherEntityType} {
+        get ${fieldName}(): ${otherEntityType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
         }
      `;
       const setter = code`
-        set ${fieldName}(${fieldName}: ${otherEntityType}) {
+        set ${fieldName}(${fieldName}: ${otherEntityType}${maybeOptional}) {
           this.ensureNotDeleted();
           this.__orm.data["${fieldName}"] = ${fieldName};
           this.__orm.em.markDirty(this);
@@ -305,7 +306,13 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       return code``;
     } else {
       return code`
-        readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}> = new ${ManyToOneReference}(this, ${otherEntityType}, "${fieldName}", "${otherFieldName}");
+        readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}${maybeOptional}> =
+          new ${ManyToOneReference}<${entityType}, ${otherEntityType}, ${otherEntityType}${maybeOptional}>(
+            this,
+            ${otherEntityType},
+            "${fieldName}",
+            "${otherFieldName}",
+          );
       `;
     }
   });

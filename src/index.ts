@@ -9,7 +9,7 @@ const F = Symbol();
 const G = Symbol();
 
 /** A relationship from `T` to `U`, could be any of many-to-one, one-to-many, or many-to-many. */
-export interface Relation<T extends Entity, U extends Entity> {
+export interface Relation<T extends Entity, U extends Entity | undefined> {
   // Make our Relation somewhat non-structural, otherwise since it's a marker interface,
   // types like `number` or `string` will match it. This also seems to nudge the type
   // inference inside of `LoadHint` to go beyond "this generic T of Entity has id and __orm"
@@ -20,7 +20,7 @@ export interface Relation<T extends Entity, U extends Entity> {
 }
 
 /** A many-to-one / foreign key from `T` to `U`. */
-export interface Reference<T extends Entity, U extends Entity> extends Relation<T, U> {
+export interface Reference<T extends Entity, U extends Entity | undefined> extends Relation<T, U> {
   load(): Promise<U>;
 
   set(other: U): void;

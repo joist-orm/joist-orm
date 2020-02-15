@@ -101,10 +101,10 @@ export function maybeResolveReferenceToId(value: any) {
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */
 export function keyToNumber(value: any): number | undefined {
-  return value === undefined ? undefined : Number(value);
+  return value === undefined || value === null ? undefined : Number(value);
 }
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */
-export function keyToString(key: any): string | undefined {
-  return key === undefined ? undefined : String(key);
+export function keyToString(value: any): string | undefined {
+  return value === undefined || value === null ? undefined : String(value);
 }

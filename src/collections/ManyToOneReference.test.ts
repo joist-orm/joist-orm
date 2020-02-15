@@ -13,6 +13,13 @@ describe("ManyToOneReference", () => {
     expect(author.firstName).toEqual("f");
   });
 
+  it("can load a null foreign key", async () => {
+    await knex.insert({ first_name: "f" }).into("authors");
+    const em = new EntityManager(knex);
+    const author = await em.load(Author, "1", "publisher");
+    expect(author.publisher.get).toBeUndefined();
+  });
+
   it("can save a foreign key", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });

@@ -41,7 +41,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
       }
     }
     // This will no-op and mark other dirty if necessary
-    ((other[this.otherFieldName] as any) as ManyToOneReference<U, T>).set(this.entity);
+    ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, T>).set(this.entity);
   }
 
   // We're not supported remove(other) because that might leave other.otherFieldName as undefined,

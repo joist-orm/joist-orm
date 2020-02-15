@@ -51,11 +51,11 @@ export class PublisherCodegen {
     return this.__orm.data["updatedAt"];
   }
 
-  get size(): PublisherSize {
+  get size(): PublisherSize | undefined {
     return this.__orm.data["size"];
   }
 
-  set size(size: PublisherSize) {
+  set size(size: PublisherSize | undefined) {
     this.ensureNotDeleted();
     this.__orm.data["size"] = size;
     this.__orm.em.markDirty(this);

@@ -156,6 +156,13 @@ describe("EntityManager", () => {
     expect(p2.size).toEqual(PublisherSize.Large);
   });
 
+  it("can load null enums", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    expect(p1.size).toBeUndefined();
+  });
+
   it("can delete an antity", async () => {
     await knex.insert({ name: "p1" }).from("publishers");
 

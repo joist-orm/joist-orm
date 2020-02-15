@@ -274,6 +274,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
             ${otherEntityType},
             "${fieldName}",
             "${otherFieldName}",
+            ${column.notNull},
           );
       `;
     }

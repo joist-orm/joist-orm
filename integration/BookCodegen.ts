@@ -14,6 +14,7 @@ export class BookCodegen {
     Author,
     "author",
     "books",
+    true,
   );
 
   readonly tags: Collection<Book, Tag> = new ManyToManyCollection(

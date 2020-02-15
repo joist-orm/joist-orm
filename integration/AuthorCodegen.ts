@@ -16,6 +16,7 @@ export class AuthorCodegen {
     Publisher,
     "publisher",
     "authors",
+    false,
   );
 
   constructor(em: EntityManager, opts: AuthorOpts) {

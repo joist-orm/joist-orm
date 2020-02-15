@@ -16,20 +16,22 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     public otherType: EntityConstructor<U>,
     private fieldName: keyof T,
     public otherFieldName: keyof U,
+    private notNull: boolean,
   ) {}
 
   async load(): Promise<U | N> {
     // This will be a string id unless we've already loaded it.
     const current = this.current();
     if (isEntity(current)) {
-      return current as U;
+      return this.ensureNotDeleted(current as U);
     }
     if (current === undefined) {
       return undefined as N;
     }
+    // Resolve the id to an entity, and then put it back in __orm.data for any future load()/get() calls.
     const other = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
     this.entity.__orm.data[this.fieldName] = other;
-    return other;
+    return this.ensureNotDeleted(other);
   }
 
   set(other: U | N): void {
@@ -42,7 +44,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (current !== undefined && !isEntity(current)) {
       throw new Error(`${current} should have been an object`);
     }
-    return current as U | N;
+    return this.ensureNotDeleted(current as U | N);
   }
 
   // Internal method used by OneToManyCollection
@@ -70,5 +72,15 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   current(): U | undefined | string {
     return this.entity.__orm.data[this.fieldName];
+  }
+
+  private ensureNotDeleted(e: U | N): U | N {
+    if (e !== undefined && e.__orm.deleted) {
+      if (this.notNull) {
+        throw new Error(`Referenced entity ${e} has been marked as deleted`);
+      }
+      return undefined as N;
+    }
+    return e;
   }
 }

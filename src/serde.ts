@@ -95,7 +95,7 @@ export class EnumFieldSerde implements ColumnSerde {
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
 // ourselves, at which point we'll resolve it to an id.
-export function maybeResolveReferenceToId(value: any) {
+export function maybeResolveReferenceToId(value: any): string | undefined {
   return value?.id || value;
 }
 

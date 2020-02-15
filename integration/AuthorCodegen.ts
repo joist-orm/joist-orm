@@ -11,11 +11,12 @@ export class AuthorCodegen {
 
   readonly books: Collection<Author, Book> = new OneToManyCollection(this, bookMeta, "books", "author", "author_id");
 
-  readonly publisher: Reference<Author, Publisher | undefined> = new ManyToOneReference<
-    Author,
+  readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference<Author, Publisher, undefined>(
+    this,
     Publisher,
-    Publisher | undefined
-  >(this, Publisher, "publisher", "authors");
+    "publisher",
+    "authors",
+  );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     this.__orm = { em, metadata: authorMeta, data: {} };

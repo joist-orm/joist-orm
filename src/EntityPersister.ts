@@ -1,5 +1,5 @@
 import { Entity, EntityMetadata } from "./EntityManager";
-import Knex from "knex";
+import Knex, { Transaction } from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
 
@@ -13,30 +13,36 @@ interface Todo {
 export async function flushEntities(knex: Knex, entities: Entity[]): Promise<void> {
   const updatedAt = new Date();
   const todos = sortEntities(entities);
-  for await (const todo of todos) {
-    if (todo) {
-      const meta = todo.metadata;
-      if (todo.deletes.length > 0) {
-        await batchDelete(knex, meta, todo.deletes);
-      }
-      if (todo.inserts.length > 0) {
-        await batchInsert(knex, meta, todo.inserts);
-      }
-      if (todo.updates.length > 0) {
-        todo.updates.forEach(e => (e.__orm.data["updatedAt"] = updatedAt));
-        await batchUpdate(knex, meta, todo.updates);
+  await knex.transaction(async tx => {
+    for await (const todo of todos) {
+      if (todo) {
+        const meta = todo.metadata;
+        if (todo.inserts.length > 0) {
+          await batchInsert(knex, tx, meta, todo.inserts);
+        }
+        if (todo.updates.length > 0) {
+          todo.updates.forEach(e => (e.__orm.data["updatedAt"] = updatedAt));
+          await batchUpdate(knex, tx, meta, todo.updates);
+        }
+        if (todo.deletes.length > 0) {
+          await batchDelete(knex, tx, meta, todo.deletes);
+        }
       }
     }
-  }
+    await tx.commit();
+  });
 }
 
-async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const rows = entities.map(entity => {
     const row = {};
     meta.columns.forEach(c => c.serde.setOnRow(entity.__orm.data, row));
     return row;
   });
-  const ids = await knex.batchInsert(meta.tableName, rows).returning("id");
+  const ids = await knex
+    .batchInsert(meta.tableName, rows)
+    .transacting(tx)
+    .returning("id");
   for (let i = 0; i < entities.length; i++) {
     entities[i].__orm.data["id"] = keyToString(ids[i]);
     entities[i].__orm.dirty = false;
@@ -44,7 +50,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 }
 
 // Uses a pg-specific syntax to issue a bulk update
-async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   // This currently assumes a 1-to-1 field-to-column mapping.
   const bindings: any[][] = meta.columns.map(() => []);
   for (const entity of entities) {
@@ -52,23 +58,27 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       bindings[i].push(c.serde.getFromEntity(entity.__orm.data) || null);
     });
   }
-  await knex.raw(
-    cleanSql(`
+  await knex
+    .raw(
+      cleanSql(`
       UPDATE ${meta.tableName}
       SET ${meta.columns.map(c => `${c.columnName} = data.${c.columnName}`).join(", ")}
       FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.columnName}`).join(", ")}) as data
       WHERE ${meta.tableName}.id = data.id
    `),
-    bindings,
-  );
+      bindings,
+    )
+    .transacting(tx);
   entities.forEach(entity => (entity.__orm.dirty = false));
 }
 
-async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  await knex.raw(
-    `DELETE FROM ${meta.tableName} WHERE id IN (?);`,
-    entities.filter(e => e.id !== undefined).map(e => e.id!),
-  );
+async function batchDelete(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  await knex
+    .raw(
+      `DELETE FROM ${meta.tableName} WHERE id IN (?);`,
+      entities.filter(e => e.id !== undefined).map(e => e.id!),
+    )
+    .transacting(tx);
 }
 
 function cleanSql(sql: string): string {

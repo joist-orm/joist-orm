@@ -2,8 +2,16 @@ import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities, flushJoinTables } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
-import { ColumnSerde, keyToString } from "./serde";
-import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
+import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
+import {
+  Collection,
+  LoadedCollection,
+  LoadedReference,
+  ManyToOneReference,
+  OneToManyCollection,
+  Reference,
+  Relation
+} from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 
@@ -27,12 +35,12 @@ export interface Entity {
 }
 
 export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U> ? FilterQuery<Exclude<U, undefined>> : T[P];
+  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> : T[P];
 };
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U>
-  ? LoadedReference<T, Loaded<Exclude<U, undefined>, H>>
+type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>
+  ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
   : P;
@@ -178,6 +186,26 @@ export class EntityManager {
   /** Marks an instance to be deleted. */
   delete(entity: Entity): void {
     // TODO Remove from any collections
+
+    // Unhook us from the other side's collection
+    Object.values(entity).forEach((v: any) => {
+      if (v instanceof ManyToOneReference) {
+        const otherId = maybeResolveReferenceToId(v.current());
+        if (otherId) {
+          // const other = this.findExistingInstance(v.otherType, otherId);
+          // if (other) {
+            // const otherCollection = (other as any)[v.otherFieldName];
+          // }
+        }
+      } else if (v instanceof OneToManyCollection) {
+        const others = v.current();
+        others.forEach(other => {
+          // TODO What if other.otherFieldName is required/not-null?
+          (other[v.otherFieldName] as ManyToOneReference<any, any, any>).set(undefined);
+        })
+      }
+    });
+
     entity.__orm.deleted = true;
   }
 
@@ -243,6 +271,8 @@ export function isEntity(e: any): e is Entity {
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
 }
 
-export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T> {
-  return (type as any).metadata as EntityMetadata<T>;
+export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
+export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
+export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructor<T>): EntityMetadata<T> {
+  return (isEntity(entityOrType) ? entityOrType.__orm.metadata : (entityOrType as any).metadata) as EntityMetadata<T>;
 }

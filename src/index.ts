@@ -7,6 +7,7 @@ export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 
 const F = Symbol();
 const G = Symbol();
+const H = Symbol();
 
 /** A relationship from `T` to `U`, could be any of many-to-one, one-to-many, or many-to-many. */
 export interface Relation<T extends Entity, U extends Entity | undefined> {
@@ -20,15 +21,18 @@ export interface Relation<T extends Entity, U extends Entity | undefined> {
 }
 
 /** A many-to-one / foreign key from `T` to `U`. */
-export interface Reference<T extends Entity, U extends Entity | undefined> extends Relation<T, U> {
-  load(): Promise<U>;
+export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
+  load(): Promise<U | N>;
 
-  set(other: U): void;
+  set(other: U | N): void;
+
+  [H]?: N;
 }
 
 /** Adds a known-safe `get` accessor. */
-export interface LoadedReference<T extends Entity, U extends Entity> extends Reference<T, U> {
-  get: U;
+export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined>
+  extends Reference<T, U, N> {
+  get: U | N;
 }
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */

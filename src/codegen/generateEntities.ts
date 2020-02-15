@@ -286,8 +286,8 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     const otherEntityName = tableToEntityName(r.targetTable);
     const otherEntityType = imp(`${otherEntityName}@./entities`);
     const otherFieldName = camelCase(pluralize(entityName));
-    const maybeOptional = column.notNull ? "" : " | undefined";
     if (isEnumTable(r.targetTable)) {
+      const maybeOptional = column.notNull ? "" : " | undefined";
       const getter = code`
         get ${fieldName}(): ${otherEntityType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
@@ -305,9 +305,10 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       primitives.push(setter);
       return code``;
     } else {
+      const maybeOptional = column.notNull ? "never" : "undefined";
       return code`
-        readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}${maybeOptional}> =
-          new ${ManyToOneReference}<${entityType}, ${otherEntityType}, ${otherEntityType}${maybeOptional}>(
+        readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}, ${maybeOptional}> =
+          new ${ManyToOneReference}<${entityType}, ${otherEntityType}, ${maybeOptional}>(
             this,
             ${otherEntityType},
             "${fieldName}",

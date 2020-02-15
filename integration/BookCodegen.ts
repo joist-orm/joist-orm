@@ -9,7 +9,7 @@ export interface BookOpts {
 export class BookCodegen {
   readonly __orm: EntityOrmField;
 
-  readonly author: Reference<Book, Author> = new ManyToOneReference<Book, Author, Author>(
+  readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
     this,
     Author,
     "author",

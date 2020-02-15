@@ -97,25 +97,15 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
 
   const entitiesFile: CodeGenFile = {
     name: "./entities.ts",
-    contents: code`
-      // This file drives our import order to avoid undefined errors
-      // when the subclasses extend the base classes, see:
-      // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
-      ${enums.map(table => {
-        return `export * from "./${tableToEntityName(table)}";`;
-      })}
-      ${entities.map(table => {
-        return `export * from "./${tableToEntityName(table)}Codegen";`;
-      })}
-      ${entities.map(table => {
-        return `export * from "./${tableToEntityName(table)}";`;
-      })}
-      export * from "./metadata";
-    `,
+    contents: generateEntitiesFile(entities, enums),
     overwrite: true,
   };
 
-  const indexFile: CodeGenFile = { name: "./index.ts", contents: code`export * from "./entities"`, overwrite: false };
+  const indexFile: CodeGenFile = {
+    name: "./index.ts",
+    contents: code`export * from "./entities"`,
+    overwrite: false,
+  };
 
   return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile];
 }
@@ -399,6 +389,24 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
         }
       }
     }
+  `;
+}
+
+function generateEntitiesFile(entities: Table[], enums: Table[]): Code {
+  return code`
+    // This file drives our import order to avoid undefined errors
+    // when the subclasses extend the base classes, see:
+    // https://medium.com/visual-development/how-to-fix-nasty-circular-dependency-issues-once-and-for-all-in-javascript-typescript-a04c987cf0de
+    ${enums.map(table => {
+      return `export * from "./${tableToEntityName(table)}";`;
+    })}
+    ${entities.map(table => {
+      return `export * from "./${tableToEntityName(table)}Codegen";`;
+    })}
+    ${entities.map(table => {
+      return `export * from "./${tableToEntityName(table)}";`;
+    })}
+    export * from "./metadata";
   `;
 }
 

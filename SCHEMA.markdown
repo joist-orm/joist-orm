@@ -27,4 +27,24 @@ Entities that want to use this enum should have a foreign key that references th
 
 ### Deferred Foreign Key Constraints
 
+Joist's goal of "batch all operations" can be difficult to achieve and still satisfy foreign key constraints, particularly as multiple types of entities are flushed to the database in a single transaction.
+
+For example, when dealing with a publisher/author pair of entities, i.e. sometimes the `publisher` needs to be flushed first to satisfy an `author.publisher_id` foreign key constraint, and other times the `author` needs to be flushed first to satisfy a `publisher.top_author_id` foreign key constraint.
+
+The easiest way for Joist to deal with this, and still keep it's "batch everything" goal, is to rely on deferred foreign key constraints, which tells Postgres that _temporarily_ violating foreign key constraints in the middle of a transaction is fine,
+as long as at `COMMIT` time, the right values are in place and satisfy the checks.
+
+To turn this capability on, you need to create your foreign keys with this syntax:
+
+```sql
+CREATE TABLE "authors" (
+  ...
+  "publisher_id" integer REFERENCES "publishers" DEFERRABLE INITIALLY DEFERRED,
+  ...
+);
+``` 
+
+See the migrations utility methods, i.e. `createEntityTable` and `foreignKey` to handle this boilerplate for you.
+
+
 

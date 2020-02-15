@@ -3,14 +3,14 @@ import { Author, Publisher, PublisherSize } from "../integration";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
-  it("can load author", async () => {
+  it("can load an entity", async () => {
     await knex.insert({ first_name: "f" }).from("authors");
     const em = new EntityManager(knex);
     const author = await em.load(Author, "1");
     expect(author.firstName).toEqual("f");
   });
 
-  it("can load multiple authors with one query", async () => {
+  it("can load multiple entities with one query", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     resetQueryCount();
@@ -22,7 +22,7 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(1);
   });
 
-  it("can load multiple authors in the right order", async () => {
+  it("can load multiple entities in the right order", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
 
@@ -32,7 +32,7 @@ describe("EntityManager", () => {
     expect(author2.firstName).toEqual("a2");
   });
 
-  it("maintains a single author instance", async () => {
+  it("maintains a single entity instance", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
 
     const em = new EntityManager(knex);
@@ -41,7 +41,7 @@ describe("EntityManager", () => {
     expect(author1a).toStrictEqual(author1b);
   });
 
-  it("inserts a new author", async () => {
+  it("inserts a new entity", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
@@ -51,7 +51,7 @@ describe("EntityManager", () => {
     expect(author.id).toEqual("1");
   });
 
-  it("inserts then updates new author", async () => {
+  it("inserts then updates new entity", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
@@ -63,10 +63,10 @@ describe("EntityManager", () => {
     expect(rows[0].first_name).toEqual("a2");
   });
 
-  it("inserts multiple authors in bulk", async () => {
+  it("inserts multiple entities in bulk", async () => {
     const em = new EntityManager(knex);
-    const author1 = new Author(em, { firstName: "a1" });
-    const author2 = new Author(em, { firstName: "a2" });
+    new Author(em, { firstName: "a1" });
+    new Author(em, { firstName: "a2" });
     await em.flush();
 
     // 3 = begin, insert, commit
@@ -75,7 +75,7 @@ describe("EntityManager", () => {
     expect(rows.length).toEqual(2);
   });
 
-  it("updates an author", async () => {
+  it("updates an entity", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
@@ -91,12 +91,10 @@ describe("EntityManager", () => {
 
   it("does not update inserted-then-unchanged entities", async () => {
     const em = new EntityManager(knex);
-    const author = new Author(em, { firstName: "a1" });
+    new Author(em, { firstName: "a1" });
     await em.flush();
-
     resetQueryCount();
     await em.flush();
-
     expect(numberOfQueries).toEqual(0);
   });
 
@@ -104,13 +102,10 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
-
     author.firstName = "a2";
     await em.flush();
-
     resetQueryCount();
     await em.flush();
-
     expect(numberOfQueries).toEqual(0);
   });
 

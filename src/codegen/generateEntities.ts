@@ -33,7 +33,6 @@ const Reference = imp("Reference@../src");
 const SimpleSerde = imp("SimpleSerde@../src/serde");
 
 export interface CodeGenFile {
-  path: string;
   name: string;
   contents: Code | string;
   overwrite: boolean;
@@ -52,10 +51,10 @@ export type EnumRow = { id: number; code: string; name: string };
 const entitiesDirectory = "./integration";
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
-export async function generateAndSaveEntities(db: Db, enumRows: EnumRows): Promise<void> {
-  const files = generateEntities(db, enumRows);
+export async function generateAndSaveFiles(db: Db, enumRows: EnumRows): Promise<void> {
+  const files = generateFiles(db, enumRows);
   for await (const file of files) {
-    const path = `${file.path}/${file.name}`;
+    const path = `${entitiesDirectory}/${file.name}`;
     if (file.overwrite) {
       await fs.writeFile(path, await contentToString(file.contents, file.name));
     } else {
@@ -68,7 +67,7 @@ export async function generateAndSaveEntities(db: Db, enumRows: EnumRows): Promi
 }
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
-export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
+export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
   const entities = db.tables.filter(isEntityTable).sortBy("name");
   const enums = db.tables.filter(isEnumTable).sortBy("name");
 
@@ -76,18 +75,8 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
     .map(table => {
       const entityName = tableToEntityName(table);
       return [
-        {
-          path: entitiesDirectory,
-          name: `${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(table, entityName),
-          overwrite: true,
-        },
-        {
-          path: entitiesDirectory,
-          name: `${entityName}.ts`,
-          contents: generateInitialEntityFile(table, entityName),
-          overwrite: false,
-        },
+        { name: `${entityName}Codegen.ts`, contents: generateEntityCodegenFile(table, entityName), overwrite: true },
+        { name: `${entityName}.ts`, contents: generateInitialEntityFile(table, entityName), overwrite: false },
       ];
     })
     .reduce(merge, []);
@@ -95,27 +84,18 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
   const enumFiles = enums
     .map(table => {
       const enumName = tableToEntityName(table);
-      return [
-        {
-          path: entitiesDirectory,
-          name: `${enumName}.ts`,
-          contents: generateEnumFile(table, enumRows, enumName),
-          overwrite: true,
-        },
-      ];
+      return [{ name: `${enumName}.ts`, contents: generateEnumFile(table, enumRows, enumName), overwrite: true }];
     })
     .reduce(merge, []);
 
   const sortedEntities = sortByRequiredForeignKeys(db);
   const metadataFile: CodeGenFile = {
-    path: entitiesDirectory,
     name: "./metadata.ts",
     contents: code`${entities.map(table => generateMetadata(sortedEntities, table))}`,
     overwrite: true,
   };
 
   const entitiesFile: CodeGenFile = {
-    path: entitiesDirectory,
     name: "./entities.ts",
     contents: code`
       // This file drives our import order to avoid undefined errors
@@ -135,12 +115,7 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
     overwrite: true,
   };
 
-  const indexFile: CodeGenFile = {
-    path: entitiesDirectory,
-    name: "./index.ts",
-    contents: code`export * from "./entities"`,
-    overwrite: false,
-  };
+  const indexFile: CodeGenFile = { name: "./index.ts", contents: code`export * from "./entities"`, overwrite: false };
 
   return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile];
 }
@@ -472,6 +447,6 @@ if (require.main === module) {
     const enumRows = await loadEnumRows(db, client);
     await client.end();
 
-    await generateAndSaveEntities(db, enumRows);
+    await generateAndSaveFiles(db, enumRows);
   })().catch(console.error);
 }

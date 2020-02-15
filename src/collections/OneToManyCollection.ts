@@ -3,7 +3,7 @@ import { Entity, EntityMetadata } from "../EntityManager";
 import { Collection } from "../";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
-import { keyToString } from "../serde";
+import { keyToString, maybeResolveReferenceToId } from "../serde";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
   private loaded: U[] | undefined;
@@ -102,7 +102,7 @@ function loaderForCollection<T extends Entity, U extends Entity>(
 
       const rowsById = groupBy(entities, entity => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
-        const ownerId = entity.__orm.data[collection.otherFieldName];
+        const ownerId = maybeResolveReferenceToId(entity.__orm.data[collection.otherFieldName]);
         if (ownerId === undefined) {
           throw new Error("Could not find ownerId in other entity");
         }

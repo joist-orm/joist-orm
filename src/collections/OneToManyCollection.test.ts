@@ -17,15 +17,32 @@ describe("OneToManyCollection", () => {
 
   it("loads collections with instances already in the UoW", async () => {
     await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "t1", author_id: 1 }).into("books");
-    await knex.insert({ title: "t2", author_id: 1 }).into("books");
+    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ title: "b2", author_id: 1 }).into("books");
 
     const em = new EntityManager(knex);
-    const t1 = await em.load(Book, "1");
+    const b1 = await em.load(Book, "1");
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
-    expect(books[0] === t1).toEqual(true);
+    expect(books[0] === b1).toEqual(true);
   });
+
+  it("loads collections with populated instances already in the UoW", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ title: "b2", author_id: 1 }).into("books");
+    const em = new EntityManager(knex);
+    // Given b1.author is already populated with a1
+    const b1 = await em.load(Book, "1", "author");
+    const a1 = await em.load(Author, "1");
+    expect(b1.author.get).toEqual(a1);
+    // When we load a1.books
+    const books = await a1.books.load();
+    // Then we have both b1 and b2
+    expect(books.length).toEqual(2);
+    expect(books[0] === b1).toEqual(true);
+  });
+
 
   it("references use collection-loaded instances from the UoW", async () => {
     await knex.insert({ first_name: "a1" }).into("authors");

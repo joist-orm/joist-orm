@@ -20,7 +20,14 @@ export interface Relation<T extends Entity, U extends Entity | undefined> {
   [G]?: U;
 }
 
-/** A many-to-one / foreign key from `T` to `U`. */
+/**
+ * A many-to-one / foreign key from `T` to `U`, i.e. book to author.
+ *
+ * The `N` generic is for whether the field is optional (i.e. the foreign key column is
+ * nullable). If it is optional, `N` will be `undefined`, which makes the return types
+ * `U | undefined`. If it is not optional, `N` will be `never`, making the return types
+ * `U | never` which becomes just `U`.
+ */
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
   load(): Promise<U | N>;
 

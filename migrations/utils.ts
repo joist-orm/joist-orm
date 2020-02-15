@@ -1,5 +1,6 @@
 /** Creates an entity table with our conventions. */
 import { ColumnDefinitions, MigrationBuilder } from "node-pg-migrate";
+import { ColumnDefinition } from "node-pg-migrate/dist/operations/tablesTypes";
 
 export function createEntityTable(b: MigrationBuilder, tableName: string, columns: ColumnDefinitions): void {
   b.createTable(tableName, {
@@ -75,4 +76,20 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
     { replace: true, language: "plpgsql", returns: "TRIGGER" },
     "BEGIN IF NEW.created_at IS NULL THEN NEW.created_at = NOW(); END IF; IF NEW.updated_at IS NULL THEN NEW.updated_at = NOW(); END IF; RETURN NEW; END;",
   );
+}
+
+export function foreignKey(otherTable: string, opts?: Partial<ColumnDefinition>): ColumnDefinition {
+  return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
+}
+
+export function createManyToManyTable(b: MigrationBuilder, tableName: string, table1: string, table2: string) {
+  const column1 = `${table1}_id`;
+  const column2 = `${table2}_id`;
+  b.createTable(tableName, {
+    id: "id",
+    [column1]: foreignKey(table1, { notNull: true }),
+    [column2]: foreignKey(table2, { notNull: true }),
+    created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
+  });
+  b.createIndex(tableName, [column2, column2], { unique: true });
 }

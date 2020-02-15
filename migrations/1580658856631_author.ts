@@ -1,6 +1,12 @@
 import { MigrationBuilder } from "node-pg-migrate";
-import { createCreatedAtFunction, createEntityTable, createEnumTable, createUpdatedAtFunction } from "./utils";
-import { ColumnDefinition } from "node-pg-migrate/dist/operations/tablesTypes";
+import {
+  createCreatedAtFunction,
+  createEntityTable,
+  createEnumTable,
+  createManyToManyTable,
+  createUpdatedAtFunction,
+  foreignKey,
+} from "./utils";
 
 export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);
@@ -30,15 +36,5 @@ export function up(b: MigrationBuilder): void {
     name: { type: "varchar(255)", notNull: true },
   });
 
-  b.createTable("books_to_tags", {
-    id: "id",
-    book_id: foreignKey("books", { notNull: true }),
-    tag_id: foreignKey("tags", { notNull: true }),
-    created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
-  });
-  b.createIndex("books_to_tags", ["book_id", "tag_id"], { unique: true });
-}
-
-function foreignKey(otherTable: string, opts?: Partial<ColumnDefinition>): ColumnDefinition {
-  return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
+  createManyToManyTable(b, "books_to_tags", "books", "tags");
 }

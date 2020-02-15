@@ -135,7 +135,7 @@ describe("OneToManyCollection", () => {
     expect(books[1].id).toEqual("1");
   });
 
-  it("removes deleted entities from collections", async () => {
+  it.skip("removes deleted entities from collections", async () => {
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
 

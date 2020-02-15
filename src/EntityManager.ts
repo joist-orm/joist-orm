@@ -38,20 +38,20 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U>
   : P;
 
 /** Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities. */
-export type AllLoaded<T extends Entity> = {
-  [P in keyof T]: MarkLoaded<T, T[P]>;
-} &
-  T;
+export type AllLoaded<T extends Entity> = T &
+  {
+    [P in keyof T]: MarkLoaded<T, T[P]>;
+  };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
-export type Loaded<T extends Entity, H extends LoadHint<T>> = {
-  [K in keyof T]: H extends NestedLoadHint<T>
-    ? LoadedIfInNestedHint<T, K, H>
-    : H extends Array<infer U>
-    ? LoadedIfInKeyHint<T, K, U>
-    : LoadedIfInKeyHint<T, K, H>;
-} &
-  T;
+export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
+  {
+    [K in keyof T]: H extends NestedLoadHint<T>
+      ? LoadedIfInNestedHint<T, K, H>
+      : H extends Array<infer U>
+      ? LoadedIfInKeyHint<T, K, U>
+      : LoadedIfInKeyHint<T, K, H>;
+  };
 
 type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
   ? MarkLoaded<T, T[K], H[K]>

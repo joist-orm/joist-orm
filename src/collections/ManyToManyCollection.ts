@@ -25,7 +25,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
 
   async load(): Promise<ReadonlyArray<U>> {
     if (this.loaded === undefined) {
-      // TODO This is basically a reference
+      // TODO This key is basically a Reference, whenever we have that.
       // TODO Unsaved entities should never get here
       const key = `${this.columnName}=${this.entity.id}`;
       this.loaded = await loaderForJoinTable(this).load(key);
@@ -80,7 +80,12 @@ function loaderForJoinTable<T extends Entity, U extends Entity>(collection: Many
   });
 }
 
-/** Loads join rows. */
+/**
+ * Loads join rows (batched).
+ *
+ * I.e. we can load the `books_to_tags` join rows for multiple `Book`s at a time, or even
+ * load `books_to_tags` for several `Book`s and several `Tag`s in a single SQL query.
+ */
 async function loadFromJoinTable<T extends Entity, U extends Entity>(
   collection: ManyToManyCollection<T, U>,
   keys: ReadonlyArray<string>,
@@ -104,21 +109,25 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
     );
   });
 
-  const rows = (await query.orderBy("id")) as JoinRow[];
+  const rows: JoinRow[] = await query.orderBy("id");
 
   // Make a map that will be both `tag_id=2 -> [...]` and `book_id=3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};
 
-  // Each join table row might have some promises to load the other entity. Eventually
-  // we should just pull the other side in via the ^ query (even if some of the rows
-  // might already be in our UoW).
+  // For each join table row, we use `EntityManager.load` to get both entities loaded.
+  // This will be another 1 or 2 queries (depending on whether we're loading just
+  // `book.getTags` (1 query to load new tags) or both `book.getTags` and `tag.getBooks
+  // (1 query to load the new tags and 1 query to look the new books)).
+  //
+  // Eventually we could have this query join into the entity tables themselves, i.e.
+  // `books` and `tags`, and use those results to hydrate the newly-found entities.
   const p = rows.map(async row => {
     // Keep a reference to our row to track updates/deletes
     getOrSet(em.joinRows, joinTableName, []).push(row);
 
-    // For this join table row, resolve the entities both of foreign keys. For now
-    // we're using the EntityManager.load to do this for this (in batch so it is N+1 safe),
-    // but eventually we should pull those into the row itself.
+    // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
+    // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
+    // we chould pull these from the row itself if we did a fancier join.
     const p = Object.entries(row).map(async entry => {
       const [column, value] = entry;
       if (column === "id" || column === "created_at") {

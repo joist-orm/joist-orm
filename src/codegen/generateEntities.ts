@@ -82,12 +82,12 @@ export function generateEntities(db: Db, enumRows: EnumRows): CodeGenFile[] {
           contents: generateEntityCodegenFile(table, entityName),
           overwrite: true,
         },
-        // {
-        //   path: entitiesDirectory,
-        //   name: `${entityName}.ts`,
-        //   contents: generateSubSpec(table, entityName),
-        //   overwrite: false,
-        // },
+        {
+          path: entitiesDirectory,
+          name: `${entityName}.ts`,
+          contents: generateInitialEntityFile(table, entityName),
+          overwrite: false,
+        },
       ];
     })
     .reduce(merge, []);
@@ -162,21 +162,17 @@ function generateEnumFile(table: Table, enumRows: EnumRows, enumName: string): C
 }
 
 /** Creates the placeholder file for our per-entity custom business logic in. */
-// function generateSubSpec(table: Table, entityName: string): Code {
-//   const baseClass = imp(`${entityName}Codegen@@src/entities/entities`);
-//   return code`
-//     export type ${entityName}Ref = ${IdentifiedReference}<${entityName}, "id">;
-//
-//     @${Entity}({ collection: "${table.name}" })
-//     export class ${entityName} extends ${baseClass} implements ${IdEntity}<${entityName}> {
-//       constructor(em: ${EntityManager}, opts?: Partial<${entityName}>) {
-//         super(em, opts);
-//       }
-//     }
-//
-//      export interface ${entityName} extends IWrappedEntity<${entityName}, "id"> {}
-//   `;
-// }
+function generateInitialEntityFile(table: Table, entityName: string): Code {
+  const codegenClass = imp(`${entityName}Codegen@./entities`);
+  const optsClass = imp(`${entityName}Opts@./entities`);
+  return code`
+    export class ${entityName} extends ${codegenClass} {
+      constructor(em: ${EntityManager}, opts: ${optsClass}) {
+        super(em, opts);
+      }
+    }
+  `;
+}
 
 function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {
   return (

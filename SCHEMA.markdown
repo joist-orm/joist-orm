@@ -10,8 +10,8 @@ However, if this is not the case, hopefully it would not be too bad to nudge you
 Joist expects entity tables to be identifiable by having at least these three columns:
 
 * `id` primary key/serial
-* `created_at` timestamptz
-* `updated_at` timestamptz
+* `created_at` `timestamptz`
+* `updated_at` `timestamptz`
 
 Joist will maintain the `created_at`/`updated_at` columns for you, although you can also use ...these triggers... that will ensure non-Joist clients also have those columns set for them.
 
@@ -24,6 +24,17 @@ Joist expects tables that you want to show up as enums to have three columns:
 * `name` i.e. `Foo Bar`
 
 Entities that want to use this enum should have a foreign key that references the appropriate enum table.
+
+### Many-to-many tables
+
+Joist expects join tables to have four columns:
+
+* `id` primary key/serial
+* One foreign key column for 1st side
+* One foreign key column for 2nd side
+* `created_at` `timestamptz`
+
+(`updated_at` is not applicable to join tables.)
 
 ### Deferred Foreign Key Constraints
 
@@ -46,5 +57,6 @@ CREATE TABLE "authors" (
 
 See the migrations utility methods, i.e. `createEntityTable` and `foreignKey` to handle this boilerplate for you.
 
+### Composite Primary Keys
 
-
+Joist does not support composite primary keys.

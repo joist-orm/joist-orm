@@ -3,9 +3,11 @@
 
 Joist generates your domain objects/classes from your database schema.
 
-This approach assumes you have a modern/pleasant schema to work with, i.e. you don't have to map esoteric 1980s-style database column names to modern getter/setters, and you don't need your object model to look dramatically different from your database tables. If you do need either of these things, Joist will not work well for you.
+It does this continually, i.e. after every migration/schema change, so that you never have to maintain a tedious/error-prone mapping from your schema to your object model. It does this by isolating the "getter/setter/collection" boilerplate into "codegen" files, i.e. `AuthorCodegen.ts`, that are always overwritten, from the custom business logic that users write in the "real" `Author.ts` domain object files.
 
-Joist's goal is to have a Rails-style development experience where, after creating an `authors` table in the database, the programmer has a very clean/nearly empty `Author.ts` file and has to do no other work. There are no annotations to write or constantly keep up to date.
+This approach (continual, verbatim mapping of the database schema to your object model) assumes you have a modern/pleasant schema to work with, i.e. you don't have to map esoteric 1980s-style database column names to modern getter/setters, and you don't need your object model to look dramatically different from your database tables. If you do need either of these things, Joist will not work for you.
+
+The upshot of this approach is that it provides a Rails-style development experience where, after creating an `authors` table in the database, the programmer has a very clean/nearly empty `Author.ts` file and has to do basically no other work. There are no annotations to write or keep up to date.
 
 If you do need some customizations, Joist's opinion is that those are best handled by declarative rules. I.e. instead of making a decision that "our `date` columns need to be mapped like `X` in our objects", and then having to re-type out `X` (say ~1-3 lines of annotations) for all 10/20/N+ date fields in your schema, you should make that decision once, and then apply it via a config file that says "map all of our dates this `X`".
 

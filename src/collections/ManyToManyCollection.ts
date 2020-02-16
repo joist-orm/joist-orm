@@ -1,12 +1,13 @@
 import DataLoader from "dataloader";
 import { Collection } from "../index";
 import { Entity, EntityConstructor } from "../EntityManager";
-import { getOrSet } from "../utils";
+import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 
 export class ManyToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
+  private removedBeforeLoaded: U[] = [];
 
   constructor(
     public joinTableName: string,
@@ -29,6 +30,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
       // TODO Unsaved entities should never get here
       const key = `${this.columnName}=${this.entity.id}`;
       this.loaded = await loaderForJoinTable(this).load(key);
+      this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.loaded as ReadonlyArray<U>;
   }
@@ -59,6 +61,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     if (row) {
       row.deleted = true;
     }
+
+    if (this.loaded !== undefined) {
+      remove(this.loaded, other);
+    } else {
+      remove(this.addedBeforeLoaded, other);
+      this.removedBeforeLoaded.push(other);
+    }
   }
 
   get get(): U[] {
@@ -71,6 +80,24 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
       }
     }
     return this.loaded;
+  }
+
+  private maybeApplyAddedAndRemovedBeforeLoaded(): void {
+    if (this.loaded) {
+      // this.loaded.unshift(...this.addedBeforeLoaded);
+      // this.addedBeforeLoaded = [];
+      this.removedBeforeLoaded.forEach(e => {
+        remove(this.loaded!, e);
+        const { em } = this.entity.__orm;
+        const row = em.joinRows[this.joinTableName].find(
+          r => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
+        );
+        if (row) {
+          row.deleted = true;
+        }
+      });
+      this.removedBeforeLoaded = [];
+    }
   }
 }
 

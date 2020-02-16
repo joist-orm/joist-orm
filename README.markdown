@@ -31,7 +31,6 @@ After checkout:
 
 - Lifecycle hooks for validation rules/derived values
 - Cascading deletions for parent/child relationships
-- Delete from many-to-manys
 - `EntityManager.find` (1st pass done)
   - Support non-string types
   - Support user-defined types

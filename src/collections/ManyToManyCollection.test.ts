@@ -113,4 +113,22 @@ describe("ManyToManyCollection", () => {
 
     expect((await knex.count().from("books_to_tags"))[0]).toEqual({ count: "1" });
   });
+
+  it("can delete a tag from a book", async () => {
+    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: `t1` }).into("tags");
+    await knex.insert({ id: 4, name: `t2` }).into("tags");
+    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
+    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "2", "tags");
+    const tag = await em.load(Tag, "3");
+    book.tags.remove(tag);
+    await em.flush();
+
+    const rows = await knex.select("*").from("books_to_tags");
+    expect(rows.length).toEqual(1);
+  });
 });

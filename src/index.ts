@@ -47,6 +47,8 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
   load(): Promise<ReadonlyArray<U>>;
 
   add(other: U): void;
+
+  remove(other: U): void;
 }
 
 /** Adds a known-safe `get` accessor. */

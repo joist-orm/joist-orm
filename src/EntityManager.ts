@@ -1,8 +1,8 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
-import { flushEntities, flushJoinTables } from "./EntityPersister";
+import { flushEntities, flushJoinTables, sortEntities, sortJoinRows } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
-import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
+import { ColumnSerde, keyToString } from "./serde";
 import {
   Collection,
   LoadedCollection,
@@ -224,8 +224,16 @@ export class EntityManager {
   }
 
   async flush(): Promise<void> {
-    await flushEntities(this.knex, this.entities);
-    await flushJoinTables(this.knex, this.joinRows);
+    const entityTodos = sortEntities(this.entities);
+    const joinRowTodos = sortJoinRows(this.joinRows);
+    if (entityTodos.length === 0 && Object.keys(joinRowTodos).length === 0) {
+      return;
+    }
+    await this.knex.transaction(async tx => {
+      await flushEntities(this.knex, tx, entityTodos);
+      await flushJoinTables(this.knex, tx, joinRowTodos);
+      await tx.commit();
+    });
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {

@@ -10,12 +10,8 @@ interface Todo {
   deletes: Entity[];
 }
 
-export async function flushEntities(knex: Knex, entities: Entity[]): Promise<void> {
+export async function flushEntities(knex: Knex, tx: Transaction, todos: Todo[]): Promise<void> {
   const updatedAt = new Date();
-  const todos = sortEntities(entities);
-  if (todos.length === 0) {
-    return;
-  }
   await knex.transaction(async tx => {
     for await (const todo of todos) {
       if (todo) {
@@ -98,7 +94,7 @@ function cleanSql(sql: string): string {
  * and have no cycles, i.e. `books` always depend on `authors` (due to the `books.author_id`
  * foreign key), but `authors` never (via a required foreign key) depend on `books`.
  */
-function sortEntities(entities: Entity[]): Todo[] {
+export function sortEntities(entities: Entity[]): Todo[] {
   const todos: Todo[] = [];
   for (const entity of entities) {
     const order = entity.__orm.metadata.order;
@@ -123,24 +119,55 @@ function sortEntities(entities: Entity[]): Todo[] {
   return todos;
 }
 
-export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinRow[]>): Promise<void> {
-  for await (const [joinTableName, rows] of Object.entries(joinRows)) {
-    const newRows = rows.filter(r => r.id === undefined);
-    const ids = await knex
-      .batchInsert(
-        joinTableName,
-        newRows.map(row => {
-          // The rows in EntityManager.joinRows point to entities, change those to ints
-          const { id, created_at, ...fkColumns } = row;
-          Object.keys(fkColumns).forEach(key => {
-            fkColumns[key] = keyToNumber(maybeResolveReferenceToId(fkColumns[key]));
-          });
-          return fkColumns;
-        }),
-      )
-      .returning("id");
-    for (let i = 0; i < ids.length; i++) {
-      newRows[i].id = ids[i];
+export async function flushJoinTables(
+  knex: Knex,
+  tx: Transaction,
+  joinRows: Record<string, JoinRowTodo>,
+): Promise<void> {
+  for await (const [joinTableName, { newRows, deletedRows }] of Object.entries(joinRows)) {
+    if (newRows.length > 0) {
+      const ids = await knex
+        .batchInsert(
+          joinTableName,
+          newRows.map(row => {
+            // The rows in EntityManager.joinRows point to entities, change those to ints
+            const { id, created_at, ...fkColumns } = row;
+            Object.keys(fkColumns).forEach(key => {
+              fkColumns[key] = keyToNumber(maybeResolveReferenceToId(fkColumns[key]));
+            });
+            return fkColumns;
+          }),
+        )
+        .transacting(tx)
+        .returning("id");
+      for (let i = 0; i < ids.length; i++) {
+        newRows[i].id = ids[i];
+      }
+    }
+    if (deletedRows.length > 0) {
+      await knex
+        .raw(
+          `DELETE FROM ${joinTableName} WHERE id IN (?);`,
+          deletedRows.map(e => e.id!),
+        )
+        .transacting(tx);
     }
   }
+}
+
+interface JoinRowTodo {
+  newRows: JoinRow[];
+  deletedRows: JoinRow[];
+}
+
+export function sortJoinRows(joinRows: Record<string, JoinRow[]>): Record<string, JoinRowTodo> {
+  const todos: Record<string, JoinRowTodo> = {};
+  for (const [joinTableName, rows] of Object.entries(joinRows)) {
+    const newRows = rows.filter(r => r.id === undefined && r.deleted !== true);
+    const deletedRows = rows.filter(r => r.id !== undefined && r.deleted === true);
+    if (newRows.length > 0 || deletedRows.length > 0) {
+      todos[joinTableName] = { newRows, deletedRows };
+    }
+  }
+  return todos;
 }

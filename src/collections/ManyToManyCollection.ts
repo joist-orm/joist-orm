@@ -53,6 +53,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     }
   }
 
+  remove(other: U): void {
+    const joinRows = getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []);
+    const row = joinRows.find(r => r[this.columnName] === this.entity);
+    if (row) {
+      row.deleted = true;
+    }
+  }
+
   get get(): U[] {
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
@@ -69,7 +77,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
 export type JoinRow = {
   id: number | undefined;
   created_at?: Date;
-  [column: string]: number | Entity | undefined | Date;
+  [column: string]: number | Entity | undefined | boolean | Date;
+  deleted?: boolean;
 };
 
 function loaderForJoinTable<T extends Entity, U extends Entity>(collection: ManyToManyCollection<T, U>) {

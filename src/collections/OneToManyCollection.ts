@@ -59,6 +59,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     return this.loaded;
   }
 
+  remove(other: U) {
+    throw new Error("Not implemented");
+  }
+
   // internal impl
 
   removeIfLoaded(other: U) {

@@ -186,30 +186,37 @@ export class EntityManager {
     this.entities.push(entity);
   }
 
-  /** Marks an instance to be deleted. */
-  delete(entity: Entity): void {
-    // TODO Remove from any collections
-
+  /**
+   * Marks an instance to be deleted.
+   *
+   * This method is async b/c deleting an entity that is the target of foreign keys requires
+   * loading all of those collections and un-setting the otherField on those entities.
+   *
+   * In theory, we wouldn't have to do this for foreign keys that are cascade delete / cascade
+   * null, but in general I prefer pulling that sort of logic into the domain layer and giving
+   * the domain model life cycle hooks a chance to handle it.
+   */
+  async delete(entity: Entity): Promise<void> {
+    entity.__orm.deleted = true;
     // Unhook us from the other side's collection
-    Object.values(entity).forEach((v: any) => {
+    const p = Object.values(entity).map(async (v: any) => {
       if (v instanceof ManyToOneReference) {
-        const otherId = maybeResolveReferenceToId(v.current());
-        if (otherId) {
-          // const other = this.findExistingInstance(v.otherType, otherId);
-          // if (other) {
-          // const otherCollection = (other as any)[v.otherFieldName];
-          // }
-        }
+        // I.e. we're a Book, and this is the Book.author ManyToOne.
+        // We want Author.books to respect this deletion, which this `set(...)` call will do.
+        // Currently, this won't mark our `Author` as dirty/for re-validation.
+        v.set(undefined, { beingDeleted: true });
       } else if (v instanceof OneToManyCollection) {
-        const others = v.current();
+        // I.e. we're an Author, and this is the Author.books OneToManyCollection.
+        // For this collection to be loaded because it's likely all of our "children" need
+        // to know, btw, this for their foreign key is pointing to is going away.
+        const others = await v.load();
         others.forEach(other => {
           // TODO What if other.otherFieldName is required/not-null?
           (other[v.otherFieldName] as ManyToOneReference<any, any, any>).set(undefined);
         });
       }
     });
-
-    entity.__orm.deleted = true;
+    await Promise.all(p);
   }
 
   markDirty(entity: Entity): void {

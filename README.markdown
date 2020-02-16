@@ -30,10 +30,7 @@ After checkout:
 ### Todo
 
 - Lifecycle hooks for validation rules/derived values
-- Deleting entities
-  - Cascading deletions
-  - Removing entity from non-cascaded references/collections
-- Delete from one-to-manys
+- Cascading deletions for parent/child relationships
 - Delete from many-to-manys
 - `EntityManager.find` (1st pass done)
   - Support non-string types

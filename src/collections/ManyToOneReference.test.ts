@@ -60,7 +60,7 @@ describe("ManyToOneReference", () => {
     expect(rows[0].author_id).toEqual(2);
   });
 
-  it.skip("removes deleted entities from collections", async () => {
+  it("removes deleted entities from collections", async () => {
     // Given an author with a publisher
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
@@ -68,9 +68,9 @@ describe("ManyToOneReference", () => {
     const a1 = await em.load(Author, "1", "publisher");
     const p1 = a1.publisher.get!;
     // When we delete the publisher
-    em.delete(p1);
+    await em.delete(p1);
     // Then the author.publisher field should be undefined
-    expect(a1.publisher).toBeUndefined();
+    expect(a1.publisher.get).toBeUndefined();
     await em.flush();
   });
 });

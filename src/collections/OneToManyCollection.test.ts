@@ -159,8 +159,9 @@ describe("OneToManyCollection", () => {
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1", { publisher: "authors" } as const);
     const authors = a1.publisher.get!.authors.get;
+    expect(authors.length).toEqual(1);
     // When we delete the author
-    em.delete(a1);
+    await em.delete(a1);
     // Then it's removed from the Publisher.authors collection
     expect(authors.length).toEqual(0);
   });
@@ -172,7 +173,7 @@ describe("OneToManyCollection", () => {
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     // When we delete the author
-    em.delete(a1);
+    await em.delete(a1);
     // And then later load the Publisher.authors in the same Unit of Work
     const p1 = await em.load(Publisher, "1", "authors");
     // Then it's still removed from the Publisher.authors collection

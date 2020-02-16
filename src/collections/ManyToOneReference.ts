@@ -34,8 +34,8 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.ensureNotDeleted(other);
   }
 
-  set(other: U | N): void {
-    this.setImpl(other);
+  set(other: U | N, opts?: { beingDeleted?: boolean }): void {
+    this.setImpl(other, opts);
   }
 
   get get(): U | N {
@@ -48,7 +48,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   // Internal method used by OneToManyCollection
-  setImpl(other: U | N): void {
+  setImpl(other: U | N, opts?: { beingDeleted?: boolean }): void {
     // If had an existing value, remove us from its collection
     const current = this.current();
     if (other === current) {
@@ -60,7 +60,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       previousCollection.removeIfLoaded(this.entity);
     }
 
-    (this.entity as any).ensureNotDeleted();
+    if (!opts || opts.beingDeleted !== true) {
+      (this.entity as any).ensureNotDeleted();
+    }
     this.entity.__orm.data[this.fieldName] = other;
     this.entity.__orm.dirty = true;
 

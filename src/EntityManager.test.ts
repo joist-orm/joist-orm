@@ -168,7 +168,7 @@ describe("EntityManager", () => {
 
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
-    em.delete(p1);
+    await em.delete(p1);
     await em.flush();
 
     const rows = await knex.select("*").from("publishers");
@@ -180,7 +180,7 @@ describe("EntityManager", () => {
 
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
-    em.delete(p1);
+    await em.delete(p1);
     expect(() => (p1.name = "p2")).toThrow("Publisher#1 is marked as deleted");
   });
 });

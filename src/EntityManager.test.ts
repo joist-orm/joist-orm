@@ -68,7 +68,6 @@ describe("EntityManager", () => {
     new Author(em, { firstName: "a1" });
     new Author(em, { firstName: "a2" });
     await em.flush();
-
     // 3 = begin, insert, commit
     expect(numberOfQueries).toEqual(3);
     const rows = await knex.select("*").from("authors");

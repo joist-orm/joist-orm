@@ -12,24 +12,21 @@ interface Todo {
 
 export async function flushEntities(knex: Knex, tx: Transaction, todos: Todo[]): Promise<void> {
   const updatedAt = new Date();
-  await knex.transaction(async tx => {
-    for await (const todo of todos) {
-      if (todo) {
-        const meta = todo.metadata;
-        if (todo.inserts.length > 0) {
-          await batchInsert(knex, tx, meta, todo.inserts);
-        }
-        if (todo.updates.length > 0) {
-          todo.updates.forEach(e => (e.__orm.data["updatedAt"] = updatedAt));
-          await batchUpdate(knex, tx, meta, todo.updates);
-        }
-        if (todo.deletes.length > 0) {
-          await batchDelete(knex, tx, meta, todo.deletes);
-        }
+  for await (const todo of todos) {
+    if (todo) {
+      const meta = todo.metadata;
+      if (todo.inserts.length > 0) {
+        await batchInsert(knex, tx, meta, todo.inserts);
+      }
+      if (todo.updates.length > 0) {
+        todo.updates.forEach(e => (e.__orm.data["updatedAt"] = updatedAt));
+        await batchUpdate(knex, tx, meta, todo.updates);
+      }
+      if (todo.deletes.length > 0) {
+        await batchDelete(knex, tx, meta, todo.deletes);
       }
     }
-    await tx.commit();
-  });
+  }
 }
 
 async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {

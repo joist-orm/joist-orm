@@ -2,7 +2,7 @@
   "name": "joist-integration-tests",
   "version": "0.1.0",
   "scripts": {
-    "migrate": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register packages/integration/migrations/migrate.ts",
+    "migrate": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register joist-migration-utils",
     "test": "./node_modules/.bin/jest --runInBand",
     "codegen": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register packages/joist-dev/src/codegen/generateEntities"
   },
@@ -17,7 +17,6 @@
     "jest": "^25.1.0",
     "joist-migration-utils": "0.1.0",
     "joist-codegen": "0.1.0",
-    "node-pg-migrate": "^4.2.2",
     "prettier": "^1.19.1",
     "ts-jest": "^25.1.0",
     "ts-node-dev": "^1.0.0-pre.44",

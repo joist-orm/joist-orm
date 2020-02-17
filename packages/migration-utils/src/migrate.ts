@@ -48,13 +48,6 @@ function generateFlushFunction(db: Db): string {
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$ ${statements} $$ LANGUAGE SQL`;
 }
 
-// If we're being run locally.
-if (require.main === module) {
-  runMigrationsIfNeeded("./migrations").catch(err => {
-    console.error(err);
-  });
-}
-
 export function isEntityTable(t: Table): boolean {
   const columnNames = t.columns.map(c => c.name);
   return includesAllOf(columnNames, ["id", "created_at", "updated_at"]);

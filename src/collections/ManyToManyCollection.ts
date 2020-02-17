@@ -150,6 +150,15 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   // Make a map that will be both `tag_id=2 -> [...]` and `book_id=3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};
 
+  // Keep a reference to our row to track updates/deletes
+  const emJoinRows = getOrSet(em.joinRows, joinTableName, []);
+
+  // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
+  const column1 = collection.columnName;
+  const cstr1 = collection.entity.__orm.metadata.cstr;
+  const column2 = collection.otherColumnName;
+  const cstr2 = collection.otherType;
+
   // For each join table row, we use `EntityManager.load` to get both entities loaded.
   // This will be another 1 or 2 queries (depending on whether we're loading just
   // `book.getTags` (1 query to load new tags) or both `book.getTags` and `tag.getBooks
@@ -157,31 +166,32 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   //
   // Eventually we could have this query join into the entity tables themselves, i.e.
   // `books` and `tags`, and use those results to hydrate the newly-found entities.
-  const p = rows.map(async row => {
-    // Keep a reference to our row to track updates/deletes
-    getOrSet(em.joinRows, joinTableName, []).push(row);
+  await Promise.all(
+    rows.map(async dbRow => {
+      // We may have already loaded this join row in a prior load of the opposite side of this m2m.
+      let emRow = emJoinRows.find(jr => {
+        return (
+          (jr[column1] as Entity).id === keyToString(dbRow[column1]) &&
+          (jr[column2] as Entity).id === keyToString(dbRow[column2])
+        );
+      });
 
-    // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
-    // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
-    // we chould pull these from the row itself if we did a fancier join.
-    const p = Object.entries(row).map(async entry => {
-      const [column, value] = entry;
-      if (column === "id" || column === "created_at") {
-        return;
+      if (!emRow) {
+        // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
+        // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
+        // we chould pull these from the row itself if we did a fancier join.
+        const p1 = em.load(cstr1, keyToString(dbRow[column1])!);
+        const p2 = em.load(cstr2, keyToString(dbRow[column2])!);
+        const [e1, e2] = await Promise.all([p1, p2]);
+        emRow = { id: dbRow.id, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
+        emJoinRows.push(emRow);
       }
 
-      const cstr = (column === collection.columnName
-        ? collection.entity.__orm.metadata.cstr
-        : collection.otherType) as EntityConstructor<any>;
-      row[column] = await em.load(cstr, keyToString(value)!);
-
       // Put this row into the map for both join table columns, i.e. `book_id=2` and `tag_id=3`
-      const key = `${column}=${value}`;
-      getOrSet(rowsByKey, key, []).push(row);
-    });
-    await Promise.all(p);
-  });
-  await Promise.all(p);
+      getOrSet(rowsByKey, `${column1}=${(emRow[column1] as Entity).id}`, []).push(emRow);
+      getOrSet(rowsByKey, `${column2}=${(emRow[column2] as Entity).id}`, []).push(emRow);
+    }),
+  );
 
   // Map the requested keys, i.e. book_id=2 back to "the tags for book 2".
   return keys.map(key => {

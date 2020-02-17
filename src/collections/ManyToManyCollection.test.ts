@@ -18,6 +18,22 @@ describe("ManyToManyCollection", () => {
     expect(tags[0].name).toEqual("t1");
   });
 
+  it("can load both sides of many-to-many", async () => {
+    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: "t1" }).into("tags");
+    await knex.insert({ id: 4, book_id: 2, tag_id: 3 }).into("books_to_tags");
+
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "2", "tags");
+    const tag = await em.load(Tag, "3", "books");
+    expect(book.tags.get.length).toEqual(1);
+    expect(tag.books.get.length).toEqual(1);
+    expect(book.tags.get[0]).toStrictEqual(tag);
+    expect(tag.books.get[0]).toStrictEqual(book);
+    expect(em.joinRows["books_to_tags"].length).toEqual(1);
+  });
+
   it("can load a many-to-many with constant queries", async () => {
     // Given a book has 5 tags
     await knex.insert({ first_name: "a1" }).into("authors");

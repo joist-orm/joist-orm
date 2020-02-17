@@ -14,6 +14,8 @@ An opinionated ORM for TypeScript/node.
 
 (See [GOALS](./GOALS.markdown) for more in-depth descriptions of each bullet.)
 
+(Also see [SCHEMA](./SCHEMA.markdown) for the assumptions Joist makes about your database schema.)
+
 ### Non-Goals
 
 - NoSQL/Mongo/etc. support.

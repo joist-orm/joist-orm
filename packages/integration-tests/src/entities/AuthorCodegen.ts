@@ -1,4 +1,11 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection, Reference } from "../../../orm/src";
+import {
+  EntityOrmField,
+  EntityManager,
+  ManyToOneReference,
+  Collection,
+  OneToManyCollection,
+  Reference,
+} from "joist-orm";
 import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 
 export interface AuthorOpts {

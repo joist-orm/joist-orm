@@ -1,6 +1,5 @@
-import { EntityMetadata } from "../../../orm/src";
+import { EntityMetadata, PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "joist-orm";
 import { Author, Book, Publisher, Tag, PublisherSize } from "./entities";
-import { PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "../../../orm/src/serde";
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,

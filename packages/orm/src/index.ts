@@ -1,6 +1,7 @@
 import { Entity } from "./EntityManager";
 
 export * from "./EntityManager";
+export * from "./serde";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";

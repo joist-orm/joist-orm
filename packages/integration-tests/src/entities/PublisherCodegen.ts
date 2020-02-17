@@ -1,4 +1,4 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection } from "../../../orm/src";
+import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection } from "joist-orm";
 import { publisherMeta, PublisherSize, Publisher, Author, authorMeta } from "./entities";
 
 export interface PublisherOpts {

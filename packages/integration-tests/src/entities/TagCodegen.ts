@@ -1,4 +1,4 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, Collection, ManyToManyCollection } from "../../../orm/src";
+import { EntityOrmField, EntityManager, ManyToOneReference, Collection, ManyToManyCollection } from "joist-orm";
 import { tagMeta, Tag, Book } from "./entities";
 
 export interface TagOpts {

@@ -19,18 +19,18 @@ import { newPgConnectionConfig } from "./connection";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
-const Collection = imp("Collection@../src");
-const OneToManyCollection = imp("OneToManyCollection@../src");
-const EntityOrmField = imp("EntityOrmField@../src");
-const EntityManager = imp("EntityManager@../src");
-const EntityMetadata = imp("EntityMetadata@../src");
-const PrimaryKeySerde = imp("PrimaryKeySerde@../src/serde");
-const ManyToOneReference = imp("ManyToOneReference@../src");
-const ManyToManyCollection = imp("ManyToManyCollection@../src");
-const EnumFieldSerde = imp("EnumFieldSerde@../src/serde");
-const ForeignKeySerde = imp("ForeignKeySerde@../src/serde");
-const Reference = imp("Reference@../src");
-const SimpleSerde = imp("SimpleSerde@../src/serde");
+const Reference = imp("Reference@joist-orm");
+const Collection = imp("Collection@joist-orm");
+const OneToManyCollection = imp("OneToManyCollection@joist-orm");
+const EntityOrmField = imp("EntityOrmField@joist-orm");
+const EntityManager = imp("EntityManager@joist-orm");
+const EntityMetadata = imp("EntityMetadata@joist-orm");
+const PrimaryKeySerde = imp("PrimaryKeySerde@joist-orm");
+const ManyToOneReference = imp("ManyToOneReference@joist-orm");
+const ManyToManyCollection = imp("ManyToManyCollection@joist-orm");
+const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
+const ForeignKeySerde = imp("ForeignKeySerde@joist-orm");
+const SimpleSerde = imp("SimpleSerde@joist-orm");
 
 export interface CodeGenFile {
   name: string;
@@ -48,7 +48,7 @@ export type EnumRows = Record<string, EnumRow[]>;
 export type EnumRow = { id: number; code: string; name: string };
 
 // TODO Make this a config option.
-const entitiesDirectory = "./integration";
+const entitiesDirectory = "./src/entities";
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(db: Db, enumRows: EnumRows): Promise<void> {

@@ -17,9 +17,11 @@ If you do need some customizations, Joist's opinion is that those are best handl
 
 Accidentally triggering N+1s is a very common pitfall of ORMs, because the ORM's "pretending to be in memory objects" mental model can be a leaky abstraction: you can access 1,000 actually-in-memory objects very quickly in a `for` loop, but you can't access 1,000 _not_-actually-in-memory objects in a `for` loop.
 
-To solve this, Joist is built from the ground-up on [DataLoader](https://github.com/graphql/dataloader), which was originally built to harnass the embarrassingly parallel nature of GraphQL implementations. DataLoader uses a cute approach to basically automatically batch any "I/O" (i.e. `async/await`) operation that happens within a single tick of the Node.js/JavaScript event loop.
+Somewhat ironically/coincidentally (given the years of callback hell that Node/JS initially had to suffer through), Node/Javascript's single-threaded model is a boon to N+1 prevention because it forces all blocking I/O calls to be "identifiable", i.e. they _always_ require a callback or a promise.
 
-This approach turns one of the weaknesses of JavaScript ("any I/O operation requires `async/await` and that's kind of boilerplate-y") into a huge strength: we can auto-batch our I/O operations basically for free/without any change to our programming model (which is requires for other languages, i.e. Scala/Haskell/etc., when they implement a DataLoader-style approach to data layers).
+The innovative [DataLoader](https://github.com/graphql/dataloader) library provides a convention for "recognizing" multiple blocking calls (that happen within a single tick of the event loop) and combining them into batch calls.
+
+Joist is built on DataLoader from the ground up, and most SQL operations (`load`, `populate`, etc.) are all automatically batched (technically `EntityManager.find` is not batched, because the bespoke queries cannot be automatically aggregated/de-aggregated), so N+1s should essentially never happen.
 
 ## Async/Await All Relations (w/Escape Hatch)
 

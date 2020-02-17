@@ -1,5 +1,5 @@
+import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
-import { EntityManager } from "../../orm/src/EntityManager";
 import { Book, Publisher } from "./entities";
 
 describe("EntityManager.populate", () => {

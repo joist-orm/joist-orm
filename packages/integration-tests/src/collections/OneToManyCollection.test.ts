@@ -1,7 +1,7 @@
-import { EntityManager } from "../../../orm/src/EntityManager";
+import { EntityManager } from "joist-orm";
+import { keyToNumber } from "joist-orm/build/serde";
 import { knex } from "../setupDbTests";
 import { Author, Book, Publisher } from "../entities";
-import { keyToNumber } from "../../../orm/src/serde";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {

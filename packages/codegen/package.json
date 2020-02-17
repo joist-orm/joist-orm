@@ -1,6 +1,8 @@
 {
   "name": "joist-codegen",
   "version": "0.1.0",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
   "dependencies": {
     "@types/pluralize": "0.0.29",
     "change-case": "^4.1.1",

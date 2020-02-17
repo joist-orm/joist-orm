@@ -1,4 +1,4 @@
-import { EntityManager } from "../../../orm/src/EntityManager";
+import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book } from "../entities";
 

@@ -1,6 +1,7 @@
 /** Creates an entity table with our conventions. */
 import { ColumnDefinitions, MigrationBuilder } from "node-pg-migrate";
 import { ColumnDefinition } from "node-pg-migrate/dist/operations/tablesTypes";
+import { singular } from "pluralize";
 
 export function createEntityTable(b: MigrationBuilder, tableName: string, columns: ColumnDefinitions): void {
   b.createTable(tableName, {
@@ -83,8 +84,8 @@ export function foreignKey(otherTable: string, opts?: Partial<ColumnDefinition>)
 }
 
 export function createManyToManyTable(b: MigrationBuilder, tableName: string, table1: string, table2: string) {
-  const column1 = `${table1}_id`;
-  const column2 = `${table2}_id`;
+  const column1 = `${singular(table1)}_id`;
+  const column2 = `${singular(table2)}_id`;
   b.createTable(tableName, {
     id: "id",
     [column1]: foreignKey(table1, { notNull: true }),

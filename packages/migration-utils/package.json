@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "main": "build/index.js",
   "dependencies": {
+    "@types/pluralize": "0.0.29",
     "pg": "^7.18.1",
     "pg-structure": "^5.10.6",
-    "node-pg-migrate": "^4.2.2"
+    "node-pg-migrate": "^4.2.2",
+    "pluralize": "^8.0.0"
   },
   "devDependencies": {
     "@types/jest": "^25.1.1",

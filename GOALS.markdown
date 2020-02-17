@@ -25,13 +25,13 @@ Joist is built on DataLoader from the ground up, and most SQL operations (i.e. `
 
 ## Async/Await All Relations (w/Escape Hatch)
 
-Per this prior point, Joist takes the strong opinion that all "this _might_ be lazy loaded" operations _must_ be marked as `async/await`.
+Joist takes the strong opinion that any "this _might_ be lazy loaded" operations (like accessing an `author.books` collection that might or might not already be loaded in memory) _must_ be marked as `async/await`.
 
-Other ORMs in the JS/TS space sometimes fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasant-ness of accessing `author.books` without `await`s/`Promise.all`/etc. code.
+Other ORMs in the JS/TS space often fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasantness of accessing `author.books` without `await`s/`Promise.all`/etc. code--as long as whoever loaded this `Author` ensured that `books` was already fetched/initialized.
 
-This seems great in the short-term, but Joist asserts its dangerous in the long-term, because code written to use "`author.books` is a `Book[]` is now coupled to `author.books` being pre-fetched and _always_ being present, regardless of the caller.
+This seems great in the short-term, but Joist asserts its dangerous in the long-term, because code written to use the "`author.books` is a `Book[]`" assumption is now coupled to `author.books` being pre-fetched and _always_ being present, regardless of the caller.
  
-This sort of implementation detail is easy to enforce when the `for (book in author.books)` is 5 lines below "load author with a `books` preload hint", however it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is not loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning an empty collection/unset reference and not telling the caller "this wasn't loaded").
+This sort of implementation detail is easy to enforce when the `for (book in author.books)` is 5 lines below "load author with a `books` preload hint", however it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is _not_ loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning a falsely empty collection or unset reference).
 
 Essentially this approach of having non-async collections creates a contract ("`author.books` must somehow be loaded") that is not present in the type system that now the programmer/maintainer must remember and self-enforce.
 
@@ -44,7 +44,9 @@ So, Joist has a way to explicitly mark subsets of fields, on subsets of object i
 This looks like:
 
 ```typescript
+// Note the `{ author: "publisher" } preload hint
 const book = await em.populate(originalBook, { author: "publisher" } as const);
+// The `populate` return type is a "special" `Book` that has `author` and `publisher` marked as "get-safe"
 expect(book.author.get.firstName).toEqual("a1");
 expect(book.author.get.publisher.get.name).toEqual("p1");
 ```
@@ -53,13 +55,13 @@ Where `originalBook`'s references (`book.author`) could _not_ call `.get` (only 
 
 ## Best-in-Class Performance
  
-Joist aims for best-in-class performance by performing all operations in bulk.
+Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, and `DELETE` operations in bulk.
 
-If you insert 100 authors, that is 1 SQL statement. If you update 500 books, that is 1 SQL statement.
+If you save 100 new authors, that is 1 SQL `INSERT` statement. If you update 500 books, that is 1 SQL `UPDATE` statement.
 
-If you have a Unit of Work that has 100 authors and 500 books, there will be 1 SQL statement for the authors, and 1 SQL statement for the books.
+If you have a Unit of Work that has 100 new authors and 500 new books, there will be 1 SQL `INSERT` statement for the authors, and 1 SQL `INSERT` statement for the books.
 
-This is dramatically different than other ORMs that generally issue 1 SQL statement per entity _instance_ instead of 1 SQL statement per entity _type_ (technically Joist is 1 SQL statement per entity type and operation, i.e. inserting authors and updating authors and deleting authors are separte statements).
+This is dramatically different than other ORMs that generally issue 1 SQL statement per entity _instance_ instead of 1 SQL statement per entity _table_ (technically Joist is 1 SQL statement per entity type and operation, i.e. inserting authors and updating authors and deleting authors are separte statements).
 
 Note that this capability, especially bulk updates, currently requires a Postgres-specific `UPDATE` syntax, but that is part of the pay-off for Joist's "unapologetically Postgres-only" approach.
 

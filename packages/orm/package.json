@@ -1,0 +1,33 @@
+{
+  "name": "joist-orm",
+  "version": "0.1.0",
+  "scripts": {
+    "migrate": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register packages/integration/migrations/migrate.ts",
+    "test": "./node_modules/.bin/jest --runInBand",
+    "codegen": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register packages/joist-dev/src/codegen/generateEntities"
+  },
+  "dependencies": {
+    "@types/dotenv": "^8.2.0",
+    "@types/pluralize": "0.0.29",
+    "change-case": "^4.1.1",
+    "dataloader": "^2.0.0",
+    "dotenv": "^8.2.0",
+    "knex": "^0.20.8",
+    "pg": "^7.18.1",
+    "pg-structure": "^5.10.6",
+    "pluralize": "^8.0.0",
+    "topological-sort": "^0.3.0",
+    "ts-poet": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^25.1.1",
+    "@types/node": "^13.7.0",
+    "jest": "^25.1.0",
+    "node-pg-migrate": "^4.2.2",
+    "prettier": "^1.19.1",
+    "ts-jest": "^25.1.0",
+    "ts-node-dev": "^1.0.0-pre.44",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.7.5"
+  }
+}

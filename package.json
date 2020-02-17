@@ -1,33 +1,12 @@
 {
-  "name": "orm-playground",
-  "version": "1.0.0",
+  "private": true,
   "scripts": {
-    "migrate": "ts-node-dev -r tsconfig-paths/register migrations/migrate.ts",
-    "test": "jest --runInBand",
-    "codegen": "ts-node-dev -r tsconfig-paths/register src/codegen/generateEntities"
+    "build": "tsc --build"
   },
-  "dependencies": {
-    "@types/dotenv": "^8.2.0",
-    "@types/pluralize": "0.0.29",
-    "change-case": "^4.1.1",
-    "dataloader": "^2.0.0",
-    "dotenv": "^8.2.0",
-    "knex": "^0.20.8",
-    "pg": "^7.18.1",
-    "pg-structure": "^5.10.6",
-    "pluralize": "^8.0.0",
-    "topological-sort": "^0.3.0",
-    "ts-poet": "^3.0.0"
-  },
-  "devDependencies": {
-    "@types/jest": "^25.1.1",
-    "@types/node": "^13.7.0",
-    "jest": "^25.1.0",
-    "node-pg-migrate": "^4.2.2",
-    "prettier": "^1.19.1",
-    "ts-jest": "^25.1.0",
-    "ts-node-dev": "^1.0.0-pre.44",
-    "tsconfig-paths": "^3.9.0",
-    "typescript": "^3.7.5"
-  }
+  "workspaces": [
+    "packages/codegen",
+    "packages/integration-tests",
+    "packages/migration-utils",
+    "packages/orm"
+  ]
 }

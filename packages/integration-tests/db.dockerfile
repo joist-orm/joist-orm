@@ -1,7 +1,17 @@
 FROM postgres
 
-# These scripts are only run once on initial db creation; if you need to re-run, use `docker-compose rm db`.
-COPY postgres-init /docker-entrypoint-initdb.d/
+# TODO Accept the database name/user name as build args.
+
+# Create the init.sh file. This file is only ran once; if you need to re-run it, use `docker-compose rm db`.
+RUN echo "#!/bin/bash" > /init.sh && \
+  echo "set -e" >> /init.sh && \
+  echo "psql -v ON_ERROR_STOP=1 --username "\$POSTGRES_USER" --dbname "\$POSTGRES_DB" <<-EOSQL" >> /init.sh && \
+  echo "  CREATE USER joist PASSWORD 'local';" >> /init.sh && \
+  echo "  CREATE DATABASE joist;" >> /init.sh && \
+  echo "  GRANT ALL PRIVILEGES ON DATABASE joist TO joist;" >> /init.sh && \
+  echo "EOSQL" >> /init.sh && \
+  chmod u+x /init.sh && \
+  mv /init.sh /docker-entrypoint-initdb.d/
 
 # Create the reset.sh file
 RUN echo "#!/bin/bash" > /reset.sh && \

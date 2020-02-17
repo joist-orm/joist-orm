@@ -12,7 +12,7 @@ An opinionated ORM for TypeScript/node.
 - Unit of Work (navigate between entities as a consistent graph)
 - Small & simple codebase (maintainable by a single engineer if needed)
 
-(See below for more in-depth descriptions of each bullet.)
+(See [GOALS](./blob/master/GOALS.markdown) for more in-depth descriptions of each bullet.)
 
 ### Non-Goals
 

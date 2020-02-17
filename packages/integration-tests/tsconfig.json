@@ -2,6 +2,8 @@
   "extends": "../../tsconfig.packages.json",
   "references": [{ "path": "../codegen" }, { "path": "../migration-utils" }, { "path": "../orm" }],
   "compilerOptions": {
+    "outDir": "./build",
+    "rootDir": "./",
     "baseUrl": "./",
     "paths": {
       "joist-codegen": ["../codegen/src"],

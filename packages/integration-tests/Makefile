@@ -12,7 +12,7 @@ build:
 # Create/recreate the database for applying migrations from scratch.
 db:
 	docker-compose up -d db
-	docker-compose exec db ./reset-database.sh
+	docker-compose exec db ./reset.sh
 	env STAGE=local npm run migrate
 	env STAGE=local npm run codegen
 

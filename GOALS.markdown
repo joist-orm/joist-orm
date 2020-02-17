@@ -67,7 +67,7 @@ A common fault of ORMs is the quickiness of their unit tests (not the ORM projec
 
 It's common for test execution times to be "okay" with a small schema of ~5-10 tables, but then to steadily degrade over time. For the "original Joist" (written in Java), this actually was _the_ founding impetus because Hibernate, the Java ORM dejour of the time, a schema with 500 tables would take 30 seconds just to create the initial session object, let alone run any actual unit test behavior.
 
-Joist (both "original Joist" and now ts-joist) take the hard-line approach that test time should be _constant_ with schema size. Tests on a 500-table schema should run just as quickly as a 20-table schema.
+Joist (both "original/Java Joist" and now joist-ts) take the hard-line approach that test time should be _constant_ with schema size. Tests on a 500-table schema should run just as quickly as a 20-table schema.
 
 Obviously this will not be _exactly_ true in practice, but that is the guiding principle.
 

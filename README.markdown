@@ -1,4 +1,4 @@
-## ts-joist
+## joist-ts
 
 An opinionated ORM for TypeScript/node.
 
@@ -44,7 +44,7 @@ After checkout:
 
 [Joist](https://github.com/stephenh/joist) is also the name for a Java-based ORM I wrote circa 2008.
 
-ts-joist has many of the same ideas (in terms of opinionated codegen), just applied to TypeScript, and leveraging DataLoader.
+joist-ts has many of the same ideas (in terms of opinionated codegen), just applied to TypeScript, and leveraging DataLoader.
 
 The `EntityManager.find` syntax is heavily inspired from [MikroORM](https://mikro-orm.io/), as well as the concept of `EntityManager.populate`.
 

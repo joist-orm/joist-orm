@@ -92,5 +92,5 @@ export function createManyToManyTable(b: MigrationBuilder, tableName: string, ta
     [column2]: foreignKey(table2, { notNull: true }),
     created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
   });
-  b.createIndex(tableName, [column2, column2], { unique: true });
+  b.createIndex(tableName, [column1, column2], { unique: true });
 }

@@ -14,4 +14,4 @@ pattern=$(grep -o "0\.[[:digit:]]\+\.0-bump" < "${file}")
 minor=$(echo "${pattern}"| grep -o "^0\.[[:digit:]]\+")
 patch=$(git log --first-parent --format=%H | wc -l)
 version="${minor}.${patch}"
-sed -i.bak "s/${pattern}/${version}/" "${file}"
+sed -i.bak "s/${pattern}/${version}/g" "${file}"

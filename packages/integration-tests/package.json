@@ -2,9 +2,9 @@
   "name": "joist-integration-tests",
   "version": "0.1.0-bump",
   "scripts": {
-    "migrate": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register joist-migration-utils",
+    "migrate": "./run.sh joist-migration-utils",
     "test": "./node_modules/.bin/jest --runInBand",
-    "codegen": "./node_modules/.bin/ts-node-dev -r tsconfig-paths/register packages/joist-dev/src/codegen/generateEntities"
+    "codegen": "./run.sh joist-codegen"
   },
   "dependencies": {
     "@types/dotenv": "^8.2.0",

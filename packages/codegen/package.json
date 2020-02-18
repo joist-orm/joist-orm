@@ -1,6 +1,6 @@
 {
   "name": "joist-codegen",
-  "version": "0.1.0",
+  "version": "0.1.0-bump",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "dependencies": {

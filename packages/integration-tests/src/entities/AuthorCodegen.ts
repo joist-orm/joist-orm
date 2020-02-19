@@ -10,6 +10,7 @@ import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 
 export interface AuthorOpts {
   firstName: string;
+  lastName?: string;
   publisher?: Publisher;
 }
 
@@ -49,6 +50,16 @@ export class AuthorCodegen {
   set firstName(firstName: string) {
     this.ensureNotDeleted();
     this.__orm.data["firstName"] = firstName;
+    this.__orm.em.markDirty(this);
+  }
+
+  get lastName(): string {
+    return this.__orm.data["lastName"];
+  }
+
+  set lastName(lastName: string) {
+    this.ensureNotDeleted();
+    this.__orm.data["lastName"] = lastName;
     this.__orm.em.markDirty(this);
   }
 

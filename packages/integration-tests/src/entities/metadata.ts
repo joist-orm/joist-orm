@@ -15,6 +15,12 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new SimpleSerde("firstName", "first_name"),
     },
     {
+      fieldName: "lastName",
+      columnName: "last_name",
+      dbType: "character varying",
+      serde: new SimpleSerde("lastName", "last_name"),
+    },
+    {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",

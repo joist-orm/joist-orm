@@ -346,14 +346,14 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       }
       const type = mapType(table.name, column.name, column.type.shortName!);
       const maybeOptional = column.notNull ? "" : "?";
-      return code`${fieldName}${maybeOptional}: ${type.fieldType}`;
+      return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
     });
   const optsRelationFields = table.m2oRelations.map(r => {
     const column = r.foreignKey.columns[0];
     const fieldName = camelCase(column.name.replace("_id", ""));
     const otherEntityName = tableToEntityName(r.targetTable);
     const maybeOptional = column.notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
+    return code`${fieldName}${maybeOptional}: ${otherEntityName};`;
   });
 
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);

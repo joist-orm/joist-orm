@@ -443,7 +443,7 @@ function sortByRequiredForeignKeys(db: Db): string[] {
   const ts = new TopologicalSort<string, Table>(new Map());
   tables.forEach(t => ts.addNode(t.name, t));
   tables.forEach(t => {
-    t.m2oRelations.forEach(m2o => {
+    t.m2oRelations.filter(m2o => isEntityTable(m2o.targetTable)).forEach(m2o => {
       if (m2o.foreignKey.columns.every(c => c.notNull)) {
         ts.addEdge(m2o.targetTable.name, t.name);
       }

@@ -1,4 +1,5 @@
 import { ConnectionConfig } from "pg";
+import { fail } from "./utils";
 
 export interface ConnectionInfo {
   dbname: string;
@@ -10,7 +11,8 @@ export interface ConnectionInfo {
 
 /** Reads the RDS-style connection information from `process.env`. */
 export function newConnectionInfo(): ConnectionInfo {
-  return JSON.parse(process.env.DATABASE_CONNECTION_INFO!) as ConnectionInfo;
+  const info = process.env.DATABASE_CONNECTION_INFO || fail("DATABASE_CONNECTION_INFO environment variable is not set")
+  return JSON.parse(info) as ConnectionInfo;
 }
 
 /** Converts the RDS-style connection information from `process.env` into pg's `ConnectionConfig`. */

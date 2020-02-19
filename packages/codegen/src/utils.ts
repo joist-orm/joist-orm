@@ -60,3 +60,7 @@ export async function trueIfResolved(p: Promise<unknown>): Promise<boolean> {
     () => false,
   );
 }
+
+export function fail(message?: string): never {
+  throw new Error(message || "Failed");
+}

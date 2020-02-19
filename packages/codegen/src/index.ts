@@ -47,14 +47,21 @@ export interface ColumnMetaData {
 export type EnumRows = Record<string, EnumRow[]>;
 export type EnumRow = { id: number; code: string; name: string };
 
-// TODO Make this a config option.
-const entitiesDirectory = "./src/entities";
+interface Config {
+  entitiesDirectory: string;
+}
+
+const defaultConfig: Config = {
+  entitiesDirectory: "./src/entities",
+}
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(db: Db, enumRows: EnumRows): Promise<void> {
+  const config = await loadConfig();
   const files = generateFiles(db, enumRows);
+  await fs.mkdir(config.entitiesDirectory);
   for await (const file of files) {
-    const path = `${entitiesDirectory}/${file.name}`;
+    const path = `${config.entitiesDirectory}/${file.name}`;
     if (file.overwrite) {
       await fs.writeFile(path, await contentToString(file.contents, file.name));
     } else {
@@ -345,7 +352,6 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     const column = r.foreignKey.columns[0];
     const fieldName = camelCase(column.name.replace("_id", ""));
     const otherEntityName = tableToEntityName(r.targetTable);
-    const otherEntityType = imp(`${otherEntityName}@./entities`);
     const maybeOptional = column.notNull ? "" : "?";
     return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
   });
@@ -444,6 +450,16 @@ function sortByRequiredForeignKeys(db: Db): string[] {
     });
   });
   return Array.from(ts.sort().values()).map(v => tableToEntityName(v.node));
+}
+
+async function loadConfig(): Promise<Config> {
+  const configPath = "./joist-codegen.json"
+  const exists = await trueIfResolved(fs.access(configPath));
+  if (exists) {
+    const content = await fs.readFile(configPath);
+    return JSON.parse(content.toString()) as Config;
+  }
+  return defaultConfig;
 }
 
 if (require.main === module) {

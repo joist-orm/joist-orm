@@ -53,7 +53,7 @@ interface Config {
 
 const defaultConfig: Config = {
   entitiesDirectory: "./src/entities",
-}
+};
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(db: Db, enumRows: EnumRows): Promise<void> {
@@ -122,7 +122,8 @@ function generateEnumFile(table: Table, enumRows: EnumRows, enumName: string): C
     export const ${enumName} = {
       ${enumRows[table.name]
         .map(row => {
-          return `${pascalCase(row.code)}: { id: ${row.id}, code: '${row.code}', name: '${row.name}' }`;
+          const safeName = row.name.replace(/(["'])/g, "\\$1");
+          return `${pascalCase(row.code)}: { id: ${row.id}, code: '${row.code}', name: '${safeName}' }`;
         })
         .join(",")}
     };
@@ -443,17 +444,19 @@ function sortByRequiredForeignKeys(db: Db): string[] {
   const ts = new TopologicalSort<string, Table>(new Map());
   tables.forEach(t => ts.addNode(t.name, t));
   tables.forEach(t => {
-    t.m2oRelations.filter(m2o => isEntityTable(m2o.targetTable)).forEach(m2o => {
-      if (m2o.foreignKey.columns.every(c => c.notNull)) {
-        ts.addEdge(m2o.targetTable.name, t.name);
-      }
-    });
+    t.m2oRelations
+      .filter(m2o => isEntityTable(m2o.targetTable))
+      .forEach(m2o => {
+        if (m2o.foreignKey.columns.every(c => c.notNull)) {
+          ts.addEdge(m2o.targetTable.name, t.name);
+        }
+      });
   });
   return Array.from(ts.sort().values()).map(v => tableToEntityName(v.node));
 }
 
 async function loadConfig(): Promise<Config> {
-  const configPath = "./joist-codegen.json"
+  const configPath = "./joist-codegen.json";
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
     const content = await fs.readFile(configPath);

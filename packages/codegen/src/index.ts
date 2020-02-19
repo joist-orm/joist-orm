@@ -1,5 +1,5 @@
 import pgStructure, { Db, Table } from "pg-structure";
-import { camelCase, paramCase, pascalCase } from "change-case";
+import { camelCase, pascalCase } from "change-case";
 import { promises as fs } from "fs";
 import { Client } from "pg";
 import pluralize from "pluralize";
@@ -157,7 +157,7 @@ function mapType(tableName: string, columnName: string, dbColumnType: string): C
 function generateMetadataFile(sortedEntities: string[], table: Table): Code {
   const entityName = tableToEntityName(table);
   const entity = imp(`${entityName}@./entities`);
-  const metaName = `${paramCase(entityName)}Meta`;
+  const metaName = `${camelCase(entityName)}Meta`;
 
   const primaryKey = code`
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}("id", "id") },
@@ -180,7 +180,7 @@ function generateMetadataFile(sortedEntities: string[], table: Table): Code {
     const column = r.foreignKey.columns[0];
     const fieldName = camelCase(column.name.replace("_id", ""));
     const otherEntity = tableToEntityName(r.targetTable);
-    const otherMeta = `${paramCase(otherEntity)}Meta`;
+    const otherMeta = `${camelCase(otherEntity)}Meta`;
     if (isEnumTable(r.targetTable)) {
       const otherEntityType = imp(`${otherEntity}@./entities`);
       return code`
@@ -297,7 +297,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       // target == child i.e. the table with the foreign key column in it
       const otherEntityName = tableToEntityName(r.targetTable);
       const otherEntityType = imp(`${otherEntityName}@./entities`);
-      const otherMeta = imp(`${paramCase(otherEntityName)}Meta@./entities`);
+      const otherMeta = imp(`${camelCase(otherEntityName)}Meta@./entities`);
       // I.e. if the other side is `child.project_id`, use children
       const fieldName = camelCase(pluralize(otherEntityName));
       const otherFieldName = camelCase(column.name.replace("_id", ""));
@@ -356,7 +356,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     return code`${fieldName}${maybeOptional}: ${otherEntityName}`;
   });
 
-  const metadata = imp(`${paramCase(entityName)}Meta@./entities`);
+  const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
   return code`
     export interface ${entityName}Opts {

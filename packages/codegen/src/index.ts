@@ -59,7 +59,7 @@ const defaultConfig: Config = {
 export async function generateAndSaveFiles(db: Db, enumRows: EnumRows): Promise<void> {
   const config = await loadConfig();
   const files = generateFiles(db, enumRows);
-  await fs.mkdir(config.entitiesDirectory);
+  await fs.mkdir(config.entitiesDirectory, { recursive: true });
   for await (const file of files) {
     const path = `${config.entitiesDirectory}/${file.name}`;
     if (file.overwrite) {

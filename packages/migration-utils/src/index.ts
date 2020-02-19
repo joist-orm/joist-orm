@@ -6,7 +6,7 @@ export * from "./utils";
 // If we're being run locally.
 if (require.main === module) {
   runMigrationsIfNeeded("./migrations").catch(err => {
-
     console.error(err);
+    process.exit(1);
   });
 }

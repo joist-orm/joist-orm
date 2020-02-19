@@ -476,5 +476,8 @@ if (require.main === module) {
     await client.end();
 
     await generateAndSaveFiles(db, enumRows);
-  })().catch(console.error);
+  })().catch(err => {
+    console.error(err);
+    process.exit(1);
+  });
 }

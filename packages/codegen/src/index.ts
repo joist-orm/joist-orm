@@ -466,6 +466,9 @@ async function loadConfig(): Promise<Config> {
 }
 
 if (require.main === module) {
+  if (Object.fromEntries === undefined) {
+    throw new Error("Please use node v12+");
+  }
   (async function() {
     const config = newPgConnectionConfig();
     const db = await pgStructure(config);

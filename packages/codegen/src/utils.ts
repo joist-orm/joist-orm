@@ -14,12 +14,12 @@ export function isEnumTable(t: Table): boolean {
 
 export function isJoinTable(t: Table): boolean {
   const { columns } = t;
-  return (
-    columns.length === 4 &&
-    columns.filter(c => c.isPrimaryKey).length === 1 &&
-    columns.filter(c => c.isForeignKey).length === 2 &&
-    columns.filter(c => c.name === "created_at").length === 1
-  );
+  const hasOnePk = columns.filter(c => c.isPrimaryKey).length === 1;
+  const hasTwoFks = columns.filter(c => c.isForeignKey).length === 2;
+  const hasThreeColumns = columns.length === 3;
+  const hasFourColumnsOneIsCreatedAt =
+    columns.length === 4 && columns.filter(c => c.name === "created_at").length === 1;
+  return hasOnePk && hasTwoFks && (hasThreeColumns || hasFourColumnsOneIsCreatedAt);
 }
 
 function includesAllOf(set: string[], subset: string[]): boolean {

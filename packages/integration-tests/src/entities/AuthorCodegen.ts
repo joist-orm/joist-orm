@@ -11,6 +11,7 @@ import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
 export interface AuthorOpts {
   firstName: string;
   lastName?: string;
+  isPopular?: boolean;
   publisher?: Publisher;
 }
 
@@ -53,13 +54,23 @@ export class AuthorCodegen {
     this.__orm.em.markDirty(this);
   }
 
-  get lastName(): string {
+  get lastName(): string | undefined {
     return this.__orm.data["lastName"];
   }
 
-  set lastName(lastName: string) {
+  set lastName(lastName: string | undefined) {
     this.ensureNotDeleted();
     this.__orm.data["lastName"] = lastName;
+    this.__orm.em.markDirty(this);
+  }
+
+  get isPopular(): boolean | undefined {
+    return this.__orm.data["isPopular"];
+  }
+
+  set isPopular(isPopular: boolean | undefined) {
+    this.ensureNotDeleted();
+    this.__orm.data["isPopular"] = isPopular;
     this.__orm.em.markDirty(this);
   }
 

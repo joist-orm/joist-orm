@@ -259,13 +259,14 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     .map(column => {
       const fieldName = camelCase(column.name);
       const type = mapType(table.name, column.name, column.type.shortName!);
+      const maybeOptional = column.notNull ? "" : " | undefined";
       const getter = code`
-        get ${fieldName}(): ${type.fieldType} {
+        get ${fieldName}(): ${type.fieldType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
         }
      `;
       const setter = code`
-        set ${fieldName}(${fieldName}: ${type.fieldType}) {
+        set ${fieldName}(${fieldName}: ${type.fieldType}${maybeOptional}) {
           this.ensureNotDeleted();
           this.__orm.data["${fieldName}"] = ${fieldName};
           this.__orm.em.markDirty(this);

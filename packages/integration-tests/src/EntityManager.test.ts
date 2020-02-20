@@ -143,6 +143,41 @@ describe("EntityManager", () => {
     expect(a3.updatedAt).not.toEqual(a1.updatedAt);
   });
 
+  it("can insert falsey values", async () => {
+    const em = new EntityManager(knex);
+    em.create(Author, { firstName: "a1", isPopular: false });
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].is_popular).toEqual(false);
+  });
+
+  it("can update falsey values", async () => {
+    await knex.insert({ first_name: "a1", is_popular: true }).from("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    a1.isPopular = false;
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].is_popular).toEqual(false);
+  });
+
+  it("can update undefined values", async () => {
+    await knex.insert({ first_name: "a1", is_popular: true }).from("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    a1.isPopular = undefined;
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].is_popular).toEqual(null);
+  });
+
+  it("can load null values as undefined", async () => {
+    await knex.insert({ first_name: "a1", is_popular: null }).from("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    expect(a1.isPopular).toBeUndefined();
+  });
+
   it("can save enums", async () => {
     const em = new EntityManager(knex);
     em.create(Publisher, { name: "a1", size: PublisherSize.Large });

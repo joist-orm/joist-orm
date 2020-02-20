@@ -14,7 +14,7 @@ export class SimpleSerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = row[this.columnName];
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
@@ -107,4 +107,8 @@ export function keyToNumber(value: any): number | undefined {
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */
 export function keyToString(value: any): string | undefined {
   return value === undefined || value === null ? undefined : String(value);
+}
+
+export function maybeNullToUndefined(value: any): any {
+  return value === null ? undefined : value;
 }

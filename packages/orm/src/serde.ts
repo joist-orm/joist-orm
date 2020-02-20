@@ -76,19 +76,19 @@ export class EnumFieldSerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = Object.values(this.enumObject).find((v: any) => v.id === row[this.columnName]);
+    data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
   }
 
   setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName]?.id;
+    row[this.columnName] = this.enumObject.findByCode(data[this.fieldName])?.id;
   }
 
   getFromEntity(data: any) {
-    return data[this.fieldName]?.id;
+    return this.enumObject.findByCode(data[this.fieldName])?.id;
   }
 
   mapToDb(value: any) {
-    return value?.id;
+    return this.enumObject.findByCode(value)?.id;
   }
 }
 

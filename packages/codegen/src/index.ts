@@ -118,19 +118,37 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
 }
 
 function generateEnumFile(table: Table, enumRows: EnumRows, enumName: string): Code {
+  const rows = enumRows[table.name];
   return code`
-    export const ${enumName} = {
-      ${enumRows[table.name]
+    export enum ${enumName} {
+      ${rows.map(row => `${pascalCase(row.code)} = '${row.code}'`).join(",\n")}
+    }
+
+    type Details = { id: number, code: ${enumName}, name: string };
+
+    const details: Record<${enumName}, Details> = {
+      ${rows
         .map(row => {
+          const code = pascalCase(row.code);
           const safeName = row.name.replace(/(["'])/g, "\\$1");
-          return `${pascalCase(row.code)}: { id: ${row.id}, code: '${row.code}', name: '${safeName}' }`;
+          return `[${enumName}.${code}]: { id: ${row.id}, code: ${enumName}.${code}, name: '${safeName}' }`;
         })
         .join(",")}
     };
-    
-    export type ${enumName} =
-      ${enumRows[table.name].map(row => `typeof ${enumName}.${pascalCase(row.code)}`).join(" | ")}
-    ;
+
+    export const ${pluralize(enumName)} = {
+      getByCode(code: ${enumName}): Details {
+        return details[code];
+      },
+
+      findByCode(code: string): Details | undefined {
+        return details[code as ${enumName}];
+      },
+
+      findById(id: number): Details | undefined {
+        return Object.values(details).find(d => d.id === id);
+      },
+    };
   `;
 }
 
@@ -183,13 +201,13 @@ function generateMetadataFile(sortedEntities: string[], table: Table): Code {
     const otherEntity = tableToEntityName(r.targetTable);
     const otherMeta = `${camelCase(otherEntity)}Meta`;
     if (isEnumTable(r.targetTable)) {
-      const otherEntityType = imp(`${otherEntity}@./entities`);
+      const enumObjectType = imp(`${pluralize(otherEntity)}@./entities`);
       return code`
         {
           fieldName: "${fieldName}",
           columnName: "${column.name}",
           dbType: "int",
-          serde: new ${EnumFieldSerde}("${fieldName}", "${column.name}", ${otherEntityType}),
+          serde: new ${EnumFieldSerde}("${fieldName}", "${column.name}", ${enumObjectType}),
         },
       `;
     } else {

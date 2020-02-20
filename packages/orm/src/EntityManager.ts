@@ -248,12 +248,45 @@ export class EntityManager {
     });
   }
 
-  async refresh(entity: Entity): Promise<void> {
-    if (entity.id) {
-      const loader = this.loaderForEntity(getMetadata(entity).cstr);
-      loader.clear(entity.id);
-      await loader.load(entity.id);
-    }
+  /**
+   * For all entities in the current `EntityManager`, load their latest data from the database.
+   *
+   * This is primarily useful in tests, i.e. having 1 `EntityManager` with some test data, running business
+   * logic in a dedicated `EntityManager`, and then `refresh`-ing the test data `EntityManager` to assert
+   * against the latest values.
+   *
+   * This works with primitive fields as well as references and collections.
+   *
+   * TODO Newly-found collection entries will not have prior load hints applied to this.
+   */
+  async refresh(): Promise<void>;
+  async refresh(entity: Entity): Promise<void>;
+  async refresh(entities: Entity[]): Promise<void>;
+  async refresh(entityOrListOrUndefined?: Entity | Entity[]): Promise<void> {
+    const list =
+      entityOrListOrUndefined === undefined
+        ? this.entities
+        : Array.isArray(entityOrListOrUndefined)
+        ? entityOrListOrUndefined
+        : [entityOrListOrUndefined];
+    await Promise.all(
+      list.map(async entity => {
+        if (entity.id) {
+          // Clear the original cached loader result and fetch the new primitives
+          const loader = this.loaderForEntity(getMetadata(entity).cstr);
+          loader.clear(entity.id);
+          await loader.load(entity.id);
+          // Then refresh any loaded collections
+          await Promise.all(
+            Object.values(entity).map(c => {
+              if ("refreshIfLoaded" in c) {
+                return c.refreshIfLoaded();
+              }
+            }),
+          );
+        }
+      }),
+    );
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {

@@ -73,6 +73,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     }
   }
 
+  async refreshIfLoaded(): Promise<void> {
+    // TODO We should remember what load hints have been applied to this collection and re-apply them.
+    if (this.loaded !== undefined && this.entity.id !== undefined) {
+      const loader = loaderForCollection(this);
+      loader.clear(this.entity.id);
+      this.loaded = await loader.load(this.entity.id);
+    }
+  }
+
   private maybeAppendAddedBeforeLoaded(): void {
     if (this.loaded) {
       this.loaded.unshift(...this.addedBeforeLoaded);

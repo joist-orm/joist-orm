@@ -1,5 +1,5 @@
 import { EntityManager } from "joist-orm";
-import { Author, Publisher, PublisherSize } from "./entities";
+import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -198,5 +198,57 @@ describe("EntityManager", () => {
     await em.refresh(p1);
     // Then we have the new data
     expect(p1.name).toEqual("p2");
+  });
+
+  it("refresh an entity with a loaded o2m collection", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
+    // Given we've loaded an entity with a collection
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1", "authors");
+    expect(p1.authors.get.length).toEqual(1);
+    // And a new row is added by something else
+    await knex.insert({ first_name: "a2", publisher_id: 1 }).into("authors");
+    // When we refresh the entity
+    await em.refresh(p1);
+    // Then we have the new data
+    expect(p1.authors.get[1].firstName).toEqual("a2");
+  });
+
+  it("refresh an entity with a loaded m2o reference", async () => {
+    await knex.insert({ name: "p1" }).into("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    // Given we've loaded an entity with a reference
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1", "publisher");
+    expect(a1.publisher.get!.name).toEqual("p1");
+    // And the foreign key is changed by something else
+    await knex.insert({ name: "p2" }).from("publishers");
+    await knex
+      .update({ publisher_id: 2 })
+      .where({ id: 1 })
+      .from("authors");
+    // When we refresh the entity
+    await em.refresh(a1);
+    // Then we have the new data
+    expect(a1.publisher.get!.name).toEqual("p2");
+  });
+
+  it("refresh an entity with a loaded m2m collection", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ name: "t1" }).into("tags");
+    await knex.insert({ tag_id: 1, book_id: 1 }).into("books_to_tags");
+    // Given we've loaded an entity with a
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "1", "tags");
+    expect(b1.tags.get.length).toEqual(1);
+    // And a new join row is added by someone else
+    await knex.insert({ name: "t2" }).into("tags");
+    await knex.insert({ tag_id: 2, book_id: 1 }).into("books_to_tags");
+    // When we refresh the entity
+    await em.refresh(b1);
+    // Then we have the new data
+    expect(b1.tags.get!.length).toEqual(2);
   });
 });

@@ -82,6 +82,18 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     return this.loaded;
   }
 
+  // impl details
+
+  async refreshIfLoaded(): Promise<void> {
+    // TODO We should remember what load hints have been applied to this collection and re-apply them.
+    if (this.loaded !== undefined && this.entity.id !== undefined) {
+      const key = `${this.columnName}=${this.entity.id}`;
+      const loader = loaderForJoinTable(this);
+      loader.clear(key);
+      this.loaded = await loader.load(key);
+    }
+  }
+
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {
     if (this.loaded) {
       // this.loaded.unshift(...this.addedBeforeLoaded);

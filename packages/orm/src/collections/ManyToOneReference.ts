@@ -11,6 +11,8 @@ import { OneToManyCollection } from "./OneToManyCollection";
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   implements Reference<T, U, N> {
+  private loaded = false;
+
   constructor(
     private entity: T,
     public otherType: EntityConstructor<U>,
@@ -31,6 +33,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     // Resolve the id to an entity, and then put it back in __orm.data for any future load()/get() calls.
     const other = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
     this.entity.__orm.data[this.fieldName] = other;
+    this.loaded = true;
     return this.ensureNotDeleted(other);
   }
 
@@ -45,6 +48,16 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       throw new Error(`${current} should have been an object`);
     }
     return this.ensureNotDeleted(current as U | N);
+  }
+
+  // private impl
+
+  async refreshIfLoaded(): Promise<void> {
+    // TODO We should remember what load hints have been applied to this collection and re-apply them.
+    if (this.loaded) {
+      const other = ((await this.entity.__orm.em.load(this.otherType, this.current() as string)) as any) as U;
+      this.entity.__orm.data[this.fieldName] = other;
+    }
   }
 
   // Internal method used by OneToManyCollection

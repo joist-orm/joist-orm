@@ -148,6 +148,14 @@ function generateEnumFile(table: Table, enumRows: EnumRows, enumName: string): C
       findById(id: number): Details | undefined {
         return Object.values(details).find(d => d.id === id);
       },
+
+      getValues(): ReadonlyArray<${enumName}> {
+        return Object.values(${enumName});
+      },
+
+      getDetails(): ReadonlyArray<Details> {
+        return Object.values(details);
+      },
     };
   `;
 }

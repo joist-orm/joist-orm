@@ -22,4 +22,12 @@ export const PublisherSizes = {
   findById(id: number): Details | undefined {
     return Object.values(details).find(d => d.id === id);
   },
+
+  getValues(): ReadonlyArray<PublisherSize> {
+    return Object.values(PublisherSize);
+  },
+
+  getDetails(): ReadonlyArray<Details> {
+    return Object.values(details);
+  },
 };

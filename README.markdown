@@ -41,6 +41,7 @@ After checkout:
 - Add `EntityManger.findById` / `findByIds`
 - Fallback to batch-bump-sequences-on-INSERT for schemas that have cycles
 - Support soft deletion?
+- Op locks/`version` column?
 
 ## History / Inspiration
 

@@ -228,6 +228,13 @@ export class EntityManager {
     entity.__orm.dirty = true;
   }
 
+  /**
+   * Flushes the SQL for any changed entities to the database.
+   *
+   * Currently this `BEGIN`s and `COMMIT`s a new transaction on every call;
+   * we should also support an `EntityManager` itself running all queries
+   * (i.e. including the initial `SELECT`s) in a transaction.
+   */
   async flush(): Promise<void> {
     const entityTodos = sortEntities(this.entities);
     const joinRowTodos = sortJoinRows(this.joinRows);
@@ -241,6 +248,14 @@ export class EntityManager {
     });
   }
 
+  async refresh(entity: Entity): Promise<void> {
+    if (entity.id) {
+      const loader = this.loaderForEntity(getMetadata(entity).cstr);
+      loader.clear(entity.id);
+      await loader.load(entity.id);
+    }
+  }
+
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {
     return getOrSet(this.loaders, type.name, () => {
       return new DataLoader<string, T | undefined>(async keys => {
@@ -251,7 +266,8 @@ export class EntityManager {
           .from(meta.tableName)
           .whereIn("id", keys as string[]);
 
-        const entities = rows.map(row => this.hydrateOrLookup(meta, row));
+        // Pass setEvenIfAlreadyFound because it might be EntityManager.refresh calling us.
+        const entities = rows.map(row => this.hydrateOrLookup(meta, row, true));
         const entitiesById = indexBy(entities, e => e.id!);
         return keys.map(k => entitiesById.get(k));
       });
@@ -264,13 +280,18 @@ export class EntityManager {
     return this.entities.find(e => getMetadata(e).cstr === type && e.id === id) as T | undefined;
   }
 
-  // TOOD Hide private
-  public hydrateOrLookup<T extends Entity>(meta: EntityMetadata<T>, row: any): T {
+  // TODO Hide private
+  public hydrateOrLookup<T extends Entity>(meta: EntityMetadata<T>, row: any, setEvenIfAlreadyFound?: boolean): T {
     const id = keyToString(row["id"])!;
     // See if this is already in our UoW
     let entity = this.findExistingInstance(meta.cstr, id) as T;
     if (!entity) {
       entity = (new meta.cstr(this, {}) as any) as T;
+      meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
+    } else if (setEvenIfAlreadyFound) {
+      // Usually if the entity alrady exists, we don't write over it, but in this case
+      // we assume that `EntityManager.refresh` is telling us to explicitly load the
+      // latest data.
       meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
     }
     return entity;

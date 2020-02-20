@@ -182,4 +182,21 @@ describe("EntityManager", () => {
     await em.delete(p1);
     expect(() => (p1.name = "p2")).toThrow("Publisher#1 is marked as deleted");
   });
+
+  it("refresh an entity", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+    // Given we've loaded an entity
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    expect(p1.name).toEqual("p1");
+    // And it's updated by something else
+    await knex
+      .update({ name: "p2" })
+      .where({ id: 1 })
+      .from("publishers");
+    // When we refresh the entity
+    await em.refresh(p1);
+    // Then we have the new data
+    expect(p1.name).toEqual("p2");
+  });
 });

@@ -11,7 +11,7 @@ import { OneToManyCollection } from "./OneToManyCollection";
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   implements Reference<T, U, N> {
-  private loaded = false;
+  private loaded: U | undefined;
 
   constructor(
     private entity: T,
@@ -23,18 +23,16 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   async load(): Promise<U | N> {
     ensureNotDeleted(this.entity);
-    // This will be a string id unless we've already loaded it.
-    const current = this.current();
-    if (isEntity(current)) {
-      return this.returnUndefinedIfDeleted(current as U);
+    if (this.loaded !== undefined) {
+      return this.returnUndefinedIfDeleted(this.loaded);
     }
+    const current = this.current();
     if (current === undefined) {
       return undefined as N;
     }
-    // Resolve the id to an entity, and then put it back in __orm.data for any future load()/get() calls.
+    // Resolve the id to an entity
     const other = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
-    this.entity.__orm.data[this.fieldName] = other;
-    this.loaded = true;
+    this.loaded = other;
     return this.returnUndefinedIfDeleted(other);
   }
 
@@ -47,11 +45,10 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   get get(): U | N {
     ensureNotDeleted(this.entity);
     // This should only be callable in the type system if we've already resolved this to an instance
-    const current = this.current();
-    if (current !== undefined && !isEntity(current)) {
-      throw new Error(`${current} should have been an object`);
+    if (this.loaded === undefined) {
+      throw new Error(`${this.current()} should have been an object`);
     }
-    return this.returnUndefinedIfDeleted(current as U | N);
+    return this.returnUndefinedIfDeleted(this.loaded);
   }
 
   // private impl
@@ -59,8 +56,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   async refreshIfLoaded(): Promise<void> {
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.loaded) {
-      const other = ((await this.entity.__orm.em.load(this.otherType, this.current() as string)) as any) as U;
-      this.entity.__orm.data[this.fieldName] = other;
+      this.loaded = ((await this.entity.__orm.em.load(this.otherType, this.current() as string)) as any) as U;
     }
   }
 
@@ -72,16 +68,15 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       return;
     }
 
-    if (isEntity(current)) {
-      const previousCollection = (current[this.otherFieldName] as any) as OneToManyCollection<U, T>;
+    if (this.loaded) {
+      const previousCollection = (this.loaded[this.otherFieldName] as any) as OneToManyCollection<U, T>;
       previousCollection.removeIfLoaded(this.entity);
     }
 
     if (!opts || opts.beingDeleted !== true) {
       (this.entity as any).ensureNotDeleted();
     }
-    this.entity.__orm.data[this.fieldName] = other;
-    this.entity.__orm.dirty = true;
+    this.entity.__orm.em.setField(this.entity, this.fieldName as string, other?.id);
 
     if (other !== undefined) {
       const newCollection = ((other as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
@@ -89,7 +84,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  current(): U | undefined | string {
+  current(): string | undefined {
     return this.entity.__orm.data[this.fieldName];
   }
 

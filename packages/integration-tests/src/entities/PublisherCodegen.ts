@@ -18,7 +18,7 @@ export class PublisherCodegen {
   );
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    this.__orm = { em, metadata: publisherMeta, data: {} };
+    this.__orm = { em, metadata: publisherMeta, data: {}, originalData: {} };
     em.register(this);
     Object.entries(opts).forEach(([key, value]) => {
       if ((this as any)[key] instanceof ManyToOneReference) {
@@ -39,8 +39,7 @@ export class PublisherCodegen {
 
   set name(name: string) {
     this.ensureNotDeleted();
-    this.__orm.data["name"] = name;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "name", name);
   }
 
   get createdAt(): Date {
@@ -57,8 +56,7 @@ export class PublisherCodegen {
 
   set size(size: PublisherSize | undefined) {
     this.ensureNotDeleted();
-    this.__orm.data["size"] = size;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "size", size);
   }
 
   toString(): string {

@@ -19,7 +19,7 @@ export class TagCodegen {
   );
 
   constructor(em: EntityManager, opts: TagOpts) {
-    this.__orm = { em, metadata: tagMeta, data: {} };
+    this.__orm = { em, metadata: tagMeta, data: {}, originalData: {} };
     em.register(this);
     Object.entries(opts).forEach(([key, value]) => {
       if ((this as any)[key] instanceof ManyToOneReference) {
@@ -40,8 +40,7 @@ export class TagCodegen {
 
   set name(name: string) {
     this.ensureNotDeleted();
-    this.__orm.data["name"] = name;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "name", name);
   }
 
   get createdAt(): Date {

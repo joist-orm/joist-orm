@@ -29,7 +29,7 @@ export class AuthorCodegen {
   );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
-    this.__orm = { em, metadata: authorMeta, data: {} };
+    this.__orm = { em, metadata: authorMeta, data: {}, originalData: {} };
     em.register(this);
     Object.entries(opts).forEach(([key, value]) => {
       if ((this as any)[key] instanceof ManyToOneReference) {
@@ -50,8 +50,7 @@ export class AuthorCodegen {
 
   set firstName(firstName: string) {
     this.ensureNotDeleted();
-    this.__orm.data["firstName"] = firstName;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "firstName", firstName);
   }
 
   get lastName(): string | undefined {
@@ -60,8 +59,7 @@ export class AuthorCodegen {
 
   set lastName(lastName: string | undefined) {
     this.ensureNotDeleted();
-    this.__orm.data["lastName"] = lastName;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "lastName", lastName);
   }
 
   get isPopular(): boolean | undefined {
@@ -70,8 +68,7 @@ export class AuthorCodegen {
 
   set isPopular(isPopular: boolean | undefined) {
     this.ensureNotDeleted();
-    this.__orm.data["isPopular"] = isPopular;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "isPopular", isPopular);
   }
 
   get createdAt(): Date {

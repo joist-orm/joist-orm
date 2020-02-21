@@ -268,8 +268,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const setter = code`
         set ${fieldName}(${fieldName}: ${type.fieldType}${maybeOptional}) {
           this.ensureNotDeleted();
-          this.__orm.data["${fieldName}"] = ${fieldName};
-          this.__orm.em.markDirty(this);
+          this.__orm.em.setField(this, "${fieldName}", ${fieldName});
         }
       `;
       return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
@@ -292,8 +291,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const setter = code`
         set ${fieldName}(${fieldName}: ${otherEntityType}${maybeOptional}) {
           this.ensureNotDeleted();
-          this.__orm.data["${fieldName}"] = ${fieldName};
-          this.__orm.em.markDirty(this);
+          this.__orm.em.setField(this, "${fieldName}", ${fieldName});
         }
       `;
       // Group enums as primitives
@@ -397,7 +395,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       ${[o2m, m2o, m2m]}
       
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        this.__orm = { em, metadata: ${metadata}, data: {} };
+        this.__orm = { em, metadata: ${metadata}, data: {}, originalData: {} };
         em.register(this);
         Object.entries(opts).forEach(([key, value]) => {
           if ((this as any)[key] instanceof ${ManyToOneReference}) {

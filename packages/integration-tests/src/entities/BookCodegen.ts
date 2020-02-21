@@ -35,7 +35,7 @@ export class BookCodegen {
   );
 
   constructor(em: EntityManager, opts: BookOpts) {
-    this.__orm = { em, metadata: bookMeta, data: {} };
+    this.__orm = { em, metadata: bookMeta, data: {}, originalData: {} };
     em.register(this);
     Object.entries(opts).forEach(([key, value]) => {
       if ((this as any)[key] instanceof ManyToOneReference) {
@@ -56,8 +56,7 @@ export class BookCodegen {
 
   set title(title: string) {
     this.ensureNotDeleted();
-    this.__orm.data["title"] = title;
-    this.__orm.em.markDirty(this);
+    this.__orm.em.setField(this, "title", title);
   }
 
   get createdAt(): Date {

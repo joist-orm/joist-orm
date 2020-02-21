@@ -23,7 +23,7 @@ export interface EntityConstructor<T> {
 export interface EntityOrmField {
   metadata: EntityMetadata<Entity>;
   data: Record<any, any>;
-  dirty?: boolean;
+  originalData: Record<any, any>;
   deleted?: boolean;
   em: EntityManager;
 }
@@ -224,8 +224,15 @@ export class EntityManager {
     await Promise.all(p);
   }
 
-  markDirty(entity: Entity): void {
-    entity.__orm.dirty = true;
+  setField(entity: Entity, fieldName: string, newValue: any): void {
+    // TODO De-dirty if newValue is reverting to originalData
+    // Push this logic into a field serde type abstraction?
+    const currentValue = entity.__orm.data[fieldName];
+    // Only save the currentValue on the 1st change of this field
+    if (!(fieldName in entity.__orm.originalData)) {
+      entity.__orm.originalData[fieldName] = currentValue;
+    }
+    entity.__orm.data[fieldName] = newValue;
   }
 
   /**

@@ -41,7 +41,7 @@ async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any
     .returning("id");
   for (let i = 0; i < entities.length; i++) {
     entities[i].__orm.data["id"] = keyToString(ids[i]);
-    entities[i].__orm.dirty = false;
+    entities[i].__orm.originalData = {};
   }
 }
 
@@ -65,7 +65,7 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
       bindings,
     )
     .transacting(tx);
-  entities.forEach(entity => (entity.__orm.dirty = false));
+  entities.forEach(entity => (entity.__orm.originalData = {}));
 }
 
 async function batchDelete(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
@@ -96,7 +96,7 @@ export function sortEntities(entities: Entity[]): Todo[] {
   for (const entity of entities) {
     const order = entity.__orm.metadata.order;
     const isNew = entity.id === undefined;
-    const isDirty = !isNew && entity.__orm.dirty;
+    const isDirty = !isNew && Object.keys(entity.__orm.originalData).length > 0;
     const isDelete = !isNew && entity.__orm.deleted;
     if (isNew || isDirty || isDelete) {
       let todo = todos[order];

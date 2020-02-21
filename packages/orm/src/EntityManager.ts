@@ -214,7 +214,7 @@ export class EntityManager {
         // I.e. we're an Author, and this is the Author.books OneToManyCollection.
         // For this collection to be loaded because it's likely all of our "children" need
         // to know, btw, this for their foreign key is pointing to is going away.
-        const others = await v.load();
+        const others = await v.load({ beingDeleted: true });
         others.forEach(other => {
           // TODO What if other.otherFieldName is required/not-null?
           (other[v.otherFieldName] as ManyToOneReference<any, any, any>).set(undefined);
@@ -276,14 +276,16 @@ export class EntityManager {
           const loader = this.loaderForEntity(getMetadata(entity).cstr);
           loader.clear(entity.id);
           await loader.load(entity.id);
-          // Then refresh any loaded collections
-          await Promise.all(
-            Object.values(entity).map(c => {
-              if ("refreshIfLoaded" in c) {
-                return c.refreshIfLoaded();
-              }
-            }),
-          );
+          if (!entity.__orm.deleted) {
+            // Then refresh any loaded collections
+            await Promise.all(
+              Object.values(entity).map(c => {
+                if ("refreshIfLoaded" in c) {
+                  return c.refreshIfLoaded();
+                }
+              }),
+            );
+          }
         }
       }),
     );
@@ -302,7 +304,21 @@ export class EntityManager {
         // Pass setEvenIfAlreadyFound because it might be EntityManager.refresh calling us.
         const entities = rows.map(row => this.hydrateOrLookup(meta, row, true));
         const entitiesById = indexBy(entities, e => e.id!);
-        return keys.map(k => entitiesById.get(k));
+
+        // Return the results back in the same order as the keys
+        return keys.map(k => {
+          const entity = entitiesById.get(k);
+          // We generally expect all of our entities to be found, but they may not for API calls like
+          // `findOneOrFail` or for `EntityManager.refresh` when the entity has been deleted out from
+          // under us.
+          if (entity === undefined) {
+            const existingEntity = this.findExistingInstance(type, k);
+            if (existingEntity) {
+              existingEntity.__orm.deleted = true;
+            }
+          }
+          return entity;
+        });
       });
     });
   }
@@ -348,4 +364,10 @@ export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructor<T>): EntityMetadata<T> {
   return (isEntity(entityOrType) ? entityOrType.__orm.metadata : (entityOrType as any).metadata) as EntityMetadata<T>;
+}
+
+export function ensureNotDeleted(entity: Entity): void {
+  if (entity.__orm.deleted) {
+    throw new Error(entity.toString() + " is marked as deleted");
+  }
 }

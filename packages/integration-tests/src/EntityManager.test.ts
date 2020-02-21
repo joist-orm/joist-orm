@@ -211,11 +211,26 @@ describe("EntityManager", () => {
 
   it("cannot modify a deleted entity", async () => {
     await knex.insert({ name: "p1" }).from("publishers");
-
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     await em.delete(p1);
     expect(() => (p1.name = "p2")).toThrow("Publisher#1 is marked as deleted");
+  });
+
+  it("cannot modify a deleted entity's o2m collection", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    await em.delete(p1);
+    expect(() => p1.authors.add(em.create(Author, { firstName: "a1" }))).toThrow("Publisher#1 is marked as deleted");
+  });
+
+  it("cannot modify a deleted entity's m2o collection", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    await em.delete(a1);
+    expect(() => a1.publisher.set(em.create(Publisher, { name: "p1" }))).toThrow("Author#1 is marked as deleted");
   });
 
   it("refresh an entity", async () => {
@@ -285,5 +300,22 @@ describe("EntityManager", () => {
     await em.refresh(b1);
     // Then we have the new data
     expect(b1.tags.get!.length).toEqual(2);
+  });
+
+  it("refresh an entity that is deleted", async () => {
+    await knex.insert({ name: "p1" }).into("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    // Given we've loaded an entity with a reference
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1", "publisher");
+    expect(a1.publisher.get!.name).toEqual("p1");
+    // And the entity is deleted
+    await knex("authors")
+      .where("id", 1)
+      .del();
+    // When we refresh the entity
+    await em.refresh(a1);
+    // Then we're marked as deleted
+    expect(a1.__orm.deleted).toEqual(true);
   });
 });

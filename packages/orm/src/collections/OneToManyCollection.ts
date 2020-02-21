@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Entity, EntityMetadata } from "../EntityManager";
+import { ensureNotDeleted, Entity, EntityMetadata } from "../EntityManager";
 import { Collection } from "../index";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -18,7 +18,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     public otherColumnName: string,
   ) {}
 
-  async load(): Promise<U[]> {
+  // opts is an internal parameter
+  async load(opts?: { beingDeleted?: boolean }): Promise<U[]> {
+    if (!opts || !opts.beingDeleted) {
+      ensureNotDeleted(this.entity);
+    }
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         this.loaded = [];
@@ -31,6 +35,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
   }
 
   add(other: U): void {
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       if (!this.addedBeforeLoaded.includes(other)) {
         this.addedBeforeLoaded.push(other);
@@ -48,6 +53,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
   // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
 
   get get(): U[] {
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         return this.addedBeforeLoaded;

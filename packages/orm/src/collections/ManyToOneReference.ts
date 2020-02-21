@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, isEntity } from "../EntityManager";
+import { ensureNotDeleted, Entity, EntityConstructor, isEntity } from "../EntityManager";
 import { Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 
@@ -22,10 +22,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   ) {}
 
   async load(): Promise<U | N> {
+    ensureNotDeleted(this.entity);
     // This will be a string id unless we've already loaded it.
     const current = this.current();
     if (isEntity(current)) {
-      return this.ensureNotDeleted(current as U);
+      return this.returnUndefinedIfDeleted(current as U);
     }
     if (current === undefined) {
       return undefined as N;
@@ -34,20 +35,23 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const other = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
     this.entity.__orm.data[this.fieldName] = other;
     this.loaded = true;
-    return this.ensureNotDeleted(other);
+    return this.returnUndefinedIfDeleted(other);
   }
 
+  // opts is an internal parameter
   set(other: U | N, opts?: { beingDeleted?: boolean }): void {
+    // setImpl conditionally checked ensureNotDeleted based on opts.beingDeleted
     this.setImpl(other, opts);
   }
 
   get get(): U | N {
+    ensureNotDeleted(this.entity);
     // This should only be callable in the type system if we've already resolved this to an instance
     const current = this.current();
     if (current !== undefined && !isEntity(current)) {
       throw new Error(`${current} should have been an object`);
     }
-    return this.ensureNotDeleted(current as U | N);
+    return this.returnUndefinedIfDeleted(current as U | N);
   }
 
   // private impl
@@ -89,7 +93,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.entity.__orm.data[this.fieldName];
   }
 
-  private ensureNotDeleted(e: U | N): U | N {
+  private returnUndefinedIfDeleted(e: U | N): U | N {
     if (e !== undefined && e.__orm.deleted) {
       if (this.notNull) {
         throw new Error(`Referenced entity ${e} has been marked as deleted`);

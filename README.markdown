@@ -22,6 +22,10 @@ An opinionated ORM for TypeScript/node.
 - Anything-but-Postgres support at this point.
 - Browser/client-side support
 
+### Install
+
+Requires ES2019/[Node v12.4.0](https://node.green/#ES2019) for `Object.fromEntries`, `Array.flatMap`, etc.
+
 ### Building
 
 After checkout:

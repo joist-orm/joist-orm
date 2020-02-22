@@ -1,6 +1,6 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
-import { Entity, EntityConstructor, EntityMetadata, FilterQuery, getMetadata } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, FilterQuery, getMetadata, isEntity } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
 
 /**
@@ -33,22 +33,27 @@ export function buildQuery<T extends Entity>(
 
   // Define a function for recursively adding joins & filters
   function addClauses(meta: EntityMetadata<any>, alias: string, where: FilterQuery<any>): void {
-    Object.entries(where).forEach(([key, value]) => {
+    Object.entries(where).forEach(([key, clause]) => {
       const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
       if (column.serde instanceof ForeignKeySerde) {
-        // Add a join for this column
-        const otherMeta = column.serde.otherMeta();
-        const otherAlias = getAlias(otherMeta.tableName);
-        query = query.innerJoin(
-          `${otherMeta.tableName} AS ${otherAlias}`,
-          `${alias}.${column.columnName}`,
-          `${otherAlias}.id`,
-        );
-        // Then recurse to add its conditions to the query
-        addClauses(otherMeta, otherAlias, (where as any)[key]);
+        if (isEntity(clause)) {
+          // This is a ForeignKey clause but we don't need to join into the other side
+          query = query.where(column.columnName, column.serde.mapToDb(clause));
+        } else {
+          // Add a join for this column
+          const otherMeta = column.serde.otherMeta();
+          const otherAlias = getAlias(otherMeta.tableName);
+          query = query.innerJoin(
+            `${otherMeta.tableName} AS ${otherAlias}`,
+            `${alias}.${column.columnName}`,
+            `${otherAlias}.id`,
+          );
+          // Then recurse to add its conditions to the query
+          addClauses(otherMeta, otherAlias, clause);
+        }
       } else {
         // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
-        query = query.where(column.columnName, column.serde.mapToDb(value));
+        query = query.where(column.columnName, column.serde.mapToDb(clause));
       }
     });
   }

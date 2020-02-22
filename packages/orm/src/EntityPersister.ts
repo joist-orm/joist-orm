@@ -47,10 +47,19 @@ async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any
 
 // Uses a pg-specific syntax to issue a bulk update
 async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
+  const changedFields = new Set<string>();
+  // Id doesn't change, but we need it for our WHERE clause
+  changedFields.add("id");
+  entities.forEach(entity => {
+    Object.keys(entity.__orm.originalData).forEach(key => changedFields.add(key));
+  });
+
   // This currently assumes a 1-to-1 field-to-column mapping.
-  const bindings: any[][] = meta.columns.map(() => []);
+  const columns = meta.columns.filter(c => changedFields.has(c.fieldName));
+  const bindings: any[][] = columns.map(() => []);
   for (const entity of entities) {
-    meta.columns.forEach((c, i) => {
+    columns.forEach((c, i) => {
       bindings[i].push(c.serde.getFromEntity(entity.__orm.data) ?? null);
     });
   }
@@ -58,8 +67,8 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
     .raw(
       cleanSql(`
       UPDATE ${meta.tableName}
-      SET ${meta.columns.map(c => `${c.columnName} = data.${c.columnName}`).join(", ")}
-      FROM (select ${meta.columns.map(c => `unnest(?::${c.dbType}[]) as ${c.columnName}`).join(", ")}) as data
+      SET ${columns.map(c => `${c.columnName} = data.${c.columnName}`).join(", ")}
+      FROM (select ${columns.map(c => `unnest(?::${c.dbType}[]) as ${c.columnName}`).join(", ")}) as data
       WHERE ${meta.tableName}.id = data.id
    `),
       bindings,

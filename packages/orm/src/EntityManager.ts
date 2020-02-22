@@ -225,14 +225,22 @@ export class EntityManager {
   }
 
   setField(entity: Entity, fieldName: string, newValue: any): void {
-    // TODO De-dirty if newValue is reverting to originalData
-    // Push this logic into a field serde type abstraction?
-    const currentValue = entity.__orm.data[fieldName];
-    // Only save the currentValue on the 1st change of this field
-    if (!(fieldName in entity.__orm.originalData)) {
-      entity.__orm.originalData[fieldName] = currentValue;
+    const { data, originalData } = entity.__orm;
+    // "Un-dirty" our originalData if newValue is reverting to originalData
+    if (fieldName in originalData) {
+      if (originalData[fieldName] === newValue) {
+        data[fieldName] = newValue;
+        delete originalData[fieldName];
+        return;
+      }
     }
-    entity.__orm.data[fieldName] = newValue;
+    // Push this logic into a field serde type abstraction?
+    const currentValue = data[fieldName];
+    // Only save the currentValue on the 1st change of this field
+    if (!(fieldName in originalData)) {
+      originalData[fieldName] = currentValue;
+    }
+    data[fieldName] = newValue;
   }
 
   /**

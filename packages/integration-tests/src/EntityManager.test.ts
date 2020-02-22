@@ -34,7 +34,6 @@ describe("EntityManager", () => {
 
   it("maintains a single entity instance", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
-
     const em = new EntityManager(knex);
     const author1a = await em.load(Author, "1");
     const author1b = await em.load(Author, "1");
@@ -103,6 +102,18 @@ describe("EntityManager", () => {
     await em.flush();
     author.firstName = "a2";
     await em.flush();
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("does not update changed-then-unchanged entities", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    a1.firstName = "a2";
+    a1.firstName = "a3";
+    a1.firstName = "a1";
     resetQueryCount();
     await em.flush();
     expect(numberOfQueries).toEqual(0);

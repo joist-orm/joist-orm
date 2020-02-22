@@ -11,7 +11,9 @@ import { OneToManyCollection } from "./OneToManyCollection";
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   implements Reference<T, U, N> {
-  private loaded: U | undefined;
+  private loaded!: U | N;
+  // We need a separate boolean to b/c loaded == undefined can still mean "isLoaded" for nullable fks.
+  private isLoaded = false;
 
   constructor(
     private entity: T,
@@ -23,17 +25,13 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   async load(): Promise<U | N> {
     ensureNotDeleted(this.entity);
-    if (this.loaded !== undefined) {
-      return this.returnUndefinedIfDeleted(this.loaded);
-    }
     const current = this.current();
-    if (current === undefined) {
-      return undefined as N;
-    }
     // Resolve the id to an entity
-    const other = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
-    this.loaded = other;
-    return this.returnUndefinedIfDeleted(other);
+    if (!isEntity(current) && current !== undefined) {
+      this.loaded = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
+    }
+    this.isLoaded = true;
+    return this.returnUndefinedIfDeleted(this.loaded);
   }
 
   // opts is an internal parameter
@@ -45,8 +43,8 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   get get(): U | N {
     ensureNotDeleted(this.entity);
     // This should only be callable in the type system if we've already resolved this to an instance
-    if (this.loaded === undefined) {
-      throw new Error(`${this.current()} should have been an object`);
+    if (!this.isLoaded) {
+      throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
     }
     return this.returnUndefinedIfDeleted(this.loaded);
   }
@@ -55,36 +53,45 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   async refreshIfLoaded(): Promise<void> {
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
-    if (this.loaded) {
-      this.loaded = ((await this.entity.__orm.em.load(this.otherType, this.current() as string)) as any) as U;
+    if (this.isLoaded) {
+      const current = this.current();
+      if (typeof current === "string") {
+        this.loaded = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
+      } else {
+        this.loaded = current;
+      }
     }
   }
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N, opts?: { beingDeleted?: boolean }): void {
-    // If had an existing value, remove us from its collection
-    const current = this.current();
-    if (other === current) {
+    if (this.isLoaded && other === this.loaded) {
       return;
     }
 
-    if (this.loaded) {
-      const previousCollection = (this.loaded[this.otherFieldName] as any) as OneToManyCollection<U, T>;
-      previousCollection.removeIfLoaded(this.entity);
-    }
+    const previousLoaded = this.loaded;
 
     if (!opts || opts.beingDeleted !== true) {
       (this.entity as any).ensureNotDeleted();
     }
-    this.entity.__orm.em.setField(this.entity, this.fieldName as string, other?.id);
+    // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
+    this.entity.__orm.em.setField(this.entity, this.fieldName as string, other?.id ?? other);
+    this.loaded = other;
+    this.isLoaded = true;
 
+    // If had an existing value, remove us from its collection
+    if (previousLoaded) {
+      const previousCollection = ((previousLoaded as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
+      previousCollection.removeIfLoaded(this.entity);
+    }
     if (other !== undefined) {
       const newCollection = ((other as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
       newCollection.add(this.entity);
     }
   }
 
-  current(): string | undefined {
+  // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
+  current(): U | string | N {
     return this.entity.__orm.data[this.fieldName];
   }
 

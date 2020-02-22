@@ -36,9 +36,13 @@ export function buildQuery<T extends Entity>(
     Object.entries(where).forEach(([key, clause]) => {
       const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
       if (column.serde instanceof ForeignKeySerde) {
+        const clauseKeys = typeof clause === "object" ? Object.keys(clause as object) : [];
         if (isEntity(clause)) {
           // This is a ForeignKey clause but we don't need to join into the other side
-          query = query.where(column.columnName, column.serde.mapToDb(clause));
+          query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+        } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
+          // If only querying on the id, we can skip the join
+          query = query.where(`${alias}.${column.columnName}`, (clause as any)["id"]);
         } else {
           // Add a join for this column
           const otherMeta = column.serde.otherMeta();
@@ -53,7 +57,7 @@ export function buildQuery<T extends Entity>(
         }
       } else {
         // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
-        query = query.where(column.columnName, column.serde.mapToDb(clause));
+        query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
       }
     });
   }

@@ -31,6 +31,7 @@ const ManyToManyCollection = imp("ManyToManyCollection@joist-orm");
 const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
 const ForeignKeySerde = imp("ForeignKeySerde@joist-orm");
 const SimpleSerde = imp("SimpleSerde@joist-orm");
+const fail = imp("fail@joist-orm");
 
 export interface CodeGenFile {
   name: string;
@@ -409,7 +410,11 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       get id(): string | undefined {
         return this.__orm.data["id"];
       }
-      
+
+      get idOrFail(): string {
+        return this.__orm.data["id"] || ${fail}("Entity has no id yet");
+      }
+
       ${primitives}
       
       toString(): string {

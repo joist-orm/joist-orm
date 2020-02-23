@@ -1,4 +1,4 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, Collection, ManyToManyCollection } from "joist-orm";
+import { EntityOrmField, EntityManager, ManyToOneReference, fail, Collection, ManyToManyCollection } from "joist-orm";
 import { tagMeta, Tag, Book } from "./entities";
 
 export interface TagOpts {
@@ -32,6 +32,10 @@ export class TagCodegen {
 
   get id(): string | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): string {
+    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get name(): string {

@@ -1,4 +1,4 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, Collection, OneToManyCollection } from "joist-orm";
+import { EntityOrmField, EntityManager, ManyToOneReference, fail, Collection, OneToManyCollection } from "joist-orm";
 import { publisherMeta, PublisherSize, Publisher, Author, authorMeta } from "./entities";
 
 export interface PublisherOpts {
@@ -31,6 +31,10 @@ export class PublisherCodegen {
 
   get id(): string | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): string {
+    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get name(): string {

@@ -2,6 +2,7 @@ import {
   EntityOrmField,
   EntityManager,
   ManyToOneReference,
+  fail,
   Reference,
   Collection,
   ManyToManyCollection,
@@ -48,6 +49,10 @@ export class BookCodegen {
 
   get id(): string | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): string {
+    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get title(): string {

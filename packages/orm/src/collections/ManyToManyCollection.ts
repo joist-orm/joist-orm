@@ -3,8 +3,10 @@ import { Collection } from "../index";
 import { Entity, EntityConstructor } from "../EntityManager";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
+import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
-export class ManyToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
+export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl
+  implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
   private removedBeforeLoaded: U[] = [];
@@ -22,7 +24,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     public otherType: EntityConstructor<U>,
     public otherFieldName: keyof U,
     public otherColumnName: string,
-  ) {}
+  ) {
+    super();
+  }
 
   async load(): Promise<ReadonlyArray<U>> {
     if (this.loaded === undefined) {

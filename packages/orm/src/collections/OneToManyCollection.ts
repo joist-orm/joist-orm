@@ -4,8 +4,10 @@ import { Collection } from "../index";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { maybeResolveReferenceToId } from "../serde";
+import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
-export class OneToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
+export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl
+  implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
 
@@ -16,7 +18,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     public fieldName: keyof T,
     public otherFieldName: keyof U,
     public otherColumnName: string,
-  ) {}
+  ) {
+    super();
+  }
 
   // opts is an internal parameter
   async load(opts?: { beingDeleted?: boolean }): Promise<U[]> {

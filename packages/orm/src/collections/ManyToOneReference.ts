@@ -1,6 +1,7 @@
 import { ensureNotDeleted, Entity, EntityConstructor, isEntity, sameEntity } from "../EntityManager";
 import { maybeResolveReferenceToId, Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
+import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
 /**
  * Manages a foreign key from one entity to another, i.e. `Book.author --> Author`.
@@ -10,6 +11,7 @@ import { OneToManyCollection } from "./OneToManyCollection";
  * `Author` that the user has set.
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
+  extends AbstractRelationImpl
   implements Reference<T, U, N> {
   private loaded!: U | N;
   // We need a separate boolean to b/c loaded == undefined can still mean "isLoaded" for nullable fks.
@@ -21,7 +23,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     private fieldName: keyof T,
     public otherFieldName: keyof U,
     private notNull: boolean,
-  ) {}
+  ) {
+    super();
+  }
 
   async load(): Promise<U | N> {
     ensureNotDeleted(this.entity);

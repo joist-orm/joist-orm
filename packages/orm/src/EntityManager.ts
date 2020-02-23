@@ -3,9 +3,10 @@ import Knex from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
-import { Collection, LoadedCollection, LoadedReference, Reference, Relation, } from "./index";
+import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
+import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -215,7 +216,7 @@ export class EntityManager {
       .filter(e => e.__orm.deleted !== true)
       .forEach(maybeOtherEntity => {
         Object.values(maybeOtherEntity).map((v: any) => {
-          if ("onDeleteOfMaybeOtherEntity" in v) {
+          if (v instanceof AbstractRelationImpl) {
             v.onDeleteOfMaybeOtherEntity(deletedEntity);
           }
         });

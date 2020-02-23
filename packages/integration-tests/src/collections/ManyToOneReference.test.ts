@@ -68,7 +68,7 @@ describe("ManyToOneReference", () => {
     const a1 = await em.load(Author, "1", "publisher");
     const p1 = a1.publisher.get!;
     // When we delete the publisher
-    await em.delete(p1);
+    em.delete(p1);
     // Then the author.publisher field should be undefined
     expect(a1.publisher.get).toBeUndefined();
     await em.flush();

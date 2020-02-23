@@ -88,6 +88,20 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     }
   }
 
+  // We already unhooked all children in our addedBeforeLoaded list; now load the full list if necessary.
+  async onEntityDeletedAndFlushing() {
+    if (this.loaded === undefined) {
+      const loaded = await this.load({ beingDeleted: true });
+      loaded.forEach(other => {
+        const m2o = (other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>;
+        if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
+          // TODO What if other.otherFieldName is required/not-null?
+          m2o.set(undefined);
+        }
+      });
+    }
+  }
+
   private maybeAppendAddedBeforeLoaded(): void {
     if (this.loaded) {
       this.loaded.unshift(...this.addedBeforeLoaded);

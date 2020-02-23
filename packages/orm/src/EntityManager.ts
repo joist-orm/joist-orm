@@ -34,9 +34,11 @@ export interface Entity {
   __orm: EntityOrmField;
 }
 
-export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> : T[P];
-} | T;
+export type FilterQuery<T extends Entity> =
+  | {
+      [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> : T[P];
+    }
+  | T;
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
 type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>
@@ -201,27 +203,26 @@ export class EntityManager {
    * null, but in general I prefer pulling that sort of logic into the domain layer and giving
    * the domain model life cycle hooks a chance to handle it.
    */
-  async delete(entity: Entity): Promise<void> {
+  delete(entity: Entity): void {
     entity.__orm.deleted = true;
-    // Unhook us from the other side's collection
-    const p = Object.values(entity).map(async (v: any) => {
+    Object.values(entity).map((v: any) => {
       if (v instanceof ManyToOneReference) {
+        // Unhook us from the other side's collection.
         // I.e. we're a Book, and this is the Book.author ManyToOne.
         // We want Author.books to respect this deletion, which this `set(...)` call will do.
         // Currently, this won't mark our `Author` as dirty/for re-validation.
         v.set(undefined, { beingDeleted: true });
       } else if (v instanceof OneToManyCollection) {
+        // Unhook us from the other side's reference.
         // I.e. we're an Author, and this is the Author.books OneToManyCollection.
         // For this collection to be loaded because it's likely all of our "children" need
         // to know, btw, this for their foreign key is pointing to is going away.
-        const others = await v.load({ beingDeleted: true });
-        others.forEach(other => {
+        v.current().forEach(other => {
           // TODO What if other.otherFieldName is required/not-null?
           (other[v.otherFieldName] as ManyToOneReference<any, any, any>).set(undefined);
         });
       }
     });
-    await Promise.all(p);
   }
 
   setField(entity: Entity, fieldName: string, newValue: any): void {
@@ -251,6 +252,8 @@ export class EntityManager {
    * (i.e. including the initial `SELECT`s) in a transaction.
    */
   async flush(): Promise<void> {
+    // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
+    await this.cascadeDeletesIntoUnloadedCollections();
     const entityTodos = sortEntities(this.entities);
     const joinRowTodos = sortJoinRows(this.joinRows);
     if (entityTodos.length === 0 && Object.keys(joinRowTodos).length === 0) {
@@ -261,6 +264,22 @@ export class EntityManager {
       await flushJoinTables(this.knex, tx, joinRowTodos);
       await tx.commit();
     });
+  }
+
+  private async cascadeDeletesIntoUnloadedCollections(): Promise<void> {
+    await Promise.all(
+      this.entities
+        .filter(e => e.__orm.deleted)
+        .map(entity => {
+          return Promise.all(
+            Object.values(entity).map(async (v: any) => {
+              if (v instanceof OneToManyCollection) {
+                await v.onEntityDeletedAndFlushing();
+              }
+            }),
+          );
+        }),
+    );
   }
 
   /**

@@ -2,16 +2,8 @@ import DataLoader from "dataloader";
 import Knex from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
-import { ColumnSerde, keyToString } from "./serde";
-import {
-  Collection,
-  LoadedCollection,
-  LoadedReference,
-  ManyToOneReference,
-  OneToManyCollection,
-  Reference,
-  Relation,
-} from "./index";
+import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
+import { Collection, LoadedCollection, LoadedReference, Reference, Relation, } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 
@@ -196,33 +188,38 @@ export class EntityManager {
   /**
    * Marks an instance to be deleted.
    *
-   * This method is async b/c deleting an entity that is the target of foreign keys requires
-   * loading all of those collections and un-setting the otherField on those entities.
+   * Any loaded collections that are currently "pointing to" this entity will be updated to
+   * no longer include this entity, i.e. if you `em.delete(b1)`, then `author.books` will have
+   * `b1` removed (if needed).
    *
-   * In theory, we wouldn't have to do this for foreign keys that are cascade delete / cascade
-   * null, but in general I prefer pulling that sort of logic into the domain layer and giving
-   * the domain model life cycle hooks a chance to handle it.
+   * This is done for all currently-loaded collections; i.e. technically unloaded collections
+   * may still point to this entity. We defer unsetting these not-currently-loaded references
+   * until `EntityManager.flush`, when we can make the async calls to load-and-unset them.
    */
-  delete(entity: Entity): void {
-    entity.__orm.deleted = true;
-    Object.values(entity).map((v: any) => {
-      if (v instanceof ManyToOneReference) {
-        // Unhook us from the other side's collection.
-        // I.e. we're a Book, and this is the Book.author ManyToOne.
-        // We want Author.books to respect this deletion, which this `set(...)` call will do.
-        // Currently, this won't mark our `Author` as dirty/for re-validation.
-        v.set(undefined, { beingDeleted: true });
-      } else if (v instanceof OneToManyCollection) {
-        // Unhook us from the other side's reference.
-        // I.e. we're an Author, and this is the Author.books OneToManyCollection.
-        // For this collection to be loaded because it's likely all of our "children" need
-        // to know, btw, this for their foreign key is pointing to is going away.
-        v.current().forEach(other => {
-          // TODO What if other.otherFieldName is required/not-null?
-          (other[v.otherFieldName] as ManyToOneReference<any, any, any>).set(undefined);
+  delete(deletedEntity: Entity): void {
+    deletedEntity.__orm.deleted = true;
+    // We want to "unhook" this entity from any other currently-loaded enitty.
+    //
+    // A simple way of doing this would be to start at this now-deleted entity
+    // and "cascading out" from its o2m/m2m collections.
+    //
+    // However, this only works for our o2m/m2m collections that are loaded,
+    // and there might be other-side entities that _are_ loaded pointing back
+    // at us that we don't realize (i.e. we're an author, and `author.books`
+    // is not loaded, but there is a `book.author` loaded in the EntityManager
+    // pointing at us).
+    //
+    // So, instead of "cascading out", we just scan all loaded entities, tell
+    // them that this entity got deleted, and let them sort it out.
+    this.entities
+      .filter(e => e.__orm.deleted !== true)
+      .forEach(maybeOtherEntity => {
+        Object.values(maybeOtherEntity).map((v: any) => {
+          if ("onDeleteOfMaybeOtherEntity" in v) {
+            v.onDeleteOfMaybeOtherEntity(deletedEntity);
+          }
         });
-      }
-    });
+      });
   }
 
   setField(entity: Entity, fieldName: string, newValue: any): void {
@@ -266,6 +263,7 @@ export class EntityManager {
     });
   }
 
+  /** Find all deleted entities and ensure their references all know about their deleted-ness. */
   private async cascadeDeletesIntoUnloadedCollections(): Promise<void> {
     await Promise.all(
       this.entities
@@ -273,7 +271,7 @@ export class EntityManager {
         .map(entity => {
           return Promise.all(
             Object.values(entity).map(async (v: any) => {
-              if (v instanceof OneToManyCollection) {
+              if ("onEntityDeletedAndFlushing" in v) {
                 await v.onEntityDeletedAndFlushing();
               }
             }),
@@ -392,6 +390,13 @@ export interface EntityMetadata<T extends Entity> {
 
 export function isEntity(e: any): e is Entity {
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
+}
+
+export function sameEntity(a: Entity | string | undefined, b: Entity | string | undefined): boolean {
+  if (a === undefined || b === undefined) {
+    return false;
+  }
+  return a === b || maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b);
 }
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;

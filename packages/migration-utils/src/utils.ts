@@ -91,8 +91,8 @@ export function createManyToManyTable(b: MigrationBuilder, tableName: string, ta
   const column2 = `${singular(table2)}_id`;
   b.createTable(tableName, {
     id: "id",
-    [column1]: foreignKey(table1, { notNull: true }),
-    [column2]: foreignKey(table2, { notNull: true }),
+    [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE" }),
+    [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE" }),
     created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
   });
   b.createIndex(tableName, [column1, column2], { unique: true });

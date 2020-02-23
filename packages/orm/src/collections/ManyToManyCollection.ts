@@ -94,6 +94,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
     }
   }
 
+  /** Some random entity got deleted, it it was in our collection, remove it. */
+  onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
+    remove(this.current(), maybeOther);
+  }
+
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {
     if (this.loaded) {
       // this.loaded.unshift(...this.addedBeforeLoaded);
@@ -110,6 +115,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> implements
       });
       this.removedBeforeLoaded = [];
     }
+  }
+
+  current(): U[] {
+    return this.loaded || this.addedBeforeLoaded;
   }
 }
 

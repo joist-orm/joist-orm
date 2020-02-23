@@ -1,9 +1,9 @@
 import DataLoader from "dataloader";
-import { ensureNotDeleted, Entity, EntityMetadata } from "../EntityManager";
+import { ensureNotDeleted, Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { Collection } from "../index";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
-import { keyToString, maybeResolveReferenceToId } from "../serde";
+import { maybeResolveReferenceToId } from "../serde";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> implements Collection<T, U> {
   private loaded: U[] | undefined;
@@ -88,8 +88,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity> implements 
     }
   }
 
+  /** Some random entity got deleted, it it was in our collection, remove it. */
+  onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
+    remove(this.current(), maybeOther);
+  }
+
   // We already unhooked all children in our addedBeforeLoaded list; now load the full list if necessary.
-  async onEntityDeletedAndFlushing() {
+  async onEntityDeletedAndFlushing(): Promise<void> {
     if (this.loaded === undefined) {
       const loaded = await this.load({ beingDeleted: true });
       loaded.forEach(other => {
@@ -119,7 +124,7 @@ function loaderForCollection<T extends Entity, U extends Entity>(
 ): DataLoader<string, U[]> {
   const { em } = collection.entity.__orm;
   // The metadata for the entity that contains the collection
-  const meta = collection.entity.__orm.metadata;
+  const meta = getMetadata(collection.entity);
   const loaderName = `${meta.tableName}.${collection.fieldName}`;
   return getOrSet(em.loaders, loaderName, () => {
     return new DataLoader<string, U[]>(async keys => {
@@ -136,10 +141,14 @@ function loaderForCollection<T extends Entity, U extends Entity>(
       const rowsById = groupBy(entities, entity => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
         const ownerId = maybeResolveReferenceToId(entity.__orm.data[collection.otherFieldName]);
-        if (ownerId === undefined) {
-          throw new Error("Could not find ownerId in other entity");
-        }
-        return ownerId;
+        // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
+        // directly from a SQL row with owner_id=X, however we might be loading this collection
+        // (i.e. find all children where owner_id=X) when the SQL thinks a child is still pointing
+        // at the parent (i.e. owner_id=X in the db), but our already-loaded child has had its
+        // `child.owner` field either changed to some other owner, or set to undefined. In either,
+        // that child should no longer be parent of this owner's collection, so just return a
+        // dummy value.
+        return ownerId ?? "dummyNoLongerOwned";
       });
       return keys.map(k => rowsById.get(k) || []);
     });

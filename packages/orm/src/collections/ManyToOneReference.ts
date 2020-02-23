@@ -1,4 +1,4 @@
-import { ensureNotDeleted, Entity, EntityConstructor, isEntity } from "../EntityManager";
+import { ensureNotDeleted, Entity, EntityConstructor, isEntity, sameEntity } from "../EntityManager";
 import { maybeResolveReferenceToId, Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 
@@ -34,10 +34,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.returnUndefinedIfDeleted(this.loaded);
   }
 
-  // opts is an internal parameter
-  set(other: U | N, opts?: { beingDeleted?: boolean }): void {
+  set(other: U | N): void {
     // setImpl conditionally checked ensureNotDeleted based on opts.beingDeleted
-    this.setImpl(other, opts);
+    this.setImpl(other, {});
   }
 
   get get(): U | N {
@@ -65,6 +64,14 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       } else {
         this.loaded = current;
       }
+    }
+  }
+
+  /** Some random entity got deleted, it it was in our reference, remove it. */
+  onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
+    if (sameEntity(this.current(), maybeOther)) {
+      // TODO Should we fail this if the field is notNull?
+      this.setImpl(undefined as N, { beingDeleted: true });
     }
   }
 

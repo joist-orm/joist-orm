@@ -43,7 +43,6 @@ describe("OneToManyCollection", () => {
     expect(books[0] === b1).toEqual(true);
   });
 
-
   it("references use collection-loaded instances from the UoW", async () => {
     await knex.insert({ first_name: "a1" }).into("authors");
     await knex.insert({ title: "t1", author_id: 1 }).into("books");
@@ -157,13 +156,14 @@ describe("OneToManyCollection", () => {
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
     const em = new EntityManager(knex);
+    // And the a1.publishers collection is loaded
     const a1 = await em.load(Author, "1", { publisher: "authors" } as const);
-    const authors = a1.publisher.get!.authors.get;
-    expect(authors.length).toEqual(1);
+    const p1 = a1.publisher.get!;
+    expect(p1.authors.get.length).toEqual(1);
     // When we delete the author
-    await em.delete(a1);
+    em.delete(a1);
     // Then it's removed from the Publisher.authors collection
-    expect(authors.length).toEqual(0);
+    expect(p1.authors.get.length).toEqual(0);
   });
 
   it("respects deleted entities before the collection loaded", async () => {
@@ -171,10 +171,11 @@ describe("OneToManyCollection", () => {
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
     const em = new EntityManager(knex);
+    // And the a1.publishers collection is not loaded
     const a1 = await em.load(Author, "1");
-    // When we delete the author
-    await em.delete(a1);
-    // And then later load the Publisher.authors in the same Unit of Work
+    // And we delete the author
+    em.delete(a1);
+    // When we later load the p1.authors in the same Unit of Work
     const p1 = await em.load(Publisher, "1", "authors");
     // Then it's still removed from the Publisher.authors collection
     expect(p1.authors.get.length).toEqual(0);

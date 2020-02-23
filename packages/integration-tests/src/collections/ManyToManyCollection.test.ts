@@ -148,7 +148,7 @@ describe("ManyToManyCollection", () => {
     expect(rows.length).toEqual(1);
   });
 
-  it("can delete a tag from a book before being loaded", async () => {
+  it("can remove a tag from a book before being loaded", async () => {
     await knex.insert({ id: 1, first_name: "a1" }).into("authors");
     await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
     await knex.insert({ id: 3, name: `t1` }).into("tags");
@@ -169,5 +169,28 @@ describe("ManyToManyCollection", () => {
 
     const rows = await knex.select("*").from("books_to_tags");
     expect(rows.length).toEqual(1);
+  });
+
+  it("can delete a tag that is on a book", async () => {
+    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: `t1` }).into("tags");
+    await knex.insert({ id: 4, name: `t2` }).into("tags");
+    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
+    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+    // Given a book with two tags
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "2", "tags");
+    const t1 = await em.load(Tag, "3");
+    const t2 = await em.load(Tag, "4");
+    // When the tag is deleted
+    em.delete(t1);
+    // Then the deleted tag is removed from the book collection
+    expect(b1.tags.get.map(t => t.id)).toEqual([t2.id]);
+    await em.flush();
+    // And the tag itself was deleted
+    expect((await knex.select("*").from("tags")).length).toEqual(1);
+    // And the join table entry was deleted
+    expect((await knex.select("*").from("books_to_tags")).length).toEqual(1);
   });
 });

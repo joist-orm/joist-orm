@@ -65,11 +65,12 @@ describe("ManyToOneReference", () => {
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
     const em = new EntityManager(knex);
+    // And we load the author with a1.publisher already populated
     const a1 = await em.load(Author, "1", "publisher");
     const p1 = a1.publisher.get!;
     // When we delete the publisher
     em.delete(p1);
-    // Then the author.publisher field should be undefined
+    // Then the a1.publisher field should be undefined
     expect(a1.publisher.get).toBeUndefined();
     await em.flush();
   });

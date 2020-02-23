@@ -1,5 +1,5 @@
 import { ensureNotDeleted, Entity, EntityConstructor, isEntity } from "../EntityManager";
-import { Reference } from "../index";
+import { maybeResolveReferenceToId, Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 
 /**
@@ -47,6 +47,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
     }
     return this.returnUndefinedIfDeleted(this.loaded);
+  }
+
+  get id(): string | N {
+    ensureNotDeleted(this.entity);
+    return maybeResolveReferenceToId(this.current()) as string | N;
   }
 
   // private impl

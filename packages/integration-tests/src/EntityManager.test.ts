@@ -329,4 +329,12 @@ describe("EntityManager", () => {
     // Then we're marked as deleted
     expect(a1.__orm.deleted).toEqual(true);
   });
+
+  it("can access a m2o id without loading", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).from("books");
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "2");
+    expect(b1.author.id).toEqual("1");
+  });
 });

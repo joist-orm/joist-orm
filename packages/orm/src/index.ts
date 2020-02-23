@@ -31,6 +31,8 @@ export interface Relation<T extends Entity, U extends Entity> {
  * `U | never` which becomes just `U`.
  */
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
+  id: string | N;
+
   load(): Promise<U | N>;
 
   set(other: U | N): void;

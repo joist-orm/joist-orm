@@ -79,7 +79,10 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
-export function foreignKey(otherTable: string, opts?: Partial<ColumnDefinition>): ColumnDefinition {
+export function foreignKey(
+  otherTable: string,
+  opts: Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">>,
+): ColumnDefinition {
   return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
 }
 

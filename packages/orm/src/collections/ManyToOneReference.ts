@@ -1,4 +1,4 @@
-import { ensureNotDeleted, Entity, EntityConstructor, isEntity, sameEntity } from "../EntityManager";
+import { ensureNotDeleted, Entity, EntityConstructor, getMetadata, isEntity, sameEntity } from "../EntityManager";
 import { maybeResolveReferenceToId, Reference } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -73,7 +73,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   /** Some random entity got deleted, it it was in our reference, remove it. */
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
-    if (sameEntity(this.current(), maybeOther)) {
+    if (sameEntity(maybeOther, getMetadata(this.otherType), this.current())) {
       // TODO Should we fail this if the field is notNull?
       this.setImpl(undefined as N, { beingDeleted: true });
     }

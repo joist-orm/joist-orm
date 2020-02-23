@@ -397,11 +397,14 @@ export function isEntity(e: any): e is Entity {
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
 }
 
-export function sameEntity(a: Entity | string | undefined, b: Entity | string | undefined): boolean {
-  if (a === undefined || b === undefined) {
+/** Compares `a` to `b`, where `b` might be an id. B/c ids can overlap, we need to know `b`'s metadata type. */
+export function sameEntity(a: Entity, bMeta: EntityMetadata<any>, bCurrent: Entity | string | undefined): boolean {
+  if (a === undefined || bCurrent === undefined) {
     return false;
   }
-  return a === b || maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b);
+  return (
+    a === bCurrent || (getMetadata(a) === bMeta && maybeResolveReferenceToId(a) === maybeResolveReferenceToId(bCurrent))
+  );
 }
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;

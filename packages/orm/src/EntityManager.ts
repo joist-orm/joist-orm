@@ -17,7 +17,7 @@ export interface EntityOrmField {
   metadata: EntityMetadata<Entity>;
   data: Record<any, any>;
   originalData: Record<any, any>;
-  deleted?: boolean;
+  deleted?: "pending" | "deleted";
   em: EntityManager;
 }
 
@@ -198,7 +198,11 @@ export class EntityManager {
    * until `EntityManager.flush`, when we can make the async calls to load-and-unset them.
    */
   delete(deletedEntity: Entity): void {
-    deletedEntity.__orm.deleted = true;
+    // Early return if already deleted.
+    if (deletedEntity.__orm.deleted) {
+      return;
+    }
+    deletedEntity.__orm.deleted = "pending";
     // We want to "unhook" this entity from any other currently-loaded enitty.
     //
     // A simple way of doing this would be to start at this now-deleted entity
@@ -213,7 +217,7 @@ export class EntityManager {
     // So, instead of "cascading out", we just scan all loaded entities, tell
     // them that this entity got deleted, and let them sort it out.
     this.entities
-      .filter(e => e.__orm.deleted !== true)
+      .filter(e => e.__orm.deleted === undefined)
       .forEach(maybeOtherEntity => {
         Object.values(maybeOtherEntity).map((v: any) => {
           if (v instanceof AbstractRelationImpl) {
@@ -268,7 +272,7 @@ export class EntityManager {
   private async cascadeDeletesIntoUnloadedCollections(): Promise<void> {
     await Promise.all(
       this.entities
-        .filter(e => e.__orm.deleted)
+        .filter(e => e.__orm.deleted === "pending")
         .map(entity => {
           return Promise.all(
             Object.values(entity).map(async (v: any) => {
@@ -309,7 +313,7 @@ export class EntityManager {
           const loader = this.loaderForEntity(getMetadata(entity).cstr);
           loader.clear(entity.id);
           await loader.load(entity.id);
-          if (!entity.__orm.deleted) {
+          if (entity.__orm.deleted === undefined) {
             // Then refresh any loaded collections
             await Promise.all(
               Object.values(entity).map(c => {
@@ -347,7 +351,7 @@ export class EntityManager {
           if (entity === undefined) {
             const existingEntity = this.findExistingInstance(type, k);
             if (existingEntity) {
-              existingEntity.__orm.deleted = true;
+              existingEntity.__orm.deleted = "deleted";
             }
           }
           return entity;

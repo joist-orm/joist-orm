@@ -208,16 +208,32 @@ describe("EntityManager", () => {
     expect(p1.size).toBeUndefined();
   });
 
-  it("can delete an antity", async () => {
+  it("can delete an entity", async () => {
+    // Given a publisher
     await knex.insert({ name: "p1" }).from("publishers");
-
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
+    // When its deleted
     await em.delete(p1);
     await em.flush();
-
+    // Then the row is deleted
     const rows = await knex.select("*").from("publishers");
     expect(rows.length).toEqual(0);
+  });
+
+  it("does not re-delete an already deleted entity", async () => {
+    // Given a publisher
+    await knex.insert({ name: "p1" }).from("publishers");
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    // And its deleted
+    await em.delete(p1);
+    await em.flush();
+    // When the EntityManager is flushed again
+    resetQueryCount();
+    await em.flush();
+    // Then we did not re-delete the row
+    expect(numberOfQueries).toEqual(0);
   });
 
   it("cannot modify a deleted entity", async () => {
@@ -327,7 +343,7 @@ describe("EntityManager", () => {
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted
-    expect(a1.__orm.deleted).toEqual(true);
+    expect(a1.__orm.deleted).toEqual("deleted");
   });
 
   it("can access a m2o id without loading", async () => {

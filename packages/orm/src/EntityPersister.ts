@@ -84,6 +84,7 @@ async function batchDelete(knex: Knex, tx: Transaction, meta: EntityMetadata<any
       entities.filter(e => e.id !== undefined).map(e => e.id!),
     )
     .transacting(tx);
+  entities.forEach(entity => (entity.__orm.deleted = "deleted"));
 }
 
 function cleanSql(sql: string): string {
@@ -106,7 +107,7 @@ export function sortEntities(entities: Entity[]): Todo[] {
     const order = entity.__orm.metadata.order;
     const isNew = entity.id === undefined;
     const isDirty = !isNew && Object.keys(entity.__orm.originalData).length > 0;
-    const isDelete = !isNew && entity.__orm.deleted;
+    const isDelete = !isNew && entity.__orm.deleted === "pending";
     if (isNew || isDirty || isDelete) {
       let todo = todos[order];
       if (!todo) {

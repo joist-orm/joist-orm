@@ -1,4 +1,4 @@
-import { EntityManager } from "joist-orm";
+import { EntityManager, Loaded } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
@@ -367,5 +367,13 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2");
     expect(b1.author.id).toEqual("1");
+  });
+
+  it("can create and cast to nested hints", async () => {
+    const em = new EntityManager(knex);
+    const bookHint = { author: "publisher" } as const;
+    const a1 = em.create(Author, { firstName: "a1" });
+    const b1 = em.create(Book, { title: "b1", author: a1 });
+    const b2: Loaded<Book, typeof bookHint> = b1;
   });
 });

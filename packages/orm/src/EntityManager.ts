@@ -53,7 +53,7 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
 /** Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities. */
 export type AllLoaded<T extends Entity> = T &
   {
-    [P in keyof T]: MarkLoaded<T, T[P]>;
+    [P in keyof T]: MarkLoaded<T, T[P], any>;
   };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */

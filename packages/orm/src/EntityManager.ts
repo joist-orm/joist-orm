@@ -39,11 +39,9 @@ export interface Entity {
   __orm: EntityOrmField;
 }
 
-export type FilterQuery<T extends Entity> =
-  | {
-      [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> : T[P];
-    }
-  | T;
+export type FilterQuery<T extends Entity> = {
+  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> | U : T[P];
+};
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
 type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>

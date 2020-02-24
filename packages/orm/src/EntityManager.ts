@@ -62,7 +62,8 @@ type MaybeUseOptsType<T extends Entity, K extends keyof T, O_K> = T[K] extends R
 type MaybeT<T, K> = K extends keyof T ? T[K] : unknown;
 
 /**
- * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities.
+ * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
+ * we know there are no already-existing rows with fk's to this new entity in the database.
  *
  * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.

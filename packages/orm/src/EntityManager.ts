@@ -52,10 +52,10 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
 
 // Helper type for New b/c "O[K] extends Entity" doesn't seem to narrow
 // correctly when inlined into New as a nested ternary.
-type MaybeUseOptsType<T extends Entity, K extends keyof T, O_K> = T[K] extends Reference<T, any, infer N>
-  ? O_K extends Entity
+type MaybeUseOptsType<T extends Entity, K extends keyof T, O_K> = T[K] extends Reference<T, infer U, infer N>
+  ? O_K extends U
     ? LoadedReference<T, O_K, N>
-    : MarkLoaded<T, T[K]>
+    : LoadedReference<T, U, N>
   : MarkLoaded<T, T[K]>;
 
 /** Given a type T, return T[K] if K is a keyof T, otherwise never. */

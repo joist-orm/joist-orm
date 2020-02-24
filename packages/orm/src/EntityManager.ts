@@ -8,6 +8,10 @@ import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
+export type OptsOf<C> = C extends new (em: EntityManager, opts: infer O) => any ? O : never;
+
+export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
+
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
 }
@@ -109,8 +113,8 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<T extends Entity, O>(type: new (em: EntityManager, opts: O) => T, opts: O): AllLoaded<T> {
-    return (new type(this, opts) as any) as AllLoaded<T>;
+  public create<C extends EntityConstructor<any>>(type: C, opts: OptsOf<C>): AllLoaded<EntityOf<C>> {
+    return (new type(this, opts) as any) as AllLoaded<EntityOf<C>>;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

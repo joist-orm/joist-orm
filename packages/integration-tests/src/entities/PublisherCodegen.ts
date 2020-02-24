@@ -1,19 +1,12 @@
-import {
-  Flavor,
-  EntityOrmField,
-  EntityManager,
-  ManyToOneReference,
-  fail,
-  Collection,
-  OneToManyCollection,
-} from "joist-orm";
-import { publisherMeta, PublisherSize, Publisher, Author, authorMeta } from "./entities";
+import { Flavor, EntityOrmField, EntityManager, setOpts, fail, Collection, OneToManyCollection } from "joist-orm";
+import { publisherMeta, PublisherSize, Author, Publisher, authorMeta } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherOpts {
   name: string;
   size?: PublisherSize;
+  authors?: Author[];
 }
 
 export class PublisherCodegen {
@@ -30,13 +23,7 @@ export class PublisherCodegen {
   constructor(em: EntityManager, opts: PublisherOpts) {
     this.__orm = { em, metadata: publisherMeta, data: {}, originalData: {} };
     em.register(this);
-    Object.entries(opts).forEach(([key, value]) => {
-      if ((this as any)[key] instanceof ManyToOneReference) {
-        (this as any)[key].set(value);
-      } else {
-        (this as any)[key] = value;
-      }
-    });
+    setOpts(this, opts);
   }
 
   get id(): PublisherId | undefined {

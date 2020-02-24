@@ -1,18 +1,11 @@
-import {
-  Flavor,
-  EntityOrmField,
-  EntityManager,
-  ManyToOneReference,
-  fail,
-  Collection,
-  ManyToManyCollection,
-} from "joist-orm";
-import { tagMeta, Tag, Book } from "./entities";
+import { Flavor, EntityOrmField, EntityManager, setOpts, fail, Collection, ManyToManyCollection } from "joist-orm";
+import { tagMeta, Book, Tag } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 
 export interface TagOpts {
   name: string;
+  books?: Book[];
 }
 
 export class TagCodegen {
@@ -31,13 +24,7 @@ export class TagCodegen {
   constructor(em: EntityManager, opts: TagOpts) {
     this.__orm = { em, metadata: tagMeta, data: {}, originalData: {} };
     em.register(this);
-    Object.entries(opts).forEach(([key, value]) => {
-      if ((this as any)[key] instanceof ManyToOneReference) {
-        (this as any)[key].set(value);
-      } else {
-        (this as any)[key] = value;
-      }
-    });
+    setOpts(this, opts);
   }
 
   get id(): TagId | undefined {

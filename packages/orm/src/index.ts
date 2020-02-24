@@ -66,3 +66,14 @@ interface Flavoring<FlavorT> {
   _type?: FlavorT;
 }
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
+
+export function setOpts(entity: Entity, opts: object): void {
+  Object.entries(opts).forEach(([key, value]) => {
+    const current = (entity as any)[key];
+    if (current && "setFromOpts" in current) {
+      current.setFromOpts(value);
+    } else {
+      (entity as any)[key] = value;
+    }
+  });
+}

@@ -2,13 +2,14 @@ import {
   Flavor,
   EntityOrmField,
   EntityManager,
-  ManyToOneReference,
+  setOpts,
   fail,
   Collection,
   OneToManyCollection,
   Reference,
+  ManyToOneReference,
 } from "joist-orm";
-import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
+import { authorMeta, Book, Author, bookMeta, Publisher } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -17,6 +18,7 @@ export interface AuthorOpts {
   lastName?: string;
   isPopular?: boolean;
   publisher?: Publisher;
+  books?: Book[];
 }
 
 export class AuthorCodegen {
@@ -35,13 +37,7 @@ export class AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
     this.__orm = { em, metadata: authorMeta, data: {}, originalData: {} };
     em.register(this);
-    Object.entries(opts).forEach(([key, value]) => {
-      if ((this as any)[key] instanceof ManyToOneReference) {
-        (this as any)[key].set(value);
-      } else {
-        (this as any)[key] = value;
-      }
-    });
+    setOpts(this, opts);
   }
 
   get id(): AuthorId | undefined {

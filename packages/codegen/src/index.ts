@@ -33,6 +33,7 @@ const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
 const ForeignKeySerde = imp("ForeignKeySerde@joist-orm");
 const SimpleSerde = imp("SimpleSerde@joist-orm");
 const fail = imp("fail@joist-orm");
+const setOpts = imp("setOpts@joist-orm");
 
 export interface CodeGenFile {
   name: string;
@@ -376,13 +377,30 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const maybeOptional = column.notNull ? "" : "?";
       return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
     });
-  const optsRelationFields = table.m2oRelations.map(r => {
+  const optsM2oRelationFields = table.m2oRelations.map(r => {
     const column = r.foreignKey.columns[0];
     const fieldName = camelCase(column.name.replace("_id", ""));
     const otherEntityName = tableToEntityName(r.targetTable);
     const maybeOptional = column.notNull ? "" : "?";
     return code`${fieldName}${maybeOptional}: ${otherEntityName};`;
   });
+  const optsO2mRelationFields = table.o2mRelations
+    .filter(r => !isJoinTable(r.targetTable))
+    .map(r => {
+      const otherEntityName = tableToEntityName(r.targetTable);
+      const otherEntityType = imp(`${otherEntityName}@./entities`);
+      const fieldName = camelCase(pluralize(otherEntityName));
+      return code`${fieldName}?: ${otherEntityType}[];`;
+    });
+  const optsM2mRelationFields = table.m2mRelations
+    .filter(r => isJoinTable(r.joinTable))
+    .map(r => {
+      const { foreignKey, targetForeignKey, targetTable } = r;
+      const otherEntityName = tableToEntityName(targetTable);
+      const otherEntityType = imp(`${otherEntityName}@./entities`);
+      const fieldName = camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", "")));
+      return code`${fieldName}?: ${otherEntityType}[];`;
+    });
 
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
@@ -390,8 +408,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     export interface ${entityName}Opts {
-      ${optsFields}
-      ${optsRelationFields}
+      ${[optsFields, optsM2oRelationFields, optsO2mRelationFields, optsM2mRelationFields]}
     }
   
     export class ${entityName}Codegen {
@@ -401,13 +418,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         this.__orm = { em, metadata: ${metadata}, data: {}, originalData: {} };
         em.register(this);
-        Object.entries(opts).forEach(([key, value]) => {
-          if ((this as any)[key] instanceof ${ManyToOneReference}) {
-            (this as any)[key].set(value);
-          } else {
-            (this as any)[key] = value;
-          }
-        });
+        ${setOpts}(this, opts);
       }
 
       get id(): ${entityName}Id | undefined {

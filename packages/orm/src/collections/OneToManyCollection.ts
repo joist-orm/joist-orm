@@ -6,7 +6,7 @@ import { ManyToOneReference } from "./ManyToOneReference";
 import { maybeResolveReferenceToId } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
-export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl
+export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
@@ -75,8 +75,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   // internal impl
 
+  setFromOpts(value: U[]): void {
+    this.loaded = value;
+  }
+
   initializeForNewEntity(): void {
-    this.loaded = [];
+    // Don't overwrite any opts values
+    if (this.loaded === undefined) {
+      this.loaded = [];
+    }
   }
 
   removeIfLoaded(other: U) {

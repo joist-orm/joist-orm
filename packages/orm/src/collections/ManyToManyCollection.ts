@@ -5,7 +5,7 @@ import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
-export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl
+export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
@@ -92,8 +92,15 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   // impl details
 
+  setFromOpts(value: U[]): void {
+    this.loaded = value;
+  }
+
   initializeForNewEntity(): void {
-    this.loaded = [];
+    // Don't overwrite any opts values
+    if (this.loaded === undefined) {
+      this.loaded = [];
+    }
   }
 
   async refreshIfLoaded(): Promise<void> {

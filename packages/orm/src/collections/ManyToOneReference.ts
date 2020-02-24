@@ -11,7 +11,7 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
  * `Author` that the user has set.
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends AbstractRelationImpl
+  extends AbstractRelationImpl<U>
   implements Reference<T, U, N> {
   private loaded!: U | N;
   // We need a separate boolean to b/c loaded == undefined can still mean "isLoaded" for nullable fks.
@@ -58,6 +58,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   // private impl
+
+  setFromOpts(value: U): void {
+    this.loaded = value;
+    this.isLoaded = true;
+  }
 
   initializeForNewEntity(): void {
     // Our codegen'd Opts type will ensure our field is inititalized if necessary/notNull

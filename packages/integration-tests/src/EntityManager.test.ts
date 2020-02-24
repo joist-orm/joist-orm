@@ -369,7 +369,7 @@ describe("EntityManager", () => {
     expect(b1.author.id).toEqual("1");
   });
 
-  it("can create and cast to nested hints", async () => {
+  it("can create and cast to nested m2o hints", async () => {
     const em = new EntityManager(knex);
     const bookHint = { author: "publisher" } as const;
     // Given we make an author, which we know as a loaded (and unset) publisher reference
@@ -382,6 +382,23 @@ describe("EntityManager", () => {
     // And we can access the author and publisher synchronously w/o compile errors
     expect(b1.author.get.publisher.get).toBeUndefined();
     expect(b2.author.get.publisher.get).toBeUndefined();
+    // And this would cause a compile error
+    // expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
+  });
+
+  it("can create and cast to nested o2m hints", async () => {
+    const em = new EntityManager(knex);
+    const publisherHint = { authors: "books" } as const;
+    // Given we make a author, which we know as a loaded (and unset) books collection
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(a1.books.get.length).toEqual(0);
+    // When we create a new publisher with that author
+    const p1 = em.create(Publisher, { name: "p1", authors: [a1] });
+    // Then we can assign this publisher to a type hint var that is expecting a loaded books/author
+    const p2: Loaded<Publisher, typeof publisherHint> = p1;
+    // And we can access the author and publisher synchronously w/o compile errors
+    expect(p1.authors.get[0].books.get).toEqual([]);
+    expect(p2.authors.get[0].books.get).toEqual([]);
     // And this would cause a compile error
     // expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
   });

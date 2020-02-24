@@ -52,14 +52,17 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
 
 // Helper type for New b/c "O[K] extends Entity" doesn't seem to narrow
 // correctly when inlined into New as a nested ternary.
-type MaybeUseOptsType<T extends Entity, K extends keyof T, O_K> = T[K] extends Reference<T, infer U, infer N>
-  ? O_K extends U
-    ? LoadedReference<T, O_K, N>
-    : LoadedReference<T, U, N>
+type MaybeUseOptsType<T extends Entity, K extends keyof T & keyof O, O> = O[K] extends Entity
+  ? T[K] extends Reference<T, infer U, infer N>
+    ? LoadedReference<T, O[K], N>
+    : MarkLoaded<T, T[K]>
+  : O[K] extends Array<infer OU>
+  ? OU extends Entity
+    ? T[K] extends Collection<T, infer U>
+      ? LoadedCollection<T, OU>
+      : MarkLoaded<T, T[K]>
+    : MarkLoaded<T, T[K]>
   : MarkLoaded<T, T[K]>;
-
-/** Given a type T, return T[K] if K is a keyof T, otherwise never. */
-type MaybeT<T, K> = K extends keyof T ? T[K] : unknown;
 
 /**
  * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
@@ -68,7 +71,8 @@ type MaybeT<T, K> = K extends keyof T ? T[K] : unknown;
  * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
-export type New<T extends Entity, O> = T & { [K in keyof T]: MaybeUseOptsType<T, K, MaybeT<O, K>> };
+export type New<C extends EntityConstructor<T>, O extends OptsOf<C>, T extends Entity = EntityOf<C>> = T &
+  { [K in keyof T]: MaybeUseOptsType<T, K, O> };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
@@ -133,8 +137,8 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<C extends EntityConstructor<any>, O extends OptsOf<C>>(type: C, opts: O): New<EntityOf<C>, O> {
-    const entity = (new type(this, opts) as any) as New<EntityOf<C>, O>;
+  public create<C extends EntityConstructor<any>, O extends OptsOf<C>>(type: C, opts: O): New<C, O> {
+    const entity = (new type(this, opts) as any) as New<C, O>;
     Object.values(entity).forEach(v => {
       if (v instanceof AbstractRelationImpl) {
         v.initializeForNewEntity();

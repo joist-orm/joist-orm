@@ -50,8 +50,8 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
   ? LoadedCollection<T, Loaded<U, H>>
   : P;
 
-// Helper type for Created b/c "O[K] extends Entity" doesn't seem to narrow
-// correctly when inlined into Created as a nested ternary.
+// Helper type for New b/c "O[K] extends Entity" doesn't seem to narrow
+// correctly when inlined into New as a nested ternary.
 type MaybeUseOptsType<T extends Entity, K extends keyof T, O_K> = T[K] extends Reference<T, any, infer N>
   ? O_K extends Entity
     ? LoadedReference<T, O_K, N>
@@ -67,7 +67,7 @@ type MaybeT<T, K> = K extends keyof T ? T[K] : unknown;
  * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
-export type Created<T extends Entity, O> = T & { [K in keyof T]: MaybeUseOptsType<T, K, MaybeT<O, K>> };
+export type New<T extends Entity, O> = T & { [K in keyof T]: MaybeUseOptsType<T, K, MaybeT<O, K>> };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
@@ -132,8 +132,8 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<C extends EntityConstructor<any>, O extends OptsOf<C>>(type: C, opts: O): Created<EntityOf<C>, O> {
-    const entity = (new type(this, opts) as any) as Created<EntityOf<C>, O>;
+  public create<C extends EntityConstructor<any>, O extends OptsOf<C>>(type: C, opts: O): New<EntityOf<C>, O> {
+    const entity = (new type(this, opts) as any) as New<EntityOf<C>, O>;
     Object.values(entity).forEach(v => {
       if (v instanceof AbstractRelationImpl) {
         v.initializeForNewEntity();

@@ -80,7 +80,10 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
 async function batchDelete(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   await knex(meta.tableName)
     .del()
-    .whereIn("id", entities.map(e => e.id!))
+    .whereIn(
+      "id",
+      entities.map(e => e.id!),
+    )
     .transacting(tx);
   entities.forEach(entity => (entity.__orm.deleted = "deleted"));
 }
@@ -150,9 +153,10 @@ export async function flushJoinTables(
       }
     }
     if (deletedRows.length > 0) {
-      await knex
-        .raw(
-          `DELETE FROM ${joinTableName} WHERE id IN (?);`,
+      await knex(joinTableName)
+        .del()
+        .whereIn(
+          "id",
           deletedRows.map(e => e.id!),
         )
         .transacting(tx);

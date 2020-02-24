@@ -61,7 +61,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   remove(other: U): void {
     const joinRows = getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []);
-    const row = joinRows.find(r => r[this.columnName] === this.entity);
+    const row = joinRows.find(r => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
     if (row) {
       row.deleted = true;
     }
@@ -100,7 +100,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   /** Some random entity got deleted, it it was in our collection, remove it. */
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
-    remove(this.current(), maybeOther);
+    if (this.current().includes(maybeOther as U)) {
+      this.remove(maybeOther as U);
+    }
   }
 
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {

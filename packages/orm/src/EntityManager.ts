@@ -52,17 +52,17 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
 
 // Helper type for New b/c "O[K] extends Entity" doesn't seem to narrow
 // correctly when inlined into New as a nested ternary.
-type MaybeUseOptsType<T extends Entity, K extends keyof T & keyof O, O> = O[K] extends Entity
+type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends Entity
   ? T[K] extends Reference<T, infer U, infer N>
     ? LoadedReference<T, O[K], N>
-    : MarkLoaded<T, T[K]>
+    : never
   : O[K] extends Array<infer OU>
   ? OU extends Entity
     ? T[K] extends Collection<T, infer U>
       ? LoadedCollection<T, OU>
-      : MarkLoaded<T, T[K]>
-    : MarkLoaded<T, T[K]>
-  : MarkLoaded<T, T[K]>;
+      : never
+    : never
+  : MarkLoaded<T, T[K], {}>;
 
 /**
  * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
@@ -72,7 +72,7 @@ type MaybeUseOptsType<T extends Entity, K extends keyof T & keyof O, O> = O[K] e
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
 export type New<C extends EntityConstructor<T>, O extends OptsOf<C>, T extends Entity = EntityOf<C>> = T &
-  { [K in keyof T]: MaybeUseOptsType<T, K, O> };
+  { [K in keyof T]: MaybeUseOptsType<T, O, K> };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &

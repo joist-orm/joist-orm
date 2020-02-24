@@ -50,25 +50,24 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
   ? LoadedCollection<T, Loaded<U, H>>
   : P;
 
-//
-type KeepOptsType<T extends Entity, U, N extends never | undefined> = U extends Entity
-  ? LoadedReference<T, U, N>
-  : never;
+// Helper type for Created b/c "O[K] extends Entity" doesn't seem to narrow
+// correctly when inlined into Created as a nested ternary.
+type MaybeUseOptsType<T extends Entity, K extends keyof T, O_K> = T[K] extends Reference<T, any, infer N>
+  ? O_K extends Entity
+    ? LoadedReference<T, O_K, N>
+    : MarkLoaded<T, T[K]>
+  : MarkLoaded<T, T[K]>;
+
+/** Given a type T, return T[K] if K is a keyof T, otherwise never. */
+type MaybeT<T, K> = K extends keyof T ? T[K] : unknown;
 
 /**
  * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities.
  *
  * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
- * we'll prefer that type, as it might have more nested type hints that we can't otherwise assume.
+ * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
-export type Created<T extends Entity, O extends OptsOf<T>> = T &
-  {
-    [K in keyof T]: T[K] extends Reference<T, any, infer N>
-      ? K extends keyof O
-        ? KeepOptsType<T, O[K], N>
-        : MarkLoaded<T, T[K]>
-      : MarkLoaded<T, T[K]>;
-  };
+export type Created<T extends Entity, O> = T & { [K in keyof T]: MaybeUseOptsType<T, K, MaybeT<O, K>> };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &

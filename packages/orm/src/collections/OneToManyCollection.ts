@@ -75,6 +75,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   // internal impl
 
+  initializeForNewEntity(): void {
+    this.loaded = [];
+  }
+
   removeIfLoaded(other: U) {
     if (this.loaded !== undefined) {
       remove(this.loaded, other);

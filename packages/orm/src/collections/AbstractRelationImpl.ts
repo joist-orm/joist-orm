@@ -5,4 +5,6 @@ import { Entity } from "../EntityManager";
  */
 export abstract class AbstractRelationImpl {
   abstract onDeleteOfMaybeOtherEntity(maybeOther: Entity): void;
+
+  abstract initializeForNewEntity(): void;
 }

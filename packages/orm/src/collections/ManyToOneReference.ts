@@ -59,6 +59,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   // private impl
 
+  initializeForNewEntity(): void {
+    // Our codegen'd Opts type will ensure our field is inititalized if necessary/notNull
+    this.isLoaded = true;
+  }
+
   async refreshIfLoaded(): Promise<void> {
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.isLoaded) {

@@ -50,10 +50,24 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
   ? LoadedCollection<T, Loaded<U, H>>
   : P;
 
-/** Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities. */
-export type AllLoaded<T extends Entity> = T &
+//
+type KeepOptsType<T extends Entity, U, N extends never | undefined> = U extends Entity
+  ? LoadedReference<T, U, N>
+  : never;
+
+/**
+ * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities.
+ *
+ * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
+ * we'll prefer that type, as it might have more nested type hints that we can't otherwise assume.
+ */
+export type Created<T extends Entity, O extends OptsOf<T>> = T &
   {
-    [P in keyof T]: MarkLoaded<T, T[P], any>;
+    [K in keyof T]: T[K] extends Reference<T, any, infer N>
+      ? K extends keyof O
+        ? KeepOptsType<T, O[K], N>
+        : MarkLoaded<T, T[K]>
+      : MarkLoaded<T, T[K]>;
   };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
@@ -119,8 +133,14 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<C extends EntityConstructor<any>>(type: C, opts: OptsOf<C>): AllLoaded<EntityOf<C>> {
-    return (new type(this, opts) as any) as AllLoaded<EntityOf<C>>;
+  public create<C extends EntityConstructor<any>, O extends OptsOf<C>>(type: C, opts: O): Created<EntityOf<C>, O> {
+    const entity = (new type(this, opts) as any) as Created<EntityOf<C>, O>;
+    Object.values(entity).forEach(v => {
+      if (v instanceof AbstractRelationImpl) {
+        v.initializeForNewEntity();
+      }
+    });
+    return entity;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

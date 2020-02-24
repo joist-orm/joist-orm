@@ -92,6 +92,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   // impl details
 
+  initializeForNewEntity(): void {
+    this.loaded = [];
+  }
+
   async refreshIfLoaded(): Promise<void> {
     ensureNotDeleted(this.entity);
     // TODO We should remember what load hints have been applied to this collection and re-apply them.

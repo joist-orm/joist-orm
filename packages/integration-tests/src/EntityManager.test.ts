@@ -373,7 +373,12 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const bookHint = { author: "publisher" } as const;
     const a1 = em.create(Author, { firstName: "a1" });
+    expect(a1.publisher.get).toBeUndefined();
     const b1 = em.create(Book, { title: "b1", author: a1 });
     const b2: Loaded<Book, typeof bookHint> = b1;
+    expect(b2.title).toEqual(b1.title);
+    expect(b2.author.get.publisher.get).toBeUndefined();
+    // This will cause a compile error
+    // expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
   });
 });

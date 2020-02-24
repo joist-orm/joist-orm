@@ -8,23 +8,31 @@ import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
-export type OptsOf<C> = C extends new (em: EntityManager, opts: infer O) => any ? O : never;
-
-export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
-
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
 }
 
+/** Return the `FooOpts` type a given `Foo` entity constructor. */
+export type OptsOf<C> = C extends new (em: EntityManager, opts: infer O) => any ? O : never;
+
+/** Return the `Foo` type for a given `Foo` entity constructor. */
+export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
+
 /** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
+  /** A point to our entity type's metadata. */
   metadata: EntityMetadata<Entity>;
+  /** A bag for our primitives/fk column values. */
   data: Record<any, any>;
+  /** A bag to keep the original values, lazily populated. */
   originalData: Record<any, any>;
+  /** Whether our entity has been deleted or not. */
   deleted?: "pending" | "deleted";
+  /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   em: EntityManager;
 }
 
+/** A marker/base interface for all of our entity types. */
 export interface Entity {
   id: string | undefined;
 

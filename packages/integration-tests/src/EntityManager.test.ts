@@ -372,13 +372,17 @@ describe("EntityManager", () => {
   it("can create and cast to nested hints", async () => {
     const em = new EntityManager(knex);
     const bookHint = { author: "publisher" } as const;
+    // Given we make an author, which we know as a loaded (and unset) publisher reference
     const a1 = em.create(Author, { firstName: "a1" });
     expect(a1.publisher.get).toBeUndefined();
+    // When we create a new book with that author
     const b1 = em.create(Book, { title: "b1", author: a1 });
+    // Then we can assign this book to a type hint var that is expecting a loaded author/publisher
     const b2: Loaded<Book, typeof bookHint> = b1;
-    expect(b2.title).toEqual(b1.title);
+    // And we can access the author and publisher synchronously w/o compile errors
+    expect(b1.author.get.publisher.get).toBeUndefined();
     expect(b2.author.get.publisher.get).toBeUndefined();
-    // This will cause a compile error
+    // And this would cause a compile error
     // expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
   });
 });

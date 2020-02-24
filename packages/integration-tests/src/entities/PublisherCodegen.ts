@@ -1,5 +1,15 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, fail, Collection, OneToManyCollection } from "joist-orm";
+import {
+  Flavor,
+  EntityOrmField,
+  EntityManager,
+  ManyToOneReference,
+  fail,
+  Collection,
+  OneToManyCollection,
+} from "joist-orm";
 import { publisherMeta, PublisherSize, Publisher, Author, authorMeta } from "./entities";
+
+export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherOpts {
   name: string;
@@ -29,11 +39,11 @@ export class PublisherCodegen {
     });
   }
 
-  get id(): string | undefined {
+  get id(): PublisherId | undefined {
     return this.__orm.data["id"];
   }
 
-  get idOrFail(): string {
+  get idOrFail(): PublisherId {
     return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 

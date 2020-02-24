@@ -1,4 +1,5 @@
 import {
+  Flavor,
   EntityOrmField,
   EntityManager,
   ManyToOneReference,
@@ -8,6 +9,8 @@ import {
   Reference,
 } from "joist-orm";
 import { authorMeta, Author, Book, bookMeta, Publisher } from "./entities";
+
+export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorOpts {
   firstName: string;
@@ -41,11 +44,11 @@ export class AuthorCodegen {
     });
   }
 
-  get id(): string | undefined {
+  get id(): AuthorId | undefined {
     return this.__orm.data["id"];
   }
 
-  get idOrFail(): string {
+  get idOrFail(): AuthorId {
     return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 

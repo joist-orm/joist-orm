@@ -1,4 +1,5 @@
 import {
+  Flavor,
   EntityOrmField,
   EntityManager,
   ManyToOneReference,
@@ -8,6 +9,8 @@ import {
   ManyToManyCollection,
 } from "joist-orm";
 import { bookMeta, Book, Author, Tag } from "./entities";
+
+export type BookId = Flavor<string, "Book">;
 
 export interface BookOpts {
   title: string;
@@ -47,11 +50,11 @@ export class BookCodegen {
     });
   }
 
-  get id(): string | undefined {
+  get id(): BookId | undefined {
     return this.__orm.data["id"];
   }
 
-  get idOrFail(): string {
+  get idOrFail(): BookId {
     return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 

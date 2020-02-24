@@ -60,3 +60,9 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
 export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
   get: ReadonlyArray<U>;
 }
+
+// https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
+interface Flavoring<FlavorT> {
+  _type?: FlavorT;
+}
+export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;

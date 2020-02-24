@@ -19,6 +19,7 @@ import { newPgConnectionConfig } from "./connection";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
+const Flavor = imp("Flavor@joist-orm");
 const Reference = imp("Reference@joist-orm");
 const Collection = imp("Collection@joist-orm");
 const OneToManyCollection = imp("OneToManyCollection@joist-orm");
@@ -386,6 +387,8 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
   return code`
+    export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
+
     export interface ${entityName}Opts {
       ${optsFields}
       ${optsRelationFields}
@@ -407,11 +410,11 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
         });
       }
 
-      get id(): string | undefined {
+      get id(): ${entityName}Id | undefined {
         return this.__orm.data["id"];
       }
 
-      get idOrFail(): string {
+      get idOrFail(): ${entityName}Id {
         return this.__orm.data["id"] || ${fail}("Entity has no id yet");
       }
 

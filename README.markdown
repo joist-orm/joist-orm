@@ -40,8 +40,6 @@ After checkout:
 - `EntityManager.find` (1st pass done)
   - Support non-string types
   - Support user-defined types
-- Reorganize into packages and publish to npm
-- Add flavor-style entity ids
 - Add `EntityManger.findById` / `findByIds`
 - Fallback to batch-bump-sequences-on-INSERT for schemas that have cycles
 - Support soft deletion?

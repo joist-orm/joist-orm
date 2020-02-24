@@ -1,5 +1,15 @@
-import { EntityOrmField, EntityManager, ManyToOneReference, fail, Collection, ManyToManyCollection } from "joist-orm";
+import {
+  Flavor,
+  EntityOrmField,
+  EntityManager,
+  ManyToOneReference,
+  fail,
+  Collection,
+  ManyToManyCollection,
+} from "joist-orm";
 import { tagMeta, Tag, Book } from "./entities";
+
+export type TagId = Flavor<string, "Tag">;
 
 export interface TagOpts {
   name: string;
@@ -30,11 +40,11 @@ export class TagCodegen {
     });
   }
 
-  get id(): string | undefined {
+  get id(): TagId | undefined {
     return this.__orm.data["id"];
   }
 
-  get idOrFail(): string {
+  get idOrFail(): TagId {
     return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 

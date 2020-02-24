@@ -78,11 +78,9 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
 }
 
 async function batchDelete(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  await knex
-    .raw(
-      `DELETE FROM ${meta.tableName} WHERE id IN (?);`,
-      entities.filter(e => e.id !== undefined).map(e => e.id!),
-    )
+  await knex(meta.tableName)
+    .del()
+    .whereIn("id", entities.map(e => e.id!))
     .transacting(tx);
   entities.forEach(entity => (entity.__orm.deleted = "deleted"));
 }

@@ -221,6 +221,21 @@ describe("EntityManager", () => {
     expect(rows.length).toEqual(0);
   });
 
+  it("can delete multiple entities", async () => {
+    // Given several publishers publisher
+    await knex.insert({ name: "p1" }).from("publishers");
+    await knex.insert({ name: "p2" }).from("publishers");
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    const p2 = await em.load(Publisher, "2");
+    // When they are deleted
+    await em.delete(p1);
+    await em.delete(p2);
+    await em.flush();
+    // Then the rows are deleted
+    expect((await knex.select("*").from("publishers")).length).toEqual(0);
+  });
+
   it("does not re-delete an already deleted entity", async () => {
     // Given a publisher
     await knex.insert({ name: "p1" }).from("publishers");

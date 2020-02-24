@@ -215,4 +215,32 @@ describe("ManyToManyCollection", () => {
     // And the join table rows were deleted
     expect((await knex.select("*").from("books_to_tags")).length).toEqual(0);
   });
+
+  it("cannot add to a deleted entity's m2m", async () => {
+    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: "t1" }).into("tags");
+    // Given a book with two tags
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "2");
+    const t1 = await em.load(Tag, "3");
+    // And the book is deleted
+    em.delete(b1);
+    // Then we cannot add to the tags collection
+    expect(() => b1.tags.add(t1)).toThrow("Book#2 is marked as deleted");
+  });
+
+  it("cannot remove to a deleted entity's m2m", async () => {
+    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: "t1" }).into("tags");
+    // Given a book with two tags
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "2");
+    const t1 = await em.load(Tag, "3");
+    // And the book is deleted
+    em.delete(b1);
+    // Then we cannot remove from the tags collection
+    expect(() => b1.tags.remove(t1)).toThrow("Book#2 is marked as deleted");
+  });
 });

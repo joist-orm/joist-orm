@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Collection } from "../index";
+import { Collection, ensureNotDeleted } from "../index";
 import { Entity, EntityConstructor } from "../EntityManager";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
@@ -29,6 +29,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   async load(): Promise<ReadonlyArray<U>> {
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       // TODO This key is basically a Reference, whenever we have that.
       // TODO Unsaved entities should never get here
@@ -40,6 +41,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   add(other: U, percolated = false): void {
+    ensureNotDeleted(this.entity);
     if (this.loaded !== undefined) {
       if (this.loaded.includes(other)) {
         return;
@@ -60,6 +62,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   remove(other: U): void {
+    ensureNotDeleted(this.entity);
     const joinRows = getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []);
     const row = joinRows.find(r => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
     if (row) {
@@ -75,6 +78,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   get get(): U[] {
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         return this.addedBeforeLoaded;
@@ -89,6 +93,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   // impl details
 
   async refreshIfLoaded(): Promise<void> {
+    ensureNotDeleted(this.entity);
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.loaded !== undefined && this.entity.id !== undefined) {
       const key = `${this.columnName}=${this.entity.id}`;
@@ -100,6 +105,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   /** Some random entity got deleted, it it was in our collection, remove it. */
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
+    ensureNotDeleted(this.entity);
     if (this.current().includes(maybeOther as U)) {
       this.remove(maybeOther as U);
     }

@@ -31,11 +31,12 @@ export function buildQuery<T extends Entity>(
     .from(`${meta.tableName} AS ${alias}`)
     .orderBy(`${alias}.id`);
 
-  const operators = ["$gt", "$gte"] as const;
+  const operators = ["$gt", "$gte", "$ne"] as const;
   type Operator = typeof operators[number];
   const opToFn: Record<Operator, string> = {
     $gt: ">",
     $gte: ">=",
+    $ne: "!=",
   };
 
   // Define a function for recursively adding joins & filters

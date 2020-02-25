@@ -125,4 +125,13 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, { age: { $gte: 1 } });
     expect(authors.length).toEqual(2);
   });
+
+  it("can find by not equal", async () => {
+    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: { $ne: 1 } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
 });

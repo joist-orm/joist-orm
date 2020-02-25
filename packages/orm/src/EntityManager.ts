@@ -42,7 +42,7 @@ export interface Entity {
 export type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T };
 
 export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> | U : FilterValue<T[P]>;
+  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> | U | null : FilterValue<T[P]>;
 };
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */

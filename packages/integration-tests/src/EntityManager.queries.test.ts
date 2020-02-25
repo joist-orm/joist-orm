@@ -114,11 +114,19 @@ describe("EntityManager.queries", () => {
   it("can find by enums", async () => {
     await knex.insert({ name: "p1", size_id: 1 }).from("publishers");
     await knex.insert({ name: "p2", size_id: 2 }).from("publishers");
-
     const em = new EntityManager(knex);
     const pubs = await em.find(Publisher, { size: PublisherSize.Large });
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p2");
+  });
+
+  it("can find by not equal enum", async () => {
+    await knex.insert({ name: "p1", size_id: 1 }).from("publishers");
+    await knex.insert({ name: "p2", size_id: 2 }).from("publishers");
+    const em = new EntityManager(knex);
+    const pubs = await em.find(Publisher, { size: { $ne: PublisherSize.Large } });
+    expect(pubs.length).toEqual(1);
+    expect(pubs[0].name).toEqual("p1");
   });
 
   it("can find by simple integer", async () => {

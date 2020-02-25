@@ -1,7 +1,27 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
-import { Entity, EntityConstructor, EntityMetadata, FilterQuery, getMetadata, isEntity } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
+import { Reference } from "./index";
+
+type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T } | { $lt: T } | { $lte: T };
+
+// For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
+type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | { $ne: T | null };
+
+export type FilterQuery<T extends Entity> = {
+  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? EntityFilterValue<U> : FilterValue<T[P]>;
+};
+
+const operators = ["$gt", "$gte", "$ne", "$lt", "$lte"] as const;
+type Operator = typeof operators[number];
+const opToFn: Record<Operator, string> = {
+  $gt: ">",
+  $gte: ">=",
+  $ne: "!=",
+  $lt: "<",
+  $lte: "<=",
+};
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -30,14 +50,6 @@ export function buildQuery<T extends Entity>(
     .select<unknown>(`${alias}.*`)
     .from(`${meta.tableName} AS ${alias}`)
     .orderBy(`${alias}.id`);
-
-  const operators = ["$gt", "$gte", "$ne"] as const;
-  type Operator = typeof operators[number];
-  const opToFn: Record<Operator, string> = {
-    $gt: ">",
-    $gte: ">=",
-    $ne: "!=",
-  };
 
   // Define a function for recursively adding joins & filters
   function addClauses(meta: EntityMetadata<any>, alias: string, where: FilterQuery<any>): void {

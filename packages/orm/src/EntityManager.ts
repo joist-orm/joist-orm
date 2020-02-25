@@ -5,7 +5,7 @@ import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
-import { buildQuery } from "./QueryBuilder";
+import { buildQuery, FilterQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export interface EntityConstructor<T> {
@@ -38,15 +38,6 @@ export interface Entity {
 
   __orm: EntityOrmField;
 }
-
-type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T };
-
-// For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | { $ne: T | null };
-
-export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? EntityFilterValue<U> : FilterValue<T[P]>;
-};
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
 type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>

@@ -162,4 +162,20 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
+
+  it("can find by like and join with not equal enum", async () => {
+    await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
+    await knex.insert({ name: "p2", size_id: 2 }).into("publishers");
+    await knex.insert({ first_name: "a", publisher_id: 1 }).into("authors");
+    await knex.insert({ first_name: "a", publisher_id: 2 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, {
+      firstName: "a",
+      publisher: {
+        size: { $ne: PublisherSize.Large }
+      },
+    });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a");
+  });
 });

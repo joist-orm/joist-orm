@@ -75,8 +75,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   // internal impl
 
-  setFromOpts(value: U[]): void {
-    this.loaded = value;
+  setFromOpts(others: U[]): void {
+    this.loaded = [];
+    others.forEach(o => this.add(o));
   }
 
   initializeForNewEntity(): void {

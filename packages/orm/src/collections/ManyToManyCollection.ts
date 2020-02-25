@@ -92,8 +92,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   // impl details
 
-  setFromOpts(value: U[]): void {
-    this.loaded = value;
+  setFromOpts(others: U[]): void {
+    this.loaded = [];
+    others.forEach(o => this.add(o));
   }
 
   initializeForNewEntity(): void {

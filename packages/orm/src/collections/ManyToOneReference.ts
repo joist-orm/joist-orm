@@ -59,9 +59,8 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   // private impl
 
-  setFromOpts(value: U): void {
-    this.loaded = value;
-    this.isLoaded = true;
+  setFromOpts(other: U): void {
+    this.setImpl(other);
   }
 
   initializeForNewEntity(): void {

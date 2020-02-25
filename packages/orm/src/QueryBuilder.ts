@@ -31,6 +31,13 @@ export function buildQuery<T extends Entity>(
     .from(`${meta.tableName} AS ${alias}`)
     .orderBy(`${alias}.id`);
 
+  const operators = ["$gt", "$gte"] as const;
+  type Operator = typeof operators[number];
+  const opToFn: Record<Operator, string> = {
+    $gt: ">",
+    $gte: ">=",
+  };
+
   // Define a function for recursively adding joins & filters
   function addClauses(meta: EntityMetadata<any>, alias: string, where: FilterQuery<any>): void {
     Object.entries(where).forEach(([key, clause]) => {
@@ -55,6 +62,11 @@ export function buildQuery<T extends Entity>(
           // Then recurse to add its conditions to the query
           addClauses(otherMeta, otherAlias, clause);
         }
+      } else if (clause instanceof Object && operators.find(p => Object.keys(clause).includes(p))) {
+        const p = Object.keys(clause)[0] as Operator;
+        const value = clause[p];
+        const fn = opToFn[p];
+        query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
       } else {
         // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
         query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));

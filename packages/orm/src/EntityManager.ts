@@ -39,8 +39,10 @@ export interface Entity {
   __orm: EntityOrmField;
 }
 
+export type FilterValue<T> = T | { $gt: T } | { $gte: T };
+
 export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> | U : T[P];
+  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> | U : FilterValue<T[P]>;
 };
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */

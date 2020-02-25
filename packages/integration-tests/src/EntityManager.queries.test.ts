@@ -109,4 +109,20 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
+
+  it("can find by greater than", async () => {
+    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: { $gt: 1 } });
+    expect(authors.length).toEqual(1);
+  });
+
+  it("can find by greater than or equal two", async () => {
+    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: { $gte: 1 } });
+    expect(authors.length).toEqual(2);
+  });
 });

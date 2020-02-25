@@ -17,6 +17,7 @@ export interface AuthorOpts {
   firstName: string;
   lastName?: string;
   isPopular?: boolean;
+  age?: number;
   publisher?: Publisher;
   books?: Book[];
 }
@@ -73,6 +74,15 @@ export class AuthorCodegen {
   set isPopular(isPopular: boolean | undefined) {
     this.ensureNotDeleted();
     this.__orm.em.setField(this, "isPopular", isPopular);
+  }
+
+  get age(): number | undefined {
+    return this.__orm.data["age"];
+  }
+
+  set age(age: number | undefined) {
+    this.ensureNotDeleted();
+    this.__orm.em.setField(this, "age", age);
   }
 
   get createdAt(): Date {

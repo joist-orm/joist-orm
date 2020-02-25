@@ -3,7 +3,7 @@ import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
-  it("can find all authors", async () => {
+  it("can find all", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     const em = new EntityManager(knex);
@@ -13,7 +13,7 @@ describe("EntityManager.queries", () => {
     expect(authors[1].firstName).toEqual("a2");
   });
 
-  it("can find an author by name", async () => {
+  it("can find by simple varchar", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     const em = new EntityManager(knex);
@@ -22,7 +22,7 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
-  it("can find books by author name", async () => {
+  it("can find by varchar through join", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     await knex.insert({ title: "b1", author_id: 1 }).from("books");
@@ -36,7 +36,7 @@ describe("EntityManager.queries", () => {
     expect(books[1].title).toEqual("b3");
   });
 
-  it("can find books by publisher name", async () => {
+  it("can find by varchar through two joins", async () => {
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ name: "p2" }).from("publishers");
     await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
@@ -50,7 +50,7 @@ describe("EntityManager.queries", () => {
     expect(books[0].title).toEqual("b2");
   });
 
-  it("can find books by author", async () => {
+  it("can find by foreign key", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     await knex.insert({ title: "b1", author_id: 1 }).from("books");
@@ -79,7 +79,7 @@ describe("EntityManager.queries", () => {
     expect(books[0].title).toEqual("b2");
   });
 
-  it("can find books by author id", async () => {
+  it("can find by foreign key using only an id", async () => {
     await knex.insert({ id: 3, first_name: "a1" }).from("authors");
     await knex.insert({ id: 4, first_name: "a2" }).from("authors");
     await knex.insert({ title: "b1", author_id: 3 }).from("books");
@@ -99,5 +99,14 @@ describe("EntityManager.queries", () => {
     const pubs = await em.find(Publisher, { size: PublisherSize.Large });
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p2");
+  });
+
+  it("can find by simple integer", async () => {
+    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: 2 });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
   });
 });

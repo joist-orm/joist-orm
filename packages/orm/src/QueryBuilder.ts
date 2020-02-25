@@ -53,6 +53,13 @@ export function buildQuery<T extends Entity>(
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
           // If only querying on the id, we can skip the join
           query = query.where(`${alias}.${column.columnName}`, (clause as any)["id"]);
+        } else if (clauseKeys.length === 1 && clauseKeys[0] === "$ne") {
+          const value = (clause as any)["$ne"];
+          if (value === null) {
+            query = query.whereNull(`${alias}.${column.columnName}`);
+          } else {
+            throw new Error("Not implemented");
+          }
         } else {
           // Add a join for this column
           const otherMeta = column.serde.otherMeta();

@@ -39,10 +39,13 @@ export interface Entity {
   __orm: EntityOrmField;
 }
 
-export type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T };
+type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T };
+
+// For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
+type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | { $ne: T | null };
 
 export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? FilterQuery<U> | U | null : FilterValue<T[P]>;
+  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? EntityFilterValue<U> : FilterValue<T[P]>;
 };
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */

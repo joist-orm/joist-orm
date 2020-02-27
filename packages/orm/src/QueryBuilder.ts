@@ -4,7 +4,7 @@ import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity } from
 import { ForeignKeySerde } from "./serde";
 import { Reference } from "./index";
 
-type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T } | { $lt: T } | { $lte: T };
+type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T } | { $lt: T } | { $lte: T } | { $like: T };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | { $ne: T | null };
@@ -13,7 +13,7 @@ export type FilterQuery<T extends Entity> = {
   [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? EntityFilterValue<U> : FilterValue<T[P]>;
 };
 
-const operators = ["$gt", "$gte", "$ne", "$lt", "$lte"] as const;
+const operators = ["$gt", "$gte", "$ne", "$lt", "$lte", "$like"] as const;
 type Operator = typeof operators[number];
 const opToFn: Record<Operator, string> = {
   $gt: ">",
@@ -21,6 +21,7 @@ const opToFn: Record<Operator, string> = {
   $ne: "!=",
   $lt: "<",
   $lte: "<=",
+  $like: "LIKE",
 };
 
 /**

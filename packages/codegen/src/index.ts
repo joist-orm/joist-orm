@@ -305,7 +305,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const maybeOptional = column.notNull ? "never" : "undefined";
       return code`
         readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}, ${maybeOptional}> =
-          new ${ManyToOneReference}<${entityType}, ${otherEntityType}, ${maybeOptional}>(
+          new ${ManyToOneReference}(
             this,
             ${otherEntityType},
             "${fieldName}",

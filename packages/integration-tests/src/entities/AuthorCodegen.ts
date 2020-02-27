@@ -27,7 +27,7 @@ export class AuthorCodegen {
 
   readonly books: Collection<Author, Book> = new OneToManyCollection(this, bookMeta, "books", "author", "author_id");
 
-  readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference<Author, Publisher, undefined>(
+  readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference(
     this,
     Publisher,
     "publisher",

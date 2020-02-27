@@ -115,7 +115,7 @@ export class EntityManager {
   public async find<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     where: FilterQuery<T>,
-    options: { populate: H },
+    options?: { populate: H },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: EntityConstructor<T>,
@@ -130,6 +130,26 @@ export class EntityManager {
       await this.populate(result, options.populate);
     }
     return result;
+  }
+
+  public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T>;
+  public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: FilterQuery<T>,
+    options: { populate: H },
+  ): Promise<Loaded<T, H>>;
+  async findOneOrFail<T extends Entity>(
+    type: EntityConstructor<T>,
+    where: FilterQuery<T>,
+    options?: { populate: any },
+  ): Promise<T> {
+    const list = await this.find(type, where, options);
+    if (list.length === 0) {
+      throw new Error("Not found");
+    } else if (list.length > 1) {
+      throw new Error(`Found more than one: ${list.map(e => e.toString()).join(", ")}`);
+    }
+    return list[0];
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */

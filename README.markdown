@@ -1,3 +1,6 @@
+
+<img src="https://img.shields.io/npm/v/joist-orm" />
+
 ## joist-ts
 
 An opinionated ORM for TypeScript/node.
@@ -22,6 +25,12 @@ An opinionated ORM for TypeScript/node.
 - Anything-but-Postgres support at this point.
 - Browser/client-side support
 
+### Status
+
+Joist is currently in beta: all of the features work, are "past proof of concept" stage, and are well-covered by tests.
+
+Per the `0.1.x` versioning, breaking API changes should be expected for awhile.
+
 ### Install
 
 Requires ES2019/[Node v12.4.0](https://node.green/#ES2019) for `Object.fromEntries`, `Array.flatMap`, etc.
@@ -30,8 +39,11 @@ Requires ES2019/[Node v12.4.0](https://node.green/#ES2019) for `Object.fromEntri
 
 After checkout:
 
+- Run `yarn install`
+- Run `yarn build`
+- `cd packages/integration-tests`
 - Run `make db` to boot up a Docker postgres instance w/the integration test schema.
-- Run `npm test` to run the tests.
+- Run `yarn test` to run the tests.
 
 ### Todo
 

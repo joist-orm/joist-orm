@@ -48,13 +48,13 @@ After checkout:
 ### Todo
 
 - Lifecycle hooks for validation rules/derived values
+  - Use load hint-style syntax to declare validation rule sub-graph
 - Cascading deletions for parent/child relationships
-- `EntityManager.find` (1st pass done)
-  - Support non-string types
-  - Support user-defined types
-- Add `EntityManger.findById` / `findByIds`
+- Codegen'd test builders 
+- Support user-defined types
 - Fallback to batch-bump-sequences-on-INSERT for schemas that have cycles
-- Support soft deletion?
+- First-class support for soft deletion?
+- LargeCollection support
 - Op locks/`version` column?
 
 ## History / Inspiration

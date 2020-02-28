@@ -305,8 +305,8 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const maybeOptional = column.notNull ? "never" : "undefined";
       return code`
         readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}, ${maybeOptional}> =
-          new ${ManyToOneReference}(
-            this,
+          new ${ManyToOneReference}<${entityType}, ${otherEntityType}, ${maybeOptional}>(
+            this as any,
             ${otherEntityType},
             "${fieldName}",
             "${otherFieldName}",
@@ -331,7 +331,13 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
       const fieldName = camelCase(pluralize(otherEntityName));
       const otherFieldName = camelCase(column.name.replace("_id", ""));
       return code`
-        readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${OneToManyCollection}(this, ${otherMeta}, "${fieldName}", "${otherFieldName}", "${column.name}");
+        readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${OneToManyCollection}(
+          this as any,
+          ${otherMeta},
+          "${fieldName}",
+          "${otherFieldName}",
+          "${column.name}"
+        );
       `;
     });
 

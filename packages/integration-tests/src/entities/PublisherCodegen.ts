@@ -13,7 +13,7 @@ export class PublisherCodegen {
   readonly __orm: EntityOrmField;
 
   readonly authors: Collection<Publisher, Author> = new OneToManyCollection(
-    this,
+    this as any,
     authorMeta,
     "authors",
     "publisher",

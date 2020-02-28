@@ -22,7 +22,13 @@ export interface BookOpts {
 export class BookCodegen {
   readonly __orm: EntityOrmField;
 
-  readonly author: Reference<Book, Author, never> = new ManyToOneReference(this, Author, "author", "books", true);
+  readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
+    this as any,
+    Author,
+    "author",
+    "books",
+    true,
+  );
 
   readonly tags: Collection<Book, Tag> = new ManyToManyCollection(
     "books_to_tags",

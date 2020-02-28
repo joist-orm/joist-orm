@@ -25,10 +25,16 @@ export interface AuthorOpts {
 export class AuthorCodegen {
   readonly __orm: EntityOrmField;
 
-  readonly books: Collection<Author, Book> = new OneToManyCollection(this, bookMeta, "books", "author", "author_id");
+  readonly books: Collection<Author, Book> = new OneToManyCollection(
+    this as any,
+    bookMeta,
+    "books",
+    "author",
+    "author_id",
+  );
 
-  readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference(
-    this,
+  readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference<Author, Publisher, undefined>(
+    this as any,
     Publisher,
     "publisher",
     "authors",

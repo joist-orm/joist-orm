@@ -1,6 +1,7 @@
 {
   "name": "joist-migration-utils",
   "version": "0.1.0-bump",
+  "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "dependencies": {

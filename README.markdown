@@ -53,3 +53,6 @@ joist-ts has many of the same ideas (in terms of opinionated codegen), just appl
 
 The `EntityManager.find` syntax is heavily inspired from [MikroORM](https://mikro-orm.io/), as well as the concept of `EntityManager.populate`.
 
+## License
+
+MIT

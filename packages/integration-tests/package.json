@@ -1,6 +1,7 @@
 {
   "name": "joist-integration-tests",
   "version": "0.1.0-bump",
+  "license": "MIT",
   "scripts": {
     "migrate": "./run.sh joist-migration-utils",
     "test": "./node_modules/.bin/jest --runInBand",

@@ -1,7 +1,15 @@
 {
-  "extends": "../../tsconfig.packages.json",
   "references": [{ "path": "../codegen" }, { "path": "../migration-utils" }, { "path": "../orm" }],
   "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "lib": ["es2019"],
+    "downlevelIteration": true,
+    "strict": true,
+    "types": ["jest", "node"],
+    "esModuleInterop": true,
+    "composite": true,
+    "sourceMap": true,
     "outDir": "./build",
     "rootDir": "./",
     "baseUrl": "./",

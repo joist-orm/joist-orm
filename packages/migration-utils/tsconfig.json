@@ -1,6 +1,14 @@
 {
-  "extends": "../../tsconfig.packages.json",
   "compilerOptions": {
+    "target": "es2019",
+    "module": "commonjs",
+    "lib": ["es2019"],
+    "downlevelIteration": true,
+    "strict": true,
+    "types": ["jest", "node"],
+    "esModuleInterop": true,
+    "composite": true,
+    "sourceMap": true,
     "outDir": "./build",
     "rootDir": "./src"
   }

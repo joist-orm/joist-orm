@@ -16,6 +16,7 @@ import {
 } from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { newPgConnectionConfig } from "./connection";
+import { EntityDbMetadata, entityType, metaName } from "./EntityDbMetadata";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
@@ -185,68 +186,59 @@ function mapType(tableName: string, columnName: string, dbColumnType: string): C
 }
 
 function generateMetadataFile(sortedEntities: string[], table: Table): Code {
-  const entityName = tableToEntityName(table);
-  const entity = imp(`${entityName}@./entities`);
-  const metaName = `${camelCase(entityName)}Meta`;
+  const dbMetadata = new EntityDbMetadata(table);
 
   const primaryKey = code`
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}("id", "id") },
   `;
 
-  const primitives = table.columns
-    .filter(c => !c.isPrimaryKey && !c.isForeignKey)
-    .map(column => {
-      const fieldName = camelCase(column.name);
-      return code`
+  const primitives = dbMetadata.primitives.map(p => {
+    const { fieldName, columnName, columnType } = p;
+    return code`
       {
         fieldName: "${fieldName}",
-        columnName: "${column.name}",
-        dbType: "${column.type.name}",
-        serde: new ${SimpleSerde}("${fieldName}", "${column.name}"),
+        columnName: "${columnName}",
+        dbType: "${columnType}",
+        serde: new ${SimpleSerde}("${fieldName}", "${columnName}"),
       },`;
-    });
-
-  const m2o = table.m2oRelations.map(r => {
-    const column = r.foreignKey.columns[0];
-    const fieldName = camelCase(column.name.replace("_id", ""));
-    const otherEntity = tableToEntityName(r.targetTable);
-    const otherMeta = `${camelCase(otherEntity)}Meta`;
-    if (isEnumTable(r.targetTable)) {
-      const enumObjectType = imp(`${pluralize(otherEntity)}@./entities`);
-      return code`
-        {
-          fieldName: "${fieldName}",
-          columnName: "${column.name}",
-          dbType: "int",
-          serde: new ${EnumFieldSerde}("${fieldName}", "${column.name}", ${enumObjectType}),
-        },
-      `;
-    } else {
-      return code`
-        {
-          fieldName: "${fieldName}",
-          columnName: "${column.name}",
-          dbType: "int",
-          serde: new ${ForeignKeySerde}("${fieldName}", "${column.name}", () => ${otherMeta}),
-        },
-      `;
-    }
   });
 
+  const enums = dbMetadata.enums.map(e => {
+    const { fieldName, columnName, enumType } = e;
+    return code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${columnName}",
+          dbType: "int",
+          serde: new ${EnumFieldSerde}("${fieldName}", "${columnName}", ${enumType}),
+        },
+      `;
+  });
+
+  const m2o = dbMetadata.manyToOnes.map(m2o => {
+    const { fieldName, columnName, otherEntity } = m2o;
+    return code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${columnName}",
+          dbType: "int",
+          serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${metaName(otherEntity)}),
+        },
+      `;
+  });
+
+  const { entityName } = dbMetadata;
+
   return code`
-    export const ${metaName}: ${EntityMetadata}<${entity}> = {
-      cstr: ${entity},
+    export const ${metaName(entityName)}: ${EntityMetadata}<${entityType(entityName)}> = {
+      cstr: ${entityType(entityName)},
       type: "${entityName}",
       tableName: "${table.name}",
-      columns: [
-        ${primaryKey}
-        ${primitives}
-        ${m2o}
-      ],
+      columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
       order: ${sortedEntities.indexOf(entityName)},
     };
     
-    (${entity} as any).metadata = ${metaName};
+    (${entityName} as any).metadata = ${metaName(entityName)};
   `;
 }
 

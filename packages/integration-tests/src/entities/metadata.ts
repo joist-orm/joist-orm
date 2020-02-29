@@ -44,7 +44,6 @@ export const authorMeta: EntityMetadata<Author> = {
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
-
     {
       fieldName: "publisher",
       columnName: "publisher_id",
@@ -82,7 +81,6 @@ export const bookMeta: EntityMetadata<Book> = {
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
-
     {
       fieldName: "author",
       columnName: "author_id",
@@ -103,6 +101,13 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
+      fieldName: "size",
+      columnName: "size_id",
+      dbType: "int",
+      serde: new EnumFieldSerde("size", "size_id", PublisherSizes),
+    },
+
+    {
       fieldName: "name",
       columnName: "name",
       dbType: "character varying",
@@ -119,13 +124,6 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
-    },
-
-    {
-      fieldName: "size",
-      columnName: "size_id",
-      dbType: "int",
-      serde: new EnumFieldSerde("size", "size_id", PublisherSizes),
     },
   ],
   order: 1,

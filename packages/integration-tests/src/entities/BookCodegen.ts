@@ -12,7 +12,7 @@ import {
   Collection,
   ManyToManyCollection,
 } from "joist-orm";
-import { bookMeta, Author, Tag, Book } from "./entities";
+import { bookMeta, Author, Tag, AuthorId, Book } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
 
@@ -27,7 +27,7 @@ export interface BookFilter {
   title?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  author?: EntityFilter<Author, FilterOf<Author>, never>;
+  author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
 }
 
 export class BookCodegen {

@@ -12,7 +12,7 @@ import {
   Reference,
   ManyToOneReference,
 } from "joist-orm";
-import { authorMeta, Publisher, Book, Author, bookMeta } from "./entities";
+import { authorMeta, Publisher, Book, PublisherId, Author, bookMeta } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -33,7 +33,7 @@ export interface AuthorFilter {
   age?: ValueFilter<number, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  publisher?: EntityFilter<Publisher, FilterOf<Publisher>, null | undefined>;
+  publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export class AuthorCodegen {

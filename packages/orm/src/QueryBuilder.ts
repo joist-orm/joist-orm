@@ -6,7 +6,7 @@ import { ForeignKeySerde } from "./serde";
 export type ValueFilter<V, N> = V | N | { $gt: V } | { $gte: V } | { $ne: V } | { $lt: V } | { $lte: V } | { $like: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-export type EntityFilter<T, F, N> = F | T | N | { $ne: T | N };
+export type EntityFilter<T, I, F, N> = T | I | F | N | { $ne: T | I | N };
 
 const operators = ["$gt", "$gte", "$ne", "$lt", "$lte", "$like"] as const;
 type Operator = typeof operators[number];
@@ -53,7 +53,7 @@ export function buildQuery<T extends Entity>(
       const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
       if (column.serde instanceof ForeignKeySerde) {
         const clauseKeys = typeof clause === "object" && clause !== null ? Object.keys(clause as object) : [];
-        if (isEntity(clause)) {
+        if (isEntity(clause) || typeof clause == "string") {
           // This is a ForeignKey clause but we don't need to join into the other side
           query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
         } else if (clause === null || clause === undefined) {
@@ -65,6 +65,8 @@ export function buildQuery<T extends Entity>(
           const value = (clause as any)["$ne"];
           if (value === null || value === undefined) {
             query = query.whereNotNull(`${alias}.${column.columnName}`);
+          } else if (typeof value === "string") {
+            query = query.whereNot(`${alias}.${column.columnName}`, value);
           } else {
             throw new Error("Not implemented");
           }

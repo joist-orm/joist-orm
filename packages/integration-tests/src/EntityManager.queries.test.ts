@@ -1,5 +1,5 @@
 import { EntityManager } from "joist-orm";
-import { Author, Book, Publisher, PublisherSize } from "./entities";
+import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { knex } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -92,6 +92,28 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, { publisher: { $ne: undefined } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find by foreign key is flavor", async () => {
+    await knex.insert({ id: 1, name: "p1" }).into("publishers");
+    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    const em = new EntityManager(knex);
+    const publisherId: PublisherId = "1";
+    const authors = await em.find(Author, { publisher: publisherId });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find by foreign key is not flavor", async () => {
+    await knex.insert({ id: 1, name: "p1" }).into("publishers");
+    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    const em = new EntityManager(knex);
+    const publisherId: PublisherId = "1";
+    // Technically id != 1 does not match the a1.publisher_id is null. Might fix this.
+    const authors = await em.find(Author, { publisher: { $ne: publisherId } });
+    expect(authors.length).toEqual(0);
   });
 
   it("can find books by publisher", async () => {
@@ -216,6 +238,8 @@ describe("EntityManager.queries", () => {
     await knex.insert({ name: "p", size_id: 1 }).into("publishers");
     await knex.insert({ name: "p", size_id: 2 }).into("publishers");
     const em = new EntityManager(knex);
-    await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow("Found more than one: Publisher#1, Publisher#2");
+    await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(
+      "Found more than one: Publisher#1, Publisher#2",
+    );
   });
 });

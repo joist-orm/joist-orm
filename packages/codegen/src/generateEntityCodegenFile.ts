@@ -193,9 +193,9 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${FilterOf}<${otherEntity.type}>, ${nullOrNever(
-      notNull,
-    )}>;`;
+    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
+      otherEntity.type
+    }>, ${nullOrNever(notNull)}>;`;
   });
   return [...primitives, ...enums, ...m2o];
 }

@@ -14,6 +14,7 @@ type Entity = {
   type: SymbolSpec;
   metaName: string;
   metaType: SymbolSpec;
+  idType: SymbolSpec;
 };
 
 type PrimitiveColumn = {
@@ -143,6 +144,7 @@ function makeEntity(entityName: string): Entity {
     type: entityType(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
+    idType: imp(`${entityName}Id@./entities`),
   };
 }
 

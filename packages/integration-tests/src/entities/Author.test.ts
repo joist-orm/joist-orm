@@ -8,6 +8,6 @@ describe("Author", () => {
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
-    expect(books.length).toEqual(2);
+    expect(books.length).toEqual(0);
   });
 });

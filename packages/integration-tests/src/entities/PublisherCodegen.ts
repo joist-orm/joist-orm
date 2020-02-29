@@ -29,6 +29,7 @@ export interface PublisherFilter {
 export class PublisherCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: PublisherFilter = null!;
+  readonly __optsType: PublisherOpts = null!;
 
   readonly authors: Collection<Publisher, Author> = new OneToManyCollection(
     this as any,

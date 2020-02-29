@@ -33,6 +33,7 @@ export interface BookFilter {
 export class BookCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: BookFilter = null!;
+  readonly __optsType: BookOpts = null!;
 
   readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
     this as any,

@@ -27,6 +27,7 @@ export interface TagFilter {
 export class TagCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: TagFilter = null!;
+  readonly __optsType: TagOpts = null!;
 
   readonly books: Collection<Tag, Book> = new ManyToManyCollection(
     "books_to_tags",

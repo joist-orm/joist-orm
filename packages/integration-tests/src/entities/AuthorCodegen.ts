@@ -39,6 +39,7 @@ export interface AuthorFilter {
 export class AuthorCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: AuthorFilter = null!;
+  readonly __optsType: AuthorOpts = null!;
 
   readonly books: Collection<Author, Book> = new OneToManyCollection(
     this as any,

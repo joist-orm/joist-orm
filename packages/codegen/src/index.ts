@@ -1,16 +1,15 @@
 import pgStructure, { Db, Table } from "pg-structure";
 import { promises as fs } from "fs";
 import { Client } from "pg";
-import { code, Code, imp } from "ts-poet";
+import { code, Code } from "ts-poet";
 import TopologicalSort from "topological-sort";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { newPgConnectionConfig } from "./connection";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEnumFile } from "./generateEnumFile";
-import { EntityManager, } from "./symbols";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
+import { generateInitialEntityFile } from "./generateInitialEntityFile";
 
 export interface CodeGenFile {
   name: string;
@@ -90,19 +89,6 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
   };
 
   return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile];
-}
-
-/** Creates the placeholder file for our per-entity custom business logic in. */
-function generateInitialEntityFile(table: Table, entityName: string): Code {
-  const codegenClass = imp(`${entityName}Codegen@./entities`);
-  const optsClass = imp(`${entityName}Opts@./entities`);
-  return code`
-    export class ${entityName} extends ${codegenClass} {
-      constructor(em: ${EntityManager}, opts: ${optsClass}) {
-        super(em, opts);
-      }
-    }
-  `;
 }
 
 export async function loadEnumRows(db: Db, client: Client): Promise<EnumRows> {

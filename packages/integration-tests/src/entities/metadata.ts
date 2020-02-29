@@ -1,5 +1,5 @@
 import { EntityMetadata, PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "joist-orm";
-import { Author, Book, Publisher, Tag, PublisherSize } from "./entities";
+import { Author, Book, Publisher, Tag, PublisherSizes } from "./entities";
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
@@ -104,7 +104,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       fieldName: "size",
       columnName: "size_id",
       dbType: "int",
-      serde: new EnumFieldSerde("size", "size_id", PublisherSize),
+      serde: new EnumFieldSerde("size", "size_id", PublisherSizes),
     },
 
     {

@@ -196,13 +196,13 @@ function generateMetadataFile(sortedEntities: string[], table: Table): Code {
   });
 
   const enums = dbMetadata.enums.map(e => {
-    const { fieldName, columnName, enumType } = e;
+    const { fieldName, columnName, enumDetailType } = e;
     return code`
         {
           fieldName: "${fieldName}",
           columnName: "${columnName}",
           dbType: "int",
-          serde: new ${EnumFieldSerde}("${fieldName}", "${columnName}", ${enumType}),
+          serde: new ${EnumFieldSerde}("${fieldName}", "${columnName}", ${enumDetailType}),
         },
       `;
   });

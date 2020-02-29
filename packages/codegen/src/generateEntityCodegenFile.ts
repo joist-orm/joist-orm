@@ -130,6 +130,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
       readonly __filterType: ${entityName}Filter = null!;
+      readonly __optsType: ${entityName}Opts = null!;
       ${[o2m, m2o, m2m]}
       
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {

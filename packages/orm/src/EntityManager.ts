@@ -13,7 +13,7 @@ export interface EntityConstructor<T> {
 }
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
-export type OptsOf<C> = C extends new (em: EntityManager, opts: infer O) => any ? O : never;
+export type OptsOf<T> = T extends { __optsType: infer O } ? O : never;
 
 /** Return the `Foo` type for a given `Foo` entity constructor. */
 export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
@@ -70,8 +70,10 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
  * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
-export type New<C extends EntityConstructor<T>, O extends OptsOf<C>, T extends Entity = EntityOf<C>> = T &
-  { [K in keyof T]: MaybeUseOptsType<T, O, K> };
+export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
+  { [K in BothKeys<T, O>]: MaybeUseOptsType<T, O, K> };
+
+type BothKeys<T, O> = keyof T & keyof O;
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
@@ -156,8 +158,8 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<C extends EntityConstructor<any>, O extends OptsOf<C>>(type: C, opts: O): New<C, O> {
-    const entity = (new type(this, opts) as any) as New<C, O>;
+  public create<T extends Entity, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
+    const entity = (new type(this, opts) as any) as New<T, O>;
     Object.values(entity).forEach(v => {
       if (v instanceof AbstractRelationImpl) {
         v.initializeForNewEntity();

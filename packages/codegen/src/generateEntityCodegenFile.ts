@@ -159,34 +159,30 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
 
 function generateOptsFields(table: Table, meta: EntityDbMetadata): Code[] {
   // Make our opts type
-  const primitives = meta.primitives.map(p => {
-    const { fieldName, columnName, notNull, columnType } = p;
+  const primitives = meta.primitives.map(({ fieldName, columnName, notNull, columnType }) => {
     if (ormMaintainedFields.includes(fieldName)) {
       return code``;
     }
     const type = mapType(table.name, columnName, columnType);
-    const maybeOptional = notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${type.fieldType};`;
   });
-  const enums = meta.enums.map(e => {
-    const { fieldName, enumType, notNull } = e;
-    const maybeOptional = notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${enumType};`;
+  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
+    return code`${fieldName}${maybeOptional(notNull)}: ${enumType};`;
   });
-  const m2o = meta.manyToOnes.map(m2o => {
-    const { fieldName, otherEntity, notNull } = m2o;
-    const maybeOptional = notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${otherEntity};`;
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity};`;
   });
-  const o2m = meta.oneToManys.map(o2m => {
-    const { fieldName, otherEntity } = o2m;
+  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${entityType(otherEntity)}[];`;
   });
-  const m2m = meta.manyToManys.map(m2m => {
-    const { fieldName, otherEntity } = m2m;
+  const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${entityType(otherEntity)}[];`;
   });
   return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
+}
+
+function maybeOptional(notNull: boolean): string {
+  return notNull ? "" : "?";
 }
 
 function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {

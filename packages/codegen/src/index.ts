@@ -310,9 +310,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
   const o2m = meta.oneToManys.map(o2m => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-        readonly ${fieldName}: ${Collection}<${entityType2}, ${entityType(
-      otherEntity,
-    )}> = new ${OneToManyCollection}(
+        readonly ${fieldName}: ${Collection}<${entityType2}, ${entityType(otherEntity)}> = new ${OneToManyCollection}(
           this as any,
           ${metaType(otherEntity)},
           "${fieldName}",
@@ -339,41 +337,33 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
   });
 
   // Make our opts type
-  const optsFields = table.columns
-    .filter(c => !c.isPrimaryKey && !c.isForeignKey)
-    .map(column => {
-      const fieldName = camelCase(column.name);
-      if (ormMaintainedFields.includes(fieldName)) {
-        return "";
-      }
-      const type = mapType(table.name, column.name, column.type.shortName!);
-      const maybeOptional = column.notNull ? "" : "?";
-      return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
-    });
-  const optsM2oRelationFields = table.m2oRelations.map(r => {
-    const column = r.foreignKey.columns[0];
-    const fieldName = camelCase(column.name.replace("_id", ""));
-    const otherEntityName = tableToEntityName(r.targetTable);
-    const maybeOptional = column.notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${otherEntityName};`;
+  const optsFields = meta.primitives.map(p => {
+    const { fieldName, columnName, notNull, columnType } = p;
+    if (ormMaintainedFields.includes(fieldName)) {
+      return "";
+    }
+    const type = mapType(table.name, columnName, columnType);
+    const maybeOptional = notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
   });
-  const optsO2mRelationFields = table.o2mRelations
-    .filter(r => !isJoinTable(r.targetTable))
-    .map(r => {
-      const otherEntityName = tableToEntityName(r.targetTable);
-      const otherEntityType = imp(`${otherEntityName}@./entities`);
-      const fieldName = camelCase(pluralize(otherEntityName));
-      return code`${fieldName}?: ${otherEntityType}[];`;
-    });
-  const optsM2mRelationFields = table.m2mRelations
-    .filter(r => isJoinTable(r.joinTable))
-    .map(r => {
-      const { foreignKey, targetForeignKey, targetTable } = r;
-      const otherEntityName = tableToEntityName(targetTable);
-      const otherEntityType = imp(`${otherEntityName}@./entities`);
-      const fieldName = camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", "")));
-      return code`${fieldName}?: ${otherEntityType}[];`;
-    });
+  const optsEnumFields = meta.enums.map(e => {
+    const { fieldName, enumType, notNull } = e;
+    const maybeOptional = notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${enumType};`;
+  });
+  const optsM2oRelationFields = meta.manyToOnes.map(m2o => {
+    const { fieldName, otherEntity, notNull } = m2o;
+    const maybeOptional = notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${otherEntity};`;
+  });
+  const optsO2mRelationFields = meta.oneToManys.map(o2m => {
+    const { fieldName, otherEntity } = o2m;
+    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
+  });
+  const optsM2mRelationFields = meta.manyToManys.map(m2m => {
+    const { fieldName, otherEntity } = m2m;
+    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
+  });
 
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
@@ -381,7 +371,7 @@ function generateEntityCodegenFile(table: Table, entityName: string): Code {
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     export interface ${entityName}Opts {
-      ${[optsFields, optsM2oRelationFields, optsO2mRelationFields, optsM2mRelationFields]}
+      ${[optsFields, optsEnumFields, optsM2oRelationFields, optsO2mRelationFields, optsM2mRelationFields]}
     }
   
     export class ${entityName}Codegen {

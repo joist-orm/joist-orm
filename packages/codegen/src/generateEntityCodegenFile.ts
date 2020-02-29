@@ -1,6 +1,6 @@
 import { Table } from "pg-structure";
 import { code, Code, imp } from "ts-poet";
-import { EntityDbMetadata, entityType, metaType } from "./EntityDbMetadata";
+import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
   Collection,
   EntityManager,
@@ -27,7 +27,7 @@ const columnCustomizations: Record<string, ColumnMetaData> = {};
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(table: Table, entityName: string): Code {
   const meta = new EntityDbMetadata(table);
-  const entityType2 = entityType(entityName);
+  const entity = meta.entity;
 
   // Add the primitives
   const primitives = meta.primitives.map(p => {
@@ -71,13 +71,12 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   // Add ManyToOne
   const m2o = meta.manyToOnes.map(m2o => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
-    const otherEntityType = entityType(otherEntity);
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-        readonly ${fieldName}: ${Reference}<${entityType2}, ${otherEntityType}, ${maybeOptional}> =
-          new ${ManyToOneReference}<${entityType2}, ${otherEntityType}, ${maybeOptional}>(
+        readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
+          new ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>(
             this as any,
-            ${otherEntityType},
+            ${otherEntity.type},
             "${fieldName}",
             "${otherFieldName}",
             ${notNull},
@@ -89,9 +88,9 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   const o2m = meta.oneToManys.map(o2m => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-        readonly ${fieldName}: ${Collection}<${entityType2}, ${entityType(otherEntity)}> = new ${OneToManyCollection}(
+        readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${OneToManyCollection}(
           this as any,
-          ${metaType(otherEntity)},
+          ${otherEntity.metaType},
           "${fieldName}",
           "${otherFieldName}",
           "${otherColumnName}"
@@ -103,12 +102,12 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   const m2m = meta.manyToManys.map(m2m => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
-        readonly ${fieldName}: ${Collection}<${entityType2}, ${entityType(otherEntity)}> = new ${ManyToManyCollection}(
+        readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${ManyToManyCollection}(
           "${joinTableName}",
           this,
           "${fieldName}",
           "${columnName}",
-          ${entityType(otherEntity)},
+          ${otherEntity.type},
           "${otherFieldName}",
           "${otherColumnName}",
         );
@@ -170,13 +169,13 @@ function generateOptsFields(table: Table, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}${maybeOptional(notNull)}: ${enumType};`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity};`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type};`;
   });
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
+    return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
+    return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
 }

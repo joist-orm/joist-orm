@@ -9,7 +9,7 @@ import {
   Reference,
   ManyToOneReference,
 } from "joist-orm";
-import { authorMeta, Book, Author, bookMeta, Publisher } from "./entities";
+import { authorMeta, Publisher, Book, Author, bookMeta } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 

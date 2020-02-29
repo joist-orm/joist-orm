@@ -1,10 +1,11 @@
 import { Table } from "pg-structure";
 import { code, Code } from "ts-poet";
-import { EntityDbMetadata, entityType, metaName } from "./EntityDbMetadata";
+import { EntityDbMetadata } from "./EntityDbMetadata";
 import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
 
 export function generateMetadataFile(sortedEntities: string[], table: Table): Code {
   const dbMetadata = new EntityDbMetadata(table);
+  const { entity } = dbMetadata;
 
   const primaryKey = code`
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}("id", "id") },
@@ -40,22 +41,20 @@ export function generateMetadataFile(sortedEntities: string[], table: Table): Co
           fieldName: "${fieldName}",
           columnName: "${columnName}",
           dbType: "int",
-          serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${metaName(otherEntity)}),
+          serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}),
         },
       `;
   });
 
-  const { entityName } = dbMetadata;
-
   return code`
-    export const ${metaName(entityName)}: ${EntityMetadata}<${entityType(entityName)}> = {
-      cstr: ${entityType(entityName)},
-      type: "${entityName}",
+    export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
+      cstr: ${entity.type},
+      type: "${entity.name}",
       tableName: "${table.name}",
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
-      order: ${sortedEntities.indexOf(entityName)},
+      order: ${sortedEntities.indexOf(entity.name)},
     };
     
-    (${entityName} as any).metadata = ${metaName(entityName)};
+    (${entity.name} as any).metadata = ${entity.metaName};
   `;
 }

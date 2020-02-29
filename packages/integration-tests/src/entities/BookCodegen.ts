@@ -9,7 +9,7 @@ import {
   Collection,
   ManyToManyCollection,
 } from "joist-orm";
-import { bookMeta, Tag, Book, Author } from "./entities";
+import { bookMeta, Author, Tag, Book } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
 

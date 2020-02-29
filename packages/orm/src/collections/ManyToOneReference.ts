@@ -88,6 +88,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
+  async onEntityDeletedAndFlushing(): Promise<void> {
+  }
+
   // Internal method used by OneToManyCollection
   setImpl(other: U | N, opts?: { beingDeleted?: boolean }): void {
     if (this.isLoaded && other === this.loaded) {

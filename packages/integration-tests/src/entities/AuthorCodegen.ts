@@ -1,9 +1,12 @@
 import {
   Flavor,
+  ValueFilter,
   EntityOrmField,
   EntityManager,
   setOpts,
   fail,
+  EntityFilter,
+  FilterOf,
   Collection,
   OneToManyCollection,
   Reference,
@@ -22,8 +25,20 @@ export interface AuthorOpts {
   books?: Book[];
 }
 
+export interface AuthorFilter {
+  id?: ValueFilter<AuthorId, never>;
+  firstName?: ValueFilter<string, never>;
+  lastName?: ValueFilter<string, null | undefined>;
+  isPopular?: ValueFilter<boolean, null | undefined>;
+  age?: ValueFilter<number, null | undefined>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
+  publisher?: EntityFilter<Publisher, FilterOf<Publisher>, null | undefined>;
+}
+
 export class AuthorCodegen {
   readonly __orm: EntityOrmField;
+  readonly __filterType: AuthorFilter = null!;
 
   readonly books: Collection<Author, Book> = new OneToManyCollection(
     this as any,

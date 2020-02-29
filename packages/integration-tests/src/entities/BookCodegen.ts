@@ -1,9 +1,12 @@
 import {
   Flavor,
+  ValueFilter,
   EntityOrmField,
   EntityManager,
   setOpts,
   fail,
+  EntityFilter,
+  FilterOf,
   Reference,
   ManyToOneReference,
   Collection,
@@ -19,8 +22,17 @@ export interface BookOpts {
   tags?: Tag[];
 }
 
+export interface BookFilter {
+  id?: ValueFilter<BookId, never>;
+  title?: ValueFilter<string, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
+  author?: EntityFilter<Author, FilterOf<Author>, never>;
+}
+
 export class BookCodegen {
   readonly __orm: EntityOrmField;
+  readonly __filterType: BookFilter = null!;
 
   readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
     this as any,

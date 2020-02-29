@@ -1,4 +1,13 @@
-import { Flavor, EntityOrmField, EntityManager, setOpts, fail, Collection, ManyToManyCollection } from "joist-orm";
+import {
+  Flavor,
+  ValueFilter,
+  EntityOrmField,
+  EntityManager,
+  setOpts,
+  fail,
+  Collection,
+  ManyToManyCollection,
+} from "joist-orm";
 import { tagMeta, Book, Tag } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
@@ -8,8 +17,16 @@ export interface TagOpts {
   books?: Book[];
 }
 
+export interface TagFilter {
+  id?: ValueFilter<TagId, never>;
+  name?: ValueFilter<string, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
+}
+
 export class TagCodegen {
   readonly __orm: EntityOrmField;
+  readonly __filterType: TagFilter = null!;
 
   readonly books: Collection<Tag, Book> = new ManyToManyCollection(
     "books_to_tags",

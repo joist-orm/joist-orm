@@ -1,9 +1,13 @@
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Table } from "pg-structure";
 import { camelCase } from "change-case";
-import { isEnumTable, isJoinTable, tableToEntityName } from "./utils";
 import { imp } from "ts-poet";
 import pluralize from "pluralize";
+import { ColumnMetaData } from "./generateEntityCodegenFile";
+import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./utils";
+
+// TODO Populate from config
+const columnCustomizations: Record<string, ColumnMetaData> = {};
 
 type Entity = {
   name: string;
@@ -16,6 +20,7 @@ type PrimitiveColumn = {
   fieldName: string;
   columnName: string;
   columnType: string;
+  fieldType: string | SymbolSpec;
   notNull: boolean;
 };
 
@@ -66,12 +71,15 @@ export class EntityDbMetadata {
 
     this.primitives = table.columns
       .filter(c => !c.isPrimaryKey && !c.isForeignKey)
-      .map(column => ({
-        fieldName: camelCase(column.name),
-        columnName: column.name,
-        columnType: column.type.shortName || column.type.name,
-        notNull: column.notNull,
-      }));
+      .map(column => {
+        const fieldName = camelCase(column.name);
+        const columnName = column.name;
+        const columnType = column.type.shortName || column.type.name;
+        const maybeCustomType = mapType(table.name, columnName, columnType);
+        const fieldType = maybeCustomType.fieldType;
+        const notNull = column.notNull;
+        return { fieldName, columnName, columnType, fieldType, notNull };
+      });
     this.manyToOnes = table.m2oRelations
       .filter(r => !isEnumTable(r.targetTable))
       .map(r => {
@@ -148,4 +156,12 @@ function metaType(entityName: string): SymbolSpec {
 
 function entityType(entityName: string): SymbolSpec {
   return imp(`${entityName}@./entities`);
+}
+
+function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {
+  return (
+    columnCustomizations[`${tableName}.${columnName}`] || {
+      fieldType: mapSimpleDbType(dbColumnType),
+    }
+  );
 }

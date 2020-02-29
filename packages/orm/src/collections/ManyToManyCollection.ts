@@ -123,6 +123,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
+  async onEntityDeletedAndFlushing(): Promise<void> {}
+
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {
     if (this.loaded) {
       // this.loaded.unshift(...this.addedBeforeLoaded);

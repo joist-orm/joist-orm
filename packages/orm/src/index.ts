@@ -7,7 +7,7 @@ export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
-export { FilterQuery } from "./QueryBuilder";
+export { EntityFilter, ValueFilter } from "./QueryBuilder";
 
 const F = Symbol();
 const G = Symbol();

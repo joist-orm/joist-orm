@@ -3,6 +3,7 @@ import { code, Code, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
   Collection,
+  EntityFilter,
   EntityManager,
   EntityOrmField,
   fail,
@@ -10,19 +11,18 @@ import {
   ManyToManyCollection,
   ManyToOneReference,
   OneToManyCollection,
+  FilterOf,
   Reference,
   setOpts,
+  ValueFilter,
 } from "./symbols";
 import { camelCase } from "change-case";
-import { mapSimpleDbType } from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 
 export interface ColumnMetaData {
   typeConverter?: SymbolSpec;
   fieldType: SymbolSpec | string;
 }
-
-const columnCustomizations: Record<string, ColumnMetaData> = {};
 
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(table: Table, entityName: string): Code {
@@ -31,16 +31,15 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
 
   // Add the primitives
   const primitives = meta.primitives.map(p => {
-    const { fieldName, columnName, columnType, notNull } = p;
-    const type = mapType(table.name, columnName, columnType);
+    const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
     const getter = code`
-        get ${fieldName}(): ${type.fieldType}${maybeOptional} {
+        get ${fieldName}(): ${fieldType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
         }
      `;
     const setter = code`
-        set ${fieldName}(${fieldName}: ${type.fieldType}${maybeOptional}) {
+        set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
           this.ensureNotDeleted();
           this.__orm.em.setField(this, "${fieldName}", ${fieldName});
         }
@@ -120,11 +119,17 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     export interface ${entityName}Opts {
-      ${generateOptsFields(table, meta)}
+      ${generateOptsFields(meta)}
     }
-  
+
+    export interface ${entityName}Filter {
+      id?: ${ValueFilter}<${entityName}Id, never>;
+      ${generateFilterFields(meta)}
+    }
+
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
+      readonly __filterType: ${entityName}Filter = null!;
       ${[o2m, m2o, m2m]}
       
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
@@ -156,14 +161,13 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   `;
 }
 
-function generateOptsFields(table: Table, meta: EntityDbMetadata): Code[] {
+function generateOptsFields(meta: EntityDbMetadata): Code[] {
   // Make our opts type
-  const primitives = meta.primitives.map(({ fieldName, columnName, notNull, columnType }) => {
+  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
     if (ormMaintainedFields.includes(fieldName)) {
       return code``;
     }
-    const type = mapType(table.name, columnName, columnType);
-    return code`${fieldName}${maybeOptional(notNull)}: ${type.fieldType};`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${fieldType};`;
   });
   const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${enumType};`;
@@ -180,16 +184,28 @@ function generateOptsFields(table: Table, meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
 }
 
+function generateFilterFields(meta: EntityDbMetadata): Code[] {
+  // Make our opts type
+  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
+    return code`${fieldName}?: ${ValueFilter}<${fieldType}, ${nullOrNever(notNull)}>;`;
+  });
+  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
+    return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
+  });
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${FilterOf}<${otherEntity.type}>, ${nullOrNever(
+      notNull,
+    )}>;`;
+  });
+  return [...primitives, ...enums, ...m2o];
+}
+
 function maybeOptional(notNull: boolean): string {
   return notNull ? "" : "?";
 }
 
-function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {
-  return (
-    columnCustomizations[`${tableName}.${columnName}`] || {
-      fieldType: mapSimpleDbType(dbColumnType),
-    }
-  );
+function nullOrNever(notNull: boolean): string {
+  return notNull ? "never" : " null | undefined";
 }
 
 const ormMaintainedFields = ["createdAt", "updatedAt"];

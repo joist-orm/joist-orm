@@ -5,7 +5,7 @@ import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
-import { buildQuery, FilterQuery } from "./QueryBuilder";
+import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export interface EntityConstructor<T> {
@@ -17,6 +17,9 @@ export type OptsOf<C> = C extends new (em: EntityManager, opts: infer O) => any 
 
 /** Return the `Foo` type for a given `Foo` entity constructor. */
 export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
+
+/** Pulls the entity query type out of a given entity type T. */
+export type FilterOf<T> = T extends { __filterType: infer Q } ? Q : never;
 
 /** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
@@ -111,15 +114,15 @@ export class EntityManager {
   // TODO make private
   joinRows: Record<string, JoinRow[]> = {};
 
-  public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T[]>;
+  public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    where: FilterQuery<T>,
+    where: FilterOf<T>,
     options?: { populate: H },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: EntityConstructor<T>,
-    where: FilterQuery<T>,
+    where: FilterOf<T>,
     options?: { populate: any },
   ): Promise<T[]> {
     const meta = getMetadata(type);
@@ -132,15 +135,15 @@ export class EntityManager {
     return result;
   }
 
-  public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterQuery<T>): Promise<T>;
+  public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T>;
   public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    where: FilterQuery<T>,
+    where: FilterOf<T>,
     options: { populate: H },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends Entity>(
     type: EntityConstructor<T>,
-    where: FilterQuery<T>,
+    where: FilterOf<T>,
     options?: { populate: any },
   ): Promise<T> {
     const list = await this.find(type, where, options);
@@ -326,7 +329,7 @@ export class EntityManager {
         .map(entity => {
           return Promise.all(
             Object.values(entity).map(async (v: any) => {
-              if ("onEntityDeletedAndFlushing" in v) {
+              if (v instanceof AbstractRelationImpl) {
                 await v.onEntityDeletedAndFlushing();
               }
             }),
@@ -367,7 +370,7 @@ export class EntityManager {
             // Then refresh any loaded collections
             await Promise.all(
               Object.values(entity).map(c => {
-                if ("refreshIfLoaded" in c) {
+                if (c instanceof AbstractRelationImpl) {
                   return c.refreshIfLoaded();
                 }
               }),

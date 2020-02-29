@@ -1,4 +1,13 @@
-import { Flavor, EntityOrmField, EntityManager, setOpts, fail, Collection, OneToManyCollection } from "joist-orm";
+import {
+  Flavor,
+  ValueFilter,
+  EntityOrmField,
+  EntityManager,
+  setOpts,
+  fail,
+  Collection,
+  OneToManyCollection,
+} from "joist-orm";
 import { publisherMeta, PublisherSize, Author, Publisher, authorMeta } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
@@ -9,8 +18,17 @@ export interface PublisherOpts {
   authors?: Author[];
 }
 
+export interface PublisherFilter {
+  id?: ValueFilter<PublisherId, never>;
+  name?: ValueFilter<string, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
+  size?: ValueFilter<PublisherSize, null | undefined>;
+}
+
 export class PublisherCodegen {
   readonly __orm: EntityOrmField;
+  readonly __filterType: PublisherFilter = null!;
 
   readonly authors: Collection<Publisher, Author> = new OneToManyCollection(
     this as any,

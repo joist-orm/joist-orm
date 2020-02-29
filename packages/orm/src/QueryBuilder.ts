@@ -1,17 +1,12 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
-import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity, FilterOf } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
-import { Reference } from "./index";
 
-type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T } | { $lt: T } | { $lte: T } | { $like: T };
+export type ValueFilter<V, N> = V | N | { $gt: V } | { $gte: V } | { $ne: V } | { $lt: V } | { $lte: V } | { $like: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | undefined | { $ne: T | null | undefined };
-
-export type FilterQuery<T extends Entity> = {
-  [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? EntityFilterValue<U> : FilterValue<T[P]>;
-};
+export type EntityFilter<T, F, N> = F | T | N | { $ne: T | N };
 
 const operators = ["$gt", "$gte", "$ne", "$lt", "$lte", "$like"] as const;
 type Operator = typeof operators[number];
@@ -34,7 +29,7 @@ const opToFn: Record<Operator, string> = {
 export function buildQuery<T extends Entity>(
   knex: Knex,
   type: EntityConstructor<T>,
-  where: FilterQuery<T>,
+  where: FilterOf<T>,
 ): QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
 
@@ -53,7 +48,7 @@ export function buildQuery<T extends Entity>(
     .orderBy(`${alias}.id`);
 
   // Define a function for recursively adding joins & filters
-  function addClauses(meta: EntityMetadata<any>, alias: string, where: FilterQuery<any>): void {
+  function addClauses(meta: EntityMetadata<any>, alias: string, where: any): void {
     Object.entries(where).forEach(([key, clause]) => {
       const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
       if (column.serde instanceof ForeignKeySerde) {
@@ -69,7 +64,7 @@ export function buildQuery<T extends Entity>(
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "$ne") {
           const value = (clause as any)["$ne"];
           if (value === null || value === undefined) {
-            query = query.whereNull(`${alias}.${column.columnName}`);
+            query = query.whereNotNull(`${alias}.${column.columnName}`);
           } else {
             throw new Error("Not implemented");
           }
@@ -87,7 +82,7 @@ export function buildQuery<T extends Entity>(
         }
       } else if (clause instanceof Object && operators.find(p => Object.keys(clause).includes(p))) {
         const p = Object.keys(clause)[0] as Operator;
-        const value = clause[p];
+        const value = (clause as any)[p];
         const fn = opToFn[p];
         query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
       } else {

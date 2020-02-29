@@ -9,4 +9,8 @@ export abstract class AbstractRelationImpl<U> {
   abstract initializeForNewEntity(): void;
 
   abstract setFromOpts(value: U): void;
+
+  abstract refreshIfLoaded(): void;
+
+  abstract async onEntityDeletedAndFlushing(): Promise<void>;
 }

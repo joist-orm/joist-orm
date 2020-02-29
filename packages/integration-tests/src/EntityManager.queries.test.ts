@@ -84,6 +84,16 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a1");
   });
 
+  it("can find by foreign key is not undefined", async () => {
+    await knex.insert({ id: 1, name: "p1" }).into("publishers");
+    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { publisher: { $ne: undefined } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
   it("can find books by publisher", async () => {
     await knex.insert({ name: "p1" }).from("publishers");
     await knex.insert({ name: "p2" }).from("publishers");

@@ -7,7 +7,7 @@ import { Reference } from "./index";
 type FilterValue<T> = T | { $gt: T } | { $gte: T } | { $ne: T } | { $lt: T } | { $lte: T } | { $like: T };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | { $ne: T | null };
+type EntityFilterValue<T extends Entity> = FilterQuery<T> | T | null | undefined | { $ne: T | null | undefined };
 
 export type FilterQuery<T extends Entity> = {
   [P in keyof T]?: T[P] extends Reference<T, infer U, any> ? EntityFilterValue<U> : FilterValue<T[P]>;
@@ -61,14 +61,14 @@ export function buildQuery<T extends Entity>(
         if (isEntity(clause)) {
           // This is a ForeignKey clause but we don't need to join into the other side
           query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
-        } else if (clause === null) {
+        } else if (clause === null || clause === undefined) {
           query = query.whereNull(`${alias}.${column.columnName}`);
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
           // If only querying on the id, we can skip the join
           query = query.where(`${alias}.${column.columnName}`, (clause as any)["id"]);
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "$ne") {
           const value = (clause as any)["$ne"];
-          if (value === null) {
+          if (value === null || value === undefined) {
             query = query.whereNull(`${alias}.${column.columnName}`);
           } else {
             throw new Error("Not implemented");

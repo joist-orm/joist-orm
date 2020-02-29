@@ -5,19 +5,10 @@ import { Client } from "pg";
 import pluralize from "pluralize";
 import { code, Code, imp } from "ts-poet";
 import TopologicalSort from "topological-sort";
-import {
-  isEntityTable,
-  isEnumTable,
-  isJoinTable,
-  mapSimpleDbType,
-  merge,
-  tableToEntityName,
-  trueIfResolved,
-} from "./utils";
+import { isEntityTable, isEnumTable, mapSimpleDbType, merge, tableToEntityName, trueIfResolved, } from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { newPgConnectionConfig } from "./connection";
 import { EntityDbMetadata, entityType, metaName, metaType } from "./EntityDbMetadata";
-import entity from "pg-structure/dist/pg-structure/base/entity";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 

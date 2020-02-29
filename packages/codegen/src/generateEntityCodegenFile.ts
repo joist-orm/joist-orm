@@ -115,42 +115,13 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
       `;
   });
 
-  // Make our opts type
-  const optsFields = meta.primitives.map(p => {
-    const { fieldName, columnName, notNull, columnType } = p;
-    if (ormMaintainedFields.includes(fieldName)) {
-      return "";
-    }
-    const type = mapType(table.name, columnName, columnType);
-    const maybeOptional = notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
-  });
-  const optsEnumFields = meta.enums.map(e => {
-    const { fieldName, enumType, notNull } = e;
-    const maybeOptional = notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${enumType};`;
-  });
-  const optsM2oRelationFields = meta.manyToOnes.map(m2o => {
-    const { fieldName, otherEntity, notNull } = m2o;
-    const maybeOptional = notNull ? "" : "?";
-    return code`${fieldName}${maybeOptional}: ${otherEntity};`;
-  });
-  const optsO2mRelationFields = meta.oneToManys.map(o2m => {
-    const { fieldName, otherEntity } = o2m;
-    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
-  });
-  const optsM2mRelationFields = meta.manyToManys.map(m2m => {
-    const { fieldName, otherEntity } = m2m;
-    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
-  });
-
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     export interface ${entityName}Opts {
-      ${[optsFields, optsEnumFields, optsM2oRelationFields, optsO2mRelationFields, optsM2mRelationFields]}
+      ${generateOptsFields(table, meta)}
     }
   
     export class ${entityName}Codegen {
@@ -184,6 +155,38 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
       }
     }
   `;
+}
+
+function generateOptsFields(table: Table, meta: EntityDbMetadata): Code[] {
+  // Make our opts type
+  const primitives = meta.primitives.map(p => {
+    const { fieldName, columnName, notNull, columnType } = p;
+    if (ormMaintainedFields.includes(fieldName)) {
+      return code``;
+    }
+    const type = mapType(table.name, columnName, columnType);
+    const maybeOptional = notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${type.fieldType};`;
+  });
+  const enums = meta.enums.map(e => {
+    const { fieldName, enumType, notNull } = e;
+    const maybeOptional = notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${enumType};`;
+  });
+  const m2o = meta.manyToOnes.map(m2o => {
+    const { fieldName, otherEntity, notNull } = m2o;
+    const maybeOptional = notNull ? "" : "?";
+    return code`${fieldName}${maybeOptional}: ${otherEntity};`;
+  });
+  const o2m = meta.oneToManys.map(o2m => {
+    const { fieldName, otherEntity } = o2m;
+    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
+  });
+  const m2m = meta.manyToManys.map(m2m => {
+    const { fieldName, otherEntity } = m2m;
+    return code`${fieldName}?: ${entityType(otherEntity)}[];`;
+  });
+  return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
 }
 
 function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {

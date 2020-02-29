@@ -61,7 +61,7 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
       ? LoadedCollection<T, OU>
       : never
     : never
-  : MarkLoaded<T, T[K], {}>;
+  : T[K];
 
 /**
  * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
@@ -71,9 +71,9 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
 export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
-  { [K in BothKeys<T, O>]: MaybeUseOptsType<T, O, K> };
-
-type BothKeys<T, O> = keyof T & keyof O;
+  {
+    [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
+  };
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &

@@ -16,7 +16,8 @@ import {
 } from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { newPgConnectionConfig } from "./connection";
-import { EntityDbMetadata, entityType, metaName } from "./EntityDbMetadata";
+import { EntityDbMetadata, entityType, metaName, metaType } from "./EntityDbMetadata";
+import entity from "pg-structure/dist/pg-structure/base/entity";
 
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
@@ -246,122 +247,96 @@ const ormMaintainedFields = ["createdAt", "updatedAt"];
 
 /** Creates the base class with the boilerplate annotations. */
 function generateEntityCodegenFile(table: Table, entityName: string): Code {
-  const entityType = imp(`${entityName}@./entities`);
+  const meta = new EntityDbMetadata(table);
+  const entityType2 = entityType(entityName);
 
   // Add the primitives
-  const primitives = table.columns
-    .filter(c => !c.isPrimaryKey && !c.isForeignKey)
-    .map(column => {
-      const fieldName = camelCase(column.name);
-      const type = mapType(table.name, column.name, column.type.shortName!);
-      const maybeOptional = column.notNull ? "" : " | undefined";
-      const getter = code`
+  const primitives = meta.primitives.map(p => {
+    const { fieldName, columnName, columnType, notNull } = p;
+    const type = mapType(table.name, columnName, columnType);
+    const maybeOptional = notNull ? "" : " | undefined";
+    const getter = code`
         get ${fieldName}(): ${type.fieldType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
         }
      `;
-      const setter = code`
+    const setter = code`
         set ${fieldName}(${fieldName}: ${type.fieldType}${maybeOptional}) {
           this.ensureNotDeleted();
           this.__orm.em.setField(this, "${fieldName}", ${fieldName});
         }
       `;
-      return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
-    });
+    return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
+  });
 
   // Add ManyToOne
-  const m2o = table.m2oRelations.map(r => {
-    const column = r.foreignKey.columns[0];
-    const fieldName = camelCase(column.name.replace("_id", ""));
-    const otherEntityName = tableToEntityName(r.targetTable);
-    const otherEntityType = imp(`${otherEntityName}@./entities`);
-    const otherFieldName = camelCase(pluralize(entityName));
-    if (isEnumTable(r.targetTable)) {
-      const maybeOptional = column.notNull ? "" : " | undefined";
-      const getter = code`
-        get ${fieldName}(): ${otherEntityType}${maybeOptional} {
+  meta.enums.forEach(e => {
+    const { fieldName, enumType, notNull } = e;
+    const maybeOptional = notNull ? "" : " | undefined";
+    const getter = code`
+        get ${fieldName}(): ${enumType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
         }
      `;
-      const setter = code`
-        set ${fieldName}(${fieldName}: ${otherEntityType}${maybeOptional}) {
+    const setter = code`
+        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
           this.ensureNotDeleted();
           this.__orm.em.setField(this, "${fieldName}", ${fieldName});
         }
       `;
-      // Group enums as primitives
-      primitives.push(getter);
-      primitives.push(setter);
-      return code``;
-    } else {
-      const maybeOptional = column.notNull ? "never" : "undefined";
-      return code`
-        readonly ${fieldName}: ${Reference}<${entityType}, ${otherEntityType}, ${maybeOptional}> =
-          new ${ManyToOneReference}<${entityType}, ${otherEntityType}, ${maybeOptional}>(
+    // Group enums as primitives
+    primitives.push(getter);
+    primitives.push(setter);
+  });
+
+  // Add ManyToOne
+  const m2o = meta.manyToOnes.map(m2o => {
+    const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
+    const otherEntityType = entityType(otherEntity);
+    const maybeOptional = notNull ? "never" : "undefined";
+    return code`
+        readonly ${fieldName}: ${Reference}<${entityType2}, ${otherEntityType}, ${maybeOptional}> =
+          new ${ManyToOneReference}<${entityType2}, ${otherEntityType}, ${maybeOptional}>(
             this as any,
             ${otherEntityType},
             "${fieldName}",
             "${otherFieldName}",
-            ${column.notNull},
+            ${notNull},
           );
       `;
-    }
   });
 
   // Add OneToMany
-  const o2m = table.o2mRelations
-    // ManyToMany join tables also show up as OneToMany tables in pg-structure
-    .filter(r => !isJoinTable(r.targetTable))
-    .map(r => {
-      const column = r.foreignKey.columns[0];
-      // source == parent i.e. the reference of the foreign key column
-      // target == child i.e. the table with the foreign key column in it
-      const otherEntityName = tableToEntityName(r.targetTable);
-      const otherEntityType = imp(`${otherEntityName}@./entities`);
-      const otherMeta = imp(`${camelCase(otherEntityName)}Meta@./entities`);
-      // I.e. if the other side is `child.project_id`, use children
-      const fieldName = camelCase(pluralize(otherEntityName));
-      const otherFieldName = camelCase(column.name.replace("_id", ""));
-      return code`
-        readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${OneToManyCollection}(
+  const o2m = meta.oneToManys.map(o2m => {
+    const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
+    return code`
+        readonly ${fieldName}: ${Collection}<${entityType2}, ${entityType(
+      otherEntity,
+    )}> = new ${OneToManyCollection}(
           this as any,
-          ${otherMeta},
+          ${metaType(otherEntity)},
           "${fieldName}",
           "${otherFieldName}",
-          "${column.name}"
+          "${otherColumnName}"
         );
       `;
-    });
+  });
 
   // Add ManyToMany
-  const m2m = table.m2mRelations
-    // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
-    // that has a foreign key to us, and a foreign key to something else, is automatically
-    // considered as a join table/m2m between "us" and "something else". Filter these out
-    // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
-    .filter(r => isJoinTable(r.joinTable))
-    .map(r => {
-      const { foreignKey, targetForeignKey, targetTable } = r;
-      // const ownerBasedOnCascade = foreignKey.onDelete === "CASCADE" || targetForeignKey.onDelete === "CASCADE";
-      // const isOwner = ownerBasedOnCascade
-      //   ? foreignKey.onDelete === "CASCADE"
-      //   : foreignKey.columns[0].name < targetForeignKey.columns[0].name;
-      const otherEntityName = tableToEntityName(targetTable);
-      const otherEntityType = imp(`${otherEntityName}@./entities`);
-      const fieldName = camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", "")));
-      const otherFieldName = camelCase(pluralize(foreignKey.columns[0].name.replace("_id", "")));
-      return code`
-        readonly ${fieldName}: ${Collection}<${entityType}, ${otherEntityType}> = new ${ManyToManyCollection}(
-          "${r.joinTable.name}",
+  const m2m = meta.manyToManys.map(m2m => {
+    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
+    return code`
+        readonly ${fieldName}: ${Collection}<${entityType2}, ${entityType(otherEntity)}> = new ${ManyToManyCollection}(
+          "${joinTableName}",
           this,
           "${fieldName}",
-          "${foreignKey.columns[0].name}",
-          ${otherEntityType},
+          "${columnName}",
+          ${entityType(otherEntity)},
           "${otherFieldName}",
-          "${targetForeignKey.columns[0].name}",
+          "${otherColumnName}",
         );
       `;
-    });
+  });
 
   // Make our opts type
   const optsFields = table.columns

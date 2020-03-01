@@ -1,4 +1,4 @@
-import { EntityManager } from "joist-orm";
+import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { knex } from "./setupDbTests";
 
@@ -231,13 +231,15 @@ describe("EntityManager.queries", () => {
     await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
     await knex.insert({ name: "p2", size_id: 2 }).into("publishers");
     const em = new EntityManager(knex);
-    await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow("Not found");
+    await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow(NotFoundError);
+    await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow("Did not find Publisher for given query");
   });
 
   it("can find by one when too many found", async () => {
     await knex.insert({ name: "p", size_id: 1 }).into("publishers");
     await knex.insert({ name: "p", size_id: 2 }).into("publishers");
     const em = new EntityManager(knex);
+    await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(TooManyError);
     await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(
       "Found more than one: Publisher#1, Publisher#2",
     );

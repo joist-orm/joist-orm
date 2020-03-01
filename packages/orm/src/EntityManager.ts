@@ -137,6 +137,7 @@ export class EntityManager {
     return result;
   }
 
+  /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
   public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T>;
   public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
@@ -150,9 +151,9 @@ export class EntityManager {
   ): Promise<T> {
     const list = await this.find(type, where, options);
     if (list.length === 0) {
-      throw new Error("Not found");
+      throw new NotFoundError(`Did not find ${type.name} for given query`);
     } else if (list.length > 1) {
-      throw new Error(`Found more than one: ${list.map(e => e.toString()).join(", ")}`);
+      throw new TooManyError(`Found more than one: ${list.map(e => e.toString()).join(", ")}`);
     }
     return list[0];
   }
@@ -468,3 +469,7 @@ export function ensureNotDeleted(entity: Entity): void {
     throw new Error(entity.toString() + " is marked as deleted");
   }
 }
+
+export class NotFoundError extends Error {}
+
+export class TooManyError extends Error {}

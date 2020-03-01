@@ -168,13 +168,13 @@ function generateOptsFields(meta: EntityDbMetadata): Code[] {
     if (ormMaintainedFields.includes(fieldName)) {
       return code``;
     }
-    return code`${fieldName}${maybeOptional(notNull)}: ${fieldType};`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
   const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${enumType};`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type};`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
   });
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type}[];`;
@@ -203,6 +203,10 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
 
 function maybeOptional(notNull: boolean): string {
   return notNull ? "" : "?";
+}
+
+function maybeUnionNull(notNull: boolean): string {
+  return notNull ? "" : " | null";
 }
 
 function nullOrNever(notNull: boolean): string {

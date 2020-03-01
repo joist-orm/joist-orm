@@ -415,4 +415,11 @@ describe("EntityManager", () => {
     // Then we still only have 1 author in the collection
     expect(authors.length).toEqual(1);
   });
+
+  it("can create and pass null to optional fields in opts", async () => {
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1", lastName: null });
+    await em.flush();
+    expect(a1.lastName).toBeUndefined();
+  });
 });

@@ -74,7 +74,9 @@ export function setOpts(entity: Entity, opts: object): void {
   if (opts === undefined) {
     return;
   }
-  Object.entries(opts).forEach(([key, value]) => {
+  Object.entries(opts).forEach(([key, _value]) => {
+    // We let optional opts fields be `| null` for convenience, and convert to undefined.
+    const value = _value === null ? undefined : _value;
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {
       current.setFromOpts(value);

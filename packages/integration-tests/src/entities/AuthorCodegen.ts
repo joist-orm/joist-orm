@@ -18,10 +18,10 @@ export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorOpts {
   firstName: string;
-  lastName?: string;
-  isPopular?: boolean;
-  age?: number;
-  publisher?: Publisher;
+  lastName?: string | null;
+  isPopular?: boolean | null;
+  age?: number | null;
+  publisher?: Publisher | null;
   books?: Book[];
 }
 

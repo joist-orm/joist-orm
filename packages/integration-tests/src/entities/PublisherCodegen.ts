@@ -14,7 +14,7 @@ export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherOpts {
   name: string;
-  size?: PublisherSize;
+  size?: PublisherSize | null;
   authors?: Author[];
 }
 

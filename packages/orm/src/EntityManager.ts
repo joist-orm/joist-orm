@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import Knex from "knex";
-import { flushEntities, flushJoinTables, sortEntities, sortJoinRows } from "./EntityPersister";
+import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
@@ -308,6 +308,7 @@ export class EntityManager {
     // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
     await this.cascadeDeletesIntoUnloadedCollections();
     const entityTodos = sortEntities(this.entities);
+    await validate(entityTodos);
     const joinRowTodos = sortJoinRows(this.joinRows);
     if (entityTodos.length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
@@ -473,3 +474,19 @@ export function ensureNotDeleted(entity: Entity): void {
 export class NotFoundError extends Error {}
 
 export class TooManyError extends Error {}
+
+async function validate(todos: Todo[]): Promise<void> {
+  await Promise.all(todos.map(todo => {
+    const p1 = todo.inserts.map(entity => {
+      if ("onSave" in entity) {
+        return (entity as any).onSave();
+      }
+    });
+    const p2 = todo.updates.map(entity => {
+      if ("onSave" in entity) {
+        return (entity as any).onSave();
+      }
+    });
+    return Promise.all([...p1, ...p2]);
+  }));
+}

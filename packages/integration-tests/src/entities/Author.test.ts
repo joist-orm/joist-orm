@@ -10,4 +10,10 @@ describe("Author", () => {
     const books = await a1.books.load();
     expect(books.length).toEqual(0);
   });
+
+  it("can have validation logic", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "a1", lastName: "a1" });
+    await expect(em.flush()).rejects.toThrow("firstName and lastName must be different");
+  });
 });

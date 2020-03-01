@@ -9,4 +9,10 @@ export class Author extends AuthorCodegen {
   get fullName(): string {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
+
+  protected onSave(): void {
+    if (this.firstName && this.firstName === this.lastName) {
+      throw new Error("firstName and lastName must be different");
+    }
+  }
 }

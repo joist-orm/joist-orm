@@ -3,7 +3,7 @@ import Knex, { Transaction } from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
 
-interface Todo {
+export interface Todo {
   metadata: EntityMetadata<any>;
   inserts: Entity[];
   updates: Entity[];

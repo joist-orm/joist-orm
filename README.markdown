@@ -47,8 +47,8 @@ After checkout:
 
 ### Todo
 
-- Lifecycle hooks for validation rules/derived values
-  - Use load hint-style syntax to declare validation rule sub-graph
+- Derived values
+- Use load hint-style syntax to declare validation rule sub-graph
 - Cascading deletions for parent/child relationships
 - Codegen'd test builders 
 - Support user-defined types

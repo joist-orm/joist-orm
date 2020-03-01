@@ -159,13 +159,8 @@ export class EntityManager {
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
   public create<T extends Entity, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
-    const entity = (new type(this, opts) as any) as New<T, O>;
-    Object.values(entity).forEach(v => {
-      if (v instanceof AbstractRelationImpl) {
-        v.initializeForNewEntity();
-      }
-    });
-    return entity;
+    // The constructor will run setOpts which handles defaulting collections to the right state.
+    return (new type(this, opts) as any) as New<T, O>;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
@@ -427,7 +422,7 @@ export class EntityManager {
     // See if this is already in our UoW
     let entity = this.findExistingInstance(meta.cstr, id) as T;
     if (!entity) {
-      entity = (new meta.cstr(this, {}) as any) as T;
+      entity = (new meta.cstr(this, undefined) as any) as T;
       meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
     } else if (setEvenIfAlreadyFound) {
       // Usually if the entity alrady exists, we don't write over it, but in this case

@@ -402,4 +402,17 @@ describe("EntityManager", () => {
     // And this would cause a compile error
     // expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
   });
+
+  it("does not add duplicate rows when using 'new'", async () => {
+    // Given we create both an author and publisher
+    const em = new EntityManager(knex);
+    const p1 = new Publisher(em, { name: "p1" });
+    new Author(em, { firstName: "a1", publisher: p1 });
+    // And we've flush all the entities to the db
+    await em.flush();
+    // When we load p1.authors for the 1st time
+    const authors = await p1.authors.load();
+    // Then we still only have 1 author in the collection
+    expect(authors.length).toEqual(1);
+  });
 });

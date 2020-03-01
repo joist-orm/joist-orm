@@ -1,4 +1,5 @@
 import { Entity } from "./EntityManager";
+import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -69,12 +70,21 @@ interface Flavoring<FlavorT> {
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
 export function setOpts(entity: Entity, opts: object): void {
+  // If opts is undefined, this instance is being hydrated from a database row, so skip all this.
+  if (opts === undefined) {
+    return;
+  }
   Object.entries(opts).forEach(([key, value]) => {
     const current = (entity as any)[key];
-    if (current && "setFromOpts" in current) {
+    if (current instanceof AbstractRelationImpl) {
       current.setFromOpts(value);
     } else {
       (entity as any)[key] = value;
+    }
+  });
+  Object.values(entity).forEach(v => {
+    if (v instanceof AbstractRelationImpl) {
+      v.initializeForNewEntity();
     }
   });
 }

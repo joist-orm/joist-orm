@@ -7,10 +7,10 @@ An opinionated ORM for TypeScript/node.
 
 ### Goals
 
-- Schema-Driven Code Generation (generated classes w/the getter/setter/relation boilerplate)
+- Schema-Driven Code Generation (continually-generated classes w/the getter/setter/relation boilerplate)
 - Gauranteed N+1 safe (pervasive use of DataLoader)
 - Async/Await All Relations (with a synchronous escape hatch)
-- Best-in-class Performance (all select/insert/update operations are bulk)
+- Best-in-class Performance (all `SELECT`/`INSERT`/`UPDATE` operations are bulk)
 - Fast Unit Tests (for downstream projects, baseline is 10-20ms/test case)
 - Unit of Work (navigate between entities as a consistent graph)
 - Small & simple codebase (maintainable by a single engineer if needed)

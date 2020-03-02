@@ -83,4 +83,8 @@ An example of this is how Joist exercises database resets: in general, between t
 
 ## Small & simple codebase
 
-(maintainable by a single engineer if needed)
+Adopting (or writing from scratch) a new piece of infrastructure code like an ORM has pros/cons, one of the large cons being lack of a large base of contributors or committers to help maintain the project.
+
+To help mitigate this risk, Joist strives to be and stay a small codebase, such that users of Joist should ideally be able to maintain/support Joist on their own if necessary.
+
+(Granted, this may change at some point, if Joist becomes popular enough to, say, tackle supporting multiple relational databases, or whatever misc feature, with the help/long-term support from multiple contributors.)

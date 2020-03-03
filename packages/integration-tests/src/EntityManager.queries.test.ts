@@ -22,6 +22,24 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
+  it("can find by simple varchar not null", async () => {
+    await knex.insert({ first_name: "a1", last_name: "l1" }).from("authors");
+    await knex.insert({ first_name: "a2" }).from("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { lastName: { $ne: null }});
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("can find by simple varchar not undefined", async () => {
+    await knex.insert({ first_name: "a1", last_name: "l1" }).from("authors");
+    await knex.insert({ first_name: "a2" }).from("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { lastName: { $ne: undefined }});
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
   it("can find by varchar through join", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");

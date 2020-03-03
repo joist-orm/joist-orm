@@ -3,7 +3,7 @@ import { fail } from "./utils";
 import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity, FilterOf } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
 
-export type ValueFilter<V, N> = V | N | { $gt: V } | { $gte: V } | { $ne: V } | { $lt: V } | { $lte: V } | { $like: V };
+export type ValueFilter<V, N> = V | N | { $gt: V } | { $gte: V } | { $ne: V | N } | { $lt: V } | { $lte: V } | { $like: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 export type EntityFilter<T, I, F, N> = T | I | F | N | { $ne: T | I | N };
@@ -83,10 +83,19 @@ export function buildQuery<T extends Entity>(
           addClauses(otherMeta, otherAlias, clause);
         }
       } else if (clause instanceof Object && operators.find(p => Object.keys(clause).includes(p))) {
+        // This is a `field: { $op: value }`
         const p = Object.keys(clause)[0] as Operator;
         const value = (clause as any)[p];
-        const fn = opToFn[p];
-        query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
+        if (value === null || value === undefined) {
+          if (p === "$ne") {
+            query = query.whereNotNull(`${alias}.${column.columnName}`);
+          } else {
+            throw new Error("Only $ne is supported when the value is undefined or null")
+          }
+        } else {
+          const fn = opToFn[p];
+          query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
+        }
       } else {
         // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
         query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));

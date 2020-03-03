@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { keyToNumber } from "joist-orm/build/serde";
 import { knex } from "../setupDbTests";
-import { Author, Book, BookOpts, Publisher } from "../entities";
+import { Author, Book, BookOpts, Publisher, Tag } from "../entities";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -179,5 +179,27 @@ describe("OneToManyCollection", () => {
     const p1 = await em.load(Publisher, "1", "authors");
     // Then it's still removed from the Publisher.authors collection
     expect(p1.authors.get.length).toEqual(0);
+  });
+
+  it("can set to both add and remove", async () => {
+    // Given the publisher already has a1 and a2
+    await knex.insert({ name: "p1" }).from("publishers");
+    await knex.insert({ id: 1, first_name: "a1", publisher_id: 1 }).into("authors");
+    await knex.insert({ id: 2, first_name: "a2", publisher_id: 1 }).into("authors");
+    await knex.insert({ id: 3, first_name: "a3" }).into("authors");
+
+    // When we set a2 and a3
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1", "authors");
+    const [a2, a3] = await em.loadAll(Author, ["2", "3"]);
+    p1.authors.set([a2, a3]);
+    await em.flush();
+
+    // Then we removed a1, left a2, and added a3
+    const rows = await knex.select("*").from("authors").orderBy("id");
+    expect(rows.length).toEqual(3);
+    expect(rows[0]).toEqual(expect.objectContaining({ publisher_id: null }));
+    expect(rows[1]).toEqual(expect.objectContaining({ publisher_id: 1 }));
+    expect(rows[2]).toEqual(expect.objectContaining({ publisher_id: 1 }));
   });
 });

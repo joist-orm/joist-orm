@@ -69,10 +69,35 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     return this.loaded;
   }
 
-  remove(other: U) {
-    throw new Error("Not implemented");
+  set(values: U[]): void {
+    ensureNotDeleted(this.entity);
+    if (this.loaded === undefined) {
+      throw new Error("set was called when not loaded");
+    }
+    // Make a copy for safe iteration
+    const loaded = [...this.loaded];
+    // Remove old values
+    for (const other of loaded) {
+      if (!values.includes(other)) {
+        this.remove(other);
+      }
+    }
+    for (const other of values) {
+      if (!loaded.includes(other)) {
+        this.add(other);
+      }
+    }
   }
 
+  remove(other: U) {
+    ensureNotDeleted(this.entity);
+    if (this.loaded === undefined) {
+      throw new Error("remove was called when not loaded");
+    }
+    // This will no-op and mark other dirty if necessary
+    remove(this.loaded, other);
+    ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
+  }
   // internal impl
 
   setFromOpts(others: U[]): void {

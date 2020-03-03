@@ -243,4 +243,28 @@ describe("ManyToManyCollection", () => {
     // Then we cannot remove from the tags collection
     expect(() => b1.tags.remove(t1)).toThrow("Book#2 is marked as deleted");
   });
+
+  it("can set to both add and remove", async () => {
+    // Given the book already has t1 and t2 on it
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await knex.insert({ id: 3, name: `t1` }).into("tags");
+    await knex.insert({ id: 4, name: `t2` }).into("tags");
+    await knex.insert({ id: 5, name: `t3` }).into("tags");
+    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
+    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+
+    // When we set t2 and t3
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "2", "tags");
+    const [t2, t3] = await em.loadAll(Tag, ["4", "5"]);
+    book.tags.set([t2, t3]);
+    await em.flush();
+
+    // Then we removed t1, left t2, and added t3
+    const rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    expect(rows.length).toEqual(2);
+    expect(rows[0]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 4 }));
+    expect(rows[1]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 5 }));
+  });
 });

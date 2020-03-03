@@ -84,10 +84,30 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
         return this.addedBeforeLoaded;
       } else {
         // This should only be callable in the type system if we've already resolved this to an instance
-        throw new Error("get was called when not preloaded");
+        throw new Error("get was called when not loaded");
       }
     }
     return this.loaded;
+  }
+
+  set(values: U[]): void {
+    ensureNotDeleted(this.entity);
+    if (this.loaded === undefined) {
+      throw new Error("set was called when not loaded");
+    }
+    // Make a copy for safe iteration
+    const loaded = [...this.loaded];
+    // Remove old values
+    for (const other of loaded) {
+      if (!values.includes(other)) {
+        this.remove(other);
+      }
+    }
+    for (const other of values) {
+      if (!loaded.includes(other)) {
+        this.add(other);
+      }
+    }
   }
 
   // impl details
@@ -115,7 +135,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
-  /** Some random entity got deleted, it it was in our collection, remove it. */
+  /** Some random entity got deleted, if it was in our collection, remove it. */
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
     ensureNotDeleted(this.entity);
     if (this.current().includes(maybeOther as U)) {

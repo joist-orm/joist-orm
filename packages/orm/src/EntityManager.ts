@@ -185,6 +185,27 @@ export class EntityManager {
     return entity;
   }
 
+  /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
+  public async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
+  public async loadAll<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    ids: string[],
+    populate: H,
+  ): Promise<Loaded<T, H>[]>;
+  async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[], hint?: any): Promise<T[]> {
+    const entities = await Promise.all(ids.map(id => {
+      return this.findExistingInstance(getMetadata(type).cstr, id) || this.loaderForEntity(type).load(id);
+    }));
+    const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
+    if (idsNotFound.length > 0) {
+      throw new Error(`${type.name}#${idsNotFound.join(",")} were not found`);
+    }
+    if (hint) {
+      await this.populate(entities as T[], hint);
+    }
+    return entities as T[];
+  }
+
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>>;
   public async populate<T extends Entity, H extends LoadHint<T>>(entity: T[], hint: H): Promise<Loaded<T, H>[]>;

@@ -61,6 +61,8 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
 /** Adds a known-safe `get` accessor. */
 export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
   get: ReadonlyArray<U>;
+
+  set(values: U[]): void;
 }
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/

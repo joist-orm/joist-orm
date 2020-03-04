@@ -110,6 +110,16 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
+  removeAll(): void {
+    ensureNotDeleted(this.entity);
+    if (this.loaded === undefined) {
+      throw new Error("removeAll was called when not loaded");
+    }
+    for (const other of [...this.loaded]) {
+      this.remove(other);
+    }
+  }
+
   // impl details
 
   setFromOpts(others: U[]): void {

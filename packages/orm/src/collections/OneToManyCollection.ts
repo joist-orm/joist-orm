@@ -98,6 +98,18 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     remove(this.loaded, other);
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
   }
+
+
+  removeAll(): void {
+    ensureNotDeleted(this.entity);
+    if (this.loaded === undefined) {
+      throw new Error("removeAll was called when not loaded");
+    }
+    for (const other of [...this.loaded]) {
+      this.remove(other);
+    }
+  }
+
   // internal impl
 
   setFromOpts(others: U[]): void {

@@ -63,6 +63,8 @@ export interface LoadedCollection<T extends Entity, U extends Entity> extends Co
   get: ReadonlyArray<U>;
 
   set(values: U[]): void;
+
+  removeAll(): void;
 }
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/

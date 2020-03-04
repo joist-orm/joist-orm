@@ -231,7 +231,7 @@ export class EntityManager {
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>>;
-  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T[], hint: H): Promise<Loaded<T, H>[]>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(entity: ReadonlyArray<T>, hint: H): Promise<Loaded<T, H>[]>;
   async populate<T extends Entity, H extends LoadHint<T>>(
     entityOrList: T | T[],
     hint: H,
@@ -394,8 +394,8 @@ export class EntityManager {
    */
   async refresh(): Promise<void>;
   async refresh(entity: Entity): Promise<void>;
-  async refresh(entities: Entity[]): Promise<void>;
-  async refresh(entityOrListOrUndefined?: Entity | Entity[]): Promise<void> {
+  async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
+  async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
     const list =
       entityOrListOrUndefined === undefined
         ? this.entities

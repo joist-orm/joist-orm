@@ -92,6 +92,14 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a1");
   });
 
+  it("can find by foreign key is new entity", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    const em = new EntityManager(knex);
+    const publisher = new Publisher(em, { name: "p1" });
+    const authors = await em.find(Author, { publisher });
+    expect(authors.length).toEqual(0);
+  });
+
   it("can find by foreign key is not null", async () => {
     await knex.insert({ id: 1, name: "p1" }).into("publishers");
     await knex.insert({ id: 2, first_name: "a1" }).into("authors");

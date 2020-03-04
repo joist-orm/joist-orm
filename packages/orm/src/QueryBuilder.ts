@@ -3,7 +3,15 @@ import { fail } from "./utils";
 import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity, FilterOf } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
 
-export type ValueFilter<V, N> = V | N | { $gt: V } | { $gte: V } | { $ne: V | N } | { $lt: V } | { $lte: V } | { $like: V };
+export type ValueFilter<V, N> =
+  | V
+  | N
+  | { $gt: V }
+  | { $gte: V }
+  | { $ne: V | N }
+  | { $lt: V }
+  | { $lte: V }
+  | { $like: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 export type EntityFilter<T, I, F, N> = T | I | F | N | { $ne: T | I | N };
@@ -55,7 +63,12 @@ export function buildQuery<T extends Entity>(
         const clauseKeys = typeof clause === "object" && clause !== null ? Object.keys(clause as object) : [];
         if (isEntity(clause) || typeof clause == "string") {
           // This is a ForeignKey clause but we don't need to join into the other side
-          query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+          if (isEntity(clause) && clause.id === undefined) {
+            // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
+            query = query.where(`${alias}.${column.columnName}`, -1);
+          } else {
+            query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+          }
         } else if (clause === null || clause === undefined) {
           query = query.whereNull(`${alias}.${column.columnName}`);
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
@@ -90,7 +103,7 @@ export function buildQuery<T extends Entity>(
           if (p === "$ne") {
             query = query.whereNotNull(`${alias}.${column.columnName}`);
           } else {
-            throw new Error("Only $ne is supported when the value is undefined or null")
+            throw new Error("Only $ne is supported when the value is undefined or null");
           }
         } else {
           const fn = opToFn[p];

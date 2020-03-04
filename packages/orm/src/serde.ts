@@ -101,7 +101,15 @@ export function maybeResolveReferenceToId(value: any): string | undefined {
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */
 export function keyToNumber(value: any): number | undefined {
-  return value === undefined || value === null ? undefined : Number(value);
+  if (value === undefined || value === null) {
+    return undefined;
+  } else if (typeof value === "number") {
+    return value;
+  } else if (typeof value === "string") {
+    return Number(value);
+  } else {
+    throw new Error(`Invalid key ${value}`);
+  }
 }
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */

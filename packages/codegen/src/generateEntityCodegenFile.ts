@@ -34,16 +34,16 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
     const getter = code`
-        get ${fieldName}(): ${fieldType}${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
-        }
-     `;
+      get ${fieldName}(): ${fieldType}${maybeOptional} {
+        return this.__orm.data["${fieldName}"];
+      }
+   `;
     const setter = code`
-        set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
-          this.ensureNotDeleted();
-          this.__orm.em.setField(this, "${fieldName}", ${fieldName});
-        }
-      `;
+      set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
+        this.ensureNotDeleted();
+        this.__orm.em.setField(this, "${fieldName}", ${fieldName});
+      }
+    `;
     return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
   });
 
@@ -52,16 +52,16 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
     const { fieldName, enumType, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
     const getter = code`
-        get ${fieldName}(): ${enumType}${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
-        }
-     `;
+      get ${fieldName}(): ${enumType}${maybeOptional} {
+        return this.__orm.data["${fieldName}"];
+      }
+   `;
     const setter = code`
-        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-          this.ensureNotDeleted();
-          this.__orm.em.setField(this, "${fieldName}", ${fieldName});
-        }
-      `;
+      set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
+        this.ensureNotDeleted();
+        this.__orm.em.setField(this, "${fieldName}", ${fieldName});
+      }
+    `;
     // Group enums as primitives
     primitives.push(getter);
     primitives.push(setter);
@@ -72,45 +72,45 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-        readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
-          new ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>(
-            this as any,
-            ${otherEntity.type},
-            "${fieldName}",
-            "${otherFieldName}",
-            ${notNull},
-          );
-      `;
+      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
+        new ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>(
+          this as any,
+          ${otherEntity.type},
+          "${fieldName}",
+          "${otherFieldName}",
+          ${notNull},
+        );
+    `;
   });
 
   // Add OneToMany
   const o2m = meta.oneToManys.map(o2m => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-        readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${OneToManyCollection}(
-          this as any,
-          ${otherEntity.metaType},
-          "${fieldName}",
-          "${otherFieldName}",
-          "${otherColumnName}"
-        );
-      `;
+      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${OneToManyCollection}(
+        this as any,
+        ${otherEntity.metaType},
+        "${fieldName}",
+        "${otherFieldName}",
+        "${otherColumnName}"
+      );
+    `;
   });
 
   // Add ManyToMany
   const m2m = meta.manyToManys.map(m2m => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
-        readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${ManyToManyCollection}(
-          "${joinTableName}",
-          this,
-          "${fieldName}",
-          "${columnName}",
-          ${otherEntity.type},
-          "${otherFieldName}",
-          "${otherColumnName}",
-        );
-      `;
+      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${ManyToManyCollection}(
+        "${joinTableName}",
+        this,
+        "${fieldName}",
+        "${columnName}",
+        ${otherEntity.type},
+        "${otherFieldName}",
+        "${otherColumnName}",
+      );
+    `;
   });
 
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);

@@ -74,6 +74,10 @@ export class TagCodegen {
     return "Tag#" + this.id;
   }
 
+  set(opts: Partial<TagOpts>): void {
+    setOpts(this, opts, false);
+  }
+
   private ensureNotDeleted() {
     if (this.__orm.deleted) {
       throw new Error(this.toString() + " is marked as deleted");

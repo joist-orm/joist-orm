@@ -16,4 +16,12 @@ describe("Author", () => {
     new Author(em, { firstName: "a1", lastName: "a1" });
     await expect(em.flush()).rejects.toThrow("firstName and lastName must be different");
   });
+
+  it("can set new opts", async () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em, { firstName: "a1", lastName: "a1" });
+    author.set({ firstName: "a2", lastName: "a2" });
+    expect(author.firstName).toEqual("a2");
+    expect(author.lastName).toEqual("a2");
+  });
 });

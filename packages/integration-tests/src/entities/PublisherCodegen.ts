@@ -83,6 +83,10 @@ export class PublisherCodegen {
     return "Publisher#" + this.id;
   }
 
+  set(opts: Partial<PublisherOpts>): void {
+    setOpts(this, opts, false);
+  }
+
   private ensureNotDeleted() {
     if (this.__orm.deleted) {
       throw new Error(this.toString() + " is marked as deleted");

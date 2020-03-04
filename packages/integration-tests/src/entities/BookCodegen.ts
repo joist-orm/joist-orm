@@ -88,6 +88,10 @@ export class BookCodegen {
     return "Book#" + this.id;
   }
 
+  set(opts: Partial<BookOpts>): void {
+    setOpts(this, opts, false);
+  }
+
   private ensureNotDeleted() {
     if (this.__orm.deleted) {
       throw new Error(this.toString() + " is marked as deleted");

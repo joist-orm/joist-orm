@@ -71,7 +71,7 @@ interface Flavoring<FlavorT> {
 }
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
-export function setOpts(entity: Entity, opts: object): void {
+export function setOpts(entity: Entity, opts: object, calledFromConstructor: boolean = true): void {
   // If opts is undefined, this instance is being hydrated from a database row, so skip all this.
   if (opts === undefined) {
     return;
@@ -81,14 +81,20 @@ export function setOpts(entity: Entity, opts: object): void {
     const value = _value === null ? undefined : _value;
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {
-      current.setFromOpts(value);
+      if (calledFromConstructor) {
+        current.setFromOpts(value);
+      } else {
+        current.set(value);
+      }
     } else {
       (entity as any)[key] = value;
     }
   });
-  Object.values(entity).forEach(v => {
-    if (v instanceof AbstractRelationImpl) {
-      v.initializeForNewEntity();
-    }
-  });
+  if (calledFromConstructor) {
+    Object.values(entity).forEach(v => {
+      if (v instanceof AbstractRelationImpl) {
+        v.initializeForNewEntity();
+      }
+    });
+  }
 }

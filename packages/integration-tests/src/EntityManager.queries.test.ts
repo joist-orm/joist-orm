@@ -26,7 +26,7 @@ describe("EntityManager.queries", () => {
     await knex.insert({ first_name: "a1", last_name: "l1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { lastName: { $ne: null }});
+    const authors = await em.find(Author, { lastName: { $ne: null } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
   });
@@ -35,7 +35,7 @@ describe("EntityManager.queries", () => {
     await knex.insert({ first_name: "a1", last_name: "l1" }).from("authors");
     await knex.insert({ first_name: "a2" }).from("authors");
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { lastName: { $ne: undefined }});
+    const authors = await em.find(Author, { lastName: { $ne: undefined } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
   });
@@ -238,6 +238,13 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by one", async () => {
+    await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
+    const em = new EntityManager(knex);
+    const publisher = await em.findOne(Publisher, { name: "p2" });
+    expect(publisher).toBeUndefined();
+  });
+
+  it("can find by one or fail", async () => {
     await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
     await knex.insert({ name: "p2", size_id: 2 }).into("publishers");
     const em = new EntityManager(knex);

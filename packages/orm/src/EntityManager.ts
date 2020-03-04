@@ -137,6 +137,27 @@ export class EntityManager {
     return result;
   }
 
+  public async findOne<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T | undefined>;
+  public async findOne<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: FilterOf<T>,
+    options?: { populate: H },
+  ): Promise<Loaded<T, H> | undefined>;
+  async findOne<T extends Entity>(
+    type: EntityConstructor<T>,
+    where: FilterOf<T>,
+    options?: { populate: any },
+  ): Promise<T | undefined> {
+    const list = await this.find(type, where, options);
+    if (list.length === 0) {
+      return undefined;
+    } else if (list.length === 1) {
+      return list[0];
+    } else {
+      throw new TooManyError(`Found more than one: ${list.map(e => e.toString()).join(", ")}`);
+    }
+  }
+
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
   public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T>;
   public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
@@ -193,9 +214,11 @@ export class EntityManager {
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[], hint?: any): Promise<T[]> {
-    const entities = await Promise.all(ids.map(id => {
-      return this.findExistingInstance(getMetadata(type).cstr, id) || this.loaderForEntity(type).load(id);
-    }));
+    const entities = await Promise.all(
+      ids.map(id => {
+        return this.findExistingInstance(getMetadata(type).cstr, id) || this.loaderForEntity(type).load(id);
+      }),
+    );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
     if (idsNotFound.length > 0) {
       throw new Error(`${type.name}#${idsNotFound.join(",")} were not found`);
@@ -497,17 +520,19 @@ export class NotFoundError extends Error {}
 export class TooManyError extends Error {}
 
 async function validate(todos: Todo[]): Promise<void> {
-  await Promise.all(todos.map(todo => {
-    const p1 = todo.inserts.map(entity => {
-      if ("onSave" in entity) {
-        return (entity as any).onSave();
-      }
-    });
-    const p2 = todo.updates.map(entity => {
-      if ("onSave" in entity) {
-        return (entity as any).onSave();
-      }
-    });
-    return Promise.all([...p1, ...p2]);
-  }));
+  await Promise.all(
+    todos.map(todo => {
+      const p1 = todo.inserts.map(entity => {
+        if ("onSave" in entity) {
+          return (entity as any).onSave();
+        }
+      });
+      const p2 = todo.updates.map(entity => {
+        if ("onSave" in entity) {
+          return (entity as any).onSave();
+        }
+      });
+      return Promise.all([...p1, ...p2]);
+    }),
+  );
 }

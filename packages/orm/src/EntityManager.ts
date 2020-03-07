@@ -130,10 +130,9 @@ export class EntityManager {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T> },
   ): Promise<T[]> {
-    const meta = getMetadata(type);
     const query = buildQuery(this.knex, type, where, options?.orderBy);
     const rows = await query;
-    const result = rows.map(row => this.hydrateOrLookup(meta, row));
+    const result = rows.map(row => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
     }
@@ -421,8 +420,8 @@ export class EntityManager {
           .from(meta.tableName)
           .whereIn("id", keys as string[]);
 
-        // Pass setEvenIfAlreadyFound because it might be EntityManager.refresh calling us.
-        const entities = rows.map(row => this.hydrateOrLookup(meta, row, true));
+        // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
+        const entities = rows.map(row => this.hydrate(type, row, { overwriteExisting: true }));
         const entitiesById = indexBy(entities, e => e.id!);
 
         // Return the results back in the same order as the keys
@@ -448,20 +447,24 @@ export class EntityManager {
     return this.entities.find(e => getMetadata(e).cstr === type && e.id === id) as T | undefined;
   }
 
-  /** Takes a result `row` from a custom query and maps the db values into a new-or-existing domain object for that row. */
-  public hydrate<T extends Entity>(type: EntityConstructor<T>, row: any): T {
-    return this.hydrateOrLookup(getMetadata(type), row, true);
-  }
-
-  // TODO Hide private
-  public hydrateOrLookup<T extends Entity>(meta: EntityMetadata<T>, row: any, setEvenIfAlreadyFound?: boolean): T {
+  /**
+   * Takes a result `row` from a custom query and maps the db values into a new-or-existing domain object for that row.
+   *
+   * The `overwriteExisting` controls whether `row`'s values should overwrite the existing fields on
+   * an entity. By default this is true, as we assume the user calling this means they know the DB has
+   * updated values that should be put into the entities. A few internal callers set this to false,
+   * i.e. when we're loading collections and have db results that are potentially stale compared to
+   * the WIP entity state.
+   */
+  public hydrate<T extends Entity>(type: EntityConstructor<T>, row: any, options?: { overwriteExisting?: boolean }): T {
+    const meta = getMetadata(type);
     const id = keyToString(row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
-    let entity = this.findExistingInstance(meta.cstr, id) as T;
+    let entity = this.findExistingInstance(type, id) as T;
     if (!entity) {
-      entity = (new meta.cstr(this, undefined) as any) as T;
+      entity = (new type(this, undefined) as any) as T;
       meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
-    } else if (setEvenIfAlreadyFound) {
+    } else if (options?.overwriteExisting !== false) {
       // Usually if the entity alrady exists, we don't write over it, but in this case
       // we assume that `EntityManager.refresh` is telling us to explicitly load the
       // latest data.

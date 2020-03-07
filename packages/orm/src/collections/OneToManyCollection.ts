@@ -191,7 +191,9 @@ function loaderForCollection<T extends Entity, U extends Entity>(
         .whereIn(collection.otherColumnName, keys as string[])
         .orderBy("id");
 
-      const entities = rows.map(row => em.hydrateOrLookup(otherMeta, row)).filter(e => e.__orm.deleted === undefined);
+      const entities = rows
+        .map(row => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }))
+        .filter(e => e.__orm.deleted === undefined);
 
       const rowsById = groupBy(entities, entity => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.

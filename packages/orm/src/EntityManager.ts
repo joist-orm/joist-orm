@@ -110,7 +110,6 @@ type NestedLoadHint<T extends Entity> = {
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
 export class EntityManager {
-  /// TODO Hide impl
   constructor(public knex: Knex) {}
 
   // TODO make private
@@ -444,8 +443,7 @@ export class EntityManager {
   }
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
-  // TODO Hide private impl
-  public findExistingInstance<T extends Entity>(type: EntityConstructor<T>, id: string): T | undefined {
+  private findExistingInstance<T extends Entity>(type: EntityConstructor<T>, id: string): T | undefined {
     return this.entities.find(e => getMetadata(e).cstr === type && e.id === id) as T | undefined;
   }
 

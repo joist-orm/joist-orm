@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  OrderBy,
   EntityOrmField,
   EntityManager,
   setOpts,
@@ -12,7 +13,7 @@ import {
   Reference,
   ManyToOneReference,
 } from "joist-orm";
-import { authorMeta, Publisher, Book, PublisherId, Author, bookMeta } from "./entities";
+import { authorMeta, Publisher, Book, PublisherId, PublisherOrder, Author, bookMeta } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -36,9 +37,21 @@ export interface AuthorFilter {
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
+export interface AuthorOrder {
+  id?: OrderBy;
+  firstName?: OrderBy;
+  lastName?: OrderBy;
+  isPopular?: OrderBy;
+  age?: OrderBy;
+  createdAt?: OrderBy;
+  updatedAt?: OrderBy;
+  publisher?: PublisherOrder;
+}
+
 export class AuthorCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: AuthorFilter = null!;
+  readonly __orderType: AuthorOrder = null!;
   readonly __optsType: AuthorOpts = null!;
 
   readonly books: Collection<Author, Book> = new OneToManyCollection(

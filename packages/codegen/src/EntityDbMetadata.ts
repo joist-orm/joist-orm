@@ -20,6 +20,8 @@ type Entity = {
   metaType: SymbolSpec;
   /** The symbol pointing to the entity's EntityId type. */
   idType: SymbolSpec;
+  /** The symbol pointing to the entity's Order type. */
+  orderType: SymbolSpec;
 };
 
 type PrimitiveField = {
@@ -156,6 +158,7 @@ function makeEntity(entityName: string): Entity {
     metaName: metaName(entityName),
     metaType: metaType(entityName),
     idType: imp(`${entityName}Id@./entities`),
+    orderType: imp(`${entityName}Order@./entities`),
   };
 }
 

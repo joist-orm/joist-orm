@@ -15,6 +15,7 @@ import {
   Reference,
   setOpts,
   ValueFilter,
+  OrderBy,
 } from "./symbols";
 import { camelCase } from "change-case";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
@@ -127,9 +128,15 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
       ${generateFilterFields(meta)}
     }
 
+    export interface ${entityName}Order {
+      id?: ${OrderBy};
+      ${generateOrderFields(meta)}
+    }
+
     export class ${entityName}Codegen {
       readonly __orm: ${EntityOrmField};
       readonly __filterType: ${entityName}Filter = null!;
+      readonly __orderType: ${entityName}Order = null!;
       readonly __optsType: ${entityName}Opts = null!;
       ${[o2m, m2o, m2m]}
       
@@ -201,6 +208,20 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
       otherEntity.type
     }>, ${nullOrNever(notNull)}>;`;
+  });
+  return [...primitives, ...enums, ...m2o];
+}
+
+function generateOrderFields(meta: EntityDbMetadata): Code[] {
+  // Make our opts type
+  const primitives = meta.primitives.map(({ fieldName }) => {
+    return code`${fieldName}?: ${OrderBy};`;
+  });
+  const enums = meta.enums.map(({ fieldName }) => {
+    return code`${fieldName}?: ${OrderBy};`;
+  });
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}?: ${otherEntity.orderType};`;
   });
   return [...primitives, ...enums, ...m2o];
 }

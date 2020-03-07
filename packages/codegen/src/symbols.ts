@@ -15,6 +15,7 @@ export const ForeignKeySerde = imp("ForeignKeySerde@joist-orm");
 export const SimpleSerde = imp("SimpleSerde@joist-orm");
 export const fail = imp("fail@joist-orm");
 export const setOpts = imp("setOpts@joist-orm");
+export const OrderBy = imp("OrderBy@joist-orm");
 export const ValueFilter = imp("ValueFilter@joist-orm");
 export const EntityFilter = imp("EntityFilter@joist-orm");
 export const FilterOf = imp("FilterOf@joist-orm");

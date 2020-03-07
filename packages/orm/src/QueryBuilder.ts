@@ -1,7 +1,9 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
-import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity, FilterOf } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity, FilterOf, OrderOf } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
+
+export type OrderBy = "ASC" | "DESC";
 
 export type ValueFilter<V, N> =
   | V
@@ -38,6 +40,7 @@ export function buildQuery<T extends Entity>(
   knex: Knex,
   type: EntityConstructor<T>,
   where: FilterOf<T>,
+  orderBy: OrderOf<T> | undefined,
 ): QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
 
@@ -50,31 +53,48 @@ export function buildQuery<T extends Entity>(
   }
 
   const alias = getAlias(meta.tableName);
-  let query: QueryBuilder<any, any> = knex
-    .select<unknown>(`${alias}.*`)
-    .from(`${meta.tableName} AS ${alias}`)
-    .orderBy(`${alias}.id`);
+  let query: QueryBuilder<any, any> = knex.select<unknown>(`${alias}.*`).from(`${meta.tableName} AS ${alias}`);
 
   // Define a function for recursively adding joins & filters
-  function addClauses(meta: EntityMetadata<any>, alias: string, where: any): void {
-    Object.entries(where).forEach(([key, clause]) => {
+  function addClauses(
+    meta: EntityMetadata<any>,
+    alias: string,
+    where: object | undefined,
+    orderBy: object | undefined,
+  ): void {
+    // Combine the where and orderBy keys so that we can add them to aliases as that same time
+    const keys = [...(where ? Object.keys(where) : []), ...(orderBy ? Object.keys(orderBy) : [])];
+
+    keys.forEach(key => {
       const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
+
+      // We may/may not have a where clause or orderBy for the key, but we should have at least one of them.
+      const clause = where && (where as any)[key];
+      const order = orderBy && (orderBy as any)[key];
+
       if (column.serde instanceof ForeignKeySerde) {
+        // I.e. this could be { authorFk: authorEntity | null | id | { ...recurse... } }
         const clauseKeys = typeof clause === "object" && clause !== null ? Object.keys(clause as object) : [];
+        // Assume we have to join to the next level based on whether the key in each hash it set
+        let joinForClause = false;
+        let joinForOrder = order !== undefined;
         if (isEntity(clause) || typeof clause == "string") {
-          // This is a ForeignKey clause but we don't need to join into the other side
+          // I.e. { authorFk: authorEntity | id }
           if (isEntity(clause) && clause.id === undefined) {
             // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
             query = query.where(`${alias}.${column.columnName}`, -1);
           } else {
             query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
           }
-        } else if (clause === null || clause === undefined) {
+        } else if ((clause === null || clause === undefined) && where && Object.keys(where).includes(key)) {
+          // I.e. { authorFk: null | undefined }
           query = query.whereNull(`${alias}.${column.columnName}`);
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
+          // I.e. { authorFk: { id: string } }
           // If only querying on the id, we can skip the join
           query = query.where(`${alias}.${column.columnName}`, (clause as any)["id"]);
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "$ne") {
+          // I.e. { authorFk: { id: { $ne: string | null | undefined } } }
           const value = (clause as any)["$ne"];
           if (value === null || value === undefined) {
             query = query.whereNotNull(`${alias}.${column.columnName}`);
@@ -84,6 +104,10 @@ export function buildQuery<T extends Entity>(
             throw new Error("Not implemented");
           }
         } else {
+          // I.e. { authorFk: { ...authorFilter... } }
+          joinForClause = clause !== undefined;
+        }
+        if (joinForClause || joinForOrder) {
           // Add a join for this column
           const otherMeta = column.serde.otherMeta();
           const otherAlias = getAlias(otherMeta.tableName);
@@ -93,30 +117,41 @@ export function buildQuery<T extends Entity>(
             `${otherAlias}.id`,
           );
           // Then recurse to add its conditions to the query
-          addClauses(otherMeta, otherAlias, clause);
-        }
-      } else if (clause instanceof Object && operators.find(p => Object.keys(clause).includes(p))) {
-        // This is a `field: { $op: value }`
-        const p = Object.keys(clause)[0] as Operator;
-        const value = (clause as any)[p];
-        if (value === null || value === undefined) {
-          if (p === "$ne") {
-            query = query.whereNotNull(`${alias}.${column.columnName}`);
-          } else {
-            throw new Error("Only $ne is supported when the value is undefined or null");
-          }
-        } else {
-          const fn = opToFn[p];
-          query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
+          addClauses(otherMeta, otherAlias, joinForClause ? clause : undefined, joinForOrder ? order : undefined);
         }
       } else {
-        // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
-        query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+        // This is not a foreign key column, so it'll have the primitive filters/order bys
+        if (clause instanceof Object && operators.find(p => Object.keys(clause).includes(p))) {
+          // I.e. `{ primitiveField: { $op: value } }`
+          const p = Object.keys(clause)[0] as Operator;
+          const value = (clause as any)[p];
+          if (value === null || value === undefined) {
+            if (p === "$ne") {
+              query = query.whereNotNull(`${alias}.${column.columnName}`);
+            } else {
+              throw new Error("Only $ne is supported when the value is undefined or null");
+            }
+          } else {
+            const fn = opToFn[p];
+            query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
+          }
+        } else if (clause) {
+          // I.e. `{ primitiveField: value }`
+          // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
+          query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+        }
+        if (order) {
+          query = query.orderBy(`${alias}.${column.columnName}`, order);
+        }
       }
     });
   }
 
-  addClauses(meta, alias, where);
+  addClauses(meta, alias, where as object, orderBy as object);
+
+  if (!orderBy) {
+    query = query.orderBy(`${alias}.id`);
+  }
 
   return query as QueryBuilder<{}, unknown[]>;
 }

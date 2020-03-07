@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  OrderBy,
   EntityOrmField,
   EntityManager,
   setOpts,
@@ -26,9 +27,18 @@ export interface PublisherFilter {
   size?: ValueFilter<PublisherSize, null | undefined>;
 }
 
+export interface PublisherOrder {
+  id?: OrderBy;
+  name?: OrderBy;
+  createdAt?: OrderBy;
+  updatedAt?: OrderBy;
+  size?: OrderBy;
+}
+
 export class PublisherCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: PublisherFilter = null!;
+  readonly __orderType: PublisherOrder = null!;
   readonly __optsType: PublisherOpts = null!;
 
   readonly authors: Collection<Publisher, Author> = new OneToManyCollection(

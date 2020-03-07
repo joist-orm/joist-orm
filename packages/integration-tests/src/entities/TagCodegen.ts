@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  OrderBy,
   EntityOrmField,
   EntityManager,
   setOpts,
@@ -24,9 +25,17 @@ export interface TagFilter {
   updatedAt?: ValueFilter<Date, never>;
 }
 
+export interface TagOrder {
+  id?: OrderBy;
+  name?: OrderBy;
+  createdAt?: OrderBy;
+  updatedAt?: OrderBy;
+}
+
 export class TagCodegen {
   readonly __orm: EntityOrmField;
   readonly __filterType: TagFilter = null!;
+  readonly __orderType: TagOrder = null!;
   readonly __optsType: TagOpts = null!;
 
   readonly books: Collection<Tag, Book> = new ManyToManyCollection(

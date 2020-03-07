@@ -21,6 +21,9 @@ export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer 
 /** Pulls the entity query type out of a given entity type T. */
 export type FilterOf<T> = T extends { __filterType: infer Q } ? Q : never;
 
+/** Pulls the entity order type out of a given entity type T. */
+export type OrderOf<T> = T extends { __orderType: infer Q } ? Q : never;
+
 /** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
   /** A point to our entity type's metadata. */
@@ -120,15 +123,15 @@ export class EntityManager {
   public async find<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
-    options?: { populate: H },
+    options?: { populate?: H; orderBy?: OrderOf<T> },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
-    options?: { populate: any },
+    options?: { populate?: any; orderBy?: OrderOf<T> },
   ): Promise<T[]> {
     const meta = getMetadata(type);
-    const query = buildQuery(this.knex, type, where);
+    const query = buildQuery(this.knex, type, where, options?.orderBy);
     const rows = await query;
     const result = rows.map(row => this.hydrateOrLookup(meta, row));
     if (options?.populate) {
@@ -231,7 +234,10 @@ export class EntityManager {
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>>;
-  public async populate<T extends Entity, H extends LoadHint<T>>(entity: ReadonlyArray<T>, hint: H): Promise<Loaded<T, H>[]>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(
+    entity: ReadonlyArray<T>,
+    hint: H,
+  ): Promise<Loaded<T, H>[]>;
   async populate<T extends Entity, H extends LoadHint<T>>(
     entityOrList: T | T[],
     hint: H,

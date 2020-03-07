@@ -1,4 +1,4 @@
-import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
+import { EntityManager, NotFoundError, OrderBy, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { knex } from "./setupDbTests";
 
@@ -276,5 +276,37 @@ describe("EntityManager.queries", () => {
     await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(
       "Found more than one: Publisher#1, Publisher#2",
     );
+  });
+
+  it("can order by string asc", async () => {
+    await knex.insert({ first_name: "a2" }).from("authors");
+    await knex.insert({ first_name: "a1" }).from("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, {}, { orderBy: { firstName: "ASC" } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a2");
+  });
+
+  it("can order by string desc", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ first_name: "a2" }).from("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, {}, { orderBy: { firstName: "DESC" } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a1");
+  });
+
+  it("can order by joined string asc", async () => {
+    await knex.insert({ name: "pB" }).into("publishers");
+    await knex.insert({ name: "pA" }).into("publishers");
+    await knex.insert({ first_name: "aB", publisher_id: 1 }).into("authors");
+    await knex.insert({ first_name: "aA", publisher_id: 2 }).into("authors");
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, {}, { orderBy: { publisher: { name: "ASC" } } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("aA");
+    expect(authors[1].firstName).toEqual("aB");
   });
 });

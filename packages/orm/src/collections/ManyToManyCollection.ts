@@ -55,14 +55,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
     if (!percolated) {
       const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
-      getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []).push(joinRow);
+      getOrSet(this.entity.__orm.em.__data.joinRows, this.joinTableName, []).push(joinRow);
       ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity, true);
     }
   }
 
   remove(other: U): void {
     ensureNotDeleted(this.entity);
-    const joinRows = getOrSet(this.entity.__orm.em.joinRows, this.joinTableName, []);
+    const joinRows = getOrSet(this.entity.__orm.em.__data.joinRows, this.joinTableName, []);
     const row = joinRows.find(r => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
     if (row) {
       row.deleted = true;
@@ -161,7 +161,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
       this.removedBeforeLoaded.forEach(e => {
         remove(this.loaded!, e);
         const { em } = this.entity.__orm;
-        const row = em.joinRows[this.joinTableName].find(
+        const row = em.__data.joinRows[this.joinTableName].find(
           r => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
         );
         if (row) {
@@ -187,7 +187,7 @@ export type JoinRow = {
 function loaderForJoinTable<T extends Entity, U extends Entity>(collection: ManyToManyCollection<T, U>) {
   const { joinTableName } = collection;
   const { em } = collection.entity.__orm;
-  return getOrSet(em.loaders, joinTableName, () => {
+  return getOrSet(em.__data.loaders, joinTableName, () => {
     return new DataLoader<string, Entity[]>(async keys => loadFromJoinTable(collection, keys));
   });
 }
@@ -227,7 +227,7 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   const rowsByKey: Record<string, JoinRow[]> = {};
 
   // Keep a reference to our row to track updates/deletes
-  const emJoinRows = getOrSet(em.joinRows, joinTableName, []);
+  const emJoinRows = getOrSet(em.__data.joinRows, joinTableName, []);
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
   const column1 = collection.columnName;

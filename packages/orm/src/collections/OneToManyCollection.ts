@@ -181,7 +181,7 @@ function loaderForCollection<T extends Entity, U extends Entity>(
   // The metadata for the entity that contains the collection
   const meta = getMetadata(collection.entity);
   const loaderName = `${meta.tableName}.${collection.fieldName}`;
-  return getOrSet(em.loaders, loaderName, () => {
+  return getOrSet(em.__data.loaders, loaderName, () => {
     return new DataLoader<string, U[]>(async keys => {
       const otherMeta = collection.otherMeta;
 

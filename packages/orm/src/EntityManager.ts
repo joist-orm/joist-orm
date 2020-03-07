@@ -112,11 +112,12 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 export class EntityManager {
   constructor(public knex: Knex) {}
 
-  // TODO make private
-  loaders: LoaderCache = {};
   private entities: Entity[] = [];
-  // TODO make private
-  joinRows: Record<string, JoinRow[]> = {};
+  // This is attempting to be internal/module private
+  __data = {
+    loaders: {} as LoaderCache,
+    joinRows: {} as Record<string, JoinRow[]>,
+  };
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
@@ -339,7 +340,7 @@ export class EntityManager {
     await this.cascadeDeletesIntoUnloadedCollections();
     const entityTodos = sortEntities(this.entities);
     await validate(entityTodos);
-    const joinRowTodos = sortJoinRows(this.joinRows);
+    const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (entityTodos.length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
     }
@@ -411,7 +412,7 @@ export class EntityManager {
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {
-    return getOrSet(this.loaders, type.name, () => {
+    return getOrSet(this.__data.loaders, type.name, () => {
       return new DataLoader<string, T | undefined>(async keys => {
         const meta = getMetadata(type);
 

@@ -8,5 +8,8 @@
     "packages/integration-tests",
     "packages/migration-utils",
     "packages/orm"
-  ]
+  ],
+  "dependencies": {
+    "typescript": "^3.8.3"
+  }
 }

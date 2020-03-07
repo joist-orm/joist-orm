@@ -447,9 +447,14 @@ export class EntityManager {
     return this.entities.find(e => getMetadata(e).cstr === type && e.id === id) as T | undefined;
   }
 
+  /** Takes a result `row` from a custom query and maps the db values into a new-or-existing domain object for that row. */
+  public hydrate<T extends Entity>(type: EntityConstructor<T>, row: any): T {
+    return this.hydrateOrLookup(getMetadata(type), row, true);
+  }
+
   // TODO Hide private
   public hydrateOrLookup<T extends Entity>(meta: EntityMetadata<T>, row: any, setEvenIfAlreadyFound?: boolean): T {
-    const id = keyToString(row["id"])!;
+    const id = keyToString(row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
     let entity = this.findExistingInstance(meta.cstr, id) as T;
     if (!entity) {

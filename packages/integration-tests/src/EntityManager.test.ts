@@ -362,8 +362,8 @@ describe("EntityManager", () => {
   });
 
   it("can access a m2o id without loading", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).from("books");
+    await knex.insert({ first_name: "a1" }).into("authors");
+    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2");
     expect(b1.author.id).toEqual("1");
@@ -421,5 +421,22 @@ describe("EntityManager", () => {
     const a1 = em.create(Author, { firstName: "a1", lastName: null });
     await em.flush();
     expect(a1.lastName).toBeUndefined();
+  });
+
+  it("can hydrate from custom queries ", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    const em = new EntityManager(knex);
+    const a1 = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
+    expect(a1.firstName).toEqual("a1");
+  });
+
+  it("can hydrate into an existing instance", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    await knex.update({ first_name: "a1b" }).into("authors");
+    const a1b = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
+    expect(a1b).toStrictEqual(a1);
+    expect(a1b.firstName).toEqual("a1b");
   });
 });

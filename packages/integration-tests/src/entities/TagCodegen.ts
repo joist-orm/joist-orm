@@ -8,6 +8,7 @@ import {
   fail,
   Collection,
   ManyToManyCollection,
+  setField,
 } from "joist-orm";
 import { tagMeta, Book, Tag } from "./entities";
 
@@ -67,8 +68,7 @@ export class TagCodegen {
   }
 
   set name(name: string) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "name", name);
+    setField(this, "name", name);
   }
 
   get createdAt(): Date {
@@ -85,11 +85,5 @@ export class TagCodegen {
 
   set(opts: Partial<TagOpts>): void {
     setOpts(this, opts, false);
-  }
-
-  private ensureNotDeleted() {
-    if (this.__orm.deleted) {
-      throw new Error(this.toString() + " is marked as deleted");
-    }
   }
 }

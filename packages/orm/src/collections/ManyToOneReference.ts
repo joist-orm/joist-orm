@@ -1,5 +1,5 @@
-import { ensureNotDeleted, Entity, EntityConstructor, getMetadata, isEntity, sameEntity } from "../EntityManager";
-import { maybeResolveReferenceToId, Reference } from "../index";
+import { Entity, EntityConstructor, getMetadata, isEntity, sameEntity } from "../EntityManager";
+import { ensureNotDeleted, maybeResolveReferenceToId, Reference, setField } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
@@ -100,10 +100,10 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const previousLoaded = this.loaded;
 
     if (!opts || opts.beingDeleted !== true) {
-      (this.entity as any).ensureNotDeleted();
+      ensureNotDeleted(this.entity);
     }
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    this.entity.__orm.em.setField(this.entity, this.fieldName as string, other?.id ?? other);
+    setField(this.entity, this.fieldName as string, other?.id ?? other);
     this.loaded = other;
     this.isLoaded = true;
 

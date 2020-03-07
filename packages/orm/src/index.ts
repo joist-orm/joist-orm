@@ -73,6 +73,26 @@ interface Flavoring<FlavorT> {
 }
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
+export function setField(entity: Entity, fieldName: string, newValue: any): void {
+  ensureNotDeleted(entity);
+  const { data, originalData } = entity.__orm;
+  // "Un-dirty" our originalData if newValue is reverting to originalData
+  if (fieldName in originalData) {
+    if (originalData[fieldName] === newValue) {
+      data[fieldName] = newValue;
+      delete originalData[fieldName];
+      return;
+    }
+  }
+  // Push this logic into a field serde type abstraction?
+  const currentValue = data[fieldName];
+  // Only save the currentValue on the 1st change of this field
+  if (!(fieldName in originalData)) {
+    originalData[fieldName] = currentValue;
+  }
+  data[fieldName] = newValue;
+}
+
 export function setOpts(entity: Entity, opts: object, calledFromConstructor: boolean = true): void {
   // If opts is undefined, this instance is being hydrated from a database row, so skip all this.
   if (opts === undefined) {
@@ -98,5 +118,11 @@ export function setOpts(entity: Entity, opts: object, calledFromConstructor: boo
         v.initializeForNewEntity();
       }
     });
+  }
+}
+
+export function ensureNotDeleted(entity: Entity): void {
+  if (entity.__orm.deleted) {
+    throw new Error(entity.toString() + " is marked as deleted");
   }
 }

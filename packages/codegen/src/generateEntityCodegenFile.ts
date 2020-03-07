@@ -7,15 +7,16 @@ import {
   EntityManager,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
   ManyToManyCollection,
   ManyToOneReference,
   OneToManyCollection,
-  FilterOf,
+  OrderBy,
   Reference,
+  setField,
   setOpts,
   ValueFilter,
-  OrderBy,
 } from "./symbols";
 import { camelCase } from "change-case";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
@@ -41,8 +42,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
    `;
     const setter = code`
       set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
-        this.ensureNotDeleted();
-        this.__orm.em.setField(this, "${fieldName}", ${fieldName});
+        ${setField}(this, "${fieldName}", ${fieldName});
       }
     `;
     return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
@@ -59,8 +59,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
    `;
     const setter = code`
       set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-        this.ensureNotDeleted();
-        this.__orm.em.setField(this, "${fieldName}", ${fieldName});
+        ${setField}(this, "${fieldName}", ${fieldName});
       }
     `;
     // Group enums as primitives
@@ -162,12 +161,6 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
 
       set(opts: Partial<${entityName}Opts>): void {
         ${setOpts}(this, opts, false);
-      }
-
-      private ensureNotDeleted() {
-        if (this.__orm.deleted) {
-          throw new Error(this.toString() + " is marked as deleted");
-        }
       }
     }
   `;

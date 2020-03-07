@@ -12,6 +12,7 @@ import {
   ManyToOneReference,
   Collection,
   ManyToManyCollection,
+  setField,
 } from "joist-orm";
 import { bookMeta, Author, Tag, AuthorId, AuthorOrder, Book } from "./entities";
 
@@ -82,8 +83,7 @@ export class BookCodegen {
   }
 
   set title(title: string) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "title", title);
+    setField(this, "title", title);
   }
 
   get createdAt(): Date {
@@ -100,11 +100,5 @@ export class BookCodegen {
 
   set(opts: Partial<BookOpts>): void {
     setOpts(this, opts, false);
-  }
-
-  private ensureNotDeleted() {
-    if (this.__orm.deleted) {
-      throw new Error(this.toString() + " is marked as deleted");
-    }
   }
 }

@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
-import { ensureNotDeleted, Entity, EntityMetadata, getMetadata } from "../EntityManager";
-import { Collection } from "../index";
+import { ensureNotDeleted, Collection } from "../";
+import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { maybeResolveReferenceToId } from "../serde";
@@ -98,7 +98,6 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     remove(this.loaded, other);
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
   }
-
 
   removeAll(): void {
     ensureNotDeleted(this.entity);

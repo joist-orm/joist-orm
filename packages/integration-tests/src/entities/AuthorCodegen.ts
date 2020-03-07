@@ -12,6 +12,7 @@ import {
   OneToManyCollection,
   Reference,
   ManyToOneReference,
+  setField,
 } from "joist-orm";
 import { authorMeta, Publisher, Book, PublisherId, PublisherOrder, Author, bookMeta } from "./entities";
 
@@ -89,8 +90,7 @@ export class AuthorCodegen {
   }
 
   set firstName(firstName: string) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "firstName", firstName);
+    setField(this, "firstName", firstName);
   }
 
   get lastName(): string | undefined {
@@ -98,8 +98,7 @@ export class AuthorCodegen {
   }
 
   set lastName(lastName: string | undefined) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "lastName", lastName);
+    setField(this, "lastName", lastName);
   }
 
   get isPopular(): boolean | undefined {
@@ -107,8 +106,7 @@ export class AuthorCodegen {
   }
 
   set isPopular(isPopular: boolean | undefined) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "isPopular", isPopular);
+    setField(this, "isPopular", isPopular);
   }
 
   get age(): number | undefined {
@@ -116,8 +114,7 @@ export class AuthorCodegen {
   }
 
   set age(age: number | undefined) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "age", age);
+    setField(this, "age", age);
   }
 
   get createdAt(): Date {
@@ -134,11 +131,5 @@ export class AuthorCodegen {
 
   set(opts: Partial<AuthorOpts>): void {
     setOpts(this, opts, false);
-  }
-
-  private ensureNotDeleted() {
-    if (this.__orm.deleted) {
-      throw new Error(this.toString() + " is marked as deleted");
-    }
   }
 }

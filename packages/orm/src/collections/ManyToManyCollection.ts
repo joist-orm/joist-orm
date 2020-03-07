@@ -1,6 +1,5 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted } from "../index";
-import { Entity, EntityConstructor } from "../EntityManager";
+import { Collection, ensureNotDeleted, Entity, EntityConstructor } from "../";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";

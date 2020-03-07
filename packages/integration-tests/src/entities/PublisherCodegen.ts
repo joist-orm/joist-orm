@@ -6,6 +6,7 @@ import {
   EntityManager,
   setOpts,
   fail,
+  setField,
   Collection,
   OneToManyCollection,
 } from "joist-orm";
@@ -68,8 +69,7 @@ export class PublisherCodegen {
   }
 
   set name(name: string) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "name", name);
+    setField(this, "name", name);
   }
 
   get createdAt(): Date {
@@ -85,8 +85,7 @@ export class PublisherCodegen {
   }
 
   set size(size: PublisherSize | undefined) {
-    this.ensureNotDeleted();
-    this.__orm.em.setField(this, "size", size);
+    setField(this, "size", size);
   }
 
   toString(): string {
@@ -95,11 +94,5 @@ export class PublisherCodegen {
 
   set(opts: Partial<PublisherOpts>): void {
     setOpts(this, opts, false);
-  }
-
-  private ensureNotDeleted() {
-    if (this.__orm.deleted) {
-      throw new Error(this.toString() + " is marked as deleted");
-    }
   }
 }

@@ -328,25 +328,6 @@ export class EntityManager {
       });
   }
 
-  setField(entity: Entity, fieldName: string, newValue: any): void {
-    const { data, originalData } = entity.__orm;
-    // "Un-dirty" our originalData if newValue is reverting to originalData
-    if (fieldName in originalData) {
-      if (originalData[fieldName] === newValue) {
-        data[fieldName] = newValue;
-        delete originalData[fieldName];
-        return;
-      }
-    }
-    // Push this logic into a field serde type abstraction?
-    const currentValue = data[fieldName];
-    // Only save the currentValue on the 1st change of this field
-    if (!(fieldName in originalData)) {
-      originalData[fieldName] = currentValue;
-    }
-    data[fieldName] = newValue;
-  }
-
   /**
    * Flushes the SQL for any changed entities to the database.
    *
@@ -513,12 +494,6 @@ export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructor<T>): EntityMetadata<T> {
   return (isEntity(entityOrType) ? entityOrType.__orm.metadata : (entityOrType as any).metadata) as EntityMetadata<T>;
-}
-
-export function ensureNotDeleted(entity: Entity): void {
-  if (entity.__orm.deleted) {
-    throw new Error(entity.toString() + " is marked as deleted");
-  }
 }
 
 export class NotFoundError extends Error {}

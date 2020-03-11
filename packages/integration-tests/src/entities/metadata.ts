@@ -51,6 +51,51 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
     },
   ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id" },
+
+    {
+      kind: "primitive",
+      fieldName: "firstName",
+    },
+    {
+      kind: "primitive",
+      fieldName: "lastName",
+    },
+    {
+      kind: "primitive",
+      fieldName: "isPopular",
+    },
+    {
+      kind: "primitive",
+      fieldName: "age",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+    },
+    {
+      kind: "m2o",
+      fieldName: "publisher",
+      otherMetadata: () => publisherMeta,
+    },
+
+    {
+      kind: "o2m",
+      fieldName: "publisher",
+      otherMetadata: () => publisherMeta,
+    },
+
+    {
+      kind: "m2m",
+      fieldName: "publisher",
+      otherMetadata: () => publisherMeta,
+    },
+  ],
   order: 2,
 };
 
@@ -86,6 +131,39 @@ export const bookMeta: EntityMetadata<Book> = {
       columnName: "author_id",
       dbType: "int",
       serde: new ForeignKeySerde("author", "author_id", () => authorMeta),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id" },
+
+    {
+      kind: "primitive",
+      fieldName: "title",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+    },
+    {
+      kind: "m2o",
+      fieldName: "author",
+      otherMetadata: () => authorMeta,
+    },
+
+    {
+      kind: "o2m",
+      fieldName: "author",
+      otherMetadata: () => authorMeta,
+    },
+
+    {
+      kind: "m2m",
+      fieldName: "author",
+      otherMetadata: () => authorMeta,
     },
   ],
   order: 3,
@@ -126,6 +204,27 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
   ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id" },
+
+    {
+      kind: "enum",
+      fieldName: "size",
+    },
+
+    {
+      kind: "primitive",
+      fieldName: "name",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+    },
+  ],
   order: 1,
 };
 
@@ -155,6 +254,22 @@ export const tagMeta: EntityMetadata<Tag> = {
       columnName: "updated_at",
       dbType: "timestamptz",
       serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id" },
+
+    {
+      kind: "primitive",
+      fieldName: "name",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
     },
   ],
   order: 0,

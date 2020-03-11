@@ -480,7 +480,43 @@ export interface EntityMetadata<T extends Entity> {
   tableName: string;
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
+  fields: Array<Field>;
   order: number;
+}
+
+export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;
+
+export type PrimaryKeyField  = {
+  kind: "primaryKey";
+  fieldName: string;
+}
+
+export type PrimitiveField = {
+  kind: "primitive";
+  fieldName: string;
+}
+
+export type EnumField = {
+  kind: "enum";
+  fieldName: string;
+}
+
+export type OneToManyField = {
+  kind: "o2m";
+  fieldName: string;
+  otherMetadata: () => EntityMetadata<any>,
+}
+
+export type ManyToOneField = {
+  kind: "m2o";
+  fieldName: string;
+  otherMetadata: () => EntityMetadata<any>,
+}
+
+export type ManyToManyField = {
+  kind: "m2m";
+  fieldName: string;
+  otherMetadata: () => EntityMetadata<any>,
 }
 
 export function isEntity(e: any): e is Entity {

@@ -30,8 +30,7 @@ const defaultConfig: Config = {
 };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
-export async function generateAndSaveFiles(db: Db, enumRows: EnumRows): Promise<void> {
-  const config = await loadConfig();
+export async function generateAndSaveFiles(db: Db, config: Config, enumRows: EnumRows): Promise<void> {
   const files = generateFiles(db, enumRows);
   await fs.mkdir(config.entitiesDirectory, { recursive: true });
   for await (const file of files) {
@@ -143,15 +142,16 @@ if (require.main === module) {
     throw new Error("Joist requires Node v12.4.0+");
   }
   (async function() {
-    const config = newPgConnectionConfig();
-    const db = await pgStructure(config);
+    const pgConfig = newPgConnectionConfig();
+    const db = await pgStructure(pgConfig);
 
-    const client = new Client(config);
+    const client = new Client(pgConfig);
     await client.connect();
     const enumRows = await loadEnumRows(db, client);
     await client.end();
 
-    await generateAndSaveFiles(db, enumRows);
+    const config = await loadConfig();
+    await generateAndSaveFiles(db, config, enumRows);
   })().catch(err => {
     console.error(err);
     process.exit(1);

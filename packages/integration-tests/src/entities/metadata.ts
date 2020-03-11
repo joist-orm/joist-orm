@@ -86,14 +86,8 @@ export const authorMeta: EntityMetadata<Author> = {
 
     {
       kind: "o2m",
-      fieldName: "publisher",
-      otherMetadata: () => publisherMeta,
-    },
-
-    {
-      kind: "m2m",
-      fieldName: "publisher",
-      otherMetadata: () => publisherMeta,
+      fieldName: "books",
+      otherMetadata: () => bookMeta,
     },
   ],
   order: 2,
@@ -155,15 +149,9 @@ export const bookMeta: EntityMetadata<Book> = {
     },
 
     {
-      kind: "o2m",
-      fieldName: "author",
-      otherMetadata: () => authorMeta,
-    },
-
-    {
       kind: "m2m",
-      fieldName: "author",
-      otherMetadata: () => authorMeta,
+      fieldName: "tags",
+      otherMetadata: () => tagMeta,
     },
   ],
   order: 3,
@@ -224,6 +212,11 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       kind: "primitive",
       fieldName: "updatedAt",
     },
+    {
+      kind: "o2m",
+      fieldName: "authors",
+      otherMetadata: () => authorMeta,
+    },
   ],
   order: 1,
 };
@@ -270,6 +263,11 @@ export const tagMeta: EntityMetadata<Tag> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+    },
+    {
+      kind: "m2m",
+      fieldName: "books",
+      otherMetadata: () => bookMeta,
     },
   ],
   order: 0,

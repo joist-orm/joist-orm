@@ -113,8 +113,8 @@ function generateFields(
     `;
   });
 
-  const o2mFields = dbMetadata.manyToOnes.map(m2o => {
-    const { fieldName, columnName, otherEntity } = m2o;
+  const o2mFields = dbMetadata.oneToManys.map(m2o => {
+    const { fieldName, otherEntity } = m2o;
     return code`
       {
         kind: "o2m",
@@ -124,8 +124,8 @@ function generateFields(
     `;
   });
 
-  const m2mFields = dbMetadata.manyToOnes.map(m2o => {
-    const { fieldName, columnName, otherEntity } = m2o;
+  const m2mFields = dbMetadata.manyToManys.map(m2o => {
+    const { fieldName, otherEntity } = m2o;
     return code`
       {
         kind: "m2m",

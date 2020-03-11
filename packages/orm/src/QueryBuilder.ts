@@ -160,5 +160,5 @@ function abbreviation(tableName: string): string {
   return tableName
     .split("_")
     .map(w => w[0])
-    .join();
+    .join("");
 }

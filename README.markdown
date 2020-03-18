@@ -49,6 +49,7 @@ After checkout:
 
 - Derived values
 - Use load hint-style syntax to declare validation rule sub-graph
+- JSON support, i.e. [upsertGraph](https://vincit.github.io/objection.js/guide/query-examples.html#graph-inserts)/`toJSON`
 - Cascading deletions for parent/child relationships
 - Codegen'd test builders 
 - Support user-defined types

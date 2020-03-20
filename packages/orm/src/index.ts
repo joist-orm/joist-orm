@@ -86,6 +86,9 @@ export function setField(entity: Entity, fieldName: string, newValue: any): void
   }
   // Push this logic into a field serde type abstraction?
   const currentValue = data[fieldName];
+  if (currentValue === newValue) {
+    return;
+  }
   // Only save the currentValue on the 1st change of this field
   if (!(fieldName in originalData)) {
     originalData[fieldName] = currentValue;

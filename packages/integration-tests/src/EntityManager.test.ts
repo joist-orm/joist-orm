@@ -439,4 +439,12 @@ describe("EntityManager", () => {
     expect(a1b).toStrictEqual(a1);
     expect(a1b.firstName).toEqual("a1b");
   });
+
+  it("ignores sets of the same value", async () => {
+    await knex.insert({ first_name: "a1" }).into("authors");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    a1.firstName = "a1";
+    expect(a1.__orm.originalData).toEqual({});
+  });
 });

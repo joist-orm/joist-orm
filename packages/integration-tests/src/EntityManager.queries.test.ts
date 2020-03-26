@@ -1,4 +1,4 @@
-import { EntityManager, NotFoundError, OrderBy, TooManyError } from "joist-orm";
+import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { knex } from "./setupDbTests";
 
@@ -131,6 +131,17 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
+  it("can find by foreign key is flavor list", async () => {
+    await knex.insert({ id: 1, name: "p1" }).into("publishers");
+    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
+    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    const em = new EntityManager(knex);
+    const publisherId: PublisherId = "1";
+    const authors = await em.find(Author, { publisher: [publisherId] });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
   it("can find by foreign key is not flavor", async () => {
     await knex.insert({ id: 1, name: "p1" }).into("publishers");
     await knex.insert({ id: 2, first_name: "a1" }).into("authors");
@@ -167,6 +178,14 @@ describe("EntityManager.queries", () => {
     const books = await em.find(Book, { author: { id: "4" } });
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
+  });
+
+  it("can find by ids", async () => {
+    await knex.insert({ name: "p1", }).into("publishers");
+    await knex.insert({ name: "p2", }).into("publishers");
+    const em = new EntityManager(knex);
+    const pubs = await em.find(Publisher, { id: ["1", "2"] });
+    expect(pubs.length).toEqual(2);
   });
 
   it("can find by enums", async () => {

@@ -7,6 +7,7 @@ export type OrderBy = "ASC" | "DESC";
 
 export type ValueFilter<V, N> =
   | V
+  | V[]
   | N
   | { $gt: V }
   | { $gte: V }
@@ -16,7 +17,7 @@ export type ValueFilter<V, N> =
   | { $like: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-export type EntityFilter<T, I, F, N> = T | I | F | N | { $ne: T | I | N };
+export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { $ne: T | I | N };
 
 const operators = ["$gt", "$gte", "$ne", "$lt", "$lte", "$like"] as const;
 type Operator = typeof operators[number];
@@ -78,11 +79,13 @@ export function buildQuery<T extends Entity>(
         // Assume we have to join to the next level based on whether the key in each hash it set
         let joinForClause = false;
         let joinForOrder = order !== undefined;
-        if (isEntity(clause) || typeof clause == "string") {
-          // I.e. { authorFk: authorEntity | id }
+        if (isEntity(clause) || typeof clause == "string" || Array.isArray(clause)) {
+          // I.e. { authorFk: authorEntity | id | id[] }
           if (isEntity(clause) && clause.id === undefined) {
             // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
             query = query.where(`${alias}.${column.columnName}`, -1);
+          } else if (Array.isArray(clause)) {
+            query = query.whereIn(`${alias}.${column.columnName}`, clause.map(id => column.serde.mapToDb(id)));
           } else {
             query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
           }
@@ -90,9 +93,14 @@ export function buildQuery<T extends Entity>(
           // I.e. { authorFk: null | undefined }
           query = query.whereNull(`${alias}.${column.columnName}`);
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
-          // I.e. { authorFk: { id: string } }
+          // I.e. { authorFk: { id: string } } || { authorFk: { id: string[] } }
           // If only querying on the id, we can skip the join
-          query = query.where(`${alias}.${column.columnName}`, (clause as any)["id"]);
+          const value = (clause as any)["id"];
+          if (Array.isArray(value)) {
+            query = query.whereIn(`${alias}.${column.columnName}`, value);
+          } else {
+            query = query.where(`${alias}.${column.columnName}`, value);
+          }
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "$ne") {
           // I.e. { authorFk: { id: { $ne: string | null | undefined } } }
           const value = (clause as any)["$ne"];
@@ -135,6 +143,9 @@ export function buildQuery<T extends Entity>(
             const fn = opToFn[p];
             query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
           }
+        } else if (Array.isArray(clause)) {
+          // I.e. `{ primitiveField: value[] }`
+          query = query.whereIn(`${alias}.${column.columnName}`, clause.map(v => column.serde.mapToDb(v)));
         } else if (clause) {
           // I.e. `{ primitiveField: value }`
           // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.

@@ -18,7 +18,7 @@
     "jest": "^25.1.0",
     "joist-migration-utils": "0.1.0-bump",
     "joist-codegen": "0.1.0-bump",
-    "prettier": "^1.19.1",
+    "prettier": "^2.0.2",
     "ts-jest": "^25.1.0",
     "ts-node-dev": "^1.0.0-pre.44",
     "tsconfig-paths": "^3.9.0",

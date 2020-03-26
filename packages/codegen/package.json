@@ -12,13 +12,13 @@
     "pg-structure": "^5.10.6",
     "pluralize": "^8.0.0",
     "topological-sort": "^0.3.0",
-    "ts-poet": "^3.0.0"
+    "ts-poet": "^3.1.0"
   },
   "devDependencies": {
     "@types/jest": "^25.1.1",
     "@types/node": "^13.7.0",
     "jest": "^25.1.0",
-    "prettier": "^1.19.1",
+    "prettier": "^2.0.2",
     "ts-jest": "^25.1.0",
     "ts-node-dev": "^1.0.0-pre.44",
     "tsconfig-paths": "^3.9.0",

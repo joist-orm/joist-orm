@@ -3376,10 +3376,10 @@ prelude-ls@~1.1.2:
   resolved "https://registry.yarnpkg.com/prelude-ls/-/prelude-ls-1.1.2.tgz#21932a549f5e52ffd9a827f570e04be62a97da54"
   integrity sha1-IZMqVJ9eUv/ZqCf1cOBL5iqX2lQ=
 
-prettier@^1.18.2, prettier@^1.19.1:
-  version "1.19.1"
-  resolved "https://registry.yarnpkg.com/prettier/-/prettier-1.19.1.tgz#f7d7f5ff8a9cd872a7be4ca142095956a60797cb"
-  integrity sha512-s7PoyDv/II1ObgQunCbB9PdLmUcBZcnWOcxDh7O0N/UwDEsHyqkW+Qh28jW+mVuCdx7gLB0BotYI1Y6uI9iyew==
+prettier@^2.0.2:
+  version "2.0.2"
+  resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.0.2.tgz#1ba8f3eb92231e769b7fcd7cb73ae1b6b74ade08"
+  integrity sha512-5xJQIPT8BraI7ZnaDwSbu5zLrB6vvi8hVV58yHQ+QK64qrY40dULy0HSRlQ2/2IdzeBpjhDkqdcFBnFeDEMVdg==
 
 pretty-format@^25.1.0:
   version "25.1.0"
@@ -4182,14 +4182,14 @@ ts-node@*:
     source-map-support "^0.5.6"
     yn "3.1.1"
 
-ts-poet@^3.0.0:
-  version "3.0.0"
-  resolved "https://registry.yarnpkg.com/ts-poet/-/ts-poet-3.0.0.tgz#5a51ac09eaf04542a7a9032b68492595bace5812"
-  integrity sha512-jlKLJnpwNYheOvdb1xqRd4MU04BRHrkmqe2gUgheT4oP+iPGxNYDgIaVsWYppXnCLxHBuWJO7mekY/hyCBwB4Q==
+ts-poet@^3.1.0:
+  version "3.1.0"
+  resolved "https://registry.yarnpkg.com/ts-poet/-/ts-poet-3.1.0.tgz#29d70e321473dc87ffbbb74d28f0bc5333e61658"
+  integrity sha512-UEdEGbCVCEyW2pkguBcRbnPs0n+qjE4LJ8WJMjgxtbpw9ocPf1AWMSSU67R+9I0Poo2WOaPuBkQpFFIlqnUDPA==
   dependencies:
     "@types/prettier" "^1.19.0"
     lodash "^4.17.15"
-    prettier "^1.18.2"
+    prettier "^2.0.2"
 
 tsconfig-paths@^3.9.0:
   version "3.9.0"

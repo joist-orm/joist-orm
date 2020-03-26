@@ -112,6 +112,7 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 export class EntityManager {
   constructor(public knex: Knex) {}
 
+  private currentFlushPromise?: Promise<void>;
   private entities: Entity[] = [];
   // This is attempting to be internal/module private
   __data = {
@@ -335,6 +336,16 @@ export class EntityManager {
    * (i.e. including the initial `SELECT`s) in a transaction.
    */
   async flush(): Promise<void> {
+    if (this.currentFlushPromise) {
+      return this.currentFlushPromise;
+    }
+    this.currentFlushPromise = this.doFlush();
+    await this.currentFlushPromise;
+    this.currentFlushPromise = undefined;
+  }
+
+  /** The implementation of flush, but called by a DataLoader to de-dup calls made in a loop. */
+  private async doFlush(): Promise<void> {
     // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
     await this.cascadeDeletesIntoUnloadedCollections();
     const entityTodos = sortEntities(this.entities);

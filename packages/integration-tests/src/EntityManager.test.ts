@@ -447,4 +447,24 @@ describe("EntityManager", () => {
     a1.firstName = "a1";
     expect(a1.__orm.originalData).toEqual({});
   });
+
+  it("can handle flush being called in a loop", async () => {
+    await knex.insert({ name: "p1" }).into("publishers");
+    await knex.insert({ name: "p2" }).into("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
+    const em = new EntityManager(knex);
+
+    const authors = await em.find(Author, { id: ["1", "2"] }, { populate: "publisher" });
+    resetQueryCount();
+    await Promise.all(authors.map(async a => {
+      // Turns out modifying two different entity types was important to trigger the race condition
+      const p = a.publisher.get!;
+      a.firstName = a.firstName + "b";
+      p.name = p.name + "b";
+      await em.flush();
+    }));
+    // 2 begin/commit, 1 flush authors, 1 flush publishers
+    expect(numberOfQueries).toEqual(4);
+  });
 });

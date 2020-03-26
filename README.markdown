@@ -70,3 +70,4 @@ The `EntityManager.find` syntax is heavily inspired from [MikroORM](https://mikr
 ## License
 
 MIT
+

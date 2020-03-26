@@ -57,6 +57,7 @@ After checkout:
 - First-class support for soft deletion?
 - LargeCollection support
 - Op locks/`version` column?
+- An in-memory backend
 
 ## History / Inspiration
 

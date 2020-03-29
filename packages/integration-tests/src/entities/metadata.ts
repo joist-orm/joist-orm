@@ -109,7 +109,6 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => bookMeta,
     },
   ],
-  order: 2,
 };
 
 (Author as any).metadata = authorMeta;
@@ -173,7 +172,6 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => tagMeta,
     },
   ],
-  order: 3,
 };
 
 (Book as any).metadata = bookMeta;
@@ -237,7 +235,6 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       otherMetadata: () => authorMeta,
     },
   ],
-  order: 1,
 };
 
 (Publisher as any).metadata = publisherMeta;
@@ -289,7 +286,6 @@ export const tagMeta: EntityMetadata<Tag> = {
       otherMetadata: () => bookMeta,
     },
   ],
-  order: 0,
 };
 
 (Tag as any).metadata = tagMeta;

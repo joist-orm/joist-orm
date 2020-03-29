@@ -351,7 +351,7 @@ export class EntityManager {
     const entityTodos = sortEntities(this.entities);
     await validate(entityTodos);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
-    if (entityTodos.length === 0 && Object.keys(joinRowTodos).length === 0) {
+    if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
     }
     await this.knex.transaction(async tx => {
@@ -492,7 +492,6 @@ export interface EntityMetadata<T extends Entity> {
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   fields: Array<Field>;
-  order: number;
 }
 
 export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;
@@ -554,9 +553,9 @@ export class NotFoundError extends Error {}
 
 export class TooManyError extends Error {}
 
-async function validate(todos: Todo[]): Promise<void> {
+async function validate(todos: Record<string, Todo>): Promise<void> {
   await Promise.all(
-    todos.map(todo => {
+    Object.values(todos).map(todo => {
       const p1 = todo.inserts.map(entity => {
         if ("onSave" in entity) {
           return (entity as any).onSave();

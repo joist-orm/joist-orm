@@ -53,7 +53,6 @@ After checkout:
 - Cascading deletions for parent/child relationships
 - Codegen'd test builders 
 - Support user-defined types
-- Fallback to batch-bump-sequences-on-INSERT for schemas that have cycles
 - First-class support for soft deletion?
 - LargeCollection support
 - Op locks/`version` column?

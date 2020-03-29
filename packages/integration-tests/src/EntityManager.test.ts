@@ -67,8 +67,8 @@ describe("EntityManager", () => {
     new Author(em, { firstName: "a1" });
     new Author(em, { firstName: "a2" });
     await em.flush();
-    // 3 = begin, insert, commit
-    expect(numberOfQueries).toEqual(3);
+    // 4 = begin, assign ids, insert, commit
+    expect(numberOfQueries).toEqual(4);
     const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(2);
   });
@@ -460,5 +460,16 @@ describe("EntityManager", () => {
     );
     // 2 begin/commit, 1 flush authors, 1 flush publishers
     expect(numberOfQueries).toEqual(4);
+  });
+
+  it("can save tables with self-references", async () => {
+    const em = new EntityManager(knex);
+    const mentor = new Author(em, { firstName: "m1" });
+    const author = new Author(em, { firstName: "a1", mentor });
+    await em.flush();
+    const rows = await knex.select("*").from("authors").orderBy("id");
+    expect(rows.length).toEqual(2);
+    expect(rows[0].mentor_id).toBeNull();
+    expect(rows[1].mentor_id).toEqual(1);
   });
 });

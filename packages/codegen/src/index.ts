@@ -1,8 +1,7 @@
-import pgStructure, { Db, Table } from "pg-structure";
+import pgStructure, { Db } from "pg-structure";
 import { promises as fs } from "fs";
 import { Client } from "pg";
 import { code, Code } from "ts-poet";
-import TopologicalSort from "topological-sort";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 import { newPgConnectionConfig } from "./connection";
 import { generateMetadataFile } from "./generateMetadataFile";
@@ -62,16 +61,15 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
     .reduce(merge, []);
 
   const enumFiles = enums
-    .map(table => {
+    .map((table) => {
       const enumName = tableToEntityName(table);
       return [{ name: `${enumName}.ts`, contents: generateEnumFile(table, enumRows, enumName), overwrite: true }];
     })
     .reduce(merge, []);
 
-  const sortedEntities = sortByRequiredForeignKeys(db);
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
-    contents: code`${entities.map(table => generateMetadataFile(sortedEntities, table))}`,
+    contents: code`${entities.map((table) => generateMetadataFile(table))}`,
     overwrite: true,
   };
 
@@ -104,27 +102,6 @@ export async function contentToString(content: Code | string, fileName: string):
     return content;
   }
   return await content.toStringWithImports(fileName);
-}
-
-/**
- * For now, we insert entities in a deterministic order based on FK dependencies.
- *
- * This will only work with a subset of schemas, so we'll work around that later.
- */
-function sortByRequiredForeignKeys(db: Db): string[] {
-  const tables = db.tables.filter(isEntityTable);
-  const ts = new TopologicalSort<string, Table>(new Map());
-  tables.forEach(t => ts.addNode(t.name, t));
-  tables.forEach(t => {
-    t.m2oRelations
-      .filter(m2o => isEntityTable(m2o.targetTable))
-      .forEach(m2o => {
-        if (m2o.foreignKey.columns.every(c => c.notNull)) {
-          ts.addEdge(m2o.targetTable.name, t.name);
-        }
-      });
-  });
-  return Array.from(ts.sort().values()).map(v => tableToEntityName(v.node));
 }
 
 async function loadConfig(): Promise<Config> {

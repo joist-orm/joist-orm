@@ -3,7 +3,7 @@ import { code, Code } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
 
-export function generateMetadataFile(sortedEntities: string[], table: Table): Code {
+export function generateMetadataFile(table: Table): Code {
   const dbMetadata = new EntityDbMetadata(table);
   const { entity } = dbMetadata;
 
@@ -17,7 +17,6 @@ export function generateMetadataFile(sortedEntities: string[], table: Table): Co
       tableName: "${table.name}",
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
       fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ],
-      order: ${sortedEntities.indexOf(entity.name)},
     };
     
     (${entity.name} as any).metadata = ${entity.metaName};

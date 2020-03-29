@@ -3,6 +3,7 @@ import Knex, { Transaction } from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
 
+/** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
   metadata: EntityMetadata<any>;
   inserts: Entity[];
@@ -10,9 +11,10 @@ export interface Todo {
   deletes: Entity[];
 }
 
-export async function flushEntities(knex: Knex, tx: Transaction, todos: Todo[]): Promise<void> {
+export async function flushEntities(knex: Knex, tx: Transaction, todos: Record<string, Todo>): Promise<void> {
   const updatedAt = new Date();
-  for await (const todo of todos) {
+  await assignNewIds(knex, tx, todos);
+  for await (const todo of Object.values(todos)) {
     if (todo) {
       const meta = todo.metadata;
       if (todo.inserts.length > 0) {
@@ -29,6 +31,35 @@ export async function flushEntities(knex: Knex, tx: Transaction, todos: Todo[]):
   }
 }
 
+/**
+ * Assigns all new entities an id directly from their corresponding sequence generator, instead of via INSERTs.
+ *
+ * This lets us avoid cyclic issues with some INSERTs having foreign keys to other rows that themselves
+ * need to first be INSERTed.
+ */
+async function assignNewIds(knex: Knex, tx: Transaction, todos: Record<string, Todo>): Promise<void> {
+  const seqStatements: string[] = [];
+  Object.values(todos).forEach((todo) => {
+    if (todo.inserts.length > 0) {
+      const meta = todo.inserts[0].__orm.metadata;
+      const sequenceName = `${meta.tableName}_id_seq`;
+      const sql = `select nextval('${sequenceName}') from generate_series(1, ${todo.inserts.length})`
+      seqStatements.push(sql);
+    }
+  });
+  if (seqStatements.length > 0) {
+    // There will be 1 per table; 1 single insert should be fine but we might need to batch for super-large schemas?
+    const sql = seqStatements.join(" UNION ALL ");
+    const result = await knex.raw(sql).transacting(tx);
+    let i = 0;
+    Object.values(todos).forEach((todo) => {
+      for (const insert of todo.inserts) {
+        insert.__orm.data["id"] = keyToString(result.rows![i++]["nextval"]);
+      }
+    });
+  }
+}
+
 async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const rows = entities.map(entity => {
     const row = {};
@@ -37,10 +68,8 @@ async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any
   });
   const ids = await knex
     .batchInsert(meta.tableName, rows)
-    .transacting(tx)
-    .returning("id");
+    .transacting(tx);
   for (let i = 0; i < entities.length; i++) {
-    entities[i].__orm.data["id"] = keyToString(ids[i]);
     entities[i].__orm.originalData = {};
   }
 }
@@ -105,18 +134,18 @@ function cleanSql(sql: string): string {
  * and have no cycles, i.e. `books` always depend on `authors` (due to the `books.author_id`
  * foreign key), but `authors` never (via a required foreign key) depend on `books`.
  */
-export function sortEntities(entities: Entity[]): Todo[] {
-  const todos: Todo[] = [];
+export function sortEntities(entities: Entity[]): Record<string, Todo> {
+  const todos: Record<string, Todo> = {};
   for (const entity of entities) {
-    const order = entity.__orm.metadata.order;
+    const name = entity.__orm.metadata.type;
     const isNew = entity.id === undefined;
     const isDirty = !isNew && Object.keys(entity.__orm.originalData).length > 0;
     const isDelete = !isNew && entity.__orm.deleted === "pending";
     if (isNew || isDirty || isDelete) {
-      let todo = todos[order];
+      let todo = todos[name];
       if (!todo) {
         todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [] };
-        todos[order] = todo;
+        todos[name] = todo;
       }
       if (isNew) {
         todo.inserts.push(entity);

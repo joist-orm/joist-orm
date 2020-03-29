@@ -45,6 +45,13 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
     {
+      fieldName: "mentor",
+      columnName: "mentor_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("mentor", "mentor_id", () => authorMeta),
+    },
+
+    {
       fieldName: "publisher",
       columnName: "publisher_id",
       dbType: "int",
@@ -80,8 +87,20 @@ export const authorMeta: EntityMetadata<Author> = {
     },
     {
       kind: "m2o",
+      fieldName: "mentor",
+      otherMetadata: () => authorMeta,
+    },
+
+    {
+      kind: "m2o",
       fieldName: "publisher",
       otherMetadata: () => publisherMeta,
+    },
+
+    {
+      kind: "o2m",
+      fieldName: "authors",
+      otherMetadata: () => authorMeta,
     },
 
     {

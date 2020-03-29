@@ -14,7 +14,7 @@ import {
   ManyToOneReference,
   setField,
 } from "joist-orm";
-import { authorMeta, Publisher, Book, PublisherId, PublisherOrder, Author, bookMeta } from "./entities";
+import { authorMeta, Author, Publisher, Book, PublisherId, PublisherOrder, bookMeta } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -23,7 +23,9 @@ export interface AuthorOpts {
   lastName?: string | null;
   isPopular?: boolean | null;
   age?: number | null;
+  mentor?: Author | null;
   publisher?: Publisher | null;
+  authors?: Author[];
   books?: Book[];
 }
 
@@ -35,6 +37,7 @@ export interface AuthorFilter {
   age?: ValueFilter<number, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
@@ -46,6 +49,7 @@ export interface AuthorOrder {
   age?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  mentor?: AuthorOrder;
   publisher?: PublisherOrder;
 }
 
@@ -55,12 +59,28 @@ export class AuthorCodegen {
   readonly __orderType: AuthorOrder = null!;
   readonly __optsType: AuthorOpts = null!;
 
+  readonly authors: Collection<Author, Author> = new OneToManyCollection(
+    this as any,
+    authorMeta,
+    "authors",
+    "mentor",
+    "mentor_id",
+  );
+
   readonly books: Collection<Author, Book> = new OneToManyCollection(
     this as any,
     bookMeta,
     "books",
     "author",
     "author_id",
+  );
+
+  readonly mentor: Reference<Author, Author, undefined> = new ManyToOneReference<Author, Author, undefined>(
+    this as any,
+    Author,
+    "mentor",
+    "authors",
+    false,
   );
 
   readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference<Author, Publisher, undefined>(

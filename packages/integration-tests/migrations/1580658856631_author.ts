@@ -30,6 +30,7 @@ export function up(b: MigrationBuilder): void {
     // for testing integers
     age: { type: "integer", notNull: false },
     publisher_id: foreignKey("publishers", { notNull: false }),
+    mentor_id: foreignKey("authors", { notNull: false }),
   });
 
   createEntityTable(b, "books", {

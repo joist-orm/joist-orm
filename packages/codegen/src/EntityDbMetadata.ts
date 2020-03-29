@@ -5,6 +5,7 @@ import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
 import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./utils";
+import { Config } from "./index";
 
 // TODO Populate from config
 const columnCustomizations: Record<string, ColumnMetaData> = {};
@@ -157,8 +158,8 @@ function makeEntity(entityName: string): Entity {
     type: entityType(entityName),
     metaName: metaName(entityName),
     metaType: metaType(entityName),
-    idType: imp(`${entityName}Id@./entities`),
-    orderType: imp(`${entityName}Order@./entities`),
+    idType: imp(`${entityName}Id@./entities`, { definedIn: `./${entityName}Codegen` }),
+    orderType: imp(`${entityName}Order@./entities`, { definedIn: `./${entityName}Codegen` }),
   };
 }
 

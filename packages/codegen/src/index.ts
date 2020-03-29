@@ -21,7 +21,7 @@ export interface CodeGenFile {
 export type EnumRows = Record<string, EnumRow[]>;
 export type EnumRow = { id: number; code: string; name: string };
 
-interface Config {
+export interface Config {
   entitiesDirectory: string;
 }
 

@@ -12,7 +12,7 @@
     "pg-structure": "^5.10.6",
     "pluralize": "^8.0.0",
     "topological-sort": "^0.3.0",
-    "ts-poet": "^3.1.0"
+    "ts-poet": "^3.2.2"
   },
   "devDependencies": {
     "@types/jest": "^25.1.1",

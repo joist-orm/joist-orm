@@ -142,7 +142,7 @@ describe("EntityManager", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     await em.flush();
 
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 10));
 
     const em2 = new EntityManager(knex);
     const a2 = await em2.load(Author, "1");
@@ -282,10 +282,7 @@ describe("EntityManager", () => {
     const p1 = await em.load(Publisher, "1");
     expect(p1.name).toEqual("p1");
     // And it's updated by something else
-    await knex
-      .update({ name: "p2" })
-      .where({ id: 1 })
-      .from("publishers");
+    await knex.update({ name: "p2" }).where({ id: 1 }).from("publishers");
     // When we refresh the entity
     await em.refresh(p1);
     // Then we have the new data
@@ -316,10 +313,7 @@ describe("EntityManager", () => {
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the foreign key is changed by something else
     await knex.insert({ name: "p2" }).from("publishers");
-    await knex
-      .update({ publisher_id: 2 })
-      .where({ id: 1 })
-      .from("authors");
+    await knex.update({ publisher_id: 2 }).where({ id: 1 }).from("authors");
     // When we refresh the entity
     await em.refresh(a1);
     // Then we have the new data
@@ -352,9 +346,7 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the entity is deleted
-    await knex("authors")
-      .where("id", 1)
-      .del();
+    await knex("authors").where("id", 1).del();
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted
@@ -457,13 +449,15 @@ describe("EntityManager", () => {
 
     const authors = await em.find(Author, { id: ["1", "2"] }, { populate: "publisher" });
     resetQueryCount();
-    await Promise.all(authors.map(async a => {
-      // Turns out modifying two different entity types was important to trigger the race condition
-      const p = a.publisher.get!;
-      a.firstName = a.firstName + "b";
-      p.name = p.name + "b";
-      await em.flush();
-    }));
+    await Promise.all(
+      authors.map(async (a) => {
+        // Turns out modifying two different entity types was important to trigger the race condition
+        const p = a.publisher.get!;
+        a.firstName = a.firstName + "b";
+        p.name = p.name + "b";
+        await em.flush();
+      }),
+    );
     // 2 begin/commit, 1 flush authors, 1 flush publishers
     expect(numberOfQueries).toEqual(4);
   });

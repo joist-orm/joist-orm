@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
+import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
@@ -117,6 +117,7 @@ export class EntityManager {
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
+    findLoaders: {} as LoaderCache,
     joinRows: {} as Record<string, JoinRow[]>,
   };
 
@@ -136,8 +137,8 @@ export class EntityManager {
     options?: { populate?: any; orderBy?: OrderOf<T> },
   ): Promise<T[]> {
     const query = buildQuery(this.knex, type, where, options?.orderBy);
-    const rows = await query;
-    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
+    const rows = await this.loaderForFind(type).load(query);
+    const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
     }
@@ -433,6 +434,60 @@ export class EntityManager {
         }
       }),
     );
+  }
+
+  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<QueryBuilder, unknown[]> {
+    return getOrSet(this.__data.findLoaders, type.name, () => {
+      return new DataLoader<QueryBuilder, unknown[]>(async (queries) => {
+        // If there is only 1 query, we can skip the tagging step.
+        if (queries.length === 1) {
+          return [await queries[0]];
+        }
+
+        const { knex } = this;
+
+        // For each query, add an additional `__tag` column that will identify that query's
+        // corresponding rows in the combined/UNION ALL'd result set.
+        //
+        // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
+        // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
+        // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
+        // not gaurantee order).
+        const tagged = queries.map((query, i) => {
+          return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
+        });
+
+        const meta = getMetadata(type);
+
+        // Kind of dumb, but make a dummy row to start our query with
+        let query = knex
+          .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
+          .from(meta.tableName)
+          .orderBy("__tag", "__row")
+          .where({ id: -1 });
+
+        // Use the dummy query as a base, then `UNION ALL` in all the rest
+        tagged.forEach((add) => {
+          query = query.unionAll(add, true);
+        });
+
+        // Issue a single SQL statement for all of them
+        const rows = await query;
+
+        // We return an array-of-arrays, where result[i] is the rows for queries[i]
+        const result: any[][] = [];
+        rows.forEach((row: any) => {
+          const tag = row["__tag"];
+          let tagRows = result[tag];
+          if (tagRows === undefined) {
+            tagRows = [];
+            result[tag] = tagRows;
+          }
+          tagRows.push(row);
+        });
+        return result;
+      });
+    });
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {

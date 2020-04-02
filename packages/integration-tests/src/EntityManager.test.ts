@@ -462,6 +462,29 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(4);
   });
 
+  it("can handle flush being called in a loop with queries", async () => {
+    await knex.insert({ name: "p1" }).into("publishers");
+    await knex.insert({ name: "p2" }).into("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
+    const em = new EntityManager(knex);
+
+    const authors = await em.find(Author, { id: ["1", "2"] } );
+    resetQueryCount();
+    await Promise.all(
+      authors.map(async (a) => {
+        const p = await em.findOneOrFail(Publisher, { id: a.publisher.id });
+        a.firstName = a.firstName + p.name;
+        await em.flush();
+      }),
+    );
+    // 4 = 1 to (combined) select the publishers, 2 for begin/commit, 1 for bulk update authors.
+    expect(numberOfQueries).toEqual(4);
+    const rows = await knex.select("*").from("authors").orderBy("id");
+    expect(rows[0].first_name).toEqual("a1p1")
+    expect(rows[1].first_name).toEqual("a2p2");
+  });
+
   it("can save tables with self-references", async () => {
     const em = new EntityManager(knex);
     const mentor = new Author(em, { firstName: "m1" });

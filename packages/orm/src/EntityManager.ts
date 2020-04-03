@@ -121,7 +121,11 @@ export class EntityManager {
   };
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
-  public async find<T extends Entity, H extends LoadHint<T>>(
+  public async find<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate?: H; orderBy?: OrderOf<T> },
@@ -133,7 +137,7 @@ export class EntityManager {
   ): Promise<T[]> {
     const query = buildQuery(this.knex, type, where, options?.orderBy);
     const rows = await query;
-    const result = rows.map(row => this.hydrate(type, row, { overwriteExisting: false }));
+    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
     }
@@ -141,11 +145,11 @@ export class EntityManager {
   }
 
   public async findOne<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T | undefined>;
-  public async findOne<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
-    where: FilterOf<T>,
-    options?: { populate: H },
-  ): Promise<Loaded<T, H> | undefined>;
+  public async findOne<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(type: EntityConstructor<T>, where: FilterOf<T>, options?: { populate: H }): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
@@ -157,17 +161,17 @@ export class EntityManager {
     } else if (list.length === 1) {
       return list[0];
     } else {
-      throw new TooManyError(`Found more than one: ${list.map(e => e.toString()).join(", ")}`);
+      throw new TooManyError(`Found more than one: ${list.map((e) => e.toString()).join(", ")}`);
     }
   }
 
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
   public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T>;
-  public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
-    where: FilterOf<T>,
-    options: { populate: H },
-  ): Promise<Loaded<T, H>>;
+  public async findOneOrFail<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(type: EntityConstructor<T>, where: FilterOf<T>, options: { populate: H }): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
@@ -177,7 +181,7 @@ export class EntityManager {
     if (list.length === 0) {
       throw new NotFoundError(`Did not find ${type.name} for given query`);
     } else if (list.length > 1) {
-      throw new TooManyError(`Found more than one: ${list.map(e => e.toString()).join(", ")}`);
+      throw new TooManyError(`Found more than one: ${list.map((e) => e.toString()).join(", ")}`);
     }
     return list[0];
   }
@@ -190,7 +194,12 @@ export class EntityManager {
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
   public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T>;
-  public async load<T extends Entity, H extends LoadHint<T>>(
+  public async load<T extends Entity, H extends LoadHint<T> & { [k: string]: N | T | [] }, N extends Narrowable>(
+    type: EntityConstructor<T>,
+    id: string,
+    populate: H,
+  ): Promise<Loaded<T, H>>;
+  public async load<T extends Entity, H extends LoadHint<T> & (N | N[]), N extends Narrowable>(
     type: EntityConstructor<T>,
     id: string,
     populate: H,
@@ -211,14 +220,14 @@ export class EntityManager {
 
   /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
   public async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
-  public async loadAll<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
-    ids: string[],
-    populate: H,
-  ): Promise<Loaded<T, H>[]>;
+  public async loadAll<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(type: EntityConstructor<T>, ids: string[], populate: H): Promise<Loaded<T, H>[]>;
   async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[], hint?: any): Promise<T[]> {
     const entities = await Promise.all(
-      ids.map(id => {
+      ids.map((id) => {
         return this.findExistingInstance(getMetadata(type).cstr, id) || this.loaderForEntity(type).load(id);
       }),
     );
@@ -233,18 +242,23 @@ export class EntityManager {
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
-  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): Promise<Loaded<T, H>>;
-  public async populate<T extends Entity, H extends LoadHint<T>>(
-    entity: ReadonlyArray<T>,
-    hint: H,
-  ): Promise<Loaded<T, H>[]>;
+  public async populate<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(entity: T, hint: H): Promise<Loaded<T, H>>;
+  public async populate<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(entities: ReadonlyArray<T>, hint: H): Promise<Loaded<T, H>[]>;
   async populate<T extends Entity, H extends LoadHint<T>>(
     entityOrList: T | T[],
     hint: H,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>>> {
     let promises: Promise<void>[] = [];
     const list: T[] = Array.isArray(entityOrList) ? entityOrList : [entityOrList];
-    list.forEach(entity => {
+    list.forEach((entity) => {
       // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
       // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
       // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per
@@ -253,15 +267,15 @@ export class EntityManager {
       if (typeof hint === "string") {
         promises.push((entity as any)[hint].load());
       } else if (Array.isArray(hint)) {
-        (hint as string[]).forEach(key => {
+        (hint as string[]).forEach((key) => {
           promises.push((entity as any)[key].load());
         });
       } else if (typeof hint === "object") {
-        Object.entries(hint).forEach(([key, nestedHint]) => {
+        Object.entries(hint as object).forEach(([key, nestedHint]) => {
           promises.push(
             (entity as any)[key].load().then((result: any) => {
               if (Array.isArray(result)) {
-                return Promise.all(result.map(result => this.populate(result, nestedHint)));
+                return Promise.all(result.map((result) => this.populate(result, nestedHint)));
               } else {
                 return this.populate(result, nestedHint);
               }
@@ -318,8 +332,8 @@ export class EntityManager {
     // So, instead of "cascading out", we just scan all loaded entities, tell
     // them that this entity got deleted, and let them sort it out.
     this.entities
-      .filter(e => e.__orm.deleted === undefined)
-      .forEach(maybeOtherEntity => {
+      .filter((e) => e.__orm.deleted === undefined)
+      .forEach((maybeOtherEntity) => {
         Object.values(maybeOtherEntity).map((v: any) => {
           if (v instanceof AbstractRelationImpl) {
             v.onDeleteOfMaybeOtherEntity(deletedEntity);
@@ -354,7 +368,7 @@ export class EntityManager {
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
     }
-    await this.knex.transaction(async tx => {
+    await this.knex.transaction(async (tx) => {
       await flushEntities(this.knex, tx, entityTodos);
       await flushJoinTables(this.knex, tx, joinRowTodos);
       await tx.commit();
@@ -365,8 +379,8 @@ export class EntityManager {
   private async cascadeDeletesIntoUnloadedCollections(): Promise<void> {
     await Promise.all(
       this.entities
-        .filter(e => e.__orm.deleted === "pending")
-        .map(entity => {
+        .filter((e) => e.__orm.deleted === "pending")
+        .map((entity) => {
           return Promise.all(
             Object.values(entity).map(async (v: any) => {
               if (v instanceof AbstractRelationImpl) {
@@ -400,7 +414,7 @@ export class EntityManager {
         ? entityOrListOrUndefined
         : [entityOrListOrUndefined];
     await Promise.all(
-      list.map(async entity => {
+      list.map(async (entity) => {
         if (entity.id) {
           // Clear the original cached loader result and fetch the new primitives
           const loader = this.loaderForEntity(getMetadata(entity).cstr);
@@ -409,7 +423,7 @@ export class EntityManager {
           if (entity.__orm.deleted === undefined) {
             // Then refresh any loaded collections
             await Promise.all(
-              Object.values(entity).map(c => {
+              Object.values(entity).map((c) => {
                 if (c instanceof AbstractRelationImpl) {
                   return c.refreshIfLoaded();
                 }
@@ -423,7 +437,7 @@ export class EntityManager {
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {
     return getOrSet(this.__data.loaders, type.name, () => {
-      return new DataLoader<string, T | undefined>(async keys => {
+      return new DataLoader<string, T | undefined>(async (keys) => {
         const meta = getMetadata(type);
 
         const rows = await this.knex
@@ -432,11 +446,11 @@ export class EntityManager {
           .whereIn("id", keys as string[]);
 
         // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
-        const entities = rows.map(row => this.hydrate(type, row, { overwriteExisting: true }));
-        const entitiesById = indexBy(entities, e => e.id!);
+        const entities = rows.map((row) => this.hydrate(type, row, { overwriteExisting: true }));
+        const entitiesById = indexBy(entities, (e) => e.id!);
 
         // Return the results back in the same order as the keys
-        return keys.map(k => {
+        return keys.map((k) => {
           const entity = entitiesById.get(k);
           // We generally expect all of our entities to be found, but they may not for API calls like
           // `findOneOrFail` or for `EntityManager.refresh` when the entity has been deleted out from
@@ -455,7 +469,7 @@ export class EntityManager {
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   private findExistingInstance<T extends Entity>(type: EntityConstructor<T>, id: string): T | undefined {
-    return this.entities.find(e => getMetadata(e).cstr === type && e.id === id) as T | undefined;
+    return this.entities.find((e) => getMetadata(e).cstr === type && e.id === id) as T | undefined;
   }
 
   /**
@@ -474,12 +488,12 @@ export class EntityManager {
     let entity = this.findExistingInstance(type, id) as T;
     if (!entity) {
       entity = (new type(this, undefined) as any) as T;
-      meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
+      meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       // Usually if the entity alrady exists, we don't write over it, but in this case
       // we assume that `EntityManager.refresh` is telling us to explicitly load the
       // latest data.
-      meta.columns.forEach(c => c.serde.setOnEntity(entity!.__orm.data, row));
+      meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
     }
     return entity;
   }
@@ -496,38 +510,38 @@ export interface EntityMetadata<T extends Entity> {
 
 export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;
 
-export type PrimaryKeyField  = {
+export type PrimaryKeyField = {
   kind: "primaryKey";
   fieldName: string;
-}
+};
 
 export type PrimitiveField = {
   kind: "primitive";
   fieldName: string;
-}
+};
 
 export type EnumField = {
   kind: "enum";
   fieldName: string;
-}
+};
 
 export type OneToManyField = {
   kind: "o2m";
   fieldName: string;
-  otherMetadata: () => EntityMetadata<any>,
-}
+  otherMetadata: () => EntityMetadata<any>;
+};
 
 export type ManyToOneField = {
   kind: "m2o";
   fieldName: string;
-  otherMetadata: () => EntityMetadata<any>,
-}
+  otherMetadata: () => EntityMetadata<any>;
+};
 
 export type ManyToManyField = {
   kind: "m2m";
   fieldName: string;
-  otherMetadata: () => EntityMetadata<any>,
-}
+  otherMetadata: () => EntityMetadata<any>;
+};
 
 export function isEntity(e: any): e is Entity {
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
@@ -555,13 +569,13 @@ export class TooManyError extends Error {}
 
 async function validate(todos: Record<string, Todo>): Promise<void> {
   await Promise.all(
-    Object.values(todos).map(todo => {
-      const p1 = todo.inserts.map(entity => {
+    Object.values(todos).map((todo) => {
+      const p1 = todo.inserts.map((entity) => {
         if ("onSave" in entity) {
           return (entity as any).onSave();
         }
       });
-      const p2 = todo.updates.map(entity => {
+      const p2 = todo.updates.map((entity) => {
         if ("onSave" in entity) {
           return (entity as any).onSave();
         }
@@ -570,3 +584,5 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
     }),
   );
 }
+
+type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {};

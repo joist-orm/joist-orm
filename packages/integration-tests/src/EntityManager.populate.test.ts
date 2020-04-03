@@ -28,7 +28,7 @@ describe("EntityManager.populate", () => {
     await knex.insert({ title: "b1", author_id: 1 }).from("books");
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
-    const bookb = await em.populate(booka, { author: "publisher" } as const);
+    const bookb = await em.populate(booka, { author: "publisher" });
     expect(bookb.author.get.firstName).toEqual("a1");
     expect(bookb.author.get.publisher.get!.name).toEqual("p1");
   });
@@ -45,7 +45,7 @@ describe("EntityManager.populate", () => {
 
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
-    const pub = await em.populate(asyncPub, { authors: "books" } as const);
+    const pub = await em.populate(asyncPub, { authors: "books" });
     expect(numberOfQueries).toEqual(2);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);
@@ -64,7 +64,7 @@ describe("EntityManager.populate", () => {
 
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
-    const pub = await em.populate(asyncPub, { authors: ["books", "publisher"] } as const);
+    const pub = await em.populate(asyncPub, { authors: ["books", "publisher"] });
     expect(numberOfQueries).toEqual(2);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);
@@ -102,7 +102,11 @@ describe("EntityManager.populate", () => {
     const _b1 = await em.load(Book, "1");
     const _b2 = await em.load(Book, "1");
     resetQueryCount();
-    const [b1, b2] = await Promise.all([em.populate(_b1, "author"), em.populate(_b2, "author")]);
+    const [b1, b2] = await Promise.all([
+      //
+      em.populate(_b1, "author"),
+      em.populate(_b2, "author"),
+    ]);
     expect(b1.author.get.firstName).toEqual("a1");
     expect(b2.author.get.firstName).toEqual("a1");
     expect(numberOfQueries).toEqual(1);

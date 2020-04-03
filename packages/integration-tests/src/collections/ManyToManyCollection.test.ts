@@ -38,7 +38,7 @@ describe("ManyToManyCollection", () => {
     await knex.insert({ first_name: "a1" }).into("authors");
     await knex.insert({ title: "b1", author_id: 1 }).into("books");
     await Promise.all(
-      zeroTo(5).map(async i => {
+      zeroTo(5).map(async (i) => {
         await knex.insert({ name: `t${i}` }).into("tags");
         await knex.insert({ book_id: 1, tag_id: i + 1 }).into("books_to_tags");
       }),
@@ -58,14 +58,14 @@ describe("ManyToManyCollection", () => {
     await knex.insert({ first_name: "a1" }).into("authors");
     await knex.insert({ title: "b1", author_id: 1 }).into("books");
     await Promise.all(
-      zeroTo(5).map(async i => {
+      zeroTo(5).map(async (i) => {
         await knex.insert({ name: `t${i}` }).into("tags");
         await knex.insert({ book_id: 1, tag_id: i + 1 }).into("books_to_tags");
       }),
     );
     // And the 1st tag itself has two more books
     await Promise.all(
-      zeroTo(2).map(async i => {
+      zeroTo(2).map(async (i) => {
         await knex.insert({ title: `b${i + 1}`, author_id: 1 }).into("books");
         await knex.insert({ book_id: i + 2, tag_id: 1 }).into("books_to_tags");
       }),
@@ -186,7 +186,7 @@ describe("ManyToManyCollection", () => {
     // When the tag is deleted
     em.delete(t1);
     // Then the deleted tag is removed from the book collection
-    expect(b1.tags.get.map(t => t.id)).toEqual([t2.id]);
+    expect(b1.tags.get.map((t) => t.id)).toEqual([t2.id]);
     await em.flush();
     // And the tag itself was deleted
     expect((await knex.select("*").from("tags")).length).toEqual(1);

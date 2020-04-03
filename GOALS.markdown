@@ -45,7 +45,7 @@ This looks like:
 
 ```typescript
 // Note the `{ author: "publisher" } preload hint
-const book = await em.populate(originalBook, { author: "publisher" } as const);
+const book = await em.populate(originalBook, { author: "publisher" });
 // The `populate` return type is a "special" `Book` that has `author` and `publisher` marked as "get-safe"
 expect(book.author.get.firstName).toEqual("a1");
 expect(book.author.get.publisher.get.name).toEqual("p1");

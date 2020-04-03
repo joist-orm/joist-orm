@@ -465,7 +465,7 @@ describe("EntityManager", () => {
   it("can save tables with self-references", async () => {
     const em = new EntityManager(knex);
     const mentor = new Author(em, { firstName: "m1" });
-    const author = new Author(em, { firstName: "a1", mentor });
+    new Author(em, { firstName: "a1", mentor });
     await em.flush();
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows.length).toEqual(2);

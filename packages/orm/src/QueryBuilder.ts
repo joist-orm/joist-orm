@@ -161,7 +161,7 @@ export function buildQuery<T extends Entity>(
   addClauses(meta, alias, where as object, orderBy as object);
 
   if (!orderBy) {
-    query = query.orderBy(`${alias}.id`);
+    // query = query.orderBy(`${alias}.id`);
   }
 
   return query as QueryBuilder<{}, unknown[]>;

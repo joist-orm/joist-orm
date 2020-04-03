@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
+import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
@@ -117,6 +117,7 @@ export class EntityManager {
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
+    findLoaders: {} as LoaderCache,
     joinRows: {} as Record<string, JoinRow[]>,
   };
 
@@ -132,8 +133,8 @@ export class EntityManager {
     options?: { populate?: any; orderBy?: OrderOf<T> },
   ): Promise<T[]> {
     const query = buildQuery(this.knex, type, where, options?.orderBy);
-    const rows = await query;
-    const result = rows.map(row => this.hydrate(type, row, { overwriteExisting: false }));
+    const rows = await this.loaderForFind(type).load(query);
+    const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
     }
@@ -419,6 +420,43 @@ export class EntityManager {
         }
       }),
     );
+  }
+
+  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<QueryBuilder, unknown[]> {
+    return getOrSet(this.__data.findLoaders, type.name, () => {
+      return new DataLoader<QueryBuilder, unknown[]>(async (queries) => {
+        // TODO If there is only 1 query, we can skip the tagging step.
+
+        // For each query, amend it to also have a `__tag` column that will identify
+        // each query's corresponding rows in the combined/UNION ALL'd result set.
+        const tagged = queries.map((query, i) => {
+          return query.select(this.knex.raw(`${i} as __tag`))
+        })
+
+        // Use the 1st query as a base, then `UNION ALL` in all the rest
+        let query = tagged[0];
+        tagged.slice(1).forEach(add => {
+          query = query.unionAll(add, true);
+        });
+
+        // Issue a single SQL statement for all of them
+        const rows = await query;
+
+        // We return an array-of-arrays, where result[0] is the rows for queries[0]
+        const result: any[][] = [];
+        rows.forEach((row: any) => {
+          const tag = row["__tag"];
+          let tagRows = result[tag];
+          if (tagRows === undefined) {
+            tagRows = []
+            result[tag] = tagRows;
+          }
+          tagRows.push(row);
+        })
+
+        return result;
+      });
+    });
   }
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {

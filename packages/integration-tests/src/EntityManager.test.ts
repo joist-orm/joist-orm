@@ -478,6 +478,8 @@ describe("EntityManager", () => {
         await em.flush();
       }),
     );
+    // 4 = 1 to bulk SELECT the publishers, 2 for begin/commit, 3 for bulk update authors.
+    expect(numberOfQueries).toEqual(4);
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows[0].first_name).toEqual("a1p1")
     expect(rows[1].first_name).toEqual("a2p2");

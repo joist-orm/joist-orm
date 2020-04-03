@@ -83,7 +83,7 @@ export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
   {
     [K in keyof T]: H extends NestedLoadHint<T>
       ? LoadedIfInNestedHint<T, K, H>
-      : H extends Array<infer U>
+      : H extends ReadonlyArray<infer U>
       ? LoadedIfInKeyHint<T, K, U>
       : LoadedIfInKeyHint<T, K, H>;
   };

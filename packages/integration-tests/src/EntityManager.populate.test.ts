@@ -52,6 +52,25 @@ describe("EntityManager.populate", () => {
     expect(pub.authors.get[1].books.get.length).toEqual(2);
   });
 
+  it("can populate one-to-many with nested keys as an array", async () => {
+    await knex.insert({ name: "p1" }).from("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await knex.insert({ title: "b2", author_id: 1 }).from("books");
+    await knex.insert({ title: "b3", author_id: 2 }).from("books");
+    await knex.insert({ title: "b4", author_id: 2 }).from("books");
+    const em = new EntityManager(knex);
+
+    const asyncPub = await em.load(Publisher, "1");
+    resetQueryCount();
+    const pub = await em.populate(asyncPub, { authors: ["books", "publisher"] } as const);
+    expect(numberOfQueries).toEqual(2);
+    expect(pub.authors.get.length).toEqual(2);
+    expect(pub.authors.get[0].books.get.length).toEqual(2);
+    expect(pub.authors.get[0].publisher.get!.id).toEqual("1");
+  });
+
   it("can populate via load", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     await knex.insert({ title: "b1", author_id: 1 }).from("books");

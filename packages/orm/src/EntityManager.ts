@@ -112,12 +112,22 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 export class EntityManager {
   constructor(public knex: Knex) {}
 
-  private currentFlushPromise?: Promise<void>;
   private entities: Entity[] = [];
+  private findLoaders: LoaderCache = {};
+  // TODO Extract this DataLoader + currentFlushPromise into its own abstraction
+  private flushLoader = new DataLoader<number, number>(async (keys) => {
+    // Have all callers in the current event loop go through a single flush
+    // together, but set currentFlushPromise to let callers in subsequent loops
+    // that they need to wait.
+    this.currentFlushPromise = this.doFlush();
+    await this.currentFlushPromise;
+    this.currentFlushPromise = undefined;
+    return keys;
+  }, { cache: false });
+  private currentFlushPromise?: Promise<void>;
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
-    findLoaders: {} as LoaderCache,
     joinRows: {} as Record<string, JoinRow[]>,
   };
 
@@ -352,11 +362,11 @@ export class EntityManager {
    */
   async flush(): Promise<void> {
     if (this.currentFlushPromise) {
-      return this.currentFlushPromise;
+      await this.currentFlushPromise;
+      await this.flushLoader.load(0);
+    } else {
+      await this.flushLoader.load(0);
     }
-    this.currentFlushPromise = this.doFlush();
-    await this.currentFlushPromise;
-    this.currentFlushPromise = undefined;
   }
 
   /** The implementation of flush, but called by a DataLoader to de-dup calls made in a loop. */
@@ -437,7 +447,7 @@ export class EntityManager {
   }
 
   private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<QueryBuilder, unknown[]> {
-    return getOrSet(this.__data.findLoaders, type.name, () => {
+    return getOrSet(this.findLoaders, type.name, () => {
       return new DataLoader<QueryBuilder, unknown[]>(async (queries) => {
         // If there is only 1 query, we can skip the tagging step.
         if (queries.length === 1) {

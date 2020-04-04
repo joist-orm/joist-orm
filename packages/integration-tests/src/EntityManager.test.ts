@@ -1,6 +1,7 @@
 import { EntityManager, Loaded } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import { Deferred } from "./Deferred";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
@@ -469,20 +470,60 @@ describe("EntityManager", () => {
     await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
     const em = new EntityManager(knex);
 
-    const authors = await em.find(Author, { id: ["1", "2"] } );
+    const authors = await em.find(Author, { id: ["1", "2"] });
     resetQueryCount();
     await Promise.all(
       authors.map(async (a) => {
+        // The findOneOrFail's will be collected into a single call
         const p = await em.findOneOrFail(Publisher, { id: a.publisher.id });
         a.firstName = a.firstName + p.name;
+        // And so this flush will be a single batch update of both authors
         await em.flush();
       }),
     );
     // 4 = 1 to (combined) select the publishers, 2 for begin/commit, 1 for bulk update authors.
     expect(numberOfQueries).toEqual(4);
     const rows = await knex.select("*").from("authors").orderBy("id");
-    expect(rows[0].first_name).toEqual("a1p1")
+    expect(rows[0].first_name).toEqual("a1p1");
     expect(rows[1].first_name).toEqual("a2p2");
+  });
+
+  it("can handle flush being called in a loop with other awaits", async () => {
+    await knex.insert({ name: "p1" }).into("publishers");
+    await knex.insert({ name: "p2" }).into("publishers");
+    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
+    const em = new EntityManager(knex);
+
+    // Create promises that we'll explicitly resolve in separate event ticks
+    const deferreds = [new Deferred<string>(), new Deferred<string>()];
+    const authors = await em.find(Author, { id: ["1", "2"] });
+
+    resetQueryCount();
+    const all = Promise.all(
+      authors.map(async (a, i) => {
+        const suffix = await deferreds[i].promise;
+        a.firstName = a.firstName + suffix;
+        await em.flush();
+      }),
+    );
+
+    // Resolve the 1st one, which will start it's own flush
+    deferreds[0].resolve("a");
+    await delay(0);
+    // resolve the 2nd one, which will also do it's own flush
+    deferreds[1].resolve("b");
+    await all;
+
+    // Given the un-coordinated await's, the lambda event loops got out of sync,
+    // so this required two flushes. Which is fine, we just want to cover the boundary
+    // case and ensure it behaves correctly. If this was a concern in a real program,
+    // some sort of `await latch` would be needed to break the lambdas back in sync.
+    // 6 = (2 for begin/commit + 1 for update authors) x 2 for each flush.
+    expect(numberOfQueries).toEqual(6);
+    const rows = await knex.select("*").from("authors").orderBy("id");
+    expect(rows[0].first_name).toEqual("a1a");
+    expect(rows[1].first_name).toEqual("a2b");
   });
 
   it("can save tables with self-references", async () => {
@@ -496,3 +537,7 @@ describe("EntityManager", () => {
     expect(rows[1].mentor_id).toEqual(1);
   });
 });
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}

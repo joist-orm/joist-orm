@@ -1,6 +1,7 @@
 import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
-import { knex } from "./setupDbTests";
+import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import exp from "constants";
 
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
@@ -332,11 +333,13 @@ describe("EntityManager.queries", () => {
   it("can find empty results in a loop", async () => {
     await knex.insert({ first_name: "a1" }).from("authors");
     const em = new EntityManager(knex);
+    resetQueryCount();
     await Promise.all(
       ["a", "b"].map(async (lastName) => {
         const authors = await em.find(Author, { lastName });
         expect(authors.length).toEqual(0);
       }),
     );
+    expect(numberOfQueries).toEqual(1);
   });
 });

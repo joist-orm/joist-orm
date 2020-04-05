@@ -9,7 +9,7 @@ An opinionated ORM for TypeScript/node.
 
 - Schema-Driven Code Generation (continually-generated classes w/the getter/setter/relation boilerplate)
 - Gauranteed N+1 safe (pervasive use of DataLoader)
-- Async/Await All Relations (with a synchronous escape hatch)
+- All Relations are Async/Await (with a type-safe escape hatch)
 - Best-in-class Performance (all `SELECT`/`INSERT`/`UPDATE` operations are bulk)
 - Fast Unit Tests (for downstream projects, baseline is 10-20ms/test case)
 - Unit of Work (navigate between entities as a consistent graph)

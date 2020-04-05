@@ -13,19 +13,19 @@ If you do need some customizations, Joist's opinion is that those are best handl
 
 (Joist's codegen is still WIP, so we don't have these customization hooks defined yet, but they will exist soon.)
 
-## Gauranteed N+1 Safe
+## Guaranteed N+1 Safe
 
 Accidentally triggering N+1s is a very common pitfall of ORMs, because the ORM's "pretending to be in memory objects" mental model can be a leaky abstraction: you can access 1,000 actually-in-memory objects very quickly in a `for` loop, but you can't access 1,000 _not_-actually-in-memory objects in a `for` loop.
 
 Somewhat ironically/coincidentally (given the years of callback hell that Node/JS initially had to suffer through), Node/JS's single-threaded model is a boon to N+1 prevention because it forces all blocking I/O calls to be "identifiable", i.e. they _always_ require a callback or a promise.
 
-The innovative [DataLoader](https://github.com/graphql/dataloader) library provides a convention for "recognizing" multiple blocking calls (that happen within a single tick of the event loop) and combining them into batch calls.
+The innovative [DataLoader](https://github.com/graphql/dataloader) library provides a convention for "recognizing" multiple blocking calls that happen within a single tick of the event loop, which is where N+1s usually sprout from, and combining them into batch calls.
 
-Joist is built on DataLoader from the ground up, and most SQL operations (i.e. `EntityManager.load`, `EntityManager.populate`, loading entity references/collections like `author.books.load()`, etc.) are all automatically batched (technically `EntityManager.find` is not batched, because the bespoke queries cannot be automatically aggregated/de-aggregated), so N+1s should essentially never happen.
+Joist is built on DataLoader from the ground up, and nearly all SQL operations (i.e. `EntityManager.load`, `EntityManager.populate`, `EntityManager.find`, loading entity references/collections like `author.books.load()`, etc.) are all automatically batched, so N+1s should essentially never happen.
 
-## Async/Await All Relations (w/Escape Hatch)
+## All Relations are Async/Await (w/Type-safe Escape Hatch)
 
-Joist takes the strong opinion that any "this _might_ be lazy loaded" operations (like accessing an `author.books` collection that might or might not already be loaded in memory) _must_ be marked as `async/await`.
+Joist takes the strong opinion that any operation that _might_ be lazy loaded (like accessing an `author.books` collection that may or may not already be loaded in memory) _must_ be marked as `async/await`.
 
 Other ORMs in the JS/TS space often fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasantness of accessing `author.books` without `await`s/`Promise.all`/etc. code--as long as whoever loaded this `Author` ensured that `books` was already fetched/initialized.
 
@@ -55,7 +55,7 @@ Where `originalBook`'s references (`book.author`) could _not_ call `.get` (only 
 
 ## Best-in-Class Performance
  
-Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, and `DELETE` operations in bulk.
+Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, `DELETE`, and even `SELECT` operations in bulk.
 
 If you save 100 new authors, that is 1 SQL `INSERT` statement. If you update 500 books, that is 1 SQL `UPDATE` statement.
 
@@ -85,6 +85,13 @@ An example of this is how Joist exercises database resets: in general, between t
 
 Adopting (or writing from scratch) a new piece of infrastructure code like an ORM has pros/cons, one of the large cons being lack of a large base of contributors or committers to help maintain the project.
 
-To help mitigate this risk, Joist strives to be and stay a small codebase, such that users of Joist should ideally be able to maintain/support Joist on their own if necessary.
+To help mitigate this risk, Joist strives to be a small codebase, such that users of Joist should ideally be able to debug/maintain/support Joist on their own if necessary.
+
+This is achieved by:
+ 
+1. Cutting scope, i.e. focusing only on Postgres
+2. Having only one way of doing things, i.e. Joist does not provide multiple/optional Repository-style APIs vs EntityManger-style APIs
+   * Relatedly, currently there are very few config options, although these will grow slightly over time (i.e. to support user-defined types)
+3. Leveraging DataLoader, i.e. a lot of Joist's ROI in terms of providing generally fancy/high-performance auto-batching and pre-loading features with a relatively simple implementation comes from building on top of DataLoader
 
 (Granted, this may change at some point, if Joist becomes popular enough to, say, tackle supporting multiple relational databases, or whatever misc feature, with the help/long-term support from multiple contributors.)

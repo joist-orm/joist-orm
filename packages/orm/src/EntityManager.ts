@@ -115,15 +115,18 @@ export class EntityManager {
   private entities: Entity[] = [];
   private findLoaders: LoaderCache = {};
   // TODO Extract this DataLoader + currentFlushPromise into its own abstraction
-  private flushLoader = new DataLoader<number, number>(async (keys) => {
-    // Have all callers in the current event loop go through a single flush
-    // together, but set currentFlushPromise to let callers in subsequent loops
-    // that they need to wait.
-    this.currentFlushPromise = this.doFlush();
-    await this.currentFlushPromise;
-    this.currentFlushPromise = undefined;
-    return keys;
-  }, { cache: false });
+  private flushLoader = new DataLoader<number, number>(
+    async (keys) => {
+      // Have all callers in the current event loop go through a single flush
+      // together, but set currentFlushPromise to let callers in subsequent loops
+      // that they need to wait.
+      this.currentFlushPromise = this.doFlush();
+      await this.currentFlushPromise;
+      this.currentFlushPromise = undefined;
+      return keys;
+    },
+    { cache: false },
+  );
   private currentFlushPromise?: Promise<void>;
   // This is attempting to be internal/module private
   __data = {
@@ -486,14 +489,12 @@ export class EntityManager {
 
         // We return an array-of-arrays, where result[i] is the rows for queries[i]
         const result: any[][] = [];
+        queries.forEach((q, i) => {
+          result[i] = [];
+        });
+
         rows.forEach((row: any) => {
-          const tag = row["__tag"];
-          let tagRows = result[tag];
-          if (tagRows === undefined) {
-            tagRows = [];
-            result[tag] = tagRows;
-          }
-          tagRows.push(row);
+          result[row["__tag"]].push(row);
         });
         return result;
       });

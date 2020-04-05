@@ -181,8 +181,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by ids", async () => {
-    await knex.insert({ name: "p1", }).into("publishers");
-    await knex.insert({ name: "p2", }).into("publishers");
+    await knex.insert({ name: "p1" }).into("publishers");
+    await knex.insert({ name: "p2" }).into("publishers");
     const em = new EntityManager(knex);
     const pubs = await em.find(Publisher, { id: ["1", "2"] });
     expect(pubs.length).toEqual(2);
@@ -327,5 +327,16 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(2);
     expect(authors[0].firstName).toEqual("aA");
     expect(authors[1].firstName).toEqual("aB");
+  });
+
+  it("can find empty results in a loop", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    const em = new EntityManager(knex);
+    await Promise.all(
+      ["a", "b"].map(async (lastName) => {
+        const authors = await em.find(Author, { lastName });
+        expect(authors.length).toEqual(0);
+      }),
+    );
   });
 });

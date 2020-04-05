@@ -2,6 +2,8 @@
 
 set -e
 
+yarn build
+
 for p in codegen migration-utils orm ; do
   ./bump.sh ./packages/$p/package.json
 done

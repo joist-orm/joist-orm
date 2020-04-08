@@ -127,6 +127,12 @@ export const bookMeta: EntityMetadata<Book> = {
       serde: new SimpleSerde("title", "title"),
     },
     {
+      fieldName: "order",
+      columnName: "order",
+      dbType: "int",
+      serde: new SimpleSerde("order", "order"),
+    },
+    {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamptz",
@@ -151,6 +157,10 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "primitive",
       fieldName: "title",
+    },
+    {
+      kind: "primitive",
+      fieldName: "order",
     },
     {
       kind: "primitive",

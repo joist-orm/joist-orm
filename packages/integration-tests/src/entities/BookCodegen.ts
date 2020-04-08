@@ -20,6 +20,7 @@ export type BookId = Flavor<string, "Book">;
 
 export interface BookOpts {
   title: string;
+  order?: number | null;
   author: Author;
   tags?: Tag[];
 }
@@ -27,6 +28,7 @@ export interface BookOpts {
 export interface BookFilter {
   id?: ValueFilter<BookId, never>;
   title?: ValueFilter<string, never>;
+  order?: ValueFilter<number, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
@@ -35,6 +37,7 @@ export interface BookFilter {
 export interface BookOrder {
   id?: OrderBy;
   title?: OrderBy;
+  order?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
@@ -84,6 +87,14 @@ export class BookCodegen {
 
   set title(title: string) {
     setField(this, "title", title);
+  }
+
+  get order(): number | undefined {
+    return this.__orm.data["order"];
+  }
+
+  set order(order: number | undefined) {
+    setField(this, "order", order);
   }
 
   get createdAt(): Date {

@@ -536,6 +536,15 @@ describe("EntityManager", () => {
     expect(rows[0].mentor_id).toBeNull();
     expect(rows[1].mentor_id).toEqual(1);
   });
+
+  it("can save entities with columns that are keywords", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+    b1.order = 1;
+    await em.flush();
+  });
 });
 
 function delay(ms: number): Promise<void> {

@@ -36,6 +36,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "books", {
     title: { type: "varchar(255)", notNull: true },
     author_id: foreignKey("authors", { notNull: true }),
+    // for testing columns that are keywords
+    order: { type: "integer", notNull: false, default: 0 },
   });
 
   createEntityTable(b, "tags", {

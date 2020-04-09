@@ -5,7 +5,6 @@ import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
 import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./utils";
-import { Config } from "./index";
 
 // TODO Populate from config
 const columnCustomizations: Record<string, ColumnMetaData> = {};
@@ -83,10 +82,12 @@ export class EntityDbMetadata {
     this.enums = table.m2oRelations.filter(r => isEnumTable(r.targetTable)).map(r => newEnumField(r));
     this.manyToOnes = table.m2oRelations
       .filter(r => !isEnumTable(r.targetTable))
+      .filter(r => !isMultiColumnForeignKey(r))
       .map(r => newManyToOneField(this.entity, r));
     this.oneToManys = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter(r => !isJoinTable(r.targetTable))
+      .filter(r => !isMultiColumnForeignKey(r))
       .map(r => newOneToMany(r));
     this.manyToManys = table.m2mRelations
       // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
@@ -94,8 +95,13 @@ export class EntityDbMetadata {
       // considered as a join table/m2m between "us" and "something else". Filter these out
       // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
       .filter(r => isJoinTable(r.joinTable))
+      .filter(r => !isMultiColumnForeignKey(r))
       .map(r => newManyToManyField(r));
   }
+}
+
+function isMultiColumnForeignKey(r: M2ORelation) {
+  return r.foreignKey.columns.length > 1;
 }
 
 function newPrimitive(column: Column, table: Table): PrimitiveField {

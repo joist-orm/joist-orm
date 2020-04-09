@@ -41,18 +41,16 @@ async function createFlushDbFunction(db: Db, client: Client): Promise<void> {
 }
 
 function generateFlushFunction(db: Db): string {
-  const statements = db.tables
-    .filter(isEntityTable)
-    .map(t => `TRUNCATE ${t.name} RESTART IDENTITY CASCADE`)
-    .join(";");
-  return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$ ${statements} $$ LANGUAGE SQL`;
+  const tables = db.tables.filter(isEntityTable).map((t) => t.name);
+  const truncate = `TRUNCATE ${tables.join(", ")} RESTART IDENTITY CASCADE`;
+  return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$ ${truncate} $$ LANGUAGE SQL`;
 }
 
 export function isEntityTable(t: Table): boolean {
-  const columnNames = t.columns.map(c => c.name);
+  const columnNames = t.columns.map((c) => c.name);
   return includesAllOf(columnNames, ["id", "created_at", "updated_at"]);
 }
 
 function includesAllOf(set: string[], subset: string[]): boolean {
-  return subset.find(e => !set.includes(e)) === undefined;
+  return subset.find((e) => !set.includes(e)) === undefined;
 }

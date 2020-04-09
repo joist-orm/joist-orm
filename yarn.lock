@@ -4268,10 +4268,10 @@ typedarray-to-buffer@^3.1.5:
   dependencies:
     is-typedarray "^1.0.0"
 
-typescript@^3.8.3:
-  version "3.8.3"
-  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.8.3.tgz#409eb8544ea0335711205869ec458ab109ee1061"
-  integrity sha512-MYlEfn5VrLNsgudQTVJeNaQFUAI7DkhnOjdpAp4T+ku1TfQClewlbSuTVHiA+8skNBgaf02TL/kLOvig4y3G8w==
+typescript@^3.9.0-beta:
+  version "3.9.0-dev.20200408"
+  resolved "https://registry.yarnpkg.com/typescript/-/typescript-3.9.0-dev.20200408.tgz#a2f4d3a20e0126cf0fdf72ffdb08625068d5ba0a"
+  integrity sha512-VxFnT5htyQ1eVm6TZeICKCrpu0xl5O+NZdVEIRrNNiEqAPpYeYNwQy1BWmbwvzBFAMQC05pY1JD4isUi9TkJUA==
 
 unc-path-regex@^0.1.2:
   version "0.1.2"

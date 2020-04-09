@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, getMetadata, isEntity, sameEntity } from "../EntityManager";
+import { Entity, EntityConstructor, getMetadata, IdOf, isEntity, sameEntity } from "../EntityManager";
 import { ensureNotDeleted, maybeResolveReferenceToId, Reference, setField } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -52,9 +52,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.returnUndefinedIfDeleted(this.loaded);
   }
 
-  get id(): string | N {
+  get id(): IdOf<U> | N {
     ensureNotDeleted(this.entity);
-    return maybeResolveReferenceToId(this.current()) as string | N;
+    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
   }
 
   // private impl
@@ -88,8 +88,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {
-  }
+  async onEntityDeletedAndFlushing(): Promise<void> {}
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N, opts?: { beingDeleted?: boolean }): void {

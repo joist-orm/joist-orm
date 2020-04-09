@@ -10,6 +10,6 @@
     "packages/orm"
   ],
   "dependencies": {
-    "typescript": "^3.8.3"
+    "typescript": "^3.9.0-beta"
   }
 }

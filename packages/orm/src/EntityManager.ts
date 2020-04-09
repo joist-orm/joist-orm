@@ -24,6 +24,9 @@ export type FilterOf<T> = T extends { __filterType: infer Q } ? Q : never;
 /** Pulls the entity order type out of a given entity type T. */
 export type OrderOf<T> = T extends { __orderType: infer Q } ? Q : never;
 
+/** Pulls the entity's id type out of a given entity type T. */
+export type IdOf<T> = T extends { id: infer I | undefined } ? I : never
+
 /** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
   /** A point to our entity type's metadata. */

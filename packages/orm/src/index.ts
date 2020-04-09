@@ -1,4 +1,4 @@
-import { Entity } from "./EntityManager";
+import { Entity, IdOf } from "./EntityManager";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export * from "./EntityManager";
@@ -34,7 +34,7 @@ export interface Relation<T extends Entity, U extends Entity> {
  * `U | never` which becomes just `U`.
  */
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
-  id: string | N;
+  id: IdOf<U> | N;
 
   load(): Promise<U | N>;
 
@@ -116,7 +116,7 @@ export function setOpts(entity: Entity, opts: object, calledFromConstructor: boo
     }
   });
   if (calledFromConstructor) {
-    Object.values(entity).forEach(v => {
+    Object.values(entity).forEach((v) => {
       if (v instanceof AbstractRelationImpl) {
         v.initializeForNewEntity();
       }

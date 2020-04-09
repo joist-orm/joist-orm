@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
-import { Author } from "../entities";
+import { Author, BookId } from "../entities";
 
 describe("Author", () => {
   it("can have business logic methods", async () => {
@@ -24,4 +24,11 @@ describe("Author", () => {
     expect(author.firstName).toEqual("a2");
     expect(author.lastName).toEqual("a2");
   });
+
+  it("has strongly typed reference ids", () => {
+    const author: Author = null!;
+    let bookId: BookId = "1";
+    // @ts-expect-error
+    bookId = author?.mentor?.id!;
+  })
 });

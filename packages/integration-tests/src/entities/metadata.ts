@@ -1,5 +1,5 @@
 import { EntityMetadata, PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "joist-orm";
-import { Author, Book, Publisher, Tag, PublisherSizes } from "./entities";
+import { Author, Book, BookReview, Publisher, Tag, PublisherSizes } from "./entities";
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
@@ -177,6 +177,12 @@ export const bookMeta: EntityMetadata<Book> = {
     },
 
     {
+      kind: "o2m",
+      fieldName: "reviews",
+      otherMetadata: () => bookReviewMeta,
+    },
+
+    {
       kind: "m2m",
       fieldName: "tags",
       otherMetadata: () => tagMeta,
@@ -185,6 +191,63 @@ export const bookMeta: EntityMetadata<Book> = {
 };
 
 (Book as any).metadata = bookMeta;
+
+export const bookReviewMeta: EntityMetadata<BookReview> = {
+  cstr: BookReview,
+  type: "BookReview",
+  tableName: "book_reviews",
+  columns: [
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+
+    {
+      fieldName: "rating",
+      columnName: "rating",
+      dbType: "int",
+      serde: new SimpleSerde("rating", "rating"),
+    },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+    {
+      fieldName: "book",
+      columnName: "book_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("book", "book_id", () => bookMeta),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id" },
+
+    {
+      kind: "primitive",
+      fieldName: "rating",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+    },
+    {
+      kind: "m2o",
+      fieldName: "book",
+      otherMetadata: () => bookMeta,
+    },
+  ],
+};
+
+(BookReview as any).metadata = bookReviewMeta;
 
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,

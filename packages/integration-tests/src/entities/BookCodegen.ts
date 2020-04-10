@@ -8,13 +8,14 @@ import {
   fail,
   EntityFilter,
   FilterOf,
+  Collection,
+  OneToManyCollection,
   Reference,
   ManyToOneReference,
-  Collection,
   ManyToManyCollection,
   setField,
 } from "joist-orm";
-import { bookMeta, Author, Tag, AuthorId, AuthorOrder, Book } from "./entities";
+import { bookMeta, Author, BookReview, Tag, AuthorId, AuthorOrder, Book, bookReviewMeta } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
 
@@ -22,6 +23,7 @@ export interface BookOpts {
   title: string;
   order?: number | null;
   author: Author;
+  reviews?: BookReview[];
   tags?: Tag[];
 }
 
@@ -48,6 +50,14 @@ export class BookCodegen {
   readonly __filterType: BookFilter = null!;
   readonly __orderType: BookOrder = null!;
   readonly __optsType: BookOpts = null!;
+
+  readonly reviews: Collection<Book, BookReview> = new OneToManyCollection(
+    this as any,
+    bookReviewMeta,
+    "reviews",
+    "book",
+    "book_id",
+  );
 
   readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
     this as any,

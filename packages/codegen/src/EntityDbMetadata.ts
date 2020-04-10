@@ -77,26 +77,26 @@ export class EntityDbMetadata {
   constructor(table: Table) {
     this.entity = makeEntity(tableToEntityName(table));
     this.primitives = table.columns
-      .filter(c => !c.isPrimaryKey && !c.isForeignKey)
-      .map(column => newPrimitive(column, table));
-    this.enums = table.m2oRelations.filter(r => isEnumTable(r.targetTable)).map(r => newEnumField(r));
+      .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
+      .map((column) => newPrimitive(column, table));
+    this.enums = table.m2oRelations.filter((r) => isEnumTable(r.targetTable)).map((r) => newEnumField(r));
     this.manyToOnes = table.m2oRelations
-      .filter(r => !isEnumTable(r.targetTable))
-      .filter(r => !isMultiColumnForeignKey(r))
-      .map(r => newManyToOneField(this.entity, r));
+      .filter((r) => !isEnumTable(r.targetTable))
+      .filter((r) => !isMultiColumnForeignKey(r))
+      .map((r) => newManyToOneField(this.entity, r));
     this.oneToManys = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
-      .filter(r => !isJoinTable(r.targetTable))
-      .filter(r => !isMultiColumnForeignKey(r))
-      .map(r => newOneToMany(r));
+      .filter((r) => !isJoinTable(r.targetTable))
+      .filter((r) => !isMultiColumnForeignKey(r))
+      .map((r) => newOneToMany(this.entity, r));
     this.manyToManys = table.m2mRelations
       // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
       // that has a foreign key to us, and a foreign key to something else, is automatically
       // considered as a join table/m2m between "us" and "something else". Filter these out
       // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
-      .filter(r => isJoinTable(r.joinTable))
-      .filter(r => !isMultiColumnForeignKey(r))
-      .map(r => newManyToManyField(r));
+      .filter((r) => isJoinTable(r.joinTable))
+      .filter((r) => !isMultiColumnForeignKey(r))
+      .map((r) => newManyToManyField(r));
   }
 }
 
@@ -130,21 +130,33 @@ function newManyToOneField(entity: Entity, r: M2ORelation): ManyToOneField {
   const columnName = column.name;
   const fieldName = camelCase(column.name.replace("_id", ""));
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  const otherFieldName = camelCase(pluralize(entity.name));
+  const otherFieldName = collectionName(otherEntity, entity);
   const notNull = column.notNull;
   return { fieldName, columnName, otherEntity, otherFieldName, notNull };
 }
 
-function newOneToMany(r: O2MRelation): OneToManyField {
+function newOneToMany(entity: Entity, r: O2MRelation): OneToManyField {
   const column = r.foreignKey.columns[0];
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  // I.e. if the other side is `child.project_id`, use children
-  const fieldName = camelCase(pluralize(otherEntity.name));
+  const fieldName = collectionName(entity, otherEntity);
   const otherFieldName = camelCase(column.name.replace("_id", ""));
   const otherColumnName = column.name;
   return { fieldName, otherEntity, otherFieldName, otherColumnName };
+}
+
+/** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
+export function collectionName(entity: Entity, otherEntity: Entity): string {
+  // TODO Handle multiple fks from otherEntity --> entity
+  // TODO Handle conflicts in names
+  // I.e. if the other side is `child.project_id`, use `children`.
+  let fieldName = otherEntity.name;
+  // If the other side is `book_reviews.book_id`, use `reviews`.
+  if (fieldName.length > entity.name.length) {
+    fieldName = fieldName.replace(entity.name, "");
+  }
+  return camelCase(pluralize(fieldName));
 }
 
 function newManyToManyField(r: M2MRelation): ManyToManyField {
@@ -158,7 +170,7 @@ function newManyToManyField(r: M2MRelation): ManyToManyField {
   return { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName };
 }
 
-function makeEntity(entityName: string): Entity {
+export function makeEntity(entityName: string): Entity {
   return {
     name: entityName,
     type: entityType(entityName),

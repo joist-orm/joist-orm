@@ -40,6 +40,12 @@ export function up(b: MigrationBuilder): void {
     order: { type: "integer", notNull: false, default: 0 },
   });
 
+  // for testing children that are named a prefix of their parent
+  createEntityTable(b, "book_reviews", {
+    rating: { type: "integer", notNull: true },
+    book_id: foreignKey("books", { notNull: true }),
+  });
+
   createEntityTable(b, "tags", {
     name: { type: "varchar(255)", notNull: true },
   });

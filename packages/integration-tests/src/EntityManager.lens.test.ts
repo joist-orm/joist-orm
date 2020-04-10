@@ -18,7 +18,26 @@ async function get<T extends Entity, RLens extends { __type: any }>(
   entity: T,
   fn: (lens: BookLens) => RLens,
 ): Promise<LensEntityType<RLens>> {
-  return null!;
+  const items: string[] = [];
+
+  const lens = new Proxy(
+    {},
+    {
+      get(object, property, receiver) {
+        items.push(String(property));
+        return receiver;
+      },
+    },
+  ) as any;
+
+  fn(lens as any);
+  console.log(items);
+
+  let current: any = entity;
+  for await (const item of items) {
+    current = await current[item].load();
+  }
+  return current!;
 }
 
 type LensEntityType<L> = L extends { __type: infer U } ? U : never;

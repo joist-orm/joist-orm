@@ -95,3 +95,62 @@ This is achieved by:
 3. Leveraging DataLoader, i.e. a lot of Joist's ROI in terms of providing generally fancy/high-performance auto-batching and pre-loading features with a relatively simple implementation comes from building on top of DataLoader
 
 (Granted, this may change at some point, if Joist becomes popular enough to, say, tackle supporting multiple relational databases, or whatever misc feature, with the help/long-term support from multiple contributors.)
+
+## Misc Features
+
+### Appropriately Null/Not Null Properties
+
+Null and not null columns are correctly modeled and enforced, i.e. a table like:
+
+```
+                                        Table "public.authors"
+    Column    |           Type           | Collation | Nullable |               Default
+--------------+--------------------------+-----------+----------+-------------------------------------
+ id           | integer                  |           | not null | nextval('authors_id_seq'::regclass)
+ first_name   | character varying(255)   |           | not null |
+ last_name    | character varying(255)   |           |          |
+```
+
+Will have properties like:
+
+```typescript
+class AuthorCodegen {
+  get firstName(): string {
+    return this.__orm.data["firstName"];
+  }
+
+  set firstName(firstName: string) {
+    setField(this, "firstName", firstName);
+  }
+
+  get lastName(): string | undefined {
+    return this.__orm.data["lastName"];
+  }
+
+  set lastName(lastName: string | undefined) {
+    setField(this, "lastName", lastName);
+  }
+}
+```
+
+And `firstName` is enforced to be non-null on construction:
+
+```typescript
+new Author(em, { firstName: "is required" });
+```
+
+I.e. you cannot `new Author()` and then forget to set `firstName`.
+
+### `EntityManager.create` marks collections as loaded
+
+The `EntityManager.create` method types the newly-created entity's collections as already loaded.
+
+I.e. this code is valid:
+
+```typescript
+const author = em.create(Author, { firstName: "asdf "});
+expect(author.books.get.length).toEqual(0);
+```
+
+Even though normally `books.get` is not allowed/must be a lazy `.load` call, in this instance `create` knows that the `Author` is brand new, so by definition can't have any existing `Book` rows in the database that might need to be looked up, so can turn the `books` collection into a loaded collection, i.e. with the `get` method available.
+

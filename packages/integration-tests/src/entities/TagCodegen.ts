@@ -2,6 +2,7 @@ import {
   Flavor,
   ValueFilter,
   OrderBy,
+  BaseEntity,
   EntityOrmField,
   EntityManager,
   setOpts,
@@ -33,7 +34,7 @@ export interface TagOrder {
   updatedAt?: OrderBy;
 }
 
-export class TagCodegen {
+export class TagCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: TagFilter = null!;
   readonly __orderType: TagOrder = null!;
@@ -50,6 +51,7 @@ export class TagCodegen {
   );
 
   constructor(em: EntityManager, opts: TagOpts) {
+    super();
     this.__orm = { em, metadata: tagMeta, data: {}, originalData: {} };
     em.register(this);
     setOpts(this, opts);

@@ -1,5 +1,6 @@
 import { imp } from "ts-poet";
 
+export const BaseEntity = imp("BaseEntity@joist-orm");
 export const Flavor = imp("Flavor@joist-orm");
 export const Reference = imp("Reference@joist-orm");
 export const Collection = imp("Collection@joist-orm");

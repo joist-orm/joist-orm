@@ -2,6 +2,7 @@ import { Table } from "pg-structure";
 import { code, Code, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
+  BaseEntity,
   Collection,
   EntityFilter,
   EntityManager,
@@ -132,7 +133,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
       ${generateOrderFields(meta)}
     }
 
-    export class ${entityName}Codegen {
+    export class ${entityName}Codegen extends ${BaseEntity} {
       readonly __orm: ${EntityOrmField};
       readonly __filterType: ${entityName}Filter = null!;
       readonly __orderType: ${entityName}Order = null!;
@@ -140,6 +141,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
       ${[o2m, m2o, m2m]}
       
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
+        super();
         this.__orm = { em, metadata: ${metadata}, data: {}, originalData: {} };
         em.register(this);
         ${setOpts}(this, opts);

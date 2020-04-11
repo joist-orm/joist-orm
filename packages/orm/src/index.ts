@@ -9,6 +9,7 @@ export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 export { OrderBy, EntityFilter, ValueFilter } from "./QueryBuilder";
+export { BaseEntity, Lens } from "./BaseEntity";
 
 const F = Symbol();
 const G = Symbol();

@@ -2,6 +2,7 @@ import {
   Flavor,
   ValueFilter,
   OrderBy,
+  BaseEntity,
   EntityOrmField,
   EntityManager,
   setOpts,
@@ -36,7 +37,7 @@ export interface PublisherOrder {
   size?: OrderBy;
 }
 
-export class PublisherCodegen {
+export class PublisherCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: PublisherFilter = null!;
   readonly __orderType: PublisherOrder = null!;
@@ -51,6 +52,7 @@ export class PublisherCodegen {
   );
 
   constructor(em: EntityManager, opts: PublisherOpts) {
+    super();
     this.__orm = { em, metadata: publisherMeta, data: {}, originalData: {} };
     em.register(this);
     setOpts(this, opts);

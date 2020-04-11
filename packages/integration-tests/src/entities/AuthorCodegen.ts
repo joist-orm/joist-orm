@@ -2,6 +2,7 @@ import {
   Flavor,
   ValueFilter,
   OrderBy,
+  BaseEntity,
   EntityOrmField,
   EntityManager,
   setOpts,
@@ -53,7 +54,7 @@ export interface AuthorOrder {
   publisher?: PublisherOrder;
 }
 
-export class AuthorCodegen {
+export class AuthorCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: AuthorFilter = null!;
   readonly __orderType: AuthorOrder = null!;
@@ -92,6 +93,7 @@ export class AuthorCodegen {
   );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
+    super();
     this.__orm = { em, metadata: authorMeta, data: {}, originalData: {} };
     em.register(this);
     setOpts(this, opts);

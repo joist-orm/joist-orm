@@ -552,7 +552,7 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     new Author(em, { firstName: "a1" });
     await em.flush();
-    const a = await em.findOrCreate(Author, { firstName: "a1" }, {});
+    const a = await em.findOrCreate(Author, { firstName: "a1" }, {}, {});
     expect(a.id).toEqual("1");
   });
 
@@ -560,8 +560,20 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     new Author(em, { firstName: "a1" });
     await em.flush();
-    const a = await em.findOrCreate(Author, { firstName: "a2" }, {});
+    const a = await em.findOrCreate(Author, { firstName: "a2" }, { lastName: "l" }, { age: 20 });
     expect(a.id).toBeUndefined();
+    expect(a.lastName).toEqual("l");
+    expect(a.age).toEqual(20);
+  });
+
+  it("can upsert with findOrCreate", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "a1" });
+    await em.flush();
+    const a = await em.findOrCreate(Author, { firstName: "a1" }, { lastName: "l" }, { age: 20 });
+    expect(a.id).toEqual("1");
+    expect(a.lastName).toEqual("l");
+    expect(a.age).toBeUndefined();
   });
 });
 

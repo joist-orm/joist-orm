@@ -1,5 +1,5 @@
-import { Entity, EntityOrmField } from "./EntityManager";
-import { Collection, Reference } from "./index";
+import { Entity, EntityOrmField, OptsOf } from "./EntityManager";
+import { Collection, Reference, setOpts } from "./index";
 
 /**
  * A type for declaratively walking the object graph.
@@ -27,6 +27,10 @@ export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
 
   abstract __orm: EntityOrmField;
+
+  public set(opts: Partial<OptsOf<this>>): void {
+    setOpts(this, opts, false);
+  }
 
   /**
    * Allows declaratively loading several layers of references at one.

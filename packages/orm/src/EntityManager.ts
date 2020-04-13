@@ -46,6 +46,8 @@ export interface Entity {
   id: string | undefined;
 
   __orm: EntityOrmField;
+
+  set(opts: Partial<OptsOf<this>>): void;
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
@@ -212,20 +214,26 @@ export class EntityManager {
    *
    * @param type the entity type to find/create
    * @param where the fields to look up the existing entity by
+   * @param upsert the fields to update if the entity is either existing or new
    * @param ifNew the fields to set if the entity is new
    */
-  async findOrCreate<T extends Entity, F extends Partial<OptsOf<T>>, O extends Omit<OptsOf<T>, keyof F>>(
-    type: EntityConstructor<T>,
-    where: F,
-    ifNew: O,
-  ): Promise<T> {
+  async findOrCreate<
+    T extends Entity,
+    F extends Partial<OptsOf<T>>,
+    U extends Partial<OptsOf<T>>,
+    O extends Omit<OptsOf<T>, keyof F | keyof U>
+  >(type: EntityConstructor<T>, where: F, upsert: U, ifNew: O): Promise<T> {
     const entities = await this.find(type, where as FilterOf<T>);
+    let entity: T;
     if (entities.length > 1) {
       throw new TooManyError();
     } else if (entities.length === 1) {
-      return entities[0];
+      entity = entities[0];
+    } else {
+      entity = this.create(type, { ...where, ...ifNew } as OptsOf<T>);
     }
-    return this.create(type, { ...where, ...ifNew } as OptsOf<T>);
+    entity.set(upsert);
+    return entity;
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */

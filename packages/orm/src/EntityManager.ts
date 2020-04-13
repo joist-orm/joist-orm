@@ -25,7 +25,7 @@ export type FilterOf<T> = T extends { __filterType: infer Q } ? Q : never;
 export type OrderOf<T> = T extends { __orderType: infer Q } ? Q : never;
 
 /** Pulls the entity's id type out of a given entity type T. */
-export type IdOf<T> = T extends { id: infer I | undefined } ? I : never
+export type IdOf<T> = T extends { id: infer I | undefined } ? I : never;
 
 /** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
@@ -201,6 +201,31 @@ export class EntityManager {
       throw new TooManyError(`Found more than one: ${list.map((e) => e.toString()).join(", ")}`);
     }
     return list[0];
+  }
+
+  /**
+   * Conditionally finds or creates an Entity.
+   *
+   * The types work out where the `where` + `ifNewOpts` are both subsets of the entity's `Opts`
+   * type, i.e. if we have to create the entity, the combintaion of `where` + `ifNewOpts` will
+   * have all of the necessary required fields.
+   *
+   * @param type the entity type to find/create
+   * @param where the fields to look up the existing entity by
+   * @param ifNew the fields to set if the entity is new
+   */
+  async findOrCreate<T extends Entity, F extends Partial<OptsOf<T>>, O extends Omit<OptsOf<T>, keyof F>>(
+    type: EntityConstructor<T>,
+    where: F,
+    ifNew: O,
+  ): Promise<T> {
+    const entities = await this.find(type, where as FilterOf<T>);
+    if (entities.length > 1) {
+      throw new TooManyError();
+    } else if (entities.length === 1) {
+      return entities[0];
+    }
+    return this.create(type, { ...where, ...ifNew } as OptsOf<T>);
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */

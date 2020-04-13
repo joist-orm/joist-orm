@@ -547,6 +547,22 @@ describe("EntityManager", () => {
     const books = await em.find(Book, { order: { $gt: 0 } });
     expect(books.length).toEqual(1);
   });
+
+  it("can find with findOrCreate", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "a1" });
+    await em.flush();
+    const a = await em.findOrCreate(Author, { firstName: "a1" }, {});
+    expect(a.id).toEqual("1");
+  });
+
+  it("can create with findOrCreate", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "a1" });
+    await em.flush();
+    const a = await em.findOrCreate(Author, { firstName: "a2" }, {});
+    expect(a.id).toBeUndefined();
+  });
 });
 
 function delay(ms: number): Promise<void> {

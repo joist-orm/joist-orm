@@ -220,9 +220,9 @@ export class EntityManager {
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
-    U extends Partial<OptsOf<T>>,
+    U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>
-  >(type: EntityConstructor<T>, where: F, upsert: U, ifNew: O): Promise<T> {
+  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U): Promise<T> {
     const entities = await this.find(type, where as FilterOf<T>);
     let entity: T;
     if (entities.length > 1) {
@@ -232,7 +232,9 @@ export class EntityManager {
     } else {
       entity = this.create(type, { ...where, ...ifNew } as OptsOf<T>);
     }
-    entity.set(upsert);
+    if (upsert) {
+      entity.set(upsert);
+    }
     return entity;
   }
 

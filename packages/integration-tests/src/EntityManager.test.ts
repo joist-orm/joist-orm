@@ -552,15 +552,25 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     new Author(em, { firstName: "a1" });
     await em.flush();
-    const a = await em.findOrCreate(Author, { firstName: "a1" }, {}, {});
+    const a = await em.findOrCreate(Author, { firstName: "a1" }, {});
     expect(a.id).toEqual("1");
+  });
+
+  it("can find by optional field with findOrCreate", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "a1", age: 20 });
+    await em.flush();
+    const a = await em.findOrCreate(Author, { age: 20 }, { firstName: "a2" });
+    expect(a.id).toEqual("1");
+    // we leave firstName alone since it was in the ifNew hash
+    expect(a.firstName).toEqual("a1");
   });
 
   it("can create with findOrCreate", async () => {
     const em = new EntityManager(knex);
     new Author(em, { firstName: "a1" });
     await em.flush();
-    const a = await em.findOrCreate(Author, { firstName: "a2" }, { lastName: "l" }, { age: 20 });
+    const a = await em.findOrCreate(Author, { firstName: "a2" }, { age: 20 }, { lastName: "l" });
     expect(a.id).toBeUndefined();
     expect(a.lastName).toEqual("l");
     expect(a.age).toEqual(20);
@@ -570,10 +580,16 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     new Author(em, { firstName: "a1" });
     await em.flush();
-    const a = await em.findOrCreate(Author, { firstName: "a1" }, { lastName: "l" }, { age: 20 });
+    const a = await em.findOrCreate(Author, { firstName: "a1" }, { age: 20 }, { lastName: "l" });
     expect(a.id).toEqual("1");
     expect(a.lastName).toEqual("l");
     expect(a.age).toBeUndefined();
+  });
+
+  it("findOrCreate doesn't compile if required field is missing", async () => {
+    const em = new EntityManager(knex);
+    // @ts-expect-error
+    await em.findOrCreate(Author, { age: 20 }, { lastName: "l" });
   });
 });
 

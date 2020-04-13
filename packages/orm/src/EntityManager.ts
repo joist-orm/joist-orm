@@ -222,7 +222,23 @@ export class EntityManager {
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U): Promise<T> {
+  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U): Promise<T>;
+  async findOrCreate<
+    T extends Entity,
+    F extends Partial<OptsOf<T>>,
+    U extends Partial<OptsOf<T>> | {},
+    O extends Omit<OptsOf<T>, keyof F | keyof U>,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+    >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: H): Promise<Loaded<T, H>> ;
+  async findOrCreate<
+    T extends Entity,
+    F extends Partial<OptsOf<T>>,
+    U extends Partial<OptsOf<T>> | {},
+    O extends Omit<OptsOf<T>, keyof F | keyof U>,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: H): Promise<T> {
     const entities = await this.find(type, where as FilterOf<T>);
     let entity: T;
     if (entities.length > 1) {
@@ -234,6 +250,9 @@ export class EntityManager {
     }
     if (upsert) {
       entity.set(upsert);
+    }
+    if (populate) {
+      await this.populate(entity, populate);
     }
     return entity;
   }

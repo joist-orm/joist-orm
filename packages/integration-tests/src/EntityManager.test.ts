@@ -591,6 +591,15 @@ describe("EntityManager", () => {
     // @ts-expect-error
     await em.findOrCreate(Author, { age: 20 }, { lastName: "l" });
   });
+
+  it("can find and populate with findOrCreate", async () => {
+    await knex.insert({ first_name: "a1" }).from("authors");
+    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const b1 = await em.findOrCreate(Book, { title: "b1", author: a1 }, {}, {}, "author");
+    expect(b1.author.get).toEqual(a1);
+  });
 });
 
 function delay(ms: number): Promise<void> {

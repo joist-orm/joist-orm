@@ -154,3 +154,15 @@ expect(author.books.get.length).toEqual(0);
 
 Even though normally `books.get` is not allowed/must be a lazy `.load` call, in this instance `create` knows that the `Author` is brand new, so by definition can't have any existing `Book` rows in the database that might need to be looked up, so can turn the `books` collection into a loaded collection, i.e. with the `get` method available.
 
+### Derived Columns
+
+If you mark a field as derived in `joist-codegen.json`, it will not have a setter, only an `abstract` getter than you must implement, and that Joist will call to use as the column in the database.
+
+```json
+{
+  "derivedFields": ["Author.initials"]
+}
+```
+
+Note that this currently only works for primitive columns, and the getter must be synchronous.
+

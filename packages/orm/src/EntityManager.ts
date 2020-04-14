@@ -3,7 +3,7 @@ import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
-import { Collection, LoadedCollection, LoadedReference, Reference, Relation } from "./index";
+import { Collection, LoadedCollection, LoadedReference, Reference, Relation, setField } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
@@ -230,7 +230,7 @@ export class EntityManager {
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
     N extends Narrowable
-    >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: H): Promise<Loaded<T, H>> ;
+  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: H): Promise<Loaded<T, H>>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
@@ -433,6 +433,7 @@ export class EntityManager {
   private async doFlush(): Promise<void> {
     // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
     await this.cascadeDeletesIntoUnloadedCollections();
+    recalcDerivedFields(this.entities);
     const entityTodos = sortEntities(this.entities);
     await validate(entityTodos);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
@@ -641,6 +642,7 @@ export type PrimaryKeyField = {
 export type PrimitiveField = {
   kind: "primitive";
   fieldName: string;
+  derived?: boolean;
 };
 
 export type EnumField = {
@@ -709,3 +711,25 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
 }
 
 type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {};
+
+/**
+ * Evaluates each derived field to see if it's value has changed.
+ *
+ * This is a) not at all reactive, b) only works for primitives, c) doesn't work
+ * with async/promise-based logic, and d) doesn't support passing an app-specific
+ * context, but it's a start.
+ */
+function recalcDerivedFields(entities: Entity[]) {
+  const derivedFieldsByMeta = new Map(
+    [...new Set(entities.map((e) => e.__orm.metadata))].map((m) => {
+      return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived).map((f) => f.fieldName)];
+    }),
+  );
+  for (const entity of entities) {
+    const derivedFields = derivedFieldsByMeta.get(entity.__orm.metadata);
+    derivedFields?.forEach(fieldName => {
+      // setField will intelligently mark/not mark the field as dirty.
+      setField(entity, fieldName, (entity as any)[fieldName]);
+    });
+  }
+}

@@ -1,6 +1,6 @@
 import { Table } from "pg-structure";
 import { code, Code, imp } from "ts-poet";
-import { EntityDbMetadata } from "./EntityDbMetadata";
+import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
   BaseEntity,
   Collection,
@@ -21,6 +21,7 @@ import {
 } from "./symbols";
 import { camelCase } from "change-case";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
+import { Config } from "./index";
 
 export interface ColumnMetaData {
   typeConverter?: SymbolSpec;
@@ -28,29 +29,44 @@ export interface ColumnMetaData {
 }
 
 /** Creates the base class with the boilerplate annotations. */
-export function generateEntityCodegenFile(table: Table, entityName: string): Code {
+export function generateEntityCodegenFile(config: Config, table: Table, entityName: string): Code {
   const meta = new EntityDbMetadata(table);
   const entity = meta.entity;
 
   // Add the primitives
-  const primitives = meta.primitives.map(p => {
+  const primitives = meta.primitives.map((p) => {
     const { fieldName, fieldType, notNull } = p;
     const maybeOptional = notNull ? "" : " | undefined";
-    const getter = code`
-      get ${fieldName}(): ${fieldType}${maybeOptional} {
-        return this.__orm.data["${fieldName}"];
-      }
-   `;
-    const setter = code`
-      set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
-        ${setField}(this, "${fieldName}", ${fieldName});
-      }
-    `;
-    return code`${getter} ${!ormMaintainedFields.includes(fieldName) ? setter : ""}`;
+
+    let getter: Code;
+    if (isDerived(config, entity, fieldName)) {
+      getter = code`
+        abstract get ${fieldName}(): ${fieldType}${maybeOptional};
+     `;
+    } else {
+      getter = code`
+        get ${fieldName}(): ${fieldType}${maybeOptional} {
+          return this.__orm.data["${fieldName}"];
+        }
+     `;
+    }
+
+    let setter: Code | string;
+    if (ormMaintainedFields.includes(fieldName) || isDerived(config, entity, fieldName)) {
+      setter = "";
+    } else {
+      setter = code`
+        set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
+    }
+
+    return code`${getter} ${setter}`;
   });
 
   // Add ManyToOne
-  meta.enums.forEach(e => {
+  meta.enums.forEach((e) => {
     const { fieldName, enumType, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
     const getter = code`
@@ -69,7 +85,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   });
 
   // Add ManyToOne
-  const m2o = meta.manyToOnes.map(m2o => {
+  const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
@@ -85,7 +101,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   });
 
   // Add OneToMany
-  const o2m = meta.oneToManys.map(o2m => {
+  const o2m = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
       readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${OneToManyCollection}(
@@ -99,7 +115,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   });
 
   // Add ManyToMany
-  const m2m = meta.manyToManys.map(m2m => {
+  const m2m = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
       readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${ManyToManyCollection}(
@@ -120,7 +136,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     export interface ${entityName}Opts {
-      ${generateOptsFields(meta)}
+      ${generateOptsFields(config, meta)}
     }
 
     export interface ${entityName}Filter {
@@ -133,7 +149,7 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
       ${generateOrderFields(meta)}
     }
 
-    export class ${entityName}Codegen extends ${BaseEntity} {
+    export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __orm: ${EntityOrmField};
       readonly __filterType: ${entityName}Filter = null!;
       readonly __orderType: ${entityName}Order = null!;
@@ -168,10 +184,10 @@ export function generateEntityCodegenFile(table: Table, entityName: string): Cod
   `;
 }
 
-function generateOptsFields(meta: EntityDbMetadata): Code[] {
+function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   // Make our opts type
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
-    if (ormMaintainedFields.includes(fieldName)) {
+    if (ormMaintainedFields.includes(fieldName) || isDerived(config, meta.entity, fieldName)) {
       return code``;
     }
     return code`${fieldName}${maybeOptional(notNull)}: ${fieldType}${maybeUnionNull(notNull)};`;
@@ -234,3 +250,7 @@ function nullOrNever(notNull: boolean): string {
 }
 
 const ormMaintainedFields = ["createdAt", "updatedAt"];
+
+export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.derivedFields.includes(`${entity.name}.${fieldName}`);
+}

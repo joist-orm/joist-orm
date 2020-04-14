@@ -10,7 +10,7 @@ import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./
 const columnCustomizations: Record<string, ColumnMetaData> = {};
 
 /** Codegen-time metadata about a given domain entity. */
-type Entity = {
+export type Entity = {
   name: string;
   /** The symbol pointing to the entity itself. */
   type: SymbolSpec;

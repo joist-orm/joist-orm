@@ -34,7 +34,7 @@ export interface TagOrder {
   updatedAt?: OrderBy;
 }
 
-export class TagCodegen extends BaseEntity {
+export abstract class TagCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: TagFilter = null!;
   readonly __orderType: TagOrder = null!;

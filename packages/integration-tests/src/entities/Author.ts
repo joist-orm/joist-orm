@@ -6,6 +6,11 @@ export class Author extends AuthorCodegen {
     super(em, opts);
   }
 
+  /** Implements the business logic for a (synchronous) derived primitive. */
+  get initials(): string {
+    return this.firstName[0] + (this.lastName !== undefined ? this.lastName[0] : "");
+  }
+
   get fullName(): string {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }

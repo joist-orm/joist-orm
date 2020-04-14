@@ -2,13 +2,18 @@ import { Table } from "pg-structure";
 import { code, Code } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
+import { isDerived } from "./generateEntityCodegenFile";
+import { Config } from "./index";
 
-export function generateMetadataFile(table: Table): Code {
+export function generateMetadataFile(config: Config, table: Table): Code {
   const dbMetadata = new EntityDbMetadata(table);
   const { entity } = dbMetadata;
 
   const { primaryKey, primitives, enums, m2o } = generateColumns(dbMetadata);
-  const { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields } = generateFields(dbMetadata);
+  const { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields } = generateFields(
+    config,
+    dbMetadata,
+  );
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
@@ -30,7 +35,7 @@ function generateColumns(
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}("id", "id") },
   `;
 
-  const primitives = dbMetadata.primitives.map(p => {
+  const primitives = dbMetadata.primitives.map((p) => {
     const { fieldName, columnName, columnType } = p;
     return code`
       {
@@ -41,7 +46,7 @@ function generateColumns(
       },`;
   });
 
-  const enums = dbMetadata.enums.map(e => {
+  const enums = dbMetadata.enums.map((e) => {
     const { fieldName, columnName, enumDetailType } = e;
     return code`
       {
@@ -53,7 +58,7 @@ function generateColumns(
     `;
   });
 
-  const m2o = dbMetadata.manyToOnes.map(m2o => {
+  const m2o = dbMetadata.manyToOnes.map((m2o) => {
     const { fieldName, columnName, otherEntity } = m2o;
     return code`
       {
@@ -69,6 +74,7 @@ function generateColumns(
 }
 
 function generateFields(
+  config: Config,
   dbMetadata: EntityDbMetadata,
 ): {
   primaryKeyField: Code;
@@ -82,16 +88,17 @@ function generateFields(
     { kind: "primaryKey", fieldName: "id" },
   `;
 
-  const primitiveFields = dbMetadata.primitives.map(p => {
+  const primitiveFields = dbMetadata.primitives.map((p) => {
     const { fieldName } = p;
     return code`
       {
         kind: "primitive",
         fieldName: "${fieldName}",
+        ${isDerived(config, dbMetadata.entity, fieldName) ? "derived: true," : ""}
       },`;
   });
 
-  const enumFields = dbMetadata.enums.map(e => {
+  const enumFields = dbMetadata.enums.map((e) => {
     const { fieldName, columnName, enumDetailType } = e;
     return code`
       {
@@ -101,7 +108,7 @@ function generateFields(
     `;
   });
 
-  const m2oFields = dbMetadata.manyToOnes.map(m2o => {
+  const m2oFields = dbMetadata.manyToOnes.map((m2o) => {
     const { fieldName, columnName, otherEntity } = m2o;
     return code`
       {
@@ -112,7 +119,7 @@ function generateFields(
     `;
   });
 
-  const o2mFields = dbMetadata.oneToManys.map(m2o => {
+  const o2mFields = dbMetadata.oneToManys.map((m2o) => {
     const { fieldName, otherEntity } = m2o;
     return code`
       {
@@ -123,7 +130,7 @@ function generateFields(
     `;
   });
 
-  const m2mFields = dbMetadata.manyToManys.map(m2o => {
+  const m2mFields = dbMetadata.manyToManys.map((m2o) => {
     const { fieldName, otherEntity } = m2o;
     return code`
       {

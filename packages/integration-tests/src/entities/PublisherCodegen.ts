@@ -37,7 +37,7 @@ export interface PublisherOrder {
   size?: OrderBy;
 }
 
-export class PublisherCodegen extends BaseEntity {
+export abstract class PublisherCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: PublisherFilter = null!;
   readonly __orderType: PublisherOrder = null!;

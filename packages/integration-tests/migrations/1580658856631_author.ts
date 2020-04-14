@@ -25,6 +25,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
     last_name: { type: "varchar(255)", notNull: false },
+    // for testing derived columns
+    initials: { type: "varchar(255)", notNull: true },
     // for testing nullable booleans
     is_popular: { type: "boolean", notNull: false },
     // for testing integers

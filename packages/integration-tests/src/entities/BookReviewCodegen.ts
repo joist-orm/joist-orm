@@ -38,7 +38,7 @@ export interface BookReviewOrder {
   book?: BookOrder;
 }
 
-export class BookReviewCodegen extends BaseEntity {
+export abstract class BookReviewCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: BookReviewFilter = null!;
   readonly __orderType: BookReviewOrder = null!;

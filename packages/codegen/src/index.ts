@@ -22,15 +22,17 @@ export type EnumRow = { id: number; code: string; name: string };
 
 export interface Config {
   entitiesDirectory: string;
+  derivedFields: string[];
 }
 
 const defaultConfig: Config = {
   entitiesDirectory: "./src/entities",
+  derivedFields: [],
 };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
-export async function generateAndSaveFiles(db: Db, config: Config, enumRows: EnumRows): Promise<void> {
-  const files = generateFiles(db, enumRows);
+export async function generateAndSaveFiles(config: Config, db: Db, enumRows: EnumRows): Promise<void> {
+  const files = generateFiles(config, db, enumRows);
   await fs.mkdir(config.entitiesDirectory, { recursive: true });
   for await (const file of files) {
     const path = `${config.entitiesDirectory}/${file.name}`;
@@ -46,7 +48,7 @@ export async function generateAndSaveFiles(db: Db, config: Config, enumRows: Enu
 }
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
-export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
+export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeGenFile[] {
   const entities = db.tables.filter(isEntityTable).sortBy("name");
   const enums = db.tables.filter(isEnumTable).sortBy("name");
 
@@ -54,7 +56,11 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
     .map((table) => {
       const entityName = tableToEntityName(table);
       return [
-        { name: `${entityName}Codegen.ts`, contents: generateEntityCodegenFile(table, entityName), overwrite: true },
+        {
+          name: `${entityName}Codegen.ts`,
+          contents: generateEntityCodegenFile(config, table, entityName),
+          overwrite: true,
+        },
         { name: `${entityName}.ts`, contents: generateInitialEntityFile(table, entityName), overwrite: false },
       ];
     })
@@ -69,7 +75,7 @@ export function generateFiles(db: Db, enumRows: EnumRows): CodeGenFile[] {
 
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
-    contents: code`${entities.map((table) => generateMetadataFile(table))}`,
+    contents: code`${entities.map((table) => generateMetadataFile(config, table))}`,
     overwrite: true,
   };
 
@@ -109,7 +115,7 @@ async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
     const content = await fs.readFile(configPath);
-    return JSON.parse(content.toString()) as Config;
+    return { ...defaultConfig, ...(JSON.parse(content.toString()) as Config) };
   }
   return defaultConfig;
 }
@@ -128,7 +134,7 @@ if (require.main === module) {
     await client.end();
 
     const config = await loadConfig();
-    await generateAndSaveFiles(db, config, enumRows);
+    await generateAndSaveFiles(config, db, enumRows);
   })().catch((err) => {
     console.error(err);
     process.exit(1);

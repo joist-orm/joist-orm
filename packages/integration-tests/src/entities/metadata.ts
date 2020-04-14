@@ -21,6 +21,12 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new SimpleSerde("lastName", "last_name"),
     },
     {
+      fieldName: "initials",
+      columnName: "initials",
+      dbType: "varchar",
+      serde: new SimpleSerde("initials", "initials"),
+    },
+    {
       fieldName: "isPopular",
       columnName: "is_popular",
       dbType: "bool",
@@ -68,6 +74,11 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "lastName",
+    },
+    {
+      kind: "primitive",
+      fieldName: "initials",
+      derived: true,
     },
     {
       kind: "primitive",

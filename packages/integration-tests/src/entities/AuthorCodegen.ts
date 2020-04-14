@@ -34,6 +34,7 @@ export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never>;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null | undefined>;
+  initials?: ValueFilter<string, never>;
   isPopular?: ValueFilter<boolean, null | undefined>;
   age?: ValueFilter<number, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
@@ -46,6 +47,7 @@ export interface AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   lastName?: OrderBy;
+  initials?: OrderBy;
   isPopular?: OrderBy;
   age?: OrderBy;
   createdAt?: OrderBy;
@@ -54,7 +56,7 @@ export interface AuthorOrder {
   publisher?: PublisherOrder;
 }
 
-export class AuthorCodegen extends BaseEntity {
+export abstract class AuthorCodegen extends BaseEntity {
   readonly __orm: EntityOrmField;
   readonly __filterType: AuthorFilter = null!;
   readonly __orderType: AuthorOrder = null!;
@@ -122,6 +124,8 @@ export class AuthorCodegen extends BaseEntity {
   set lastName(lastName: string | undefined) {
     setField(this, "lastName", lastName);
   }
+
+  abstract get initials(): string;
 
   get isPopular(): boolean | undefined {
     return this.__orm.data["isPopular"];

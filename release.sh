@@ -4,6 +4,8 @@ set -e
 
 yarn build
 
+(cd packages/integration-tests && exec yarn test)
+
 for p in codegen migration-utils orm ; do
   ./bump.sh ./packages/$p/package.json
 done

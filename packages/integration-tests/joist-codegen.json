@@ -1,5 +1,8 @@
 {
   "derivedFields": [
     "Author.initials"
+  ],
+  "protectedFields": [
+    "Author.wasEverPopular"
   ]
 }

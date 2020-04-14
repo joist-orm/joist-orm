@@ -39,6 +39,12 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new SimpleSerde("age", "age"),
     },
     {
+      fieldName: "wasEverPopular",
+      columnName: "was_ever_popular",
+      dbType: "bool",
+      serde: new SimpleSerde("wasEverPopular", "was_ever_popular"),
+    },
+    {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamptz",
@@ -87,6 +93,10 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "age",
+    },
+    {
+      kind: "primitive",
+      fieldName: "wasEverPopular",
     },
     {
       kind: "primitive",

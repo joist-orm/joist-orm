@@ -32,4 +32,16 @@ describe("Author", () => {
     // @ts-expect-error
     bookId = author?.mentor?.id!;
   });
+
+  it("can set protected fields", async () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em, { firstName: "a1", isPopular: true });
+    expect(author.wasEverPopular).toEqual(true);
+    await em.flush();
+    // But they cannot be called directly
+    expect(() => {
+      // @ts-expect-error
+      author.wasEverPopular = false;
+    }).toThrow(TypeError);
+  });
 });

@@ -23,11 +23,13 @@ export type EnumRow = { id: number; code: string; name: string };
 export interface Config {
   entitiesDirectory: string;
   derivedFields: string[];
+  protectedFields: string[];
 }
 
 const defaultConfig: Config = {
   entitiesDirectory: "./src/entities",
   derivedFields: [],
+  protectedFields: [],
 };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */

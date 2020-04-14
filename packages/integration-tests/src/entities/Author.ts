@@ -15,6 +15,14 @@ export class Author extends AuthorCodegen {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
 
+  set isPopular(isPopular: boolean | undefined) {
+    super.isPopular = isPopular;
+    // Testing protected fields
+    if (isPopular && !this.wasEverPopular) {
+      super.setWasEverPopular(true);
+    }
+  }
+
   protected onSave(): void {
     if (this.firstName && this.firstName === this.lastName) {
       throw new Error("firstName and lastName must be different");

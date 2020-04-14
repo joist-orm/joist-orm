@@ -1,4 +1,5 @@
 import { Table } from "pg-structure";
+import { pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
@@ -52,7 +53,19 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
     }
 
     let setter: Code | string;
-    if (ormMaintainedFields.includes(fieldName) || isDerived(config, entity, fieldName)) {
+    if (isProtected(config, entity, fieldName)) {
+      // TODO Allow making the getter to be protected as well. And so probably remove it
+      // from the Opts as well. Wonder how that works for required protected fields?
+      //
+      // We have to use a method of `set${fieldName}` because TS enforces getters/setters to have
+      // same access level and currently we're leaving the getter as public.
+      setter = code`
+        protected set${pascalCase(fieldName)}(${fieldName}: ${fieldType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
+
+    } else if (ormMaintainedFields.includes(fieldName) || isDerived(config, entity, fieldName)) {
       setter = "";
     } else {
       setter = code`
@@ -253,4 +266,8 @@ const ormMaintainedFields = ["createdAt", "updatedAt"];
 
 export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
   return config.derivedFields.includes(`${entity.name}.${fieldName}`);
+}
+
+export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.protectedFields.includes(`${entity.name}.${fieldName}`);
 }

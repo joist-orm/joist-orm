@@ -24,6 +24,7 @@ export interface AuthorOpts {
   lastName?: string | null;
   isPopular?: boolean | null;
   age?: number | null;
+  wasEverPopular?: boolean | null;
   mentor?: Author | null;
   publisher?: Publisher | null;
   authors?: Author[];
@@ -37,6 +38,7 @@ export interface AuthorFilter {
   initials?: ValueFilter<string, never>;
   isPopular?: ValueFilter<boolean, null | undefined>;
   age?: ValueFilter<number, null | undefined>;
+  wasEverPopular?: ValueFilter<boolean, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
@@ -50,6 +52,7 @@ export interface AuthorOrder {
   initials?: OrderBy;
   isPopular?: OrderBy;
   age?: OrderBy;
+  wasEverPopular?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   mentor?: AuthorOrder;
@@ -141,6 +144,14 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   set age(age: number | undefined) {
     setField(this, "age", age);
+  }
+
+  get wasEverPopular(): boolean | undefined {
+    return this.__orm.data["wasEverPopular"];
+  }
+
+  protected setWasEverPopular(wasEverPopular: boolean | undefined) {
+    setField(this, "wasEverPopular", wasEverPopular);
   }
 
   get createdAt(): Date {

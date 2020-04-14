@@ -1,11 +1,12 @@
 import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 import { Book, Publisher } from "./entities";
+import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, "author");
@@ -13,8 +14,8 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate many-to-one with multiple keys", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, ["author", "tags"]);
@@ -23,9 +24,9 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate many-to-one with nested keys", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, { author: "publisher" });
@@ -34,13 +35,13 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate one-to-many with nested keys", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 1 }).from("books");
-    await knex.insert({ title: "b3", author_id: 2 }).from("books");
-    await knex.insert({ title: "b4", author_id: 2 }).from("books");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBook({ title: "b3", author_id: 2 });
+    await insertBook({ title: "b4", author_id: 2 });
     const em = new EntityManager(knex);
 
     const asyncPub = await em.load(Publisher, "1");
@@ -53,13 +54,13 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate one-to-many with nested keys as an array", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 1 }).from("books");
-    await knex.insert({ title: "b3", author_id: 2 }).from("books");
-    await knex.insert({ title: "b4", author_id: 2 }).from("books");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBook({ title: "b3", author_id: 2 });
+    await insertBook({ title: "b4", author_id: 2 });
     const em = new EntityManager(knex);
 
     const asyncPub = await em.load(Publisher, "1");
@@ -72,8 +73,8 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate via load", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const book = await em.load(Book, "1", ["author", "tags"]);
     expect(book.author.get.firstName).toEqual("a1");
@@ -81,9 +82,9 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate a list", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 1 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
 
     const em = new EntityManager(knex);
     const _b1 = await em.load(Book, "1");
@@ -94,9 +95,9 @@ describe("EntityManager.populate", () => {
   });
 
   it("batches across separate populate calls", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 1 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
 
     const em = new EntityManager(knex);
     const _b1 = await em.load(Book, "1");
@@ -113,10 +114,10 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate from a find call", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 2 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
     const em = new EntityManager(knex);
     resetQueryCount();
     const books = await em.find(Book, {}, { populate: "author" });

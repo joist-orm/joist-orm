@@ -1,12 +1,12 @@
 import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
-import exp from "constants";
+import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
 
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, {});
     expect(authors.length).toEqual(2);
@@ -15,8 +15,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by simple varchar", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { firstName: "a2" });
     expect(authors.length).toEqual(1);
@@ -24,8 +24,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by simple varchar not null", async () => {
-    await knex.insert({ first_name: "a1", last_name: "l1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { lastName: { $ne: null } });
     expect(authors.length).toEqual(1);
@@ -33,8 +33,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by simple varchar not undefined", async () => {
-    await knex.insert({ first_name: "a1", last_name: "l1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { lastName: { $ne: undefined } });
     expect(authors.length).toEqual(1);
@@ -42,11 +42,11 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by varchar through join", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 2 }).from("books");
-    await knex.insert({ title: "b3", author_id: 2 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertBook({ title: "b3", author_id: 2 });
 
     const em = new EntityManager(knex);
     const books = await em.find(Book, { author: { firstName: "a2" } });
@@ -56,12 +56,12 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by varchar through two joins", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ name: "p2" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 2 }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 2 }).from("books");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
 
     const em = new EntityManager(knex);
     const books = await em.find(Book, { author: { publisher: { name: "p2" } } });
@@ -70,10 +70,10 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 2 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
 
     const em = new EntityManager(knex);
     const a2 = await em.load(Author, "2");
@@ -84,9 +84,9 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is null", async () => {
-    await knex.insert({ id: 1, name: "p1" }).into("publishers");
-    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { publisher: null });
     expect(authors.length).toEqual(1);
@@ -94,7 +94,7 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is new entity", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const publisher = new Publisher(em, { name: "p1" });
     const authors = await em.find(Author, { publisher });
@@ -102,9 +102,9 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is not null", async () => {
-    await knex.insert({ id: 1, name: "p1" }).into("publishers");
-    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { publisher: { $ne: null } });
     expect(authors.length).toEqual(1);
@@ -112,9 +112,9 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is not undefined", async () => {
-    await knex.insert({ id: 1, name: "p1" }).into("publishers");
-    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { publisher: { $ne: undefined } });
     expect(authors.length).toEqual(1);
@@ -122,9 +122,9 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is flavor", async () => {
-    await knex.insert({ id: 1, name: "p1" }).into("publishers");
-    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
     const publisherId: PublisherId = "1";
     const authors = await em.find(Author, { publisher: publisherId });
@@ -133,9 +133,9 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is flavor list", async () => {
-    await knex.insert({ id: 1, name: "p1" }).into("publishers");
-    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
     const publisherId: PublisherId = "1";
     const authors = await em.find(Author, { publisher: [publisherId] });
@@ -144,9 +144,9 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key is not flavor", async () => {
-    await knex.insert({ id: 1, name: "p1" }).into("publishers");
-    await knex.insert({ id: 2, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 3, first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
     const publisherId: PublisherId = "1";
     // Technically id != 1 does not match the a1.publisher_id is null. Might fix this.
@@ -155,12 +155,12 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find books by publisher", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ name: "p2" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 2 }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
-    await knex.insert({ title: "b2", author_id: 2 }).from("books");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
 
     const em = new EntityManager(knex);
     const publisher = await em.load(Publisher, "2");
@@ -170,10 +170,11 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key using only an id", async () => {
-    await knex.insert({ id: 3, first_name: "a1" }).from("authors");
-    await knex.insert({ id: 4, first_name: "a2" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 3 }).from("books");
-    await knex.insert({ title: "b2", author_id: 4 }).from("books");
+    await insertAuthor({
+      id: 3, first_name: "a1" });
+    await insertAuthor({ id: 4, first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 3 });
+    await insertBook({ title: "b2", author_id: 4 });
 
     const em = new EntityManager(knex);
     const books = await em.find(Book, { author: { id: "4" } });
@@ -182,16 +183,16 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by ids", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ name: "p2" }).into("publishers");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
     const em = new EntityManager(knex);
     const pubs = await em.find(Publisher, { id: ["1", "2"] });
     expect(pubs.length).toEqual(2);
   });
 
   it("can find by enums", async () => {
-    await knex.insert({ name: "p1", size_id: 1 }).from("publishers");
-    await knex.insert({ name: "p2", size_id: 2 }).from("publishers");
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ name: "p2", size_id: 2 });
     const em = new EntityManager(knex);
     const pubs = await em.find(Publisher, { size: PublisherSize.Large });
     expect(pubs.length).toEqual(1);
@@ -199,8 +200,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by not equal enum", async () => {
-    await knex.insert({ name: "p1", size_id: 1 }).from("publishers");
-    await knex.insert({ name: "p2", size_id: 2 }).from("publishers");
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ name: "p2", size_id: 2 });
     const em = new EntityManager(knex);
     const pubs = await em.find(Publisher, { size: { $ne: PublisherSize.Large } });
     expect(pubs.length).toEqual(1);
@@ -208,8 +209,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by simple integer", async () => {
-    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { age: 2 });
     expect(authors.length).toEqual(1);
@@ -217,24 +218,24 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by greater than", async () => {
-    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { age: { $gt: 1 } });
     expect(authors.length).toEqual(1);
   });
 
   it("can find by greater than or equal two", async () => {
-    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { age: { $gte: 1 } });
     expect(authors.length).toEqual(2);
   });
 
   it("can find by not equal", async () => {
-    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { age: { $ne: 1 } });
     expect(authors.length).toEqual(1);
@@ -242,18 +243,18 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by like", async () => {
-    await knex.insert({ first_name: "a1", age: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", age: 2 }).into("authors");
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, { firstName: { $like: "a%" } });
     expect(authors.length).toEqual(2);
   });
 
   it("can find by like and join with not equal enum", async () => {
-    await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
-    await knex.insert({ name: "p2", size_id: 2 }).into("publishers");
-    await knex.insert({ first_name: "a", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a", publisher_id: 2 }).into("authors");
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ name: "p2", size_id: 2 });
+    await insertAuthor({ first_name: "a", publisher_id: 1 });
+    await insertAuthor({ first_name: "a", publisher_id: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, {
       firstName: "a",
@@ -266,31 +267,31 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by one", async () => {
-    await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
+    await insertPublisher({ name: "p1", size_id: 1 });
     const em = new EntityManager(knex);
     const publisher = await em.findOne(Publisher, { name: "p2" });
     expect(publisher).toBeUndefined();
   });
 
   it("can find by one or fail", async () => {
-    await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
-    await knex.insert({ name: "p2", size_id: 2 }).into("publishers");
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ name: "p2", size_id: 2 });
     const em = new EntityManager(knex);
     const publisher = await em.findOneOrFail(Publisher, { name: "p2" });
     expect(publisher.name).toEqual("p2");
   });
 
   it("can find by one when not found", async () => {
-    await knex.insert({ name: "p1", size_id: 1 }).into("publishers");
-    await knex.insert({ name: "p2", size_id: 2 }).into("publishers");
+    await insertPublisher({ name: "p1", size_id: 1 });
+    await insertPublisher({ name: "p2", size_id: 2 });
     const em = new EntityManager(knex);
     await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow(NotFoundError);
     await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow("Did not find Publisher for given query");
   });
 
   it("can find by one when too many found", async () => {
-    await knex.insert({ name: "p", size_id: 1 }).into("publishers");
-    await knex.insert({ name: "p", size_id: 2 }).into("publishers");
+    await insertPublisher({ name: "p", size_id: 1 });
+    await insertPublisher({ name: "p", size_id: 2 });
     const em = new EntityManager(knex);
     await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(TooManyError);
     await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(
@@ -299,8 +300,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can order by string asc", async () => {
-    await knex.insert({ first_name: "a2" }).from("authors");
-    await knex.insert({ first_name: "a1" }).from("authors");
+    await insertAuthor({ first_name: "a2" });
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, {}, { orderBy: { firstName: "ASC" } });
     expect(authors.length).toEqual(2);
@@ -309,8 +310,8 @@ describe("EntityManager.queries", () => {
   });
 
   it("can order by string desc", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, {}, { orderBy: { firstName: "DESC" } });
     expect(authors.length).toEqual(2);
@@ -319,10 +320,10 @@ describe("EntityManager.queries", () => {
   });
 
   it("can order by joined string asc", async () => {
-    await knex.insert({ name: "pB" }).into("publishers");
-    await knex.insert({ name: "pA" }).into("publishers");
-    await knex.insert({ first_name: "aB", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "aA", publisher_id: 2 }).into("authors");
+    await insertPublisher({ name: "pB" });
+    await insertPublisher({ name: "pA" });
+    await insertAuthor({ first_name: "aB", publisher_id: 1 });
+    await insertAuthor({ first_name: "aA", publisher_id: 2 });
     const em = new EntityManager(knex);
     const authors = await em.find(Author, {}, { orderBy: { publisher: { name: "ASC" } } });
     expect(authors.length).toEqual(2);
@@ -331,7 +332,7 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find empty results in a loop", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     resetQueryCount();
     await Promise.all(

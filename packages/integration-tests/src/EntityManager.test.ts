@@ -2,18 +2,19 @@ import { EntityManager, Loaded } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 import { Deferred } from "./Deferred";
+import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "./entities/factories";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
-    await knex.insert({ first_name: "f" }).from("authors");
+    await insertAuthor({ first_name: "f" });
     const em = new EntityManager(knex);
     const author = await em.load(Author, "1");
     expect(author.firstName).toEqual("f");
   });
 
   it("can load multiple entities with one query", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
     resetQueryCount();
 
     const em = new EntityManager(knex);
@@ -24,8 +25,8 @@ describe("EntityManager", () => {
   });
 
   it("can load multiple entities in the right order", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ first_name: "a2" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
 
     const em = new EntityManager(knex);
     const [author2, author1] = await Promise.all([em.load(Author, "2"), em.load(Author, "1")]);
@@ -34,7 +35,7 @@ describe("EntityManager", () => {
   });
 
   it("maintains a single entity instance", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const author1a = await em.load(Author, "1");
     const author1b = await em.load(Author, "1");
@@ -109,7 +110,7 @@ describe("EntityManager", () => {
   });
 
   it("does not update changed-then-unchanged entities", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
+    await insertAuthor({ first_name: "a1", initials: "a" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     a1.firstName = "a2";
@@ -164,7 +165,7 @@ describe("EntityManager", () => {
   });
 
   it("can update falsey values", async () => {
-    await knex.insert({ first_name: "a1", is_popular: true }).from("authors");
+    await insertAuthor({ first_name: "a1", is_popular: true });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     a1.isPopular = false;
@@ -174,7 +175,7 @@ describe("EntityManager", () => {
   });
 
   it("can update undefined values", async () => {
-    await knex.insert({ first_name: "a1", is_popular: true }).from("authors");
+    await insertAuthor({ first_name: "a1", is_popular: true });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     a1.isPopular = undefined;
@@ -184,7 +185,7 @@ describe("EntityManager", () => {
   });
 
   it("can load null values as undefined", async () => {
-    await knex.insert({ first_name: "a1", is_popular: null }).from("authors");
+    await insertAuthor({ first_name: "a1", is_popular: null });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     expect(a1.isPopular).toBeUndefined();
@@ -203,7 +204,7 @@ describe("EntityManager", () => {
   });
 
   it("can load null enums", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
+    await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     expect(p1.size).toBeUndefined();
@@ -211,7 +212,7 @@ describe("EntityManager", () => {
 
   it("can delete an entity", async () => {
     // Given a publisher
-    await knex.insert({ name: "p1" }).from("publishers");
+    await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     // When its deleted
@@ -224,8 +225,8 @@ describe("EntityManager", () => {
 
   it("can delete multiple entities", async () => {
     // Given several publishers publisher
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ name: "p2" }).from("publishers");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     const p2 = await em.load(Publisher, "2");
@@ -239,7 +240,7 @@ describe("EntityManager", () => {
 
   it("does not re-delete an already deleted entity", async () => {
     // Given a publisher
-    await knex.insert({ name: "p1" }).from("publishers");
+    await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     // And its deleted
@@ -253,7 +254,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify a deleted entity", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
+    await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     await em.delete(p1);
@@ -261,7 +262,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify a deleted entity's o2m collection", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
+    await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     await em.delete(p1);
@@ -269,7 +270,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify a deleted entity's m2o collection", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     await em.delete(a1);
@@ -277,7 +278,7 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
+    await insertPublisher({ name: "p1" });
     // Given we've loaded an entity
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
@@ -291,14 +292,14 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity with a loaded o2m collection", async () => {
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).from("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a collection
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1", "authors");
     expect(p1.authors.get.length).toEqual(1);
     // And a new row is added by something else
-    await knex.insert({ first_name: "a2", publisher_id: 1 }).into("authors");
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
     // When we refresh the entity
     await em.refresh(p1);
     // Then we have the new data
@@ -306,14 +307,14 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity with a loaded m2o reference", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a reference
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the foreign key is changed by something else
-    await knex.insert({ name: "p2" }).from("publishers");
+    await insertPublisher({ name: "p2" });
     await knex.update({ publisher_id: 2 }).where({ id: 1 }).from("authors");
     // When we refresh the entity
     await em.refresh(a1);
@@ -322,17 +323,17 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity with a loaded m2m collection", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ name: "t1" }).into("tags");
-    await knex.insert({ tag_id: 1, book_id: 1 }).into("books_to_tags");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertBookToTag({ tag_id: 1, book_id: 1 });
     // Given we've loaded an entity with a
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "1", "tags");
     expect(b1.tags.get.length).toEqual(1);
     // And a new join row is added by someone else
-    await knex.insert({ name: "t2" }).into("tags");
-    await knex.insert({ tag_id: 2, book_id: 1 }).into("books_to_tags");
+    await insertTag({ name: "t2" });
+    await insertBookToTag({ tag_id: 2, book_id: 1 });
     // When we refresh the entity
     await em.refresh(b1);
     // Then we have the new data
@@ -340,8 +341,8 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity that is deleted", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a reference
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1", "publisher");
@@ -355,8 +356,8 @@ describe("EntityManager", () => {
   });
 
   it("can access a m2o id without loading", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2");
     expect(b1.author.id).toEqual("1");
@@ -417,14 +418,14 @@ describe("EntityManager", () => {
   });
 
   it("can hydrate from custom queries ", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
     expect(a1.firstName).toEqual("a1");
   });
 
   it("can hydrate into an existing instance", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     await knex.update({ first_name: "a1b" }).into("authors");
@@ -434,7 +435,7 @@ describe("EntityManager", () => {
   });
 
   it("ignores sets of the same value", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
+    await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     a1.firstName = "a1";
@@ -442,10 +443,10 @@ describe("EntityManager", () => {
   });
 
   it("can handle flush being called in a loop", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ name: "p2" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
     const em = new EntityManager(knex);
 
     const authors = await em.find(Author, { id: ["1", "2"] }, { populate: "publisher" });
@@ -464,10 +465,10 @@ describe("EntityManager", () => {
   });
 
   it("can handle flush being called in a loop with queries", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ name: "p2" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
     const em = new EntityManager(knex);
 
     const authors = await em.find(Author, { id: ["1", "2"] });
@@ -489,10 +490,10 @@ describe("EntityManager", () => {
   });
 
   it("can handle flush being called in a loop with other awaits", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ name: "p2" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
     const em = new EntityManager(knex);
 
     // Create promises that we'll explicitly resolve in separate event ticks
@@ -593,12 +594,33 @@ describe("EntityManager", () => {
   });
 
   it("can find and populate with findOrCreate", async () => {
-    await knex.insert({ first_name: "a1" }).from("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).from("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
     const b1 = await em.findOrCreate(Book, { title: "b1", author: a1 }, {}, {}, "author");
     expect(b1.author.get).toEqual(a1);
+  });
+
+  it("can set derived values", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1", lastName: "last" });
+    expect(a1.initials).toEqual("al");
+    await em.flush();
+    expect((await knex.select("*").from("authors"))[0]["initials"]).toEqual("al");
+
+    // Changing the derived value issues an update
+    resetQueryCount();
+    a1.lastName = "different";
+    await em.flush();
+    // 3 = begin, update, commit
+    expect(numberOfQueries).toEqual(3);
+    expect((await knex.select("*").from("authors"))[0]["initials"]).toEqual("ad");
+
+    // Not changing the derived value does not issue an update
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toEqual(0);
   });
 });
 

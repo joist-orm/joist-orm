@@ -2,12 +2,13 @@ import { EntityManager } from "joist-orm";
 import { keyToNumber } from "joist-orm/build/serde";
 import { knex } from "../setupDbTests";
 import { Author, Book, BookOpts, Publisher, Tag } from "../entities";
+import { insertAuthor, insertBook, insertPublisher } from "../entities/factories";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "t1", author_id: 1 }).into("books");
-    await knex.insert({ title: "t2", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "t1", author_id: 1 });
+    await insertBook({ title: "t2", author_id: 1 });
 
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
@@ -16,9 +17,9 @@ describe("OneToManyCollection", () => {
   });
 
   it("loads collections with instances already in the UoW", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ title: "b2", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
 
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "1");
@@ -28,9 +29,9 @@ describe("OneToManyCollection", () => {
   });
 
   it("loads collections with populated instances already in the UoW", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ title: "b2", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
     const em = new EntityManager(knex);
     // Given b1.author is already populated with a1
     const b1 = await em.load(Book, "1", "author");
@@ -44,9 +45,9 @@ describe("OneToManyCollection", () => {
   });
 
   it("references use collection-loaded instances from the UoW", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "t1", author_id: 1 }).into("books");
-    await knex.insert({ title: "t2", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "t1", author_id: 1 });
+    await insertBook({ title: "t2", author_id: 1 });
 
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
@@ -134,8 +135,8 @@ describe("OneToManyCollection", () => {
 
   it("combines both pre-loaded and post-loaded entities", async () => {
     // Given an author with one book
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     // And we load the author
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
@@ -153,8 +154,8 @@ describe("OneToManyCollection", () => {
 
   it("removes deleted entities from other collections", async () => {
     // Given an author with a publisher
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = new EntityManager(knex);
     // And the a1.publishers collection is loaded
     const a1 = await em.load(Author, "1", { publisher: "authors" });
@@ -168,8 +169,8 @@ describe("OneToManyCollection", () => {
 
   it("respects deleted entities before the collection loaded", async () => {
     // Given an author with a publisher
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = new EntityManager(knex);
     // And the a1.publishers collection is not loaded
     const a1 = await em.load(Author, "1");
@@ -183,10 +184,10 @@ describe("OneToManyCollection", () => {
 
   it("can set to both add and remove", async () => {
     // Given the publisher already has a1 and a2
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ id: 1, first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ id: 2, first_name: "a2", publisher_id: 1 }).into("authors");
-    await knex.insert({ id: 3, first_name: "a3" }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a3" });
 
     // When we set a2 and a3
     const em = new EntityManager(knex);

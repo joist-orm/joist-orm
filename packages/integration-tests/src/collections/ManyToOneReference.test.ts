@@ -1,11 +1,12 @@
 import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book } from "../entities";
+import { insertAuthor, insertBook, insertPublisher } from "../entities/factories";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
-    await knex.insert({ first_name: "f" }).into("authors");
-    await knex.insert({ title: "t", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "f" });
+    await insertBook({ title: "t", author_id: 1 });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "1");
@@ -14,7 +15,7 @@ describe("ManyToOneReference", () => {
   });
 
   it("can load a null foreign key", async () => {
-    await knex.insert({ first_name: "f" }).into("authors");
+    await insertAuthor({ first_name: "f" });
     const em = new EntityManager(knex);
     const author = await em.load(Author, "1", "publisher");
     expect(author.publisher.get).toBeUndefined();
@@ -31,10 +32,10 @@ describe("ManyToOneReference", () => {
   });
 
   it("batch loads foreign keys", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ first_name: "a2" }).into("authors");
-    await knex.insert({ title: "t1", author_id: 1 }).into("books");
-    await knex.insert({ title: "t2", author_id: 2 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "t1", author_id: 1 });
+    await insertBook({ title: "t2", author_id: 2 });
 
     const em = new EntityManager(knex);
     const [b1, b2] = await Promise.all([em.load(Book, "1"), em.load(Book, "2")]);
@@ -46,9 +47,9 @@ describe("ManyToOneReference", () => {
   });
 
   it("can save changes to a foreign key", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ first_name: "a2" }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
 
     const em = new EntityManager(knex);
     const a2 = await em.load(Author, "2");
@@ -62,8 +63,8 @@ describe("ManyToOneReference", () => {
 
   it("removes deleted entities from collections", async () => {
     // Given an author with a publisher
-    await knex.insert({ name: "p1" }).from("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = new EntityManager(knex);
     // And we load the author with a1.publisher already populated
     const a1 = await em.load(Author, "1", "publisher");

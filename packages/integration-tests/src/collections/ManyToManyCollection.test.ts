@@ -2,13 +2,14 @@ import { EntityManager } from "joist-orm";
 import { zeroTo } from "joist-orm/build/utils";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book, Tag } from "../entities";
+import { insertAuthor, insertBook, insertBookToTag, insertTag } from "../entities/factories";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: "t1" }).into("tags");
-    await knex.insert({ id: 4, book_id: 2, tag_id: 3 }).into("books_to_tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: "t1" });
+    await insertBookToTag({ id: 4, book_id: 2, tag_id: 3 });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "2");
@@ -18,10 +19,10 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can load both sides of many-to-many", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: "t1" }).into("tags");
-    await knex.insert({ id: 4, book_id: 2, tag_id: 3 }).into("books_to_tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: "t1" });
+    await insertBookToTag({ id: 4, book_id: 2, tag_id: 3 });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "2", "tags");
@@ -35,12 +36,12 @@ describe("ManyToManyCollection", () => {
 
   it("can load a many-to-many with constant queries", async () => {
     // Given a book has 5 tags
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     await Promise.all(
       zeroTo(5).map(async (i) => {
-        await knex.insert({ name: `t${i}` }).into("tags");
-        await knex.insert({ book_id: 1, tag_id: i + 1 }).into("books_to_tags");
+        await insertTag({ name: `t${i}` });
+        await insertBookToTag({ book_id: 1, tag_id: i + 1 });
       }),
     );
 
@@ -55,19 +56,19 @@ describe("ManyToManyCollection", () => {
 
   it("can load both sides of a many-to-many with constant queries", async () => {
     // Given a book has 5 tags
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
     await Promise.all(
       zeroTo(5).map(async (i) => {
-        await knex.insert({ name: `t${i}` }).into("tags");
-        await knex.insert({ book_id: 1, tag_id: i + 1 }).into("books_to_tags");
+        await insertTag({ name: `t${i}` });
+        await insertBookToTag({ book_id: 1, tag_id: i + 1 });
       }),
     );
     // And the 1st tag itself has two more books
     await Promise.all(
       zeroTo(2).map(async (i) => {
-        await knex.insert({ title: `b${i + 1}`, author_id: 1 }).into("books");
-        await knex.insert({ book_id: i + 2, tag_id: 1 }).into("books_to_tags");
+        await insertBook({ title: `b${i + 1}`, author_id: 1 });
+        await insertBookToTag({ book_id: i + 2, tag_id: 1 });
       }),
     );
 
@@ -83,9 +84,9 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can add a new tag to a book", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "2");
@@ -99,9 +100,9 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can add a new book to a tag", async () => {
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "2");
@@ -130,12 +131,12 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can remove a tag from a book", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
-    await knex.insert({ id: 4, name: `t2` }).into("tags");
-    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
-    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "2", "tags");
@@ -149,12 +150,12 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can remove a tag from a book before being loaded", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
-    await knex.insert({ id: 4, name: `t2` }).into("tags");
-    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
-    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
 
     const em = new EntityManager(knex);
     const book = await em.load(Book, "2");
@@ -172,12 +173,12 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can delete a tag that is on a book", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
-    await knex.insert({ id: 4, name: `t2` }).into("tags");
-    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
-    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
     // Given a book with two tags
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2", "tags");
@@ -195,12 +196,12 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can delete multiple tags on a book", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
-    await knex.insert({ id: 4, name: `t2` }).into("tags");
-    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
-    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
     // Given a book with two tags
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2", "tags");
@@ -217,9 +218,9 @@ describe("ManyToManyCollection", () => {
   });
 
   it("cannot add to a deleted entity's m2m", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: "t1" }).into("tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: "t1" });
     // Given a book with two tags
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2");
@@ -231,9 +232,9 @@ describe("ManyToManyCollection", () => {
   });
 
   it("cannot remove to a deleted entity's m2m", async () => {
-    await knex.insert({ id: 1, first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: "t1" }).into("tags");
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: "t1" });
     // Given a book with two tags
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2");
@@ -246,13 +247,13 @@ describe("ManyToManyCollection", () => {
 
   it("can set to both add and remove", async () => {
     // Given the book already has t1 and t2 on it
-    await knex.insert({ first_name: "a1" }).into("authors");
-    await knex.insert({ id: 2, title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ id: 3, name: `t1` }).into("tags");
-    await knex.insert({ id: 4, name: `t2` }).into("tags");
-    await knex.insert({ id: 5, name: `t3` }).into("tags");
-    await knex.insert({ book_id: 2, tag_id: 3 }).into("books_to_tags");
-    await knex.insert({ book_id: 2, tag_id: 4 }).into("books_to_tags");
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertTag({ id: 5, name: `t3` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
 
     // When we set t2 and t3
     const em = new EntityManager(knex);

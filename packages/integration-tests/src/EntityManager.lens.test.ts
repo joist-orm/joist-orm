@@ -1,12 +1,13 @@
 import { EntityManager, Lens } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 import { Book, Publisher } from "./entities";
+import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
 
 describe("EntityManager.lens", () => {
   it("can navigate references", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "1");
     const p1 = await b1.load((b) => b.author.publisher);
@@ -14,12 +15,12 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate with n+1 safe queries", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ name: "p2" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 2 }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ title: "b2", author_id: 2 }).into("books");
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
     const em = new EntityManager(knex);
     const [b1, b2] = await em.find(Book, {});
     resetQueryCount();
@@ -42,12 +43,12 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate collections", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 1 }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ title: "b2", author_id: 2 }).into("books");
-    await knex.insert({ title: "b3", author_id: 2 }).into("books");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertBook({ title: "b3", author_id: 2 });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     resetQueryCount();
@@ -59,12 +60,12 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate collections then reference", async () => {
-    await knex.insert({ name: "p1" }).into("publishers");
-    await knex.insert({ first_name: "a1", publisher_id: 1 }).into("authors");
-    await knex.insert({ first_name: "a2", publisher_id: 1 }).into("authors");
-    await knex.insert({ title: "b1", author_id: 1 }).into("books");
-    await knex.insert({ title: "b2", author_id: 2 }).into("books");
-    await knex.insert({ title: "b3", author_id: 2 }).into("books");
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertBook({ title: "b3", author_id: 2 });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
     // This ends in a singular author (which is cyclic, but just b/c our test schema is small, it doesn't matter)

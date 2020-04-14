@@ -622,6 +622,16 @@ describe("EntityManager", () => {
     await em.flush();
     expect(numberOfQueries).toEqual(0);
   });
+
+  it("can delete entities that have derived values", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    await em.delete(a1);
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows.length).toEqual(0);
+  });
 });
 
 function delay(ms: number): Promise<void> {

@@ -1,5 +1,4 @@
 import { EntityManager } from "joist-orm";
-import { zeroTo } from "joist-orm/build/utils";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book, Tag } from "../entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag } from "../entities/factories";
@@ -269,3 +268,7 @@ describe("ManyToManyCollection", () => {
     expect(rows[1]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 5 }));
   });
 });
+
+export function zeroTo(n: number): number[] {
+  return [...Array(n).keys()];
+}

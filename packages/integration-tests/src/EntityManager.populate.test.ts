@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
-import { Book, Publisher } from "./entities";
+import { Author, Book, Publisher } from "./entities";
 import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
 
 describe("EntityManager.populate", () => {
@@ -124,5 +124,12 @@ describe("EntityManager.populate", () => {
     expect(books[0].author.get.firstName).toEqual("a1");
     expect(books[1].author.get.firstName).toEqual("a2");
     expect(numberOfQueries).toEqual(2);
+  });
+
+  it("does not break when popling through null relations  ", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1", { publisher: "authors" });
+    expect(a1.publisher.get).toBeUndefined();
   });
 });

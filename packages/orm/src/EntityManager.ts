@@ -330,6 +330,9 @@ export class EntityManager {
     let promises: Promise<void>[] = [];
     const list: T[] = Array.isArray(entityOrList) ? entityOrList : [entityOrList];
     list.forEach((entity) => {
+      if (!entity) {
+        return;
+      }
       // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
       // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
       // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per

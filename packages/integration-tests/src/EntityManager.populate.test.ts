@@ -126,10 +126,19 @@ describe("EntityManager.populate", () => {
     expect(numberOfQueries).toEqual(2);
   });
 
-  it("does not break when popling through null relations  ", async () => {
+  it("does not break when populating through null relations  ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1", { publisher: "authors" });
     expect(a1.publisher.get).toBeUndefined();
+  });
+
+  it("populate assumes ids are loaded", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "1", "author");
+    const authorId: string = book.author.id;
+    expect(authorId).toEqual("1");
   });
 });

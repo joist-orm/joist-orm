@@ -728,9 +728,9 @@ function recalcDerivedFields(entities: Entity[]) {
       return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived).map((f) => f.fieldName)];
     }),
   );
-  for (const entity of entities.filter(e => e.__orm.deleted === undefined)) {
+  for (const entity of entities.filter((e) => e.__orm.deleted === undefined)) {
     const derivedFields = derivedFieldsByMeta.get(entity.__orm.metadata);
-    derivedFields?.forEach(fieldName => {
+    derivedFields?.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.
       setField(entity, fieldName, (entity as any)[fieldName]);
     });

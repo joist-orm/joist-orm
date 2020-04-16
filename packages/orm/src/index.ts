@@ -50,7 +50,17 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
 
 /** Adds a known-safe `get` accessor. */
 export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+  extends Omit<Reference<T, U, N>, "id"> {
+
+  // Since we've fetched the entity from the db, we're going to omit out the "| undefined" from Reference.id
+  // which handles "this reference is set to a new entity" and just assume the id is there (or else N which
+  // is for nullable references, which will just always be potentially `undefined`).
+  //
+  // Note that, similar to `.get`, this is _usually_ right, but if the user mutates the object graph after the
+  // populate, i.e. they change some fields to have actually-new / not-included-in-the-`populate` call entities,
+  // then these might turn into runtime errors. But the ergonomics are sufficiently better that it is worth it.
+  id: IdOf<T> | N;
+
   get: U | N;
 }
 

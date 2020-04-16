@@ -38,6 +38,9 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
   /** Returns the id of the current assigned entity, or `undefined` if the assigned entity has no id yet, or `undefined` if this column is nullable and currently unset. */
   id: IdOf<U> | undefined;
 
+  /** Returns the id of the current assigned entity or a runtime error if it's either a) unset or b) set to a new entity that doesn't have an `id` yet. */
+  idOrFail: IdOf<U>;
+
   load(): Promise<U | N>;
 
   set(other: U | N): void;

@@ -1,5 +1,5 @@
 import { Entity, EntityConstructor, getMetadata, IdOf, isEntity, sameEntity } from "../EntityManager";
-import { ensureNotDeleted, maybeResolveReferenceToId, Reference, setField } from "../index";
+import { ensureNotDeleted, fail, maybeResolveReferenceToId, Reference, setField } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
@@ -59,6 +59,11 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   get id(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity);
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
+  }
+
+  get idOrFail(): IdOf<U> {
+    ensureNotDeleted(this.entity);
+    return this.id || fail("Reference is unset or assigned to a new entity");
   }
 
   // private impl

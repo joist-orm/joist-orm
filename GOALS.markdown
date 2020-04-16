@@ -166,3 +166,13 @@ If you mark a field as derived in `joist-codegen.json`, it will not have a sette
 
 Note that this currently only works for primitive columns, and the getter must be synchronous.
 
+### Protected Columns
+
+If you mark a field as protected in `joist-codegen.json`, it will have a protected setter that only your entity's business logic can call. The getter will still be public.
+
+```json
+{
+  "protectedFields": ["Author.initials"]
+}
+```
+

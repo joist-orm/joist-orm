@@ -3,10 +3,9 @@ import {
   ValueFilter,
   OrderBy,
   BaseEntity,
-  EntityOrmField,
   EntityManager,
   setOpts,
-  fail,
+  OptsOf,
   EntityFilter,
   FilterOf,
   Collection,
@@ -47,7 +46,6 @@ export interface BookOrder {
 }
 
 export abstract class BookCodegen extends BaseEntity {
-  readonly __orm: EntityOrmField;
   readonly __filterType: BookFilter = null!;
   readonly __orderType: BookOrder = null!;
   readonly __optsType: BookOpts = null!;
@@ -79,18 +77,12 @@ export abstract class BookCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super();
-    this.__orm = { em, metadata: bookMeta, data: {}, originalData: {} };
-    em.register(this);
-    setOpts(this, opts);
+    super(em, bookMeta);
+    this.set(opts as BookOpts, { calledFromConstructor: true } as any);
   }
 
   get id(): BookId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idOrFail(): BookId {
-    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get title(): string {
@@ -117,11 +109,7 @@ export abstract class BookCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  toString(): string {
-    return "Book#" + this.id;
-  }
-
-  set(opts: Partial<BookOpts>): void {
-    setOpts(this, opts, false);
+  set(values: Partial<BookOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+    setOpts(this, values as OptsOf<this>, opts);
   }
 }

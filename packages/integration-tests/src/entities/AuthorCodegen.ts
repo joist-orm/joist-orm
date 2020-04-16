@@ -3,10 +3,9 @@ import {
   ValueFilter,
   OrderBy,
   BaseEntity,
-  EntityOrmField,
   EntityManager,
   setOpts,
-  fail,
+  OptsOf,
   EntityFilter,
   FilterOf,
   Collection,
@@ -60,7 +59,6 @@ export interface AuthorOrder {
 }
 
 export abstract class AuthorCodegen extends BaseEntity {
-  readonly __orm: EntityOrmField;
   readonly __filterType: AuthorFilter = null!;
   readonly __orderType: AuthorOrder = null!;
   readonly __optsType: AuthorOpts = null!;
@@ -98,18 +96,12 @@ export abstract class AuthorCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
-    super();
-    this.__orm = { em, metadata: authorMeta, data: {}, originalData: {} };
-    em.register(this);
-    setOpts(this, opts);
+    super(em, authorMeta);
+    this.set(opts as AuthorOpts, { calledFromConstructor: true } as any);
   }
 
   get id(): AuthorId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idOrFail(): AuthorId {
-    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get firstName(): string {
@@ -162,11 +154,7 @@ export abstract class AuthorCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  toString(): string {
-    return "Author#" + this.id;
-  }
-
-  set(opts: Partial<AuthorOpts>): void {
-    setOpts(this, opts, false);
+  set(values: Partial<AuthorOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+    setOpts(this, values as OptsOf<this>, opts);
   }
 }

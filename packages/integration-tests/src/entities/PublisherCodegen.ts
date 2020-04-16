@@ -3,10 +3,9 @@ import {
   ValueFilter,
   OrderBy,
   BaseEntity,
-  EntityOrmField,
   EntityManager,
   setOpts,
-  fail,
+  OptsOf,
   setField,
   Collection,
   OneToManyCollection,
@@ -38,7 +37,6 @@ export interface PublisherOrder {
 }
 
 export abstract class PublisherCodegen extends BaseEntity {
-  readonly __orm: EntityOrmField;
   readonly __filterType: PublisherFilter = null!;
   readonly __orderType: PublisherOrder = null!;
   readonly __optsType: PublisherOpts = null!;
@@ -52,18 +50,12 @@ export abstract class PublisherCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    super();
-    this.__orm = { em, metadata: publisherMeta, data: {}, originalData: {} };
-    em.register(this);
-    setOpts(this, opts);
+    super(em, publisherMeta);
+    this.set(opts as PublisherOpts, { calledFromConstructor: true } as any);
   }
 
   get id(): PublisherId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idOrFail(): PublisherId {
-    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get name(): string {
@@ -90,11 +82,7 @@ export abstract class PublisherCodegen extends BaseEntity {
     setField(this, "size", size);
   }
 
-  toString(): string {
-    return "Publisher#" + this.id;
-  }
-
-  set(opts: Partial<PublisherOpts>): void {
-    setOpts(this, opts, false);
+  set(values: Partial<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+    setOpts(this, values as OptsOf<this>, opts);
   }
 }

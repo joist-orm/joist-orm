@@ -3,10 +3,9 @@ import {
   ValueFilter,
   OrderBy,
   BaseEntity,
-  EntityOrmField,
   EntityManager,
   setOpts,
-  fail,
+  OptsOf,
   Collection,
   ManyToManyCollection,
   setField,
@@ -35,7 +34,6 @@ export interface TagOrder {
 }
 
 export abstract class TagCodegen extends BaseEntity {
-  readonly __orm: EntityOrmField;
   readonly __filterType: TagFilter = null!;
   readonly __orderType: TagOrder = null!;
   readonly __optsType: TagOpts = null!;
@@ -51,18 +49,12 @@ export abstract class TagCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: TagOpts) {
-    super();
-    this.__orm = { em, metadata: tagMeta, data: {}, originalData: {} };
-    em.register(this);
-    setOpts(this, opts);
+    super(em, tagMeta);
+    this.set(opts as TagOpts, { calledFromConstructor: true } as any);
   }
 
   get id(): TagId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idOrFail(): TagId {
-    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get name(): string {
@@ -81,11 +73,7 @@ export abstract class TagCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  toString(): string {
-    return "Tag#" + this.id;
-  }
-
-  set(opts: Partial<TagOpts>): void {
-    setOpts(this, opts, false);
+  set(values: Partial<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+    setOpts(this, values as OptsOf<this>, opts);
   }
 }

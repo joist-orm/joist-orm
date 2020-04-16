@@ -1,4 +1,3 @@
-
 ## Schema-Driven Code Generation
 
 Joist generates your domain objects/classes from your database schema.
@@ -30,7 +29,7 @@ Joist takes the strong opinion that any operation that _might_ be lazy loaded (l
 Other ORMs in the JS/TS space often fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasantness of accessing `author.books` without `await`s/`Promise.all`/etc. code--as long as whoever loaded this `Author` ensured that `books` was already fetched/initialized.
 
 This seems great in the short-term, but Joist asserts its dangerous in the long-term, because code written to use the "`author.books` is a `Book[]`" assumption is now coupled to `author.books` being pre-fetched and _always_ being present, regardless of the caller.
- 
+
 This sort of implementation detail is easy to enforce when the `for (book in author.books)` is 5 lines below "load author with a `books` preload hint", however it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is _not_ loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning a falsely empty collection or unset reference).
 
 Essentially this approach of having non-async collections creates a contract ("`author.books` must somehow be loaded") that is not present in the type system that now the programmer/maintainer must remember and self-enforce.
@@ -54,7 +53,7 @@ expect(book.author.get.publisher.get.name).toEqual("p1");
 Where `originalBook`'s references (`book.author`) could _not_ call `.get` (only `.load` which returns a `Promise`), however, the return value of `em.populate` uses mapped types to transform only the fields listed in the hint (`author` and the nested `author.publisher`) to be safe for synchronous access, so the calling code can now call `.get` and avoid the fuss of promises (only for this section of `populate`-blessed code).
 
 ## Best-in-Class Performance
- 
+
 Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, `DELETE`, and even `SELECT` operations in bulk.
 
 If you save 100 new authors, that is 1 SQL `INSERT` statement. If you update 500 books, that is 1 SQL `UPDATE` statement.
@@ -88,10 +87,10 @@ Adopting (or writing from scratch) a new piece of infrastructure code like an OR
 To help mitigate this risk, Joist strives to be a small codebase, such that users of Joist should ideally be able to debug/maintain/support Joist on their own if necessary.
 
 This is achieved by:
- 
+
 1. Cutting scope, i.e. focusing only on Postgres
 2. Having only one way of doing things, i.e. Joist does not provide multiple/optional Repository-style APIs vs EntityManger-style APIs
-   * Relatedly, currently there are very few config options, although these will grow slightly over time (i.e. to support user-defined types)
+   - Relatedly, currently there are very few config options, although these will grow slightly over time (i.e. to support user-defined types)
 3. Leveraging DataLoader, i.e. a lot of Joist's ROI in terms of providing generally fancy/high-performance auto-batching and pre-loading features with a relatively simple implementation comes from building on top of DataLoader
 
 (Granted, this may change at some point, if Joist becomes popular enough to, say, tackle supporting multiple relational databases, or whatever misc feature, with the help/long-term support from multiple contributors.)
@@ -148,7 +147,7 @@ The `EntityManager.create` method types the newly-created entity's collections a
 I.e. this code is valid:
 
 ```typescript
-const author = em.create(Author, { firstName: "asdf "});
+const author = em.create(Author, { firstName: "asdf " });
 expect(author.books.get.length).toEqual(0);
 ```
 
@@ -176,3 +175,25 @@ If you mark a field as protected in `joist-codegen.json`, it will have a protect
 }
 ```
 
+### Automatic Null Conversion
+
+Joist generally prefers to use `undefined` where ever possible, i.e. columns that are `NULL` in the database are returned as `undefined`.
+
+That said, for converting input, each entity's `Opts` type accepts either `undefined` or `null`, which is useful when implementing APIs where `undefined` means "do not change" and `null` means "unset", i.e.:
+
+```typescript
+const author = em.load(Author, "1");
+const firstName: string | null | undefined = ...;
+if (firstName !== undefined) {
+  author.set({ firstName });
+  // author.firstName is now undefined
+}
+```
+
+You can also do this by using the `ignoreUndefined` option of `set`:
+
+```typescript
+const author = em.load(Author, "1");
+const firstName: string | null | undefined = ...;
+author.set({ firstName }, { ignoreUndefined: true });
+```

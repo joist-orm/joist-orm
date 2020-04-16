@@ -3,10 +3,9 @@ import {
   ValueFilter,
   OrderBy,
   BaseEntity,
-  EntityOrmField,
   EntityManager,
   setOpts,
-  fail,
+  OptsOf,
   EntityFilter,
   FilterOf,
   Reference,
@@ -39,7 +38,6 @@ export interface BookReviewOrder {
 }
 
 export abstract class BookReviewCodegen extends BaseEntity {
-  readonly __orm: EntityOrmField;
   readonly __filterType: BookReviewFilter = null!;
   readonly __orderType: BookReviewOrder = null!;
   readonly __optsType: BookReviewOpts = null!;
@@ -53,18 +51,12 @@ export abstract class BookReviewCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
-    super();
-    this.__orm = { em, metadata: bookReviewMeta, data: {}, originalData: {} };
-    em.register(this);
-    setOpts(this, opts);
+    super(em, bookReviewMeta);
+    this.set(opts as BookReviewOpts, { calledFromConstructor: true } as any);
   }
 
   get id(): BookReviewId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idOrFail(): BookReviewId {
-    return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
   get rating(): number {
@@ -83,11 +75,7 @@ export abstract class BookReviewCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  toString(): string {
-    return "BookReview#" + this.id;
-  }
-
-  set(opts: Partial<BookReviewOpts>): void {
-    setOpts(this, opts, false);
+  set(values: Partial<BookReviewOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+    setOpts(this, values as OptsOf<this>, opts);
   }
 }

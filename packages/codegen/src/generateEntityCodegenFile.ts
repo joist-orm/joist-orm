@@ -1,5 +1,5 @@
 import { Table } from "pg-structure";
-import { pascalCase } from "change-case";
+import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
@@ -7,20 +7,18 @@ import {
   Collection,
   EntityFilter,
   EntityManager,
-  EntityOrmField,
-  fail,
   FilterOf,
   Flavor,
   ManyToManyCollection,
   ManyToOneReference,
   OneToManyCollection,
+  OptsOf,
   OrderBy,
   Reference,
   setField,
   setOpts,
   ValueFilter,
 } from "./symbols";
-import { camelCase } from "change-case";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Config } from "./index";
 
@@ -64,7 +62,6 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
           ${setField}(this, "${fieldName}", ${fieldName});
         }
       `;
-
     } else if (ormMaintainedFields.includes(fieldName) || isDerived(config, entity, fieldName)) {
       setter = "";
     } else {
@@ -163,35 +160,24 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
     }
 
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
-      readonly __orm: ${EntityOrmField};
       readonly __filterType: ${entityName}Filter = null!;
       readonly __orderType: ${entityName}Order = null!;
       readonly __optsType: ${entityName}Opts = null!;
       ${[o2m, m2o, m2m]}
-      
+
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        super();
-        this.__orm = { em, metadata: ${metadata}, data: {}, originalData: {} };
-        em.register(this);
-        ${setOpts}(this, opts);
+        super(em, ${metadata});
+        this.set(opts as ${entityName}Opts, { calledFromConstructor: true } as any);
       }
 
       get id(): ${entityName}Id | undefined {
         return this.__orm.data["id"];
       }
 
-      get idOrFail(): ${entityName}Id {
-        return this.__orm.data["id"] || ${fail}("Entity has no id yet");
-      }
-
       ${primitives}
       
-      toString(): string {
-        return "${entityName}#" + this.id;
-      }
-
-      set(opts: Partial<${entityName}Opts>): void {
-        ${setOpts}(this, opts, false);
+      set(values: Partial<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
+        ${setOpts}(this, values as ${OptsOf}<this>, opts);
       }
     }
   `;

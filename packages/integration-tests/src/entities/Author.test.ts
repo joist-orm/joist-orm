@@ -1,5 +1,5 @@
 import { EntityManager } from "joist-orm";
-import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { knex } from "../setupDbTests";
 import { Author, BookId } from "../entities";
 import { insertAuthor } from "./factories";
 
@@ -43,5 +43,19 @@ describe("Author", () => {
       // @ts-expect-error
       author.wasEverPopular = false;
     }).toThrow(TypeError);
+  });
+
+  it("setting optional fields to null is allowed", () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em, { firstName: "a1" });
+    author.set({ lastName: null });
+    expect(author.lastName).toBeUndefined();
+  });
+
+  it("set can treat undefined as leave", () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em, { firstName: "a1" });
+    author.set({ firstName: undefined }, { ignoreUndefined: true });
+    expect(author.firstName).toEqual("a1");
   });
 });

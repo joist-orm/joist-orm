@@ -1,5 +1,5 @@
-import { Entity, EntityOrmField, OptsOf } from "./EntityManager";
-import { Collection, Reference, setOpts } from "./index";
+import { Entity, EntityManager, EntityOrmField, IdOf, OptsOf } from "./EntityManager";
+import { Collection, fail, Reference, setOpts } from "./index";
 
 /**
  * A type for declaratively walking the object graph.
@@ -25,15 +25,15 @@ type LenKeys<T extends Entity> = {
  */
 export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
+  readonly __orm: EntityOrmField;
 
-  abstract __orm: EntityOrmField;
-
-  public set(opts: Partial<OptsOf<this>>): void {
-    setOpts(this, opts, false);
+  constructor(em: EntityManager, metadata: any) {
+    this.__orm = { em, metadata, data: {}, originalData: {} };
+    em.register(this);
   }
 
   /**
-   * Allows declaratively loading several layers of references at one.
+   * Allows declaratively loading/traversing several layers of references at once.
    *
    * I.e.:
    *
@@ -64,5 +64,16 @@ export abstract class BaseEntity implements Entity {
       }
     }
     return current!;
+  }
+
+  abstract set(values: Partial<OptsOf<this>>): void;
+
+  /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
+  get idOrFail(): IdOf<this> {
+    return this.__orm.data["id"] || fail("Entity has no id yet");
+  }
+
+  toString(): string {
+    return `${this.__orm.metadata.type}#${this.id}`;
   }
 }

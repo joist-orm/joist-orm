@@ -1,7 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
 import { Author, Book } from "../entities";
-import { insertAuthor } from "./factories";
 
 describe("Book", () => {
   it("non-null reference might still have a null id", async () => {

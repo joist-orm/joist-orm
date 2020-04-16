@@ -1,4 +1,4 @@
-import { Entity, IdOf } from "./EntityManager";
+import { Entity, IdOf, OptsOf } from "./EntityManager";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export * from "./EntityManager";
@@ -51,7 +51,6 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
 /** Adds a known-safe `get` accessor. */
 export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Omit<Reference<T, U, N>, "id"> {
-
   // Since we've fetched the entity from the db, we're going to omit out the "| undefined" from Reference.id
   // which handles "this reference is set to a new entity" and just assume the id is there (or else N which
   // is for nullable references, which will just always be potentially `undefined`).
@@ -111,13 +110,31 @@ export function setField(entity: Entity, fieldName: string, newValue: any): void
   data[fieldName] = newValue;
 }
 
-export function setOpts(entity: Entity, opts: object, calledFromConstructor: boolean = true): void {
-  // If opts is undefined, this instance is being hydrated from a database row, so skip all this.
-  if (opts === undefined) {
+/**
+ * Sets each value in `values` on the current entity.
+ *
+ * The default behavior is that passing a value as either `null` or `undefined` will set
+ * the field as `undefined`, i.e. automatic `null` to `undefined` conversion.
+ *
+ * However, if you pass `ignoreUndefined: true`, then any opt that is `undefined` will be treated
+ * as "do not set", and `null` will still mean "set to `undefined`". This is useful for implementing
+ * APIs were an input of `undefined` means "do not set / noop" and `null` means "unset".
+ */
+export function setOpts<T extends Entity>(
+  entity: T,
+  values: OptsOf<T>,
+  opts: { calledFromConstructor?: boolean; ignoreUndefined?: boolean },
+): void {
+  // If `values` is undefined, this instance is being hydrated from a database row, so skip all this.
+  if (values === undefined) {
     return;
   }
-  Object.entries(opts).forEach(([key, _value]) => {
+  const { calledFromConstructor, ignoreUndefined } = opts;
+  Object.entries(values as {}).forEach(([key, _value]) => {
     // We let optional opts fields be `| null` for convenience, and convert to undefined.
+    if (ignoreUndefined && _value === undefined) {
+      return;
+    }
     const value = _value === null ? undefined : _value;
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {

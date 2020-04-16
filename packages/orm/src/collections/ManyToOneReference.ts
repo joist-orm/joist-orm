@@ -43,6 +43,10 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     this.setImpl(other, {});
   }
 
+  isSet(): boolean {
+    return this.current() !== undefined;
+  }
+
   get get(): U | N {
     ensureNotDeleted(this.entity);
     // This should only be callable in the type system if we've already resolved this to an instance
@@ -52,9 +56,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.returnUndefinedIfDeleted(this.loaded);
   }
 
-  get id(): IdOf<U> | N {
+  get id(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity);
-    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+    return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
 
   // private impl

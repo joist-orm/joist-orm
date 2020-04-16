@@ -35,11 +35,15 @@ export interface Relation<T extends Entity, U extends Entity> {
  * `U | never` which becomes just `U`.
  */
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
-  id: IdOf<U> | N;
+  /** Returns the id of the current assigned entity, or `undefined` if the assigned entity has no id yet, or `undefined` if this column is nullable and currently unset. */
+  id: IdOf<U> | undefined;
 
   load(): Promise<U | N>;
 
   set(other: U | N): void;
+
+  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
+  isSet(): boolean;
 
   [H]?: N;
 }

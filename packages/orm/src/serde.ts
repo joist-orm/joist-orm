@@ -96,7 +96,7 @@ export class EnumFieldSerde implements ColumnSerde {
 // map, and then assume it will be persisted before we're asked to persist
 // ourselves, at which point we'll resolve it to an id.
 export function maybeResolveReferenceToId(value: any): string | undefined {
-  return value?.id || value;
+  return typeof value === "number" || typeof value === "string" ? value : value?.id;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unles its undefined. */

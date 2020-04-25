@@ -134,10 +134,11 @@ export function setOpts<T extends Entity>(
   }
   const { calledFromConstructor, ignoreUndefined } = opts;
   Object.entries(values as {}).forEach(([key, _value]) => {
-    // We let optional opts fields be `| null` for convenience, and convert to undefined.
+    // If ignoreUndefined is set, we treat undefined as a noop
     if (ignoreUndefined && _value === undefined) {
       return;
     }
+    // We let optional opts fields be `| null` for convenience, and convert to undefined.
     const value = _value === null ? undefined : _value;
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {

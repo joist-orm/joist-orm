@@ -1,25 +1,54 @@
 
-Joist makes several assumptions about your schema.
+Joist makes several assumptions about your database schema, as described below.
 
-Ideally you are developing your database schema greenfield with Joist from day one.
+Ideally you are developing your database schema greenfield with Joist from day one, so you can just adopt these assumptions/conventions from the beginning.
 
 However, if this is not the case, hopefully it would not be too bad to nudge your schema towards what Joist expects.
 
 ### Entity tables
 
-Joist expects entity tables to be identifiable by having at least these three columns:
+Joist expects entity tables (i.e. `authors`, `books`) to:
+ 
+1. Be named using plurals, i.e. `authors` vs. `author`,
 
-* `id` primary key/serial
-* `created_at` `timestamptz`
-* `updated_at` `timestamptz`
+2. Always have at least these three columns:
 
-Joist will maintain the `created_at`/`updated_at` columns for you, although you can also use ...these triggers... that will ensure non-Joist clients also have those columns set for them.
+    * `id` primary key/serial
+    * `created_at` `timestamptz`
+    * `updated_at` `timestamptz`
 
-### Enum tables
+   Joist will maintain the `created_at`/`updated_at` columns for you, although you can also use ...these triggers... (TODO add link) that will ensure non-Joist clients also have those columns set for them.
 
-Joist models "domain enums" as their own database tables with a row-per-enum constant. I.e. it does not use the Postgres built-in enum type, or unconstrained `integer` columns.
+   (Eventually Joist should/will have configurable support for enabling/disabling the use of `created_at`/`updated_at` columsn, but for now it is assumed/required to have them.)
 
-This "enums-as-tables" approach allows the entities that use an enum, i.e. `Publisher.size` is a `PublisherSize` to use foreign keys to the enum table, i.e. `publisers.size_id` is a foreign key to the `publisher_size` table, to primarily a) ensure data integrity that all `size_id` entries are valid sizes, and b) tell Joist's code generator that the `Publisher.size` field should use the `PublisherSize` enum type.
+3. Have a single primary key column, `id`, that is `SERIAL`/auto-increment
+
+### Enums are modeled as tables
+
+Joist models enums (i.e. `EmployeeStatus`) as their own database tables with a row-per-value. 
+
+I.e. `epmloyee_status` (singular) might have two rows like:
+
+```
+id  | code          | name
+----+---------------+---------------
+1   | FULL_TIME     | Full Time
+2   | PART_TIME     | Part Time
+```
+
+And will be codegen'd as:
+
+```typescript
+enum EmployeeStatus {
+  FullTime,
+  PartTime,
+}
+```
+
+This "enums-as-tables" approach allows the entities reference to the enum, i.e. `Employee.status` pointing to the `EmployeeStatus` enum, to use foreign keys to the enum table, i.e. `employees.status_id` is a foreign key to the `employee_status` table. This enabled:
+ 
+1. Data integrity, ensuring htat all `status_id` values are valid statuses, and
+2. Allows Joist's code generator to tell both that `employees.status_id` is a) of the type `EmployeeStatus` and b) how many enum values `EmployeeStatus` has.
 
 Joist expects enum tables to have three columns:
 

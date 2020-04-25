@@ -3,12 +3,14 @@ import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
+  Entity as EntitySym,
   BaseEntity,
   Collection,
   EntityFilter,
   EntityManager,
   FilterOf,
   Flavor,
+  Lens,
   ManyToManyCollection,
   ManyToOneReference,
   OneToManyCollection,
@@ -178,6 +180,12 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
       
       set(values: Partial<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
         ${setOpts}(this, values as ${OptsOf}<this>, opts);
+      }
+
+      async load<U extends ${EntitySym}, V extends U | U[]>(
+        fn: (lens: ${Lens}<${entityName}, ${entityName}>) => ${Lens}<U, V>
+      ): Promise<V> {
+        return super.load(fn);
       }
     }
   `;

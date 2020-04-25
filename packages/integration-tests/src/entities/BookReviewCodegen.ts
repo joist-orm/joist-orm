@@ -6,6 +6,8 @@ import {
   EntityManager,
   setOpts,
   OptsOf,
+  Entity,
+  Lens,
   EntityFilter,
   FilterOf,
   Reference,
@@ -77,5 +79,9 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   set(values: Partial<BookReviewOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, opts);
+  }
+
+  async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<BookReview, BookReview>) => Lens<U, V>): Promise<V> {
+    return super.load(fn);
   }
 }

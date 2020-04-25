@@ -6,6 +6,8 @@ import {
   EntityManager,
   setOpts,
   OptsOf,
+  Entity,
+  Lens,
   Collection,
   ManyToManyCollection,
   setField,
@@ -75,5 +77,9 @@ export abstract class TagCodegen extends BaseEntity {
 
   set(values: Partial<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, opts);
+  }
+
+  async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Tag, Tag>) => Lens<U, V>): Promise<V> {
+    return super.load(fn);
   }
 }

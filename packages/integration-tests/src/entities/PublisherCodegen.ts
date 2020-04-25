@@ -6,6 +6,8 @@ import {
   EntityManager,
   setOpts,
   OptsOf,
+  Entity,
+  Lens,
   setField,
   Collection,
   OneToManyCollection,
@@ -84,5 +86,9 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   set(values: Partial<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, opts);
+  }
+
+  async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Publisher, Publisher>) => Lens<U, V>): Promise<V> {
+    return super.load(fn);
   }
 }

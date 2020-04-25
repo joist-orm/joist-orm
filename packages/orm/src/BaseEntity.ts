@@ -1,5 +1,5 @@
 import { Entity, EntityManager, EntityOrmField, IdOf, OptsOf } from "./EntityManager";
-import { Collection, fail, Reference, setOpts } from "./index";
+import { Collection, fail, Reference } from "./index";
 
 /**
  * A type for declaratively walking the object graph.
@@ -41,7 +41,10 @@ export abstract class BaseEntity implements Entity {
    * const publisher = await book.load(b => b.author.publisher);
    * ```
    */
-  async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<this, this>) => Lens<U, V>): Promise<V> {
+  // For some reason accepting Lens<this, this> does not work when called from within the entity
+  // subclass itself, so we use the codegen hammer in our subclass to force the right Lens type
+  // in a .load stub that just calls us for the implementation.
+  async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<any, any>) => Lens<U, V>): Promise<V> {
     const paths: string[] = [];
     // The proxy collects the path navigations that the `fn` does.
     const proxy = new Proxy(

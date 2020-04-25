@@ -1,4 +1,4 @@
-FROM postgres
+FROM postgres:10.7
 
 # TODO Accept the database name/user name as build args.
 

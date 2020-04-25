@@ -73,7 +73,7 @@ export abstract class BaseEntity implements Entity {
     return this.__orm.data["id"] || fail("Entity has no id yet");
   }
 
-  toString(): string {
+  [Symbol.toStringTag](): string {
     return `${this.__orm.metadata.type}#${this.id}`;
   }
 }

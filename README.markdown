@@ -15,9 +15,9 @@ An opinionated ORM for TypeScript/node.
 - Unit of Work (navigate between entities as a consistent graph)
 - Small & simple codebase (maintainable by a single engineer if needed)
 
-(See [GOALS](./GOALS.markdown) for more in-depth descriptions of each bullet.)
+(See [goals](./docs/goals.markdown) for more in-depth descriptions of each bullet.)
 
-(Also see [SCHEMA](./SCHEMA.markdown) for the assumptions Joist makes about your database schema.)
+(Also see [Schema Assumptions](./docs/schema-assumptions.markdown) for the assumptions Joist makes about your database schema.)
 
 ### Non-Goals
 

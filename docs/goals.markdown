@@ -1,16 +1,22 @@
 # Goals
 
+The high-level goal of Joist is to bring ActiveRecord-esque productivity to TypeScript/Node projects.
+
+Obviously this is a lofty goal, and Joist has only just started down that road, but that is the standard Joist strives for.
+
 ## Schema-Driven Code Generation
 
-Joist generates your domain objects/classes from your database schema.
+Joist generates your domain objects/classes from your database schema, i.e. for a given `authors` table, Joist will generate an `Author` type with all of the respective fields (`first_name`, `last_name`) and collections (`author.books` loads/joins the `books` rows for that author id).
 
-It does this continually, i.e. after every migration/schema change, so that you never have to maintain a tedious/error-prone mapping from your schema to your object model. It does this by isolating the "getter/setter/collection" boilerplate into "codegen" files, i.e. `AuthorCodegen.ts`, that are always overwritten, from the custom business logic that users write in the "real" `Author.ts` domain object files.
+It does this continually, i.e. after every migration/schema change, so that you never have to maintain a tedious/error-prone mapping from your schema to your object model. Similar to "evergreen" browsers, this is "evergreen" code generation.
 
-This approach (continual, verbatim mapping of the database schema to your object model) assumes you have a modern/pleasant schema to work with, i.e. you don't have to map esoteric 1980s-style database column names to modern getter/setters, and you don't need your object model to look dramatically different from your database tables. If you do need either of these things, Joist will not work for you.
+To keep your `Author` type as clean as possible, and not overwrite any custom business logic you've added, the boilerplate of getters/setters/collections are isolated into "codegen" base classes, i.e. `AuthorCodegen.ts`, that are always overwritten.
 
-The upshot of this approach is that it provides a Rails-style development experience where, after creating an `authors` table in the database, the programmer has a very clean/nearly empty `Author.ts` file and has to do basically no other work. There are no annotations to write or keep up to date.
+This approach (continual, verbatim mapping of the database schema to your object model) assumes you have a modern/pleasant schema to work with, i.e. you don't have to map esoteric 1980s-style database column names to modern getter/setters, and you don't need your object model to look dramatically different from your database tables. These are ActiveRecord-esque assumptions. If you do need either of these things, Joist will not work for you.
 
-If you do need some customizations, Joist's opinion is that those are best handled by declarative rules. I.e. instead of making a decision that "our `date` columns need to be mapped like `X` in our objects", and then having to re-type out `X` (say ~1-3 lines of annotations) for all 10/20/N+ date fields in your schema, you should make that decision once, and then apply it via a config file that says "map all of our dates this `X`".
+The upshot of this approach is that it provides a Rails-style development experience where, after creating an `authors` table in the database, the programmer has a very clean/nearly empty `Author.ts` file and has to do basically no boilerplate other work. There are no annotations to write or keep up to date.
+
+If you do need some customizations, Joist's opinion/approach is that those are best handled by declarative rules. I.e. instead of making a decision that "our `timestamptz` columns need to be mapped like `X` in our objects", and then having to re-type out `@Column(whateverType = Date)` (say ~1-3 lines of annotations) for all 10/20/100+ date fields in your schema, you should make that decision once, and then apply it via a config file that says "map all of our dates this `X` way".
 
 (Joist's codegen is still WIP, so we don't have these customization hooks defined yet, but they will exist soon.)
 
@@ -28,13 +34,13 @@ Joist is built on DataLoader from the ground up, and nearly all SQL operations (
 
 Joist takes the strong opinion that any operation that _might_ be lazy loaded (like accessing an `author.books` collection that may or may not already be loaded in memory) _must_ be marked as `async/await`.
 
-Other ORMs in the JS/TS space often fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasantness of accessing `author.books` without `await`s/`Promise.all`/etc. code--as long as whoever loaded this `Author` ensured that `books` was already fetched/initialized.
+Other ORMs in the JS/TS space often fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasantness of accessing `author.books` without `await`s/`Promise.all`/etc. code--as long as whoever loaded this `Author` instance ensured that `books` was already fetched/initialized.
 
-This seems great in the short-term, but Joist asserts its dangerous in the long-term, because code written to use the "`author.books` is a `Book[]`" assumption is now coupled to `author.books` being pre-fetched and _always_ being present, regardless of the caller.
+This seems great in the short-term, but Joist asserts its dangerous in the long-term, because code written to rely on the "`author.books` is a `Book[]`" assumption is now coupled to `author.books` being pre-fetched and _always_ being present, regardless of the caller.
 
-This sort of implementation detail is easy to enforce when the `for (book in author.books)` is 5 lines below "load author with a `books` preload hint", however it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is _not_ loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning a falsely empty collection or unset reference).
+This sort of implementation detail is easy to enforce when the synchronous-assuming (i.e. `for (book in author.books)`) is 5 lines below the "load author with a `books` preload hint" in the same file. However it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is _not_ loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning a falsely empty collection or unset reference).
 
-Essentially this approach of having non-async collections creates a contract ("`author.books` must somehow be loaded") that is not present in the type system that now the programmer/maintainer must remember and self-enforce.
+Essentially this approach of having non-async collections creates a contract ("`author.books` must somehow be loaded") that is not present in the type system, so now the programmer/maintainer must remember and self-enforce it.
 
 So Joist does not do that, all references/collections are "always `async`".
 
@@ -54,6 +60,16 @@ expect(book.author.get.publisher.get.name).toEqual("p1");
 
 Where `originalBook`'s references (`book.author`) could _not_ call `.get` (only `.load` which returns a `Promise`), however, the return value of `em.populate` uses mapped types to transform only the fields listed in the hint (`author` and the nested `author.publisher`) to be safe for synchronous access, so the calling code can now call `.get` and avoid the fuss of promises (only for this section of `populate`-blessed code).
 
+Most of Joist's `EntityManager` take a `populate` parameter to help you return data both a) already loaded from the database, and b) _marked in the type system as loaded_ to achieve the pleasantness of synchronous access without the risks of mis-modeling references as always/naively loaded.
+
+As one more helpful feature, you can also navigate across multiple levels of the object graph with a single async call using `Entity.load`, i.e.:
+
+```typescript
+const allAuthorReviews = await author.load(a => a.books.comments);
+```
+
+Here `a.books.comments` acts similar to a [lens](https://medium.com/@dtipson/functional-lenses-d1aba9e52254), and defines a (type safe) path that `load` then recursively navigates for you, with the convenience of only having a single `await` call in your code.
+
 ## Best-in-Class Performance
 
 Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, `DELETE`, and even `SELECT` operations in bulk.
@@ -64,13 +80,13 @@ If you have a Unit of Work that has 100 new authors and 500 new books, there wil
 
 This is dramatically different than other ORMs that generally issue 1 SQL statement per entity _instance_ instead of 1 SQL statement per entity _table_ (technically Joist is 1 SQL statement per entity type and operation, i.e. inserting authors and updating authors and deleting authors are separte statements).
 
-Note that this capability, especially bulk updates, currently requires a Postgres-specific `UPDATE` syntax, but that is part of the pay-off for Joist's "unapologetically Postgres-only" approach.
+Note that this capability, especially bulk updates, currently requires a Postgres-specific `UPDATE` syntax, but that is part of the pay-off for Joist's "unapologetically Postgres-only (for now)" approach.
 
 ## Fast Unit Tests
 
 A common fault of ORMs is the quickiness of their unit tests (not the ORM project's unit tests, like Joist's internal test suite, but the unit tests that users of Joist write for their own business logic using their own entities).
 
-It's common for test execution times to be "okay" with a small schema of ~5-10 tables, but then to steadily degrade over time. For the "original Joist" (written in Java), this actually was _the_ founding impetus because Hibernate, the Java ORM dejour of the time, a schema with 500 tables would take 30 seconds just to create the initial session object, let alone run any actual unit test behavior.
+It's common for test execution times to be "okay" with a small schema of ~5-10 tables, but then to steadily degrade over time. For the "original Joist" (written in Java), this actually was the founding impetus because Hibernate, the Java ORM dejour of the time, a schema with 500 tables would take 30 seconds just to create the initial `Session` object, let alone run any actual unit test behavior.
 
 Joist (both "original/Java Joist" and now joist-ts) take the hard-line approach that test time should be _constant_ with schema size. Tests on a 500-table schema should run just as quickly as a 20-table schema.
 

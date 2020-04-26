@@ -1,18 +1,12 @@
 import pgMigrate from "node-pg-migrate";
 import pgStructure, { Db, Table } from "pg-structure";
-import { Client, ClientConfig } from "pg";
+import { Client } from "pg";
+import { newPgConnectionConfig } from "./connection";
 
 const productionDirectory = "/home/node/app/migrations";
 
 export async function runMigrationsIfNeeded(dir: string = productionDirectory): Promise<void> {
-  const config: ClientConfig = {
-    host: "127.0.0.1",
-    port: 5435,
-    user: "joist",
-    password: "local",
-    database: "joist",
-  };
-  const client = new Client(config);
+  const client = new Client(newPgConnectionConfig());
   await client.connect();
 
   try {
@@ -26,7 +20,7 @@ export async function runMigrationsIfNeeded(dir: string = productionDirectory): 
       decamelize: true,
     });
 
-    const db = await pgStructure(config);
+    const db = await pgStructure(newPgConnectionConfig());
     // if (env.STAGE === "local" || env.STAGE === "docker") {
     console.log("Creating flush_database() function");
     await createFlushDbFunction(db, client);

@@ -97,3 +97,7 @@ export function createManyToManyTable(b: MigrationBuilder, tableName: string, ta
   });
   b.createIndex(tableName, [column1, column2], { unique: true });
 }
+
+export function fail(message?: string): never {
+  throw new Error(message || "Failed");
+}

@@ -3,8 +3,6 @@ ARG APP_DBNAME=joist
 ARG APP_USERNAME=joist
 ARG APP_PASSWORD=local
 
-# TODO Accept the database name/user name as build args.
-
 # Create the init.sh file. This file is only ran once; if you need to re-run it, use `docker-compose rm db`.
 RUN echo "#!/bin/bash" > /init.sh && \
   echo "set -e" >> /init.sh && \

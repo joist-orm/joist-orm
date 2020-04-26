@@ -1,4 +1,4 @@
-FROM node:12.7.0
+FROM node:14.0.0
 WORKDIR /home/node/app
 COPY ../orm package-lock.json ./
 RUN npm install

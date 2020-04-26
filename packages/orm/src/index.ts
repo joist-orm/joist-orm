@@ -162,6 +162,6 @@ export function setOpts<T extends Entity>(
 
 export function ensureNotDeleted(entity: Entity): void {
   if (entity.__orm.deleted) {
-    throw new Error(entity.toString() + " is marked as deleted");
+    throw new Error(entity + " is marked as deleted");
   }
 }

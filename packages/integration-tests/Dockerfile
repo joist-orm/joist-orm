@@ -3,7 +3,6 @@ FROM node:12.7.0 as build
 WORKDIR /home/node/app
 COPY ../orm package-lock.json .npmrc ./
 RUN npm ci
-COPY env.docker ./
 COPY ./graphql-codegen.yml ./
 COPY ../../tsconfig.json ./
 COPY ./codegen ./codegen

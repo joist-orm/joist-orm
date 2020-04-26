@@ -8,8 +8,6 @@
     "codegen": "./run.sh joist-codegen"
   },
   "dependencies": {
-    "@types/dotenv": "^8.2.0",
-    "dotenv": "^8.2.0",
     "joist-orm": "0.1.0-bump"
   },
   "devDependencies": {

@@ -19,4 +19,6 @@ services:
       dockerfile: ./tests.dockerfile
     depends_on:
       - db
-    env_file: env.docker
+    env_file:
+      - local.env
+      - local.docker.env

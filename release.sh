@@ -2,9 +2,7 @@
 
 set -e
 
-yarn build
-
-(cd packages/integration-tests && exec yarn test)
+echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > .npmrc
 
 for p in codegen migration-utils orm ; do
   ./bump.sh ./packages/$p/package.json
@@ -12,7 +10,7 @@ done
 
 for p in codegen migration-utils orm ; do
   cd ./packages/$p
-  yarn publish --non-interactive --otp $1
+  yarn publish --non-interactive
   cd ../..
 done
 

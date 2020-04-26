@@ -6,8 +6,8 @@
   "types": "build/index.d.ts",
   "dependencies": {
     "@types/pluralize": "0.0.29",
-    "pg": "^7.18.1",
-    "pg-structure": "^5.10.6",
+    "pg": "^8.0.3",
+    "pg-structure": "^5.10.10",
     "node-pg-migrate": "^4.2.2",
     "pluralize": "^8.0.0"
   },

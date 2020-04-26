@@ -1,0 +1,21 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/node:14.0.0
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: |
+          cd packages/integration-tests
+          docker-compose build db tests
+          docker-compose up db-wait
+          docker-compose up -d tests
+      - run: |
+          cd packages/integration-tests
+          docker-compose exec tests ./tests.sh
+      - run: |
+          cd packages/integration-tests
+          if [ "$CIRCLE_BRANCH" = "master" ]; then
+            docker-compose exec tests ./release.sh
+          fi

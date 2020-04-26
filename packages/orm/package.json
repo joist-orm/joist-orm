@@ -7,7 +7,7 @@
   "dependencies": {
     "dataloader": "^2.0.0",
     "knex": "^0.20.13",
-    "pg": "^7.18.1"
+    "pg": "^8.0.3"
   },
   "devDependencies": {
     "@types/jest": "^25.1.1",

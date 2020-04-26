@@ -1,4 +1,10 @@
 import Knex from "knex";
+import { config } from "dotenv";
+import { newPgConnectionConfig } from "./connection";
+
+if (process.env.DATABASE_CONNECTION_INFO === undefined) {
+  config({ path: "./local.env" });
+}
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
@@ -8,13 +14,7 @@ export let numberOfQueries = 0;
 beforeAll(async () => {
   knex = Knex({
     client: "pg",
-    connection: {
-      host: "127.0.0.1",
-      port: 5435,
-      user: "joist",
-      password: "local",
-      database: "joist",
-    },
+    connection: newPgConnectionConfig(),
     debug: false,
     asyncStackTraces: true,
   }).on("query", () => {

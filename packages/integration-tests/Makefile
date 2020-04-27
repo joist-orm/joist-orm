@@ -13,8 +13,8 @@ build:
 db:
 	docker-compose up -d db
 	docker-compose exec db ./reset.sh
-	env STAGE=local npm run migrate
-	env STAGE=local npm run codegen
+	env npm run migrate
+	env npm run codegen
 
 psql:
 	docker-compose exec db ./console.sh

@@ -22,10 +22,10 @@ export async function runMigrationsIfNeeded(dir: string = productionDirectory): 
 
     const db = await pgStructure(newPgConnectionConfig());
 
-    // if (env.STAGE === "local" || env.STAGE === "docker") {
-    console.log("Creating flush_database() function");
-    await createFlushDbFunction(db, client);
-    // }
+    if (process.env.ADD_FLUSH_DATABASE === "true") {
+      console.log("Creating flush_database() function");
+      await createFlushDbFunction(db, client);
+    }
   } finally {
     await client.end();
   }

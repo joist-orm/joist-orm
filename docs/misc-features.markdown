@@ -103,3 +103,36 @@ const author = em.load(Author, "1");
 const firstName: string | null | undefined = ...;
 author.set({ firstName }, { ignoreUndefined: true });
 ```
+
+### Fast database resets
+
+To reset the database between each unit test, Joist generates a stored procedure that will delete all rows/reset the sequence ids:
+
+```typescript
+await knex.select(knex.raw("flush_database()"));
+```
+
+This is generated at the end of the `joist-migation-utils` set only if `ADD_FLUSH_DATABASE` environment variable is set, i.e. this function should never exist in your production database. It is only for local testing.
+
+(Some ORMs invoke tests in a transaction, and then rollback the transaction before the next test, but this a) makes debugging failed tests extremely difficult b/c the data you want to investigate via `psql` has disappeared/been rolled back, and b) means your tests cannot test any behavior that uses transactions.)
+
+### `EntityManager.refresh()`
+
+The `EntityManager.refresh` method reloads all currently-loaded entities from the database, as well as any of their loaded relations (i.e. if you have `author1.books` loaded and a new `books` row is added with `author_id=1`, after `refresh()`, the `author1.books` collection will have the newly-added book in it.
+
+This is primarily useful for unit tests, where you want to do behavior like:
+
+```typescript
+// Given an author
+const a = em.create(Author, { ... });
+// When we perform the business logic
+// (...assumme this is a test helper method that invokes the logic and
+// then calls EntityManager.refresh before returning)
+await runBusinessLogic();
+// Then we have a new book
+expect(a.books.get.length).toEqual(1);
+```
+
+But `runBusinessLogic` is run it its own transaction/`EntityManager` instance (which is generally a good idea to avoid accidentally relying on the test's `EntityManager` state), but after `runBusinessLogic` completes, you want to see the latest & great version of `a`.
+
+Without `EntityManager.refresh`, tests must jump through various hoops like managing `a1`/`a1Reloaded` variables.

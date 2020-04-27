@@ -8,7 +8,7 @@
     "@types/pluralize": "0.0.29",
     "pg": "^8.0.3",
     "pg-structure": "^5.10.10",
-    "node-pg-migrate": "^4.2.2",
+    "node-pg-migrate": "^4.6.2",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {

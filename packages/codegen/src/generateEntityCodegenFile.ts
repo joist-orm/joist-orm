@@ -183,7 +183,7 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
       }
 
       async load<U extends ${EntitySym}, V extends U | U[]>(
-        fn: (lens: ${Lens}<${entityName}, ${entityName}>) => ${Lens}<U, V>
+        fn: (lens: ${Lens}<${entity.type}, ${entity.type}>) => ${Lens}<U, V>
       ): Promise<V> {
         return super.load(fn);
       }

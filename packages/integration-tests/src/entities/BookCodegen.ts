@@ -17,7 +17,7 @@ import {
   ManyToManyCollection,
   setField,
 } from "joist-orm";
-import { bookMeta, Author, BookReview, Tag, AuthorId, AuthorOrder, Book, bookReviewMeta } from "./entities";
+import { bookMeta, Book, Author, BookReview, Tag, AuthorId, AuthorOrder, bookReviewMeta } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
 

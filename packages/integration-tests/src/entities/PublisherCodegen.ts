@@ -12,7 +12,7 @@ import {
   Collection,
   OneToManyCollection,
 } from "joist-orm";
-import { publisherMeta, PublisherSize, Author, Publisher, authorMeta } from "./entities";
+import { publisherMeta, Publisher, PublisherSize, Author, authorMeta } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 

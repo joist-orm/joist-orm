@@ -14,7 +14,7 @@ import {
   ManyToOneReference,
   setField,
 } from "joist-orm";
-import { bookReviewMeta, Book, BookId, BookOrder, BookReview } from "./entities";
+import { bookReviewMeta, BookReview, Book, BookId, BookOrder } from "./entities";
 
 export type BookReviewId = Flavor<string, "BookReview">;
 

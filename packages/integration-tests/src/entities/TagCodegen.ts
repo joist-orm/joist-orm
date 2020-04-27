@@ -12,7 +12,7 @@ import {
   ManyToManyCollection,
   setField,
 } from "joist-orm";
-import { tagMeta, Book, Tag } from "./entities";
+import { tagMeta, Tag, Book } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 

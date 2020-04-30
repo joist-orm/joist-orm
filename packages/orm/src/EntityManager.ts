@@ -7,7 +7,6 @@ import { Collection, LoadedCollection, LoadedReference, Reference, Relation, set
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
-import equal from "fast-deep-equal";
 import hash from "object-hash";
 
 export interface EntityConstructor<T> {
@@ -531,7 +530,7 @@ export class EntityManager {
           const uniqueQueries: FilterAndOrder<T>[] = [];
           const queryToUnique: Record<number, number> = {};
           queries.forEach((q, i) => {
-            let j = uniqueQueries.findIndex((uq) => equal(uq, q));
+            let j = uniqueQueries.findIndex((uq) => whereFilterHash(uq) === whereFilterHash(q));
             if (j === -1) {
               uniqueQueries.push(q);
               j = uniqueQueries.length - 1;
@@ -593,17 +592,7 @@ export class EntityManager {
         },
         {
           // Our where/filter tuple is a complex object, so object-hash it to ensure caching works
-          cacheKeyFn: (k) =>
-            hash(k, {
-              replacer: (v) => {
-                // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
-                if (isEntity(v)) {
-                  return v.id;
-                } else {
-                  return v;
-                }
-              },
-            }),
+          cacheKeyFn: whereFilterHash,
         },
       );
     });
@@ -782,4 +771,10 @@ function recalcDerivedFields(entities: Entity[]) {
       setField(entity, fieldName, (entity as any)[fieldName]);
     });
   }
+}
+
+// If a where clause includes an entity, object-hash cannot hash it, so just use the id.
+const replacer = (v: any) => (isEntity(v) ? v.id : v);
+function whereFilterHash(k: FilterAndOrder<any>): string {
+  return hash(k, { replacer });
 }

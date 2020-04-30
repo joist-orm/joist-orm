@@ -7,6 +7,7 @@ import { Collection, LoadedCollection, LoadedReference, Reference, Relation, set
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
+import equal from "fast-deep-equal";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -114,6 +115,8 @@ type NestedLoadHint<T extends Entity> = {
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
+type FilterAndOrder<T> = [FilterOf<T>, OrderOf<T> | undefined];
+
 export class EntityManager {
   constructor(public knex: Knex) {}
 
@@ -154,8 +157,7 @@ export class EntityManager {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T> },
   ): Promise<T[]> {
-    const query = buildQuery(this.knex, type, where, options?.orderBy);
-    const rows = await this.loaderForFind(type).load(query);
+    const rows = await this.loaderForFind(type).load([where, options?.orderBy]);
     const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -510,15 +512,36 @@ export class EntityManager {
     );
   }
 
-  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<QueryBuilder, unknown[]> {
+  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<FilterAndOrder<T>, unknown[]> {
     return getOrSet(this.findLoaders, type.name, () => {
-      return new DataLoader<QueryBuilder, unknown[]>(async (queries) => {
+      return new DataLoader<FilterAndOrder<T>, unknown[]>(async (queries) => {
         // If there is only 1 query, we can skip the tagging step.
         if (queries.length === 1) {
-          return [await queries[0]];
+          const [where, orderBy] = queries[0];
+          return [await buildQuery(this.knex, type, where, orderBy)];
         }
 
         const { knex } = this;
+
+        // Map each incoming query[i] to itself or a previous dup
+        const uniqueQueries: FilterAndOrder<T>[] = [];
+        const queryToUnique: Record<number, number> = {};
+        queries.forEach((q, i) => {
+          let j = uniqueQueries.findIndex((uq) => equal(uq, q));
+          if (j === -1) {
+            uniqueQueries.push(q);
+            j = uniqueQueries.length - 1;
+          }
+          queryToUnique[i] = j;
+        });
+
+        // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
+        if (uniqueQueries.length === 1) {
+          const [where, orderBy] = queries[0];
+          const rows = await buildQuery(this.knex, type, where, orderBy);
+          // Reuse this same result for however many callers asked for it.
+          return queries.map(q => rows);
+        }
 
         // For each query, add an additional `__tag` column that will identify that query's
         // corresponding rows in the combined/UNION ALL'd result set.
@@ -527,7 +550,8 @@ export class EntityManager {
         // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
         // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
         // not gaurantee order).
-        const tagged = queries.map((query, i) => {
+        const tagged = uniqueQueries.map(([where, orderBy], i) => {
+          const query = buildQuery(this.knex, type, where, orderBy) as QueryBuilder;
           return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
         });
 
@@ -548,14 +572,18 @@ export class EntityManager {
         // Issue a single SQL statement for all of them
         const rows = await query;
 
+        const resultForUniques: any[][] = [];
+        uniqueQueries.forEach((q, i) => {
+          resultForUniques[i] = [];
+        });
+        rows.forEach((row: any) => {
+          resultForUniques[row["__tag"]].push(row);
+        });
+
         // We return an array-of-arrays, where result[i] is the rows for queries[i]
         const result: any[][] = [];
         queries.forEach((q, i) => {
-          result[i] = [];
-        });
-
-        rows.forEach((row: any) => {
-          result[row["__tag"]].push(row);
+          result[i] = resultForUniques[queryToUnique[i]];
         });
         return result;
       });

@@ -10,6 +10,7 @@ if (process.env.DATABASE_CONNECTION_INFO === undefined) {
 export let knex: Knex;
 
 export let numberOfQueries = 0;
+export let queries: string[] = [];
 
 beforeAll(async () => {
   knex = Knex({
@@ -17,8 +18,9 @@ beforeAll(async () => {
     connection: newPgConnectionConfig(),
     debug: false,
     asyncStackTraces: true,
-  }).on("query", () => {
+  }).on("query", (e: any) => {
     numberOfQueries++;
+    queries.push(e.sql);
   });
 });
 
@@ -33,4 +35,5 @@ afterAll(async () => {
 
 export function resetQueryCount() {
   numberOfQueries = 0;
+  queries = [];
 }

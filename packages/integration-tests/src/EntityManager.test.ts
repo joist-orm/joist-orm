@@ -1,6 +1,6 @@
 import { EntityManager, Loaded } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
-import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 import { Deferred } from "./Deferred";
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "./entities/factories";
 
@@ -525,6 +525,50 @@ describe("EntityManager", () => {
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows[0].first_name).toEqual("a1a");
     expect(rows[1].first_name).toEqual("a2b");
+  });
+
+  it("will dedup queries that are loaded at the same time", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = new EntityManager(knex);
+    resetQueryCount();
+    // Given two queryies with exactly the same where clause
+    const p1p = em.find(Publisher, { id: "1" });
+    const p2p = em.find(Publisher, { id: "1" });
+    // When they are executed in the same event loop
+    const [p1, p2] = await Promise.all([p1p, p2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // And it's the regular/sane query, i.e. not auto-batched
+    expect(queries).toMatchInlineSnapshot(`
+      Array [
+        "select \\"p0\\".* from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc",
+      ]
+    `);
+    // And both results are the same
+    expect(p1.length).toEqual(1);
+    expect(p1).toEqual(p2);
+  });
+
+  it("does dedup queries with different order bys", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    const em = new EntityManager(knex);
+    resetQueryCount();
+    // Given two queryies with exactly the same where clause but different orders
+    const p1p = em.find(Publisher, { id: "1" }, { orderBy: { id: "ASC" } });
+    const p2p = em.find(Publisher, { id: "1" }, { orderBy: { id: "DESC" } });
+    // When they are executed in the same event loop
+    const [p1, p2] = await Promise.all([p1p, p2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // And it is still auto-batched
+    expect(queries).toMatchInlineSnapshot(`
+Array [
+  "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" ASC, \\"p0\\".\\"id\\" ASC) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" DESC, \\"p0\\".\\"id\\" DESC) order by \\"__tag\\" asc",
+]
+`);
+    // And the results are the expected reverse of each other
+    expect(p1.reverse()).toEqual(p2);
   });
 
   it("can save tables with self-references", async () => {

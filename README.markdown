@@ -48,6 +48,7 @@ After checkout:
 ### Todo
 
 - Derived values
+  - Derived primitives is implemented
 - Use load hint-style syntax to declare validation rule sub-graph
 - JSON support, i.e. [upsertGraph](https://vincit.github.io/objection.js/guide/query-examples.html#graph-inserts)/`toJSON`
 - Cascading deletions for parent/child relationships
@@ -57,6 +58,9 @@ After checkout:
 - LargeCollection support
 - Op locks/`version` column?
 - An in-memory backend
+- Rename onSave --> preFlush / postFlush
+- Add example of "lastName cannot be changed" that uses 1) validation rule, 2) isNew, and 3) type-safe changed
+- Add Collection.load(loadHint)
 
 ## History / Inspiration
 
@@ -69,4 +73,5 @@ The `EntityManager.find` syntax is heavily inspired from [MikroORM](https://mikr
 ## License
 
 MIT
+
 

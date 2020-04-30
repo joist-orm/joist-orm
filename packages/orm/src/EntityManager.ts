@@ -591,7 +591,7 @@ export class EntityManager {
           return result;
         },
         {
-          // Our where/filter tuple is a complex object, so object-hash it to ensure caching works
+          // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
           cacheKeyFn: whereFilterHash,
         },
       );
@@ -775,6 +775,7 @@ function recalcDerivedFields(entities: Entity[]) {
 
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
 const replacer = (v: any) => (isEntity(v) ? v.id : v);
-function whereFilterHash(k: FilterAndOrder<any>): string {
-  return hash(k, { replacer });
+
+function whereFilterHash(where: FilterAndOrder<any>): string {
+  return hash(where, { replacer });
 }

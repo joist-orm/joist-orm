@@ -8,6 +8,7 @@ import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import equal from "fast-deep-equal";
+import hash from "object-hash";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -450,6 +451,8 @@ export class EntityManager {
       await flushJoinTables(this.knex, tx, joinRowTodos);
       await tx.commit();
     });
+    // Reset the find caches b/c data will have changed in the db
+    this.findLoaders = {};
   }
 
   /** Find all deleted entities and ensure their references all know about their deleted-ness. */
@@ -514,79 +517,95 @@ export class EntityManager {
 
   private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<FilterAndOrder<T>, unknown[]> {
     return getOrSet(this.findLoaders, type.name, () => {
-      return new DataLoader<FilterAndOrder<T>, unknown[]>(async (queries) => {
-        // If there is only 1 query, we can skip the tagging step.
-        if (queries.length === 1) {
-          const [where, orderBy] = queries[0];
-          return [await buildQuery(this.knex, type, where, orderBy)];
-        }
-
-        const { knex } = this;
-
-        // Map each incoming query[i] to itself or a previous dup
-        const uniqueQueries: FilterAndOrder<T>[] = [];
-        const queryToUnique: Record<number, number> = {};
-        queries.forEach((q, i) => {
-          let j = uniqueQueries.findIndex((uq) => equal(uq, q));
-          if (j === -1) {
-            uniqueQueries.push(q);
-            j = uniqueQueries.length - 1;
+      return new DataLoader<FilterAndOrder<T>, unknown[], string>(
+        async (queries) => {
+          // If there is only 1 query, we can skip the tagging step.
+          if (queries.length === 1) {
+            const [where, orderBy] = queries[0];
+            return [await buildQuery(this.knex, type, where, orderBy)];
           }
-          queryToUnique[i] = j;
-        });
 
-        // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
-        if (uniqueQueries.length === 1) {
-          const [where, orderBy] = queries[0];
-          const rows = await buildQuery(this.knex, type, where, orderBy);
-          // Reuse this same result for however many callers asked for it.
-          return queries.map(q => rows);
-        }
+          const { knex } = this;
 
-        // For each query, add an additional `__tag` column that will identify that query's
-        // corresponding rows in the combined/UNION ALL'd result set.
-        //
-        // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
-        // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
-        // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
-        // not gaurantee order).
-        const tagged = uniqueQueries.map(([where, orderBy], i) => {
-          const query = buildQuery(this.knex, type, where, orderBy) as QueryBuilder;
-          return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
-        });
+          // Map each incoming query[i] to itself or a previous dup
+          const uniqueQueries: FilterAndOrder<T>[] = [];
+          const queryToUnique: Record<number, number> = {};
+          queries.forEach((q, i) => {
+            let j = uniqueQueries.findIndex((uq) => equal(uq, q));
+            if (j === -1) {
+              uniqueQueries.push(q);
+              j = uniqueQueries.length - 1;
+            }
+            queryToUnique[i] = j;
+          });
 
-        const meta = getMetadata(type);
+          // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
+          if (uniqueQueries.length === 1) {
+            const [where, orderBy] = queries[0];
+            const rows = await buildQuery(this.knex, type, where, orderBy);
+            // Reuse this same result for however many callers asked for it.
+            return queries.map((q) => rows);
+          }
 
-        // Kind of dumb, but make a dummy row to start our query with
-        let query = knex
-          .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
-          .from(meta.tableName)
-          .orderBy("__tag", "__row")
-          .where({ id: -1 });
+          // For each query, add an additional `__tag` column that will identify that query's
+          // corresponding rows in the combined/UNION ALL'd result set.
+          //
+          // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
+          // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
+          // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
+          // not gaurantee order).
+          const tagged = uniqueQueries.map(([where, orderBy], i) => {
+            const query = buildQuery(this.knex, type, where, orderBy) as QueryBuilder;
+            return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
+          });
 
-        // Use the dummy query as a base, then `UNION ALL` in all the rest
-        tagged.forEach((add) => {
-          query = query.unionAll(add, true);
-        });
+          const meta = getMetadata(type);
 
-        // Issue a single SQL statement for all of them
-        const rows = await query;
+          // Kind of dumb, but make a dummy row to start our query with
+          let query = knex
+            .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
+            .from(meta.tableName)
+            .orderBy("__tag", "__row")
+            .where({ id: -1 });
 
-        const resultForUniques: any[][] = [];
-        uniqueQueries.forEach((q, i) => {
-          resultForUniques[i] = [];
-        });
-        rows.forEach((row: any) => {
-          resultForUniques[row["__tag"]].push(row);
-        });
+          // Use the dummy query as a base, then `UNION ALL` in all the rest
+          tagged.forEach((add) => {
+            query = query.unionAll(add, true);
+          });
 
-        // We return an array-of-arrays, where result[i] is the rows for queries[i]
-        const result: any[][] = [];
-        queries.forEach((q, i) => {
-          result[i] = resultForUniques[queryToUnique[i]];
-        });
-        return result;
-      });
+          // Issue a single SQL statement for all of them
+          const rows = await query;
+
+          const resultForUniques: any[][] = [];
+          uniqueQueries.forEach((q, i) => {
+            resultForUniques[i] = [];
+          });
+          rows.forEach((row: any) => {
+            resultForUniques[row["__tag"]].push(row);
+          });
+
+          // We return an array-of-arrays, where result[i] is the rows for queries[i]
+          const result: any[][] = [];
+          queries.forEach((q, i) => {
+            result[i] = resultForUniques[queryToUnique[i]];
+          });
+          return result;
+        },
+        {
+          // Our where/filter tuple is a complex object, so object-hash it to ensure caching works
+          cacheKeyFn: (k) =>
+            hash(k, {
+              replacer: (v) => {
+                // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
+                if (isEntity(v)) {
+                  return v.id;
+                } else {
+                  return v;
+                }
+              },
+            }),
+        },
+      );
     });
   }
 

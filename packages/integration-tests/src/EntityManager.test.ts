@@ -531,7 +531,7 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     resetQueryCount();
-    // Given two queryies with exactly the same where clause
+    // Given two queries with exactly the same where clause
     const p1p = em.find(Publisher, { id: "1" });
     const p2p = em.find(Publisher, { id: "1" });
     // When they are executed in the same event loop
@@ -554,7 +554,7 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p2" });
     const em = new EntityManager(knex);
     resetQueryCount();
-    // Given two queryies with exactly the same where clause but different orders
+    // Given two queries with exactly the same where clause but different orders
     const p1p = em.find(Publisher, { id: "1" }, { orderBy: { id: "ASC" } });
     const p2p = em.find(Publisher, { id: "1" }, { orderBy: { id: "DESC" } });
     // When they are executed in the same event loop
@@ -675,6 +675,32 @@ Array [
     await em.flush();
     const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(0);
+  });
+
+  it("caches finds within a UnitOfWork", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = new EntityManager(knex);
+    resetQueryCount();
+    // Given two queries with exactly the same where clause
+    await em.find(Publisher, { id: "1" });
+    // And one is executed in another event loop
+    await em.find(Publisher, { id: "1" });
+    // Then we only issued a single SQL query
+    expect(numberOfQueries).toEqual(1);
+  });
+
+  it("resets the find cache after a flush", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = new EntityManager(knex);
+    // Given two queries with exactly the same where clause
+    await em.find(Publisher, { id: "1" });
+    // And we flush before executing the next query
+    em.create(Publisher, { name: "p2" });
+    await em.flush();
+    // Then we re-issue the SQL query
+    resetQueryCount();
+    await em.find(Publisher, { id: "1" });
+    expect(numberOfQueries).toEqual(1);
   });
 });
 

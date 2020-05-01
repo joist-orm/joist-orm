@@ -8,6 +8,8 @@ import { Collection, fail, Reference } from "./index";
  */
 export type Lens<T extends Entity, R extends T | T[] = T> = {
   [P in LenKeys<T>]: T[P] extends Reference<T, infer U, infer N>
+    // See if R is a T[], which means even if this is a `.parent`-singular reference, upstream
+    // in the lens we've gone through a collection, so will be returning multiple `parent`s.
     ? Lens<U, R extends Array<T> ? U[] : U>
     : T[P] extends Collection<T, infer U>
     ? Lens<U, U[]>

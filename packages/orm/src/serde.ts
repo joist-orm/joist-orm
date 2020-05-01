@@ -67,7 +67,7 @@ export class ForeignKeySerde implements ColumnSerde {
     return keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
   }
 
-  mapToDb(value: any) {
+  mapToDb(value: any): any {
     return keyToNumber(maybeResolveReferenceToId(value));
   }
 }

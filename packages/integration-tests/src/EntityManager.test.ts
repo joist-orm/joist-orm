@@ -377,7 +377,8 @@ describe("EntityManager", () => {
     expect(b1.author.get.publisher.get).toBeUndefined();
     expect(b2.author.get.publisher.get).toBeUndefined();
     // And this would cause a compile error
-    // expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
+    // @ts-expect-error
+    expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
   });
 
   it("can create and cast to nested o2m hints", async () => {

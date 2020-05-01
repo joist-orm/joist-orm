@@ -376,9 +376,11 @@ describe("EntityManager", () => {
     // And we can access the author and publisher synchronously w/o compile errors
     expect(b1.author.get.publisher.get).toBeUndefined();
     expect(b2.author.get.publisher.get).toBeUndefined();
-    // And this would cause a compile error
-    // @ts-expect-error
-    expect(b2.author.get.publisher.get!.authors.get).toEqual(0);
+    expect(() => {
+      // And this would cause a compile error
+      // @ts-expect-error
+      return b2.author.get.publisher.get!.authors.get;
+    }).toThrow(TypeError);
   });
 
   it("can create and cast to nested o2m hints", async () => {

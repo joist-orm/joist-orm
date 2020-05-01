@@ -70,6 +70,8 @@ export interface LoadedReference<T extends Entity, U extends Entity, N extends n
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
   load(): Promise<ReadonlyArray<U>>;
 
+  find(id: IdOf<U>): Promise<U | undefined>;
+
   add(other: U): void;
 
   remove(other: U): void;

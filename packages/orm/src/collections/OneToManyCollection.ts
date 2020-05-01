@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted } from "../";
+import { Collection, ensureNotDeleted, IdOf } from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -36,6 +36,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       this.maybeAppendAddedBeforeLoaded();
     }
     return this.loaded;
+  }
+
+  async find(id: IdOf<U>): Promise<U | undefined> {
+    return (await this.load()).find(u => u.id === id);
   }
 
   add(other: U): void {

@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, Entity, EntityConstructor } from "../";
+import { Collection, ensureNotDeleted, Entity, EntityConstructor, IdOf } from "../";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -37,6 +37,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.loaded as ReadonlyArray<U>;
+  }
+
+  async find(id: IdOf<U>): Promise<U | undefined> {
+    return (await this.load()).find(u => u.id === id);
   }
 
   add(other: U, percolated = false): void {

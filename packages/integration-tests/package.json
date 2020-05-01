@@ -3,7 +3,7 @@
   "version": "0.1.0-bump",
   "license": "MIT",
   "scripts": {
-    "migrate": "./run.sh joist-migration-utils",
+    "migrate": "./run.sh ../../node_modules/joist-migration-utils",
     "test": "./node_modules/.bin/jest --runInBand --detectOpenHandles",
     "codegen": "./run.sh joist-codegen"
   },

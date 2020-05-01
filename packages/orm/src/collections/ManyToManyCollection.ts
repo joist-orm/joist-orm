@@ -63,7 +63,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   remove(other: U): void {
     ensureNotDeleted(this.entity);
     const joinRows = getOrSet(this.entity.__orm.em.__data.joinRows, this.joinTableName, []);
-    const row = joinRows.find(r => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
+    const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
     if (row) {
       row.deleted = true;
     }
@@ -123,7 +123,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   setFromOpts(others: U[]): void {
     this.loaded = [];
-    others.forEach(o => this.add(o));
+    others.forEach((o) => this.add(o));
   }
 
   initializeForNewEntity(): void {
@@ -158,11 +158,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     if (this.loaded) {
       // this.loaded.unshift(...this.addedBeforeLoaded);
       // this.addedBeforeLoaded = [];
-      this.removedBeforeLoaded.forEach(e => {
+      this.removedBeforeLoaded.forEach((e) => {
         remove(this.loaded!, e);
         const { em } = this.entity.__orm;
         const row = em.__data.joinRows[this.joinTableName].find(
-          r => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
+          (r) => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
         );
         if (row) {
           row.deleted = true;
@@ -188,7 +188,7 @@ function loaderForJoinTable<T extends Entity, U extends Entity>(collection: Many
   const { joinTableName } = collection;
   const { em } = collection.entity.__orm;
   return getOrSet(em.__data.loaders, joinTableName, () => {
-    return new DataLoader<string, Entity[]>(async keys => loadFromJoinTable(collection, keys));
+    return new DataLoader<string, Entity[]>(async (keys) => loadFromJoinTable(collection, keys));
   });
 }
 
@@ -207,7 +207,7 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
 
   // Break out `column_id=string` keys out
   const columns: Record<string, string[]> = {};
-  keys.forEach(key => {
+  keys.forEach((key) => {
     const [columnId, id] = key.split("=");
     getOrSet(columns, columnId, []).push(id);
   });
@@ -217,7 +217,7 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   Object.entries(columns).forEach(([columnId, values]) => {
     query = query.orWhereIn(
       columnId,
-      values.map(id => keyToNumber(id)!),
+      values.map((id) => keyToNumber(id)!),
     );
   });
 
@@ -243,9 +243,9 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   // Eventually we could have this query join into the entity tables themselves, i.e.
   // `books` and `tags`, and use those results to hydrate the newly-found entities.
   await Promise.all(
-    rows.map(async dbRow => {
+    rows.map(async (dbRow) => {
       // We may have already loaded this join row in a prior load of the opposite side of this m2m.
-      let emRow = emJoinRows.find(jr => {
+      let emRow = emJoinRows.find((jr) => {
         return (
           (jr[column1] as Entity).id === keyToString(dbRow[column1]) &&
           (jr[column2] as Entity).id === keyToString(dbRow[column2])
@@ -270,10 +270,10 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   );
 
   // Map the requested keys, i.e. book_id=2 back to "the tags for book 2".
-  return keys.map(key => {
+  return keys.map((key) => {
     const [column] = key.split("=");
     const joinRows = rowsByKey[key] || [];
     const otherColumn = column === collection.columnName ? collection.otherColumnName : collection.columnName;
-    return joinRows.map(joinRow => joinRow[otherColumn] as Entity);
+    return joinRows.map((joinRow) => joinRow[otherColumn] as Entity);
   });
 }

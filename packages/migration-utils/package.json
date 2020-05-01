@@ -6,17 +6,17 @@
   "types": "build/index.d.ts",
   "dependencies": {
     "@types/pluralize": "0.0.29",
+    "node-pg-migrate": "^4.7.0",
     "pg": "^8.0.3",
     "pg-structure": "^5.10.10",
-    "node-pg-migrate": "^4.6.2",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {
-    "@types/jest": "^25.1.1",
-    "@types/node": "^13.7.0",
-    "jest": "^25.1.0",
-    "prettier": "^2.0.2",
-    "ts-jest": "^25.1.0",
+    "@types/jest": "^25.2.1",
+    "@types/node": "^13.13.4",
+    "jest": "^25.5.3",
+    "prettier": "^2.0.5",
+    "ts-jest": "^25.4.0",
     "ts-node-dev": "^1.0.0-pre.44",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.9.0-beta"

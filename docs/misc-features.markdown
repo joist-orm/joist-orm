@@ -98,8 +98,9 @@ If you mark a field as protected in `joist-codegen.json`, it will have a protect
 Joist generally prefers to use `undefined` where ever possible, i.e. columns that are `null` in the database are returned as `undefined`.
 
 ```typescript
-// Given `authors` row `1` has a null last_name column
+// Given `authors` row id=1 has last_name=null
 const author = em.load(Author, "1");
+// Then the domain object treats it as `undefined`
 expect(author.lastName).toBeUndefined();
 ```
 
@@ -112,25 +113,31 @@ author.set({ lastName: newLastName });
 expect(author.lastName).toBeUndefined();
 ```
 
-Although when saved to the database, `undefined`s are converted back into `null`s.
+And when saved to the database, `undefined`s are converted back into `null`s.
+
+(Note that the `author.lastName` setter does not accept `null` because in TypeScript the types of getters and setters must be exactly the same, and so Joist can't "allow setting `null`" while "enforcing `null` will not be returned". Helper methods like `Entity.set` do not have this restriction, and so can accept `null`s and do the `null` to `undefined` conversion for callers.)
 
 ### Support for Partial Update Style APIs
 
 A common pattern for APIs is to treat `null` and `undefined` differently, i.e. `{ lastName: null }` specifically means "unset the `lastName` property" while `firstName` being not present (i.e. `undefined`) means "do not change `firstName`".
 
-These APIs can be difficult to map to Joist's opinionated approach to "required properties must never be passed as `null` or `undefined`", so Joist has two partial-update-ish helper methods: `EntityMangaer.createUnsafe` and `Entity.setUnsafe`.
+These APIs can be difficult to map to Joist's opinionated approach of "required properties must never be passed as `null` or `undefined`", so Joist has two helper methods for building partial-update-style APIs: `EntityMangaer.createUnsafe` and `Entity.setUnsafe`.
 
-I.e. for a non-null `firstName`/nullable `lastName` fields that comes in as the "partial update" type of `string | null | undefined`, `Author.setUnsafe` allows directly passing both fields:
+I.e. for a non-null `firstName` and nullable `lastName` fields that both come in (from an RPC call or GraphQL mutation) as the "partial update" type of `string | null | undefined`, `Author.setUnsafe` allows directly passing both fields:
 
 ```typescript
 const author = em.load(Author, "1");
 const firstName: string | null | undefined = incomingFirstName;
 const lastName: string | null | undefined = incomingLastName;
+// Calling set is a compile error because set's firstName must be a string
+// @ts-expect-error
+author.set({ firstName, lastName });
+// Call setUnsafe will compile
 author.setUnsafe({ firstName, lastName });
 }
 ```
 
-And:
+And the runtime behavior is:
 
 * `firstName: "foo"` will update `firstName`
 * `firstName: undefined` will noop
@@ -140,6 +147,24 @@ And:
 * `lastName: null` will unset `lastName` (i.e. set it as `undefined`)
 
 The `EntityManager.createUnsafe` constructor method has similar semantics.
+
+Arguably the ideal partial-update type for `Author` in this scenario would be:
+
+```typescript
+interface AuthorInput {
+  firstName: string | undefined,
+  lastName: string | null | undefined,
+}
+```
+
+Which would alleviate the need for `setUnsafe`, but it's sometimes hard to express this nuance in RPC/API type systems that generate the `AuthorInput` TypeScript type, i.e. in particular GraphQL's type system cannot express the difference between `firstName` and `lastName` with a partial-update style input type like:
+
+```graphql
+type AuthorInput {
+  firstName: String
+  lastName: String
+}
+``` 
 
 ### Fast database resets
 

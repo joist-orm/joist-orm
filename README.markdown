@@ -53,9 +53,11 @@ In general priority/itch order:
   - Codegen db constraints like required, length check (probably not unique constraints)
   - Add lambdas at a class-level? `addRule(() => ...)` in the constructor?
   - (Later) Use load hint-style syntax to declare "reactive" validation rule sub-graphs
+- Optionally move `begin` to the start of Unit of Work
 - Codegen'd test builders 
 - Lifecycle hooks
   - Rename `onSave` --> `preFlush` / `postFlush`
+  - See [Gusto](https://engineering.gusto.com/the-rails-callbacks-best-practices-used-at-gusto/) posts but using WAL/EventBridge events are best-practice way of doing this anyway
 - Add example of "lastName cannot be changed" that uses 1) validation rule, 2) isNew, and 3) type-safe changed
 - Add Collection.load(loadHint)
 - Derived values

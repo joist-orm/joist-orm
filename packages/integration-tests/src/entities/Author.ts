@@ -1,5 +1,5 @@
 import { EntityManager } from "joist-orm";
-import { AuthorCodegen, AuthorOpts } from "./entities";
+import { AuthorCodegen, AuthorOpts, Book } from "./entities";
 
 export class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
@@ -8,7 +8,7 @@ export class Author extends AuthorCodegen {
 
   /** Implements the business logic for a (synchronous) derived primitive. */
   get initials(): string {
-    return this.firstName[0] + (this.lastName !== undefined ? this.lastName[0] : "");
+    return (this.firstName || "")[0] + (this.lastName !== undefined ? this.lastName[0] : "");
   }
 
   get fullName(): string {

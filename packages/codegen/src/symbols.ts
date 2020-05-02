@@ -21,6 +21,7 @@ export const setOpts = imp("setOpts@joist-orm");
 export const setField = imp("setField@joist-orm");
 export const OrderBy = imp("OrderBy@joist-orm");
 export const OptsOf = imp("OptsOf@joist-orm");
+export const PartialOrNull = imp("PartialOrNull@joist-orm");
 export const ValueFilter = imp("ValueFilter@joist-orm");
 export const EntityFilter = imp("EntityFilter@joist-orm");
 export const FilterOf = imp("FilterOf@joist-orm");

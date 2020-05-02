@@ -16,11 +16,11 @@ Null and not null columns are correctly modeled and enforced, i.e. a table like:
  last_name    | character varying(255)   |           |          |
 ```
 
-Will have properties like:
+Means the domain object `Author` will appropriately null/non-null properties:
 
 ```typescript
 class AuthorCodegen {
-  get firstName(): string {
+  get firstName(): string
     return this.__orm.data["firstName"];
   }
 
@@ -38,13 +38,25 @@ class AuthorCodegen {
 }
 ```
 
-And `firstName` is enforced to be non-null on construction:
+And the non-null `firstName` is also non-null on construction:
 
 ```typescript
 new Author(em, { firstName: "is required" });
 ```
 
-I.e. you cannot `new Author()` and then forget to set `firstName`.
+I.e. you cannot call `new Author()` and then forget to set `firstName`.
+
+The appropriate null/non-null-ness is also enforced in the `Author.set` method:
+
+```typescript
+author.set({ firstName: "cannotBeNull" });
+```
+
+Although `set` does accept a `Partial`, so if you don't want to change `firstName`, you don't have to pass it to `set`:
+
+```typescript
+author.set({ lastName: "..." });
+```
 
 ### `EntityManager.create` marks collections as loaded
 
@@ -83,26 +95,51 @@ If you mark a field as protected in `joist-codegen.json`, it will have a protect
 
 ### Automatic Null Conversion
 
-Joist generally prefers to use `undefined` where ever possible, i.e. columns that are `NULL` in the database are returned as `undefined`.
+Joist generally prefers to use `undefined` where ever possible, i.e. columns that are `null` in the database are returned as `undefined`.
 
-That said, for converting input, each entity's `Opts` type accepts either `undefined` or `null`, which is useful when implementing APIs where `undefined` means "do not change" and `null` means "unset", i.e.:
+```typescript
+// Given `authors` row `1` has a null last_name column
+const author = em.load(Author, "1");
+expect(author.lastName).toBeUndefined();
+```
+
+And methods that allow setting `lastName` will accept `null` and convert it to `undefined`:
+
+```typescript
+const newLastName: string | undefined | null = null;
+author.set({ lastName: newLastName });
+// `lastName` is converted to `undefined`
+expect(author.lastName).toBeUndefined();
+```
+
+Although when saved to the database, `undefined`s are converted back into `null`s.
+
+### Support for Partial Update Style APIs
+
+A common pattern for APIs is to treat `null` and `undefined` differently, i.e. `{ lastName: null }` specifically means "unset the `lastName` property" while `firstName` being not present (i.e. `undefined`) means "do not change `firstName`".
+
+These APIs can be difficult to map to Joist's opinionated approach to "required properties must never be passed as `null` or `undefined`", so Joist has two partial-update-ish helper methods: `EntityMangaer.createUnsafe` and `Entity.setUnsafe`.
+
+I.e. for a non-null `firstName`/nullable `lastName` fields that comes in as the "partial update" type of `string | null | undefined`, `Author.setUnsafe` allows directly passing both fields:
 
 ```typescript
 const author = em.load(Author, "1");
-const firstName: string | null | undefined = ...;
-if (firstName !== undefined) {
-  author.set({ firstName });
-  // author.firstName is now undefined
+const firstName: string | null | undefined = incomingFirstName;
+const lastName: string | null | undefined = incomingLastName;
+author.setUnsafe({ firstName, lastName });
 }
 ```
 
-You can also do this by using the `ignoreUndefined` option of `set`:
+And:
 
-```typescript
-const author = em.load(Author, "1");
-const firstName: string | null | undefined = ...;
-author.set({ firstName }, { ignoreUndefined: true });
-```
+* `firstName: "foo"` will update `firstName`
+* `firstName: undefined` will noop
+* `firstName: null` will be a runtime error
+* `lastName: "bar"` will update `lastName`
+* `lastName: undefined` will noop
+* `lastName: null` will unset `lastName` (i.e. set it as `undefined`)
+
+The `EntityManager.createUnsafe` constructor method has similar semantics.
 
 ### Fast database resets
 

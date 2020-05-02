@@ -1,4 +1,4 @@
-import { Entity, IdOf, OptsOf } from "./EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, getMetadata, IdOf, OptsOf } from "./EntityManager";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export * from "./EntityManager";
@@ -134,6 +134,7 @@ export function setOpts<T extends Entity>(
   if (values === undefined) {
     return;
   }
+  const requiredKeys = getRequiredKeys(entity);
   const { calledFromConstructor, ignoreUndefined } = opts;
   Object.entries(values as {}).forEach(([key, _value]) => {
     // If ignoreUndefined is set, we treat undefined as a noop
@@ -142,6 +143,9 @@ export function setOpts<T extends Entity>(
     }
     // We let optional opts fields be `| null` for convenience, and convert to undefined.
     const value = _value === null ? undefined : _value;
+    if (value === undefined && requiredKeys.includes(key)) {
+      throw new Error(`${key} is required`);
+    }
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {
       if (calledFromConstructor) {
@@ -166,4 +170,17 @@ export function ensureNotDeleted(entity: Entity): void {
   if (entity.__orm.deleted) {
     throw new Error(entity + " is marked as deleted");
   }
+}
+
+/** Adds `null` to every key in `T` to accept partial-update-style input. */
+export type PartialOrNull<T> = {
+  [P in keyof T]?: T[P] | null;
+};
+
+export function getRequiredKeys<T extends Entity>(entity: T): string[];
+export function getRequiredKeys<T extends Entity>(type: EntityConstructor<T>): string[];
+export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstructor<T>): string[] {
+  return getMetadata(entityOrType as any)
+    .fields.filter((f) => f.required)
+    .map((f) => f.fieldName);
 }

@@ -85,7 +85,7 @@ function generateFields(
   m2mFields: Code[];
 } {
   const primaryKeyField = code`
-    { kind: "primaryKey", fieldName: "id" },
+    { kind: "primaryKey", fieldName: "id", required: true },
   `;
 
   const primitiveFields = dbMetadata.primitives.map((p) => {
@@ -94,26 +94,31 @@ function generateFields(
       {
         kind: "primitive",
         fieldName: "${fieldName}",
-        ${isDerived(config, dbMetadata.entity, fieldName) ? "derived: true," : ""}
+        ${
+          isDerived(config, dbMetadata.entity, fieldName)
+            ? "derived: true, required: false,"
+            : `required: ${p.notNull},`
+        }
       },`;
   });
 
-  const enumFields = dbMetadata.enums.map((e) => {
-    const { fieldName, columnName, enumDetailType } = e;
+  const enumFields = dbMetadata.enums.map(({ fieldName, notNull }) => {
     return code`
       {
         kind: "enum",
         fieldName: "${fieldName}",
+        required: ${notNull},
       },
     `;
   });
 
   const m2oFields = dbMetadata.manyToOnes.map((m2o) => {
-    const { fieldName, columnName, otherEntity } = m2o;
+    const { fieldName, notNull, otherEntity } = m2o;
     return code`
       {
         kind: "m2o",
         fieldName: "${fieldName}",
+        required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
       },
     `;
@@ -125,6 +130,7 @@ function generateFields(
       {
         kind: "o2m",
         fieldName: "${fieldName}",
+        required: false,
         otherMetadata: () => ${otherEntity.metaName},
       },
     `;
@@ -136,6 +142,7 @@ function generateFields(
       {
         kind: "m2m",
         fieldName: "${fieldName}",
+        required: false,
         otherMetadata: () => ${otherEntity.metaName},
       },
     `;

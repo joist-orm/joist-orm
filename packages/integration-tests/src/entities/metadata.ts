@@ -71,62 +71,74 @@ export const authorMeta: EntityMetadata<Author> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id" },
+    { kind: "primaryKey", fieldName: "id", required: true },
 
     {
       kind: "primitive",
       fieldName: "firstName",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "lastName",
+      required: false,
     },
     {
       kind: "primitive",
       fieldName: "initials",
       derived: true,
+      required: false,
     },
     {
       kind: "primitive",
       fieldName: "isPopular",
+      required: false,
     },
     {
       kind: "primitive",
       fieldName: "age",
+      required: false,
     },
     {
       kind: "primitive",
       fieldName: "wasEverPopular",
+      required: false,
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      required: true,
     },
     {
       kind: "m2o",
       fieldName: "mentor",
+      required: false,
       otherMetadata: () => authorMeta,
     },
 
     {
       kind: "m2o",
       fieldName: "publisher",
+      required: false,
       otherMetadata: () => publisherMeta,
     },
 
     {
       kind: "o2m",
       fieldName: "authors",
+      required: false,
       otherMetadata: () => authorMeta,
     },
 
     {
       kind: "o2m",
       fieldName: "books",
+      required: false,
       otherMetadata: () => bookMeta,
     },
   ],
@@ -173,39 +185,46 @@ export const bookMeta: EntityMetadata<Book> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id" },
+    { kind: "primaryKey", fieldName: "id", required: true },
 
     {
       kind: "primitive",
       fieldName: "title",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "order",
+      required: false,
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      required: true,
     },
     {
       kind: "m2o",
       fieldName: "author",
+      required: true,
       otherMetadata: () => authorMeta,
     },
 
     {
       kind: "o2m",
       fieldName: "reviews",
+      required: false,
       otherMetadata: () => bookReviewMeta,
     },
 
     {
       kind: "m2m",
       fieldName: "tags",
+      required: false,
       otherMetadata: () => tagMeta,
     },
   ],
@@ -246,23 +265,27 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id" },
+    { kind: "primaryKey", fieldName: "id", required: true },
 
     {
       kind: "primitive",
       fieldName: "rating",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      required: true,
     },
     {
       kind: "m2o",
       fieldName: "book",
+      required: true,
       otherMetadata: () => bookMeta,
     },
   ],
@@ -304,28 +327,33 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id" },
+    { kind: "primaryKey", fieldName: "id", required: true },
 
     {
       kind: "enum",
       fieldName: "size",
+      required: false,
     },
 
     {
       kind: "primitive",
       fieldName: "name",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      required: true,
     },
     {
       kind: "o2m",
       fieldName: "authors",
+      required: false,
       otherMetadata: () => authorMeta,
     },
   ],
@@ -360,23 +388,27 @@ export const tagMeta: EntityMetadata<Tag> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id" },
+    { kind: "primaryKey", fieldName: "id", required: true },
 
     {
       kind: "primitive",
       fieldName: "name",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
+      required: true,
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      required: true,
     },
     {
       kind: "m2m",
       fieldName: "books",
+      required: false,
       otherMetadata: () => bookMeta,
     },
   ],

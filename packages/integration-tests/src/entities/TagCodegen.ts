@@ -6,6 +6,7 @@ import {
   EntityManager,
   setOpts,
   OptsOf,
+  PartialOrNull,
   Entity,
   Lens,
   Collection,
@@ -77,6 +78,10 @@ export abstract class TagCodegen extends BaseEntity {
 
   set(values: Partial<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, opts);
+  }
+
+  setUnsafe(values: PartialOrNull<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Tag, Tag>) => Lens<U, V>): Promise<V> {

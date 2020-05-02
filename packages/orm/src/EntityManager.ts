@@ -3,7 +3,7 @@ import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
-import { Collection, LoadedCollection, LoadedReference, Reference, Relation, setField } from "./index";
+import { Collection, LoadedCollection, LoadedReference, PartialOrNull, Reference, Relation, setField } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
@@ -49,6 +49,8 @@ export interface Entity {
   __orm: EntityOrmField;
 
   set(opts: Partial<OptsOf<this>>): void;
+
+  setUnsafe(values: PartialOrNull<OptsOf<this>>): void;
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
@@ -263,6 +265,11 @@ export class EntityManager {
   public create<T extends Entity, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
     // The constructor will run setOpts which handles defaulting collections to the right state.
     return (new type(this, opts) as any) as New<T, O>;
+  }
+
+  /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
+  public createUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+    return (new type(this, opts) as any);
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
@@ -676,34 +683,40 @@ export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyFiel
 export type PrimaryKeyField = {
   kind: "primaryKey";
   fieldName: string;
+  required: true;
 };
 
 export type PrimitiveField = {
   kind: "primitive";
   fieldName: string;
+  required: boolean;
   derived?: boolean;
 };
 
 export type EnumField = {
   kind: "enum";
   fieldName: string;
+  required: boolean;
 };
 
 export type OneToManyField = {
   kind: "o2m";
   fieldName: string;
+  required: boolean;
   otherMetadata: () => EntityMetadata<any>;
 };
 
 export type ManyToOneField = {
   kind: "m2o";
   fieldName: string;
+  required: boolean;
   otherMetadata: () => EntityMetadata<any>;
 };
 
 export type ManyToManyField = {
   kind: "m2m";
   fieldName: string;
+  required: boolean;
   otherMetadata: () => EntityMetadata<any>;
 };
 

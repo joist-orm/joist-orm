@@ -1,5 +1,5 @@
 import { Entity, EntityManager, EntityOrmField, IdOf, OptsOf } from "./EntityManager";
-import { Collection, fail, Reference } from "./index";
+import { Collection, fail, PartialOrNull, Reference } from "./index";
 
 /**
  * A type for declaratively walking the object graph.
@@ -72,6 +72,8 @@ export abstract class BaseEntity implements Entity {
   }
 
   abstract set(values: Partial<OptsOf<this>>): void;
+
+  abstract setUnsafe(values: PartialOrNull<OptsOf<this>>): void;
 
   /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
   get idOrFail(): IdOf<this> {

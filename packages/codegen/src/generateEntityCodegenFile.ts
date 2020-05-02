@@ -3,9 +3,9 @@ import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
-  Entity as EntitySym,
   BaseEntity,
   Collection,
+  Entity as EntitySym,
   EntityFilter,
   EntityManager,
   FilterOf,
@@ -16,6 +16,7 @@ import {
   OneToManyCollection,
   OptsOf,
   OrderBy,
+  PartialOrNull,
   Reference,
   setField,
   setOpts,
@@ -180,6 +181,10 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
       
       set(values: Partial<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
         ${setOpts}(this, values as ${OptsOf}<this>, opts);
+      }
+
+      setUnsafe(values: ${PartialOrNull}<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
+        ${setOpts}(this, values as ${OptsOf}<this>, { ignoreUndefined: true, ...opts });
       }
 
       async load<U extends ${EntitySym}, V extends U | U[]>(

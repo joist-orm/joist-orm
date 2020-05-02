@@ -420,6 +420,49 @@ describe("EntityManager", () => {
     expect(a1.lastName).toBeUndefined();
   });
 
+  it("cannot create without a required field", async () => {
+    const em = new EntityManager(knex);
+    // @ts-expect-error
+    em.create(Author, {});
+    expect(() => {
+      // @ts-expect-error
+      em.create(Author, { firstName: null });
+    }).toThrow("firstName is required");
+  });
+
+  it("can createUnsafe without a required field", async () => {
+    const em = new EntityManager(knex);
+    expect(() => {
+      // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
+      em.createUnsafe(Author, { firstName: null });
+    }).toThrow("firstName is required");
+  });
+
+  it("cannot set with a null required field", async () => {
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      // @ts-expect-error
+      a1.set({ firstName: null });
+    }).toThrow("firstName is required");
+  });
+
+  it("can setUnsafe with a null required field", async () => {
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1" });
+    expect(() => {
+      // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
+      a1.setUnsafe({ firstName: null });
+    }).toThrow("firstName is required");
+  });
+
+  it("setUnsafe defaults to ignoredUndefined", async () => {
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1" });
+    a1.setUnsafe({ firstName: undefined });
+    expect(a1.firstName).toEqual("a1");
+  });
+
   it("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);

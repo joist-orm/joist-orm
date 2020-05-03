@@ -1,5 +1,6 @@
 
-<img src="https://img.shields.io/npm/v/joist-orm" />
+![npm](https://img.shields.io/npm/v/joist-orm)
+[![CircleCI](https://circleci.com/gh/stephenh/joist-ts.svg?style=svg)](https://circleci.com/gh/stephenh/joist-ts)
 
 ## joist-ts
 

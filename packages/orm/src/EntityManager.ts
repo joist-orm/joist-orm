@@ -323,18 +323,22 @@ export class EntityManager {
 
   /** Loads entities from a knex QueryBuilder. */
   public async loadFromQuery<T extends Entity>(type: EntityConstructor<T>, query: QueryBuilder): Promise<T[]>;
-  public async loadFromQuery<
-    T extends Entity,
-    H extends LoadHint<T> & { [k: string]: N | T | [] },
-    N extends Narrowable
-  >(type: EntityConstructor<T>, query: QueryBuilder, populate: H): Promise<Loaded<T, H>[]>;
+  public async loadFromQuery<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    query: QueryBuilder,
+    populate: H,
+  ): Promise<Loaded<T, H>[]>;
   public async loadFromQuery<T extends Entity>(
     type: EntityConstructor<T>,
     query: QueryBuilder,
     populate?: any,
   ): Promise<T[]> {
     const rows = await query;
-    return rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    if (populate) {
+      await this.populate(entities, populate);
+    }
+    return entities;
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */

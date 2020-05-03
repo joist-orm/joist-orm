@@ -206,6 +206,13 @@ describe("EntityManager", () => {
     expect(authors[0]).toStrictEqual(a1);
   });
 
+  it("can load custom queries and populate", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: null });
+    const em = new EntityManager(knex);
+    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"), "books");
+    expect(authors[0].books.get).toEqual([]);
+  });
+
   it("can save enums", async () => {
     const em = new EntityManager(knex);
     em.create(Publisher, { name: "a1", size: PublisherSize.Large });

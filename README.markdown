@@ -34,7 +34,7 @@ Per the `0.1.x` versioning, breaking API changes should be expected for awhile.
 
 ### Install
 
-Requires ES2019/[Node v12.4.0](https://node.green/#ES2019) for `Object.fromEntries`, `Array.flatMap`, etc.
+See [Getting Started](./docs/getting-started.markdown).
 
 ### Building
 

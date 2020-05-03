@@ -269,7 +269,7 @@ export class EntityManager {
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
   public createUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
-    return (new type(this, opts) as any);
+    return new type(this, opts) as any;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
@@ -319,6 +319,22 @@ export class EntityManager {
       await this.populate(entities as T[], hint);
     }
     return entities as T[];
+  }
+
+  /** Loads entities from a knex QueryBuilder. */
+  public async loadFromQuery<T extends Entity>(type: EntityConstructor<T>, query: QueryBuilder): Promise<T[]>;
+  public async loadFromQuery<
+    T extends Entity,
+    H extends LoadHint<T> & { [k: string]: N | T | [] },
+    N extends Narrowable
+  >(type: EntityConstructor<T>, query: QueryBuilder, populate: H): Promise<Loaded<T, H>[]>;
+  public async loadFromQuery<T extends Entity>(
+    type: EntityConstructor<T>,
+    query: QueryBuilder,
+    populate?: any,
+  ): Promise<T[]> {
+    const rows = await query;
+    return rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */

@@ -191,6 +191,21 @@ describe("EntityManager", () => {
     expect(a1.isPopular).toBeUndefined();
   });
 
+  it("can load custom queries", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: null });
+    const em = new EntityManager(knex);
+    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
+    expect(authors.length).toEqual(1);
+  });
+
+  it("can load custom queries and maintain identity", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: null });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
+    expect(authors[0]).toStrictEqual(a1);
+  });
+
   it("can save enums", async () => {
     const em = new EntityManager(knex);
     em.create(Publisher, { name: "a1", size: PublisherSize.Large });

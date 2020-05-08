@@ -210,3 +210,26 @@ Note that this is not a shared/second-level cache, i.e. shared across multiple r
 This cache is solely for queries issued with the current unit of work, and it is thrown away/re-created for each new Unit of Work, so there should not be any issues with stale data or need to invalidate the cache (beyond what Joist already does by invalidating it on each `EntityManager.flush()` call).
 
 (Pedantically, currently Joist's Unit of Work does not currently open a transaction until `flush` is started, so without that transactional isolation, Joist's UoW find cache may actually be "hiding" changed results (between `find` 1 and `find` 2) than if it were to actually re-issue the query each time. That said, a) ideally/at some point Joist's UoW will use a transaction throughout, such that this isolation behavior of not noticing new changes is actually a desired feature (i.e. avoiding non-repeatable reads), and b) UoWs are assumed to be extremely short-lived, i.e. per request, so you should generally not be trying to observe changed results between `find` calls anyway.)
+
+### Validation Rules
+
+Entities can have validation rules added that will be run during `EntityManager.flush()`:
+
+```typescript
+class Author extends AuthorCodegen {
+  constructor(em: EntityManager, opts: AuthorOpts) {
+    super(em, opts);
+    this.addRule(() => {
+      if (this.firstName && this.firstName === this.lastName) {
+        return "firstName and lastName must be different";
+      }
+    });
+  })
+}
+```
+
+If any validation rule returns a non-`undefined` string, `flush()` will throw a `ValidationErrors` error.
+
+
+
+

@@ -18,6 +18,14 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("firstName and lastName must be different");
   });
 
+  it("can have multiple validation rules", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
+    await expect(em.flush()).rejects.toThrow(
+      "Validation errors: firstName and lastName must be different, lastName is invalid",
+    );
+  });
+
   it("can set new opts", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1", lastName: "a1" });

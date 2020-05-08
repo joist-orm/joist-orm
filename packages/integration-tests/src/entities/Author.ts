@@ -1,9 +1,21 @@
-import { EntityManager } from "joist-orm";
+import { EntityManager, ValidationError } from "joist-orm";
 import { AuthorCodegen, AuthorOpts, Book } from "./entities";
 
 export class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
+
+    this.addRule(() => {
+      if (this.firstName && this.firstName === this.lastName) {
+        return "firstName and lastName must be different";
+      }
+    });
+
+    this.addRule(() => {
+      if (this.lastName === "NotAllowedLastName") {
+        return "lastName is invalid";
+      }
+    });
   }
 
   /** Implements the business logic for a (synchronous) derived primitive. */
@@ -20,12 +32,6 @@ export class Author extends AuthorCodegen {
     // Testing protected fields
     if (isPopular && !this.wasEverPopular) {
       super.setWasEverPopular(true);
-    }
-  }
-
-  protected onSave(): void {
-    if (this.firstName && this.firstName === this.lastName) {
-      throw new Error("firstName and lastName must be different");
     }
   }
 }

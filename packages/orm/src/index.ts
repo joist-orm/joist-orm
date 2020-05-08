@@ -184,3 +184,24 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
     .fields.filter((f) => f.required)
     .map((f) => f.fieldName);
 }
+
+/** Entity validation errors; if `entity` is invalid, throw a `ValidationError`. */
+export type ValidationRule<T extends Entity> = (entity: T) => string | ValidationError | ValidationError[] | undefined;
+
+export type ValidationError = { entity: Entity; message: string };
+
+export class ValidationErrors extends Error {
+  constructor(errors: ValidationError[]) {
+    super(errorMessage(errors));
+  }
+}
+
+function errorMessage(errors: ValidationError[]): string {
+  if (errors.length === 1) {
+    return `Validation error: ${errors[0].message}`;
+  } else if (errors.length === 2) {
+    return `Validation errors: ${errors.map((e) => e.message).join(", ")}`;
+  } else {
+    return `Validation errors (${errors.length})`;
+  }
+}

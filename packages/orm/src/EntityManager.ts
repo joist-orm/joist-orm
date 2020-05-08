@@ -3,7 +3,18 @@ import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
-import { Collection, LoadedCollection, LoadedReference, PartialOrNull, Reference, Relation, setField } from "./index";
+import {
+  Collection,
+  LoadedCollection,
+  LoadedReference,
+  PartialOrNull,
+  Reference,
+  Relation,
+  setField,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+} from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
@@ -40,6 +51,8 @@ export interface EntityOrmField {
   deleted?: "pending" | "deleted";
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   em: EntityManager;
+  /** The validation rules for this instance. */
+  rules: ValidationRule<any>[];
 }
 
 /** A marker/base interface for all of our entity types. */
@@ -765,21 +778,34 @@ export class NotFoundError extends Error {}
 export class TooManyError extends Error {}
 
 async function validate(todos: Record<string, Todo>): Promise<void> {
-  await Promise.all(
-    Object.values(todos).map((todo) => {
-      const p1 = todo.inserts.map((entity) => {
-        if ("onSave" in entity) {
-          return (entity as any).onSave();
-        }
-      });
-      const p2 = todo.updates.map((entity) => {
-        if ("onSave" in entity) {
-          return (entity as any).onSave();
-        }
-      });
-      return Promise.all([...p1, ...p2]);
-    }),
-  );
+  const errors: ValidationError[] = [];
+  // TODO Allow async validation rules
+  Object.values(todos).forEach((todo) => {
+    todo.inserts.forEach((entity) => {
+      errors.push(...entity.__orm.rules.flatMap((rule) => coerceError(entity, rule(entity))));
+    });
+    todo.updates.forEach((entity) => {
+      errors.push(...entity.__orm.rules.flatMap((rule) => coerceError(entity, rule(entity))));
+    });
+  });
+  if (errors.length > 0) {
+    throw new ValidationErrors(errors);
+  }
+}
+
+function coerceError(
+  entity: Entity,
+  maybeError: string | ValidationError | ValidationError[] | undefined,
+): ValidationError[] {
+  if (maybeError === undefined) {
+    return [];
+  } else if (typeof maybeError === "string") {
+    return [{ entity, message: maybeError }];
+  } else if (Array.isArray(maybeError)) {
+    return maybeError as ValidationError[];
+  } else {
+    return [maybeError];
+  }
 }
 
 type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {};

@@ -778,16 +778,16 @@ export class NotFoundError extends Error {}
 export class TooManyError extends Error {}
 
 async function validate(todos: Record<string, Todo>): Promise<void> {
-  const errors: ValidationError[] = [];
-  // TODO Allow async validation rules
-  Object.values(todos).forEach((todo) => {
-    todo.inserts.forEach((entity) => {
-      errors.push(...entity.__orm.rules.flatMap((rule) => coerceError(entity, rule(entity))));
+  const p = Object.values(todos).flatMap((todo) => {
+    const p1 = todo.inserts.flatMap((entity) => {
+      return entity.__orm.rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
     });
-    todo.updates.forEach((entity) => {
-      errors.push(...entity.__orm.rules.flatMap((rule) => coerceError(entity, rule(entity))));
+    const p2 = todo.updates.flatMap((entity) => {
+      return entity.__orm.rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
     });
+    return [...p1, ...p2];
   });
+  const errors = (await Promise.all(p)).flat();
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }

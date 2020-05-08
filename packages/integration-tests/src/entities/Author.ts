@@ -22,6 +22,13 @@ export class Author extends AuthorCodegen {
         return "lastName cannot be changed";
       }
     });
+
+    this.addRule(async () => {
+      const books = await this.books.load();
+      if (books.length > 0 && books.find((b) => b.title === this.firstName)) {
+        return "A book title cannot be the author's firstName";
+      }
+    });
   }
 
   /** Implements the business logic for a (synchronous) derived primitive. */

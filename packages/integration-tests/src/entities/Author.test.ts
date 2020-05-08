@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
-import { Author, BookId } from "../entities";
+import { Author, Book, BookId } from "../entities";
 import { insertAuthor } from "./factories";
 
 describe("Author", () => {
@@ -24,6 +24,13 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow(
       "Validation errors: firstName and lastName must be different, lastName is invalid",
     );
+  });
+
+  it("can have async validation rules", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1" });
+    new Book(em, { title: "a1", author: a1 });
+    await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
   });
 
   describe("hasChanged", () => {

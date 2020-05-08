@@ -1,4 +1,3 @@
-
 # Misc Features
 
 See [goals](./goals.markdown) for higher-level features like N+1 safety/etc.
@@ -139,12 +138,12 @@ author.setUnsafe({ firstName, lastName });
 
 And the runtime behavior is:
 
-* `firstName: "foo"` will update `firstName`
-* `firstName: undefined` will noop
-* `firstName: null` will be a runtime error
-* `lastName: "bar"` will update `lastName`
-* `lastName: undefined` will noop
-* `lastName: null` will unset `lastName` (i.e. set it as `undefined`)
+- `firstName: "foo"` will update `firstName`
+- `firstName: undefined` will noop
+- `firstName: null` will be a runtime error
+- `lastName: "bar"` will update `lastName`
+- `lastName: undefined` will noop
+- `lastName: null` will unset `lastName` (i.e. set it as `undefined`)
 
 The `EntityManager.createUnsafe` constructor method has similar semantics.
 
@@ -152,8 +151,8 @@ Arguably the ideal partial-update type for `Author` in this scenario would be:
 
 ```typescript
 interface AuthorInput {
-  firstName: string | undefined,
-  lastName: string | null | undefined,
+  firstName: string | undefined;
+  lastName: string | null | undefined;
 }
 ```
 
@@ -164,7 +163,7 @@ type AuthorInput {
   firstName: String
   lastName: String
 }
-``` 
+```
 
 ### Fast database resets
 
@@ -219,10 +218,17 @@ Entities can have validation rules added that will be run during `EntityManager.
 class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
+
     this.addRule(() => {
       if (this.firstName && this.firstName === this.lastName) {
         return "firstName and lastName must be different";
       }
+    });
+
+    // Rules can be async
+    this.addRule(async () => {
+      const books = await this.books.load();
+      // ...
     });
   })
 }
@@ -240,6 +246,3 @@ expect(a1.hasChanged.firstName).toBeFalsey();
 a1.firstName = "a2";
 expect(a1.hasChanged.firstName).toBeTruthy();
 ```
-
-
-

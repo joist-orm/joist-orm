@@ -186,7 +186,11 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
 }
 
 /** Entity validation errors; if `entity` is invalid, throw a `ValidationError`. */
-export type ValidationRule<T extends Entity> = (entity: T) => string | ValidationError | ValidationError[] | undefined;
+export type ValidationRule<T extends Entity> = (
+  entity: T,
+) => MaybePromise<string | ValidationError | ValidationError[] | undefined>;
+
+type MaybePromise<T> = T | PromiseLike<T>;
 
 export type ValidationError = { entity: Entity; message: string };
 

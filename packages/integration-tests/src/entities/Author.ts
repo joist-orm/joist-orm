@@ -16,6 +16,12 @@ export class Author extends AuthorCodegen {
         return "lastName is invalid";
       }
     });
+
+    this.addRule(() => {
+      if (this.hasChanged.lastName) {
+        return "lastName cannot be changed";
+      }
+    });
   }
 
   /** Implements the business logic for a (synchronous) derived primitive. */

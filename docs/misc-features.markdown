@@ -230,6 +230,16 @@ class Author extends AuthorCodegen {
 
 If any validation rule returns a non-`undefined` string, `flush()` will throw a `ValidationErrors` error.
 
+### Tracking Changed Properties
+
+Entities track which of their properties have changed:
+
+```typescript
+const a1 = em.load(Author, "1");
+expect(a1.hasChanged.firstName).toBeFalsey();
+a1.firstName = "a2";
+expect(a1.hasChanged.firstName).toBeTruthy();
+```
 
 
 

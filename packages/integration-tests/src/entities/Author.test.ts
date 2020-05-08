@@ -26,6 +26,38 @@ describe("Author", () => {
     );
   });
 
+  describe("hasChanged", () => {
+    it("on create nothing is considered changed", async () => {
+      const em = new EntityManager(knex);
+      const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
+      expect(a1.hasChanged.firstName).toBeFalsy();
+    });
+
+    it("after initial load nothing is considered changed", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = new EntityManager(knex);
+      const a1 = await em.load(Author, "1");
+      expect(a1.hasChanged.firstName).toBeFalsy();
+    });
+
+    it("after initial load and mutate then hasChanged is true", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = new EntityManager(knex);
+      const a1 = await em.load(Author, "1");
+      expect(a1.hasChanged.firstName).toBeFalsy();
+      a1.firstName = "a2";
+      expect(a1.hasChanged.firstName).toBeTruthy();
+    });
+
+    it("can enforce validation rules", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "l1" });
+      const em = new EntityManager(knex);
+      const a1 = await em.load(Author, "1");
+      a1.lastName = "l2";
+      await expect(em.flush()).rejects.toThrow("Validation error: lastName cannot be changed");
+    });
+  });
+
   it("can set new opts", async () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1", lastName: "a1" });

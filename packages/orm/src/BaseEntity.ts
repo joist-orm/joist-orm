@@ -8,9 +8,9 @@ import { Collection, fail, PartialOrNull, Reference, ValidationRule } from "./in
  */
 export type Lens<T extends Entity, R extends T | T[] = T> = {
   [P in LenKeys<T>]: T[P] extends Reference<T, infer U, infer N>
-    // See if R is a T[], which means even if this is a `.parent`-singular reference, upstream
-    // in the lens we've gone through a collection, so will be returning multiple `parent`s.
-    ? Lens<U, R extends Array<T> ? U[] : U>
+    ? // See if R is a T[], which means even if this is a `.parent`-singular reference, upstream
+      // in the lens we've gone through a collection, so will be returning multiple `parent`s.
+      Lens<U, R extends Array<T> ? U[] : U>
     : T[P] extends Collection<T, infer U>
     ? Lens<U, U[]>
     : never;
@@ -79,6 +79,15 @@ export abstract class BaseEntity implements Entity {
     this.__orm.rules.push(rule);
   }
 
+  public get hasChanged(): Changed<this> {
+    const entity = this;
+    return new Proxy(this, {
+      get(target, p: PropertyKey, receiver: any): any {
+        return typeof p === "string" && entity.__orm.originalData[p] !== undefined;
+      },
+    }) as any as Changed<this>;
+  }
+
   /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
   get idOrFail(): IdOf<this> {
     return this.__orm.data["id"] || fail("Entity has no id yet");
@@ -92,3 +101,7 @@ export abstract class BaseEntity implements Entity {
     return this.toString();
   }
 }
+
+type Changed<T extends Entity> = {
+  [K in keyof OptsOf<T>]: boolean;
+};

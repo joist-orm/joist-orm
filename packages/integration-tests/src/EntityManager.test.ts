@@ -723,11 +723,11 @@ Array [
 
     // Changing the derived value issues an update
     resetQueryCount();
-    a1.lastName = "different";
+    a1.firstName = "b1";
     await em.flush();
     // 3 = begin, update, commit
     expect(numberOfQueries).toEqual(3);
-    expect((await knex.select("*").from("authors"))[0]["initials"]).toEqual("ad");
+    expect((await knex.select("*").from("authors"))[0]["initials"]).toEqual("bl");
 
     // Not changing the derived value does not issue an update
     resetQueryCount();

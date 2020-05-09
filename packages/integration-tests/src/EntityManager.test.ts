@@ -528,8 +528,16 @@ describe("EntityManager", () => {
         await em.flush();
       }),
     );
-    // 2 begin/commit, 1 flush authors, 1 flush publishers
-    expect(numberOfQueries).toEqual(4);
+    // 5 = 1 author validation hook, 2 begin/commit, 1 flush authors, 1 flush publishers
+    expect(queries).toMatchInlineSnapshot(`
+      Array [
+        "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
+        "BEGIN;",
+        "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+        "UPDATE publishers SET \\"name\\" = data.name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"name\\") as data WHERE publishers.id = data.id",
+        "COMMIT;",
+      ]
+    `);
   });
 
   it("can handle flush being called in a loop with queries", async () => {
@@ -550,8 +558,16 @@ describe("EntityManager", () => {
         await em.flush();
       }),
     );
-    // 4 = 1 to (combined) select the publishers, 2 for begin/commit, 1 for bulk update authors.
-    expect(numberOfQueries).toEqual(4);
+    // 5 = 1 to (combined) select the publishers, 1 author validation hook, 2 for begin/commit, 1 for bulk update authors.
+    expect(queries).toMatchInlineSnapshot(`
+Array [
+  "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) order by \\"__tag\\" asc",
+  "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
+  "BEGIN;",
+  "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+  "COMMIT;",
+]
+`);
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows[0].first_name).toEqual("a1p1");
     expect(rows[1].first_name).toEqual("a2p2");
@@ -588,8 +604,19 @@ describe("EntityManager", () => {
     // so this required two flushes. Which is fine, we just want to cover the boundary
     // case and ensure it behaves correctly. If this was a concern in a real program,
     // some sort of `await latch` would be needed to break the lambdas back in sync.
-    // 6 = (2 for begin/commit + 1 for update authors) x 2 for each flush.
-    expect(numberOfQueries).toEqual(6);
+    // 8 = (1 author validation hook + 2 for begin/commit + 1 for update authors) x 2 for each flush.
+    expect(queries).toMatchInlineSnapshot(`
+Array [
+  "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
+  "BEGIN;",
+  "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+  "COMMIT;",
+  "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
+  "BEGIN;",
+  "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+  "COMMIT;",
+]
+`);
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows[0].first_name).toEqual("a1a");
     expect(rows[1].first_name).toEqual("a2b");

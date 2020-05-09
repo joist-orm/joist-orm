@@ -2,6 +2,9 @@ import { EntityManager, ValidationError } from "joist-orm";
 import { AuthorCodegen, AuthorOpts, Book } from "./entities";
 
 export class Author extends AuthorCodegen {
+  public beforeFlushRan = false;
+  public afterCommitRan = false;
+
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
 
@@ -28,6 +31,13 @@ export class Author extends AuthorCodegen {
       if (books.length > 0 && books.find((b) => b.title === this.firstName)) {
         return "A book title cannot be the author's firstName";
       }
+    });
+
+    this.beforeFlush(() => {
+      this.beforeFlushRan = true;
+    });
+    this.afterCommit(() => {
+      this.afterCommitRan = true;
     });
   }
 

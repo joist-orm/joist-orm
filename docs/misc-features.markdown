@@ -246,3 +246,20 @@ expect(a1.hasChanged.firstName).toBeFalsey();
 a1.firstName = "a2";
 expect(a1.hasChanged.firstName).toBeTruthy();
 ```
+
+### Lifecycle Hooks
+
+There are two lifecycle hooks: `beforeFlush` and `afterCommit`:
+
+```typescript
+class Author extends AuthorCodegen {
+  constructor(em: EntityManager, opts: AuthorOpts) {
+    super(em, opts);
+
+    this.beforeFlush(async () => ...);
+
+    this.afterCommit(async () => ...);
+  }
+}
+```
+

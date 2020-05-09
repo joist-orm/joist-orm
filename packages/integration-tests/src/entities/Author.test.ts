@@ -33,6 +33,16 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
   });
 
+  it("can have lifecycle hooks", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1" });
+    expect(a1.beforeFlushRan).toBeFalsy();
+    expect(a1.afterCommitRan).toBeFalsy();
+    await em.flush();
+    expect(a1.beforeFlushRan).toBeTruthy();
+    expect(a1.afterCommitRan).toBeTruthy();
+  });
+
   describe("hasChanged", () => {
     it("on create nothing is considered changed", async () => {
       const em = new EntityManager(knex);

@@ -51,8 +51,14 @@ export interface EntityOrmField {
   deleted?: "pending" | "deleted";
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   em: EntityManager;
+
+  // TODO Consider storing these not per-instance.
   /** The validation rules for this instance. */
   rules: ValidationRule<any>[];
+  /** The before-flush hooks for this instance. */
+  beforeFlush: Array<() => void | Promise<void>>;
+  /** The after-commit hooks for this instance. */
+  afterCommit: Array<() => void | Promise<void>>;
 }
 
 /** A marker/base interface for all of our entity types. */
@@ -480,16 +486,18 @@ export class EntityManager {
     await this.cascadeDeletesIntoUnloadedCollections();
     recalcDerivedFields(this.entities);
     const entityTodos = sortEntities(this.entities);
-    await validate(entityTodos);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
     }
+    await validate(entityTodos);
+    await beforeFlush(entityTodos);
     await this.knex.transaction(async (tx) => {
       await flushEntities(this.knex, tx, entityTodos);
       await flushJoinTables(this.knex, tx, joinRowTodos);
       await tx.commit();
     });
+    await afterCommit(entityTodos);
     // Reset the find caches b/c data will have changed in the db
     this.findLoaders = {};
   }
@@ -779,18 +787,32 @@ export class TooManyError extends Error {}
 
 async function validate(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
-    const p1 = todo.inserts.flatMap((entity) => {
+    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
       return entity.__orm.rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
     });
-    const p2 = todo.updates.flatMap((entity) => {
-      return entity.__orm.rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
-    });
-    return [...p1, ...p2];
   });
   const errors = (await Promise.all(p)).flat();
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }
+}
+
+async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap((todo) => {
+    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
+      return entity.__orm.beforeFlush.map(async (fn) => fn());
+    });
+  });
+  await Promise.all(p);
+}
+
+async function afterCommit(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap((todo) => {
+    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
+      return entity.__orm.afterCommit.map(async (fn) => fn());
+    });
+  });
+  await Promise.all(p);
 }
 
 function coerceError(

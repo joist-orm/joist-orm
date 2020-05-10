@@ -1,12 +1,10 @@
-import { Table } from "pg-structure";
 import { code, Code } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
-import { ConfigApi, EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
+import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
 import { isDerived } from "./generateEntityCodegenFile";
 import { Config } from "./index";
 
-export function generateMetadataFile(config: Config, table: Table): Code {
-  const dbMetadata = new EntityDbMetadata(table);
+export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
   const { entity } = dbMetadata;
 
   const { primaryKey, primitives, enums, m2o } = generateColumns(dbMetadata);
@@ -19,7 +17,7 @@ export function generateMetadataFile(config: Config, table: Table): Code {
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
-      tableName: "${table.name}",
+      tableName: "${dbMetadata.tableName}",
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
       fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ],
       config: ${entity.configConst},

@@ -75,6 +75,7 @@ export class EntityDbMetadata {
   manyToOnes: ManyToOneField[];
   oneToManys: OneToManyField[];
   manyToManys: ManyToManyField[];
+  tableName: string;
 
   constructor(table: Table) {
     this.entity = makeEntity(tableToEntityName(table));
@@ -99,6 +100,7 @@ export class EntityDbMetadata {
       .filter((r) => isJoinTable(r.joinTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .map((r) => newManyToManyField(r));
+    this.tableName = table.name;
   }
 }
 

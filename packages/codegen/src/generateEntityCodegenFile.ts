@@ -1,10 +1,10 @@
-import { Table } from "pg-structure";
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
   BaseEntity,
-  Collection, ConfigApi,
+  Collection,
+  ConfigApi,
   Entity as EntitySym,
   EntityFilter,
   EntityManager,
@@ -31,9 +31,9 @@ export interface ColumnMetaData {
 }
 
 /** Creates the base class with the boilerplate annotations. */
-export function generateEntityCodegenFile(config: Config, table: Table, entityName: string): Code {
-  const meta = new EntityDbMetadata(table);
-  const entity = meta.entity;
+export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata): Code {
+  const { entity } = meta;
+  const entityName = entity.name;
 
   // Add the primitives
   const primitives = meta.primitives.map((p) => {

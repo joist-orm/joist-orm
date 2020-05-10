@@ -9,6 +9,7 @@ import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEnumFile } from "./generateEnumFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
+import { EntityDbMetadata } from "./EntityDbMetadata";
 
 export interface CodeGenFile {
   name: string;
@@ -51,19 +52,20 @@ export async function generateAndSaveFiles(config: Config, db: Db, enumRows: Enu
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
 export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeGenFile[] {
-  const entities = db.tables.filter(isEntityTable).sortBy("name");
+  const entityTables = db.tables.filter(isEntityTable).sortBy("name");
   const enums = db.tables.filter(isEnumTable).sortBy("name");
+  const entities = entityTables.map((table) => new EntityDbMetadata(table));
 
   const entityFiles = entities
-    .map((table) => {
-      const entityName = tableToEntityName(table);
+    .map((meta) => {
+      const entityName = meta.entity.name;
       return [
         {
           name: `${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(config, table, entityName),
+          contents: generateEntityCodegenFile(config, meta),
           overwrite: true,
         },
-        { name: `${entityName}.ts`, contents: generateInitialEntityFile(table, entityName), overwrite: false },
+        { name: `${entityName}.ts`, contents: generateInitialEntityFile(meta), overwrite: false },
       ];
     })
     .reduce(merge, []);
@@ -77,7 +79,9 @@ export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeG
 
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
-    contents: code`${entities.map((table) => generateMetadataFile(config, table))}`,
+    contents: code`
+      ${entities.map((meta) => generateMetadataFile(config, meta))}
+    `,
     overwrite: true,
   };
 

@@ -745,6 +745,7 @@ export type OneToManyField = {
   fieldName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
+  otherFieldName: string;
 };
 
 export type ManyToOneField = {
@@ -752,6 +753,7 @@ export type ManyToOneField = {
   fieldName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
+  otherFieldName: string;
 };
 
 export type ManyToManyField = {
@@ -759,6 +761,7 @@ export type ManyToManyField = {
   fieldName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
+  otherFieldName: string;
 };
 
 export function isEntity(e: any): e is Entity {

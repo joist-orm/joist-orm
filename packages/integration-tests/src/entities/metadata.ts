@@ -119,6 +119,7 @@ export const authorMeta: EntityMetadata<Author> = {
       fieldName: "mentor",
       required: false,
       otherMetadata: () => authorMeta,
+      otherFieldName: "authors",
     },
 
     {
@@ -126,6 +127,7 @@ export const authorMeta: EntityMetadata<Author> = {
       fieldName: "publisher",
       required: false,
       otherMetadata: () => publisherMeta,
+      otherFieldName: "authors",
     },
 
     {
@@ -133,6 +135,7 @@ export const authorMeta: EntityMetadata<Author> = {
       fieldName: "authors",
       required: false,
       otherMetadata: () => authorMeta,
+      otherFieldName: "mentor",
     },
 
     {
@@ -140,6 +143,7 @@ export const authorMeta: EntityMetadata<Author> = {
       fieldName: "books",
       required: false,
       otherMetadata: () => bookMeta,
+      otherFieldName: "author",
     },
   ],
 };
@@ -212,6 +216,7 @@ export const bookMeta: EntityMetadata<Book> = {
       fieldName: "author",
       required: true,
       otherMetadata: () => authorMeta,
+      otherFieldName: "books",
     },
 
     {
@@ -219,6 +224,7 @@ export const bookMeta: EntityMetadata<Book> = {
       fieldName: "reviews",
       required: false,
       otherMetadata: () => bookReviewMeta,
+      otherFieldName: "book",
     },
 
     {
@@ -226,6 +232,7 @@ export const bookMeta: EntityMetadata<Book> = {
       fieldName: "tags",
       required: false,
       otherMetadata: () => tagMeta,
+      otherFieldName: "books",
     },
   ],
 };
@@ -287,6 +294,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       fieldName: "book",
       required: true,
       otherMetadata: () => bookMeta,
+      otherFieldName: "reviews",
     },
   ],
 };
@@ -355,6 +363,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       fieldName: "authors",
       required: false,
       otherMetadata: () => authorMeta,
+      otherFieldName: "publisher",
     },
   ],
 };
@@ -410,6 +419,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       fieldName: "books",
       required: false,
       otherMetadata: () => bookMeta,
+      otherFieldName: "tags",
     },
   ],
 };

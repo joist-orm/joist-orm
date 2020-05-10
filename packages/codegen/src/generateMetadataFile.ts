@@ -113,37 +113,40 @@ function generateFields(
   });
 
   const m2oFields = dbMetadata.manyToOnes.map((m2o) => {
-    const { fieldName, notNull, otherEntity } = m2o;
+    const { fieldName, notNull, otherEntity, otherFieldName } = m2o;
     return code`
       {
         kind: "m2o",
         fieldName: "${fieldName}",
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
+        otherFieldName: "${otherFieldName}",
       },
     `;
   });
 
   const o2mFields = dbMetadata.oneToManys.map((m2o) => {
-    const { fieldName, otherEntity } = m2o;
+    const { fieldName, otherEntity, otherFieldName } = m2o;
     return code`
       {
         kind: "o2m",
         fieldName: "${fieldName}",
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
+        otherFieldName: "${otherFieldName}",
       },
     `;
   });
 
   const m2mFields = dbMetadata.manyToManys.map((m2o) => {
-    const { fieldName, otherEntity } = m2o;
+    const { fieldName, otherEntity, otherFieldName } = m2o;
     return code`
       {
         kind: "m2m",
         fieldName: "${fieldName}",
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
+        otherFieldName: "${otherFieldName}",
       },
     `;
   });

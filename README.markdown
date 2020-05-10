@@ -50,6 +50,7 @@ After checkout:
 
 In general priority/itch order:
  
+- Fix reactive rules not catching old-value vs. new-value
 - Validation rules
   - Codegen db constraints like required, length check (probably not unique constraints)
   - Add lambdas at a class-level? `addRule(() => ...)` in the constructor?

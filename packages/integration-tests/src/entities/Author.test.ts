@@ -80,7 +80,7 @@ describe("Author", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
-  it("has async derived values that doesn't change recalced", async () => {
+  it("can save when async derived values don't change", async () => {
     const em = new EntityManager(knex);
     // Given an author with a book
     const a1 = new Author(em, { firstName: "a1" });
@@ -92,6 +92,24 @@ describe("Author", () => {
     await em.flush();
     // Then the author derived value is didn't change
     expect(a1.numberOfBooks).toEqual(1);
+  });
+
+  it.skip("has async derived values triggered on both old and new value", async () => {
+    const em = new EntityManager(knex);
+    // Given two authors
+    const a1 = new Author(em, { firstName: "a1" });
+    const a2 = new Author(em, { firstName: "a2" });
+    //  And a book that is originally associated with a1
+    const b1 = new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+    expect(a1.numberOfBooks).toEqual(1);
+    expect(a2.numberOfBooks).toEqual(0);
+    // When we move the book to a2
+    b1.author.set(a2);
+    await em.flush();
+    // Then both derived values got updated
+    expect(a1.numberOfBooks).toEqual(0);
+    expect(a2.numberOfBooks).toEqual(1);
   });
 
   it("cannot set async derived value", async () => {

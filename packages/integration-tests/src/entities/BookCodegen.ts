@@ -12,6 +12,7 @@ import {
   Lens,
   EntityFilter,
   FilterOf,
+  newRequiredRule,
   Collection,
   OneToManyCollection,
   Reference,
@@ -50,6 +51,11 @@ export interface BookOrder {
 }
 
 export const bookConfig = new ConfigApi<Book>();
+
+bookConfig.addRule(newRequiredRule("title"));
+bookConfig.addRule(newRequiredRule("createdAt"));
+bookConfig.addRule(newRequiredRule("updatedAt"));
+bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity {
   readonly __filterType: BookFilter = null!;

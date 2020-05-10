@@ -12,6 +12,7 @@ import {
   Lens,
   EntityFilter,
   FilterOf,
+  newRequiredRule,
   Reference,
   ManyToOneReference,
   setField,
@@ -42,6 +43,11 @@ export interface BookReviewOrder {
 }
 
 export const bookReviewConfig = new ConfigApi<BookReview>();
+
+bookReviewConfig.addRule(newRequiredRule("rating"));
+bookReviewConfig.addRule(newRequiredRule("createdAt"));
+bookReviewConfig.addRule(newRequiredRule("updatedAt"));
+bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity {
   readonly __filterType: BookReviewFilter = null!;

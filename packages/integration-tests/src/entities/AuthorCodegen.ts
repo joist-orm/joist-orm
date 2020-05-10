@@ -12,6 +12,7 @@ import {
   Lens,
   EntityFilter,
   FilterOf,
+  newRequiredRule,
   Collection,
   OneToManyCollection,
   Reference,
@@ -65,6 +66,12 @@ export interface AuthorOrder {
 }
 
 export const authorConfig = new ConfigApi<Author>();
+
+authorConfig.addRule(newRequiredRule("firstName"));
+authorConfig.addRule(newRequiredRule("initials"));
+authorConfig.addRule(newRequiredRule("numberOfBooks"));
+authorConfig.addRule(newRequiredRule("createdAt"));
+authorConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorCodegen extends BaseEntity {
   readonly __filterType: AuthorFilter = null!;

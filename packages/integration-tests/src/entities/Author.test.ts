@@ -199,4 +199,10 @@ describe("Author", () => {
     author.set({ firstName: undefined }, { ignoreUndefined: true });
     expect(author.firstName).toEqual("a1");
   });
+
+  it("gets not-null validation rules for free", async () => {
+    const em = new EntityManager(knex);
+    em.createUnsafe(Author, {});
+    await expect(em.flush()).rejects.toThrow("Validation error: firstName is required");
+  });
 });

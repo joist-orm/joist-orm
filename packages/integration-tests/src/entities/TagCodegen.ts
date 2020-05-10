@@ -10,6 +10,7 @@ import {
   PartialOrNull,
   Entity,
   Lens,
+  newRequiredRule,
   Collection,
   ManyToManyCollection,
   setField,
@@ -38,6 +39,10 @@ export interface TagOrder {
 }
 
 export const tagConfig = new ConfigApi<Tag>();
+
+tagConfig.addRule(newRequiredRule("name"));
+tagConfig.addRule(newRequiredRule("createdAt"));
+tagConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class TagCodegen extends BaseEntity {
   readonly __filterType: TagFilter = null!;

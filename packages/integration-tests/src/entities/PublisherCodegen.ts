@@ -10,6 +10,7 @@ import {
   PartialOrNull,
   Entity,
   Lens,
+  newRequiredRule,
   setField,
   Collection,
   OneToManyCollection,
@@ -41,6 +42,10 @@ export interface PublisherOrder {
 }
 
 export const publisherConfig = new ConfigApi<Publisher>();
+
+publisherConfig.addRule(newRequiredRule("name"));
+publisherConfig.addRule(newRequiredRule("createdAt"));
+publisherConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class PublisherCodegen extends BaseEntity {
   readonly __filterType: PublisherFilter = null!;

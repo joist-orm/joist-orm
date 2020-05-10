@@ -13,6 +13,7 @@ import {
   Lens,
   ManyToManyCollection,
   ManyToOneReference,
+  newRequiredRule,
   OneToManyCollection,
   OptsOf,
   OrderBy,
@@ -156,6 +157,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     `;
   });
 
+  const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
   return code`
@@ -174,8 +176,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       id?: ${OrderBy};
       ${generateOrderFields(meta)}
     }
-    
-    export const ${camelCase(entityName)}Config = new ${ConfigApi}<${entity.type}>();
+
+    export const ${configName} = new ${ConfigApi}<${entity.type}>();
+
+    ${generateDefaultValidationRules(meta, configName)}
 
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __filterType: ${entityName}Filter = null!;
@@ -209,6 +213,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       }
     }
   `;
+}
+
+function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
+  const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes];
+  return fields.filter(p => p.notNull).map(({ fieldName}) => {
+    return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`
+  });
 }
 
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {

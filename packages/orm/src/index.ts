@@ -211,6 +211,10 @@ export class ValidationErrors extends Error {
   }
 }
 
+export function newRequiredRule<T extends Entity>(key: keyof T): ValidationRule<T> {
+  return (entity) => (entity.__orm.data[key] === undefined ? `${key} is required` : undefined);
+}
+
 function errorMessage(errors: ValidationError[]): string {
   if (errors.length === 1) {
     return `Validation error: ${errors[0].message}`;

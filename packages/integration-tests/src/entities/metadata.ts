@@ -46,6 +46,12 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new SimpleSerde("initials", "initials"),
     },
     {
+      fieldName: "numberOfBooks",
+      columnName: "number_of_books",
+      dbType: "int",
+      serde: new SimpleSerde("numberOfBooks", "number_of_books"),
+    },
+    {
       fieldName: "isPopular",
       columnName: "is_popular",
       dbType: "bool",
@@ -107,6 +113,11 @@ export const authorMeta: EntityMetadata<Author> = {
       fieldName: "initials",
       derived: true,
       required: false,
+    },
+    {
+      kind: "primitive",
+      fieldName: "numberOfBooks",
+      required: true,
     },
     {
       kind: "primitive",
@@ -451,5 +462,4 @@ export const tagMeta: EntityMetadata<Tag> = {
 (Tag as any).metadata = tagMeta;
 
 const allMetadata = [authorMeta, bookMeta, bookReviewMeta, publisherMeta, tagMeta];
-
 configureMetadata(allMetadata);

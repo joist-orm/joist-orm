@@ -478,6 +478,7 @@ export class EntityManager {
     await this.cascadeDeletesIntoUnloadedCollections();
     recalcDerivedFields(this.entities);
     const entityTodos = sortEntities(this.entities);
+    await recalcAsyncDerivedFields(this, entityTodos);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
@@ -879,7 +880,7 @@ type Narrowable = string | number | boolean | symbol | object | undefined | void
  */
 function recalcDerivedFields(entities: Entity[]) {
   const derivedFieldsByMeta = new Map(
-    [...new Set(entities.map((e) => e.__orm.metadata))].map((m) => {
+    [...new Set(entities.map(getMetadata))].map((m) => {
       return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived).map((f) => f.fieldName)];
     }),
   );
@@ -890,6 +891,20 @@ function recalcDerivedFields(entities: Entity[]) {
       setField(entity, fieldName, (entity as any)[fieldName]);
     });
   }
+}
+
+async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).map(async (todo) => {
+    const { asyncDerivedFields } = todo.metadata.config.__data;
+    const changed = [...todo.inserts, ...todo.updates];
+    const p = Object.entries(asyncDerivedFields).map(async ([key, entry]) => {
+      const [hint, fn] = entry;
+      await em.populate(changed, hint);
+      await Promise.all(changed.map((entity) => setField(entity, key, fn(entity))));
+    });
+    await Promise.all(p);
+  });
+  await Promise.all(p);
 }
 
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.

@@ -55,6 +55,31 @@ describe("Author", () => {
     expect(a1.afterCommitRan).toBeTruthy();
   });
 
+  it("can have async derived values", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1" });
+    new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+    expect(a1.numberOfBooks).toEqual(1);
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].number_of_books).toEqual(1);
+  });
+
+  it("cannot set async derived value", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1" });
+    expect(() => {
+      // @ts-expect-error
+      a1.numberOfBooks = 1;
+    }).toThrow("Cannot set property numberOfBooks");
+  });
+
+  it("cannot access async derived value before flush", async () => {
+    const em = new EntityManager(knex);
+    const a1 = new Author(em, { firstName: "a1" });
+    expect(() => a1.numberOfBooks).toThrow("numberOfBooks has not been derived yet");
+  });
+
   describe("hasChanged", () => {
     it("on create nothing is considered changed", async () => {
       const em = new EntityManager(knex);

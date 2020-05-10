@@ -2,6 +2,9 @@
   "derivedFields": [
     "Author.initials"
   ],
+  "asyncDerivedFields": [
+    "Author.numberOfBooks"
+  ],
   "protectedFields": [
     "Author.wasEverPopular"
   ]

@@ -222,8 +222,10 @@ function errorMessage(errors: ValidationError[]): string {
 }
 
 class ConfigData<T extends Entity> {
-  /** The validation rules for this instance. */
+  /** The validation rules for this entity type. */
   rules: ValidationRule<T>[] = [];
+  /** The async derived fields for this entity type. */
+  asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
   /** The before-flush hooks for this instance. */
   beforeFlush: Array<(entity: T) => void | Promise<void>> = [];
   /** The after-commit hooks for this instance. */
@@ -251,6 +253,15 @@ export class ConfigApi<T extends Entity> {
       (fn as any).hint = ruleOrHint;
       this.__data.rules.push(fn);
     }
+  }
+
+  /** Registers `fn` as the lambda to provide the async value for `key`. */
+  setAsyncDerivedField<P extends keyof T, H extends LoadHint<T>>(
+    key: P,
+    populate: H,
+    fn: (entity: Loaded<T, H>) => T[P],
+  ): void {
+    this.__data.asyncDerivedFields[key] = [populate, fn as any];
   }
 
   beforeFlush(fn: (entity: T) => void | Promise<void>): void {

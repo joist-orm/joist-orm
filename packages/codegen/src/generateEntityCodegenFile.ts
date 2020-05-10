@@ -41,7 +41,16 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const maybeOptional = notNull ? "" : " | undefined";
 
     let getter: Code;
-    if (isDerived(config, entity, fieldName)) {
+    if (isAsyncDerived(config, entity, fieldName)) {
+      getter = code`
+        get ${fieldName}(): ${fieldType}${maybeOptional} {
+          if (!("${fieldName}" in this.__orm.data)) {
+            throw new Error("${fieldName} has not been derived yet");
+          }
+          return this.__orm.data["${fieldName}"];
+        }
+     `;
+    } else if (isDerived(config, entity, fieldName)) {
       getter = code`
         abstract get ${fieldName}(): ${fieldType}${maybeOptional};
      `;
@@ -65,7 +74,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
           ${setField}(this, "${fieldName}", ${fieldName});
         }
       `;
-    } else if (ormMaintainedFields.includes(fieldName) || isDerived(config, entity, fieldName)) {
+    } else if (
+      ormMaintainedFields.includes(fieldName) ||
+      isDerived(config, entity, fieldName) ||
+      isAsyncDerived(config, entity, fieldName)
+    ) {
       setter = "";
     } else {
       setter = code`
@@ -201,7 +214,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   // Make our opts type
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
-    if (ormMaintainedFields.includes(fieldName) || isDerived(config, meta.entity, fieldName)) {
+    if (
+      ormMaintainedFields.includes(fieldName) ||
+      isDerived(config, meta.entity, fieldName) ||
+      isAsyncDerived(config, meta.entity, fieldName)
+    ) {
       return code``;
     }
     return code`${fieldName}${maybeOptional(notNull)}: ${fieldType}${maybeUnionNull(notNull)};`;
@@ -267,6 +284,10 @@ const ormMaintainedFields = ["createdAt", "updatedAt"];
 
 export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
   return config.derivedFields.includes(`${entity.name}.${fieldName}`);
+}
+
+export function isAsyncDerived(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.asyncDerivedFields.includes(`${entity.name}.${fieldName}`);
 }
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {

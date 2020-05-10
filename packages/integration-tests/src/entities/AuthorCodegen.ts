@@ -39,6 +39,7 @@ export interface AuthorFilter {
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null | undefined>;
   initials?: ValueFilter<string, never>;
+  numberOfBooks?: ValueFilter<number, never>;
   isPopular?: ValueFilter<boolean, null | undefined>;
   age?: ValueFilter<number, null | undefined>;
   wasEverPopular?: ValueFilter<boolean, null | undefined>;
@@ -53,6 +54,7 @@ export interface AuthorOrder {
   firstName?: OrderBy;
   lastName?: OrderBy;
   initials?: OrderBy;
+  numberOfBooks?: OrderBy;
   isPopular?: OrderBy;
   age?: OrderBy;
   wasEverPopular?: OrderBy;
@@ -127,6 +129,13 @@ export abstract class AuthorCodegen extends BaseEntity {
   }
 
   abstract get initials(): string;
+
+  get numberOfBooks(): number {
+    if (!("numberOfBooks" in this.__orm.data)) {
+      throw new Error("numberOfBooks has not been derived yet");
+    }
+    return this.__orm.data["numberOfBooks"];
+  }
 
   get isPopular(): boolean | undefined {
     return this.__orm.data["isPopular"];

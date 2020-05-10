@@ -60,3 +60,7 @@ authorConfig.beforeFlush((author) => {
 authorConfig.afterCommit((author) => {
   author.afterCommitRan = true;
 });
+
+authorConfig.setAsyncDerivedField("numberOfBooks", "books", (author) => {
+  return author.books.get.length;
+});

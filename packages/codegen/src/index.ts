@@ -25,12 +25,14 @@ export type EnumRow = { id: number; code: string; name: string };
 export interface Config {
   entitiesDirectory: string;
   derivedFields: string[];
+  asyncDerivedFields: string[];
   protectedFields: string[];
 }
 
 const defaultConfig: Config = {
   entitiesDirectory: "./src/entities",
   derivedFields: [],
+  asyncDerivedFields: [],
   protectedFields: [],
 };
 

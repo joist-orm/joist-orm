@@ -8,8 +8,9 @@ export async function insertAuthor(row: {
   is_popular?: boolean | null;
   publisher_id?: number | null;
   initials?: string;
+  number_of_books?: number;
 }) {
-  await knex.insert({ initials: row.first_name[0], ...row }).into("authors");
+  await knex.insert({ initials: row.first_name[0], number_of_books: 0, ...row }).into("authors");
 }
 
 export async function insertBook(row: { id?: number; title: string; author_id: number | null }) {

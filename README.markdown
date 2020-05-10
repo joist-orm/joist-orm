@@ -51,19 +51,9 @@ After checkout:
 In general priority/itch order:
  
 - Fix reactive rules not catching old-value vs. new-value
-- Validation rules
-  - Codegen db constraints like required, length check (probably not unique constraints)
-  - Add lambdas at a class-level? `addRule(() => ...)` in the constructor?
-  - (Later) Use load hint-style syntax to declare "reactive" validation rule sub-graphs
 - Optionally move `begin` to the start of Unit of Work
 - Codegen'd test builders 
-- Lifecycle hooks
-  - Rename `onSave` --> `preFlush` / `postFlush`
-  - See [Gusto](https://engineering.gusto.com/the-rails-callbacks-best-practices-used-at-gusto/) posts but using WAL/EventBridge events are best-practice way of doing this anyway
-- Add example of "lastName cannot be changed" that uses 1) validation rule, 2) isNew, and 3) type-safe changed
-- Add Collection.load(loadHint)
-- Derived values
-  - Derived primitives is implemented
+- Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)
 - Support user-defined types
 - LargeCollection support
   - I.e. `joist-config.json` entry to mark (say) `publisher.authors` as "too big to never read at once" and use a different/restricted API, i.e. forced paging

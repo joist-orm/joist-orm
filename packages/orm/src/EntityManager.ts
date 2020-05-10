@@ -482,6 +482,7 @@ export class EntityManager {
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
     }
+    // TODO Run beforeFlush first, so it can fill in derived values for validate?
     await validate(entityTodos);
     await beforeFlush(entityTodos);
     await this.knex.transaction(async (tx) => {
@@ -777,16 +778,17 @@ export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructo
   return (isEntity(entityOrType) ? entityOrType.__orm.metadata : (entityOrType as any).metadata) as EntityMetadata<T>;
 }
 
+/** Thrown by `findOneOrFail` if an entity is not found. */
 export class NotFoundError extends Error {}
 
+/** Thrown by `findOne` and `findOneOrFail` if more than one entity is found. */
 export class TooManyError extends Error {}
 
 async function validate(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
+    const rules = todo.metadata.config.__data.rules;
     return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return entity.__orm.metadata.config.__data.rules.flatMap(async (rule) =>
-        coerceError(entity, await rule(entity)),
-      );
+      return rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
     });
   });
   const errors = (await Promise.all(p)).flat();
@@ -797,8 +799,9 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
 
 async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
+    const beforeFlush = todo.metadata.config.__data.beforeFlush;
     return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return entity.__orm.metadata.config.__data.beforeFlush.map(async (fn) => fn(entity));
+      return beforeFlush.map(async (fn) => fn(entity));
     });
   });
   await Promise.all(p);
@@ -806,8 +809,9 @@ async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
 
 async function afterCommit(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
+    const afterCommit = todo.metadata.config.__data.afterCommit;
     return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return entity.__orm.metadata.config.__data.afterCommit.map(async (fn) => fn(entity));
+      return afterCommit.map(async (fn) => fn(entity));
     });
   });
   await Promise.all(p);

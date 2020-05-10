@@ -231,9 +231,9 @@ class ConfigData<T extends Entity> {
   /** The async derived fields for this entity type. */
   asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
   /** The before-flush hooks for this instance. */
-  beforeFlush: Array<(entity: T) => MaybePromise<void>> = [];
+  beforeFlush: HookFn<T>[] = [];
   /** The after-commit hooks for this instance. */
-  afterCommit: Array<(entity: T) => MaybePromise<void>> = [];
+  afterCommit: HookFn<T>[] = [];
 
   // Load-hint-ish structures that point back to instances that depend on us for validation rules.
   reactiveRules: string[][] = [];
@@ -270,14 +270,30 @@ export class ConfigApi<T extends Entity> {
     this.__data.asyncDerivedFields[key] = [populate, fn as any];
   }
 
-  beforeFlush(fn: (entity: T) => MaybePromise<void>): void {
-    this.__data.beforeFlush.push(fn);
+  beforeFlush<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
+  beforeFlush(fn: HookFn<T>): void;
+  beforeFlush(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
+    if (typeof ruleOrHint === "function") {
+      this.__data.beforeFlush.push(ruleOrHint);
+    } else {
+      const fn = async (entity: T) => {
+        // TODO Use this for reactive beforeFlush
+        const { em } = entity.__orm;
+        const loaded = await em.populate(entity, ruleOrHint);
+        return maybeFn!(loaded);
+      };
+      // Squirrel our hint away where configureMetadata can find it
+      (fn as any).hint = ruleOrHint;
+      this.__data.beforeFlush.push(fn);
+    }
   }
 
-  afterCommit(fn: (entity: T) => MaybePromise<void>): void {
+  afterCommit(fn: HookFn<T>): void {
     this.__data.afterCommit.push(fn);
   }
 }
+
+type HookFn<T extends Entity> = (entity: T) => MaybePromise<T>;
 
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {

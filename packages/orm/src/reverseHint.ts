@@ -1,30 +1,12 @@
-import { Author, Book, BookReview } from "./entities";
-import { Entity, EntityConstructor, LoadHint, getMetadata } from "joist-orm";
-import { fail } from "./utils";
-
-describe("reverse", () => {
-  it("can do string hint", () => {
-    expect(reverse(Author, "books")).toEqual([[Book, "author"]]);
-  });
-
-  it("can do array of string hints", () => {
-    expect(reverse(Author, ["books", "authors"])).toEqual([
-      [Book, "author"],
-      [Author, "mentor"],
-    ]);
-  });
-
-  it("can do array of string", () => {
-    expect(reverse(Author, { books: "reviews" })).toEqual([[BookReview, { book: "author" }]]);
-  });
-});
+import { Entity, EntityConstructor, getMetadata, LoadHint } from "./EntityManager";
+import { fail } from "joist-integration-tests/build/src/utils";
 
 /**
  * Given a load hint of "given an entity, load these N things", return an array
  * of what those N things are, and reversed load hints to "come back" to the
  * original entity.
  */
-function reverse<T extends Entity>(
+export function reverse<T extends Entity>(
   entityType: EntityConstructor<T>,
   hint: LoadHint<T>,
 ): [EntityConstructor<any>, LoadHint<any>][] {
@@ -59,7 +41,7 @@ function reverse<T extends Entity>(
           if (typeof hint !== "string") {
             throw new Error("Not handled yet");
           }
-          return [e, { [hint]: field.otherFieldName }] as any;
+          return [e, {[hint]: field.otherFieldName}] as any;
         });
       })
       .flat();

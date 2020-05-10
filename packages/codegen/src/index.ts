@@ -10,6 +10,7 @@ import { generateEnumFile } from "./generateEnumFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { EntityDbMetadata } from "./EntityDbMetadata";
+import { configureMetadata } from "./symbols";
 
 export interface CodeGenFile {
   name: string;
@@ -81,6 +82,9 @@ export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeG
     name: "./metadata.ts",
     contents: code`
       ${entities.map((meta) => generateMetadataFile(config, meta))}
+
+      const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];
+      ${configureMetadata}(allMetadata);
     `,
     overwrite: true,
   };

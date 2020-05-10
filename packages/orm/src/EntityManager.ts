@@ -483,6 +483,7 @@ export class EntityManager {
       return;
     }
     // TODO Run beforeFlush first, so it can fill in derived values for validate?
+    await addReactiveValidations(entityTodos);
     await validate(entityTodos);
     await beforeFlush(entityTodos);
     await this.knex.transaction(async (tx) => {
@@ -784,10 +785,45 @@ export class NotFoundError extends Error {}
 /** Thrown by `findOne` and `findOneOrFail` if more than one entity is found. */
 export class TooManyError extends Error {}
 
+/**
+ * For the entities currently in `todos`, find any reactive validation rules that point
+ * from the currently-changed entities back to each rule's originally-defined-in entity,
+ * and ensure those entities are added to `todos`.
+ */
+async function addReactiveValidations(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).map(async (todo) => {
+    // Find each statically-declared reactive rule for the given entity type
+    todo.metadata.config.__data.reactiveRules.map(async (reactiveRule) => {
+      // Start at the current entities
+      let current = [...todo.inserts, ...todo.updates] as Entity[];
+      let paths = [...reactiveRule];
+      // And "work backgrounds" through the reverse hint
+      while (paths.length) {
+        const path = paths.shift()!;
+        // Use flat() so that this works with either references or collections
+        current = (await Promise.all(current.map(async (c) => await (c as any)[path].load()))).flat() as Entity[];
+      }
+      // Then add the resulting "found" entities to the right todos to be validated
+      current.forEach((entity) => {
+        const meta = getMetadata(entity);
+        let todo = todos[meta.type];
+        if (!todo) {
+          todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
+          todos[meta.type] = todo;
+        }
+        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity)) {
+          todo.validates.push(entity);
+        }
+      });
+    });
+  });
+  await Promise.all(p);
+}
+
 async function validate(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     const rules = todo.metadata.config.__data.rules;
-    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
+    return [...todo.inserts, ...todo.updates, ...todo.validates].flatMap((entity) => {
       return rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
     });
   });

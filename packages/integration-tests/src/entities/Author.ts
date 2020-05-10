@@ -45,9 +45,8 @@ authorConfig.addRule((a) => {
   }
 });
 
-authorConfig.addRule(async (a) => {
-  const books = await a.books.load();
-  if (books.length > 0 && books.find((b) => b.title === a.firstName)) {
+authorConfig.addRule("books", async (a) => {
+  if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {
     return "A book title cannot be the author's firstName";
   }
 });

@@ -1,9 +1,20 @@
-import { Entity, EntityConstructor, getMetadata, IdOf, Loaded, LoadHint, OptsOf, } from "./EntityManager";
+import {
+  Entity,
+  EntityConstructor,
+  EntityMetadata,
+  getMetadata,
+  IdOf,
+  Loaded,
+  LoadHint,
+  OptsOf,
+} from "./EntityManager";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
+import { reverseHint } from "./reverseHint";
 
 export * from "./EntityManager";
 export * from "./serde";
 export * from "./connection";
+export * from "./reverseHint";
 export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
@@ -217,6 +228,9 @@ class ConfigData<T extends Entity> {
   beforeFlush: Array<(entity: T) => void | Promise<void>> = [];
   /** The after-commit hooks for this instance. */
   afterCommit: Array<(entity: T) => void | Promise<void>> = [];
+
+  // Load-hint-ish structures that point back to instances that depend on us for validation rules.
+  reactiveRules: string[][] = [];
 }
 
 export class ConfigApi<T extends Entity> {
@@ -228,11 +242,14 @@ export class ConfigApi<T extends Entity> {
     if (typeof ruleOrHint === "function") {
       this.__data.rules.push(ruleOrHint);
     } else {
-      this.__data.rules.push(async (entity) => {
+      const fn = async (entity: T) => {
         const { em } = entity.__orm;
         const loaded = await em.populate(entity, ruleOrHint);
         return maybeRule!(loaded);
-      });
+      };
+      // Squirrel our hint away where configureMetadata can find it
+      (fn as any).hint = ruleOrHint;
+      this.__data.rules.push(fn);
     }
   }
 
@@ -243,4 +260,21 @@ export class ConfigApi<T extends Entity> {
   afterCommit(fn: (entity: T) => void | Promise<void>): void {
     this.__data.afterCommit.push(fn);
   }
+}
+
+/** Processes the metas based on any custom calls to the `configApi` hooks. */
+export function configureMetadata(metas: EntityMetadata<any>[]): void {
+  // Look for reactive validation rules to reverse
+  metas.forEach((meta) => {
+    meta.config.__data.rules.forEach((rule) => {
+      if ((rule as any).hint) {
+        const reversals = reverseHint(meta.cstr, (rule as any).hint);
+        // For each reversal, tell its config about the reverse hint to force-re-validate
+        // the original rule's instance any time it changes.
+        reversals.forEach(([otherEntity, reverseHint]) => {
+          getMetadata(otherEntity).config.__data.reactiveRules.push(reverseHint);
+        });
+      }
+    });
+  });
 }

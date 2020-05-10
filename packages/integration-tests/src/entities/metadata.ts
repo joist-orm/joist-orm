@@ -1,4 +1,11 @@
-import { EntityMetadata, PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "joist-orm";
+import {
+  configureMetadata,
+  EntityMetadata,
+  PrimaryKeySerde,
+  SimpleSerde,
+  ForeignKeySerde,
+  EnumFieldSerde,
+} from "joist-orm";
 import {
   Author,
   authorConfig,
@@ -442,3 +449,7 @@ export const tagMeta: EntityMetadata<Tag> = {
 };
 
 (Tag as any).metadata = tagMeta;
+
+const allMetadata = [authorMeta, bookMeta, bookReviewMeta, publisherMeta, tagMeta];
+
+configureMetadata(allMetadata);

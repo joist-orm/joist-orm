@@ -33,6 +33,18 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
   });
 
+  it("can have reactive validation rules", async () => {
+    const em = new EntityManager(knex);
+    // Given the book and author start out with acceptable names
+    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+    // When the book name is later changed to collide with the author
+    b1.title = "a1";
+    // Then the validation rule is ran even though it's on the author entity
+    await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
+  });
+
   it("can have lifecycle hooks", async () => {
     const em = new EntityManager(knex);
     const a1 = new Author(em, { firstName: "a1" });

@@ -65,6 +65,35 @@ describe("Author", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
+  it("has async derived values automatically recalced", async () => {
+    const em = new EntityManager(knex);
+    // Given an author with initially no books
+    const a1 = new Author(em, { firstName: "a1" });
+    await em.flush();
+    expect(a1.numberOfBooks).toEqual(0);
+    // When we add a book
+    new Book(em, { title: "b1", author: a1 });
+    // Then the author derived value is re-derived
+    await em.flush();
+    expect(a1.numberOfBooks).toEqual(1);
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].number_of_books).toEqual(1);
+  });
+
+  it("has async derived values that doesn't change recalced", async () => {
+    const em = new EntityManager(knex);
+    // Given an author with a book
+    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = new Book(em, { author: a1, title: "b1" });
+    await em.flush();
+    expect(a1.numberOfBooks).toEqual(1);
+    // When we change the book
+    b1.title = "b12";
+    await em.flush();
+    // Then the author derived value is didn't change
+    expect(a1.numberOfBooks).toEqual(1);
+  });
+
   it("cannot set async derived value", async () => {
     const em = new EntityManager(knex);
     const a1 = new Author(em, { firstName: "a1" });

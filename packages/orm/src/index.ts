@@ -233,6 +233,8 @@ class ConfigData<T extends Entity> {
 
   // Load-hint-ish structures that point back to instances that depend on us for validation rules.
   reactiveRules: string[][] = [];
+  // Load-hint-ish structures that point back to instances that depend on us for derived values.
+  reactiveDerivedValues: string[][] = [];
 }
 
 export class ConfigApi<T extends Entity> {
@@ -275,8 +277,8 @@ export class ConfigApi<T extends Entity> {
 
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
-  // Look for reactive validation rules to reverse
   metas.forEach((meta) => {
+    // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
       if ((rule as any).hint) {
         const reversals = reverseHint(meta.cstr, (rule as any).hint);
@@ -286,6 +288,14 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
           getMetadata(otherEntity).config.__data.reactiveRules.push(reverseHint);
         });
       }
+    });
+    // Look for reactive async derived values rules to reverse
+    Object.entries(meta.config.__data.asyncDerivedFields).forEach(([key, entry]) => {
+      const hint = entry![0];
+      const reversals = reverseHint(meta.cstr, hint);
+      reversals.forEach(([otherEntity, reverseHint]) => {
+        getMetadata(otherEntity).config.__data.reactiveDerivedValues.push(reverseHint);
+      });
     });
   });
 }

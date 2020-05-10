@@ -1,4 +1,4 @@
-import { Entity, EntityMetadata } from "./EntityManager";
+import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
 import Knex, { Transaction } from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
@@ -67,7 +67,8 @@ async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any
     meta.columns.forEach((c) => c.serde.setOnRow(entity.__orm.data, row));
     return row;
   });
-  const ids = await knex.batchInsert(meta.tableName, rows).transacting(tx);
+  // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
+  await knex.batchInsert(meta.tableName, rows).transacting(tx);
   for (let i = 0; i < entities.length; i++) {
     entities[i].__orm.originalData = {};
   }
@@ -82,6 +83,12 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
   entities.forEach((entity) => {
     Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
   });
+
+  // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't changed,
+  // it'll be a noop, so just short-circuit if it looks like that happened, i.e. we have no changed fields.
+  if (changedFields.size === 1) {
+    return;
+  }
 
   // This currently assumes a 1-to-1 field-to-column mapping.
   const columns = meta.columns.filter((c) => changedFields.has(c.fieldName));
@@ -133,16 +140,11 @@ function cleanSql(sql: string): string {
 export function sortEntities(entities: Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
-    const name = entity.__orm.metadata.type;
     const isNew = entity.id === undefined;
     const isDirty = !isNew && Object.keys(entity.__orm.originalData).length > 0;
     const isDelete = !isNew && entity.__orm.deleted === "pending";
     if (isNew || isDirty || isDelete) {
-      let todo = todos[name];
-      if (!todo) {
-        todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
-        todos[name] = todo;
-      }
+      const todo = getTodo(todos, entity);
       if (isNew) {
         todo.inserts.push(entity);
       } else if (isDelete) {
@@ -153,6 +155,17 @@ export function sortEntities(entities: Entity[]): Record<string, Todo> {
     }
   }
   return todos;
+}
+
+/** getOrSets a `Todo` for `entity` in `todos`. */
+export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
+  const meta = getMetadata(entity);
+  let todo = todos[meta.type];
+  if (!todo) {
+    todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
+    todos[meta.type] = todo;
+  }
+  return todo;
 }
 
 export async function flushJoinTables(

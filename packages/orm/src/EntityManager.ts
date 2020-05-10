@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import Knex, { QueryBuilder } from "knex";
-import { flushEntities, flushJoinTables, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
+import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import {
@@ -478,6 +478,7 @@ export class EntityManager {
     await this.cascadeDeletesIntoUnloadedCollections();
     recalcDerivedFields(this.entities);
     const entityTodos = sortEntities(this.entities);
+    await addReactiveAsyncDerivedValues(entityTodos);
     await recalcAsyncDerivedFields(this, entityTodos);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
@@ -792,28 +793,28 @@ export class TooManyError extends Error {}
  * and ensure those entities are added to `todos`.
  */
 async function addReactiveValidations(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).map(async (todo) => {
+  const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     // Find each statically-declared reactive rule for the given entity type
-    todo.metadata.config.__data.reactiveRules.map(async (reactiveRule) => {
-      // Start at the current entities
-      let current = [...todo.inserts, ...todo.updates] as Entity[];
-      let paths = [...reactiveRule];
-      // And "work backgrounds" through the reverse hint
-      while (paths.length) {
-        const path = paths.shift()!;
-        // Use flat() so that this works with either references or collections
-        current = (await Promise.all(current.map(async (c) => await (c as any)[path].load()))).flat() as Entity[];
-      }
-      // Then add the resulting "found" entities to the right todos to be validated
-      current.forEach((entity) => {
-        const meta = getMetadata(entity);
-        let todo = todos[meta.type];
-        if (!todo) {
-          todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
-          todos[meta.type] = todo;
-        }
+    return todo.metadata.config.__data.reactiveRules.map(async (reverseHint) => {
+      // Add the resulting "found" entities to the right todos to be validated
+      (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
+        const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity)) {
           todo.validates.push(entity);
+        }
+      });
+    });
+  });
+  await Promise.all(p);
+}
+
+async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
+  const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
+    return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
+      (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
+        const todo = getTodo(todos, entity);
+        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity)) {
+          todo.updates.push(entity);
         }
       });
     });
@@ -893,6 +894,7 @@ function recalcDerivedFields(entities: Entity[]) {
   }
 }
 
+/** Calcs async derived fields for inserts and updates. */
 async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).map(async (todo) => {
     const { asyncDerivedFields } = todo.metadata.config.__data;
@@ -912,4 +914,22 @@ const replacer = (v: any) => (isEntity(v) ? v.id : v);
 
 function whereFilterHash(where: FilterAndOrder<any>): string {
   return hash(where, { replacer });
+}
+
+/**
+ * Walks `reverseHint` for every entity in `entities`.
+ *
+ * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all of the books' authors' publishers.
+ */
+async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
+  // Start at the current entities
+  let current = [...entities];
+  const paths = [...reverseHint];
+  // And "work backgrounds" through the reverse hint
+  while (paths.length) {
+    const path = paths.shift()!;
+    // Use flat() so that this works with either references or collections
+    current = (await Promise.all(current.map((c) => (c as any)[path].load()))).flat() as Entity[];
+  }
+  return current;
 }

@@ -9,15 +9,17 @@ export class Author extends AuthorCodegen {
     super(em, opts);
   }
 
-  /** Implements the business logic for a (synchronous) derived primitive. */
+  /** Implements the business logic for a (synchronous) persisted derived value. */
   get initials(): string {
     return (this.firstName || "")[0] + (this.lastName !== undefined ? this.lastName[0] : "");
   }
 
+  /** Implements the business logic for an unpersisted derived value. */
   get fullName(): string {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
 
+  /** Implements a public API for controlling access to a protected field (`wasEverPopular`). */
   set isPopular(isPopular: boolean | undefined) {
     super.isPopular = isPopular;
     // Testing protected fields

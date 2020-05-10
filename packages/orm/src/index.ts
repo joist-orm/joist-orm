@@ -231,9 +231,9 @@ class ConfigData<T extends Entity> {
   /** The async derived fields for this entity type. */
   asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
   /** The before-flush hooks for this instance. */
-  beforeFlush: Array<(entity: T) => void | Promise<void>> = [];
+  beforeFlush: Array<(entity: T) => MaybePromise<void>> = [];
   /** The after-commit hooks for this instance. */
-  afterCommit: Array<(entity: T) => void | Promise<void>> = [];
+  afterCommit: Array<(entity: T) => MaybePromise<void>> = [];
 
   // Load-hint-ish structures that point back to instances that depend on us for validation rules.
   reactiveRules: string[][] = [];
@@ -270,11 +270,11 @@ export class ConfigApi<T extends Entity> {
     this.__data.asyncDerivedFields[key] = [populate, fn as any];
   }
 
-  beforeFlush(fn: (entity: T) => void | Promise<void>): void {
+  beforeFlush(fn: (entity: T) => MaybePromise<void>): void {
     this.__data.beforeFlush.push(fn);
   }
 
-  afterCommit(fn: (entity: T) => void | Promise<void>): void {
+  afterCommit(fn: (entity: T) => MaybePromise<void>): void {
     this.__data.afterCommit.push(fn);
   }
 }

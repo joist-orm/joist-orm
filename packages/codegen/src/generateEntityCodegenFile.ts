@@ -4,7 +4,7 @@ import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
   BaseEntity,
-  Collection,
+  Collection, ConfigApi,
   Entity as EntitySym,
   EntityFilter,
   EntityManager,
@@ -161,6 +161,8 @@ export function generateEntityCodegenFile(config: Config, table: Table, entityNa
       id?: ${OrderBy};
       ${generateOrderFields(meta)}
     }
+    
+    export const ${camelCase(entityName)}Config = new ${ConfigApi}<${entity.type}>();
 
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __filterType: ${entityName}Filter = null!;

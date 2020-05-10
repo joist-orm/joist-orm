@@ -28,15 +28,7 @@ export abstract class BaseEntity implements Entity {
   readonly __orm: EntityOrmField;
 
   constructor(em: EntityManager, metadata: any) {
-    this.__orm = {
-      em,
-      metadata,
-      data: {},
-      originalData: {},
-      rules: [],
-      beforeFlush: [],
-      afterCommit: [],
-    };
+    this.__orm = { em, metadata, data: {}, originalData: {} };
     em.register(this);
   }
 
@@ -80,18 +72,6 @@ export abstract class BaseEntity implements Entity {
   abstract set(values: Partial<OptsOf<this>>): void;
 
   abstract setUnsafe(values: PartialOrNull<OptsOf<this>>): void;
-
-  protected addRule(rule: ValidationRule<this>): void {
-    this.__orm.rules.push(rule);
-  }
-
-  protected beforeFlush(fn: () => void | Promise<void>): void {
-    this.__orm.beforeFlush.push(fn);
-  }
-
-  protected afterCommit(fn: () => void | Promise<void>): void {
-    this.__orm.afterCommit.push(fn);
-  }
 
   public get hasChanged(): Changed<this> {
     const entity = this;

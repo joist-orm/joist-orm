@@ -5,6 +5,7 @@ import { getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import {
   Collection,
+  ConfigApi,
   LoadedCollection,
   LoadedReference,
   PartialOrNull,
@@ -13,7 +14,6 @@ import {
   setField,
   ValidationError,
   ValidationErrors,
-  ValidationRule,
 } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
@@ -51,14 +51,6 @@ export interface EntityOrmField {
   deleted?: "pending" | "deleted";
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   em: EntityManager;
-
-  // TODO Consider storing these not per-instance.
-  /** The validation rules for this instance. */
-  rules: ValidationRule<any>[];
-  /** The before-flush hooks for this instance. */
-  beforeFlush: Array<() => void | Promise<void>>;
-  /** The after-commit hooks for this instance. */
-  afterCommit: Array<() => void | Promise<void>>;
 }
 
 /** A marker/base interface for all of our entity types. */
@@ -717,6 +709,7 @@ export interface EntityMetadata<T extends Entity> {
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   fields: Array<Field>;
+  config: ConfigApi<T>;
 }
 
 export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;
@@ -791,7 +784,9 @@ export class TooManyError extends Error {}
 async function validate(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return entity.__orm.rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
+      return entity.__orm.metadata.config.__data.rules.flatMap(async (rule) =>
+        coerceError(entity, await rule(entity)),
+      );
     });
   });
   const errors = (await Promise.all(p)).flat();
@@ -803,7 +798,7 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
 async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return entity.__orm.beforeFlush.map(async (fn) => fn());
+      return entity.__orm.metadata.config.__data.beforeFlush.map(async (fn) => fn(entity));
     });
   });
   await Promise.all(p);
@@ -812,7 +807,7 @@ async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
 async function afterCommit(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return entity.__orm.afterCommit.map(async (fn) => fn());
+      return entity.__orm.metadata.config.__data.afterCommit.map(async (fn) => fn(entity));
     });
   });
   await Promise.all(p);

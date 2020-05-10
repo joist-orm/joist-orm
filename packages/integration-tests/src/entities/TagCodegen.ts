@@ -2,6 +2,7 @@ import {
   Flavor,
   ValueFilter,
   OrderBy,
+  ConfigApi,
   BaseEntity,
   EntityManager,
   setOpts,
@@ -13,7 +14,7 @@ import {
   ManyToManyCollection,
   setField,
 } from "joist-orm";
-import { tagMeta, Tag, Book } from "./entities";
+import { Tag, tagMeta, Book } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -35,6 +36,8 @@ export interface TagOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
+
+export const tagConfig = new ConfigApi<Tag>();
 
 export abstract class TagCodegen extends BaseEntity {
   readonly __filterType: TagFilter = null!;

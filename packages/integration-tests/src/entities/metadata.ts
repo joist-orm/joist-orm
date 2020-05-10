@@ -1,5 +1,17 @@
 import { EntityMetadata, PrimaryKeySerde, SimpleSerde, ForeignKeySerde, EnumFieldSerde } from "joist-orm";
-import { Author, Book, BookReview, Publisher, Tag, PublisherSizes } from "./entities";
+import {
+  Author,
+  authorConfig,
+  Book,
+  bookConfig,
+  BookReview,
+  bookReviewConfig,
+  Publisher,
+  publisherConfig,
+  Tag,
+  tagConfig,
+  PublisherSizes,
+} from "./entities";
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
@@ -146,6 +158,7 @@ export const authorMeta: EntityMetadata<Author> = {
       otherFieldName: "author",
     },
   ],
+  config: authorConfig,
 };
 
 (Author as any).metadata = authorMeta;
@@ -235,6 +248,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherFieldName: "books",
     },
   ],
+  config: bookConfig,
 };
 
 (Book as any).metadata = bookMeta;
@@ -297,6 +311,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       otherFieldName: "reviews",
     },
   ],
+  config: bookReviewConfig,
 };
 
 (BookReview as any).metadata = bookReviewMeta;
@@ -366,6 +381,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       otherFieldName: "publisher",
     },
   ],
+  config: publisherConfig,
 };
 
 (Publisher as any).metadata = publisherMeta;
@@ -422,6 +438,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       otherFieldName: "tags",
     },
   ],
+  config: tagConfig,
 };
 
 (Tag as any).metadata = tagMeta;

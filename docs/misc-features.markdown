@@ -218,20 +218,20 @@ Entities can have validation rules added that will be run during `EntityManager.
 class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
-
-    this.addRule(() => {
-      if (this.firstName && this.firstName === this.lastName) {
-        return "firstName and lastName must be different";
-      }
-    });
-
-    // Rules can be async
-    this.addRule(async () => {
-      const books = await this.books.load();
-      // ...
-    });
   })
 }
+
+authorConfig.addRule((author) => {
+  if (author.firstName && author.firstName === author.lastName) {
+    return "firstName and lastName must be different";
+  }
+});
+
+// Rules can be async
+authorConfig.addRule(async (author) => {
+  const books = await authorthis.books.load();
+  // ...
+});
 ```
 
 If any validation rule returns a non-`undefined` string, `flush()` will throw a `ValidationErrors` error.
@@ -255,11 +255,11 @@ There are two lifecycle hooks: `beforeFlush` and `afterCommit`:
 class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
-
-    this.beforeFlush(async () => ...);
-
-    this.afterCommit(async () => ...);
   }
 }
+
+authorConfig.beforeFlush(async () => ...);
+
+authorConfig.afterCommit(async () => ...);
 ```
 

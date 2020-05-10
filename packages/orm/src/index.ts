@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, EntityMetadata, getMetadata, IdOf, OptsOf } from "./EntityManager";
+import { Entity, EntityConstructor, getMetadata, IdOf, Loaded, LoadHint, OptsOf, } from "./EntityManager";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 
 export * from "./EntityManager";
@@ -207,5 +207,40 @@ function errorMessage(errors: ValidationError[]): string {
     return `Validation errors: ${errors.map((e) => e.message).join(", ")}`;
   } else {
     return `Validation errors (${errors.length})`;
+  }
+}
+
+class ConfigData<T extends Entity> {
+  /** The validation rules for this instance. */
+  rules: ValidationRule<T>[] = [];
+  /** The before-flush hooks for this instance. */
+  beforeFlush: Array<(entity: T) => void | Promise<void>> = [];
+  /** The after-commit hooks for this instance. */
+  afterCommit: Array<(entity: T) => void | Promise<void>> = [];
+}
+
+export class ConfigApi<T extends Entity> {
+  __data = new ConfigData<T>();
+
+  addRule<H extends LoadHint<T>>(populate: H, rule: ValidationRule<Loaded<T, H>>): void;
+  addRule(rule: ValidationRule<T>): void;
+  addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+    if (typeof ruleOrHint === "function") {
+      this.__data.rules.push(ruleOrHint);
+    } else {
+      this.__data.rules.push(async (entity) => {
+        const { em } = entity.__orm;
+        const loaded = await em.populate(entity, ruleOrHint);
+        return maybeRule!(loaded);
+      });
+    }
+  }
+
+  beforeFlush(fn: (entity: T) => void | Promise<void>): void {
+    this.__data.beforeFlush.push(fn);
+  }
+
+  afterCommit(fn: (entity: T) => void | Promise<void>): void {
+    this.__data.afterCommit.push(fn);
   }
 }

@@ -2,6 +2,7 @@ import {
   Flavor,
   ValueFilter,
   OrderBy,
+  ConfigApi,
   BaseEntity,
   EntityManager,
   setOpts,
@@ -13,7 +14,7 @@ import {
   Collection,
   OneToManyCollection,
 } from "joist-orm";
-import { publisherMeta, Publisher, PublisherSize, Author, authorMeta } from "./entities";
+import { Publisher, publisherMeta, PublisherSize, Author, authorMeta } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -38,6 +39,8 @@ export interface PublisherOrder {
   updatedAt?: OrderBy;
   size?: OrderBy;
 }
+
+export const publisherConfig = new ConfigApi<Publisher>();
 
 export abstract class PublisherCodegen extends BaseEntity {
   readonly __filterType: PublisherFilter = null!;

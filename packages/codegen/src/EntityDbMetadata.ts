@@ -22,6 +22,8 @@ export type Entity = {
   idType: SymbolSpec;
   /** The symbol pointing to the entity's Order type. */
   orderType: SymbolSpec;
+  /** The symbol pointing to the entity's config const. */
+  configConst: SymbolSpec;
 };
 
 type PrimitiveField = {
@@ -178,6 +180,7 @@ export function makeEntity(entityName: string): Entity {
     metaType: metaType(entityName),
     idType: imp(`${entityName}Id@./entities`, { definedIn: `./${entityName}Codegen` }),
     orderType: imp(`${entityName}Order@./entities`, { definedIn: `./${entityName}Codegen` }),
+    configConst: imp(`${camelCase(entityName)}Config@./entities`, { definedIn: `./${entityName}Codegen` }),
   };
 }
 

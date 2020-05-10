@@ -1,5 +1,5 @@
-import { EntityManager, ValidationError } from "joist-orm";
-import { AuthorCodegen, AuthorOpts, Book } from "./entities";
+import { EntityManager } from "joist-orm";
+import { AuthorCodegen, authorConfig, AuthorOpts } from "./entities";
 
 export class Author extends AuthorCodegen {
   public beforeFlushRan = false;
@@ -7,38 +7,6 @@ export class Author extends AuthorCodegen {
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
-
-    this.addRule(() => {
-      if (this.firstName && this.firstName === this.lastName) {
-        return "firstName and lastName must be different";
-      }
-    });
-
-    this.addRule(() => {
-      if (this.lastName === "NotAllowedLastName") {
-        return "lastName is invalid";
-      }
-    });
-
-    this.addRule(() => {
-      if (this.hasChanged.lastName) {
-        return "lastName cannot be changed";
-      }
-    });
-
-    this.addRule(async () => {
-      const books = await this.books.load();
-      if (books.length > 0 && books.find((b) => b.title === this.firstName)) {
-        return "A book title cannot be the author's firstName";
-      }
-    });
-
-    this.beforeFlush(() => {
-      this.beforeFlushRan = true;
-    });
-    this.afterCommit(() => {
-      this.afterCommitRan = true;
-    });
   }
 
   /** Implements the business logic for a (synchronous) derived primitive. */
@@ -58,3 +26,36 @@ export class Author extends AuthorCodegen {
     }
   }
 }
+
+authorConfig.addRule((a) => {
+  if (a.firstName && a.firstName === a.lastName) {
+    return "firstName and lastName must be different";
+  }
+});
+
+authorConfig.addRule((a) => {
+  if (a.lastName === "NotAllowedLastName") {
+    return "lastName is invalid";
+  }
+});
+
+authorConfig.addRule((a) => {
+  if (a.hasChanged.lastName) {
+    return "lastName cannot be changed";
+  }
+});
+
+authorConfig.addRule(async (a) => {
+  const books = await a.books.load();
+  if (books.length > 0 && books.find((b) => b.title === a.firstName)) {
+    return "A book title cannot be the author's firstName";
+  }
+});
+
+authorConfig.beforeFlush((author) => {
+  author.beforeFlushRan = true;
+});
+
+authorConfig.afterCommit((author) => {
+  author.afterCommitRan = true;
+});

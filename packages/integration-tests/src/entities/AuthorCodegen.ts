@@ -2,6 +2,7 @@ import {
   Flavor,
   ValueFilter,
   OrderBy,
+  ConfigApi,
   BaseEntity,
   EntityManager,
   setOpts,
@@ -17,7 +18,7 @@ import {
   ManyToOneReference,
   setField,
 } from "joist-orm";
-import { authorMeta, Author, Publisher, Book, PublisherId, PublisherOrder, bookMeta } from "./entities";
+import { Author, authorMeta, Publisher, Book, PublisherId, PublisherOrder, bookMeta } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -60,6 +61,8 @@ export interface AuthorOrder {
   mentor?: AuthorOrder;
   publisher?: PublisherOrder;
 }
+
+export const authorConfig = new ConfigApi<Author>();
 
 export abstract class AuthorCodegen extends BaseEntity {
   readonly __filterType: AuthorFilter = null!;

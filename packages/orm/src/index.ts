@@ -293,7 +293,7 @@ export class ConfigApi<T extends Entity> {
   }
 }
 
-type HookFn<T extends Entity> = (entity: T) => MaybePromise<T>;
+type HookFn<T extends Entity> = (entity: T) => MaybePromise<void>;
 
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {

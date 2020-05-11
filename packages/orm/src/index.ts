@@ -1,6 +1,7 @@
 import {
   Entity,
   EntityConstructor,
+  EntityManager,
   EntityMetadata,
   getMetadata,
   IdOf,
@@ -318,4 +319,8 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
       });
     });
   });
+}
+
+export function getEm(entity: Entity): EntityManager {
+  return entity.__orm.em;
 }

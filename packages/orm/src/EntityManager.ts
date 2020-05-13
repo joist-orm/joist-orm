@@ -945,8 +945,11 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   // And "work backgrounds" through the reverse hint
   while (paths.length) {
     const path = paths.shift()!;
-    // Use flat() so that this works with either references or collections
-    current = (await Promise.all(current.map((c) => (c as any)[path].load()))).flat() as Entity[];
+    // The path might touch either a reference or a collection
+    const entitiesOrLists = await Promise.all(current.map((c) => (c as any)[path].load()));
+    // Use flat() to get them all as entities
+    const entities = entitiesOrLists.flat().filter((e) => e !== undefined);
+    current = entities as Entity[];
   }
   return current;
 }

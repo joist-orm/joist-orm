@@ -9,7 +9,14 @@ export interface FieldStatus<T> {
 type NullOrDefinedOr<T> = T | null | undefined;
 type ExcludeNever<T> = Pick<T, { [P in keyof T]: T[P] extends never ? never : P }[keyof T]>;
 
-/** Creates the `this.changes.firstName` changes API for a given entity `T`. */
+/**
+ * Creates the `this.changes.firstName` changes API for a given entity `T`.
+ *
+ * Specifically we use the fields from OptsOf but:
+ *
+ * - Exclude collections
+ * - Convert entity types to id types to match what is stored in originalData
+ */
 export type Changes<T extends Entity> = ExcludeNever<
   {
     [P in keyof OptsOf<T>]-?: OptsOf<T>[P] extends NullOrDefinedOr<infer U>

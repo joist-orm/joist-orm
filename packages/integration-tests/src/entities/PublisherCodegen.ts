@@ -8,8 +8,10 @@ import {
   setOpts,
   OptsOf,
   PartialOrNull,
+  newChangesProxy,
   Entity,
   Lens,
+  FieldStatus,
   newRequiredRule,
   setField,
   Collection,
@@ -39,6 +41,13 @@ export interface PublisherOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
+}
+
+interface PublisherChanges {
+  name: FieldStatus<string>;
+  createdAt: FieldStatus<Date>;
+  updatedAt: FieldStatus<Date>;
+  size: FieldStatus<PublisherSize>;
 }
 
 export const publisherConfig = new ConfigApi<Publisher>();
@@ -99,6 +108,10 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   setUnsafe(values: PartialOrNull<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  }
+
+  get changes(): PublisherChanges {
+    return newChangesProxy(this);
   }
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Publisher, Publisher>) => Lens<U, V>): Promise<V> {

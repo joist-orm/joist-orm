@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
-import { Author, Book, BookId } from "../entities";
-import { insertAuthor } from "./factories";
+import { Author, Book, BookId, Publisher } from "../entities";
+import { insertAuthor, insertPublisher } from "./factories";
 import { newPgConnectionConfig } from "joist-codegen/build/connection";
 import pgStructure from "pg-structure";
 
@@ -129,36 +129,61 @@ describe("Author", () => {
     expect(() => a1.numberOfBooks).toThrow("numberOfBooks has not been derived yet");
   });
 
-  describe("hasChanged", () => {
+  describe("changes", () => {
     it("on create nothing is considered changed", async () => {
       const em = new EntityManager(knex);
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
-      expect(a1.hasChanged.firstName).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.originalValue).toBeUndefined();
     });
 
     it("after initial load nothing is considered changed", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = new EntityManager(knex);
       const a1 = await em.load(Author, "1");
-      expect(a1.hasChanged.firstName).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.originalValue).toBeUndefined();
     });
 
     it("after initial load and mutate then hasChanged is true", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = new EntityManager(knex);
       const a1 = await em.load(Author, "1");
-      expect(a1.hasChanged.firstName).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.originalValue).toBeUndefined();
       a1.firstName = "a2";
-      expect(a1.hasChanged.firstName).toBeTruthy();
+      expect(a1.changes.firstName.hasChanged).toBeTruthy();
+      expect(a1.changes.firstName.originalValue).toEqual("a1");
     });
 
-    it("can enforce validation rules", async () => {
-      await insertAuthor({ first_name: "a1", last_name: "l1" });
+    it("does not have collections", async () => {
+      const em = new EntityManager(knex);
+      const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
+      // @ts-expect-error
+      a1.changes.books;
+    });
+
+    it("works for eferences", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ name: "p2" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = new EntityManager(knex);
       const a1 = await em.load(Author, "1");
-      a1.lastName = "l2";
-      await expect(em.flush()).rejects.toThrow("Validation error: lastName cannot be changed");
+      expect(a1.changes.publisher.hasChanged).toBeFalsy();
+      expect(a1.changes.publisher.originalValue).toBeUndefined();
+      a1.publisher.set(await em.load(Publisher, "2"));
+      expect(a1.changes.publisher.hasChanged).toBeTruthy();
+      expect(a1.changes.publisher.originalValue).toEqual("1");
+
     });
+  });
+
+  it("can enforce validation rules", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    a1.lastName = "l2";
+    await expect(em.flush()).rejects.toThrow("Validation error: lastName cannot be changed");
   });
 
   it("can set new opts", async () => {

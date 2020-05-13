@@ -8,10 +8,13 @@ import {
   setOpts,
   OptsOf,
   PartialOrNull,
+  newChangesProxy,
   Entity,
   Lens,
   EntityFilter,
   FilterOf,
+  FieldStatus,
+  IdOf,
   newRequiredRule,
   Collection,
   OneToManyCollection,
@@ -48,6 +51,14 @@ export interface BookOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
+}
+
+interface BookChanges {
+  title: FieldStatus<string>;
+  order: FieldStatus<number>;
+  createdAt: FieldStatus<Date>;
+  updatedAt: FieldStatus<Date>;
+  author: FieldStatus<IdOf<Author>>;
 }
 
 export const bookConfig = new ConfigApi<Book>();
@@ -127,6 +138,10 @@ export abstract class BookCodegen extends BaseEntity {
 
   setUnsafe(values: PartialOrNull<BookOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  }
+
+  get changes(): BookChanges {
+    return newChangesProxy(this);
   }
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Book, Book>) => Lens<U, V>): Promise<V> {

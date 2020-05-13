@@ -1,5 +1,5 @@
 import { Entity, EntityManager, EntityOrmField, IdOf, OptsOf } from "./EntityManager";
-import { Collection, fail, PartialOrNull, Reference, ValidationRule } from "./index";
+import { Collection, fail, PartialOrNull, Reference } from "./index";
 
 /**
  * A type for declaratively walking the object graph.
@@ -27,7 +27,7 @@ export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
   readonly __orm: EntityOrmField;
 
-  constructor(em: EntityManager, metadata: any) {
+  protected constructor(em: EntityManager, metadata: any) {
     this.__orm = { em, metadata, data: {}, originalData: {} };
     em.register(this);
   }
@@ -73,15 +73,6 @@ export abstract class BaseEntity implements Entity {
 
   abstract setUnsafe(values: PartialOrNull<OptsOf<this>>): void;
 
-  public get hasChanged(): Changed<this> {
-    const entity = this;
-    return (new Proxy(this, {
-      get(target, p: PropertyKey, receiver: any): any {
-        return typeof p === "string" && entity.__orm.originalData[p] !== undefined;
-      },
-    }) as any) as Changed<this>;
-  }
-
   /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
   get idOrFail(): IdOf<this> {
     return this.__orm.data["id"] || fail("Entity has no id yet");
@@ -96,6 +87,3 @@ export abstract class BaseEntity implements Entity {
   }
 }
 
-type Changed<T extends Entity> = {
-  [K in keyof OptsOf<T>]: boolean;
-};

@@ -242,9 +242,10 @@ Entities track which of their properties have changed:
 
 ```typescript
 const a1 = em.load(Author, "1");
-expect(a1.hasChanged.firstName).toBeFalsey();
+expect(a1.changes.firstName.hasChanged).toBeFalsey();
 a1.firstName = "a2";
-expect(a1.hasChanged.firstName).toBeTruthy();
+expect(a1.changes.firstName.hasChanged).toBeTruthy();
+expect(a1.changes.firstName.originalValue).toEqual("a1");
 ```
 
 ### Lifecycle Hooks

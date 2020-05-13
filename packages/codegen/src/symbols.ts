@@ -1,6 +1,7 @@
 import { imp } from "ts-poet";
 
 export const ConfigApi = imp("ConfigApi@joist-orm");
+export const FieldStatus = imp("FieldStatus@joist-orm");
 export const Entity = imp("Entity@joist-orm");
 export const BaseEntity = imp("BaseEntity@joist-orm");
 export const Flavor = imp("Flavor@joist-orm");
@@ -22,9 +23,11 @@ export const setOpts = imp("setOpts@joist-orm");
 export const setField = imp("setField@joist-orm");
 export const OrderBy = imp("OrderBy@joist-orm");
 export const OptsOf = imp("OptsOf@joist-orm");
+export const IdOf = imp("IdOf@joist-orm");
 export const PartialOrNull = imp("PartialOrNull@joist-orm");
 export const ValueFilter = imp("ValueFilter@joist-orm");
 export const EntityFilter = imp("EntityFilter@joist-orm");
 export const FilterOf = imp("FilterOf@joist-orm");
 export const configureMetadata = imp("configureMetadata@joist-orm");
 export const newRequiredRule = imp("newRequiredRule@joist-orm");
+export const newChangesProxy = imp("newChangesProxy@joist-orm");

@@ -324,3 +324,19 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 export function getEm(entity: Entity): EntityManager {
   return entity.__orm.em;
 }
+
+/** Exposes a field's changed/original value in each entity's `this.changes` property. */
+export interface FieldStatus<T> {
+  hasChanged: boolean;
+  originalValue?: T;
+}
+
+export function newChangesProxy(entity: Entity): any {
+  return new Proxy(entity, {
+    get(target, p: PropertyKey): FieldStatus<any> {
+      const originalValue = typeof p === "string" && entity.__orm.originalData[p];
+      const hasChanged = typeof p === "string" && p in entity.__orm.originalData && entity.id !== undefined;
+      return { hasChanged, originalValue };
+    },
+  });
+}

@@ -8,11 +8,14 @@ import {
   Entity as EntitySym,
   EntityFilter,
   EntityManager,
+  FieldStatus,
   FilterOf,
   Flavor,
+  IdOf,
   Lens,
   ManyToManyCollection,
   ManyToOneReference,
+  newChangesProxy,
   newRequiredRule,
   OneToManyCollection,
   OptsOf,
@@ -177,6 +180,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${generateOrderFields(meta)}
     }
 
+    interface ${entityName}Changes {
+      ${generateChanges(config, meta)}
+    }
+
     export const ${configName} = new ${ConfigApi}<${entity.type}>();
 
     ${generateDefaultValidationRules(meta, configName)}
@@ -204,6 +211,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       setUnsafe(values: ${PartialOrNull}<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
         ${setOpts}(this, values as ${OptsOf}<this>, { ignoreUndefined: true, ...opts });
+      }
+
+      get changes(): ${entityName}Changes {
+        return ${newChangesProxy}(this);
       }
 
       async load<U extends ${EntitySym}, V extends U | U[]>(
@@ -247,6 +258,20 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
+}
+
+/** Makes the entity's `Changes` properties. */
+function generateChanges(config: Config, meta: EntityDbMetadata): Code[] {
+  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
+    return code`${fieldName}: ${FieldStatus}<${fieldType}>;`;
+  });
+  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
+    return code`${fieldName}: ${FieldStatus}<${enumType}>;`;
+  });
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}: ${FieldStatus}<${IdOf}<${otherEntity.type}>>;`;
+  });
+  return [...primitives, ...enums, ...m2o];
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {

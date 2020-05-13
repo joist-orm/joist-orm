@@ -42,7 +42,7 @@ authorConfig.addRule((a) => {
 });
 
 authorConfig.addRule((a) => {
-  if (a.hasChanged.lastName) {
+  if (a.changes.lastName.hasChanged) {
     return "lastName cannot be changed";
   }
 });

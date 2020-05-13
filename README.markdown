@@ -51,13 +51,14 @@ After checkout:
 In general priority/itch order:
  
 - Fix reactive rules not catching old-value vs. new-value
+- Fix reactive rules not catching "middle-references" changing
 - Optionally move `begin` to the start of Unit of Work
 - Codegen'd test builders 
 - Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)
 - Support user-defined types
 - LargeCollection support
   - I.e. `joist-config.json` entry to mark (say) `publisher.authors` as "too big to never read at once" and use a different/restricted API, i.e. forced paging
-- JSON support, i.e. [upsertGraph](https://vincit.github.io/objection.js/guide/query-examples.html#graph-inserts)/`toJSON`
+- JSON support, i.e. `toJSON`
 - Cascading deletions for parent/child relationships
 - First-class support for soft deletion?
 - Op locks/`version` column?

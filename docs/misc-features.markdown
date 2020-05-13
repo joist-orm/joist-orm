@@ -165,6 +165,13 @@ type AuthorInput {
 }
 ```
 
+There is also a `createOrUpdateUnsafe` method that will conditionally create-or-update an entity, while accepting partial-update/"`null`-means-unset" opts (and, per above, still apply runtime validation that no required fields are unset):
+
+```graphql
+const firstName: string | undefined | null = "...fromPartialApi...";
+await createOrUpdateUnsafe(em, Author, null, { firstName });
+```
+
 ### Fast database resets
 
 To reset the database between each unit test, Joist generates a stored procedure that will delete all rows/reset the sequence ids:

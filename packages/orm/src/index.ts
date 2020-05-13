@@ -340,3 +340,21 @@ export function newChangesProxy(entity: Entity): any {
     },
   });
 }
+
+/**
+ * A utility function to create-or-update entities coming from a partial-update style API.
+ */
+export async function createOrUpdateUnsafe<T extends Entity>(
+  em: EntityManager,
+  constructor: EntityConstructor<T>,
+  id: IdOf<T> | undefined | null,
+  opts: PartialOrNull<OptsOf<T>>,
+): Promise<T> {
+  if (id === null || id === undefined) {
+    return em.createUnsafe(constructor, opts);
+  } else {
+    const entity = await em.load(constructor, id);
+    entity.setUnsafe(opts);
+    return entity;
+  }
+}

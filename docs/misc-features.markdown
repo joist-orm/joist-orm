@@ -165,12 +165,25 @@ type AuthorInput {
 }
 ```
 
-There is also a `createOrUpdateUnsafe` method that will conditionally create-or-update an entity, while accepting partial-update/"`null`-means-unset" opts (and, per above, still apply runtime validation that no required fields are unset):
+There is also a `EntityManager.createOrUpdateUnsafe` method that will conditionally create-or-update an entity, while accepting partial-update/"`null`-means-unset" opts (and, per above, still apply runtime validation that no required fields are unset):
 
-```graphql
-const firstName: string | undefined | null = "...fromPartialApi...";
-await createOrUpdateUnsafe(em, Author, null, { firstName });
+```typescript
+// Partial-update-typed variables from incoming API call
+const id: number | undefined | null = 0;
+const firstName: string | undefined | null = "...fromApi...";
+const mentorId: number | undefined | null = 1;
+const newBooks: Array<{ title: string | undefined | null }> = [{ title: "...fromApi..." }];
+await em.createOrUpdateUnsafe(Author, {
+ id,
+ firstName,
+ mentor: mentorId,
+ books: newBooks
+});
 ```
+
+Note how, unlike the `create` and `set` methods that are synchronous and so only accept `Entity` values for opts like `mentor` and `books`, `createOrUpdateUnsafe` accepts partials of references/collections and will recursively `createOrUpdateUnsafe` nested partials into the appropriate new-or-found entities based on the presence of `id` fields.
+
+This effectively mimicks Objection.js's [`upsertGraph`](https://vincit.github.io/objection.js/guide/query-examples.html#graph-upserts), with the same disclaimer that you should only pass trusted/white-listed keys to `createOrUpdateUnsafe` (i.e. keys from a validated/subset GraphQL input type) and not just whatever form fields the user has happened to HTTP POST to your endpoint.
 
 ### Fast database resets
 

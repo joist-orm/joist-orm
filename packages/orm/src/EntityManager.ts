@@ -13,6 +13,7 @@ import {
   Reference,
   Relation,
   setField,
+  setOpts,
   ValidationError,
   ValidationErrors,
 } from "./index";
@@ -282,7 +283,12 @@ export class EntityManager {
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
   public createUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
-    return new type(this, opts) as any;
+    // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
+    // mean "ignore" (and we assume validation rules will catch it later) but still set
+    // `calledFromConstructor` because this is _basically_ like calling `new`.
+    const entity = new (type as any)(this) as T;
+    setOpts(entity, opts as any, { ignoreUndefined: true, calledFromConstructor: true });
+    return entity;
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */

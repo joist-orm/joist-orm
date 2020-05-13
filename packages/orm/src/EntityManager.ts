@@ -565,6 +565,7 @@ export class EntityManager {
                 if (c instanceof AbstractRelationImpl) {
                   return c.refreshIfLoaded();
                 }
+                return undefined;
               }),
             );
           }

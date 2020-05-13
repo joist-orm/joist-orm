@@ -4,7 +4,6 @@
     "target": "es2019",
     "module": "commonjs",
     "lib": ["es2019"],
-    "downlevelIteration": true,
     "strict": true,
     "types": ["jest", "node"],
     "esModuleInterop": true,

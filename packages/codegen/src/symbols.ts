@@ -30,4 +30,5 @@ export const EntityFilter = imp("EntityFilter@joist-orm");
 export const FilterOf = imp("FilterOf@joist-orm");
 export const configureMetadata = imp("configureMetadata@joist-orm");
 export const newRequiredRule = imp("newRequiredRule@joist-orm");
+export const Changes = imp("Changes@joist-orm");
 export const newChangesProxy = imp("newChangesProxy@joist-orm");

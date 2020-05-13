@@ -8,13 +8,12 @@ import {
   setOpts,
   OptsOf,
   PartialOrNull,
+  Changes,
   newChangesProxy,
   Entity,
   Lens,
   EntityFilter,
   FilterOf,
-  FieldStatus,
-  IdOf,
   newRequiredRule,
   Reference,
   ManyToOneReference,
@@ -43,13 +42,6 @@ export interface BookReviewOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   book?: BookOrder;
-}
-
-interface BookReviewChanges {
-  rating: FieldStatus<number>;
-  createdAt: FieldStatus<Date>;
-  updatedAt: FieldStatus<Date>;
-  book: FieldStatus<IdOf<Book>>;
 }
 
 export const bookReviewConfig = new ConfigApi<BookReview>();
@@ -105,8 +97,8 @@ export abstract class BookReviewCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 
-  get changes(): BookReviewChanges {
-    return newChangesProxy(this);
+  get changes(): Changes<BookReview> {
+    return newChangesProxy((this as any) as BookReview);
   }
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<BookReview, BookReview>) => Lens<U, V>): Promise<V> {

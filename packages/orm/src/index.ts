@@ -332,14 +332,29 @@ export interface FieldStatus<T> {
   originalValue?: T;
 }
 
-export function newChangesProxy(entity: Entity): any {
+type ExcludeNever<T> = Pick<T, { [P in keyof T]: T[P] extends never ? never : P }[keyof T]>;
+
+/** Creates the `this.changes.firstName` changes API for a given entity `T`. */
+export type Changes<T extends Entity> = ExcludeNever<
+  {
+    [P in keyof OptsOf<T>]-?: OptsOf<T>[P] extends NullOrDefinedOr<infer U>
+      ? U extends Array<any>
+        ? never
+        : U extends Entity
+        ? FieldStatus<IdOf<U>>
+        : FieldStatus<U>
+      : never;
+  }
+>;
+
+export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
   return new Proxy(entity, {
     get(target, p: PropertyKey): FieldStatus<any> {
       const originalValue = typeof p === "string" && entity.__orm.originalData[p];
       const hasChanged = typeof p === "string" && p in entity.__orm.originalData && entity.id !== undefined;
       return { hasChanged, originalValue };
     },
-  });
+  }) as any;
 }
 
 // Utility type to strip off null and defined and infer only T.

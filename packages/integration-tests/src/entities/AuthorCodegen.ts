@@ -8,13 +8,12 @@ import {
   setOpts,
   OptsOf,
   PartialOrNull,
+  Changes,
   newChangesProxy,
   Entity,
   Lens,
   EntityFilter,
   FilterOf,
-  FieldStatus,
-  IdOf,
   newRequiredRule,
   Collection,
   OneToManyCollection,
@@ -66,20 +65,6 @@ export interface AuthorOrder {
   updatedAt?: OrderBy;
   mentor?: AuthorOrder;
   publisher?: PublisherOrder;
-}
-
-interface AuthorChanges {
-  firstName: FieldStatus<string>;
-  lastName: FieldStatus<string>;
-  initials: FieldStatus<string>;
-  numberOfBooks: FieldStatus<number>;
-  isPopular: FieldStatus<boolean>;
-  age: FieldStatus<number>;
-  wasEverPopular: FieldStatus<boolean>;
-  createdAt: FieldStatus<Date>;
-  updatedAt: FieldStatus<Date>;
-  mentor: FieldStatus<IdOf<Author>>;
-  publisher: FieldStatus<IdOf<Publisher>>;
 }
 
 export const authorConfig = new ConfigApi<Author>();
@@ -201,8 +186,8 @@ export abstract class AuthorCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 
-  get changes(): AuthorChanges {
-    return newChangesProxy(this);
+  get changes(): Changes<Author> {
+    return newChangesProxy((this as any) as Author);
   }
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Author, Author>) => Lens<U, V>): Promise<V> {

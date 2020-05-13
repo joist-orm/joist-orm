@@ -3,15 +3,14 @@ import { code, Code, imp } from "ts-poet";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import {
   BaseEntity,
+  Changes,
   Collection,
   ConfigApi,
   Entity as EntitySym,
   EntityFilter,
   EntityManager,
-  FieldStatus,
   FilterOf,
   Flavor,
-  IdOf,
   Lens,
   ManyToManyCollection,
   ManyToOneReference,
@@ -180,10 +179,6 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${generateOrderFields(meta)}
     }
 
-    interface ${entityName}Changes {
-      ${generateChanges(config, meta)}
-    }
-
     export const ${configName} = new ${ConfigApi}<${entity.type}>();
 
     ${generateDefaultValidationRules(meta, configName)}
@@ -213,8 +208,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         ${setOpts}(this, values as ${OptsOf}<this>, { ignoreUndefined: true, ...opts });
       }
 
-      get changes(): ${entityName}Changes {
-        return ${newChangesProxy}(this);
+      get changes(): ${Changes}<${entityName}> {
+        return ${newChangesProxy}(this as any as ${entityName});
       }
 
       async load<U extends ${EntitySym}, V extends U | U[]>(
@@ -258,20 +253,6 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
-}
-
-/** Makes the entity's `Changes` properties. */
-function generateChanges(config: Config, meta: EntityDbMetadata): Code[] {
-  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
-    return code`${fieldName}: ${FieldStatus}<${fieldType}>;`;
-  });
-  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
-    return code`${fieldName}: ${FieldStatus}<${enumType}>;`;
-  });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}: ${FieldStatus}<${IdOf}<${otherEntity.type}>>;`;
-  });
-  return [...primitives, ...enums, ...m2o];
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {

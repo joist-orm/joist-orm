@@ -8,10 +8,10 @@ import {
   setOpts,
   OptsOf,
   PartialOrNull,
+  Changes,
   newChangesProxy,
   Entity,
   Lens,
-  FieldStatus,
   newRequiredRule,
   Collection,
   ManyToManyCollection,
@@ -38,12 +38,6 @@ export interface TagOrder {
   name?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-}
-
-interface TagChanges {
-  name: FieldStatus<string>;
-  createdAt: FieldStatus<Date>;
-  updatedAt: FieldStatus<Date>;
 }
 
 export const tagConfig = new ConfigApi<Tag>();
@@ -100,8 +94,8 @@ export abstract class TagCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 
-  get changes(): TagChanges {
-    return newChangesProxy(this);
+  get changes(): Changes<Tag> {
+    return newChangesProxy((this as any) as Tag);
   }
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Tag, Tag>) => Lens<U, V>): Promise<V> {

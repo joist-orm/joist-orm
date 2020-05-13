@@ -452,12 +452,25 @@ describe("EntityManager", () => {
     }).toThrow("firstName is required");
   });
 
-  it("can createUnsafe without a required field", async () => {
+  it("cannot createUnsafe without a required field", async () => {
     const em = new EntityManager(knex);
     expect(() => {
       // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
       em.createUnsafe(Author, { firstName: null });
     }).toThrow("firstName is required");
+  });
+
+  it("can createUnsafe with an optional reference being undefined", async () => {
+    const em = new EntityManager(knex);
+    em.createUnsafe(Author, { firstName: "a1", mentor: undefined });
+    await em.flush();
+  });
+
+  it("cannot createUnsafe with a required reference being undefined", async () => {
+    const em = new EntityManager(knex);
+    expect(() => {
+      em.createUnsafe(Book, { title: "b1", author: undefined });
+    }).toThrow("author is required");
   });
 
   it("cannot set with a null required field", async () => {

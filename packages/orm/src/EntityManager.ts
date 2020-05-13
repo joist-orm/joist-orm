@@ -62,7 +62,7 @@ export interface Entity {
 
   __orm: EntityOrmField;
 
-  isNew: boolean;
+  readonly isNew: boolean;
 
   set(opts: Partial<OptsOf<this>>): void;
 

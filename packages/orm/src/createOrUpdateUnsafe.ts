@@ -4,7 +4,7 @@ import { PartialOrNull } from "./index";
 
 type NullOrDefinedOr<T> = T | null | undefined;
 
-type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & Foo<PartialOrNull<OptsOf<T>>>;
+export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & Foo<PartialOrNull<OptsOf<T>>>;
 
 type Foo<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>

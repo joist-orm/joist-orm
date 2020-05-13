@@ -1,4 +1,4 @@
-import { createOrUpdateUnsafe, EntityManager } from "joist-orm";
+import { EntityManager } from "joist-orm";
 import { knex } from "./setupDbTests";
 import { Author } from "./entities";
 import { insertAuthor } from "./entities/factories";
@@ -6,13 +6,13 @@ import { insertAuthor } from "./entities/factories";
 describe("EntityManager", () => {
   it("can create new entity with valid data", async () => {
     const em = new EntityManager(knex);
-    const a1 = await createOrUpdateUnsafe(em, Author, { firstName: "a1" });
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1" });
     expect(a1.firstName).toEqual("a1");
   });
 
   it("fails to create new entity with invalid data", async () => {
     const em = new EntityManager(knex);
-    await expect(createOrUpdateUnsafe(em, Author, { id: null, firstName: null })).rejects.toThrow(
+    await expect(em.createOrUpdateUnsafe(Author, { id: null, firstName: null })).rejects.toThrow(
       "firstName is required",
     );
   });
@@ -20,21 +20,21 @@ describe("EntityManager", () => {
   it("can update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
-    const a1 = await createOrUpdateUnsafe(em, Author, { id: "1", firstName: "a2" });
+    const a1 = await em.createOrUpdateUnsafe(Author, { id: "1", firstName: "a2" });
     expect(a1.firstName).toEqual("a2");
   });
 
   it("fails to update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
-    await expect(createOrUpdateUnsafe(em, Author, { id: "1", firstName: null })).rejects.toThrow(
+    await expect(em.createOrUpdateUnsafe(Author, { id: "1", firstName: null })).rejects.toThrow(
       "firstName is required",
     );
   });
 
   it("can create new children with valid data", async () => {
     const em = new EntityManager(knex);
-    const a1 = await createOrUpdateUnsafe(em, Author, {
+    const a1 = await em.createOrUpdateUnsafe(Author, {
       firstName: "a1",
       mentor: { firstName: "m1" },
       books: [{ title: "b1" }],
@@ -47,7 +47,7 @@ describe("EntityManager", () => {
   it("can update existing references with valid data", async () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
-    const a1 = await createOrUpdateUnsafe(em, Author, {
+    const a1 = await em.createOrUpdateUnsafe(Author, {
       firstName: "a1",
       mentor: { id: "1", firstName: "m2" },
     });

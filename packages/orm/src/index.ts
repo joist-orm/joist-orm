@@ -17,7 +17,7 @@ export * from "./serde";
 export * from "./connection";
 export * from "./reverseHint";
 export * from "./changes";
-export * from "./createOrUpdateUnsafe";
+export { DeepPartialOrNull } from "./createOrUpdateUnsafe";
 export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";

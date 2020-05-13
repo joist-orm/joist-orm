@@ -6,6 +6,8 @@ import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import {
   Collection,
   ConfigApi,
+  createOrUpdateUnsafe,
+  DeepPartialOrNull,
   LoadedCollection,
   LoadedReference,
   PartialOrNull,
@@ -281,6 +283,11 @@ export class EntityManager {
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
   public createUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
     return new type(this, opts) as any;
+  }
+
+  /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
+  public createOrUpdateUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
+    return createOrUpdateUnsafe(this, type, opts);
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

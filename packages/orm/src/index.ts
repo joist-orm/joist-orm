@@ -209,7 +209,7 @@ type MaybePromise<T> = T | PromiseLike<T>;
 export type ValidationError = { entity: Entity; message: string };
 
 export class ValidationErrors extends Error {
-  constructor(errors: ValidationError[]) {
+  constructor(public errors: ValidationError[]) {
     super(errorMessage(errors));
   }
 }

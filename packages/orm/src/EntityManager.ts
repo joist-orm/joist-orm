@@ -920,9 +920,11 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
     const { asyncDerivedFields } = todo.metadata.config.__data;
     const changed = [...todo.inserts, ...todo.updates];
     const p = Object.entries(asyncDerivedFields).map(async ([key, entry]) => {
-      const [hint, fn] = entry;
-      await em.populate(changed, hint);
-      await Promise.all(changed.map((entity) => setField(entity, key, fn(entity))));
+      if (entry) {
+        const [hint, fn] = entry;
+        await em.populate(changed, hint);
+        await Promise.all(changed.map((entity) => setField(entity, key, fn(entity))));
+      }
     });
     await Promise.all(p);
   });

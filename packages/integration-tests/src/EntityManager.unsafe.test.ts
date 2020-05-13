@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "./setupDbTests";
 import { Author } from "./entities";
-import { insertAuthor } from "./entities/factories";
+import { insertAuthor, insertBook } from "./entities/factories";
 
 describe("EntityManager", () => {
   it("can create new entity with valid data", async () => {
@@ -55,5 +55,27 @@ describe("EntityManager", () => {
     expect((await a1.mentor.load())!.firstName).toEqual("m2");
     await em.flush();
     expect((await knex.count().from("authors"))[0]).toEqual({ count: "2" });
+  });
+
+  it("references can refer to entities by id", async () => {
+    await insertAuthor({ first_name: "m1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, {
+      firstName: "a1",
+      mentor: "1",
+    });
+    expect(a1.firstName).toEqual("a1");
+    expect((await a1.mentor.load())!.firstName).toEqual("m1");
+  });
+
+  it("collections can refer to entities by id", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, {
+      firstName: "a2",
+      books: ["1"],
+    });
+    expect((await a1.books.load())[0].title).toEqual("b1");
   });
 });

@@ -772,6 +772,10 @@ export function isEntity(e: any): e is Entity {
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
 }
 
+export function isKey(k: any): k is string {
+  return typeof k === "string";
+}
+
 /** Compares `a` to `b`, where `b` might be an id. B/c ids can overlap, we need to know `b`'s metadata type. */
 export function sameEntity(a: Entity, bMeta: EntityMetadata<any>, bCurrent: Entity | string | undefined): boolean {
   if (a === undefined || bCurrent === undefined) {

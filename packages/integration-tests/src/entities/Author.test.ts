@@ -242,11 +242,11 @@ describe("Author", () => {
     expect(i).toBeTruthy();
   });
 
-  it("has isNew", async () => {
+  it("has isNewEntity", async () => {
     const em = new EntityManager(knex);
     const a1 = await em.create(Author, { firstName: "a1" });
-    expect(a1.isNew).toBeTruthy();
+    expect(a1.isNewEntity).toBeTruthy();
     await em.flush();
-    expect(a1.isNew).toBeFalsy();
+    expect(a1.isNewEntity).toBeFalsy();
   });
 });

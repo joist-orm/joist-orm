@@ -10,6 +10,15 @@ export function createEntityTable(b: MigrationBuilder, tableName: string, column
     created_at: { type: "timestamptz", notNull: true },
     updated_at: { type: "timestamptz", notNull: true },
   });
+
+  // Postgres doesn't automatically index foreign keys, so any column def points at
+  // another table, assume we'll be doing a lot of lookups on this column and should fk it.
+  Object.entries(columns).forEach(([name, def]) => {
+    if (typeof def === "object" && def.references) {
+      b.sql(`CREATE INDEX ${tableName}_${name}_idx ON ${tableName} USING btree (${name})`);
+    }
+  });
+
   createTriggers(b, tableName);
 }
 
@@ -20,7 +29,7 @@ export function createEnumTable(b: MigrationBuilder, tableName: string, values: 
     name: { type: "text", notNull: true },
   });
   b.addConstraint(tableName, `${tableName}_unique_enum_code_constraint`, "UNIQUE (code)");
-  values.forEach(value => addEnumValue(b, tableName, value));
+  values.forEach((value) => addEnumValue(b, tableName, value));
 }
 export function addEnumValue(b: MigrationBuilder, tableName: string, value: [string, string]): void {
   const [code, name] = value;

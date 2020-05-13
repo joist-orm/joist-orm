@@ -2,6 +2,8 @@ import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
 import { Author, Book, BookId } from "../entities";
 import { insertAuthor } from "./factories";
+import { newPgConnectionConfig } from "joist-codegen/build/connection";
+import pgStructure from "pg-structure";
 
 describe("Author", () => {
   it("can have business logic methods", async () => {
@@ -204,5 +206,14 @@ describe("Author", () => {
     const em = new EntityManager(knex);
     em.createUnsafe(Author, {});
     await expect(em.flush()).rejects.toThrow("Validation error: firstName is required");
+  });
+
+  it("has an index on the publisher_id foreign key", async () => {
+    // Ensures createEntityTable automatically creates indexes for foreign keys.
+    const pgConfig = newPgConnectionConfig();
+    const db = await pgStructure(pgConfig);
+    const t = db.tables.find((t) => t.name === "authors")!;
+    const i = t.indexes.find((i) => i.name === "authors_publisher_id_idx")!;
+    expect(i).toBeTruthy();
   });
 });

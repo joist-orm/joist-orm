@@ -6,7 +6,6 @@ import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import {
   Collection,
   ConfigApi,
-  createOrUpdateUnsafe,
   DeepPartialOrNull,
   LoadedCollection,
   LoadedReference,
@@ -21,6 +20,7 @@ import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
+import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;

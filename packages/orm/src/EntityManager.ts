@@ -62,6 +62,8 @@ export interface Entity {
 
   __orm: EntityOrmField;
 
+  isNew: boolean;
+
   set(opts: Partial<OptsOf<this>>): void;
 
   setUnsafe(values: PartialOrNull<OptsOf<this>>): void;

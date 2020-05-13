@@ -241,4 +241,12 @@ describe("Author", () => {
     const i = t.indexes.find((i) => i.name === "authors_publisher_id_idx")!;
     expect(i).toBeTruthy();
   });
+
+  it("has isNew", async () => {
+    const em = new EntityManager(knex);
+    const a1 = await em.create(Author, { firstName: "a1" });
+    expect(a1.isNew).toBeTruthy();
+    await em.flush();
+    expect(a1.isNew).toBeFalsy();
+  });
 });

@@ -61,7 +61,6 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: "1" });
-    expect(a1.firstName).toEqual("a1");
     expect((await a1.mentor.load())!.firstName).toEqual("m1");
   });
 
@@ -69,7 +68,6 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: null });
-    expect(a1.firstName).toEqual("a1");
     expect(a1.mentor.isSet()).toBeFalsy();
   });
 
@@ -77,7 +75,6 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: undefined });
-    expect(a1.firstName).toEqual("a1");
     expect(a1.mentor.isSet()).toBeFalsy();
   });
 
@@ -85,7 +82,6 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: await em.load(Author, "1") });
-    expect(a1.firstName).toEqual("a1");
     expect(a1.mentor.id).toEqual("1");
   });
 

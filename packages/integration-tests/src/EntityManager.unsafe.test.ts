@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "./setupDbTests";
-import { Author } from "./entities";
+import { Author, Book } from "./entities";
 import { insertAuthor, insertBook } from "./entities/factories";
 
 describe("EntityManager", () => {
@@ -60,7 +60,7 @@ describe("EntityManager", () => {
   it("references can refer to entities by id", async () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
-    const mentorId: string | undefined | null = "1" as any;
+    const mentorId: string | undefined | null | Author = "1" as any;
     const a1 = await em.createOrUpdateUnsafe(Author, {
       firstName: "a1",
       mentor: mentorId,
@@ -73,7 +73,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
-    const bookIds: string[] | undefined | null = ["1"] as any;
+    const bookIds: string[] | undefined | null | Book[] = ["1"] as any;
     const a1 = await em.createOrUpdateUnsafe(Author, {
       firstName: "a2",
       books: bookIds,

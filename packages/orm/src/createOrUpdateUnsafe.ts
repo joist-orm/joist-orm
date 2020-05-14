@@ -10,10 +10,10 @@ type Foo<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<DeepPartialOrNull<V> | IdOf<V>> | null
+        ? Array<V | DeepPartialOrNull<V> | IdOf<V>> | null
         : T[P]
       : U extends Entity
-      ? DeepPartialOrNull<U> | IdOf<U> | null
+      ? U | DeepPartialOrNull<U> | IdOf<U> | null
       : T[P]
     : T[P];
 };

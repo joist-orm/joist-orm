@@ -4,9 +4,19 @@ import { PartialOrNull } from "./index";
 
 type NullOrDefinedOr<T> = T | null | undefined;
 
-export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & Foo<PartialOrNull<OptsOf<T>>>;
+/**
+ * The type for `EntityManager.createOrUpdateUnsafe` that allows "upsert"-ish behavior.
+ *
+ * I.e. `T` is an entity with an optional id (create if unset, update if set), and we recurse
+ * into any relations (references or collections) to allow those relations themselves to be
+ * any combination of 1) ids to existing entities, 2) entities directly, 3) null/undefined
+ * with the appropriate partial-update behavior, or 4) partials.
+ */
+export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & AllowRelationsToBeIdsOrEntitiesOrPartials<
+  PartialOrNull<OptsOf<T>>
+>;
 
-type Foo<T> = {
+type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity

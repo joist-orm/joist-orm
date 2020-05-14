@@ -33,7 +33,9 @@ export async function createOrUpdateUnsafe<T extends Entity>(
   const p = Object.entries(others).map(async ([key, value]) => {
     const field = meta.fields.find((f) => f.fieldName === key)!;
     if (field.kind === "m2o" && !isEntity(value)) {
-      if (isKey(value)) {
+      if (!value || isEntity(value)) {
+        return [key, value];
+      } else if (isKey(value)) {
         // This is a many-to-one reference
         const entity = await em.load(field.otherMetadata().cstr, value);
         return [key, entity];
@@ -44,15 +46,17 @@ export async function createOrUpdateUnsafe<T extends Entity>(
       }
     } else if (field.kind === "o2m" || field.kind === "m2m") {
       // Look for one-to-many/many-to-many partials
-      const entities = (value as Array<any>).map(async (value) => {
-        if (isEntity(value)) {
-          return value;
-        } else if (isKey(value)) {
-          return await em.load(field.otherMetadata().cstr, value);
-        } else {
-          return await createOrUpdateUnsafe(em, field.otherMetadata().cstr, value as any);
-        }
-      });
+      const entities = !value
+        ? []
+        : (value as Array<any>).map(async (value) => {
+            if (!value || isEntity(value)) {
+              return value;
+            } else if (isKey(value)) {
+              return await em.load(field.otherMetadata().cstr, value);
+            } else {
+              return await createOrUpdateUnsafe(em, field.otherMetadata().cstr, value as any);
+            }
+          });
       return [key, await Promise.all(entities)];
     } else {
       return [key, value];

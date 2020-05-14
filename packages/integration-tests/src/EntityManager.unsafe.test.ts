@@ -60,24 +60,64 @@ describe("EntityManager", () => {
   it("references can refer to entities by id", async () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
-    const mentorId: string | undefined | null | Author = "1" as any;
-    const a1 = await em.createOrUpdateUnsafe(Author, {
-      firstName: "a1",
-      mentor: mentorId,
-    });
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: "1" });
     expect(a1.firstName).toEqual("a1");
     expect((await a1.mentor.load())!.firstName).toEqual("m1");
+  });
+
+  it("references can refer to null", async () => {
+    await insertAuthor({ first_name: "m1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: null });
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.mentor.isSet()).toBeFalsy();
+  });
+
+  it("references can refer to undefined", async () => {
+    await insertAuthor({ first_name: "m1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: undefined });
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.mentor.isSet()).toBeFalsy();
+  });
+
+  it("references can refer to entity", async () => {
+    await insertAuthor({ first_name: "m1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a1", mentor: await em.load(Author, "1") });
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.mentor.id).toEqual("1");
   });
 
   it("collections can refer to entities by id", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
-    const bookIds: string[] | undefined | null | Book[] = ["1"] as any;
-    const a1 = await em.createOrUpdateUnsafe(Author, {
-      firstName: "a2",
-      books: bookIds,
-    });
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a2", books: ["1"] });
+    expect((await a1.books.load())[0].title).toEqual("b1");
+  });
+
+  it("collections can refer to null", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a2", books: null });
+    expect(await a1.books.load()).toEqual([]);
+  });
+
+  it("collections can refer to undefined", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a2", books: undefined });
+    expect(await a1.books.load()).toEqual([]);
+  });
+
+  it("collections can refer to entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdateUnsafe(Author, { firstName: "a2", books: [await em.load(Book, "1")] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
 });

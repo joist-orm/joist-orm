@@ -968,8 +968,8 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
         // see if Book.author has changed so we can re-validate both the old author's books and the
         // new author's books.
         const isReference = getMetadata(c).fields.find((f) => f.fieldName === fieldName)?.kind === "m2o";
-        const hasChanged = (c as any).changes[fieldName].hasChanged;
-        if (isReference && hasChanged) {
+        const hasChanged = isReference && (c as any).changes[fieldName].hasChanged;
+        if (hasChanged) {
           const originalValue = (c as any).changes[fieldName].originalValue;
           const originalEntityMaybePromise = isEntity(originalValue)
             ? originalValue

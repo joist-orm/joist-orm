@@ -285,6 +285,12 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       serde: new SimpleSerde("rating", "rating"),
     },
     {
+      fieldName: "isPublic",
+      columnName: "is_public",
+      dbType: "bool",
+      serde: new SimpleSerde("isPublic", "is_public"),
+    },
+    {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamptz",
@@ -309,6 +315,11 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "primitive",
       fieldName: "rating",
+      required: true,
+    },
+    {
+      kind: "primitive",
+      fieldName: "isPublic",
       required: true,
     },
     {

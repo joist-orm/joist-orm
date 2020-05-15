@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
-import { Author, Book, BookId, Publisher } from "../entities";
+import { Author, Book, BookId, BookReview, Publisher } from "../entities";
 import { insertAuthor, insertBook, insertPublisher } from "./factories";
 import { newPgConnectionConfig } from "joist-codegen/build/connection";
 import pgStructure from "pg-structure";
@@ -145,6 +145,27 @@ describe("Author", () => {
     expect(() => a1.numberOfBooks).toThrow("numberOfBooks has not been derived yet");
   });
 
+  it("can derive async fields across multiple hops", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "1");
+    em.create(BookReview, { rating: 1, book: b1 });
+    await em.flush();
+    const rows = await knex.select("is_public").from("book_reviews");
+    expect(rows[0].is_public).toBe(false);
+
+    // When the author age changes
+    const em2 = new EntityManager(knex);
+    const a1 = await em2.load(Author, "1");
+    a1.age = 30;
+    await em2.flush();
+
+    // Then the review is now public
+    const rows2 = await knex.select("is_public").from("book_reviews");
+    expect(rows2[0].is_public).toBe(true);
+  });
+
   describe("changes", () => {
     it("on create nothing is considered changed", async () => {
       const em = new EntityManager(knex);
@@ -179,7 +200,7 @@ describe("Author", () => {
       a1.changes.books;
     });
 
-    it("works for eferences", async () => {
+    it("works for references", async () => {
       await insertPublisher({ name: "p1" });
       await insertPublisher({ name: "p2" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });

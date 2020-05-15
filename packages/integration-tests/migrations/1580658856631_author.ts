@@ -50,6 +50,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "book_reviews", {
     rating: { type: "integer", notNull: true },
     book_id: foreignKey("books", { notNull: true }),
+    is_public: { type: "boolean", notNull: true },
   });
 
   createEntityTable(b, "tags", {

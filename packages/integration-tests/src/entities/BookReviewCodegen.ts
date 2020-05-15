@@ -31,6 +31,7 @@ export interface BookReviewOpts {
 export interface BookReviewFilter {
   id?: ValueFilter<BookReviewId, never>;
   rating?: ValueFilter<number, never>;
+  isPublic?: ValueFilter<boolean, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
@@ -39,6 +40,7 @@ export interface BookReviewFilter {
 export interface BookReviewOrder {
   id?: OrderBy;
   rating?: OrderBy;
+  isPublic?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   book?: BookOrder;
@@ -47,6 +49,7 @@ export interface BookReviewOrder {
 export const bookReviewConfig = new ConfigApi<BookReview>();
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
+bookReviewConfig.addRule(newRequiredRule("isPublic"));
 bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
@@ -79,6 +82,13 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   set rating(rating: number) {
     setField(this, "rating", rating);
+  }
+
+  get isPublic(): boolean {
+    if (!("isPublic" in this.__orm.data)) {
+      throw new Error("isPublic has not been derived yet");
+    }
+    return this.__orm.data["isPublic"];
   }
 
   get createdAt(): Date {

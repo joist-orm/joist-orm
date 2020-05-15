@@ -3,7 +3,8 @@
     "Author.initials"
   ],
   "asyncDerivedFields": [
-    "Author.numberOfBooks"
+    "Author.numberOfBooks",
+    "BookReview.isPublic"
   ],
   "protectedFields": [
     "Author.wasEverPopular"

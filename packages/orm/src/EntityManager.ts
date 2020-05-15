@@ -7,6 +7,7 @@ import {
   Collection,
   ConfigApi,
   DeepPartialOrNull,
+  getEm,
   LoadedCollection,
   LoadedReference,
   PartialOrNull,
@@ -828,6 +829,10 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
   await Promise.all(p);
 }
 
+/**
+ * Given the current changed entities in `todos`, use the static metadata of `reactiveDerivedValues`
+ * to find any potentially-unloaded entities we should now re-calc, and add them to `todos`.
+ */
 async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
@@ -914,7 +919,12 @@ function recalcDerivedFields(entities: Entity[]) {
   }
 }
 
-/** Calcs async derived fields for inserts and updates. */
+/**
+ * Calcs async derived fields for inserts and updates.
+ *
+ * We assume that `addReactiveAsyncDerivedValues` has already found any "reactive"
+ * entities that need fields re-calced, and has already added them to `todos`.
+ */
 async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).map(async (todo) => {
     const { asyncDerivedFields } = todo.metadata.config.__data;
@@ -947,11 +957,28 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   // Start at the current entities
   let current = [...entities];
   const paths = [...reverseHint];
-  // And "work backgrounds" through the reverse hint
+  // And "walk backwards" through the reverse hint
   while (paths.length) {
-    const path = paths.shift()!;
+    const fieldName = paths.shift()!;
     // The path might touch either a reference or a collection
-    const entitiesOrLists = await Promise.all(current.map((c) => (c as any)[path].load()));
+    const entitiesOrLists = await Promise.all(
+      current.flatMap((c) => {
+        const currentValuePromise = (c as any)[fieldName].load();
+        // If we're going from Book.author back to Author to re-validate the Author.books collection,
+        // see if Book.author has changed so we can re-validate both the old author's books and the
+        // new author's books.
+        const isReference = getMetadata(c).fields.find((f) => f.fieldName === fieldName)?.kind === "m2o";
+        const hasChanged = (c as any).changes[fieldName].hasChanged;
+        if (isReference && hasChanged) {
+          const originalValue = (c as any).changes[fieldName].originalValue;
+          const originalEntityMaybePromise = isEntity(originalValue)
+            ? originalValue
+            : getEm(c).load((c as any)[fieldName].otherType, originalValue);
+          return [currentValuePromise, originalEntityMaybePromise];
+        }
+        return [currentValuePromise];
+      }),
+    );
     // Use flat() to get them all as entities
     const entities = entitiesOrLists.flat().filter((e) => e !== undefined);
     current = entities as Entity[];

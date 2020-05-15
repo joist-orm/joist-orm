@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
 import { Author, Book, BookId, Publisher } from "../entities";
-import { insertAuthor, insertPublisher } from "./factories";
+import { insertAuthor, insertBook, insertPublisher } from "./factories";
 import { newPgConnectionConfig } from "joist-codegen/build/connection";
 import pgStructure from "pg-structure";
 
@@ -96,7 +96,7 @@ describe("Author", () => {
     expect(a1.numberOfBooks).toEqual(1);
   });
 
-  it.skip("has async derived values triggered on both old and new value", async () => {
+  it("has async derived values triggered on both old and new value", async () => {
     const em = new EntityManager(knex);
     // Given two authors
     const a1 = new Author(em, { firstName: "a1" });
@@ -112,6 +112,22 @@ describe("Author", () => {
     // Then both derived values got updated
     expect(a1.numberOfBooks).toEqual(0);
     expect(a2.numberOfBooks).toEqual(1);
+  });
+
+  it("has async derived values triggered on both lazy-loaded old and new value", async () => {
+    const em = new EntityManager(knex);
+    // Given a book & author already in the databaseo
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    // When we make a new author for b1 (and a1 is not even in the UnitOfWork)
+    const a2 = new Author(em, { firstName: "a2" });
+    const b1 = await em.load(Book, "1");
+    b1.author.set(a2);
+    await em.flush();
+    // Then both authors derived values got updated
+    const rows = await knex.select("id", "number_of_books").from("authors").orderBy("id");
+    expect(rows[0]).toMatchObject({ id: 1, number_of_books: 0 });
+    expect(rows[1]).toMatchObject({ id: 2, number_of_books: 1 });
   });
 
   it("cannot set async derived value", async () => {
@@ -174,7 +190,6 @@ describe("Author", () => {
       a1.publisher.set(await em.load(Publisher, "2"));
       expect(a1.changes.publisher.hasChanged).toBeTruthy();
       expect(a1.changes.publisher.originalValue).toEqual("1");
-
     });
   });
 

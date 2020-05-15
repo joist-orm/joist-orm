@@ -50,7 +50,6 @@ After checkout:
 
 In general priority/itch order:
  
-- Fix reactive rules not catching old-value vs. new-value
 - Fix reactive rules not catching "middle-references" changing
 - Optionally move `begin` to the start of Unit of Work
 - Codegen'd test builders 

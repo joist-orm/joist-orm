@@ -552,8 +552,8 @@ describe("EntityManager", () => {
       Array [
         "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
         "BEGIN;",
-        "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-        "UPDATE publishers SET \\"name\\" = data.name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"name\\") as data WHERE publishers.id = data.id",
+        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+        "UPDATE publishers SET \\"name\\" = data.\\"name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"name\\") as data WHERE publishers.id = data.id",
         "COMMIT;",
       ]
     `);
@@ -579,14 +579,14 @@ describe("EntityManager", () => {
     );
     // 5 = 1 to (combined) select the publishers, 1 author validation hook, 2 for begin/commit, 1 for bulk update authors.
     expect(queries).toMatchInlineSnapshot(`
-Array [
-  "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) order by \\"__tag\\" asc",
-  "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
-  "BEGIN;",
-  "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-  "COMMIT;",
-]
-`);
+      Array [
+        "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) order by \\"__tag\\" asc",
+        "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
+        "BEGIN;",
+        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+        "COMMIT;",
+      ]
+    `);
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows[0].first_name).toEqual("a1p1");
     expect(rows[1].first_name).toEqual("a2p2");
@@ -625,17 +625,17 @@ Array [
     // some sort of `await latch` would be needed to break the lambdas back in sync.
     // 8 = (1 author validation hook + 2 for begin/commit + 1 for update authors) x 2 for each flush.
     expect(queries).toMatchInlineSnapshot(`
-Array [
-  "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
-  "BEGIN;",
-  "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-  "COMMIT;",
-  "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
-  "BEGIN;",
-  "UPDATE authors SET \\"first_name\\" = data.first_name FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-  "COMMIT;",
-]
-`);
+      Array [
+        "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
+        "BEGIN;",
+        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+        "COMMIT;",
+        "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
+        "BEGIN;",
+        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
+        "COMMIT;",
+      ]
+    `);
     const rows = await knex.select("*").from("authors").orderBy("id");
     expect(rows[0].first_name).toEqual("a1a");
     expect(rows[1].first_name).toEqual("a2b");
@@ -677,10 +677,10 @@ Array [
     expect(numberOfQueries).toEqual(1);
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
-Array [
-  "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" ASC, \\"p0\\".\\"id\\" ASC) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" DESC, \\"p0\\".\\"id\\" DESC) order by \\"__tag\\" asc",
-]
-`);
+      Array [
+        "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" ASC, \\"p0\\".\\"id\\" ASC) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" DESC, \\"p0\\".\\"id\\" DESC) order by \\"__tag\\" asc",
+      ]
+    `);
     // And the results are the expected reverse of each other
     expect(p1.reverse()).toEqual(p2);
   });

@@ -104,7 +104,7 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
       UPDATE ${meta.tableName}
       SET ${columns
         .filter((c) => c.columnName !== "id")
-        .map((c) => `"${c.columnName}" = data.${c.columnName}`)
+        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
       FROM (select ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")}) as data
       WHERE ${meta.tableName}.id = data.id

@@ -50,7 +50,9 @@ After checkout:
 
 In general priority/itch order:
  
+- Open source a `joist-graphql-utils` with the `entityResolver` logic in it
 - Fix reactive rules not catching "middle-references" changing
+- Support `documentId`-style props in unsafe methods
 - Optionally move `begin` to the start of Unit of Work
 - Codegen'd test builders 
 - Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)

@@ -607,6 +607,16 @@ export class EntityManager {
             return queries.map((q) => rows);
           }
 
+          // TODO: Instead of this tagged approach, we could probably check if the each
+          // where cause: a) has the same structure for joins, and b) has conditions that
+          // we can evaluate client-side, and then combine it into a query like:
+          //
+          // SELECT entity.*, t1.foo as condition1, t2.bar as condition2 FROM ...
+          // WHERE t1.foo (union of each queries condition)
+          //
+          // And then use the `condition1` and `condition2` to tease the combined result set
+          // back apart into each condition's result list.
+
           // For each query, add an additional `__tag` column that will identify that query's
           // corresponding rows in the combined/UNION ALL'd result set.
           //

@@ -39,7 +39,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    return (await this.load()).find(u => u.id === id);
+    return (await this.load()).find((u) => u.id === id);
   }
 
   add(other: U): void {
@@ -168,7 +168,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   private maybeAppendAddedBeforeLoaded(): void {
     if (this.loaded) {
-      this.loaded.unshift(...this.addedBeforeLoaded);
+      const newEntities = this.addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
+      this.loaded.unshift(...newEntities);
       this.addedBeforeLoaded = [];
     }
   }

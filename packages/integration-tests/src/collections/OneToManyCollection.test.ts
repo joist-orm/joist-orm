@@ -114,7 +114,7 @@ describe("OneToManyCollection", () => {
     // When we add the book to the 2nd author
     a2_2.books.add(b1_2);
 
-    // Then the book is associtiated with only the 2nd author
+    // Then the book is associated with only the 2nd author
     expect(await b1_2.author.load()).toEqual(a2_2);
     expect((await a1_2.books.load()).length).toEqual(0);
     expect((await a2_2.books.load()).length).toEqual(1);
@@ -202,5 +202,23 @@ describe("OneToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ publisher_id: null }));
     expect(rows[1]).toEqual(expect.objectContaining({ publisher_id: 1 }));
     expect(rows[2]).toEqual(expect.objectContaining({ publisher_id: 1 }));
+  });
+
+  it("does not duplicate items", async () => {
+    // Given the publisher p1 already has an author a1
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+
+    // And we re-add a1 to the unloaded publisher collection
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    const a1 = await em.load(Author, "1");
+    p1.authors.add(a1);
+
+    // When we load authors
+    const authors = await p1.authors.load();
+
+    // Then we still only have one entry
+    expect(authors.length).toEqual(1);
   });
 });

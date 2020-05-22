@@ -65,7 +65,7 @@ In general priority/itch order:
 - Op locks/`version` column?
 - An in-memory backend
 
-## History / Inspiration
+### History / Inspiration
 
 [Joist](https://github.com/stephenh/joist) is also the name for a Java-based ORM I wrote circa 2008.
 
@@ -73,7 +73,7 @@ joist-ts has many of the same ideas (in terms of opinionated codegen), just appl
 
 The `EntityManager.find` syntax is heavily inspired from [MikroORM](https://mikro-orm.io/), as well as the concept of `EntityManager.populate`.
 
-## License
+### License
 
 MIT
 

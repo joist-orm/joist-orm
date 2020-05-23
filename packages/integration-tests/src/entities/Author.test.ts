@@ -2,7 +2,7 @@ import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
 import { Author, Book, BookId, BookReview, Publisher } from "../entities";
 import { insertAuthor, insertBook, insertPublisher } from "./factories";
-import { newPgConnectionConfig } from "joist-codegen/build/connection";
+import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 
 describe("Author", () => {

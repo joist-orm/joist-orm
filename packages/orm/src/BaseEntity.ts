@@ -86,6 +86,18 @@ export abstract class BaseEntity implements Entity {
     return `${this.__orm.metadata.type}#${this.id}`;
   }
 
+  /**
+   * A very simple toJSON.
+   *
+   * This is not really meant as something you would actually put on the
+   * wire as an API response, but instead is to keep accidental/debugging
+   * JSON-ification of an Entity (i.e. by a logger like pino) to not
+   * recurse into all of our References/Collections/EntityManager/etc.
+   *  */
+  public toJSON(): object {
+    return this.__orm.data;
+  }
+
   [Symbol.toStringTag](): string {
     return this.toString();
   }

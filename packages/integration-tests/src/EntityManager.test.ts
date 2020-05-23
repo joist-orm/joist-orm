@@ -816,6 +816,21 @@ describe("EntityManager", () => {
     await em.find(Publisher, { id: "1" });
     expect(numberOfQueries).toEqual(1);
   });
+
+  it("has a simple toJSON", async () => {
+    const em = new EntityManager(knex);
+    expect(JSON.stringify(em)).toEqual(`"<EntityManager 0>"`);
+  });
+
+  it("has a simple toJSON for entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    expect(a1.toJSON()).toMatchObject({
+      id: "1",
+      firstName: "a1",
+    });
+  });
 });
 
 function delay(ms: number): Promise<void> {

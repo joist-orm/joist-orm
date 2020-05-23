@@ -514,6 +514,17 @@ export class EntityManager {
     this.findLoaders = {};
   }
 
+  /**
+   * A very simple toJSON.
+   *
+   * This is not really meant to be useful, it's to prevent huge/circular output if
+   * an EntityManager accidentally ends up getting logged to something like pino that
+   * over-zealous toJSONs anything it touches.
+   */
+  public toJSON(): string {
+    return `<EntityManager ${this.entities.length}>`;
+  }
+
   /** Find all deleted entities and ensure their references all know about their deleted-ness. */
   private async cascadeDeletesIntoUnloadedCollections(): Promise<void> {
     await Promise.all(

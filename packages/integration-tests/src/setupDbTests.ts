@@ -1,6 +1,6 @@
 import Knex from "knex";
 import { config } from "dotenv";
-import { newPgConnectionConfig } from "./connection";
+import { newPgConnectionConfig } from "joist-utils";
 
 if (process.env.DATABASE_CONNECTION_INFO === undefined) {
   config({ path: "./local.env" });

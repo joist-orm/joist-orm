@@ -1,5 +1,4 @@
 {
-  "references": [{ "path": "../codegen" }, { "path": "../migration-utils" }, { "path": "../orm" }],
   "compilerOptions": {
     "target": "es2019",
     "module": "commonjs",
@@ -16,7 +15,14 @@
     "paths": {
       "joist-codegen": ["../codegen/src"],
       "joist-migration-utils": ["../migration-utils/src"],
-      "joist-orm": ["../orm/src"]
+      "joist-orm": ["../orm/src"],
+      "joist-utils": ["../utils/src"]
     }
-  }
+  },
+  "references": [
+    { "path": "../codegen" },
+    { "path": "../migration-utils" },
+    { "path": "../orm" },
+    { "path": "../utils" }
+  ]
 }

@@ -12,10 +12,6 @@
     "sourceMap": true,
     "outDir": "./build",
     "rootDir": "./src",
-    "baseUrl": "./src",
-    "paths": {
-      "joist-utils": ["../../utils/src"]
-    }
-  },
-  "references": [{ "path": "../utils" }]
+    "baseUrl": "./src"
+  }
 }

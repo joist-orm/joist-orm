@@ -1,6 +1,7 @@
 import { ConnectionConfig } from "pg";
-import { fail } from "./utils";
+import { fail } from "./index";
 
+// Matches the AWS RDS/ECS JSON config that is stored/auto-created in ECS. */
 export interface ConnectionInfo {
   dbname: string;
   username: string;

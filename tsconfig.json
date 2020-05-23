@@ -3,7 +3,8 @@
     { "path": "./packages/codegen" },
     { "path": "./packages/integration-tests" },
     { "path": "./packages/migration-utils" },
-    { "path": "./packages/orm" }
+    { "path": "./packages/orm" },
+    { "path": "./packages/utils" }
   ],
   "files": [],
   "include": [],

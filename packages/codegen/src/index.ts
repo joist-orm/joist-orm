@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import { Client } from "pg";
 import { code, Code } from "ts-poet";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
-import { newPgConnectionConfig } from "./connection";
+import { newPgConnectionConfig } from "joist-utils";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEnumFile } from "./generateEnumFile";

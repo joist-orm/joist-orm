@@ -1,7 +1,7 @@
+import { Client } from "pg";
 import pgMigrate from "node-pg-migrate";
 import pgStructure, { Db, Table } from "pg-structure";
-import { Client } from "pg";
-import { newPgConnectionConfig } from "./connection";
+import { newPgConnectionConfig } from "joist-utils";
 
 const productionDirectory = "/home/node/app/migrations";
 

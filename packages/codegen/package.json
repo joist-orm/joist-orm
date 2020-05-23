@@ -11,7 +11,8 @@
     "pg": "^8.0.3",
     "pg-structure": "^5.10.10",
     "pluralize": "^8.0.0",
-    "ts-poet": "^3.2.2"
+    "ts-poet": "^3.2.2",
+    "joist-utils": "0.1.0-bump"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",

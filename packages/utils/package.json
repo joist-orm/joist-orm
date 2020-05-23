@@ -1,16 +1,11 @@
 {
-  "name": "joist-orm",
+  "name": "joist-utils",
   "version": "0.1.0-bump",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "dependencies": {
-    "@types/object-hash": "^1.3.1",
-    "dataloader": "^2.0.0",
-    "knex": "^0.21.1",
-    "object-hash": "^2.0.3",
-    "pg": "^8.0.3",
-    "joist-utils": "0.1.0-bump"
+    "pg": "^8.0.3"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",

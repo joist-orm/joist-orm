@@ -14,7 +14,7 @@ import { reverseHint } from "./reverseHint";
 
 export * from "./EntityManager";
 export * from "./serde";
-export * from "./connection";
+export { newPgConnectionConfig } from "joist-utils";
 export * from "./reverseHint";
 export * from "./changes";
 export { DeepPartialOrNull } from "./createOrUpdateUnsafe";

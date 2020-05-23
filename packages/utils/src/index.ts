@@ -1,4 +1,4 @@
-export * from "./connection";
+export { newPgConnectionConfig } from "./connection";
 
 export function fail(message?: string): never {
   throw new Error(message || "Failed");

@@ -8,7 +8,7 @@
     "@types/pluralize": "0.0.29",
     "change-case": "^4.1.1",
     "knex": "^0.21.1",
-    "pg": "^8.0.3",
+    "pg": "^8.2.1",
     "pg-structure": "^5.10.10",
     "pluralize": "^8.0.0",
     "ts-poet": "^3.2.2",

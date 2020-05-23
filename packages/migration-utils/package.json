@@ -7,7 +7,7 @@
   "dependencies": {
     "@types/pluralize": "0.0.29",
     "node-pg-migrate": "^4.7.0",
-    "pg": "^8.0.3",
+    "pg": "^8.2.1",
     "pg-structure": "^5.10.10",
     "pluralize": "^8.0.0",
     "joist-utils": "0.1.0-bump"

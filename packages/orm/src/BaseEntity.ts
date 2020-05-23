@@ -1,4 +1,4 @@
-import { Entity, EntityManager, EntityOrmField, IdOf, OptsOf } from "./EntityManager";
+import { Entity, EntityManager, EntityOrmField, IdOf, isEntity, OptsOf } from "./EntityManager";
 import { Collection, fail, PartialOrNull, Reference } from "./index";
 
 /**
@@ -95,11 +95,15 @@ export abstract class BaseEntity implements Entity {
    * recurse into all of our References/Collections/EntityManager/etc.
    *  */
   public toJSON(): object {
-    return this.__orm.data;
+    return Object.fromEntries(
+      Object.entries(this.__orm.data).map(([key, value]) => {
+        // Don't recurse into new entities b/c the point is to stay shallow
+        return [key, isEntity(value) ? value.toString() : value];
+      }),
+    );
   }
 
   [Symbol.toStringTag](): string {
     return this.toString();
   }
 }
-

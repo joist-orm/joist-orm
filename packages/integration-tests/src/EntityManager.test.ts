@@ -826,9 +826,11 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
+    a1.publisher.set(em.create(Publisher, { name: "p1" }));
     expect(a1.toJSON()).toMatchObject({
       id: "1",
       firstName: "a1",
+      publisher: "Publisher#undefined",
     });
   });
 });

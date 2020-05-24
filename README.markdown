@@ -34,7 +34,7 @@ Per the `0.1.x` versioning, breaking API changes should be expected for awhile.
 
 ### Install
 
-See [Getting Started](./docs/getting-started.markdown).
+See [Getting Started](./docs/getting-started.markdown) and the [integration-tests](./packages/integration-tests), which is essentially a sample app with a domain model of `Author`, `Book`, etc. entities.
 
 ### Building
 

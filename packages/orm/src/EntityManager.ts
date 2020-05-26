@@ -843,7 +843,7 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       // Add the resulting "found" entities to the right todos to be validated
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
-        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity)) {
+        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.validates.push(entity);
         }
       });
@@ -861,7 +861,7 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
     return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
-        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity)) {
+        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.updates.push(entity);
         }
       });

@@ -47,6 +47,38 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
   });
 
+  it("delete does not blow up due to reactive validation rules", async () => {
+    // Given an author and book
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const b1 = await em.load(Book, "1");
+    // When we change the book
+    b1.title = "b2";
+    // And the book that it would reactively trigger is deleted
+    em.delete(a1);
+    // Then we can't b/c the book.author is required
+    await expect(em.flush()).rejects.toThrow("Validation error: author is required");
+  });
+
+  it("cascading deletes does not blow up due to reactive validation rules", async () => {
+    // Given an author and book
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const b1 = await em.load(Book, "1");
+    // When we change the book
+    b1.title = "b2";
+    // And also delete it
+    em.delete(b1);
+    // And the book that it would reactively trigger is deleted
+    em.delete(a1);
+    // Then it works
+    await em.flush();
+  });
+
   it("can have lifecycle hooks", async () => {
     const em = new EntityManager(knex);
     const a1 = new Author(em, { firstName: "a1" });

@@ -82,6 +82,10 @@ export abstract class BaseEntity implements Entity {
     return this.id === undefined;
   }
 
+  get isDeletedEntity(): boolean {
+    return this.__orm.deleted !== undefined;
+  }
+
   toString(): string {
     return `${this.__orm.metadata.type}#${this.id}`;
   }

@@ -132,7 +132,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   private returnUndefinedIfDeleted(e: U | N): U | N {
-    if (e !== undefined && e.__orm.deleted) {
+    if (e !== undefined && e.isDeletedEntity) {
       if (this.notNull) {
         throw new Error(`Referenced entity ${e} has been marked as deleted`);
       }

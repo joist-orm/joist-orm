@@ -375,6 +375,7 @@ describe("EntityManager", () => {
     await em.refresh(a1);
     // Then we're marked as deleted
     expect(a1.__orm.deleted).toEqual("deleted");
+    expect(a1.isDeletedEntity).toEqual(true);
   });
 
   it("can access a m2o id without loading", async () => {

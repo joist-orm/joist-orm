@@ -65,6 +65,8 @@ export interface Entity {
 
   readonly isNewEntity: boolean;
 
+  readonly isDeletedEntity: boolean;
+
   set(opts: Partial<OptsOf<this>>): void;
 
   setUnsafe(values: PartialOrNull<OptsOf<this>>): void;

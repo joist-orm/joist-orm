@@ -12,6 +12,9 @@ import {
   newChangesProxy,
   Entity,
   Lens,
+  LoadHint,
+  Loaded,
+  getEm,
   newRequiredRule,
   Collection,
   ManyToManyCollection,
@@ -100,5 +103,9 @@ export abstract class TagCodegen extends BaseEntity {
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Tag, Tag>) => Lens<U, V>): Promise<V> {
     return super.load(fn);
+  }
+
+  async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {
+    return getEm(this).populate((this as any) as Tag, hint);
   }
 }

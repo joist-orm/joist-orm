@@ -1,5 +1,5 @@
-import { EntityManager } from "joist-orm";
-import { AuthorCodegen, authorConfig, AuthorOpts } from "./entities";
+import { EntityManager, Loaded } from "joist-orm";
+import { AuthorCodegen, authorConfig, AuthorOpts, Book } from "./entities";
 
 export class Author extends AuthorCodegen {
   public beforeFlushRan = false;
@@ -7,6 +7,11 @@ export class Author extends AuthorCodegen {
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
+  }
+
+  /** Example of using populate within an entity on itself. */
+  get withLoadedBooks(): Promise<Loaded<Author, "books">> {
+    return this.populate("books");
   }
 
   /** Implements the business logic for a (synchronous) persisted derived value. */

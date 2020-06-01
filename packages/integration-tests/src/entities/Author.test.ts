@@ -319,4 +319,13 @@ describe("Author", () => {
     await em.flush();
     expect(a1.isNewEntity).toBeFalsy();
   });
+
+  it("can populate itself easily", async () => {
+    await insertAuthor({ first_name: "a1", age: 10 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const a2 = await a1.withLoadedBooks;
+    expect(a2.books.get.length).toEqual(1);
+  });
 });

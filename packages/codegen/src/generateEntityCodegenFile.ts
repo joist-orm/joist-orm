@@ -1,6 +1,8 @@
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
+import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
+import { Config } from "./index";
 import {
   BaseEntity,
   Changes,
@@ -11,7 +13,10 @@ import {
   EntityManager,
   FilterOf,
   Flavor,
+  getEm,
   Lens,
+  Loaded,
+  LoadHint,
   ManyToManyCollection,
   ManyToOneReference,
   newChangesProxy,
@@ -25,8 +30,6 @@ import {
   setOpts,
   ValueFilter,
 } from "./symbols";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { Config } from "./index";
 
 export interface ColumnMetaData {
   typeConverter?: SymbolSpec;
@@ -217,15 +220,21 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ): Promise<V> {
         return super.load(fn);
       }
+
+      async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {
+        return ${getEm}(this).populate(this as any as ${entityName}, hint);
+      }
     }
   `;
 }
 
 function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
   const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes];
-  return fields.filter(p => p.notNull).map(({ fieldName}) => {
-    return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`
-  });
+  return fields
+    .filter((p) => p.notNull)
+    .map(({ fieldName }) => {
+      return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
+    });
 }
 
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {

@@ -32,3 +32,6 @@ export const configureMetadata = imp("configureMetadata@joist-orm");
 export const newRequiredRule = imp("newRequiredRule@joist-orm");
 export const Changes = imp("Changes@joist-orm");
 export const newChangesProxy = imp("newChangesProxy@joist-orm");
+export const LoadHint = imp("LoadHint@joist-orm");
+export const Loaded = imp("Loaded@joist-orm");
+export const getEm = imp("getEm@joist-orm");

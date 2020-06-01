@@ -1,5 +1,5 @@
-import { Entity, EntityManager, EntityOrmField, IdOf, isEntity, OptsOf } from "./EntityManager";
-import { Collection, fail, PartialOrNull, Reference } from "./index";
+import { Entity, EntityManager, EntityOrmField, IdOf, isEntity, Loaded, LoadHint, OptsOf } from "./EntityManager";
+import { Collection, fail, getEm, PartialOrNull, Reference } from "./index";
 
 /**
  * A type for declaratively walking the object graph.

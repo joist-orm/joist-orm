@@ -12,6 +12,9 @@ import {
   newChangesProxy,
   Entity,
   Lens,
+  LoadHint,
+  Loaded,
+  getEm,
   EntityFilter,
   FilterOf,
   newRequiredRule,
@@ -192,5 +195,9 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Author, Author>) => Lens<U, V>): Promise<V> {
     return super.load(fn);
+  }
+
+  async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {
+    return getEm(this).populate((this as any) as Author, hint);
   }
 }

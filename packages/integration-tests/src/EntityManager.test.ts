@@ -593,53 +593,24 @@ describe("EntityManager", () => {
     expect(rows[1].first_name).toEqual("a2p2");
   });
 
-  it("can handle flush being called in a loop with other awaits", async () => {
+  it("does not allow flush to be called while another flush is in progress", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+
     const em = new EntityManager(knex);
 
-    // Create promises that we'll explicitly resolve in separate event ticks
-    const deferreds = [new Deferred<string>(), new Deferred<string>()];
-    const authors = await em.find(Author, { id: ["1", "2"] });
+    // Modify an object so the first flush is more than just a no-op
+    const author = await em.load(Author, "1");
+    author.firstName = "new name";
 
-    resetQueryCount();
-    const all = Promise.all(
-      authors.map(async (a, i) => {
-        const suffix = await deferreds[i].promise;
-        a.firstName = a.firstName + suffix;
-        await em.flush();
-      }),
-    );
+    // call our first flush
+    em.flush();
 
-    // Resolve the 1st one, which will start it's own flush
-    deferreds[0].resolve("a");
+    // do some async work
     await delay(0);
-    // resolve the 2nd one, which will also do it's own flush
-    deferreds[1].resolve("b");
-    await all;
 
-    // Given the un-coordinated await's, the lambda event loops got out of sync,
-    // so this required two flushes. Which is fine, we just want to cover the boundary
-    // case and ensure it behaves correctly. If this was a concern in a real program,
-    // some sort of `await latch` would be needed to break the lambdas back in sync.
-    // 8 = (1 author validation hook + 2 for begin/commit + 1 for update authors) x 2 for each flush.
-    expect(queries).toMatchInlineSnapshot(`
-      Array [
-        "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
-        "BEGIN;",
-        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-        "COMMIT;",
-        "select * from \\"books\\" where \\"author_id\\" in (?) order by \\"id\\" asc",
-        "BEGIN;",
-        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-        "COMMIT;",
-      ]
-    `);
-    const rows = await knex.select("*").from("authors").orderBy("id");
-    expect(rows[0].first_name).toEqual("a1a");
-    expect(rows[1].first_name).toEqual("a2b");
+    // should fail as the first flush is still running
+    await expect(em.flush()).rejects.toThrow("Cannot flush while another flush is already in progress");
   });
 
   it("will dedup queries that are loaded at the same time", async () => {

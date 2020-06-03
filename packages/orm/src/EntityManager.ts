@@ -1,12 +1,13 @@
 import DataLoader from "dataloader";
 import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
-import { getOrSet, indexBy } from "./utils";
+import { fail, getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import {
   Collection,
   ConfigApi,
   DeepPartialOrNull,
+  EntityHook,
   getEm,
   LoadedCollection,
   LoadedReference,
@@ -23,6 +24,8 @@ import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
+import { proxyEntity } from "./EntityProxy";
+import * as util from "util";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -66,6 +69,12 @@ export interface Entity {
   readonly isNewEntity: boolean;
 
   readonly isDeletedEntity: boolean;
+
+  readonly isDirtyEntity: boolean;
+
+  readonly isPendingFlush: boolean;
+
+  readonly isPendingDelete: boolean;
 
   set(opts: Partial<OptsOf<this>>): void;
 
@@ -122,7 +131,7 @@ type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends ke
 type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : T[K];
 
 /** From any non-`Relations` field in `T`, i.e. for loader hints. */
-type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
+export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
 
 // https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
 type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
@@ -143,6 +152,7 @@ export class EntityManager {
 
   private entities: Entity[] = [];
   private findLoaders: LoaderCache = {};
+  private flushSecret: number = 0;
   // TODO Extract this DataLoader + currentFlushPromise into its own abstraction
   private flushLoader = new DataLoader<number, number>(
     async (keys) => {
@@ -482,30 +492,48 @@ export class EntityManager {
    * (i.e. including the initial `SELECT`s) in a transaction.
    */
   async flush(): Promise<void> {
-    if (this.currentFlushPromise) {
-      await this.currentFlushPromise;
-      await this.flushLoader.load(0);
-    } else {
-      await this.flushLoader.load(0);
+    if (this.isFlushing) {
+      throw new Error("Cannot flush while another flush is already in progress");
     }
+
+    await this.flushLoader.load(0);
+  }
+
+  get isFlushing(): boolean {
+    return this.currentFlushPromise !== undefined;
   }
 
   /** The implementation of flush, but called by a DataLoader to de-dup calls made in a loop. */
   private async doFlush(): Promise<void> {
-    // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-    await this.cascadeDeletesIntoUnloadedCollections();
-    recalcDerivedFields(this.entities);
-    const entityTodos = sortEntities(this.entities);
-    await addReactiveAsyncDerivedValues(entityTodos);
-    await recalcAsyncDerivedFields(this, entityTodos);
+    const entitiesToFlush: Entity[] = [];
+    let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+
+    while (pendingEntities.length > 0) {
+      const wrappedEntities = pendingEntities.map((e) => proxyEntity(e, this.flushSecret));
+      // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
+      await this.cascadeDeletesIntoUnloadedCollections(wrappedEntities);
+      recalcDerivedFields(wrappedEntities);
+      const entityTodos = sortEntities(wrappedEntities);
+      await addReactiveAsyncDerivedValues(entityTodos);
+      await recalcAsyncDerivedFields(this, entityTodos);
+
+      // TODO Run beforeFlush first, so it can fill in derived values for validate?
+      await addReactiveValidations(entityTodos);
+      await validate(entityTodos);
+      await beforeDelete(entityTodos);
+      await beforeFlush(entityTodos);
+
+      entitiesToFlush.push(...pendingEntities);
+      pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
+      this.flushSecret += 1;
+    }
+
+    const entityTodos = sortEntities(entitiesToFlush);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
       return;
     }
-    // TODO Run beforeFlush first, so it can fill in derived values for validate?
-    await addReactiveValidations(entityTodos);
-    await validate(entityTodos);
-    await beforeFlush(entityTodos);
+
     await this.knex.transaction(async (tx) => {
       await flushEntities(this.knex, tx, entityTodos);
       await flushJoinTables(this.knex, tx, joinRowTodos);
@@ -528,10 +556,10 @@ export class EntityManager {
   }
 
   /** Find all deleted entities and ensure their references all know about their deleted-ness. */
-  private async cascadeDeletesIntoUnloadedCollections(): Promise<void> {
+  private async cascadeDeletesIntoUnloadedCollections(entities: Entity[]): Promise<void> {
     await Promise.all(
-      this.entities
-        .filter((e) => e.__orm.deleted === "pending")
+      entities
+        .filter((e) => e.isPendingDelete)
         .map((entity) => {
           return Promise.all(
             Object.values(entity).map(async (v: any) => {
@@ -801,7 +829,8 @@ export type ManyToManyField = {
   otherFieldName: string;
 };
 
-export function isEntity(e: any): e is Entity {
+export function isEntity(entityOrProxy: any): entityOrProxy is Entity {
+  const e = util.types.isProxy(entityOrProxy) ? entityOrProxy.proxyTarget : entityOrProxy;
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
 }
 
@@ -844,7 +873,7 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
-          todo.validates.push(entity);
+          todo.validates.push(util.types.isProxy(entity) ? entity : proxyEntity(entity, getEm(entity)["flushSecret"]));
         }
       });
     });
@@ -862,7 +891,7 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
-          todo.updates.push(entity);
+          todo.updates.push(util.types.isProxy(entity) ? entity : proxyEntity(entity, getEm(entity)["flushSecret"]));
         }
       });
     });
@@ -883,24 +912,32 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
   }
 }
 
-async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
+async function runHook(
+  hook: EntityHook,
+  todos: Record<string, Todo>,
+  keys: ("inserts" | "deletes" | "updates" | "validates")[],
+): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
-    const beforeFlush = todo.metadata.config.__data.beforeFlush;
-    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return beforeFlush.map(async (fn) => fn(entity));
-    });
+    const hookFns = todo.metadata.config.__data.hooks[hook];
+    return keys
+      .flatMap((k) => todo[k])
+      .flatMap((entity) => {
+        return hookFns.map(async (fn) => fn(entity));
+      });
   });
   await Promise.all(p);
 }
 
+async function beforeDelete(todos: Record<string, Todo>): Promise<void> {
+  await runHook("beforeDelete", todos, ["deletes"]);
+}
+
+async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
+  await runHook("beforeFlush", todos, ["inserts", "updates"]);
+}
+
 async function afterCommit(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap((todo) => {
-    const afterCommit = todo.metadata.config.__data.afterCommit;
-    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
-      return afterCommit.map(async (fn) => fn(entity));
-    });
-  });
-  await Promise.all(p);
+  await runHook("afterCommit", todos, ["inserts", "updates"]);
 }
 
 function coerceError(
@@ -933,7 +970,7 @@ function recalcDerivedFields(entities: Entity[]) {
       return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived).map((f) => f.fieldName)];
     }),
   );
-  for (const entity of entities.filter((e) => e.__orm.deleted === undefined)) {
+  for (const entity of entities.filter((e) => !e.isDeletedEntity)) {
     const derivedFields = derivedFieldsByMeta.get(entity.__orm.metadata);
     derivedFields?.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.

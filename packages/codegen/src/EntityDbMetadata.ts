@@ -56,6 +56,7 @@ type OneToManyField = {
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
+  otherColumnNotNull: boolean;
 };
 
 type ManyToManyField = {
@@ -147,7 +148,8 @@ function newOneToMany(entity: Entity, r: O2MRelation): OneToManyField {
   const fieldName = collectionName(entity, otherEntity);
   const otherFieldName = camelCase(column.name.replace("_id", ""));
   const otherColumnName = column.name;
-  return { fieldName, otherEntity, otherFieldName, otherColumnName };
+  const otherColumnNotNull = column.notNull;
+  return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull };
 }
 
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */

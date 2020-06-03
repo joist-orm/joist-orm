@@ -32,6 +32,18 @@ export abstract class BaseEntity implements Entity {
     return this.__orm.deleted !== undefined;
   }
 
+  get isDirtyEntity(): boolean {
+    return Object.keys(this.__orm.originalData).length > 0;
+  }
+
+  get isPendingFlush(): boolean {
+    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete;
+  }
+
+  get isPendingDelete(): boolean {
+    return this.__orm.deleted === "pending";
+  }
+
   toString(): string {
     return `${this.__orm.metadata.type}#${this.id}`;
   }

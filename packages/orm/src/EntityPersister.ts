@@ -2,6 +2,7 @@ import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
 import Knex, { Transaction } from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
+import * as util from "util";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
@@ -140,14 +141,11 @@ function cleanSql(sql: string): string {
 export function sortEntities(entities: Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
-    const isNew = entity.id === undefined;
-    const isDirty = !isNew && Object.keys(entity.__orm.originalData).length > 0;
-    const isDelete = !isNew && entity.__orm.deleted === "pending";
-    if (isNew || isDirty || isDelete) {
+    if (entity.isPendingFlush) {
       const todo = getTodo(todos, entity);
-      if (isNew) {
+      if (entity.isNewEntity) {
         todo.inserts.push(entity);
-      } else if (isDelete) {
+      } else if (entity.isPendingDelete) {
         todo.deletes.push(entity);
       } else {
         todo.updates.push(entity);
@@ -163,6 +161,15 @@ export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
   let todo = todos[meta.type];
   if (!todo) {
     todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
+    [todo.inserts, todo.updates, todo.deletes, todo.validates].forEach((array) => {
+      array.includes = function (entityOrProxy: any) {
+        const entity = util.types.isProxy(entityOrProxy) ? entityOrProxy.proxyTarget : entityOrProxy;
+        return (this as any[]).some((otherOrProxy) => {
+          const other = util.types.isProxy(otherOrProxy) ? otherOrProxy.proxyTarget : otherOrProxy;
+          return other === entity;
+        });
+      };
+    });
     todos[meta.type] = todo;
   }
   return todo;

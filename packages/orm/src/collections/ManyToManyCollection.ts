@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, Entity, EntityConstructor, IdOf } from "../";
+import { Collection, ensureNotDeleted, Entity, EntityConstructor, getEm, IdOf } from "../";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -40,7 +40,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    return (await this.load()).find(u => u.id === id);
+    return (await this.load()).find((u) => u.id === id);
   }
 
   add(other: U, percolated = false): void {
@@ -59,14 +59,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
     if (!percolated) {
       const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
-      getOrSet(this.entity.__orm.em.__data.joinRows, this.joinTableName, []).push(joinRow);
+      getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
       ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity, true);
     }
   }
 
   remove(other: U): void {
     ensureNotDeleted(this.entity);
-    const joinRows = getOrSet(this.entity.__orm.em.__data.joinRows, this.joinTableName, []);
+    const joinRows = getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []);
     const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
     if (row) {
       row.deleted = true;
@@ -164,7 +164,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
       // this.addedBeforeLoaded = [];
       this.removedBeforeLoaded.forEach((e) => {
         remove(this.loaded!, e);
-        const { em } = this.entity.__orm;
+        const em = getEm(this.entity);
         const row = em.__data.joinRows[this.joinTableName].find(
           (r) => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
         );
@@ -179,6 +179,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   current(): U[] {
     return this.loaded || this.addedBeforeLoaded;
   }
+
+  public toString(): string {
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherType.name}, otherFieldName: ${this.otherFieldName})`;
+  }
 }
 
 export type JoinRow = {
@@ -190,7 +194,7 @@ export type JoinRow = {
 
 function loaderForJoinTable<T extends Entity, U extends Entity>(collection: ManyToManyCollection<T, U>) {
   const { joinTableName } = collection;
-  const { em } = collection.entity.__orm;
+  const em = getEm(collection.entity);
   return getOrSet(em.__data.loaders, joinTableName, () => {
     return new DataLoader<string, Entity[]>(async (keys) => loadFromJoinTable(collection, keys));
   });
@@ -207,7 +211,7 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   keys: ReadonlyArray<string>,
 ): Promise<Entity[][]> {
   const { joinTableName } = collection;
-  const { em } = collection.entity.__orm;
+  const em = getEm(collection.entity);
 
   // Break out `column_id=string` keys out
   const columns: Record<string, string[]> = {};

@@ -279,7 +279,8 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
-    await em.delete(p1);
+    em.delete(p1);
+    await em.flush();
     expect(() => (p1.name = "p2")).toThrow("Publisher#1 is marked as deleted");
   });
 
@@ -287,7 +288,8 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p1" });
     const em = new EntityManager(knex);
     const p1 = await em.load(Publisher, "1");
-    await em.delete(p1);
+    em.delete(p1);
+    await em.flush();
     expect(() => p1.authors.add(em.create(Author, { firstName: "a1" }))).toThrow("Publisher#1 is marked as deleted");
   });
 
@@ -295,7 +297,8 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
-    await em.delete(a1);
+    em.delete(a1);
+    await em.flush();
     expect(() => a1.publisher.set(em.create(Publisher, { name: "p1" }))).toThrow("Author#1 is marked as deleted");
   });
 
@@ -530,87 +533,67 @@ describe("EntityManager", () => {
     expect(a1.__orm.originalData).toEqual({});
   });
 
-  it("can handle flush being called in a loop", async () => {
-    await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    await insertAuthor({ first_name: "a2", publisher_id: 2 });
-    const em = new EntityManager(knex);
-
-    const authors = await em.find(Author, { id: ["1", "2"] }, { populate: "publisher" });
-    resetQueryCount();
-    await Promise.all(
-      authors.map(async (a) => {
-        // Turns out modifying two different entity types was important to trigger the race condition
-        const p = a.publisher.get!;
-        a.firstName = a.firstName + "b";
-        p.name = p.name + "b";
-        await em.flush();
-      }),
-    );
-    // 5 = 1 author validation hook, 2 begin/commit, 1 flush authors, 1 flush publishers
-    expect(queries).toMatchInlineSnapshot(`
-      Array [
-        "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
-        "BEGIN;",
-        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-        "UPDATE publishers SET \\"name\\" = data.\\"name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"name\\") as data WHERE publishers.id = data.id",
-        "COMMIT;",
-      ]
-    `);
-  });
-
-  it("can handle flush being called in a loop with queries", async () => {
-    await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    await insertAuthor({ first_name: "a2", publisher_id: 2 });
-    const em = new EntityManager(knex);
-
-    const authors = await em.find(Author, { id: ["1", "2"] });
-    resetQueryCount();
-    await Promise.all(
-      authors.map(async (a) => {
-        // The findOneOrFail's will be collected into a single call
-        const p = await em.findOneOrFail(Publisher, { id: a.publisher.id });
-        a.firstName = a.firstName + p.name;
-        // And so this flush will be a single batch update of both authors
-        await em.flush();
-      }),
-    );
-    // 5 = 1 to (combined) select the publishers, 1 author validation hook, 2 for begin/commit, 1 for bulk update authors.
-    expect(queries).toMatchInlineSnapshot(`
-      Array [
-        "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc) order by \\"__tag\\" asc",
-        "select * from \\"books\\" where \\"author_id\\" in (?, ?) order by \\"id\\" asc",
-        "BEGIN;",
-        "UPDATE authors SET \\"first_name\\" = data.\\"first_name\\" FROM (select unnest(?::int[]) as \\"id\\", unnest(?::varchar[]) as \\"first_name\\") as data WHERE authors.id = data.id",
-        "COMMIT;",
-      ]
-    `);
-    const rows = await knex.select("*").from("authors").orderBy("id");
-    expect(rows[0].first_name).toEqual("a1p1");
-    expect(rows[1].first_name).toEqual("a2p2");
-  });
-
-  it("does not allow flush to be called while another flush is in progress", async () => {
+  it("cannot flush while another flush is in progress", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-
     const em = new EntityManager(knex);
-
-    // Modify an object so the first flush is more than just a no-op
     const author = await em.load(Author, "1");
     author.firstName = "new name";
-
-    // call our first flush
-    em.flush();
-
-    // do some async work
+    const flushPromise = em.flush();
     await delay(0);
-
-    // should fail as the first flush is still running
     await expect(em.flush()).rejects.toThrow("Cannot flush while another flush is already in progress");
+    await flushPromise;
+  });
+
+  it("can modify an entity inside a hook", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const author = await em.load(Author, "1");
+    author.firstName = "new name";
+    author.ageForBeforeFlush = 27;
+    await em.flush();
+    expect(author.age).toEqual(27);
+  });
+
+  it("cannot modify an entity during a flush outside hooks", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const author = await em.load(Author, "1");
+    author.firstName = "new name";
+    const flushPromise = em.flush();
+    await delay(0);
+    expect(() => (author.firstName = "different name")).toThrow(
+      "Cannot set 'firstName' on Author#1 during a flush outside of a entity hook",
+    );
+    await flushPromise;
+  });
+
+  it("cannot modify an entity's o2m collection during a flush outside hooks", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = new EntityManager(knex);
+    const p1 = await em.load(Publisher, "1");
+    const a1 = em.create(Author, { firstName: "a1" });
+    p1.name = "new name";
+    const flushPromise = em.flush();
+    await delay(0);
+    expect(() => p1.authors.add(a1)).toThrow(
+      "Cannot set 'publisher' on Author#undefined during a flush outside of a entity hook",
+    );
+    await flushPromise;
+  });
+
+  it("cannot modify an entity's m2o collection during a flush outside hooks", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    const p1 = em.create(Publisher, { name: "p1" });
+    a1.firstName = a1.firstName + "b";
+    const flushPromise = em.flush();
+    await delay(0);
+    expect(() => a1.publisher.set(p1)).toThrow(
+      "Cannot set 'publisher' on Author#1 during a flush outside of a entity hook",
+    );
+    await flushPromise;
   });
 
   it("will dedup queries that are loaded at the same time", async () => {
@@ -760,6 +743,29 @@ describe("EntityManager", () => {
     await em.delete(a1);
     await em.flush();
     const rows = await knex.select("*").from("authors");
+    expect(rows.length).toEqual(0);
+  });
+
+  it("can cascade deletes into other entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    await em.delete(a1);
+    await em.flush();
+    const rows = await knex.select("*").from("books");
+    expect(rows.length).toEqual(0);
+  });
+
+  it("can cascade deletes through multiple levels", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Publisher, "1");
+    await em.delete(a1);
+    await em.flush();
+    const rows = await knex.select("*").from("books");
     expect(rows.length).toEqual(0);
   });
 

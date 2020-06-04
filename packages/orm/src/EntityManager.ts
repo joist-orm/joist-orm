@@ -24,7 +24,7 @@ import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
-import { proxyEntity } from "./EntityProxy";
+import { getTargetFromMaybeFlushProxy, isFlushProxy, proxyEntity } from "./FlushProxy";
 import * as util from "util";
 
 export interface EntityConstructor<T> {
@@ -153,20 +153,7 @@ export class EntityManager {
   private entities: Entity[] = [];
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
-  // TODO Extract this DataLoader + currentFlushPromise into its own abstraction
-  private flushLoader = new DataLoader<number, number>(
-    async (keys) => {
-      // Have all callers in the current event loop go through a single flush
-      // together, but set currentFlushPromise to let callers in subsequent loops
-      // that they need to wait.
-      this.currentFlushPromise = this.doFlush();
-      await this.currentFlushPromise;
-      this.currentFlushPromise = undefined;
-      return keys;
-    },
-    { cache: false },
-  );
-  private currentFlushPromise?: Promise<void>;
+  private _isFlushing: boolean = false;
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
@@ -496,15 +483,8 @@ export class EntityManager {
       throw new Error("Cannot flush while another flush is already in progress");
     }
 
-    await this.flushLoader.load(0);
-  }
+    this._isFlushing = true;
 
-  get isFlushing(): boolean {
-    return this.currentFlushPromise !== undefined;
-  }
-
-  /** The implementation of flush, but called by a DataLoader to de-dup calls made in a loop. */
-  private async doFlush(): Promise<void> {
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
 
@@ -542,7 +522,16 @@ export class EntityManager {
     await afterCommit(entityTodos);
     // Reset the find caches b/c data will have changed in the db
     this.findLoaders = {};
+
+    this._isFlushing = false;
   }
+
+  get isFlushing(): boolean {
+    return this._isFlushing;
+  }
+
+  /** The implementation of flush, but called by a DataLoader to de-dup calls made in a loop. */
+  private async doFlush(): Promise<void> {}
 
   /**
    * A very simple toJSON.
@@ -772,6 +761,10 @@ export class EntityManager {
     }
     return entity;
   }
+
+  public toString(): string {
+    return "EntityManager";
+  }
 }
 
 export interface EntityMetadata<T extends Entity> {
@@ -830,7 +823,7 @@ export type ManyToManyField = {
 };
 
 export function isEntity(entityOrProxy: any): entityOrProxy is Entity {
-  const e = util.types.isProxy(entityOrProxy) ? entityOrProxy.proxyTarget : entityOrProxy;
+  const e = getTargetFromMaybeFlushProxy(entityOrProxy);
   return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
 }
 
@@ -873,7 +866,7 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
-          todo.validates.push(util.types.isProxy(entity) ? entity : proxyEntity(entity, getEm(entity)["flushSecret"]));
+          todo.validates.push(proxyEntity(entity, getEm(entity)["flushSecret"]));
         }
       });
     });
@@ -891,7 +884,7 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
-          todo.updates.push(util.types.isProxy(entity) ? entity : proxyEntity(entity, getEm(entity)["flushSecret"]));
+          todo.updates.push(proxyEntity(entity, getEm(entity)["flushSecret"]));
         }
       });
     });

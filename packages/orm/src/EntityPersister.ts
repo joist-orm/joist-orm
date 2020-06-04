@@ -3,6 +3,7 @@ import Knex, { Transaction } from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import * as util from "util";
+import { getTargetFromMaybeFlushProxy, isFlushProxy } from "./FlushProxy";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
@@ -163,11 +164,8 @@ export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
     todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
     [todo.inserts, todo.updates, todo.deletes, todo.validates].forEach((array) => {
       array.includes = function (entityOrProxy: any) {
-        const entity = util.types.isProxy(entityOrProxy) ? entityOrProxy.proxyTarget : entityOrProxy;
-        return (this as any[]).some((otherOrProxy) => {
-          const other = util.types.isProxy(otherOrProxy) ? otherOrProxy.proxyTarget : otherOrProxy;
-          return other === entity;
-        });
+        const entity = getTargetFromMaybeFlushProxy(entityOrProxy);
+        return (this as any[]).some((otherOrProxy) => entity == getTargetFromMaybeFlushProxy(otherOrProxy));
       };
     });
     todos[meta.type] = todo;

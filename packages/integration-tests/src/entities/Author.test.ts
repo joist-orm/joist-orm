@@ -84,9 +84,13 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     expect(a1.beforeFlushRan).toBeFalsy();
     expect(a1.afterCommitRan).toBeFalsy();
+    expect(a1.beforeDeleteRan).toBeFalsy();
     await em.flush();
     expect(a1.beforeFlushRan).toBeTruthy();
     expect(a1.afterCommitRan).toBeTruthy();
+    em.delete(a1);
+    await em.flush();
+    expect(a1.beforeDeleteRan).toBeTruthy();
   });
 
   it("can have async derived values", async () => {

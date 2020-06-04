@@ -15,10 +15,9 @@ import { reverseHint } from "./reverseHint";
 import { OneToManyCollection } from "./collections/OneToManyCollection";
 import { ManyToOneReference } from "./collections/ManyToOneReference";
 import { ManyToManyCollection } from "./collections/ManyToManyCollection";
-import { doc } from "prettier";
-import utils = doc.utils;
 import * as util from "util";
 import { EntityOrmField } from "./EntityManager";
+import { isFlushProxy, proxyEntityManager } from "./FlushProxy";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -116,15 +115,15 @@ interface Flavoring<FlavorT> {
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
 export function setField(entity: Entity, fieldName: string, newValue: any): void {
-  ensureNotDeleted(entity);
+  ensureNotDeleted(entity, { ignore: "pending" });
   const em = getEm(entity);
 
   if (em.isFlushing) {
-    if (!util.types.isProxy(entity) || (entity as any).flushSecret === undefined) {
+    if (!isFlushProxy(entity)) {
       throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);
     }
 
-    if ((entity as any).flushSecret !== (em as any).flushSecret) {
+    if (entity.__flushSecret !== em["flushSecret"]) {
       throw new Error(`Attempting to use an entity proxy outside its flush loop`);
     }
   }
@@ -201,8 +200,8 @@ export function setOpts<T extends Entity>(
   }
 }
 
-export function ensureNotDeleted(entity: Entity, ignoredState?: EntityOrmField["deleted"]): void {
-  if (entity.isDeletedEntity && (ignoredState === undefined || entity.__orm.deleted !== ignoredState)) {
+export function ensureNotDeleted(entity: Entity, opts: { ignore?: EntityOrmField["deleted"] } = {}): void {
+  if (entity.isDeletedEntity && (opts.ignore === undefined || entity.__orm.deleted !== opts.ignore)) {
     throw new Error(entity + " is marked as deleted");
   }
 }
@@ -278,7 +277,7 @@ export class ConfigApi<T extends Entity> {
       this.__data.rules.push(ruleOrHint);
     } else {
       const fn = async (entity: T) => {
-        const { em } = entity.__orm;
+        const em = getEm(entity);
         const loaded = await em.populate(entity, ruleOrHint);
         return maybeRule!(loaded);
       };
@@ -288,7 +287,7 @@ export class ConfigApi<T extends Entity> {
     }
   }
 
-  addCascadedDelete(relationship: keyof RelationsIn<T>): void {
+  cascadeDelete(relationship: keyof RelationsIn<T>): void {
     this.beforeDelete(relationship, (entity) => {
       const em = getEm(entity);
       const relation = entity[relationship] as any;
@@ -320,7 +319,7 @@ export class ConfigApi<T extends Entity> {
     } else {
       const fn = async (entity: T) => {
         // TODO Use this for reactive beforeFlush
-        const { em } = entity.__orm;
+        const em = getEm(entity);
         const loaded = await em.populate(entity, ruleOrHint);
         return maybeFn!(loaded);
       };
@@ -373,5 +372,5 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 }
 
 export function getEm(entity: Entity): EntityManager {
-  return entity.__orm.em;
+  return isFlushProxy(entity) ? proxyEntityManager(entity.__orm.em, entity.__flushSecret) : entity.__orm.em;
 }

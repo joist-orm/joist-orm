@@ -1,5 +1,5 @@
 import { Entity, EntityConstructor, getMetadata, IdOf, isEntity, sameEntity } from "../EntityManager";
-import { ensureNotDeleted, fail, maybeResolveReferenceToId, Reference, setField } from "../index";
+import { ensureNotDeleted, fail, getEm, maybeResolveReferenceToId, Reference, setField } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
@@ -32,15 +32,14 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
+      this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
     }
     this.isLoaded = true;
     return this.returnUndefinedIfDeleted(this.loaded);
   }
 
   set(other: U | N): void {
-    // setImpl conditionally checked ensureNotDeleted based on opts.beingDeleted
-    this.setImpl(other, {});
+    this.setImpl(other);
   }
 
   isSet(): boolean {
@@ -48,7 +47,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   get get(): U | N {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     // This should only be callable in the type system if we've already resolved this to an instance
     if (!this.isLoaded) {
       throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
@@ -57,12 +56,12 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   get id(): IdOf<U> | undefined {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
 
   get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     return this.id || fail("Reference is unset or assigned to a new entity");
   }
 
@@ -82,7 +81,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (this.isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
-        this.loaded = ((await this.entity.__orm.em.load(this.otherType, current)) as any) as U;
+        this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
       } else {
         this.loaded = current;
       }
@@ -93,23 +92,22 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
     if (sameEntity(maybeOther, getMetadata(this.otherType), this.current())) {
       // TODO Should we fail this if the field is notNull?
-      this.setImpl(undefined as N, { beingDeleted: true });
+      this.setImpl(undefined as N);
     }
   }
 
   async onEntityDeletedAndFlushing(): Promise<void> {}
 
   // Internal method used by OneToManyCollection
-  setImpl(other: U | N, opts?: { beingDeleted?: boolean }): void {
+  setImpl(other: U | N): void {
     if (this.isLoaded && other === this.loaded) {
       return;
     }
 
     const previousLoaded = this.loaded;
 
-    if (!opts || opts.beingDeleted !== true) {
-      ensureNotDeleted(this.entity);
-    }
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     setField(this.entity, this.fieldName as string, other?.id ?? other);
     this.loaded = other;
@@ -139,5 +137,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       return undefined as N;
     }
     return e;
+  }
+
+  public toString(): string {
+    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherType.name}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 }

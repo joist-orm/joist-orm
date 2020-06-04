@@ -3,7 +3,9 @@ import { AuthorCodegen, authorConfig, AuthorOpts, Book } from "./entities";
 
 export class Author extends AuthorCodegen {
   public beforeFlushRan = false;
+  public beforeDeleteRan = false;
   public afterCommitRan = false;
+  public ageForBeforeFlush?: number;
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
@@ -58,8 +60,17 @@ authorConfig.addRule("books", async (a) => {
   }
 });
 
+authorConfig.cascadeDelete("books");
+
 authorConfig.beforeFlush((author) => {
   author.beforeFlushRan = true;
+  if (author.ageForBeforeFlush !== undefined) {
+    author.age = author.ageForBeforeFlush;
+  }
+});
+
+authorConfig.beforeDelete((author) => {
+  author.beforeDeleteRan = true;
 });
 
 authorConfig.afterCommit((author) => {

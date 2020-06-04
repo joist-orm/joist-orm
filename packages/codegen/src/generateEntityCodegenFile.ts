@@ -243,7 +243,7 @@ function generateDefaultCascadedDeletes(meta: EntityDbMetadata, configName: stri
   return meta.oneToManys
     .filter((p) => p.otherColumnNotNull)
     .map(({ fieldName }) => {
-      return code`${configName}.addCascadedDelete("${fieldName}"));`;
+      return code`${configName}.cascadeDelete("${fieldName}"));`;
     });
 }
 

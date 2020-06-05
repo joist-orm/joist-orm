@@ -15,9 +15,8 @@ import { reverseHint } from "./reverseHint";
 import { OneToManyCollection } from "./collections/OneToManyCollection";
 import { ManyToOneReference } from "./collections/ManyToOneReference";
 import { ManyToManyCollection } from "./collections/ManyToManyCollection";
-import * as util from "util";
 import { EntityOrmField } from "./EntityManager";
-import { isFlushProxy, proxyEntityManager } from "./FlushProxy";
+import { isFlushProxy, createFlushProxy } from "./FlushProxy";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -291,10 +290,12 @@ export class ConfigApi<T extends Entity> {
     this.beforeDelete(relationship, (entity) => {
       const em = getEm(entity);
       const relation = entity[relationship] as any;
+
       if (relation instanceof ManyToOneReference) {
         em.delete(relation.get);
       } else if (relation instanceof OneToManyCollection) {
-        (relation.get as Entity[]).forEach((e) => em.delete(e));
+        const entities = relation.get as Entity[];
+        entities.forEach((e) => em.delete(e));
       } else if (relation instanceof ManyToManyCollection) {
         (relation.get as Entity[]).forEach((e) => {
           relation.remove(e);
@@ -372,5 +373,5 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 }
 
 export function getEm(entity: Entity): EntityManager {
-  return isFlushProxy(entity) ? proxyEntityManager(entity.__orm.em, entity.__flushSecret) : entity.__orm.em;
+  return isFlushProxy(entity) ? createFlushProxy(entity.__orm.em, entity.__flushSecret) : entity.__orm.em;
 }

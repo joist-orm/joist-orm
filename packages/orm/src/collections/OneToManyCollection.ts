@@ -5,6 +5,7 @@ import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { maybeResolveReferenceToId } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { deproxyMaybeFlushProxy, deproxyMaybeFlushProxyArray } from "../FlushProxy";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
@@ -29,7 +30,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       if (this.entity.id === undefined) {
         this.loaded = [];
       } else {
-        this.loaded = await loaderForCollection(this).load(this.entity.id);
+        this.loaded = deproxyMaybeFlushProxyArray(await loaderForCollection(this).load(this.entity.id))!;
       }
       this.maybeAppendAddedBeforeLoaded();
     }
@@ -42,13 +43,16 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   add(other: U): void {
     ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
-      if (!this.addedBeforeLoaded.includes(other)) {
-        this.addedBeforeLoaded.push(other);
+    const loaded = deproxyMaybeFlushProxyArray(this.loaded);
+    other = deproxyMaybeFlushProxy(other);
+    if (loaded === undefined) {
+      const addedBeforeLoaded = deproxyMaybeFlushProxyArray(this.addedBeforeLoaded)!;
+      if (!addedBeforeLoaded.includes(other)) {
+        addedBeforeLoaded.push(other);
       }
     } else {
-      if (!this.loaded.includes(other)) {
-        this.loaded.push(other);
+      if (!loaded.includes(other)) {
+        loaded.push(other);
       }
     }
     // This will no-op and mark other dirty if necessary
@@ -96,8 +100,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     if (this.loaded === undefined) {
       throw new Error("remove was called when not loaded");
     }
+    other = deproxyMaybeFlushProxy(other);
     // This will no-op and mark other dirty if necessary
-    remove(this.loaded, other);
+    remove(deproxyMaybeFlushProxy(this.loaded), other);
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
   }
 
@@ -138,7 +143,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     if (this.loaded !== undefined && this.entity.id !== undefined) {
       const loader = loaderForCollection(this);
       loader.clear(this.entity.id);
-      this.loaded = await loader.load(this.entity.id);
+      this.loaded = deproxyMaybeFlushProxyArray(await loader.load(this.entity.id));
     }
   }
 
@@ -165,9 +170,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   }
 
   private maybeAppendAddedBeforeLoaded(): void {
-    if (this.loaded) {
-      const newEntities = this.addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
-      this.loaded.unshift(...newEntities);
+    const loaded = deproxyMaybeFlushProxyArray(this.loaded);
+    if (loaded) {
+      const newEntities = deproxyMaybeFlushProxyArray(this.addedBeforeLoaded)!.filter((e) => !loaded?.includes(e));
+      loaded.unshift(...newEntities);
       this.addedBeforeLoaded = [];
     }
   }

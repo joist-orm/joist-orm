@@ -24,8 +24,7 @@ import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
-import { deproxyMaybeFlushProxy, createFlushProxy, maybeFlushDeproxy, deproxyMaybeFlushProxyArray } from "./FlushProxy";
-import * as util from "util";
+const { Contexty } = require("contexty");
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -148,12 +147,15 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 type FilterAndOrder<T> = [FilterOf<T>, OrderOf<T> | undefined];
 
 export class EntityManager {
-  constructor(public knex: Knex) {}
+  constructor(public knex: Knex) {
+    this.contexty.create();
+  }
 
   private entities: Entity[] = [];
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
+  private contexty = new Contexty();
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
@@ -427,7 +429,7 @@ export class EntityManager {
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     entity.__orm.data["createdAt"] = new Date();
     entity.__orm.data["updatedAt"] = new Date();
-    deproxyMaybeFlushProxyArray(this.entities)!.push(deproxyMaybeFlushProxy(entity));
+    this.entities.push(entity);
   }
 
   /**
@@ -485,20 +487,25 @@ export class EntityManager {
 
     this._isFlushing = true;
 
+    // We need to split the thread so that Node's executionAsyncId changes and in turn
+    // Contexty give us a context that's distinct from whatever called flush
+    await new Promise((res) => setTimeout(res, 0));
+    const context = this.contexty.create();
+
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
 
     while (pendingEntities.length > 0) {
-      const wrappedEntities = pendingEntities.map((e) => createFlushProxy(e, this.flushSecret));
+      context.flushSecret = this.flushSecret;
       // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-      await this.cascadeDeletesIntoUnloadedCollections(wrappedEntities);
-      recalcDerivedFields(wrappedEntities);
-      const entityTodos = sortEntities(wrappedEntities);
-      await addReactiveAsyncDerivedValues(entityTodos, this.flushSecret);
+      await this.cascadeDeletesIntoUnloadedCollections(pendingEntities);
+      recalcDerivedFields(pendingEntities);
+      const entityTodos = sortEntities(pendingEntities);
+      await addReactiveAsyncDerivedValues(entityTodos);
       await recalcAsyncDerivedFields(this, entityTodos);
 
       // TODO Run beforeFlush first, so it can fill in derived values for validate?
-      await addReactiveValidations(entityTodos, this.flushSecret);
+      await addReactiveValidations(entityTodos);
       await validate(entityTodos);
       await beforeDelete(entityTodos);
       await beforeFlush(entityTodos);
@@ -819,9 +826,8 @@ export type ManyToManyField = {
   otherFieldName: string;
 };
 
-export function isEntity(entityOrProxy: any): entityOrProxy is Entity {
-  const e = deproxyMaybeFlushProxy(entityOrProxy);
-  return e !== undefined && e instanceof Object && "id" in e && "__orm" in e;
+export function isEntity(maybeEntity: any): maybeEntity is Entity {
+  return maybeEntity !== undefined && maybeEntity instanceof Object && "id" in maybeEntity && "__orm" in maybeEntity;
 }
 
 export function isKey(k: any): k is string {
@@ -855,13 +861,12 @@ export class TooManyError extends Error {}
  * from the currently-changed entities back to each rule's originally-defined-in entity,
  * and ensure those entities are added to `todos`.
  */
-async function addReactiveValidations(todos: Record<string, Todo>, flushSecret: number): Promise<void> {
+async function addReactiveValidations(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     // Find each statically-declared reactive rule for the given entity type
     return todo.metadata.config.__data.reactiveRules.map(async (reverseHint) => {
       // Add the resulting "found" entities to the right todos to be validated
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
-        entity = createFlushProxy(entity, flushSecret);
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.validates.push(entity);
@@ -876,11 +881,10 @@ async function addReactiveValidations(todos: Record<string, Todo>, flushSecret: 
  * Given the current changed entities in `todos`, use the static metadata of `reactiveDerivedValues`
  * to find any potentially-unloaded entities we should now re-calc, and add them to `todos`.
  */
-async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>, flushSecret: number): Promise<void> {
+async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
       (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
-        entity = createFlushProxy(entity, flushSecret);
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.updates.push(entity);

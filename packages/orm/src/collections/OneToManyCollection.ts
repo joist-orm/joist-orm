@@ -5,7 +5,6 @@ import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { maybeResolveReferenceToId } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { deproxyMaybeFlushProxy, deproxyMaybeFlushProxyArray } from "../FlushProxy";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
@@ -30,7 +29,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       if (this.entity.id === undefined) {
         this.loaded = [];
       } else {
-        this.loaded = deproxyMaybeFlushProxyArray(await loaderForCollection(this).load(this.entity.id))!;
+        this.loaded = await loaderForCollection(this).load(this.entity.id);
       }
       this.maybeAppendAddedBeforeLoaded();
     }
@@ -43,10 +42,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   add(other: U): void {
     ensureNotDeleted(this.entity);
-    const loaded = deproxyMaybeFlushProxyArray(this.loaded);
-    other = deproxyMaybeFlushProxy(other);
+    const loaded = this.loaded;
     if (loaded === undefined) {
-      const addedBeforeLoaded = deproxyMaybeFlushProxyArray(this.addedBeforeLoaded)!;
+      const addedBeforeLoaded = this.addedBeforeLoaded;
       if (!addedBeforeLoaded.includes(other)) {
         addedBeforeLoaded.push(other);
       }
@@ -100,9 +98,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     if (this.loaded === undefined) {
       throw new Error("remove was called when not loaded");
     }
-    other = deproxyMaybeFlushProxy(other);
     // This will no-op and mark other dirty if necessary
-    remove(deproxyMaybeFlushProxy(this.loaded), other);
+    remove(this.loaded, other);
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
   }
 
@@ -143,7 +140,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     if (this.loaded !== undefined && this.entity.id !== undefined) {
       const loader = loaderForCollection(this);
       loader.clear(this.entity.id);
-      this.loaded = deproxyMaybeFlushProxyArray(await loader.load(this.entity.id));
+      this.loaded = await loader.load(this.entity.id);
     }
   }
 
@@ -170,9 +167,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   }
 
   private maybeAppendAddedBeforeLoaded(): void {
-    const loaded = deproxyMaybeFlushProxyArray(this.loaded);
+    const loaded = this.loaded;
     if (loaded) {
-      const newEntities = deproxyMaybeFlushProxyArray(this.addedBeforeLoaded)!.filter((e) => !loaded?.includes(e));
+      const newEntities = this.addedBeforeLoaded.filter((e) => !loaded?.includes(e));
       loaded.unshift(...newEntities);
       this.addedBeforeLoaded = [];
     }

@@ -16,7 +16,6 @@ import { OneToManyCollection } from "./collections/OneToManyCollection";
 import { ManyToOneReference } from "./collections/ManyToOneReference";
 import { ManyToManyCollection } from "./collections/ManyToManyCollection";
 import { EntityOrmField } from "./EntityManager";
-import { isFlushProxy, createFlushProxy } from "./FlushProxy";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -118,12 +117,14 @@ export function setField(entity: Entity, fieldName: string, newValue: any): void
   const em = getEm(entity);
 
   if (em.isFlushing) {
-    if (!isFlushProxy(entity)) {
+    const { context } = em["contexty"];
+
+    if (context.flushSecret === undefined) {
       throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);
     }
 
-    if (entity.__flushSecret !== em["flushSecret"]) {
-      throw new Error(`Attempting to use an entity proxy outside its flush loop`);
+    if (context.flushSecret !== em["flushSecret"]) {
+      throw new Error(`Attempting to reuse a hook context outside its flush loop`);
     }
   }
 
@@ -373,5 +374,5 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 }
 
 export function getEm(entity: Entity): EntityManager {
-  return isFlushProxy(entity) ? createFlushProxy(entity.__orm.em, entity.__flushSecret) : entity.__orm.em;
+  return entity.__orm.em;
 }

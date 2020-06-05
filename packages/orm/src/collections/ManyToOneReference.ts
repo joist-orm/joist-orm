@@ -2,6 +2,7 @@ import { Entity, EntityConstructor, getMetadata, IdOf, isEntity, sameEntity } fr
 import { ensureNotDeleted, fail, getEm, maybeResolveReferenceToId, Reference, setField } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { deproxyMaybeFlushProxy } from "../FlushProxy";
 
 /**
  * Manages a foreign key from one entity to another, i.e. `Book.author --> Author`.
@@ -32,7 +33,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
+      this.loaded = deproxyMaybeFlushProxy(((await getEm(this.entity).load(this.otherType, current)) as any) as U);
     }
     this.isLoaded = true;
     return this.returnUndefinedIfDeleted(this.loaded);
@@ -81,9 +82,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (this.isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
-        this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
+        this.loaded = deproxyMaybeFlushProxy(((await getEm(this.entity).load(this.otherType, current)) as any) as U);
       } else {
-        this.loaded = current;
+        this.loaded = deproxyMaybeFlushProxy(current);
       }
     }
   }
@@ -110,7 +111,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     setField(this.entity, this.fieldName as string, other?.id ?? other);
-    this.loaded = other;
+    this.loaded = deproxyMaybeFlushProxy(other);
     this.isLoaded = true;
 
     // If had an existing value, remove us from its collection

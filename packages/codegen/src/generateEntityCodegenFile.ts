@@ -186,7 +186,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
     ${generateDefaultValidationRules(meta, configName)}
     
-    ${generateDefaultCascadedDeletes(meta, configName)}
+    ${generateDefaultCascadeDeletes(meta, configName)}
 
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __filterType: ${entityName}Filter = null!;
@@ -237,11 +237,11 @@ function generateDefaultValidationRules(meta: EntityDbMetadata, configName: stri
     });
 }
 
-function generateDefaultCascadedDeletes(meta: EntityDbMetadata, configName: string): Code[] {
+function generateDefaultCascadeDeletes(meta: EntityDbMetadata, configName: string): Code[] {
   return meta.oneToManys
     .filter((p) => p.otherColumnNotNull)
     .map(({ fieldName }) => {
-      return code`${configName}.cascadeDelete("${fieldName}"));`;
+      return code`${configName}.cascadeDelete("${fieldName}");`;
     });
 }
 

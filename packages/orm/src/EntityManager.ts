@@ -518,6 +518,7 @@ export class EntityManager {
     const entityTodos = sortEntities(entitiesToFlush);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
+      this._isFlushing = false;
       return;
     }
 

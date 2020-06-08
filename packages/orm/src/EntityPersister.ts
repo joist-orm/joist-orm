@@ -140,14 +140,11 @@ function cleanSql(sql: string): string {
 export function sortEntities(entities: Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
-    const isNew = entity.id === undefined;
-    const isDirty = !isNew && Object.keys(entity.__orm.originalData).length > 0;
-    const isDelete = !isNew && entity.__orm.deleted === "pending";
-    if (isNew || isDirty || isDelete) {
+    if (entity.isPendingFlush) {
       const todo = getTodo(todos, entity);
-      if (isNew) {
+      if (entity.isNewEntity) {
         todo.inserts.push(entity);
-      } else if (isDelete) {
+      } else if (entity.isPendingDelete) {
         todo.deletes.push(entity);
       } else {
         todo.updates.push(entity);

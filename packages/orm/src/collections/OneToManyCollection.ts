@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, IdOf } from "../";
+import { Collection, ensureNotDeleted, getEm, IdOf } from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { getOrSet, groupBy, remove } from "../utils";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -23,10 +23,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   }
 
   // opts is an internal parameter
-  async load(opts?: { beingDeleted?: boolean }): Promise<readonly U[]> {
-    if (!opts || !opts.beingDeleted) {
-      ensureNotDeleted(this.entity);
-    }
+  async load(): Promise<readonly U[]> {
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         this.loaded = [];
@@ -61,7 +59,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
 
   get get(): U[] {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
         return this.addedBeforeLoaded;
@@ -155,7 +153,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   // We already unhooked all children in our addedBeforeLoaded list; now load the full list if necessary.
   async onEntityDeletedAndFlushing(): Promise<void> {
     if (this.loaded === undefined) {
-      const loaded = await this.load({ beingDeleted: true });
+      const loaded = await this.load();
       loaded.forEach((other) => {
         const m2o = (other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>;
         if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
@@ -177,12 +175,16 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   current(): U[] {
     return this.loaded || this.addedBeforeLoaded;
   }
+
+  public toString(): string {
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+  }
 }
 
 function loaderForCollection<T extends Entity, U extends Entity>(
   collection: OneToManyCollection<T, U>,
 ): DataLoader<string, U[]> {
-  const { em } = collection.entity.__orm;
+  const em = getEm(collection.entity);
   // The metadata for the entity that contains the collection
   const meta = getMetadata(collection.entity);
   const loaderName = `${meta.tableName}.${collection.fieldName}`;

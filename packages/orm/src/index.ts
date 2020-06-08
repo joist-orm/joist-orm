@@ -8,9 +8,14 @@ import {
   Loaded,
   LoadHint,
   OptsOf,
+  RelationsIn,
 } from "./EntityManager";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import { reverseHint } from "./reverseHint";
+import { OneToManyCollection } from "./collections/OneToManyCollection";
+import { ManyToOneReference } from "./collections/ManyToOneReference";
+import { ManyToManyCollection } from "./collections/ManyToManyCollection";
+import { EntityOrmField, contexty } from "./EntityManager";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -108,7 +113,21 @@ interface Flavoring<FlavorT> {
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
 export function setField(entity: Entity, fieldName: string, newValue: any): void {
-  ensureNotDeleted(entity);
+  ensureNotDeleted(entity, { ignore: "pending" });
+  const em = getEm(entity);
+
+  if (em.isFlushing) {
+    const { flushSecret } = contexty.context;
+
+    if (flushSecret === undefined) {
+      throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);
+    }
+
+    if (flushSecret !== em["flushSecret"]) {
+      throw new Error(`Attempting to reuse a hook context outside its flush loop`);
+    }
+  }
+
   const { data, originalData } = entity.__orm;
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
@@ -181,8 +200,8 @@ export function setOpts<T extends Entity>(
   }
 }
 
-export function ensureNotDeleted(entity: Entity): void {
-  if (entity.isDeletedEntity) {
+export function ensureNotDeleted(entity: Entity, opts: { ignore?: EntityOrmField["deleted"] } = {}): void {
+  if (entity.isDeletedEntity && (opts.ignore === undefined || entity.__orm.deleted !== opts.ignore)) {
     throw new Error(entity + " is marked as deleted");
   }
 }
@@ -229,16 +248,19 @@ function errorMessage(errors: ValidationError[]): string {
   }
 }
 
+export type EntityHook = "beforeFlush" | "beforeDelete" | "afterCommit";
+type HookFn<T extends Entity> = (entity: T) => MaybePromise<void>;
 class ConfigData<T extends Entity> {
   /** The validation rules for this entity type. */
   rules: ValidationRule<T>[] = [];
   /** The async derived fields for this entity type. */
   asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
-  /** The before-flush hooks for this instance. */
-  beforeFlush: HookFn<T>[] = [];
-  /** The after-commit hooks for this instance. */
-  afterCommit: HookFn<T>[] = [];
-
+  /** The hooks for this instance. */
+  hooks: Record<EntityHook, HookFn<T>[]> = {
+    beforeDelete: [],
+    beforeFlush: [],
+    afterCommit: [],
+  };
   // Load-hint-ish structures that point back to instances that depend on us for validation rules.
   reactiveRules: string[][] = [];
   // Load-hint-ish structures that point back to instances that depend on us for derived values.
@@ -255,7 +277,7 @@ export class ConfigApi<T extends Entity> {
       this.__data.rules.push(ruleOrHint);
     } else {
       const fn = async (entity: T) => {
-        const { em } = entity.__orm;
+        const em = getEm(entity);
         const loaded = await em.populate(entity, ruleOrHint);
         return maybeRule!(loaded);
       };
@@ -263,6 +285,25 @@ export class ConfigApi<T extends Entity> {
       (fn as any).hint = ruleOrHint;
       this.__data.rules.push(fn);
     }
+  }
+
+  cascadeDelete(relationship: keyof RelationsIn<T>): void {
+    this.beforeDelete(relationship, (entity) => {
+      const em = getEm(entity);
+      const relation = entity[relationship] as any;
+
+      if (relation instanceof ManyToOneReference) {
+        em.delete(relation.get);
+      } else if (relation instanceof OneToManyCollection) {
+        const entities = relation.get as Entity[];
+        entities.forEach((e) => em.delete(e));
+      } else if (relation instanceof ManyToManyCollection) {
+        (relation.get as Entity[]).forEach((e) => {
+          relation.remove(e);
+          em.delete(e);
+        });
+      }
+    });
   }
 
   /** Registers `fn` as the lambda to provide the async value for `key`. */
@@ -274,30 +315,38 @@ export class ConfigApi<T extends Entity> {
     this.__data.asyncDerivedFields[key] = [populate, fn as any];
   }
 
-  beforeFlush<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
-  beforeFlush(fn: HookFn<T>): void;
-  beforeFlush(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
+  private hook(hook: EntityHook, ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>) {
     if (typeof ruleOrHint === "function") {
-      this.__data.beforeFlush.push(ruleOrHint);
+      this.__data.hooks[hook].push(ruleOrHint);
     } else {
       const fn = async (entity: T) => {
         // TODO Use this for reactive beforeFlush
-        const { em } = entity.__orm;
+        const em = getEm(entity);
         const loaded = await em.populate(entity, ruleOrHint);
         return maybeFn!(loaded);
       };
       // Squirrel our hint away where configureMetadata can find it
       (fn as any).hint = ruleOrHint;
-      this.__data.beforeFlush.push(fn);
+      this.__data.hooks[hook].push(fn);
     }
   }
 
+  beforeDelete<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
+  beforeDelete(fn: HookFn<T>): void;
+  beforeDelete(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
+    this.hook("beforeDelete", ruleOrHint, maybeFn);
+  }
+
+  beforeFlush<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
+  beforeFlush(fn: HookFn<T>): void;
+  beforeFlush(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
+    this.hook("beforeFlush", ruleOrHint, maybeFn);
+  }
+
   afterCommit(fn: HookFn<T>): void {
-    this.__data.afterCommit.push(fn);
+    this.hook("afterCommit", fn);
   }
 }
-
-type HookFn<T extends Entity> = (entity: T) => MaybePromise<void>;
 
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {

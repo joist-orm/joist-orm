@@ -25,6 +25,9 @@ import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
 const { Contexty } = require("contexty");
+export const contexty = new Contexty();
+// create a context here so there is always one defined
+contexty.create();
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -147,15 +150,12 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 type FilterAndOrder<T> = [FilterOf<T>, OrderOf<T> | undefined];
 
 export class EntityManager {
-  constructor(public knex: Knex) {
-    this.contexty.create();
-  }
+  constructor(public knex: Knex) {}
 
   private entities: Entity[] = [];
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
-  private contexty = new Contexty();
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
@@ -490,7 +490,7 @@ export class EntityManager {
     // We need to split the thread so that Node's executionAsyncId changes and in turn
     // Contexty give us a context that's distinct from whatever called flush
     await new Promise((res) => setTimeout(res, 0));
-    const context = this.contexty.create();
+    const context = contexty.create();
 
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);

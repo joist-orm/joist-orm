@@ -15,7 +15,7 @@ import { reverseHint } from "./reverseHint";
 import { OneToManyCollection } from "./collections/OneToManyCollection";
 import { ManyToOneReference } from "./collections/ManyToOneReference";
 import { ManyToManyCollection } from "./collections/ManyToManyCollection";
-import { EntityOrmField } from "./EntityManager";
+import { EntityOrmField, contexty } from "./EntityManager";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -117,13 +117,13 @@ export function setField(entity: Entity, fieldName: string, newValue: any): void
   const em = getEm(entity);
 
   if (em.isFlushing) {
-    const { context } = em["contexty"];
+    const { flushSecret } = contexty.context;
 
-    if (context.flushSecret === undefined) {
+    if (flushSecret === undefined) {
       throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);
     }
 
-    if (context.flushSecret !== em["flushSecret"]) {
+    if (flushSecret !== em["flushSecret"]) {
       throw new Error(`Attempting to reuse a hook context outside its flush loop`);
     }
   }

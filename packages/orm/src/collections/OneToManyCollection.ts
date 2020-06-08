@@ -42,15 +42,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   add(other: U): void {
     ensureNotDeleted(this.entity);
-    const loaded = this.loaded;
-    if (loaded === undefined) {
-      const addedBeforeLoaded = this.addedBeforeLoaded;
-      if (!addedBeforeLoaded.includes(other)) {
-        addedBeforeLoaded.push(other);
+    if (this.loaded === undefined) {
+      if (!this.addedBeforeLoaded.includes(other)) {
+        this.addedBeforeLoaded.push(other);
       }
     } else {
-      if (!loaded.includes(other)) {
-        loaded.push(other);
+      if (!this.loaded.includes(other)) {
+        this.loaded.push(other);
       }
     }
     // This will no-op and mark other dirty if necessary
@@ -167,10 +165,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   }
 
   private maybeAppendAddedBeforeLoaded(): void {
-    const loaded = this.loaded;
-    if (loaded) {
-      const newEntities = this.addedBeforeLoaded.filter((e) => !loaded?.includes(e));
-      loaded.unshift(...newEntities);
+    if (this.loaded) {
+      const newEntities = this.addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
+      this.loaded.unshift(...newEntities);
       this.addedBeforeLoaded = [];
     }
   }

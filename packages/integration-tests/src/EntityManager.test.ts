@@ -1,7 +1,7 @@
 import { EntityManager, Loaded } from "joist-orm";
+import { Deferred } from "./Deferred";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
-import { Deferred } from "./Deferred";
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "./entities/factories";
 
 describe("EntityManager", () => {

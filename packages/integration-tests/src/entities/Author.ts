@@ -32,6 +32,11 @@ export class Author extends AuthorCodegen {
       super.setWasEverPopular(true);
     }
   }
+
+  /** Example of an async boolean that can be navigated via a lens. */
+  async hasBooks(): Promise<boolean> {
+    return (await this.books.load()).length > 0;
+  }
 }
 
 authorConfig.addRule((a) => {

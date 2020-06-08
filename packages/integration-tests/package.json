@@ -5,7 +5,7 @@
   "scripts": {
     "migrate": "./run.sh ../../node_modules/joist-migration-utils",
     "test": "./node_modules/.bin/jest --runInBand --detectOpenHandles",
-    "codegen": "./run.sh joist-codegen"
+    "codegen": "./run.sh ../codegen"
   },
   "dependencies": {
     "joist-orm": "0.1.0-bump"

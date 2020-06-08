@@ -23,7 +23,8 @@ export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 export { OrderBy, EntityFilter, ValueFilter } from "./QueryBuilder";
-export { BaseEntity, Lens } from "./BaseEntity";
+export { BaseEntity } from "./BaseEntity";
+export * from "./loadLens";
 
 const F = Symbol();
 const G = Symbol();

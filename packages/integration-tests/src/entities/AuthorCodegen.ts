@@ -10,8 +10,8 @@ import {
   PartialOrNull,
   Changes,
   newChangesProxy,
-  Entity,
   Lens,
+  loadLens,
   LoadHint,
   Loaded,
   getEm,
@@ -193,8 +193,8 @@ export abstract class AuthorCodegen extends BaseEntity {
     return newChangesProxy((this as any) as Author);
   }
 
-  async load<U extends Entity, V extends U | U[]>(fn: (lens: Lens<Author, Author>) => Lens<U, V>): Promise<V> {
-    return super.load(fn);
+  async load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
+    return loadLens((this as any) as Author, fn);
   }
 
   async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {

@@ -35,3 +35,4 @@ export const newChangesProxy = imp("newChangesProxy@joist-orm");
 export const LoadHint = imp("LoadHint@joist-orm");
 export const Loaded = imp("Loaded@joist-orm");
 export const getEm = imp("getEm@joist-orm");
+export const loadLens = imp("loadLens@joist-orm");

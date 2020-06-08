@@ -8,7 +8,6 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  Entity as EntitySym,
   EntityFilter,
   EntityManager,
   FilterOf,
@@ -17,6 +16,7 @@ import {
   Lens,
   Loaded,
   LoadHint,
+  loadLens,
   ManyToManyCollection,
   ManyToOneReference,
   newChangesProxy,
@@ -215,10 +215,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         return ${newChangesProxy}(this as any as ${entityName});
       }
 
-      async load<U extends ${EntitySym}, V extends U | U[]>(
-        fn: (lens: ${Lens}<${entity.type}, ${entity.type}>) => ${Lens}<U, V>
-      ): Promise<V> {
-        return super.load(fn);
+      async load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
+        return ${loadLens}(this as any as ${entityName}, fn);
       }
 
       async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {

@@ -142,10 +142,10 @@ export function sortEntities(entities: Entity[]): Record<string, Todo> {
   for (const entity of entities) {
     if (entity.isPendingFlush) {
       const todo = getTodo(todos, entity);
-      if (entity.isNewEntity) {
-        todo.inserts.push(entity);
-      } else if (entity.isPendingDelete) {
+      if (entity.isPendingDelete) {
         todo.deletes.push(entity);
+      } else if (entity.isNewEntity) {
+        todo.inserts.push(entity);
       } else {
         todo.updates.push(entity);
       }

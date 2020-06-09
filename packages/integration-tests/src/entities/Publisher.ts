@@ -7,8 +7,6 @@ export class Publisher extends PublisherCodegen {
   }
 }
 
-publisherConfig.cascadeDelete("authors");
-
 publisherConfig.addRule("authors", (p) => {
   if (p.authors.get.length === 13) {
     return "Cannot have 13 authors";

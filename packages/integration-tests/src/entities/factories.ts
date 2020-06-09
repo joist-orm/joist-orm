@@ -28,3 +28,7 @@ export async function insertTag(row: { id?: number; name: string }) {
 export async function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
   await knex.insert(row).into("books_to_tags");
 }
+
+export async function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
+  await knex.insert({ is_public: true, ...row }).into("book_reviews");
+}

@@ -1,7 +1,14 @@
 import { EntityManager, Loaded } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
-import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "./entities/factories";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertBookToTag,
+  insertPublisher,
+  insertTag,
+} from "./entities/factories";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
@@ -769,15 +776,17 @@ describe("EntityManager", () => {
   });
 
   it("can cascade deletes through multiple levels", async () => {
-    await insertPublisher({ name: "p1" });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
     const em = new EntityManager(knex);
-    const a1 = await em.load(Publisher, "1");
+    const a1 = await em.load(Author, "1");
     await em.delete(a1);
     await em.flush();
-    const rows = await knex.select("*").from("books");
-    expect(rows.length).toEqual(0);
+    const bookRows = await knex.select("*").from("books");
+    const bookReviewRows = await knex.select("*").from("book_reviews");
+    expect(bookRows).toHaveLength(0);
+    expect(bookReviewRows).toHaveLength(0);
   });
 
   it("caches finds within a UnitOfWork", async () => {

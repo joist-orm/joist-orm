@@ -1,14 +1,26 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, Entity, EntityConstructor, getEm, IdOf } from "../";
+import {
+  Collection,
+  ensureNotDeleted,
+  Entity,
+  EntityConstructor,
+  getEm,
+  IdOf,
+  ManyToOneReference,
+  maybeResolveReferenceToId,
+  OneToManyCollection,
+} from "../";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { getMetadata } from "../EntityManager";
 
 export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
   private removedBeforeLoaded: U[] = [];
+  private isCascadeDelete: boolean;
 
   constructor(
     public joinTableName: string,
@@ -25,6 +37,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     public otherColumnName: string,
   ) {
     super();
+    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   async load(): Promise<ReadonlyArray<U>> {
@@ -65,7 +78,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   remove(other: U): void {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     const joinRows = getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []);
     const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
     if (row) {
@@ -148,15 +161,20 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
-  /** Some random entity got deleted, if it was in our collection, remove it. */
-  onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (this.current().includes(maybeOther as U)) {
-      this.remove(maybeOther as U);
+  onEntityDelete() {
+    if (this.isCascadeDelete) {
+      this.current().forEach(getEm(this.entity).delete);
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {}
+  async onEntityDeletedAndFlushing(): Promise<void> {
+    const entities = await this.load();
+    entities.forEach((other) => {
+      const m2m = (other[this.otherFieldName] as any) as ManyToManyCollection<U, T>;
+      m2m.remove(this.entity);
+    });
+    this.loaded = [];
+  }
 
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {
     if (this.loaded) {

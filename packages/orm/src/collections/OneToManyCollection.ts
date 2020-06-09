@@ -10,6 +10,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
+  private isCascadeDelete: boolean;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -20,6 +21,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     public otherColumnName: string,
   ) {
     super();
+    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   // opts is an internal parameter
@@ -91,13 +93,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     }
   }
 
-  remove(other: U) {
-    ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
+  remove(other: U, opts: { requireLoaded: boolean } = { requireLoaded: true }) {
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
     // This will no-op and mark other dirty if necessary
-    remove(this.loaded, other);
+    remove(this.loaded || this.addedBeforeLoaded, other);
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
   }
 
@@ -142,25 +144,24 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     }
   }
 
-  /** Some random entity got deleted, it it was in our collection, remove it. */
-  onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
-    if (this.current().includes(maybeOther as U)) {
-      this.remove(maybeOther as U);
+  onEntityDelete(): void {
+    if (this.isCascadeDelete) {
+      this.current().forEach(getEm(this.entity).delete);
     }
   }
 
   // We already unhooked all children in our addedBeforeLoaded list; now load the full list if necessary.
   async onEntityDeletedAndFlushing(): Promise<void> {
-    if (this.loaded === undefined) {
-      const loaded = await this.load();
-      loaded.forEach((other) => {
-        const m2o = (other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>;
-        if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
-          // TODO What if other.otherFieldName is required/not-null?
-          m2o.set(undefined);
-        }
-      });
-    }
+    const current = await this.load();
+    current.forEach((other) => {
+      const m2o = (other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>;
+      if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
+        // TODO What if other.otherFieldName is required/not-null?
+        m2o.set(undefined);
+      }
+    });
+    this.loaded = [];
+    this.addedBeforeLoaded = [];
   }
 
   private maybeAppendAddedBeforeLoaded(): void {
@@ -197,9 +198,8 @@ function loaderForCollection<T extends Entity, U extends Entity>(
         .whereIn(collection.otherColumnName, keys as string[])
         .orderBy("id");
 
-      const entities = rows
-        .map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }))
-        .filter((e) => !e.isDeletedEntity);
+      const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
+      // .filter((e) => !e.isDeletedEntity);
 
       const rowsById = groupBy(entities, (entity) => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.

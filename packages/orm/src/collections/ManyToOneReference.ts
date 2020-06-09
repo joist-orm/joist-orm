@@ -16,7 +16,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   private loaded!: U | N;
   // We need a separate boolean to b/c loaded == undefined can still mean "isLoaded" for nullable fks.
   private isLoaded = false;
-  private cascadeDelete: boolean;
+  private isCascadeDelete: boolean;
 
   constructor(
     private entity: T,
@@ -26,7 +26,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     private notNull: boolean,
   ) {
     super();
-    this.cascadeDelete = getMetadata(otherType).config.__data.cascadeDeleteFields.includes(otherFieldName as any);
+    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   async load(): Promise<U | N> {
@@ -90,18 +90,25 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  /** Some random entity got deleted, it it was in our reference, remove it. */
-  onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
-    if (sameEntity(maybeOther, getMetadata(this.otherType), this.current())) {
-      // TODO Should we fail this if the field is notNull?
-      this.setImpl(undefined as N);
-      if (this.cascadeDelete) {
-        getEm(this.entity).delete(this.entity);
+  onEntityDelete(): void {
+    if (this.isCascadeDelete) {
+      const current = this.current();
+      if (current !== undefined && typeof current !== "string") {
+        getEm(this.entity).delete(current as U);
       }
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {}
+  async onEntityDeletedAndFlushing(): Promise<void> {
+    const current = await this.load();
+    if (current !== undefined) {
+      const o2m = ((current as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
+      o2m.remove(this.entity, { requireLoaded: false });
+    }
+    setField(this.entity, this.fieldName as string, undefined);
+    this.loaded = undefined as any;
+    this.isLoaded = true;
+  }
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N): void {

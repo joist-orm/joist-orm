@@ -186,9 +186,9 @@ describe("ManyToManyCollection", () => {
     const t2 = await em.load(Tag, "4");
     // When the tag is deleted
     em.delete(t1);
+    await em.flush();
     // Then the deleted tag is removed from the book collection
     expect(b1.tags.get.map((t) => t.id)).toEqual([t2.id]);
-    await em.flush();
     // And the tag itself was deleted
     expect((await knex.select("*").from("tags")).length).toEqual(1);
     // And the join table entry was deleted
@@ -210,9 +210,9 @@ describe("ManyToManyCollection", () => {
     // When both tags are deleted
     em.delete(t1);
     em.delete(t2);
+    await em.flush();
     // Then the deleted tag is removed from the book collection
     expect(b1.tags.get.length).toEqual(0);
-    await em.flush();
     // And the join table rows were deleted
     expect((await knex.select("*").from("books_to_tags")).length).toEqual(0);
   });
@@ -241,6 +241,7 @@ describe("ManyToManyCollection", () => {
     const t1 = await em.load(Tag, "3");
     // And the book is deleted
     em.delete(b1);
+    await em.flush();
     // Then we cannot remove from the tags collection
     expect(() => b1.tags.remove(t1)).toThrow("Book#2 is marked as deleted");
   });

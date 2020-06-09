@@ -23,8 +23,8 @@ export abstract class AbstractRelationImpl<U> {
   abstract async onEntityDeletedAndFlushing(): Promise<void>;
 
   /**
-   * Called any time any entity in the Unit of Work is deleted, so that we can,
-   * if needed, remove it from our reference/collection.
+   * Called when our entity has been `EntityManager.delete`'d so that we can run any special behavior
+   * like cascades
    */
-  abstract onDeleteOfMaybeOtherEntity(maybeOther: Entity): void;
+  abstract onEntityDelete(): void;
 }

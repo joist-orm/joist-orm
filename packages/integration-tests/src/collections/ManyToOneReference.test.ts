@@ -71,8 +71,8 @@ describe("ManyToOneReference", () => {
     const p1 = a1.publisher.get!;
     // When we delete the publisher
     em.delete(p1);
+    await em.flush();
     // Then the a1.publisher field should be undefined
     expect(a1.publisher.get).toBeUndefined();
-    await em.flush();
   });
 });

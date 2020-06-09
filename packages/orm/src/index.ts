@@ -294,20 +294,8 @@ export class ConfigApi<T extends Entity> {
   cascadeDelete(relationship: keyof RelationsIn<T>): void {
     this.__data.cascadeDeleteFields.push(relationship);
     this.beforeDelete(relationship, (entity) => {
-      const em = getEm(entity);
-      const relation = entity[relationship] as any;
-
-      if (relation instanceof ManyToOneReference) {
-        em.delete(relation.get);
-      } else if (relation instanceof OneToManyCollection) {
-        const entities = relation.get as Entity[];
-        entities.forEach((e) => em.delete(e));
-      } else if (relation instanceof ManyToManyCollection) {
-        (relation.get as Entity[]).forEach((e) => {
-          relation.remove(e);
-          em.delete(e);
-        });
-      }
+      const relation = (entity[relationship] as any) as AbstractRelationImpl<T>;
+      relation.onEntityDelete();
     });
   }
 

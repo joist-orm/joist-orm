@@ -382,39 +382,27 @@ export class EntityManager {
     entityOrList: T | T[],
     hint: H,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>>> {
-    let promises: Promise<void>[] = [];
     const list: T[] = Array.isArray(entityOrList) ? entityOrList : [entityOrList];
-    list.forEach((entity) => {
-      if (!entity) {
-        return;
-      }
-      // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
-      // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
-      // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per
-      // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
-      // in).
-      if (typeof hint === "string") {
-        promises.push((entity as any)[hint].load());
-      } else if (Array.isArray(hint)) {
-        (hint as string[]).forEach((key) => {
-          promises.push((entity as any)[key].load());
-        });
-      } else if (typeof hint === "object") {
-        Object.entries(hint as object).forEach(([key, nestedHint]) => {
-          promises.push(
-            (entity as any)[key].load().then((result: any) => {
-              if (Array.isArray(result)) {
-                return Promise.all(result.map((result) => this.populate(result, nestedHint)));
-              } else {
-                return this.populate(result, nestedHint);
-              }
-            }),
+    const promises = list
+      .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
+      .flatMap((entity) => {
+        // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
+        // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
+        // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per
+        // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
+        // in).
+        if (typeof hint === "string") {
+          return (entity as any)[hint].load();
+        } else if (Array.isArray(hint)) {
+          return (hint as string[]).map((key) => (entity as any)[key].load());
+        } else if (typeof hint === "object") {
+          return Object.entries(hint as object).map(([key, nestedHint]) =>
+            (entity as any)[key].load().then((result: any) => this.populate(result, nestedHint)),
           );
-        });
-      } else {
-        throw new Error(`Unexpected hint ${hint}`);
-      }
-    });
+        } else {
+          throw new Error(`Unexpected hint ${hint}`);
+        }
+      });
     await Promise.all(promises);
     return entityOrList as any;
   }
@@ -447,27 +435,11 @@ export class EntityManager {
       return;
     }
     deletedEntity.__orm.deleted = "pending";
-    // We want to "unhook" this entity from any other currently-loaded enitty.
-    //
-    // A simple way of doing this would be to start at this now-deleted entity
-    // and "cascading out" from its o2m/m2m collections.
-    //
-    // However, this only works for our o2m/m2m collections that are loaded,
-    // and there might be other-side entities that _are_ loaded pointing back
-    // at us that we don't realize (i.e. we're an author, and `author.books`
-    // is not loaded, but there is a `book.author` loaded in the EntityManager
-    // pointing at us).
-    //
-    // So, instead of "cascading out", we just scan all loaded entities, tell
-    // them that this entity got deleted, and let them sort it out.
-    this.entities
-      .filter((e) => e.__orm.deleted === undefined)
-      .forEach((maybeOtherEntity) => {
-        Object.values(maybeOtherEntity).map((v: any) => {
-          if (v instanceof AbstractRelationImpl) {
-            v.onDeleteOfMaybeOtherEntity(deletedEntity);
-          }
-        });
+
+    Object.values(deletedEntity)
+      .filter((v) => v instanceof AbstractRelationImpl)
+      .map((relation: AbstractRelationImpl<any>) => {
+        relation.onEntityDelete();
       });
   }
 
@@ -495,24 +467,25 @@ export class EntityManager {
 
     while (pendingEntities.length > 0) {
       context.flushSecret = this.flushSecret;
-      // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-      await this.cascadeDeletesIntoUnloadedCollections(pendingEntities);
-      recalcDerivedFields(pendingEntities);
-      const entityTodos = sortEntities(pendingEntities);
-      await addReactiveAsyncDerivedValues(entityTodos);
-      await recalcAsyncDerivedFields(this, entityTodos);
+      const todos = sortEntities(pendingEntities);
 
-      // TODO Run beforeFlush first, so it can fill in derived values for validate?
-      await addReactiveValidations(entityTodos);
-      await validate(entityTodos);
-      await beforeDelete(entityTodos);
-      await beforeFlush(entityTodos);
+      // add objects to todos that have reactive hooks
+      await addReactiveAsyncDerivedValues(todos);
+      await addReactiveValidations(todos);
+
+      // run our hooks
+      await beforeDelete(todos);
+      // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
+      await cascadeDeletesIntoRelations(todos);
+      await beforeFlush(todos);
+      recalcDerivedFields(todos);
+      await recalcAsyncDerivedFields(this, todos);
+      await validate(todos);
 
       entitiesToFlush.push(...pendingEntities);
       pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
       this.flushSecret += 1;
     }
-
     const entityTodos = sortEntities(entitiesToFlush);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
     if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
@@ -528,6 +501,7 @@ export class EntityManager {
     await afterCommit(entityTodos);
     // Reset the find caches b/c data will have changed in the db
     this.findLoaders = {};
+    this.__data.loaders = {};
 
     this._isFlushing = false;
   }
@@ -545,23 +519,6 @@ export class EntityManager {
    */
   public toJSON(): string {
     return `<EntityManager ${this.entities.length}>`;
-  }
-
-  /** Find all deleted entities and ensure their references all know about their deleted-ness. */
-  private async cascadeDeletesIntoUnloadedCollections(entities: Entity[]): Promise<void> {
-    await Promise.all(
-      entities
-        .filter((e) => e.isPendingDelete)
-        .map((entity) => {
-          return Promise.all(
-            Object.values(entity).map(async (v: any) => {
-              if (v instanceof AbstractRelationImpl) {
-                await v.onEntityDeletedAndFlushing();
-              }
-            }),
-          );
-        }),
-    );
   }
 
   /**
@@ -862,10 +819,11 @@ export class TooManyError extends Error {}
  */
 async function addReactiveValidations(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
+    const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
     return todo.metadata.config.__data.reactiveRules.map(async (reverseHint) => {
       // Add the resulting "found" entities to the right todos to be validated
-      (await followReverseHint([...todo.inserts, ...todo.updates, ...todo.deletes], reverseHint)).forEach((entity) => {
+      (await followReverseHint(entities, reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.validates.push(entity);
@@ -882,8 +840,9 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
  */
 async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
+    const entities = [...todo.inserts, ...todo.updates];
     return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
-      (await followReverseHint([...todo.inserts, ...todo.updates], reverseHint)).forEach((entity) => {
+      (await followReverseHint(entities, reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.updates.push(entity);
@@ -894,12 +853,27 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
   await Promise.all(p);
 }
 
+/** Find all deleted entities and ensure their references all know about their deleted-ness. */
+async function cascadeDeletesIntoRelations(todos: Record<string, Todo>): Promise<void> {
+  const entities = Object.values(todos).flatMap((todo) => todo.deletes);
+  await Promise.all(
+    entities
+      .flatMap((e) => Object.values(e))
+      .filter((v) => v instanceof AbstractRelationImpl)
+      .map((relation: AbstractRelationImpl<any>) => {
+        return relation.onEntityDeletedAndFlushing();
+      }),
+  );
+}
+
 async function validate(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     const rules = todo.metadata.config.__data.rules;
-    return [...todo.inserts, ...todo.updates, ...todo.validates].flatMap((entity) => {
-      return rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
-    });
+    return [...todo.inserts, ...todo.updates, ...todo.validates]
+      .filter((e) => !e.isDeletedEntity)
+      .flatMap((entity) => {
+        return rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
+      });
   });
   const errors = (await Promise.all(p)).flat();
   if (errors.length > 0) {
@@ -914,8 +888,9 @@ async function runHook(
 ): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     const hookFns = todo.metadata.config.__data.hooks[hook];
+
     return keys
-      .flatMap((k) => todo[k])
+      .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
       .flatMap((entity) => {
         return hookFns.map(async (fn) => fn(entity));
       });
@@ -959,13 +934,17 @@ type Narrowable = string | number | boolean | symbol | object | undefined | void
  * with async/promise-based logic, and d) doesn't support passing an app-specific
  * context, but it's a start.
  */
-function recalcDerivedFields(entities: Entity[]) {
+function recalcDerivedFields(todos: Record<string, Todo>) {
+  const entities = Object.values(todos)
+    .flatMap((todo) => [...todo.inserts, ...todo.updates])
+    .filter((e) => !e.isDeletedEntity);
   const derivedFieldsByMeta = new Map(
     [...new Set(entities.map(getMetadata))].map((m) => {
       return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived).map((f) => f.fieldName)];
     }),
   );
-  for (const entity of entities.filter((e) => !e.isDeletedEntity)) {
+
+  for (const entity of entities) {
     const derivedFields = derivedFieldsByMeta.get(entity.__orm.metadata);
     derivedFields?.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.

@@ -1,5 +1,4 @@
 import { EntityManager, Loaded } from "joist-orm";
-import { Deferred } from "./Deferred";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "./entities/factories";
@@ -751,6 +750,18 @@ describe("EntityManager", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const a1 = await em.load(Author, "1");
+    await em.delete(a1);
+    await em.flush();
+    const rows = await knex.select("*").from("books");
+    expect(rows.length).toEqual(0);
+  });
+
+  it("can cascade deletes into other loaded entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    await em.load(Book, "1");
     await em.delete(a1);
     await em.flush();
     const rows = await knex.select("*").from("books");

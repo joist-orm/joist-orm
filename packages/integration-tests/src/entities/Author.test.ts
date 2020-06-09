@@ -80,10 +80,10 @@ describe("Author", () => {
     const b1 = await em.load(Book, "1");
     // When we change the book
     b1.title = "b2";
-    // And the book that it would reactively trigger is deleted
+    // And the author that it would reactively trigger is deleted
     em.delete(a1);
-    // Then we can't b/c the book.author is required
-    await expect(em.flush()).rejects.toThrow("Validation error: author is required");
+    // Then it works b/c the author cascade delete takes precedence
+    await em.flush();
   });
 
   it("cascading deletes does not blow up due to reactive validation rules", async () => {

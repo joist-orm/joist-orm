@@ -16,6 +16,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   private loaded!: U | N;
   // We need a separate boolean to b/c loaded == undefined can still mean "isLoaded" for nullable fks.
   private isLoaded = false;
+  private cascadeDelete: boolean;
 
   constructor(
     private entity: T,
@@ -25,6 +26,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     private notNull: boolean,
   ) {
     super();
+    this.cascadeDelete = getMetadata(otherType).config.__data.cascadeDeleteFields.includes(otherFieldName as any);
   }
 
   async load(): Promise<U | N> {
@@ -93,6 +95,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (sameEntity(maybeOther, getMetadata(this.otherType), this.current())) {
       // TODO Should we fail this if the field is notNull?
       this.setImpl(undefined as N);
+      if (this.cascadeDelete) {
+        getEm(this.entity).delete(this.entity);
+      }
     }
   }
 

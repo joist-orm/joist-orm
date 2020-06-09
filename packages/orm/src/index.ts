@@ -265,6 +265,7 @@ class ConfigData<T extends Entity> {
   reactiveRules: string[][] = [];
   // Load-hint-ish structures that point back to instances that depend on us for derived values.
   reactiveDerivedValues: string[][] = [];
+  cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
 }
 
 export class ConfigApi<T extends Entity> {
@@ -288,6 +289,7 @@ export class ConfigApi<T extends Entity> {
   }
 
   cascadeDelete(relationship: keyof RelationsIn<T>): void {
+    this.__data.cascadeDeleteFields.push(relationship);
     this.beforeDelete(relationship, (entity) => {
       const em = getEm(entity);
       const relation = entity[relationship] as any;

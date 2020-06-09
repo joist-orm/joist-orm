@@ -145,8 +145,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   /** Some random entity got deleted, it it was in our collection, remove it. */
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
     if (this.current().includes(maybeOther as U)) {
-      // TODO Use this.remove() when it's implemented
-      remove(this.current(), maybeOther);
+      this.remove(maybeOther as U);
     }
   }
 

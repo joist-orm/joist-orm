@@ -150,7 +150,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   /** Some random entity got deleted, if it was in our collection, remove it. */
   onDeleteOfMaybeOtherEntity(maybeOther: Entity): void {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.current().includes(maybeOther as U)) {
       this.remove(maybeOther as U);
     }

@@ -28,7 +28,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   async load(): Promise<ReadonlyArray<U>> {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       // TODO This key is basically a Reference, whenever we have that.
       // TODO Unsaved entities should never get here

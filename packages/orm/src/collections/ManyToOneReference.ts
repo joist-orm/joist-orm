@@ -28,7 +28,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   async load(): Promise<U | N> {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
@@ -130,7 +130,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   private returnUndefinedIfDeleted(e: U | N): U | N {
-    if (e !== undefined && e.isDeletedEntity) {
+    if (e !== undefined && e.isDeletedEntity && !e.isPendingDelete) {
       if (this.notNull) {
         throw new Error(`Referenced entity ${e} has been marked as deleted`);
       }

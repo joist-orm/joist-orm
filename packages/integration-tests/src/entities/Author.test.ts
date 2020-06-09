@@ -71,6 +71,18 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("An author cannot have 13 books");
   });
 
+  it("can have reactive validation fired on optional child", async () => {
+    // Given the author has no publisher
+    await insertAuthor({ first_name: "a1" });
+    await insertPublisher({ name: "p1" });
+    const em = new EntityManager(knex);
+    // When we set the publisher
+    const a1 = await em.load(Author, "1");
+    a1.publisher.set(await em.load(Publisher, "1"));
+    // Then flush doesn't blow up
+    await em.flush();
+  });
+
   it("delete does not blow up due to reactive validation rules", async () => {
     // Given an author and book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });

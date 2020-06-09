@@ -1026,8 +1026,8 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
         // new author's books.
         const isReference = getMetadata(c).fields.find((f) => f.fieldName === fieldName)?.kind === "m2o";
         const hasChanged = isReference && (c as any).changes[fieldName].hasChanged;
-        if (hasChanged) {
-          const originalValue = (c as any).changes[fieldName].originalValue;
+        const originalValue = (c as any).changes[fieldName].originalValue;
+        if (hasChanged && originalValue) {
           const originalEntityMaybePromise = isEntity(originalValue)
             ? originalValue
             : getEm(c).load((c as any)[fieldName].otherType, originalValue);

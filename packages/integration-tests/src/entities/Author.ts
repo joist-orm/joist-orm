@@ -1,5 +1,5 @@
 import { EntityManager, Loaded } from "joist-orm";
-import { AuthorCodegen, authorConfig, AuthorOpts, Book } from "./entities";
+import { AuthorCodegen, authorConfig, AuthorOpts } from "./entities";
 
 export class Author extends AuthorCodegen {
   public beforeFlushRan = false;
@@ -59,9 +59,17 @@ authorConfig.addRule((a) => {
   }
 });
 
+// Example of reactive rule being fired on Book change
 authorConfig.addRule("books", async (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {
     return "A book title cannot be the author's firstName";
+  }
+});
+
+// Example of reactive rule being fired on Book insertion/deletion
+authorConfig.addRule("books", async (a) => {
+  if (a.books.get.length === 13) {
+    return "An author cannot have 13 books";
   }
 });
 

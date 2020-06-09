@@ -1,9 +1,10 @@
 import { EntityManager } from "joist-orm";
-import { knex } from "../setupDbTests";
-import { Author, Book, BookId, BookReview, Publisher } from "../entities";
-import { insertAuthor, insertBook, insertPublisher } from "./factories";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
+import { Author, Book, BookId, BookReview, Publisher } from "../entities";
+import { knex } from "../setupDbTests";
+import { zeroTo } from "../utils";
+import { insertAuthor, insertBook, insertPublisher } from "./factories";
 
 describe("Author", () => {
   it("can have business logic methods", async () => {
@@ -45,6 +46,29 @@ describe("Author", () => {
     b1.title = "a1";
     // Then the validation rule is ran even though it's on the author entity
     await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
+  });
+
+  it("can have reactive validation fired on new child", async () => {
+    // Given the author has 12 books
+    await insertAuthor({ first_name: "a1" });
+    await Promise.all(zeroTo(12).map((n) => insertBook({ title: `b${n}`, author_id: 1 })));
+    const em = new EntityManager(knex);
+    // When we add a 13th book
+    const a1 = await em.load(Author, "1");
+    const b1 = new Book(em, { title: "b1", author: a1 });
+    // Then the Author validation rule fails
+    await expect(em.flush()).rejects.toThrow("An author cannot have 13 books");
+  });
+
+  it("can have reactive validation fired on deleted child", async () => {
+    // Given the author has 14 books
+    await insertAuthor({ first_name: "a1" });
+    await Promise.all(zeroTo(14).map((n) => insertBook({ title: `b${n}`, author_id: 1 })));
+    const em = new EntityManager(knex);
+    // When we delete the 14th book
+    em.delete(await em.load(Book, "14"));
+    // Then the Author validation rule fails
+    await expect(em.flush()).rejects.toThrow("An author cannot have 13 books");
   });
 
   it("delete does not blow up due to reactive validation rules", async () => {

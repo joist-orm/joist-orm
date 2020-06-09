@@ -10,7 +10,9 @@ type MaybeArray<U, V> = U extends ReadonlyArray<any> ? (V extends ReadonlyArray<
 /** Given a type T that we come across in the path, de-array it to continue our flatMap-ish semantics. */
 type MaybeDropArray<T> = T extends ReadonlyArray<infer U> ? U : T;
 
-const L = Symbol();
+// This shouldn't need exported, but fighting:
+// Exported variable 'entityResolvers' has or is using name 'L' from external module "/home/node/app/node_modules/joist-orm/build/loadLens" but cannot be named.
+export const L = Symbol();
 
 type Primitive = string | number | boolean | symbol;
 

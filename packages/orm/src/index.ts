@@ -250,7 +250,8 @@ function errorMessage(errors: ValidationError[]): string {
 
 export type EntityHook = "beforeFlush" | "beforeDelete" | "afterCommit";
 type HookFn<T extends Entity> = (entity: T) => MaybePromise<void>;
-class ConfigData<T extends Entity> {
+
+export class ConfigData<T extends Entity> {
   /** The validation rules for this entity type. */
   rules: ValidationRule<T>[] = [];
   /** The async derived fields for this entity type. */

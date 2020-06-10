@@ -185,8 +185,6 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     export const ${configName} = new ${ConfigApi}<${entity.type}>();
 
     ${generateDefaultValidationRules(meta, configName)}
-    
-    ${generateDefaultCascadeDeletes(meta, configName)}
 
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __filterType: ${entityName}Filter = null!;

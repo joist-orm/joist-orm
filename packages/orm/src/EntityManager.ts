@@ -25,7 +25,6 @@ import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
 import { Contexty } from "./contexty";
-export const contexty = new Contexty();
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -154,11 +153,16 @@ export class EntityManager {
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
+  private contexty?: Contexty;
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
     joinRows: {} as Record<string, JoinRow[]>,
   };
+
+  get context() {
+    return this.contexty?.context || {};
+  }
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
   public async find<
@@ -457,13 +461,16 @@ export class EntityManager {
 
     this._isFlushing = true;
 
-    // We need to split the thread so that Node's executionAsyncId changes and in turn
-    // Contexty give us a context that's distinct from whatever called flush
-    await new Promise((res) => setTimeout(res, 0));
-    const context = contexty.create();
+    this.contexty = new Contexty();
+    this.contexty.create();
 
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+
+    // We need to split the thread so that Node's executionAsyncId changes and in turn
+    // Contexty give us a context that's distinct from whatever called flush
+    await new Promise((res) => setTimeout(res, 0));
+    const context = this.contexty.create();
 
     while (pendingEntities.length > 0) {
       context.flushSecret = this.flushSecret;
@@ -486,23 +493,24 @@ export class EntityManager {
       pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
       this.flushSecret += 1;
     }
+
     const entityTodos = sortEntities(entitiesToFlush);
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
-    if (Object.keys(entityTodos).length === 0 && Object.keys(joinRowTodos).length === 0) {
-      this._isFlushing = false;
-      return;
+
+    if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
+      await this.knex.transaction(async (tx) => {
+        await flushEntities(this.knex, tx, entityTodos);
+        await flushJoinTables(this.knex, tx, joinRowTodos);
+        await tx.commit();
+      });
+      await afterCommit(entityTodos);
+      // Reset the find caches b/c data will have changed in the db
+      this.findLoaders = {};
+      this.__data.loaders = {};
     }
 
-    await this.knex.transaction(async (tx) => {
-      await flushEntities(this.knex, tx, entityTodos);
-      await flushJoinTables(this.knex, tx, joinRowTodos);
-      await tx.commit();
-    });
-    await afterCommit(entityTodos);
-    // Reset the find caches b/c data will have changed in the db
-    this.findLoaders = {};
-    this.__data.loaders = {};
-
+    this.contexty.cleanup();
+    this.contexty = undefined;
     this._isFlushing = false;
   }
 

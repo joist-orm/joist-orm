@@ -1,27 +1,29 @@
-import { createHook, executionAsyncId } from "async_hooks";
+import { createHook, executionAsyncId, AsyncHook } from "async_hooks";
 
 const contexties = new Map();
 
 // Not active until enableHook is called
-const hook = createHook({
-  init(asyncId, type, triggerAsyncId) {
-    for (let contexts of contexties.values()) {
-      contexts.set(asyncId, contexts.get(triggerAsyncId));
-    }
-  },
-  destroy(asyncId) {
-    for (let contexts of contexties.values()) {
-      contexts.delete(asyncId);
-    }
-  },
-});
+let hook: AsyncHook | undefined;
 
-export function enableHook() {
+function enableHook() {
+  hook = createHook({
+    init(asyncId, type, triggerAsyncId) {
+      for (let contexts of contexties.values()) {
+        contexts.set(asyncId, contexts.get(triggerAsyncId));
+      }
+    },
+    destroy(asyncId) {
+      for (let contexts of contexties.values()) {
+        contexts.delete(asyncId);
+      }
+    },
+  });
   hook.enable();
 }
 
-export function disableHook() {
-  hook.disable();
+function disableHook() {
+  hook?.disable();
+  hook = undefined;
 }
 
 export class Contexty {
@@ -42,5 +44,12 @@ export class Contexty {
 
   get context() {
     return contexties.get(this).get(executionAsyncId());
+  }
+
+  cleanup() {
+    contexties.delete(this);
+    if (contexties.size === 0) {
+      disableHook();
+    }
   }
 }

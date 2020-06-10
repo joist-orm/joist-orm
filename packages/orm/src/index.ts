@@ -22,6 +22,7 @@ export * from "./serde";
 export { newPgConnectionConfig } from "joist-utils";
 export * from "./reverseHint";
 export * from "./changes";
+export * from "./contexty";
 export { DeepPartialOrNull } from "./createOrUpdateUnsafe";
 export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";

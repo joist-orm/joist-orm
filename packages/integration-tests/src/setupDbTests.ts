@@ -1,3 +1,4 @@
+import { disableHook } from "joist-orm";
 import Knex from "knex";
 import { config } from "dotenv";
 import { newPgConnectionConfig } from "joist-utils";
@@ -31,6 +32,7 @@ beforeEach(async () => {
 
 afterAll(async () => {
   await knex.destroy();
+  disableHook();
 });
 
 export function resetQueryCount() {

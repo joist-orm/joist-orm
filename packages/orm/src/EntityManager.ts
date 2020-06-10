@@ -24,7 +24,7 @@ import { buildQuery } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
-const { Contexty } = require("contexty");
+import { Contexty } from "./contexty";
 export const contexty = new Contexty();
 
 export interface EntityConstructor<T> {

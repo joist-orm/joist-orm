@@ -29,7 +29,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
-  async load(): Promise<U | N> {
+  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     const current = this.current();
     // Resolve the id to an entity
@@ -37,7 +37,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
     }
     this.isLoaded = true;
-    return this.returnUndefinedIfDeleted(this.loaded);
+    return this.filterDeleted(this.loaded, opts);
   }
 
   set(other: U | N): void {
@@ -48,13 +48,22 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.current() !== undefined;
   }
 
-  get get(): U | N {
+  private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     // This should only be callable in the type system if we've already resolved this to an instance
     if (!this.isLoaded) {
       throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
     }
-    return this.returnUndefinedIfDeleted(this.loaded);
+
+    return this.filterDeleted(this.loaded, opts);
+  }
+
+  get getWithDeleted(): U | N {
+    return this.doGet({ withDeleted: true });
+  }
+
+  get get(): U | N {
+    return this.doGet({ withDeleted: false });
   }
 
   get id(): IdOf<U> | undefined {
@@ -92,7 +101,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   onEntityDelete(): void {
     if (this.isCascadeDelete) {
-      const current = this.current();
+      const current = this.current({ withDeleted: true });
       if (current !== undefined && typeof current !== "string") {
         getEm(this.entity).delete(current as U);
       }
@@ -100,7 +109,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   async onEntityDeletedAndFlushing(): Promise<void> {
-    const current = await this.load();
+    const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
       const o2m = ((current as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
       o2m.remove(this.entity, { requireLoaded: false });
@@ -137,18 +146,16 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
-  current(): U | string | N {
-    return this.entity.__orm.data[this.fieldName];
+  current(opts?: { withDeleted?: boolean }): U | string | N {
+    const current = this.entity.__orm.data[this.fieldName];
+    if (current !== undefined && isEntity(current)) {
+      return this.filterDeleted(current as U, opts);
+    }
+    return current;
   }
 
-  private returnUndefinedIfDeleted(e: U | N): U | N {
-    if (e !== undefined && e.isDeletedEntity && !e.isPendingDelete) {
-      if (this.notNull) {
-        throw new Error(`Referenced entity ${e} has been marked as deleted`);
-      }
-      return undefined as N;
-    }
-    return e;
+  private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
+    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
   }
 
   public toString(): string {

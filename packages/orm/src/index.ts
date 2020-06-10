@@ -62,7 +62,7 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
   /** Returns the id of the current assigned entity or a runtime error if it's either a) unset or b) set to a new entity that doesn't have an `id` yet. */
   idOrFail: IdOf<U>;
 
-  load(): Promise<U | N>;
+  load(opts?: { withDeleted: boolean }): Promise<U | N>;
 
   set(other: U | N): void;
 
@@ -84,12 +84,13 @@ export interface LoadedReference<T extends Entity, U extends Entity, N extends n
   // then these might turn into runtime errors. But the ergonomics are sufficiently better that it is worth it.
   id: IdOf<T> | N;
 
+  getWithDeleted: U | N;
   get: U | N;
 }
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
-  load(): Promise<ReadonlyArray<U>>;
+  load(opts?: { withDeleted: boolean }): Promise<ReadonlyArray<U>>;
 
   find(id: IdOf<U>): Promise<U | undefined>;
 
@@ -100,6 +101,7 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
 
 /** Adds a known-safe `get` accessor. */
 export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
+  getWithDeleted: ReadonlyArray<U>;
   get: ReadonlyArray<U>;
 
   set(values: U[]): void;

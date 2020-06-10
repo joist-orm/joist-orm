@@ -24,8 +24,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
+  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
+  }
+
   // opts is an internal parameter
-  async load(): Promise<readonly U[]> {
+  async load(opts?: { withDeleted?: boolean }): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
@@ -35,7 +39,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       }
       this.maybeAppendAddedBeforeLoaded();
     }
-    return this.loaded;
+    return this.filterDeleted(this.loaded, opts);
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
@@ -57,10 +61,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(this.entity);
   }
 
-  // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
-  // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
-
-  get get(): U[] {
+  private doGet(): U[] {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
@@ -71,6 +72,14 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       }
     }
     return this.loaded;
+  }
+
+  get getWithDeleted(): U[] {
+    return this.filterDeleted(this.doGet(), { withDeleted: true });
+  }
+
+  get get(): U[] {
+    return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
   set(values: U[]): void {
@@ -93,6 +102,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     }
   }
 
+  // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
+  // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
   remove(other: U, opts: { requireLoaded: boolean } = { requireLoaded: true }) {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined && opts.requireLoaded) {
@@ -146,13 +157,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   onEntityDelete(): void {
     if (this.isCascadeDelete) {
-      this.current().forEach(getEm(this.entity).delete);
+      this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
     }
   }
 
   // We already unhooked all children in our addedBeforeLoaded list; now load the full list if necessary.
   async onEntityDeletedAndFlushing(): Promise<void> {
-    const current = await this.load();
+    const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
       const m2o = (other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>;
       if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
@@ -172,8 +183,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     }
   }
 
-  current(): U[] {
-    return this.loaded || this.addedBeforeLoaded;
+  current(opts?: { withDeleted?: boolean }): U[] {
+    return this.filterDeleted(this.loaded || this.addedBeforeLoaded, opts);
   }
 
   public toString(): string {

@@ -40,7 +40,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
-  async load(): Promise<ReadonlyArray<U>> {
+  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
+  }
+
+  async load(opts?: { withDeleted?: boolean }): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       // TODO This key is basically a Reference, whenever we have that.
@@ -49,7 +53,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
       this.loaded = await loaderForJoinTable(this).load(key);
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
-    return this.loaded as ReadonlyArray<U>;
+    return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
@@ -93,7 +97,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
-  get get(): U[] {
+  private doGet(): U[] {
     ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       if (this.entity.id === undefined) {
@@ -104,6 +108,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
       }
     }
     return this.loaded;
+  }
+
+  get getWithDeleted(): U[] {
+    return this.filterDeleted(this.doGet(), { withDeleted: true });
+  }
+
+  get get(): U[] {
+    return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
   set(values: U[]): void {
@@ -163,12 +175,12 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   onEntityDelete() {
     if (this.isCascadeDelete) {
-      this.current().forEach(getEm(this.entity).delete);
+      this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
     }
   }
 
   async onEntityDeletedAndFlushing(): Promise<void> {
-    const entities = await this.load();
+    const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = (other[this.otherFieldName] as any) as ManyToManyCollection<U, T>;
       m2m.remove(this.entity);
@@ -194,8 +206,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
-  current(): U[] {
-    return this.loaded || this.addedBeforeLoaded;
+  current(opts?: { withDeleted?: boolean }): U[] {
+    return this.filterDeleted(this.loaded || this.addedBeforeLoaded, opts);
   }
 
   public toString(): string {

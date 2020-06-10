@@ -41,6 +41,8 @@ export class Author extends AuthorCodegen {
   }
 }
 
+authorConfig.cascadeDelete("books");
+
 authorConfig.addRule((a) => {
   if (a.firstName && a.firstName === a.lastName) {
     return "firstName and lastName must be different";

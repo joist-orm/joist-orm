@@ -78,8 +78,6 @@ authorConfig.addRule(newRequiredRule("numberOfBooks"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
-authorConfig.cascadeDelete("books");
-
 export abstract class AuthorCodegen extends BaseEntity {
   readonly __filterType: AuthorFilter = null!;
   readonly __orderType: AuthorOrder = null!;

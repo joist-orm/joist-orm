@@ -26,8 +26,6 @@ import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
 const { Contexty } = require("contexty");
 export const contexty = new Contexty();
-// create a context here so there is always one defined
-contexty.create();
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;

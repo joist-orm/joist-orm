@@ -117,7 +117,8 @@ export function setField(entity: Entity, fieldName: string, newValue: any): void
   const em = getEm(entity);
 
   if (em.isFlushing) {
-    const { flushSecret } = contexty.context;
+    const { context } = contexty;
+    const { flushSecret } = context || {};
 
     if (flushSecret === undefined) {
       throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);

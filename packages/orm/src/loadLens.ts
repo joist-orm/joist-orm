@@ -2,7 +2,7 @@
 type LoadLike<U> = { load(): Promise<U> };
 
 /** Generically matches a property or zero-arg method that returns a promise. */
-type PromiseOrPromiseFnLike<U> = PromiseLike<U> | (() => PromiseLike<U>);
+type PromiseFnLike<U> = () => PromiseLike<U>;
 
 /** Given a parent type U, and a new type V, returns V[] if U is already an array, i.e. we're in flatMap mode. */
 type MaybeArray<U, V> = U extends ReadonlyArray<any> ? (V extends ReadonlyArray<any> ? V : V[]) : V;
@@ -10,11 +10,7 @@ type MaybeArray<U, V> = U extends ReadonlyArray<any> ? (V extends ReadonlyArray<
 /** Given a type T that we come across in the path, de-array it to continue our flatMap-ish semantics. */
 type MaybeDropArray<T> = T extends ReadonlyArray<infer U> ? U : T;
 
-// This shouldn't need exported, but fighting:
-// Exported variable 'entityResolvers' has or is using name 'L' from external module "/home/node/app/node_modules/joist-orm/build/loadLens" but cannot be named.
-export const L = Symbol();
-
-type Primitive = string | number | boolean | symbol;
+type DropUndefined<T> = Exclude<T, undefined>;
 
 /**
  * A type for declaratively walking the object graph.
@@ -25,20 +21,13 @@ type Primitive = string | number | boolean | symbol;
  * `R` is either a `T` or `T[]` or `T | undefined` and just captures whether we've hit a
  * list at any point in the lens navigation path.
  */
-export type Lens<T, R = T> = T extends Primitive ? ValueLens<T, R> : ObjectLens<T, R>;
-
-type ValueLens<T, R> = { [L]: T };
-
-type ObjectLens<T, R> = {
-  [P in keyof T]-?: Exclude<
-    T[P] extends LoadLike<infer U>
-      ? Lens<MaybeDropArray<U>, MaybeArray<R, U>>
-      : T[P] extends PromiseOrPromiseFnLike<infer U>
-      ? Lens<MaybeDropArray<U>, MaybeArray<R, U>>
-      : Lens<MaybeDropArray<T[P]>, MaybeArray<R, T[P]>>,
-    undefined
-  >;
-} & { [L]: T };
+export type Lens<T, R = T> = {
+  [P in keyof T]: T[P] extends LoadLike<infer U>
+    ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
+    : T[P] extends PromiseFnLike<infer U>
+    ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
+    : Lens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
+};
 
 /**
  * Allows declaratively loading/traversing several layers of references at once.

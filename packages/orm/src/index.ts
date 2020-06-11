@@ -28,6 +28,8 @@ export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
+export { CustomCollection } from "./collections/CustomCollection";
+export { CustomReference } from "./collections/CustomReference";
 export { OrderBy, EntityFilter, ValueFilter } from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
 export * from "./loadLens";

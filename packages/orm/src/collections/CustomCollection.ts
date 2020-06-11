@@ -1,16 +1,21 @@
-import { Entity } from "../EntityManager";
+import { Entity, IdOf } from "../EntityManager";
 import { AbstractRelationImpl, AbstractRelationOpts } from "./AbstractRelationImpl";
-import { ensureNotDeleted } from "../index";
+import { Collection, ensureNotDeleted } from "../index";
 
-export class CustomCollection<
-  T extends Entity,
-  U extends Entity,
-  N extends never | undefined
-> extends AbstractRelationImpl<U[]> {
-  private loaded!: U[] | N;
-  private loadPromise: Promise<U[] | N> | undefined;
+export type CustomCollectionOpts<T extends Entity, U, N extends never | undefined> = AbstractRelationOpts<T, U[], N> & {
+  load: (entity: T) => Promise<U[]>;
+  find?: (entity: T, id: IdOf<U>) => Promise<U | undefined>;
+  add?: (entity: T, other: U) => void;
+  remove?: (entity: T, other: U) => void;
+};
+
+export class CustomCollection<T extends Entity, U extends Entity, N extends never | undefined>
+  extends AbstractRelationImpl<U[]>
+  implements Collection<T, U> {
+  private loaded!: U[] | undefined;
+  private loadPromise: Promise<U[]> | undefined;
   public isLoaded = false;
-  constructor(private entity: T, private fieldName: keyof T, private opts: AbstractRelationOpts<T, U[], N>) {
+  constructor(private entity: T, private fieldName: keyof T, private opts: CustomCollectionOpts<T, U, N>) {
     super();
   }
 
@@ -36,7 +41,7 @@ export class CustomCollection<
     return this.doGet({ withDeleted: false });
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U[] | N> {
+  async load(opts?: { withDeleted?: boolean }): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loadPromise !== undefined) {
       await this.loadPromise;
@@ -49,7 +54,7 @@ export class CustomCollection<
       this.isLoaded = true;
     }
 
-    return this.filterDeleted(this.loaded as U[], opts);
+    return this.filterDeleted(this.loaded!, opts);
   }
 
   initializeForNewEntity(): void {
@@ -94,6 +99,27 @@ export class CustomCollection<
     if (refreshIfLoaded !== undefined) {
       await refreshIfLoaded(this.entity);
     }
+  }
+
+  async find(id: IdOf<U>): Promise<U | undefined> {
+    const { find } = this.opts;
+    return find !== undefined ? await find(this.entity, id) : undefined;
+  }
+
+  add(other: U): void {
+    const { add } = this.opts;
+    if (add === undefined) {
+      throw new Error(`'add' not implemented on ${this}`);
+    }
+    add(this.entity, other);
+  }
+
+  remove(other: U): void {
+    const { remove } = this.opts;
+    if (remove === undefined) {
+      throw new Error(`'remove' not implemented on ${this}`);
+    }
+    remove(this.entity, other);
   }
 
   toString(): string {

@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, getMetadata, IdOf, isEntity, sameEntity } from "../EntityManager";
+import { Entity, EntityConstructor, getMetadata, IdOf, isEntity } from "../EntityManager";
 import { ensureNotDeleted, fail, getEm, maybeResolveReferenceToId, Reference, setField } from "../index";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";

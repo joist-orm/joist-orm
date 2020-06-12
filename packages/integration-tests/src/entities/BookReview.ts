@@ -1,7 +1,30 @@
-import { BookReviewCodegen, bookReviewConfig, BookReviewOpts } from "./entities";
-import { EntityManager } from "joist-orm";
+import { Author, BookReviewCodegen, bookReviewConfig, BookReviewOpts } from "./entities";
+import { CustomReference, EntityManager, Reference } from "joist-orm";
 
 export class BookReview extends BookReviewCodegen {
+  public setFromOpts = false;
+  readonly author: Reference<BookReview, Author, never> = new CustomReference<
+    BookReview,
+    Author,
+    { book: "author" },
+    never
+  >(this, "author", {
+    load: async (review) => {
+      await review.load((r) => r.book.author);
+    },
+    get: (review) => review.book.get.author.get,
+    set: (review, author) => {
+      review.book.get.author.set(author);
+    },
+    setFromOpts: (review, author) => {
+      review.setFromOpts = true;
+      review.author.set(author);
+    },
+    isSet: (review) => {
+      return review.book.isSet() && review.book.get.author.isSet();
+    },
+  });
+
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, opts);
   }

@@ -1,9 +1,14 @@
-import { Entity, IdOf } from "../EntityManager";
+import { Entity, IdOf, Loaded, LoadHint } from "../EntityManager";
 import { AbstractRelationImpl, AbstractRelationOpts } from "./AbstractRelationImpl";
 import { Collection, ensureNotDeleted } from "../index";
 
-export type CustomCollectionOpts<T extends Entity, U, N extends never | undefined> = AbstractRelationOpts<T, U[], N> & {
-  load: (entity: T) => Promise<U[]>;
+export type CustomCollectionOpts<
+  T extends Entity,
+  U extends Entity,
+  N extends never | undefined
+> = AbstractRelationOpts<T, U[], N> & {
+  load: (entity: T) => Promise<Loaded<T, LoadHint<T>>>;
+  get: (entity: ReturnType<CustomCollectionOpts<T, U, N>["load"]> extends Promise<infer V> ? V : never) => U[];
   find?: (entity: T, id: IdOf<U>) => Promise<U | undefined>;
   add?: (entity: T, other: U) => void;
   remove?: (entity: T, other: U) => void;
@@ -12,8 +17,8 @@ export type CustomCollectionOpts<T extends Entity, U, N extends never | undefine
 export class CustomCollection<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
-  private loaded!: U[] | undefined;
-  private loadPromise: Promise<U[]> | undefined;
+  private loadedEntity!: U[] | undefined;
+  private loadPromise: ReturnType<CustomCollectionOpts<T, U, N>["load"]> | undefined;
   public isLoaded = false;
   constructor(private entity: T, private fieldName: keyof T, private opts: CustomCollectionOpts<T, U, N>) {
     super();
@@ -25,12 +30,14 @@ export class CustomCollection<T extends Entity, U extends Entity, N extends neve
 
   private doGet(opts?: { withDeleted?: boolean }): U[] | N {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    // This should only be callable in the type system if we've already resolved this to an instance
-    if (!this.isLoaded) {
+
+    if (!this.isLoaded && !this.entity.isNewEntity) {
+      // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
     }
 
-    return this.filterDeleted(this.loaded as U[], opts);
+    const entities = this.entity.isNewEntity ? this.opts.get(this.entity as any) : this.loaded;
+    return this.filterDeleted(entities as U[], opts);
   }
 
   get getWithDeleted(): U[] | N {
@@ -49,7 +56,8 @@ export class CustomCollection<T extends Entity, U extends Entity, N extends neve
 
     if (!this.isLoaded) {
       this.loadPromise = this.opts.load(this.entity);
-      this.loaded = await this.loadPromise;
+      const loadedEnitity = await this.loadPromise;
+      this.loaded = this.opts.get(loadedEnitity);
       this.loadPromise = undefined;
       this.isLoaded = true;
     }
@@ -80,26 +88,11 @@ export class CustomCollection<T extends Entity, U extends Entity, N extends neve
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {
-    const { onEntityDeletedAndFlushing } = this.opts;
-    if (onEntityDeletedAndFlushing !== undefined) {
-      await onEntityDeletedAndFlushing(this.entity);
-    }
-  }
+  async onEntityDeletedAndFlushing(): Promise<void> {}
 
-  onEntityDelete(): void {
-    const { onEntityDelete } = this.opts;
-    if (onEntityDelete !== undefined) {
-      onEntityDelete(this.entity);
-    }
-  }
+  onEntityDelete(): void {}
 
-  async refreshIfLoaded(): Promise<void> {
-    const { refreshIfLoaded } = this.opts;
-    if (refreshIfLoaded !== undefined) {
-      await refreshIfLoaded(this.entity);
-    }
-  }
+  async refreshIfLoaded(): Promise<void> {}
 
   async find(id: IdOf<U>): Promise<U | undefined> {
     const { find } = this.opts;

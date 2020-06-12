@@ -138,7 +138,7 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
 export type LoadHint<T extends Entity> = keyof RelationsIn<T> | ReadonlyArray<keyof RelationsIn<T>> | NestedLoadHint<T>;
 
-type NestedLoadHint<T extends Entity> = {
+export type NestedLoadHint<T extends Entity> = {
   [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
 };
 

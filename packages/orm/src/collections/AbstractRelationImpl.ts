@@ -30,9 +30,6 @@ export abstract class AbstractRelationImpl<U> {
 }
 
 export type AbstractRelationOpts<T extends Entity, U, N extends never | undefined> = {
-  onEntityDelete?: (entity: T) => void;
-  onEntityDeletedAndFlushing?: (entity: T) => Promise<void>;
   set?: (entity: T, other: U) => void;
   setFromOpts?: (entity: T, other: U) => void;
-  refreshIfLoaded?: (entity: T) => Promise<void>;
 };

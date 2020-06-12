@@ -1,11 +1,43 @@
-import { EntityManager, Loaded } from "joist-orm";
-import { AuthorCodegen, authorConfig, AuthorOpts } from "./entities";
+import { Collection, CustomCollection, Entity, EntityManager, getEm, Loaded, LoadHint } from "joist-orm";
+import { AuthorCodegen, authorConfig, AuthorOpts, Book, BookReview } from "./entities";
+
+type Test<T extends Entity, U extends Loaded<T, LoadHint<T>>> = {
+  herp: (em: EntityManager) => Promise<U>;
+  derp: (test: U) => void;
+};
+
+const test: Test<Author, Loaded<Author, { books: "reviews" }>> = {
+  herp: async (em) => await em.load(Author, "1", { books: "reviews" }),
+  derp: (test) => {},
+};
 
 export class Author extends AuthorCodegen {
   public beforeFlushRan = false;
   public beforeDeleteRan = false;
   public afterCommitRan = false;
   public ageForBeforeFlush?: number;
+
+  readonly reviews: Collection<Author, BookReview> = new CustomCollection<Author, BookReview, undefined>(
+    this,
+    "reviews",
+    {
+      load: async (author) => await getEm(author).populate(author, { books: "reviews" }),
+      get: (author) =>
+        (author as Loaded<Author, { books: "reviews" }>).books.get.flatMap((b) => b.reviews.get) as BookReview[],
+      add: (author, other) => {
+        getEm(author).create(Book, { title: "a new book", author, reviews: [other] });
+      },
+    },
+  );
+
+  readonly reviewsWithoutCallbacks: Collection<Author, BookReview> = new CustomCollection<
+    Author,
+    BookReview,
+    undefined
+  >(this, "reviewsWithoutCallbacks", {
+    load: async (author) => (await getEm(author).populate(author, { books: "reviews" })) as Loaded<Author, any>,
+    get: (author: Loaded<Author, { books: "reviews" }>) => author.books.get.flatMap((b) => b.reviews.get),
+  });
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);

@@ -11,7 +11,6 @@ export type CustomReferenceOpts<
   load: (entity: T) => Promise<void>;
   get: (entity: Loaded<T, H>) => U | N;
   set?: (entity: Loaded<T, H>, other: U) => void;
-  setFromOpts?: (entity: Loaded<T, H>, other: U) => void;
   isSet?: (entity: Loaded<T, H>) => boolean;
 };
 
@@ -96,16 +95,7 @@ export class CustomReference<T extends Entity, U extends Entity, H extends LoadH
   }
 
   setFromOpts(value: U): void {
-    ensureNewOrLoaded(this);
-
-    const { setFromOpts, set } = this.opts;
-    if (setFromOpts !== undefined) {
-      setFromOpts(this.entity as any, value);
-    } else if (set !== undefined) {
-      set(this.entity as any, value);
-    } else {
-      throw new Error(`'setFromOpts' not implemented on ${this}`);
-    }
+    this.set(value);
   }
 
   // these callbacks should be no-ops as they ought to be handled by the underlying relations

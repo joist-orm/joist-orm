@@ -9,25 +9,30 @@ export type ValueFilter<V, N> =
   | V
   | V[]
   | N
-  | { $gt: V }
-  | { $gte: V }
-  | { $ne: V | N }
-  | { $lt: V }
-  | { $lte: V }
-  | { $like: V };
+  // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
+  | { eq: V | N }
+  | { in: V[] }
+  | { gt: V }
+  | { gte: V }
+  | { ne: V | N }
+  | { lt: V }
+  | { lte: V }
+  | { like: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { $ne: T | I | N };
+export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { ne: T | I | N };
 
-const operators = ["$gt", "$gte", "$ne", "$lt", "$lte", "$like"] as const;
+const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "in"] as const;
 type Operator = typeof operators[number];
 const opToFn: Record<Operator, string> = {
-  $gt: ">",
-  $gte: ">=",
-  $ne: "!=",
-  $lt: "<",
-  $lte: "<=",
-  $like: "LIKE",
+  eq: "=",
+  gt: ">",
+  gte: ">=",
+  ne: "!=",
+  lt: "<",
+  lte: "<=",
+  like: "LIKE",
+  in: "...",
 };
 
 /**
@@ -66,8 +71,8 @@ export function buildQuery<T extends Entity>(
     // Combine the where and orderBy keys so that we can add them to aliases as that same time
     const keys = [...(where ? Object.keys(where) : []), ...(orderBy ? Object.keys(orderBy) : [])];
 
-    keys.forEach(key => {
-      const column = meta.columns.find(c => c.fieldName === key) || fail(`${key} not found`);
+    keys.forEach((key) => {
+      const column = meta.columns.find((c) => c.fieldName === key) || fail(`${key} not found`);
 
       // We may/may not have a where clause or orderBy for the key, but we should have at least one of them.
       const clause = where && (where as any)[key];
@@ -85,7 +90,10 @@ export function buildQuery<T extends Entity>(
             // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
             query = query.where(`${alias}.${column.columnName}`, -1);
           } else if (Array.isArray(clause)) {
-            query = query.whereIn(`${alias}.${column.columnName}`, clause.map(id => column.serde.mapToDb(id)));
+            query = query.whereIn(
+              `${alias}.${column.columnName}`,
+              clause.map((id) => column.serde.mapToDb(id)),
+            );
           } else {
             query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
           }
@@ -101,9 +109,9 @@ export function buildQuery<T extends Entity>(
           } else {
             query = query.where(`${alias}.${column.columnName}`, value);
           }
-        } else if (clauseKeys.length === 1 && clauseKeys[0] === "$ne") {
-          // I.e. { authorFk: { id: { $ne: string | null | undefined } } }
-          const value = (clause as any)["$ne"];
+        } else if (clauseKeys.length === 1 && clauseKeys[0] === "ne") {
+          // I.e. { authorFk: { id: { ne: string | null | undefined } } }
+          const value = (clause as any)["ne"];
           if (value === null || value === undefined) {
             query = query.whereNotNull(`${alias}.${column.columnName}`);
           } else if (typeof value === "string") {
@@ -129,24 +137,37 @@ export function buildQuery<T extends Entity>(
         }
       } else {
         // This is not a foreign key column, so it'll have the primitive filters/order bys
-        if (clause instanceof Object && operators.find(p => Object.keys(clause).includes(p))) {
-          // I.e. `{ primitiveField: { $op: value } }`
+        if (clause instanceof Object && operators.find((p) => Object.keys(clause).includes(p))) {
+          // I.e. `{ primitiveField: { op: value } }`
           const p = Object.keys(clause)[0] as Operator;
           const value = (clause as any)[p];
           if (value === null || value === undefined) {
-            if (p === "$ne") {
+            if (p === "ne") {
               query = query.whereNotNull(`${alias}.${column.columnName}`);
+            } else if (p === "eq") {
+              query = query.whereNull(`${alias}.${column.columnName}`);
             } else {
-              throw new Error("Only $ne is supported when the value is undefined or null");
+              throw new Error("Only ne is supported when the value is undefined or null");
             }
+          } else if (p === "in") {
+            query = query.whereIn(
+              `${alias}.${column.columnName}`,
+              (value as Array<any>).map((v) => column.serde.mapToDb(v)),
+            );
           } else {
             const fn = opToFn[p];
             query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
           }
         } else if (Array.isArray(clause)) {
           // I.e. `{ primitiveField: value[] }`
-          query = query.whereIn(`${alias}.${column.columnName}`, clause.map(v => column.serde.mapToDb(v)));
-        } else if (clause) {
+          query = query.whereIn(
+            `${alias}.${column.columnName}`,
+            clause.map((v) => column.serde.mapToDb(v)),
+          );
+        } else if (clause === null) {
+          // I.e. `{ primitiveField: null }`
+          query = query.whereNull(`${alias}.${column.columnName}`);
+        } else if (clause !== undefined) {
           // I.e. `{ primitiveField: value }`
           // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
           query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
@@ -170,6 +191,6 @@ export function buildQuery<T extends Entity>(
 function abbreviation(tableName: string): string {
   return tableName
     .split("_")
-    .map(w => w[0])
+    .map((w) => w[0])
     .join("");
 }

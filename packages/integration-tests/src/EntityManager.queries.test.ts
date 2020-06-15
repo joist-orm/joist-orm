@@ -27,7 +27,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { lastName: { $ne: null } });
+    const authors = await em.find(Author, { lastName: { ne: null } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
   });
@@ -36,7 +36,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { lastName: { $ne: undefined } });
+    const authors = await em.find(Author, { lastName: { ne: undefined } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
   });
@@ -106,7 +106,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { publisher: { $ne: null } });
+    const authors = await em.find(Author, { publisher: { ne: null } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
@@ -116,7 +116,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { publisher: { $ne: undefined } });
+    const authors = await em.find(Author, { publisher: { ne: undefined } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
@@ -150,7 +150,7 @@ describe("EntityManager.queries", () => {
     const em = new EntityManager(knex);
     const publisherId: PublisherId = "1";
     // Technically id != 1 does not match the a1.publisher_id is null. Might fix this.
-    const authors = await em.find(Author, { publisher: { $ne: publisherId } });
+    const authors = await em.find(Author, { publisher: { ne: publisherId } });
     expect(authors.length).toEqual(0);
   });
 
@@ -171,7 +171,9 @@ describe("EntityManager.queries", () => {
 
   it("can find by foreign key using only an id", async () => {
     await insertAuthor({
-      id: 3, first_name: "a1" });
+      id: 3,
+      first_name: "a1",
+    });
     await insertAuthor({ id: 4, first_name: "a2" });
     await insertBook({ title: "b1", author_id: 3 });
     await insertBook({ title: "b2", author_id: 4 });
@@ -203,7 +205,7 @@ describe("EntityManager.queries", () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     await insertPublisher({ name: "p2", size_id: 2 });
     const em = new EntityManager(knex);
-    const pubs = await em.find(Publisher, { size: { $ne: PublisherSize.Large } });
+    const pubs = await em.find(Publisher, { size: { ne: PublisherSize.Large } });
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p1");
   });
@@ -217,11 +219,46 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
+  it("can find by integer with eq", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: { eq: 2 } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find by integer with in", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: { in: [1, 2] } });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can find by integer with null", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: { eq: null } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find by integer with non-op null", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = new EntityManager(knex);
+    const authors = await em.find(Author, { age: null });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
   it("can find by greater than", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { age: { $gt: 1 } });
+    const authors = await em.find(Author, { age: { gt: 1 } });
     expect(authors.length).toEqual(1);
   });
 
@@ -229,7 +266,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { age: { $gte: 1 } });
+    const authors = await em.find(Author, { age: { gte: 1 } });
     expect(authors.length).toEqual(2);
   });
 
@@ -237,7 +274,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { age: { $ne: 1 } });
+    const authors = await em.find(Author, { age: { ne: 1 } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
@@ -246,7 +283,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { firstName: { $like: "a%" } });
+    const authors = await em.find(Author, { firstName: { like: "a%" } });
     expect(authors.length).toEqual(2);
   });
 
@@ -259,7 +296,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, {
       firstName: "a",
       publisher: {
-        size: { $ne: PublisherSize.Large },
+        size: { ne: PublisherSize.Large },
       },
     });
     expect(authors.length).toEqual(1);

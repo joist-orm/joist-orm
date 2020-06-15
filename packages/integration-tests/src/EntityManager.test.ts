@@ -664,7 +664,7 @@ describe("EntityManager", () => {
     await em.flush();
     b1.order = 1;
     await em.flush();
-    const books = await em.find(Book, { order: { $gt: 0 } });
+    const books = await em.find(Book, { order: { gt: 0 } });
     expect(books.length).toEqual(1);
   });
 

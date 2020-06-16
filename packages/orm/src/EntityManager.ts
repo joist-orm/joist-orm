@@ -20,7 +20,7 @@ import {
   ValidationErrors,
 } from "./index";
 import { JoinRow } from "./collections/ManyToManyCollection";
-import { buildQuery } from "./QueryBuilder";
+import { buildQuery, FilterAndSettings } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
 import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
@@ -147,8 +147,6 @@ type NestedLoadHint<T extends Entity> = {
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
-type FilterAndOrder<T> = [FilterOf<T>, OrderOf<T> | undefined];
-
 export class EntityManager {
   constructor(public knex: Knex) {}
 
@@ -175,14 +173,14 @@ export class EntityManager {
   >(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
-    options?: { populate?: H; orderBy?: OrderOf<T> },
+    options?: { populate?: H; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
-    options?: { populate?: any; orderBy?: OrderOf<T> },
+    options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await this.loaderForFind(type).load([where, options?.orderBy]);
+    const rows = await this.loaderForFind(type).load({ where, ...options });
     const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -203,9 +201,9 @@ export class EntityManager {
   async findGql<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
-    options?: { populate?: any; orderBy?: OrderOf<T> },
+    options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await this.loaderForFind(type).load([where, options?.orderBy]);
+    const rows = await this.loaderForFind(type).load({ where, ...options });
     const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -599,20 +597,19 @@ export class EntityManager {
     );
   }
 
-  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<FilterAndOrder<T>, unknown[]> {
+  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<FilterAndSettings<T>, unknown[]> {
     return getOrSet(this.findLoaders, type.name, () => {
-      return new DataLoader<FilterAndOrder<T>, unknown[], string>(
+      return new DataLoader<FilterAndSettings<T>, unknown[], string>(
         async (queries) => {
           // If there is only 1 query, we can skip the tagging step.
           if (queries.length === 1) {
-            const [where, orderBy] = queries[0];
-            return [await buildQuery(this.knex, type, where, orderBy)];
+            return [await buildQuery(this.knex, type, queries[0])];
           }
 
           const { knex } = this;
 
           // Map each incoming query[i] to itself or a previous dup
-          const uniqueQueries: FilterAndOrder<T>[] = [];
+          const uniqueQueries: FilterAndSettings<T>[] = [];
           const queryToUnique: Record<number, number> = {};
           queries.forEach((q, i) => {
             let j = uniqueQueries.findIndex((uq) => whereFilterHash(uq) === whereFilterHash(q));
@@ -625,8 +622,7 @@ export class EntityManager {
 
           // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
           if (uniqueQueries.length === 1) {
-            const [where, orderBy] = queries[0];
-            const rows = await buildQuery(this.knex, type, where, orderBy);
+            const rows = await buildQuery(this.knex, type, queries[0]);
             // Reuse this same result for however many callers asked for it.
             return queries.map((q) => rows);
           }
@@ -648,8 +644,8 @@ export class EntityManager {
           // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
           // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
           // not gaurantee order).
-          const tagged = uniqueQueries.map(([where, orderBy], i) => {
-            const query = buildQuery(this.knex, type, where, orderBy) as QueryBuilder;
+          const tagged = uniqueQueries.map((queryAndSettings, i) => {
+            const query = buildQuery(this.knex, type, queryAndSettings) as QueryBuilder;
             return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
           });
 
@@ -1012,7 +1008,7 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
 const replacer = (v: any) => (isEntity(v) ? v.id : v);
 
-function whereFilterHash(where: FilterAndOrder<any>): string {
+function whereFilterHash(where: FilterAndSettings<any>): string {
   return hash(where, { replacer });
 }
 

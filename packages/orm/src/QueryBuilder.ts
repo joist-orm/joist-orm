@@ -60,6 +60,13 @@ const opToFn: Record<Operator, string> = {
   in: "...",
 };
 
+export type FilterAndSettings<T> = {
+  where: FilterOf<T>;
+  orderBy?: OrderOf<T>;
+  limit?: number;
+  offset?: number;
+};
+
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
  *
@@ -70,10 +77,10 @@ const opToFn: Record<Operator, string> = {
 export function buildQuery<T extends Entity>(
   knex: Knex,
   type: EntityConstructor<T>,
-  where: FilterOf<T>,
-  orderBy: OrderOf<T> | undefined,
+  filter: FilterAndSettings<T>,
 ): QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
+  const { where, orderBy, limit, offset } = filter;
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -208,6 +215,12 @@ export function buildQuery<T extends Entity>(
 
   if (!orderBy) {
     query = query.orderBy(`${alias}.id`);
+  }
+  if (limit) {
+    query = query.limit(limit);
+  }
+  if (offset) {
+    query = query.offset(offset);
   }
 
   return query as QueryBuilder<{}, unknown[]>;

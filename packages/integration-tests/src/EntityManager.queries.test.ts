@@ -422,8 +422,25 @@ describe("EntityManager.queries", () => {
     const gqlFilter: GraphQLPublisherFilter = {
       size: [PublisherSize.Small],
     };
-    const authors = await em.findGql(Publisher, gqlFilter);
-    expect(authors.length).toEqual(1);
+    const publishers = await em.findGql(Publisher, gqlFilter);
+    expect(publishers.length).toEqual(1);
+  });
+
+  it("can offset/limit", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    await insertPublisher({ name: "p3" });
+    await insertPublisher({ name: "p4" });
+    const em = new EntityManager(knex);
+    const p23 = await em.find(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
+    expect(p23.length).toEqual(2);
+    expect(p23[0].name).toEqual("p2");
+    expect(p23[1].name).toEqual("p3");
+
+    const p43 = await em.find(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
+    expect(p43.length).toEqual(2);
+    expect(p43[0].name).toEqual("p2");
+    expect(p43[1].name).toEqual("p1");
   });
 });
 

@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  ValueGraphQLFilter,
   OrderBy,
   ConfigApi,
   BaseEntity,
@@ -17,6 +18,8 @@ import {
   getEm,
   EntityFilter,
   FilterOf,
+  EntityGraphQLFilter,
+  GraphQLFilterOf,
   newRequiredRule,
   Collection,
   OneToManyCollection,
@@ -46,6 +49,15 @@ export interface BookFilter {
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
 }
 
+export interface BookGraphQLFilter {
+  id?: ValueGraphQLFilter<BookId>;
+  title?: ValueGraphQLFilter<string>;
+  order?: ValueGraphQLFilter<number>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+}
+
 export interface BookOrder {
   id?: OrderBy;
   title?: OrderBy;
@@ -64,6 +76,7 @@ bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity {
   readonly __filterType: BookFilter = null!;
+  readonly __gqlFilterType: BookGraphQLFilter = null!;
   readonly __orderType: BookOrder = null!;
   readonly __optsType: BookOpts = null!;
 

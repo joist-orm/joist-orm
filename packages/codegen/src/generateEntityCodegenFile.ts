@@ -5,14 +5,19 @@ import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
 import { Config } from "./index";
 import {
   BaseEntity,
+  BooleanFilter,
+  BooleanGraphQLFilter,
   Changes,
   Collection,
   ConfigApi,
   EntityFilter,
+  EntityGraphQLFilter,
   EntityManager,
+  EnumGraphQLFilter,
   FilterOf,
   Flavor,
   getEm,
+  GraphQLFilterOf,
   Lens,
   Loaded,
   LoadHint,
@@ -29,6 +34,7 @@ import {
   setField,
   setOpts,
   ValueFilter,
+  ValueGraphQLFilter,
 } from "./symbols";
 
 export interface ColumnMetaData {
@@ -177,6 +183,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${generateFilterFields(meta)}
     }
 
+    export interface ${entityName}GraphQLFilter {
+      id?: ${ValueGraphQLFilter}<${entityName}Id>;
+      ${generateGraphQLFilterFields(meta)}
+    }
+
     export interface ${entityName}Order {
       id?: ${OrderBy};
       ${generateOrderFields(meta)}
@@ -188,6 +199,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __filterType: ${entityName}Filter = null!;
+      readonly __gqlFilterType: ${entityName}GraphQLFilter = null!;
       readonly __orderType: ${entityName}Order = null!;
       readonly __optsType: ${entityName}Opts = null!;
       ${[o2m, m2o, m2m]}
@@ -271,9 +283,12 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {
-  // Make our opts type
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
-    return code`${fieldName}?: ${ValueFilter}<${fieldType}, ${nullOrNever(notNull)}>;`;
+    if (fieldType === "boolean") {
+      return code`${fieldName}?: ${BooleanFilter}<${nullOrNever(notNull)}>;`;
+    } else {
+      return code`${fieldName}?: ${ValueFilter}<${fieldType}, ${nullOrNever(notNull)}>;`;
+    }
   });
   const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
     return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
@@ -282,6 +297,23 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
       otherEntity.type
     }>, ${nullOrNever(notNull)}>;`;
+  });
+  return [...primitives, ...enums, ...m2o];
+}
+
+function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
+  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
+    if (fieldType === "boolean") {
+      return code`${fieldName}?: ${BooleanGraphQLFilter};`;
+    } else {
+      return code`${fieldName}?: ${ValueGraphQLFilter}<${fieldType}>;`;
+    }
+  });
+  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
+    return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
+  });
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
   });
   return [...primitives, ...enums, ...m2o];
 }

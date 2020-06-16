@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  ValueGraphQLFilter,
   OrderBy,
   ConfigApi,
   BaseEntity,
@@ -15,8 +16,12 @@ import {
   LoadHint,
   Loaded,
   getEm,
+  BooleanFilter,
   EntityFilter,
   FilterOf,
+  BooleanGraphQLFilter,
+  EntityGraphQLFilter,
+  GraphQLFilterOf,
   newRequiredRule,
   Reference,
   ManyToOneReference,
@@ -34,10 +39,19 @@ export interface BookReviewOpts {
 export interface BookReviewFilter {
   id?: ValueFilter<BookReviewId, never>;
   rating?: ValueFilter<number, never>;
-  isPublic?: ValueFilter<boolean, never>;
+  isPublic?: BooleanFilter<never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
+}
+
+export interface BookReviewGraphQLFilter {
+  id?: ValueGraphQLFilter<BookReviewId>;
+  rating?: ValueGraphQLFilter<number>;
+  isPublic?: BooleanGraphQLFilter;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
 }
 
 export interface BookReviewOrder {
@@ -59,6 +73,7 @@ bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity {
   readonly __filterType: BookReviewFilter = null!;
+  readonly __gqlFilterType: BookReviewGraphQLFilter = null!;
   readonly __orderType: BookReviewOrder = null!;
   readonly __optsType: BookReviewOpts = null!;
 

@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  ValueGraphQLFilter,
   OrderBy,
   ConfigApi,
   BaseEntity,
@@ -15,6 +16,7 @@ import {
   LoadHint,
   Loaded,
   getEm,
+  EnumGraphQLFilter,
   newRequiredRule,
   setField,
   Collection,
@@ -38,6 +40,14 @@ export interface PublisherFilter {
   size?: ValueFilter<PublisherSize, null | undefined>;
 }
 
+export interface PublisherGraphQLFilter {
+  id?: ValueGraphQLFilter<PublisherId>;
+  name?: ValueGraphQLFilter<string>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+  size?: EnumGraphQLFilter<PublisherSize>;
+}
+
 export interface PublisherOrder {
   id?: OrderBy;
   name?: OrderBy;
@@ -54,6 +64,7 @@ publisherConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class PublisherCodegen extends BaseEntity {
   readonly __filterType: PublisherFilter = null!;
+  readonly __gqlFilterType: PublisherGraphQLFilter = null!;
   readonly __orderType: PublisherOrder = null!;
   readonly __optsType: PublisherOpts = null!;
 

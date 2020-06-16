@@ -1,8 +1,13 @@
+import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
+import { ManyToManyCollection } from "./collections/ManyToManyCollection";
+import { ManyToOneReference } from "./collections/ManyToOneReference";
+import { OneToManyCollection } from "./collections/OneToManyCollection";
 import {
   Entity,
   EntityConstructor,
   EntityManager,
   EntityMetadata,
+  EntityOrmField,
   getMetadata,
   IdOf,
   Loaded,
@@ -10,12 +15,7 @@ import {
   OptsOf,
   RelationsIn,
 } from "./EntityManager";
-import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import { reverseHint } from "./reverseHint";
-import { OneToManyCollection } from "./collections/OneToManyCollection";
-import { ManyToOneReference } from "./collections/ManyToOneReference";
-import { ManyToManyCollection } from "./collections/ManyToManyCollection";
-import { EntityOrmField } from "./EntityManager";
 
 export * from "./EntityManager";
 export * from "./serde";
@@ -29,7 +29,7 @@ export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 export { CustomReference } from "./collections/CustomReference";
-export { OrderBy, EntityFilter, ValueFilter } from "./QueryBuilder";
+export * from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
 export * from "./loadLens";
 

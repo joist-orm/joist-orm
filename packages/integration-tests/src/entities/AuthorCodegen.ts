@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  ValueGraphQLFilter,
   OrderBy,
   ConfigApi,
   BaseEntity,
@@ -15,8 +16,12 @@ import {
   LoadHint,
   Loaded,
   getEm,
+  BooleanFilter,
   EntityFilter,
   FilterOf,
+  BooleanGraphQLFilter,
+  EntityGraphQLFilter,
+  GraphQLFilterOf,
   newRequiredRule,
   Collection,
   OneToManyCollection,
@@ -46,13 +51,28 @@ export interface AuthorFilter {
   lastName?: ValueFilter<string, null | undefined>;
   initials?: ValueFilter<string, never>;
   numberOfBooks?: ValueFilter<number, never>;
-  isPopular?: ValueFilter<boolean, null | undefined>;
+  isPopular?: BooleanFilter<null | undefined>;
   age?: ValueFilter<number, null | undefined>;
-  wasEverPopular?: ValueFilter<boolean, null | undefined>;
+  wasEverPopular?: BooleanFilter<null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+}
+
+export interface AuthorGraphQLFilter {
+  id?: ValueGraphQLFilter<AuthorId>;
+  firstName?: ValueGraphQLFilter<string>;
+  lastName?: ValueGraphQLFilter<string>;
+  initials?: ValueGraphQLFilter<string>;
+  numberOfBooks?: ValueGraphQLFilter<number>;
+  isPopular?: BooleanGraphQLFilter;
+  age?: ValueGraphQLFilter<number>;
+  wasEverPopular?: BooleanGraphQLFilter;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
 }
 
 export interface AuthorOrder {
@@ -80,6 +100,7 @@ authorConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorCodegen extends BaseEntity {
   readonly __filterType: AuthorFilter = null!;
+  readonly __gqlFilterType: AuthorGraphQLFilter = null!;
   readonly __orderType: AuthorOrder = null!;
   readonly __optsType: AuthorOpts = null!;
 

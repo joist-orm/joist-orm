@@ -1,6 +1,7 @@
 import {
   Flavor,
   ValueFilter,
+  ValueGraphQLFilter,
   OrderBy,
   ConfigApi,
   BaseEntity,
@@ -36,6 +37,13 @@ export interface TagFilter {
   updatedAt?: ValueFilter<Date, never>;
 }
 
+export interface TagGraphQLFilter {
+  id?: ValueGraphQLFilter<TagId>;
+  name?: ValueGraphQLFilter<string>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+}
+
 export interface TagOrder {
   id?: OrderBy;
   name?: OrderBy;
@@ -51,6 +59,7 @@ tagConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class TagCodegen extends BaseEntity {
   readonly __filterType: TagFilter = null!;
+  readonly __gqlFilterType: TagGraphQLFilter = null!;
   readonly __orderType: TagOrder = null!;
   readonly __optsType: TagOpts = null!;
 

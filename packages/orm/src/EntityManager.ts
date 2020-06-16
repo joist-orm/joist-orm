@@ -39,6 +39,9 @@ export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer 
 /** Pulls the entity query type out of a given entity type T. */
 export type FilterOf<T> = T extends { __filterType: infer Q } ? Q : never;
 
+/** Pulls the entity GraphQL query type out of a given entity type T. */
+export type GraphQLFilterOf<T> = T extends { __gqlFilterType: infer Q } ? Q : never;
+
 /** Pulls the entity order type out of a given entity type T. */
 export type OrderOf<T> = T extends { __orderType: infer Q } ? Q : never;
 
@@ -175,6 +178,29 @@ export class EntityManager {
     options?: { populate?: H; orderBy?: OrderOf<T> },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
+    type: EntityConstructor<T>,
+    where: FilterOf<T>,
+    options?: { populate?: any; orderBy?: OrderOf<T> },
+  ): Promise<T[]> {
+    const rows = await this.loaderForFind(type).load([where, options?.orderBy]);
+    const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    if (options?.populate) {
+      await this.populate(result, options.populate);
+    }
+    return result;
+  }
+
+  public async findGql<T extends Entity>(type: EntityConstructor<T>, where: GraphQLFilterOf<T>): Promise<T[]>;
+  public async findGql<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(
+    type: EntityConstructor<T>,
+    where: GraphQLFilterOf<T>,
+    options?: { populate?: H; orderBy?: OrderOf<T> },
+  ): Promise<Loaded<T, H>[]>;
+  async findGql<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T> },

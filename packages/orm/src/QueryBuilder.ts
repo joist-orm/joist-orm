@@ -5,6 +5,8 @@ import { ForeignKeySerde } from "./serde";
 
 export type OrderBy = "ASC" | "DESC";
 
+export type BooleanFilter<N> = true | false | N;
+
 export type ValueFilter<V, N> =
   | V
   | V[]
@@ -21,6 +23,29 @@ export type ValueFilter<V, N> =
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { ne: T | I | N };
+
+export type BooleanGraphQLFilter = true | false | null;
+
+/** This essentially matches the ValueFilter but with looser types to placate GraphQL. */
+export type ValueGraphQLFilter<V> =
+  | {
+      eq?: V | null;
+      in?: V[] | null;
+      gt?: V | null;
+      gte?: V | null;
+      ne?: V | null;
+      lt?: V | null;
+      lte?: V | null;
+      like?: V | null;
+    }
+  | V
+  | V[]
+  | null;
+
+export type EnumGraphQLFilter<V> = V[] | null | undefined;
+
+/** A GraphQL version of EntityFilter. */
+export type EntityGraphQLFilter<T, I, F> = T | I | I[] | F | { ne: T | I } | null | undefined;
 
 const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "in"] as const;
 type Operator = typeof operators[number];

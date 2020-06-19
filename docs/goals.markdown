@@ -65,10 +65,13 @@ Most of Joist's `EntityManager` take a `populate` parameter to help you return d
 As one more helpful feature, you can also navigate across multiple levels of the object graph with a single async call using `Entity.load`, i.e.:
 
 ```typescript
+// await way
+const allAuthorReviews = (await Promise.all(await author.books.load()).map(b => b.comments.load())).flat();
+// lens navigation way
 const allAuthorReviews = await author.load(a => a.books.comments);
 ```
 
-Here `a.books.comments` acts similar to a [lens](https://medium.com/@dtipson/functional-lenses-d1aba9e52254), and defines a (type safe) path that `load` then recursively navigates for you, with the convenience of only having a single `await` call in your code.
+Here `a.books.comments` acts similar to a [lens](https://medium.com/@dtipson/functional-lenses-d1aba9e52254), and defines a (type safe) path that `load` then recursively/asynchronously navigates for you, with the convenience of only having a single `await` call in your code.
 
 ## Best-in-Class Performance
 

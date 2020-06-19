@@ -30,6 +30,7 @@ type PrimitiveField = {
   fieldName: string;
   columnName: string;
   columnType: string;
+  columnDefault: number | boolean | string | null;
   fieldType: string | SymbolSpec;
   notNull: boolean;
 };
@@ -116,7 +117,8 @@ function newPrimitive(column: Column, table: Table): PrimitiveField {
   const maybeCustomType = mapType(table.name, columnName, columnType);
   const fieldType = maybeCustomType.fieldType;
   const notNull = column.notNull;
-  return { fieldName, columnName, columnType, fieldType, notNull };
+  const columnDefault = column.default;
+  return { fieldName, columnName, columnType, fieldType, notNull, columnDefault };
 }
 
 function newEnumField(r: M2ORelation): EnumField {

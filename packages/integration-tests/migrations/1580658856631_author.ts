@@ -58,4 +58,9 @@ export function up(b: MigrationBuilder): void {
   });
 
   createManyToManyTable(b, "books_to_tags", "books", "tags");
+
+  createEntityTable(b, "json_data", {
+    notNullJson: { type: "jsonb", notNull: true },
+    nullableJson: { type: "jsonb", notNull: false },
+  });
 }

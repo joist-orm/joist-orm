@@ -44,6 +44,8 @@ export function mapSimpleDbType(dbType: string): string {
     case "timestamptz":
     case "date":
       return "Date";
+    case "jsonb":
+      return "unknown";
     default:
       throw new Error(`Unrecognized type ${dbType}`);
   }

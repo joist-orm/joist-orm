@@ -13,6 +13,8 @@ import {
   bookConfig,
   BookReview,
   bookReviewConfig,
+  JsonDatum,
+  jsonDatumConfig,
   Publisher,
   publisherConfig,
   Tag,
@@ -345,6 +347,67 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
+export const jsonDatumMeta: EntityMetadata<JsonDatum> = {
+  cstr: JsonDatum,
+  type: "JsonDatum",
+  tableName: "json_data",
+  columns: [
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+
+    {
+      fieldName: "notNullJson",
+      columnName: "not_null_json",
+      dbType: "jsonb",
+      serde: new SimpleSerde("notNullJson", "not_null_json"),
+    },
+    {
+      fieldName: "nullableJson",
+      columnName: "nullable_json",
+      dbType: "jsonb",
+      serde: new SimpleSerde("nullableJson", "nullable_json"),
+    },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id", required: true },
+
+    {
+      kind: "primitive",
+      fieldName: "notNullJson",
+      required: true,
+    },
+    {
+      kind: "primitive",
+      fieldName: "nullableJson",
+      required: false,
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+      required: true,
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+      required: true,
+    },
+  ],
+  config: jsonDatumConfig,
+};
+
+(JsonDatum as any).metadata = jsonDatumMeta;
+
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
@@ -472,5 +535,5 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-const allMetadata = [authorMeta, bookMeta, bookReviewMeta, publisherMeta, tagMeta];
+const allMetadata = [authorMeta, bookMeta, bookReviewMeta, jsonDatumMeta, publisherMeta, tagMeta];
 configureMetadata(allMetadata);

@@ -1,6 +1,6 @@
 import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
-import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
-import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
+import { Author, Book, Publisher, PublisherId, PublisherSize, JsonDatum } from "./entities";
+import { insertAuthor, insertBook, insertPublisher, insertJsonData } from "./entities/factories";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -441,6 +441,18 @@ describe("EntityManager.queries", () => {
     expect(p43.length).toEqual(2);
     expect(p43[0].name).toEqual("p2");
     expect(p43[1].name).toEqual("p1");
+  });
+
+  it("can save and get jsonb data", async () => {
+    const opaqueData = { foo: "foo", baz: 100, bar: false, sub: { child: "test" } };
+    await insertJsonData({
+      not_null_json: opaqueData,
+      nullable_json: null
+    });
+    const em = new EntityManager(knex);
+    const data = await em.find(JsonDatum, { id: ["1"] });
+    expect(data[0].notNullJson).toEqual(opaqueData)
+    expect(data[0].nullableJson).toBeUndefined()
   });
 });
 

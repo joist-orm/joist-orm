@@ -12,6 +12,8 @@ import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { configureMetadata } from "./symbols";
 
+export { EntityDbMetadata };
+
 export interface CodeGenFile {
   name: string;
   contents: Code | string;
@@ -27,6 +29,7 @@ export interface Config {
   derivedFields: string[];
   asyncDerivedFields: string[];
   protectedFields: string[];
+  codegenPlugins: string[];
 }
 
 const defaultConfig: Config = {
@@ -34,6 +37,7 @@ const defaultConfig: Config = {
   derivedFields: [],
   asyncDerivedFields: [],
   protectedFields: [],
+  codegenPlugins: [],
 };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
@@ -103,7 +107,15 @@ export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeG
     overwrite: false,
   };
 
-  return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile];
+  // Look for modules to require and call the exported `.run(EntityDbMetadata[], Table[])` method
+  const pluginFiles: CodeGenFile[] = config.codegenPlugins
+    .map((p) => {
+      const plugin = require(p);
+      return plugin.run(entities, enumRows);
+    })
+    .flat();
+
+  return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile, ...pluginFiles];
 }
 
 export async function loadEnumRows(db: Db, client: Client): Promise<EnumRows> {

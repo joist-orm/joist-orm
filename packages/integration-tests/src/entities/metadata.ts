@@ -36,9 +36,10 @@ import {
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
+  tagName: "author",
   tableName: "authors",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => authorMeta, "id", "id") },
 
     {
       fieldName: "firstName",
@@ -224,9 +225,10 @@ export const authorMeta: EntityMetadata<Author> = {
 export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
+  tagName: "book",
   tableName: "books",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => bookMeta, "id", "id") },
 
     {
       fieldName: "title",
@@ -335,9 +337,10 @@ export const bookMeta: EntityMetadata<Book> = {
 export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   cstr: BookAdvance,
   type: "BookAdvance",
+  tagName: "bookAdvance",
   tableName: "book_advances",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => bookAdvanceMeta, "id", "id") },
 
     {
       fieldName: "status",
@@ -423,9 +426,10 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
 export const bookReviewMeta: EntityMetadata<BookReview> = {
   cstr: BookReview,
   type: "BookReview",
+  tagName: "bookReview",
   tableName: "book_reviews",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => bookReviewMeta, "id", "id") },
 
     {
       fieldName: "rating",
@@ -510,9 +514,10 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
+  tagName: "image",
   tableName: "images",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => imageMeta, "id", "id") },
 
     {
       fieldName: "type",
@@ -627,9 +632,10 @@ export const imageMeta: EntityMetadata<Image> = {
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
+  tagName: "publisher",
   tableName: "publishers",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => publisherMeta, "id", "id") },
 
     {
       fieldName: "size",
@@ -716,9 +722,10 @@ export const publisherMeta: EntityMetadata<Publisher> = {
 export const tagMeta: EntityMetadata<Tag> = {
   cstr: Tag,
   type: "Tag",
+  tagName: "tag",
   tableName: "tags",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => tagMeta, "id", "id") },
 
     {
       fieldName: "name",

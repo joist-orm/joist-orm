@@ -1,4 +1,4 @@
-import { EntityMetadata } from "./EntityManager";
+import { EntityMetadata, keyToNumber, keyToString, maybeResolveReferenceToId } from "./index";
 
 export interface ColumnSerde {
   setOnEntity(data: any, row: any): void;
@@ -32,18 +32,18 @@ export class SimpleSerde implements ColumnSerde {
 
 /** Maps integer primary keys ot strings "because GraphQL". */
 export class PrimaryKeySerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
+  constructor(private meta: () => EntityMetadata<any>, private fieldName: string, private columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(row[this.columnName]);
+    data[this.fieldName] = keyToString(this.meta(), row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(data[this.fieldName]);
+    row[this.columnName] = keyToNumber(this.meta(), data[this.fieldName]);
   }
 
   getFromEntity(data: any) {
-    return keyToNumber(data[this.fieldName]);
+    return keyToNumber(this.meta(), data[this.fieldName]);
   }
 
   mapToDb(value: any) {
@@ -56,19 +56,19 @@ export class ForeignKeySerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(row[this.columnName]);
+    data[this.fieldName] = keyToString(this.otherMeta(), row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
+    row[this.columnName] = keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
   }
 
   getFromEntity(data: any) {
-    return keyToNumber(maybeResolveReferenceToId(data[this.fieldName]));
+    return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
   }
 
   mapToDb(value: any): any {
-    return keyToNumber(maybeResolveReferenceToId(value));
+    return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(value));
   }
 }
 
@@ -92,31 +92,6 @@ export class EnumFieldSerde implements ColumnSerde {
   }
 }
 
-// Before a referred-to object is saved, we keep its instance in our data
-// map, and then assume it will be persisted before we're asked to persist
-// ourselves, at which point we'll resolve it to an id.
-export function maybeResolveReferenceToId(value: any): string | undefined {
-  return typeof value === "number" || typeof value === "string" ? value : value?.id;
-}
-
-/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
-export function keyToNumber(value: any): number | undefined {
-  if (value === undefined || value === null) {
-    return undefined;
-  } else if (typeof value === "number") {
-    return value;
-  } else if (typeof value === "string") {
-    return Number(value);
-  } else {
-    throw new Error(`Invalid key ${value}`);
-  }
-}
-
-/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
-export function keyToString(value: any): string | undefined {
-  return value === undefined || value === null ? undefined : String(value);
-}
-
-export function maybeNullToUndefined(value: any): any {
+function maybeNullToUndefined(value: any): any {
   return value === null ? undefined : value;
 }

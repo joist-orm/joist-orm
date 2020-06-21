@@ -1,7 +1,8 @@
+import { camelCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
+import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
-import { Config } from "./config";
 
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
   const { entity } = dbMetadata;
@@ -16,6 +17,7 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
+      tagName: "${camelCase(entity.name)}",
       tableName: "${dbMetadata.tableName}",
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
       fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ],
@@ -31,7 +33,7 @@ function generateColumns(
   dbMetadata: EntityDbMetadata,
 ): { primaryKey: Code; primitives: Code[]; enums: Code[]; m2o: Code[] } {
   const primaryKey = code`
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}("id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id") },
   `;
 
   const primitives = dbMetadata.primitives.map((p) => {

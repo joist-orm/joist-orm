@@ -18,6 +18,21 @@ describe("EntityManager", () => {
     expect(author.firstName).toEqual("f");
   });
 
+  it("can load an entity by tagged id", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = new EntityManager(knex);
+    const author = await em.load(Author, "author:1");
+    expect(author.firstName).toEqual("f");
+  });
+
+  it("fails to load an entity by an invalid tagged id", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = new EntityManager(knex);
+    await expect(em.load(Author, "publisher:1")).rejects.toThrow(
+      "Invalid tagged id, expected tag author, got publisher:1",
+    );
+  });
+
   it("can load multiple entities with one query", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -55,7 +70,7 @@ describe("EntityManager", () => {
 
     const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(1);
-    expect(author.id).toEqual("1");
+    expect(author.id).toEqual("author:1");
   });
 
   it("inserts then updates new entity", async () => {
@@ -85,11 +100,11 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
-    expect(author.id).toEqual("1");
+    expect(author.id).toEqual("author:1");
 
     author.firstName = "a2";
     await em.flush();
-    expect(author.id).toEqual("1");
+    expect(author.id).toEqual("author:1");
 
     const row = (await knex.select("*").from("authors"))[0];
     expect(row["first_name"]).toEqual("a2");
@@ -287,7 +302,7 @@ describe("EntityManager", () => {
     const p1 = await em.load(Publisher, "1");
     em.delete(p1);
     await em.flush();
-    expect(() => (p1.name = "p2")).toThrow("Publisher#1 is marked as deleted");
+    expect(() => (p1.name = "p2")).toThrow("Publisher:1 is marked as deleted");
   });
 
   it("cannot modify a deleted entity's o2m collection", async () => {
@@ -296,7 +311,7 @@ describe("EntityManager", () => {
     const p1 = await em.load(Publisher, "1");
     em.delete(p1);
     await em.flush();
-    expect(() => p1.authors.add(em.create(Author, { firstName: "a1" }))).toThrow("Publisher#1 is marked as deleted");
+    expect(() => p1.authors.add(em.create(Author, { firstName: "a1" }))).toThrow("Publisher:1 is marked as deleted");
   });
 
   it("cannot modify a deleted entity's m2o collection", async () => {
@@ -305,7 +320,7 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1");
     em.delete(a1);
     await em.flush();
-    expect(() => a1.publisher.set(em.create(Publisher, { name: "p1" }))).toThrow("Author#1 is marked as deleted");
+    expect(() => a1.publisher.set(em.create(Publisher, { name: "p1" }))).toThrow("Author:1 is marked as deleted");
   });
 
   it("refresh an entity", async () => {
@@ -392,7 +407,7 @@ describe("EntityManager", () => {
     await insertBook({ id: 2, title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "2");
-    expect(b1.author.id).toEqual("1");
+    expect(b1.author.id).toEqual("author:1");
   });
 
   it("can create and cast to nested m2o hints", async () => {
@@ -569,7 +584,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => (author.firstName = "different name")).toThrow(
-      "Cannot set 'firstName' on Author#1 during a flush outside of a entity hook",
+      "Cannot set 'firstName' on Author:1 during a flush outside of a entity hook",
     );
     await flushPromise;
   });
@@ -583,7 +598,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => p1.authors.add(a1)).toThrow(
-      "Cannot set 'publisher' on Author#undefined during a flush outside of a entity hook",
+      "Cannot set 'publisher' on Author:new during a flush outside of a entity hook",
     );
     await flushPromise;
   });
@@ -597,7 +612,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => a1.publisher.set(p1)).toThrow(
-      "Cannot set 'publisher' on Author#1 during a flush outside of a entity hook",
+      "Cannot set 'publisher' on Author:1 during a flush outside of a entity hook",
     );
     await flushPromise;
   });
@@ -673,7 +688,7 @@ describe("EntityManager", () => {
     new Author(em, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a1" }, {});
-    expect(a.id).toEqual("1");
+    expect(a.id).toEqual("author:1");
   });
 
   it("can find by optional field with findOrCreate", async () => {
@@ -681,7 +696,7 @@ describe("EntityManager", () => {
     new Author(em, { firstName: "a1", age: 20 });
     await em.flush();
     const a = await em.findOrCreate(Author, { age: 20 }, { firstName: "a2" });
-    expect(a.id).toEqual("1");
+    expect(a.id).toEqual("author:1");
     // we leave firstName alone since it was in the ifNew hash
     expect(a.firstName).toEqual("a1");
   });
@@ -701,7 +716,7 @@ describe("EntityManager", () => {
     new Author(em, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a1" }, { age: 20 }, { lastName: "l" });
-    expect(a.id).toEqual("1");
+    expect(a.id).toEqual("author:1");
     expect(a.lastName).toEqual("l");
     expect(a.age).toBeUndefined();
   });
@@ -826,9 +841,9 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1");
     a1.publisher.set(em.create(Publisher, { name: "p1" }));
     expect(a1.toJSON()).toMatchObject({
-      id: "1",
+      id: "author:1",
       firstName: "a1",
-      publisher: "Publisher#undefined",
+      publisher: "Publisher:new",
     });
   });
 

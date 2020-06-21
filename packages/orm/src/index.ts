@@ -19,8 +19,9 @@ import {
 } from "./EntityManager";
 import { reverseHint } from "./reverseHint";
 
-export * from "./EntityManager";
+export * from "./keys";
 export * from "./serde";
+export * from "./EntityManager";
 export { newPgConnectionConfig } from "joist-utils";
 export * from "./reverseHint";
 export * from "./changes";
@@ -211,7 +212,7 @@ export function setOpts<T extends Entity>(
 
 export function ensureNotDeleted(entity: Entity, opts: { ignore?: EntityOrmField["deleted"] } = {}): void {
   if (entity.isDeletedEntity && (opts.ignore === undefined || entity.__orm.deleted !== opts.ignore)) {
-    throw new Error(entity + " is marked as deleted");
+    throw new Error(`${entity} is marked as deleted`);
   }
 }
 

@@ -1,6 +1,6 @@
+import { insertAuthor, insertBook, insertBookReview, insertImage } from "@src/entities/inserts";
 import { EntityManager } from "joist-orm";
 import { Author, Book, BookReview, Image, ImageType } from "../entities";
-import { insertAuthor, insertBook, insertBookReview, insertImage } from "@src/entities/inserts";
 import { knex } from "../setupDbTests";
 
 describe("CustomReference", () => {
@@ -82,7 +82,7 @@ describe("CustomReference", () => {
     const a2 = await em.load(Author, "2");
     const r1 = await em.load(BookReview, "1");
 
-    expect(() => r1.author.set(a2)).toThrow("BookReview#1.author was not loaded");
+    expect(() => r1.author.set(a2)).toThrow("BookReview:1.author was not loaded");
   });
 
   it("can load against a new entity", async () => {

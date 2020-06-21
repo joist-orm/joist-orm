@@ -7,23 +7,28 @@ import { Contexty } from "./contexty";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import {
+  assertIdsAreTagged,
   Collection,
+  ColumnSerde,
   ConfigApi,
   DeepPartialOrNull,
+  deTagIds,
   EntityHook,
   getEm,
+  keyToString,
   LoadedCollection,
   LoadedReference,
+  maybeResolveReferenceToId,
   PartialOrNull,
   Reference,
   Relation,
   setField,
   setOpts,
+  tagIfNeeded,
   ValidationError,
   ValidationErrors,
 } from "./index";
 import { buildQuery, FilterAndSettings } from "./QueryBuilder";
-import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import { fail, getOrSet, indexBy, NullOrDefinedOr } from "./utils";
 
 export interface EntityConstructor<T> {
@@ -382,9 +387,11 @@ export class EntityManager {
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
     }
-    const entity = this.findExistingInstance(getMetadata(type).cstr, id) || (await this.loaderForEntity(type).load(id));
+    const meta = getMetadata(type);
+    const tagged = tagIfNeeded(meta, id);
+    const entity = this.findExistingInstance(meta.cstr, tagged) || (await this.loaderForEntity(type).load(tagged));
     if (!entity) {
-      throw new Error(`${type.name}#${id} was not found`);
+      throw new Error(`${tagged} was not found`);
     }
     if (hint) {
       await this.populate(entity, hint);
@@ -399,15 +406,17 @@ export class EntityManager {
     H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
     N extends Narrowable
   >(type: EntityConstructor<T>, ids: string[], populate: H): Promise<Loaded<T, H>[]>;
-  async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[], hint?: any): Promise<T[]> {
+  async loadAll<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
+    const meta = getMetadata(type);
+    const ids = _ids.map((id) => tagIfNeeded(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(getMetadata(type).cstr, id) || this.loaderForEntity(type).load(id);
+        return this.findExistingInstance(meta.cstr, id) || this.loaderForEntity(type).load(id);
       }),
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
     if (idsNotFound.length > 0) {
-      throw new Error(`${type.name}#${idsNotFound.join(",")} were not found`);
+      throw new Error(`${idsNotFound.join(",")} were not found`);
     }
     if (hint) {
       await this.populate(entities as T[], hint);
@@ -796,20 +805,19 @@ export class EntityManager {
 
   private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {
     return getOrSet(this.__data.loaders, type.name, () => {
-      return new DataLoader<string, T | undefined>(async (keys) => {
+      return new DataLoader<string, T | undefined>(async (_keys) => {
         const meta = getMetadata(type);
+        assertIdsAreTagged(_keys);
+        const keys = deTagIds(meta, _keys);
 
-        const rows = await this.knex
-          .select("*")
-          .from(meta.tableName)
-          .whereIn("id", keys as string[]);
+        const rows = await this.knex.select("*").from(meta.tableName).whereIn("id", keys);
 
         // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
         const entities = rows.map((row) => this.hydrate(type, row, { overwriteExisting: true }));
         const entitiesById = indexBy(entities, (e) => e.id!);
 
         // Return the results back in the same order as the keys
-        return keys.map((k) => {
+        return _keys.map((k) => {
           const entity = entitiesById.get(k);
           // We generally expect all of our entities to be found, but they may not for API calls like
           // `findOneOrFail` or for `EntityManager.refresh` when the entity has been deleted out from
@@ -842,7 +850,7 @@ export class EntityManager {
    */
   public hydrate<T extends Entity>(type: EntityConstructor<T>, row: any, options?: { overwriteExisting?: boolean }): T {
     const meta = getMetadata(type);
-    const id = keyToString(row["id"]) || fail("No id column was available");
+    const id = keyToString(meta, row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
     let entity = this.findExistingInstance(type, id) as T;
     if (!entity) {
@@ -876,6 +884,7 @@ export interface EntityMetadata<T extends Entity> {
   cstr: EntityConstructor<T>;
   type: string;
   tableName: string;
+  tagName: string;
   // Eventually our dbType should go away to support N-column fields
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   fields: Array<Field>;

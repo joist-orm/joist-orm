@@ -88,4 +88,14 @@ describe("EntityManager.lens", () => {
     const publisherName: string | undefined = await a1.load((a) => a.publisher.name);
     expect(publisherName).toEqual(undefined);
   });
+
+  it("can navigate into getters", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const b1 = await em.load(Book, "1");
+    const p1Id = await b1.load((b) => b.author.publisher.idOrFail);
+    expect(p1Id).toEqual("publisher:1");
+  });
 });

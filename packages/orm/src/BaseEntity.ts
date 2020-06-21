@@ -1,5 +1,15 @@
-import { Entity, EntityManager, EntityOrmField, IdOf, isEntity, OptsOf } from "./EntityManager";
-import { fail, PartialOrNull } from "./index";
+import {
+  Entity,
+  EntityManager,
+  EntityOrmField,
+  fail,
+  getMetadata,
+  IdOf,
+  isEntity,
+  keyToNumber,
+  OptsOf,
+  PartialOrNull,
+} from "./index";
 
 /**
  * The base class for all entities.
@@ -48,7 +58,11 @@ export abstract class BaseEntity implements Entity {
   }
 
   toString(): string {
-    return `${this.__orm.metadata.type}#${this.id}`;
+    const meta = getMetadata(this);
+    // Strip the tag because we add back the entity prefix
+    const id = keyToNumber(meta, this.id) || "new";
+    // Returns `Author:1` instead of `author:1` to differentiate the instance's toString from the tagged id itself
+    return `${meta.type}:${id}`;
   }
 
   /**

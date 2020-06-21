@@ -69,7 +69,7 @@ describe("EntityManager.populate", () => {
     expect(numberOfQueries).toEqual(2);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);
-    expect(pub.authors.get[0].publisher.get!.id).toEqual("1");
+    expect(pub.authors.get[0].publisher.get!.id).toEqual("publisher:1");
   });
 
   it("can populate via load", async () => {
@@ -139,7 +139,7 @@ describe("EntityManager.populate", () => {
     const em = new EntityManager(knex);
     const book = await em.load(Book, "1", "author");
     const authorId: string = book.author.id;
-    expect(authorId).toEqual("1");
+    expect(authorId).toEqual("author:1");
   });
 
   it("can populate two literals", async () => {

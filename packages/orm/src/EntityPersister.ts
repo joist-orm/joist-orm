@@ -1,7 +1,6 @@
-import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
 import Knex from "knex";
-import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
-import { JoinRow } from "./collections/ManyToManyCollection";
+import { JoinRow, ManyToManyCollection } from "./collections/ManyToManyCollection";
+import { Entity, EntityMetadata, getMetadata, keyToNumber, keyToString, maybeResolveReferenceToId } from "./index";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
@@ -55,7 +54,7 @@ async function assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<vo
     let i = 0;
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
-        insert.__orm.data["id"] = keyToString(result.rows![i++]["nextval"]);
+        insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
       }
     });
   }
@@ -120,7 +119,7 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     .del()
     .whereIn(
       "id",
-      entities.map((e) => e.id!),
+      entities.map((e) => keyToNumber(meta, e.id!).toString()),
     );
   entities.forEach((entity) => (entity.__orm.deleted = "deleted"));
 }
@@ -172,9 +171,10 @@ export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinR
           joinTableName,
           newRows.map((row) => {
             // The rows in EntityManager.joinRows point to entities, change those to ints
-            const { id, created_at, ...fkColumns } = row;
+            const { id, created_at, m2m, ...fkColumns } = row;
             Object.keys(fkColumns).forEach((key) => {
-              fkColumns[key] = keyToNumber(maybeResolveReferenceToId(fkColumns[key]));
+              const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
+              fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
             });
             return fkColumns;
           }),
@@ -196,6 +196,8 @@ export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinR
 }
 
 interface JoinRowTodo {
+  // Store the m2m reference (either side of the m2m, it doesn't matter which) to help tag/untag the foreign keys
+  m2m: ManyToManyCollection<any, any>;
   newRows: JoinRow[];
   deletedRows: JoinRow[];
 }
@@ -206,7 +208,7 @@ export function sortJoinRows(joinRows: Record<string, JoinRow[]>): Record<string
     const newRows = rows.filter((r) => r.id === undefined && r.deleted !== true);
     const deletedRows = rows.filter((r) => r.id !== undefined && r.deleted === true);
     if (newRows.length > 0 || deletedRows.length > 0) {
-      todos[joinTableName] = { newRows, deletedRows };
+      todos[joinTableName] = { newRows, deletedRows, m2m: rows[0].m2m };
     }
   }
   return todos;

@@ -1,7 +1,16 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, Entity, EntityMetadata, getEm, IdOf } from "../";
+import {
+  Collection,
+  ensureNotDeleted,
+  Entity,
+  EntityMetadata,
+  getEm,
+  getMetadata,
+  IdOf,
+  keyToNumber,
+  keyToString,
+} from "../";
 import { getOrSet, remove } from "../utils";
-import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
 export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
@@ -64,7 +73,12 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
 
     if (!percolated) {
-      const joinRow: JoinRow = { id: undefined, [this.columnName]: this.entity, [this.otherColumnName]: other };
+      const joinRow: JoinRow = {
+        id: undefined,
+        m2m: this,
+        [this.columnName]: this.entity,
+        [this.otherColumnName]: other,
+      };
       getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
       ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity, true);
     }
@@ -206,8 +220,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
 export type JoinRow = {
   id: number | undefined;
+  m2m: ManyToManyCollection<any, any>;
   created_at?: Date;
-  [column: string]: number | Entity | undefined | boolean | Date;
+  [column: string]: number | Entity | undefined | boolean | Date | ManyToManyCollection<any, any>;
   deleted?: boolean;
 };
 
@@ -242,9 +257,11 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   // Or together `where tag_id in (...)` and `book_id in (...)`
   let query = em.knex.select("*").from(joinTableName);
   Object.entries(columns).forEach(([columnId, values]) => {
+    // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
+    const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
     query = query.orWhereIn(
       columnId,
-      values.map((id) => keyToNumber(id)!),
+      values.map((id) => keyToNumber(meta, id)!),
     );
   });
 
@@ -258,9 +275,9 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
   const column1 = collection.columnName;
-  const cstr1 = collection.entity.__orm.metadata.cstr;
+  const meta1 = collection.entity.__orm.metadata;
   const column2 = collection.otherColumnName;
-  const cstr2 = collection.otherMeta.cstr;
+  const meta2 = collection.otherMeta;
 
   // For each join table row, we use `EntityManager.load` to get both entities loaded.
   // This will be another 1 or 2 queries (depending on whether we're loading just
@@ -274,8 +291,8 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
       // We may have already loaded this join row in a prior load of the opposite side of this m2m.
       let emRow = emJoinRows.find((jr) => {
         return (
-          (jr[column1] as Entity).id === keyToString(dbRow[column1]) &&
-          (jr[column2] as Entity).id === keyToString(dbRow[column2])
+          (jr[column1] as Entity).id === keyToString(meta1, dbRow[column1]) &&
+          (jr[column2] as Entity).id === keyToString(meta2, dbRow[column2])
         );
       });
 
@@ -283,10 +300,10 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
         // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
         // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
         // we chould pull these from the row itself if we did a fancier join.
-        const p1 = em.load(cstr1, keyToString(dbRow[column1])!);
-        const p2 = em.load(cstr2, keyToString(dbRow[column2])!);
+        const p1 = em.load(meta1.cstr, keyToString(meta1, dbRow[column1])!);
+        const p2 = em.load(meta2.cstr, keyToString(meta2, dbRow[column2])!);
         const [e1, e2] = await Promise.all([p1, p2]);
-        emRow = { id: dbRow.id, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
+        emRow = { id: dbRow.id, m2m: collection, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
         emJoinRows.push(emRow);
       }
 

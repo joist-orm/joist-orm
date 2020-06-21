@@ -82,7 +82,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: await em.load(Author, "1") });
-    expect(a1.mentor.id).toEqual("1");
+    expect(a1.mentor.id).toEqual("author:1");
   });
 
   it("collections can refer to entities by id", async () => {

@@ -228,7 +228,7 @@ describe("ManyToManyCollection", () => {
     // And the book is deleted
     em.delete(b1);
     // Then we cannot add to the tags collection
-    expect(() => b1.tags.add(t1)).toThrow("Book#2 is marked as deleted");
+    expect(() => b1.tags.add(t1)).toThrow("Book:2 is marked as deleted");
   });
 
   it("cannot remove to a deleted entity's m2m", async () => {
@@ -243,7 +243,7 @@ describe("ManyToManyCollection", () => {
     em.delete(b1);
     await em.flush();
     // Then we cannot remove from the tags collection
-    expect(() => b1.tags.remove(t1)).toThrow("Book#2 is marked as deleted");
+    expect(() => b1.tags.remove(t1)).toThrow("Book:2 is marked as deleted");
   });
 
   it("can set to both add and remove", async () => {

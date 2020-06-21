@@ -1,10 +1,19 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, getEm, IdOf } from "../";
-import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
+import {
+  assertIdsAreTagged,
+  Collection,
+  deTagIds,
+  ensureNotDeleted,
+  Entity,
+  EntityMetadata,
+  getEm,
+  getMetadata,
+  IdOf,
+  maybeResolveReferenceToId,
+} from "../index";
 import { getOrSet, groupBy, remove } from "../utils";
-import { ManyToOneReference } from "./ManyToOneReference";
-import { maybeResolveReferenceToId } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { ManyToOneReference } from "./ManyToOneReference";
 
 export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
@@ -209,13 +218,16 @@ function loaderForCollection<T extends Entity, U extends Entity>(
   const meta = getMetadata(collection.entity);
   const loaderName = `${meta.tableName}.${collection.fieldName}`;
   return getOrSet(em.__data.loaders, loaderName, () => {
-    return new DataLoader<string, U[]>(async (keys) => {
+    return new DataLoader<string, U[]>(async (_keys) => {
       const otherMeta = collection.otherMeta;
+
+      assertIdsAreTagged(_keys);
+      const keys = deTagIds(meta, _keys);
 
       const rows = await em.knex
         .select("*")
         .from(otherMeta.tableName)
-        .whereIn(collection.otherColumnName, keys as string[])
+        .whereIn(collection.otherColumnName, keys)
         .orderBy("id");
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
@@ -233,7 +245,7 @@ function loaderForCollection<T extends Entity, U extends Entity>(
         // dummy value.
         return ownerId ?? "dummyNoLongerOwned";
       });
-      return keys.map((k) => rowsById.get(k) || []);
+      return _keys.map((k) => rowsById.get(k) || []);
     });
   });
 }

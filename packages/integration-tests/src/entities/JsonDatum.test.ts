@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "../setupDbTests";
-import { JsonDatum } from "./JsonDatum";
+import { JsonDatum } from "./entities";
 
 describe("JsonDatum", () => {
   it("creates JsonDatum too", async () => {
@@ -8,6 +8,5 @@ describe("JsonDatum", () => {
     const notNullJson = { some: { data: "here" } }
     const datum = em.create(JsonDatum, { notNullJson });
     expect(datum.notNullJson).toEqual(notNullJson)
-
   });
 });

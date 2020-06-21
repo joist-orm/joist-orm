@@ -1,12 +1,6 @@
 {
-  "derivedFields": [
-    "Author.initials"
-  ],
-  "asyncDerivedFields": [
-    "Author.numberOfBooks",
-    "BookReview.isPublic"
-  ],
-  "protectedFields": [
-    "Author.wasEverPopular"
-  ]
+  "derivedFields": ["Author.initials"],
+  "asyncDerivedFields": ["Author.numberOfBooks", "BookReview.isPublic"],
+  "protectedFields": ["Author.wasEverPopular"],
+  "codegenPlugins": ["joist-graphql-codegen"]
 }

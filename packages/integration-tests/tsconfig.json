@@ -14,13 +14,16 @@
     "baseUrl": "./",
     "paths": {
       "joist-codegen": ["../codegen/src"],
+      "joist-graphql-codegen": ["../graphql-codegen/src"],
       "joist-migration-utils": ["../migration-utils/src"],
       "joist-orm": ["../orm/src"],
-      "joist-utils": ["../utils/src"]
+      "joist-utils": ["../utils/src"],
+      "@src/*": ["src/*"]
     }
   },
   "references": [
     { "path": "../codegen" },
+    { "path": "../graphql-codegen" },
     { "path": "../migration-utils" },
     { "path": "../orm" },
     { "path": "../utils" }

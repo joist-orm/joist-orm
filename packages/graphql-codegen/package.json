@@ -1,0 +1,23 @@
+{
+  "name": "joist-graphql-codegen",
+  "version": "0.1.0-bump",
+  "license": "MIT",
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "dependencies": {
+    "change-case": "^4.1.1",
+    "ts-poet": "^3.2.2",
+    "joist-codegen": "0.1.0-bump",
+    "joist-utils": "0.1.0-bump",
+    "pluralize": "^8.0.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^25.2.1",
+    "@types/node": "^13.13.4",
+    "jest": "^25.5.3",
+    "prettier": "^2.0.5",
+    "ts-jest": "^25.4.0",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.9.5"
+  }
+}

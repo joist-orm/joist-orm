@@ -1,0 +1,2 @@
+enum PublisherSize { SMALL LARGE }
+type PublisherSizeDetail { code: PublisherSize! name: String! }

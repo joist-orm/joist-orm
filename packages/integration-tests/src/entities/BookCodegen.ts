@@ -67,6 +67,8 @@ export interface BookOrder {
   author?: AuthorOrder;
 }
 
+export const bookDefaultValues = { order: 0 };
+
 export const bookConfig = new ConfigApi<Book>();
 
 bookConfig.addRule(newRequiredRule("title"));
@@ -107,7 +109,7 @@ export abstract class BookCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super(em, bookMeta);
+    super(em, bookMeta, { ...bookDefaultValues });
     this.set(opts as BookOpts, { calledFromConstructor: true } as any);
   }
 

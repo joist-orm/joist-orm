@@ -1,7 +1,7 @@
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
+import { Entity, EntityDbMetadata, PrimitiveField } from "./EntityDbMetadata";
 import { Config } from "./index";
 import {
   BaseEntity,
@@ -171,6 +171,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
+  const defaultValues = generateDefaultValues(config, meta);
+  const hasDefaultValues = defaultValues.length > 0;
+  const defaultValuesName = `${camelCase(entityName)}DefaultValues`;
+
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
@@ -192,11 +196,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       id?: ${OrderBy};
       ${generateOrderFields(meta)}
     }
+    
+    ${hasDefaultValues ? code`export const ${defaultValuesName} = { ${defaultValues} };` : ""}
 
     export const ${configName} = new ${ConfigApi}<${entity.type}>();
 
     ${generateDefaultValidationRules(meta, configName)}
-
+  
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __filterType: ${entityName}Filter = null!;
       readonly __gqlFilterType: ${entityName}GraphQLFilter = null!;
@@ -205,7 +211,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${[o2m, m2o, m2m]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        super(em, ${metadata});
+        ${hasDefaultValues ? code`super(em, ${metadata}, {...${defaultValuesName}})` : code`super(em, ${metadata})`};
         this.set(opts as ${entityName}Opts, { calledFromConstructor: true } as any);
       }
 
@@ -238,6 +244,43 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   `;
 }
 
+function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: PrimitiveField): boolean {
+  let { fieldName, columnDefault, columnType } = field;
+
+  // if there's no default at all, return false
+  if (columnDefault === null) {
+    return false;
+  }
+
+  // even though default is defined as a number | boolean | string | null in reality pg-structure
+  // only ever returns a string | null so we make sure of that here
+  columnDefault = columnDefault.toString();
+
+  // if this value should be set elsewhere, return false
+  if (
+    ormMaintainedFields.includes(fieldName) ||
+    isDerived(config, meta.entity, fieldName) ||
+    isAsyncDerived(config, meta.entity, fieldName)
+  ) {
+    return false;
+  }
+
+  // try to validate that we actually got a primitive value and not arbitrary SQL
+  return (
+    (["smallint", "int", "bigint"].includes(columnType) && !isNaN(parseInt(columnDefault))) ||
+    (["varchar", "text"].includes(columnType) && /^'.*'$/.test(columnDefault)) ||
+    ("bool" === columnType && ["true", "false"].includes(columnDefault))
+  );
+}
+
+function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
+  return meta.primitives
+    .filter((field) => fieldHasDefaultValue(config, meta, field))
+    .map(({ fieldName, columnDefault }) => {
+      return code`${fieldName}: ${columnDefault},`;
+    });
+}
+
 function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
   const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes];
   return fields
@@ -247,17 +290,10 @@ function generateDefaultValidationRules(meta: EntityDbMetadata, configName: stri
     });
 }
 
-function generateDefaultCascadeDeletes(meta: EntityDbMetadata, configName: string): Code[] {
-  return meta.oneToManys
-    .filter((p) => p.otherColumnNotNull)
-    .map(({ fieldName }) => {
-      return code`${configName}.cascadeDelete("${fieldName}");`;
-    });
-}
-
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   // Make our opts type
-  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
+  const primitives = meta.primitives.map((field) => {
+    const { fieldName, fieldType, notNull, columnDefault } = field;
     if (
       ormMaintainedFields.includes(fieldName) ||
       isDerived(config, meta.entity, fieldName) ||
@@ -265,7 +301,9 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     ) {
       return code``;
     }
-    return code`${fieldName}${maybeOptional(notNull)}: ${fieldType}${maybeUnionNull(notNull)};`;
+    return code`${fieldName}${maybeOptional(
+      notNull && !fieldHasDefaultValue(config, meta, field),
+    )}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
   const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;

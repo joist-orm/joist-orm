@@ -10,8 +10,8 @@ export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
   readonly __orm: EntityOrmField;
 
-  protected constructor(em: EntityManager, metadata: any) {
-    this.__orm = { em, metadata, data: {}, originalData: {} };
+  protected constructor(em: EntityManager, metadata: any, data?: Record<string, any>) {
+    this.__orm = { em, metadata, data: data || {}, originalData: {} };
     em.register(this);
   }
 

@@ -1,11 +1,6 @@
-import { EntityManager } from "joist-orm";
-import { PublisherCodegen, publisherConfig, PublisherOpts } from "./entities";
+import { PublisherCodegen, publisherConfig } from "./entities";
 
-export class Publisher extends PublisherCodegen {
-  constructor(em: EntityManager, opts: PublisherOpts) {
-    super(em, opts);
-  }
-}
+export class Publisher extends PublisherCodegen {}
 
 publisherConfig.addRule("authors", (p) => {
   if (p.authors.get.length === 13) {

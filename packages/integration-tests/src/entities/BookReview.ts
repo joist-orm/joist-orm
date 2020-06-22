@@ -1,5 +1,5 @@
-import { Author, BookReviewCodegen, bookReviewConfig, BookReviewOpts } from "./entities";
-import { CustomReference, EntityManager, Reference } from "joist-orm";
+import { Author, BookReviewCodegen, bookReviewConfig } from "./entities";
+import { CustomReference, Reference } from "joist-orm";
 
 export class BookReview extends BookReviewCodegen {
   readonly author: Reference<BookReview, Author, never> = new CustomReference<
@@ -19,10 +19,6 @@ export class BookReview extends BookReviewCodegen {
       return review.book.isSet() && review.book.get.author.isSet();
     },
   });
-
-  constructor(em: EntityManager, opts: BookReviewOpts) {
-    super(em, opts);
-  }
 }
 
 // Reviews are only public if the author is over the age of 21

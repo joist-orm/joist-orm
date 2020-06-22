@@ -1,10 +1,5 @@
-import { EntityManager } from "joist-orm";
-import { BookCodegen, bookConfig, BookOpts } from "./entities";
+import { BookCodegen, bookConfig } from "./entities";
 
-export class Book extends BookCodegen {
-  constructor(em: EntityManager, opts: BookOpts) {
-    super(em, opts);
-  }
-}
+export class Book extends BookCodegen {}
 
 bookConfig.cascadeDelete("reviews");

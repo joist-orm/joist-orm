@@ -1,15 +1,11 @@
-import { EntityManager, Loaded } from "joist-orm";
-import { AuthorCodegen, authorConfig, AuthorOpts } from "./entities";
+import { Loaded } from "joist-orm";
+import { AuthorCodegen, authorConfig } from "./entities";
 
 export class Author extends AuthorCodegen {
   public beforeFlushRan = false;
   public beforeDeleteRan = false;
   public afterCommitRan = false;
   public ageForBeforeFlush?: number;
-
-  constructor(em: EntityManager, opts: AuthorOpts) {
-    super(em, opts);
-  }
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {

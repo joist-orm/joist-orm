@@ -6,12 +6,7 @@ import { EntityDbMetadata } from "./EntityDbMetadata";
 export function generateInitialEntityFile(meta: EntityDbMetadata): Code {
   const entityName = meta.entity.name;
   const codegenClass = imp(`${entityName}Codegen@./entities`);
-  const optsClass = imp(`${entityName}Opts@./entities`);
   return code`
-    export class ${entityName} extends ${codegenClass} {
-      constructor(em: ${EntityManager}, opts: ${optsClass}) {
-        super(em, opts);
-      }
-    }
+    export class ${entityName} extends ${codegenClass} {}
   `;
 }

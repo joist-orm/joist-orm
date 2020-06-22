@@ -26,7 +26,7 @@ export type Entity = {
   configConst: SymbolSpec;
 };
 
-type PrimitiveField = {
+export type PrimitiveField = {
   fieldName: string;
   columnName: string;
   columnType: string;
@@ -35,7 +35,7 @@ type PrimitiveField = {
   notNull: boolean;
 };
 
-type EnumField = {
+export type EnumField = {
   fieldName: string;
   columnName: string;
   enumName: string;
@@ -44,7 +44,7 @@ type EnumField = {
   notNull: boolean;
 };
 
-type ManyToOneField = {
+export type ManyToOneField = {
   fieldName: string;
   columnName: string;
   otherFieldName: string;
@@ -52,7 +52,7 @@ type ManyToOneField = {
   notNull: boolean;
 };
 
-type OneToManyField = {
+export type OneToManyField = {
   fieldName: string;
   otherEntity: Entity;
   otherFieldName: string;
@@ -60,7 +60,7 @@ type OneToManyField = {
   otherColumnNotNull: boolean;
 };
 
-type ManyToManyField = {
+export type ManyToManyField = {
   joinTableName: string;
   fieldName: string;
   columnName: string;

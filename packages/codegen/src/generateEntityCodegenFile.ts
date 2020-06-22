@@ -1,7 +1,7 @@
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { Entity, EntityDbMetadata } from "./EntityDbMetadata";
+import { Entity, EntityDbMetadata, PrimitiveField } from "./EntityDbMetadata";
 import { Config } from "./index";
 import {
   BaseEntity,
@@ -173,7 +173,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   const defaultValues = generateDefaultValues(config, meta);
   const hasDefaultValues = defaultValues.length > 0;
-  const defaultValuesName = `${entityName}DefaultValues`;
+  const defaultValuesName = `${camelCase(entityName)}DefaultValues`;
 
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
@@ -244,11 +244,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   `;
 }
 
-function fieldHasDefaultValue(
-  config: Config,
-  meta: EntityDbMetadata,
-  field: EntityDbMetadata["primitives"] extends Array<infer U> ? U : never,
-): boolean {
+function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: PrimitiveField): boolean {
   let { fieldName, columnDefault, columnType } = field;
 
   // if there's no default at all, return false

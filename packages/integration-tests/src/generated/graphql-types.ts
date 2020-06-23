@@ -3,7 +3,7 @@
 import { PublisherSize } from "@src/entities";
 
 export type Resolvers = {
-  PublisherSize: {
+  PublisherSizeDetail: {
     code: (root: PublisherSize) => string;
     name: (root: PublisherSize) => string;
   };

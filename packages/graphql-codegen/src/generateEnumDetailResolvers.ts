@@ -4,26 +4,25 @@ import pluralize from "pluralize";
 import { code, imp } from "ts-poet";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
-export function generateEnumResolvers(enums: EnumRows): CodeGenFile {
-  const resolvers = Object.entries(enums).map(([_name, rows]) => {
-    const name = pascalCase(_name);
+export function generateEnumDetailResolvers(enums: EnumRows): CodeGenFile {
+  const enumNames = Object.keys(enums).map((name) => pascalCase(name));
+
+  const resolvers = enumNames.map((name) => {
     const type = imp(`${pluralize(name)}@@src/entities`);
     return code`
-        ${name}: {
-          code: (root) => root,
-          name: (root) => ${type}.getByCode(root).name,
-        },
-      `;
+      ${name}Detail: {
+        code: (root) => root,
+        name: (root) => ${type}.getByCode(root).name,
+      },
+    `;
   });
 
   const Resolvers = imp("Resolvers@@src/generated/graphql-types");
 
   const contents = code`
-    type Enums = ${Object.keys(enums)
-      .map((n) => `"${pascalCase(n)}"`)
-      .join(" | ")};
+    type EnumDetails = ${enumNames.map((n) => `"${n}Detail"`).join(" | ")};
 
-    export const enumResolvers: Pick<${Resolvers}, Enums> = {
+    export const enumResolvers: Pick<${Resolvers}, EnumDetails> = {
       ${resolvers}
     };
   `;

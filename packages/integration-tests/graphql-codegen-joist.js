@@ -3,8 +3,8 @@ const mappers = {
   Book: "@src/entities#BookId",
   BookReview: "@src/entities#BookReviewId",
   Publisher: "@src/entities#PublisherId",
-  Tag: "@src/entities#TagId",
   PublisherSizeDetail: "@src/entities#PublisherSize",
+  Tag: "@src/entities#TagId",
 };
 
 const enumValues = {

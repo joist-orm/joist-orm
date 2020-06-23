@@ -11,7 +11,7 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
       })}
       ${Object.entries(enums).map(([_name, rows]) => {
         const name = pascalCase(_name);
-        return `${name}Detail: "@src/entities#${name},"`;
+        return `${name}Detail: "@src/entities#${name}",`;
       })}
     };
 

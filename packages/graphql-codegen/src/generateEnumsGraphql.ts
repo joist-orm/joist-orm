@@ -1,5 +1,6 @@
 import { pascalCase } from "change-case";
 import { CodeGenFile, EnumRows } from "joist-codegen";
+import { code } from "ts-poet";
 
 /** Generates a `schema/enums.graphql` with GQL enums that match all of our domain enums. */
 export function generateEnumsGraphql(enums: EnumRows): CodeGenFile {
@@ -12,5 +13,5 @@ export function generateEnumsGraphql(enums: EnumRows): CodeGenFile {
     })
     .flat()
     .join("\n");
-  return { name: "../../schema/enums.graphql", overwrite: true, contents };
+  return { name: "../../schema/enums.graphql", overwrite: true, contents: code`${contents}` };
 }

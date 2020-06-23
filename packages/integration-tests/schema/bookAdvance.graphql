@@ -1,0 +1,17 @@
+type BookAdvance {
+  id: ID!
+  createdAt: Date!
+  updatedAt: Date!
+  status: AdvanceStatus!
+  book: Book!
+  publisher: Publisher!
+}
+
+input SaveBookAdvanceInput {
+  id: ID
+  createdAt: Date
+  updatedAt: Date
+  status: AdvanceStatus
+  bookId: ID
+  publisherId: ID
+}

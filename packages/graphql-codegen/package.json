@@ -6,10 +6,11 @@
   "types": "build/index.d.ts",
   "dependencies": {
     "change-case": "^4.1.1",
-    "ts-poet": "^3.2.2",
+    "graphql": "^15.3.0",
     "joist-codegen": "0.1.0-bump",
     "joist-utils": "0.1.0-bump",
-    "pluralize": "^8.0.0"
+    "pluralize": "^8.0.0",
+    "ts-poet": "^3.2.2"
   },
   "devDependencies": {
     "@types/jest": "^26.0.3",

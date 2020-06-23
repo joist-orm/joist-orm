@@ -16,10 +16,19 @@ import { configureMetadata } from "./symbols";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 
 export { EntityDbMetadata };
+export {
+  PrimitiveField,
+  EnumField,
+  ManyToOneField,
+  OneToManyField,
+  ManyToManyField,
+  OneToOneField,
+  makeEntity,
+} from "./EntityDbMetadata";
 
 export interface CodeGenFile {
   name: string;
-  contents: Code | string;
+  contents: Code;
   overwrite: boolean;
 }
 
@@ -29,7 +38,7 @@ export type EnumRow = { id: number; code: string; name: string };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): Promise<void> {
-  const files = generateFiles(config, dbMeta);
+  const files = await generateFiles(config, dbMeta);
   await fs.mkdir(config.entitiesDirectory, { recursive: true });
   for await (const file of files) {
     const path = `${config.entitiesDirectory}/${file.name}`;
@@ -45,7 +54,7 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
 }
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
-export function generateFiles(config: Config, dbMeta: DbMetadata): CodeGenFile[] {
+export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodeGenFile[]> {
   const { entities, enumTables: enums, enumRows } = dbMeta;
   const entityFiles = entities
     .map((meta) => {
@@ -100,12 +109,15 @@ export function generateFiles(config: Config, dbMeta: DbMetadata): CodeGenFile[]
   };
 
   // Look for modules to require and call the exported `.run(EntityDbMetadata[], Table[])` method
-  const pluginFiles: CodeGenFile[] = config.codegenPlugins
-    .map((p) => {
-      const plugin = require(p);
-      return plugin.run(entities, enumRows);
-    })
-    .flat();
+
+  const pluginFiles: CodeGenFile[] = (
+    await Promise.all(
+      config.codegenPlugins.map((p) => {
+        const plugin = require(p);
+        return plugin.run(entities, enumRows);
+      }),
+    )
+  ).flat();
 
   return [...entityFiles, ...enumFiles, entitiesFile, ...factoriesFiles, metadataFile, indexFile, ...pluginFiles];
 }

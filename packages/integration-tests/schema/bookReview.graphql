@@ -1,0 +1,17 @@
+type BookReview {
+  id: ID!
+  rating: Int!
+  isPublic: Boolean!
+  createdAt: Date!
+  updatedAt: Date!
+  book: Book!
+}
+
+input SaveBookReviewInput {
+  id: ID
+  rating: Int
+  isPublic: Boolean
+  createdAt: Date
+  updatedAt: Date
+  bookId: ID
+}

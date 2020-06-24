@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import Knex, { QueryBuilder } from "knex";
+import Knex, { Transaction, QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { fail, getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
@@ -435,6 +435,36 @@ export class EntityManager {
     return entityOrList as any;
   }
 
+  /**
+   * Executes `fn` with a transaction, and automatically calls `flush`/`commit` at the end.
+   *
+   * This ensures both any `.find` as well as `.flush` operations happen within the same
+   * transaction, which is useful for enforcing cross-table/application-level invariants that
+   * cannot be enforced with database-level constraints.
+   */
+  public async transaction<T>(fn: () => Promise<T>): Promise<T> {
+    const originalKnex = this.knex;
+    const txn = await this.knex.transaction();
+    this.knex = txn;
+    try {
+      await txn.raw("set transaction isolation level serializable;");
+      const result = await fn();
+      // The lambda may have done some interstitial flushes (that would not
+      // have committed the transaction), but go ahead and do a final one
+      // in case they didn't explicitly call flush.
+      await this.flush();
+      await txn.commit();
+      return result;
+    } finally {
+      if (!txn.isCompleted()) {
+        txn.rollback().catch((e) => {
+          console.error(e, "Error rolling back");
+        });
+      }
+      this.knex = originalKnex;
+    }
+  }
+
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(entity: Entity): void {
     if (entity.id && this.findExistingInstance(getMetadata(entity).cstr, entity.id) !== undefined) {
@@ -474,9 +504,13 @@ export class EntityManager {
   /**
    * Flushes the SQL for any changed entities to the database.
    *
-   * Currently this `BEGIN`s and `COMMIT`s a new transaction on every call;
-   * we should also support an `EntityManager` itself running all queries
-   * (i.e. including the initial `SELECT`s) in a transaction.
+   * If this is run outside of an existing transaction, it will `BEGIN` and `COMMIT`
+   * a new transaction on every `.flush()` call so that all of the `INSERT`s/etc.
+   * happen atomically.
+   *
+   * If this is run within an existing transaction, i.e. `EntityManager.transaction`,
+   * then it will only issue `INSERT`s/etc. and defer to the caller to `COMMIT`
+   * the transaction.
    */
   async flush(): Promise<void> {
     if (this.isFlushing) {
@@ -522,12 +556,25 @@ export class EntityManager {
     const joinRowTodos = sortJoinRows(this.__data.joinRows);
 
     if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
-      await this.knex.transaction(async (tx) => {
-        await flushEntities(this.knex, tx, entityTodos);
-        await flushJoinTables(this.knex, tx, joinRowTodos);
-        await tx.commit();
-      });
+      const alreadyInTxn = "commit" in this.knex;
+
+      if (!alreadyInTxn) {
+        await this.knex.transaction(async (knex) => {
+          await flushEntities(knex, entityTodos);
+          await flushJoinTables(knex, joinRowTodos);
+          // When using `.transaction` with a lambda, we don't explicitly call commit
+          // await knex.commit();
+        });
+      } else {
+        await flushEntities(this.knex, entityTodos);
+        await flushJoinTables(this.knex, joinRowTodos);
+        // Defer to the caller to commit the transaction
+      }
+
+      // TODO: This is really "after flush" if we're being called from a transaction that
+      // is going to make multiple `em.flush()` calls?
       await afterCommit(entityTodos);
+
       // Reset the find caches b/c data will have changed in the db
       this.findLoaders = {};
       this.__data.loaders = {};

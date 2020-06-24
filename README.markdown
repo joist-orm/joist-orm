@@ -51,9 +51,11 @@ After checkout:
 In general priority/itch order:
  
 - Open source a `joist-graphql-utils` with the `entityResolver` logic in it
-- Fix reactive rules not catching "middle-references" changing
+- Fix reactive rules not catching "middle-references" changing (fixed?)
 - Support `documentId`-style props in unsafe methods
+  - Rename `unsafe` methods to `partial`? 
 - Optionally move `begin` to the start of Unit of Work
+- `readonly asyncValue` that integrations into `populate`
 - Codegen'd test builders 
 - Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)
 - Support user-defined types

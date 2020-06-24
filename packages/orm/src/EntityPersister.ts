@@ -1,5 +1,5 @@
 import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
-import Knex, { Transaction } from "knex";
+import Knex from "knex";
 import { keyToNumber, keyToString, maybeResolveReferenceToId } from "./serde";
 import { JoinRow } from "./collections/ManyToManyCollection";
 
@@ -12,21 +12,21 @@ export interface Todo {
   validates: Entity[];
 }
 
-export async function flushEntities(knex: Knex, tx: Transaction, todos: Record<string, Todo>): Promise<void> {
+export async function flushEntities(knex: Knex, todos: Record<string, Todo>): Promise<void> {
   const updatedAt = new Date();
-  await assignNewIds(knex, tx, todos);
+  await assignNewIds(knex, todos);
   for await (const todo of Object.values(todos)) {
     if (todo) {
       const meta = todo.metadata;
       if (todo.inserts.length > 0) {
-        await batchInsert(knex, tx, meta, todo.inserts);
+        await batchInsert(knex, meta, todo.inserts);
       }
       if (todo.updates.length > 0) {
         todo.updates.forEach((e) => (e.__orm.data["updatedAt"] = updatedAt));
-        await batchUpdate(knex, tx, meta, todo.updates);
+        await batchUpdate(knex, meta, todo.updates);
       }
       if (todo.deletes.length > 0) {
-        await batchDelete(knex, tx, meta, todo.deletes);
+        await batchDelete(knex, meta, todo.deletes);
       }
     }
   }
@@ -38,7 +38,7 @@ export async function flushEntities(knex: Knex, tx: Transaction, todos: Record<s
  * This lets us avoid cyclic issues with some INSERTs having foreign keys to other rows that themselves
  * need to first be INSERTed.
  */
-async function assignNewIds(knex: Knex, tx: Transaction, todos: Record<string, Todo>): Promise<void> {
+async function assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
   const seqStatements: string[] = [];
   Object.values(todos).forEach((todo) => {
     if (todo.inserts.length > 0) {
@@ -51,7 +51,7 @@ async function assignNewIds(knex: Knex, tx: Transaction, todos: Record<string, T
   if (seqStatements.length > 0) {
     // There will be 1 per table; 1 single insert should be fine but we might need to batch for super-large schemas?
     const sql = seqStatements.join(" UNION ALL ");
-    const result = await knex.raw(sql).transacting(tx);
+    const result = await knex.raw(sql);
     let i = 0;
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
@@ -61,21 +61,23 @@ async function assignNewIds(knex: Knex, tx: Transaction, todos: Record<string, T
   }
 }
 
-async function batchInsert(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const rows = entities.map((entity) => {
     const row = {};
     meta.columns.forEach((c) => c.serde.setOnRow(entity.__orm.data, row));
     return row;
   });
   // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
-  await knex.batchInsert(meta.tableName, rows).transacting(tx);
+  // We also use `.transacting` b/c even when `knex` is already a Transaction object,
+  // `batchInsert` w/o the `transacting` adds savepoints that we don't want/need.
+  await knex.batchInsert(meta.tableName, rows).transacting(knex as any);
   for (let i = 0; i < entities.length; i++) {
     entities[i].__orm.originalData = {};
   }
 }
 
 // Uses a pg-specific syntax to issue a bulk update
-async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
   const changedFields = new Set<string>();
   // Id doesn't change, but we need it for our WHERE clause
@@ -98,9 +100,8 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
       bindings[i].push(c.serde.getFromEntity(entity.__orm.data) ?? null);
     });
   }
-  await knex
-    .raw(
-      cleanSql(`
+  await knex.raw(
+    cleanSql(`
       UPDATE ${meta.tableName}
       SET ${columns
         .filter((c) => c.columnName !== "id")
@@ -109,20 +110,18 @@ async function batchUpdate(knex: Knex, tx: Transaction, meta: EntityMetadata<any
       FROM (select ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")}) as data
       WHERE ${meta.tableName}.id = data.id
    `),
-      bindings,
-    )
-    .transacting(tx);
+    bindings,
+  );
   entities.forEach((entity) => (entity.__orm.originalData = {}));
 }
 
-async function batchDelete(knex: Knex, tx: Transaction, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   await knex(meta.tableName)
     .del()
     .whereIn(
       "id",
       entities.map((e) => e.id!),
-    )
-    .transacting(tx);
+    );
   entities.forEach((entity) => (entity.__orm.deleted = "deleted"));
 }
 
@@ -165,11 +164,7 @@ export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
   return todo;
 }
 
-export async function flushJoinTables(
-  knex: Knex,
-  tx: Transaction,
-  joinRows: Record<string, JoinRowTodo>,
-): Promise<void> {
+export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinRowTodo>): Promise<void> {
   for await (const [joinTableName, { newRows, deletedRows }] of Object.entries(joinRows)) {
     if (newRows.length > 0) {
       const ids = await knex
@@ -184,7 +179,6 @@ export async function flushJoinTables(
             return fkColumns;
           }),
         )
-        .transacting(tx)
         .returning("id");
       for (let i = 0; i < ids.length; i++) {
         newRows[i].id = ids[i];
@@ -196,8 +190,7 @@ export async function flushJoinTables(
         .whereIn(
           "id",
           deletedRows.map((e) => e.id!),
-        )
-        .transacting(tx);
+        );
     }
   }
 }

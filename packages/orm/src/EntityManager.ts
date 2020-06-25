@@ -262,8 +262,8 @@ export class EntityManager {
    *
    * @param type the entity type to find/create
    * @param where the fields to look up the existing entity by
-   * @param upsert the fields to update if the entity is either existing or new
    * @param ifNew the fields to set if the entity is new
+   * @param upsert the fields to update if the entity is either existing or new
    */
   async findOrCreate<
     T extends Entity,

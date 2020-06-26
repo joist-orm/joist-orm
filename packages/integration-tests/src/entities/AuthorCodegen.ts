@@ -13,6 +13,9 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
+  Entity,
+  Reference,
+  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -25,11 +28,20 @@ import {
   newRequiredRule,
   Collection,
   OneToManyCollection,
-  Reference,
   ManyToOneReference,
   setField,
 } from "joist-orm";
-import { Author, authorMeta, Publisher, Book, PublisherId, PublisherOrder, bookMeta } from "./entities";
+import {
+  Author,
+  authorMeta,
+  Publisher,
+  Book,
+  Image,
+  PublisherId,
+  PublisherOrder,
+  bookMeta,
+  imageMeta,
+} from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -43,6 +55,7 @@ export interface AuthorOpts {
   publisher?: Publisher | null;
   authors?: Author[];
   books?: Book[];
+  images?: Image[];
 }
 
 export interface AuthorFilter {
@@ -116,6 +129,14 @@ export abstract class AuthorCodegen extends BaseEntity {
     this as any,
     bookMeta,
     "books",
+    "author",
+    "author_id",
+  );
+
+  readonly images: Collection<Author, Image> = new OneToManyCollection(
+    this as any,
+    imageMeta,
+    "images",
     "author",
     "author_id",
   );
@@ -216,6 +237,12 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Author, fn);
+  }
+
+  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
+    fn: (lens: Lens<Author>) => Lens<V>,
+  ): Reference<Author, U, N> {
+    return hasOneThrough((this as any) as Author, fn);
   }
 
   async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {

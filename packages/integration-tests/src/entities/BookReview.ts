@@ -1,24 +1,9 @@
+import { Reference } from "joist-orm";
 import { Author, BookReviewCodegen, bookReviewConfig } from "./entities";
-import { CustomReference, Reference } from "joist-orm";
 
 export class BookReview extends BookReviewCodegen {
-  readonly author: Reference<BookReview, Author, never> = new CustomReference<
-    BookReview,
-    Author,
-    { book: "author" },
-    never
-  >(this, "author", {
-    load: async (review) => {
-      await review.load((r) => r.book.author);
-    },
-    get: (review) => review.book.get.author.get,
-    set: (review, author) => {
-      review.book.get.author.set(author);
-    },
-    isSet: (review) => {
-      return review.book.isSet() && review.book.get.author.isSet();
-    },
-  });
+  // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
+  readonly author: Reference<BookReview, Author, never> = this.hasOneThrough((review) => review.book.author);
 }
 
 // Reviews are only public if the author is over the age of 21

@@ -13,6 +13,9 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
+  Entity,
+  Reference,
+  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -23,12 +26,22 @@ import {
   newRequiredRule,
   Collection,
   OneToManyCollection,
-  Reference,
   ManyToOneReference,
   ManyToManyCollection,
   setField,
 } from "joist-orm";
-import { Book, bookMeta, Author, BookReview, Tag, AuthorId, AuthorOrder, bookReviewMeta } from "./entities";
+import {
+  Book,
+  bookMeta,
+  Author,
+  BookReview,
+  Image,
+  Tag,
+  AuthorId,
+  AuthorOrder,
+  bookReviewMeta,
+  imageMeta,
+} from "./entities";
 
 export type BookId = Flavor<string, "Book">;
 
@@ -37,6 +50,7 @@ export interface BookOpts {
   order?: number | null;
   author: Author;
   reviews?: BookReview[];
+  images?: Image[];
   tags?: Tag[];
 }
 
@@ -86,6 +100,14 @@ export abstract class BookCodegen extends BaseEntity {
     this as any,
     bookReviewMeta,
     "reviews",
+    "book",
+    "book_id",
+  );
+
+  readonly images: Collection<Book, Image> = new OneToManyCollection(
+    this as any,
+    imageMeta,
+    "images",
     "book",
     "book_id",
   );
@@ -155,6 +177,12 @@ export abstract class BookCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Book, fn);
+  }
+
+  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
+    fn: (lens: Lens<Book>) => Lens<V>,
+  ): Reference<Book, U, N> {
+    return hasOneThrough((this as any) as Book, fn);
   }
 
   async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {

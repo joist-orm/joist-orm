@@ -13,6 +13,9 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
+  Entity,
+  Reference,
+  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -23,7 +26,6 @@ import {
   EntityGraphQLFilter,
   GraphQLFilterOf,
   newRequiredRule,
-  Reference,
   ManyToOneReference,
   setField,
 } from "joist-orm";
@@ -131,6 +133,12 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<BookReview>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as BookReview, fn);
+  }
+
+  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
+    fn: (lens: Lens<BookReview>) => Lens<V>,
+  ): Reference<BookReview, U, N> {
+    return hasOneThrough((this as any) as BookReview, fn);
   }
 
   async populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>> {

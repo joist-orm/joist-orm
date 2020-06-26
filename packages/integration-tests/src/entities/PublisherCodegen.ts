@@ -13,6 +13,9 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
+  Entity,
+  Reference,
+  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -22,7 +25,7 @@ import {
   Collection,
   OneToManyCollection,
 } from "joist-orm";
-import { Publisher, publisherMeta, PublisherSize, Author, authorMeta } from "./entities";
+import { Publisher, publisherMeta, PublisherSize, Author, Image, authorMeta, imageMeta } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -30,6 +33,7 @@ export interface PublisherOpts {
   name: string;
   size?: PublisherSize | null;
   authors?: Author[];
+  images?: Image[];
 }
 
 export interface PublisherFilter {
@@ -74,6 +78,14 @@ export abstract class PublisherCodegen extends BaseEntity {
     "authors",
     "publisher",
     "publisher_id",
+  );
+
+  readonly images: Collection<Publisher, Image> = new OneToManyCollection(
+    this as any,
+    imageMeta,
+    "images",
+    "publisher",
+    "publisher",
   );
 
   constructor(em: EntityManager, opts: PublisherOpts) {
@@ -123,6 +135,12 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Publisher, fn);
+  }
+
+  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
+    fn: (lens: Lens<Publisher>) => Lens<V>,
+  ): Reference<Publisher, U, N> {
+    return hasOneThrough((this as any) as Publisher, fn);
   }
 
   async populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>> {

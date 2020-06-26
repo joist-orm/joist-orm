@@ -58,4 +58,18 @@ export function up(b: MigrationBuilder): void {
   });
 
   createManyToManyTable(b, "books_to_tags", "books", "tags");
+
+  createEnumTable(b, "image_type", [
+    ["BOOK_IMAGE", "Book Image"],
+    ["AUTHOR_IMAGE", "Author Image"],
+    ["PUBLISHER_IMAGE", "Publisher Image"],
+  ]);
+
+  createEntityTable(b, "images", {
+    type_id: foreignKey("image_type", { notNull: true }),
+    file_name: { type: "varchar(255)", notNull: true },
+    book_id: foreignKey("books", { notNull: false }),
+    author_id: foreignKey("authors", { notNull: false }),
+    publisher: foreignKey("publishers", { notNull: false }),
+  });
 }

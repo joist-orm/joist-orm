@@ -13,6 +13,9 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
+  Entity,
+  Reference,
+  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -112,6 +115,12 @@ export abstract class TagCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Tag, fn);
+  }
+
+  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
+    fn: (lens: Lens<Tag>) => Lens<V>,
+  ): Reference<Tag, U, N> {
+    return hasOneThrough((this as any) as Tag, fn);
   }
 
   async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {

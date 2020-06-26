@@ -102,7 +102,7 @@ export abstract class TagCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, opts);
   }
 
-  setUnsafe(values: PartialOrNull<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+  setPartial(values: PartialOrNull<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 

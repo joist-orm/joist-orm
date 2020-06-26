@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import Knex, { Transaction, QueryBuilder } from "knex";
+import Knex, { QueryBuilder } from "knex";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import { fail, getOrSet, indexBy } from "./utils";
 import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
@@ -23,7 +23,7 @@ import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery, FilterAndSettings } from "./QueryBuilder";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import hash from "object-hash";
-import { createOrUpdateUnsafe } from "./createOrUpdateUnsafe";
+import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { Contexty } from "./contexty";
 
 export interface EntityConstructor<T> {
@@ -80,7 +80,7 @@ export interface Entity {
 
   set(opts: Partial<OptsOf<this>>): void;
 
-  setUnsafe(values: PartialOrNull<OptsOf<this>>): void;
+  setPartial(values: PartialOrNull<OptsOf<this>>): void;
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
@@ -188,6 +188,11 @@ export class EntityManager {
     return result;
   }
 
+  /**
+   * Works exactly like `find` but accepts "less than greatly typed" GraphQL filters.
+   *
+   * I.e. filtering by `null` on fields that are non-`nullable`.
+   */
   public async findGql<T extends Entity>(type: EntityConstructor<T>, where: GraphQLFilterOf<T>): Promise<T[]>;
   public async findGql<
     T extends Entity,
@@ -312,7 +317,7 @@ export class EntityManager {
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+  public createPartial<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
     // `calledFromConstructor` because this is _basically_ like calling `new`.
@@ -322,8 +327,8 @@ export class EntityManager {
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createOrUpdateUnsafe<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
-    return createOrUpdateUnsafe(this, type, opts);
+  public createOrUpdatePartial<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
+    return createOrUpdatePartial(this, type, opts);
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

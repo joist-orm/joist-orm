@@ -206,7 +206,7 @@ export abstract class AuthorCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, opts);
   }
 
-  setUnsafe(values: PartialOrNull<AuthorOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+  setPartial(values: PartialOrNull<AuthorOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 

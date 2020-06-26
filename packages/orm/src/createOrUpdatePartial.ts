@@ -31,7 +31,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
 /**
  * A utility function to create-or-update entities coming from a partial-update style API.
  */
-export async function createOrUpdateUnsafe<T extends Entity>(
+export async function createOrUpdatePartial<T extends Entity>(
   em: EntityManager,
   constructor: EntityConstructor<T>,
   opts: DeepPartialOrNull<T>,
@@ -51,7 +51,7 @@ export async function createOrUpdateUnsafe<T extends Entity>(
         return [key, entity];
       } else {
         // This is a many-to-one partial
-        const entity = await createOrUpdateUnsafe(em, field.otherMetadata().cstr, value as any);
+        const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
         return [key, entity];
       }
     } else if (field.kind === "o2m" || field.kind === "m2m") {
@@ -64,7 +64,7 @@ export async function createOrUpdateUnsafe<T extends Entity>(
             } else if (isKey(value)) {
               return await em.load(field.otherMetadata().cstr, value);
             } else {
-              return await createOrUpdateUnsafe(em, field.otherMetadata().cstr, value as any);
+              return await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
             }
           });
       return [key, await Promise.all(entities)];
@@ -75,10 +75,10 @@ export async function createOrUpdateUnsafe<T extends Entity>(
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
 
   if (id === null || id === undefined) {
-    return em.createUnsafe(constructor, _opts);
+    return em.createPartial(constructor, _opts);
   } else {
     const entity = await em.load(constructor, id);
-    entity.setUnsafe(_opts);
+    entity.setPartial(_opts);
     return entity;
   }
 }

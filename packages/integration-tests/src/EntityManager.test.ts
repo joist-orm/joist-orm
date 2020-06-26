@@ -462,30 +462,30 @@ describe("EntityManager", () => {
     }).toThrow("firstName is required");
   });
 
-  it("cannot createUnsafe without a required field as null", async () => {
+  it("cannot createPartial without a required field as null", async () => {
     const em = new EntityManager(knex);
     expect(() => {
       // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
-      em.createUnsafe(Author, { firstName: null });
+      em.createPartial(Author, { firstName: null });
     }).toThrow("firstName is required");
   });
 
-  it("cannot createUnsafe without a required field as undefined", async () => {
+  it("cannot createPartial without a required field as undefined", async () => {
     const em = new EntityManager(knex);
     // `undefined` is treated as ignore, and caught at flush time
-    em.createUnsafe(Author, { firstName: undefined });
+    em.createPartial(Author, { firstName: undefined });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
-  it("can createUnsafe with an optional reference being undefined", async () => {
+  it("can createPartial with an optional reference being undefined", async () => {
     const em = new EntityManager(knex);
-    em.createUnsafe(Author, { firstName: "a1", mentor: undefined });
+    em.createPartial(Author, { firstName: "a1", mentor: undefined });
     await em.flush();
   });
 
-  it("cannot createUnsafe with a required reference being undefined", async () => {
+  it("cannot createPartial with a required reference being undefined", async () => {
     const em = new EntityManager(knex);
-    em.createUnsafe(Book, { title: "b1", author: undefined });
+    em.createPartial(Book, { title: "b1", author: undefined });
     await expect(em.flush()).rejects.toThrow("author is required");
   });
 
@@ -498,19 +498,19 @@ describe("EntityManager", () => {
     }).toThrow("firstName is required");
   });
 
-  it("can setUnsafe with a null required field", async () => {
+  it("can setPartial with a null required field", async () => {
     const em = new EntityManager(knex);
     const a1 = em.create(Author, { firstName: "a1" });
     expect(() => {
       // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
-      a1.setUnsafe({ firstName: null });
+      a1.setPartial({ firstName: null });
     }).toThrow("firstName is required");
   });
 
-  it("setUnsafe defaults to ignoredUndefined", async () => {
+  it("setPartial defaults to ignoredUndefined", async () => {
     const em = new EntityManager(knex);
     const a1 = em.create(Author, { firstName: "a1" });
-    a1.setUnsafe({ firstName: undefined });
+    a1.setPartial({ firstName: undefined });
     expect(a1.firstName).toEqual("a1");
   });
 

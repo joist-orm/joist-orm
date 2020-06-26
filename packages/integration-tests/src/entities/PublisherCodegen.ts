@@ -113,7 +113,7 @@ export abstract class PublisherCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, opts);
   }
 
-  setUnsafe(values: PartialOrNull<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+  setPartial(values: PartialOrNull<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 

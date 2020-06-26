@@ -23,7 +23,7 @@ export { newPgConnectionConfig } from "joist-utils";
 export * from "./reverseHint";
 export * from "./changes";
 export * from "./contexty";
-export { DeepPartialOrNull } from "./createOrUpdateUnsafe";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";

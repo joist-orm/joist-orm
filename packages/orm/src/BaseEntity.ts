@@ -17,7 +17,10 @@ export abstract class BaseEntity implements Entity {
 
   abstract set(values: Partial<OptsOf<this>>): void;
 
-  abstract setUnsafe(values: PartialOrNull<OptsOf<this>>): void;
+  /**
+   * Similar to `set` but applies "Partial API" semantics, i.e. `null` means unset and `undefined` means don't change.
+   */
+  abstract setPartial(values: PartialOrNull<OptsOf<this>>): void;
 
   /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
   get idOrFail(): IdOf<this> {

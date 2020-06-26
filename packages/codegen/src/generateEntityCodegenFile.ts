@@ -225,7 +225,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         ${setOpts}(this, values as ${OptsOf}<this>, opts);
       }
 
-      setUnsafe(values: ${PartialOrNull}<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
+      setPartial(values: ${PartialOrNull}<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
         ${setOpts}(this, values as ${OptsOf}<this>, { ignoreUndefined: true, ...opts });
       }
 

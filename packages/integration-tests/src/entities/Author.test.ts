@@ -339,7 +339,7 @@ describe("Author", () => {
 
   it("gets not-null validation rules for free", async () => {
     const em = new EntityManager(knex);
-    em.createUnsafe(Author, {});
+    em.createPartial(Author, {});
     await expect(em.flush()).rejects.toThrow("Validation error: firstName is required");
   });
 

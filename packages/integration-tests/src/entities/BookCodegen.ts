@@ -145,7 +145,7 @@ export abstract class BookCodegen extends BaseEntity {
     setOpts(this, values as OptsOf<this>, opts);
   }
 
-  setUnsafe(values: PartialOrNull<BookOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
+  setPartial(values: PartialOrNull<BookOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
     setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
   }
 

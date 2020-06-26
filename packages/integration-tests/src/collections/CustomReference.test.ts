@@ -28,8 +28,8 @@ describe("CustomReference", () => {
   it("can set a reference", async () => {
     const em = new EntityManager(knex);
     const author = em.create(Author, { firstName: "a1" });
-    const book = em.createUnsafe(Book, { title: "t1" });
-    const review = em.createUnsafe(BookReview, { book, rating: 5 });
+    const book = em.createPartial(Book, { title: "t1" });
+    const review = em.createPartial(BookReview, { book, rating: 5 });
     review.author.set(author);
     await em.flush();
 
@@ -40,8 +40,8 @@ describe("CustomReference", () => {
   it("can set a reference through opts", async () => {
     const em = new EntityManager(knex);
     const author = em.create(Author, { firstName: "a1" });
-    const book = em.createUnsafe(Book, { title: "t1" });
-    em.createUnsafe(BookReview, { book, rating: 5, author } as any);
+    const book = em.createPartial(Book, { title: "t1" });
+    em.createPartial(BookReview, { book, rating: 5, author } as any);
     await em.flush();
 
     const rows = await knex.select("*").from("books");

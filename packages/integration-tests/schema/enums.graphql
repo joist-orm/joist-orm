@@ -1,2 +1,5 @@
+enum ImageType { BOOK_IMAGE AUTHOR_IMAGE PUBLISHER_IMAGE }
+type ImageTypeDetail { code: ImageType! name: String! }
+
 enum PublisherSize { SMALL LARGE }
 type PublisherSizeDetail { code: PublisherSize! name: String! }

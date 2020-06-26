@@ -42,19 +42,7 @@ export type Lens<T, R = T> = {
 // subclass itself, so we use the codegen hammer in our subclass to force the right Lens type
 // in a .load stub that just calls us for the implementation.
 export async function loadLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): Promise<V> {
-  const paths: string[] = [];
-  // The proxy collects the path navigations that the user's `fn` lambda invokes.
-  const proxy = new Proxy(
-    {},
-    {
-      get(object, property, receiver) {
-        paths.push(String(property));
-        return receiver;
-      },
-    },
-  );
-  // Invoke the lens function to record the navigation path on our proxy
-  fn(proxy as any);
+  const paths = collectPaths(fn);
   let current: any = start;
   // Now evaluate each step of the path
   for await (const path of paths) {
@@ -80,4 +68,59 @@ function maybeLoad(object: any, path: string): unknown {
   } else {
     return value;
   }
+}
+
+/**
+ * The synchronous version of `loadLens`.
+ *
+ * This assumes you've first evaluated the lens with `loadLens` and now can access it synchronously.
+ */
+export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V {
+  const paths = collectPaths(fn);
+  let current: any = start;
+  // Now evaluate each step of the path
+  for (const path of paths) {
+    if (Array.isArray(current)) {
+      current = current.map((c) => maybeGet(c, path)).flat();
+      current = [...new Set(current)];
+    } else {
+      current = maybeGet(current, path);
+    }
+  }
+  return current!;
+}
+
+function maybeGet(object: any, path: string): unknown {
+  if (object === undefined || object === null) {
+    return undefined;
+  }
+  const value = object[path];
+  if (value && typeof value === "object" && "get" in value) {
+    if (typeof value.get === "function") {
+      return value.get();
+    } else {
+      return value.get;
+    }
+  } else if (value && typeof value === "function") {
+    return value.apply(object);
+  } else {
+    return value;
+  }
+}
+
+function collectPaths(fn: Function): string[] {
+  const paths: string[] = [];
+  // The proxy collects the path navigations that the user's `fn` lambda invokes.
+  const proxy = new Proxy(
+    {},
+    {
+      get(object, property, receiver) {
+        paths.push(String(property));
+        return receiver;
+      },
+    },
+  );
+  // Invoke the lens function to record the navigation path on our proxy
+  fn(proxy as any);
+  return paths;
 }

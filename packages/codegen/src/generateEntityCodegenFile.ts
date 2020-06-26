@@ -10,6 +10,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  Entity as EntitySym,
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
@@ -18,6 +19,7 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
+  hasOneThrough,
   Lens,
   Loaded,
   LoadHint,
@@ -235,6 +237,12 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       async load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn);
+      }
+
+      hasOneThrough<U extends ${EntitySym}, N extends undefined | never, V extends U | N>(
+        fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<V>
+      ): ${Reference}<${entity.type}, U, N> {
+        return ${hasOneThrough}(this as any as ${entity.type}, fn);
       }
 
       async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {

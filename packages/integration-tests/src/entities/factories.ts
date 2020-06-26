@@ -32,3 +32,13 @@ export async function insertBookToTag(row: { id?: number; book_id: number; tag_i
 export async function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
   await knex.insert({ is_public: true, ...row }).into("book_reviews");
 }
+export async function insertImage(row: {
+  id?: number;
+  type_id: number;
+  book_id?: number | null;
+  author_id?: number | null;
+  publisher_id?: number | null;
+  file_name: string;
+}) {
+  await knex.insert(row).into("images");
+}

@@ -29,6 +29,7 @@ export { OneToManyCollection } from "./collections/OneToManyCollection";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 export { CustomReference } from "./collections/CustomReference";
+export { hasOneThrough } from "./collections/hasOneThrough";
 export * from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
 export * from "./loadLens";

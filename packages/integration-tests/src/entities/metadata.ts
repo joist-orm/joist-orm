@@ -13,10 +13,13 @@ import {
   bookConfig,
   BookReview,
   bookReviewConfig,
+  Image,
+  imageConfig,
   Publisher,
   publisherConfig,
   Tag,
   tagConfig,
+  ImageTypes,
   PublisherSizes,
 } from "./entities";
 
@@ -175,6 +178,14 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "author",
     },
+
+    {
+      kind: "o2m",
+      fieldName: "images",
+      required: false,
+      otherMetadata: () => imageMeta,
+      otherFieldName: "author",
+    },
   ],
   config: authorConfig,
 };
@@ -255,6 +266,14 @@ export const bookMeta: EntityMetadata<Book> = {
       fieldName: "reviews",
       required: false,
       otherMetadata: () => bookReviewMeta,
+      otherFieldName: "book",
+    },
+
+    {
+      kind: "o2m",
+      fieldName: "images",
+      required: false,
+      otherMetadata: () => imageMeta,
       otherFieldName: "book",
     },
 
@@ -345,6 +364,112 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
+export const imageMeta: EntityMetadata<Image> = {
+  cstr: Image,
+  type: "Image",
+  tableName: "images",
+  columns: [
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+
+    {
+      fieldName: "type",
+      columnName: "type_id",
+      dbType: "int",
+      serde: new EnumFieldSerde("type", "type_id", ImageTypes),
+    },
+
+    {
+      fieldName: "fileName",
+      columnName: "file_name",
+      dbType: "varchar",
+      serde: new SimpleSerde("fileName", "file_name"),
+    },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+    {
+      fieldName: "author",
+      columnName: "author_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("author", "author_id", () => authorMeta),
+    },
+
+    {
+      fieldName: "book",
+      columnName: "book_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("book", "book_id", () => bookMeta),
+    },
+
+    {
+      fieldName: "publisher",
+      columnName: "publisher",
+      dbType: "int",
+      serde: new ForeignKeySerde("publisher", "publisher", () => publisherMeta),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id", required: true },
+
+    {
+      kind: "enum",
+      fieldName: "type",
+      required: true,
+    },
+
+    {
+      kind: "primitive",
+      fieldName: "fileName",
+      required: true,
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+      required: true,
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+      required: true,
+    },
+    {
+      kind: "m2o",
+      fieldName: "author",
+      required: false,
+      otherMetadata: () => authorMeta,
+      otherFieldName: "images",
+    },
+
+    {
+      kind: "m2o",
+      fieldName: "book",
+      required: false,
+      otherMetadata: () => bookMeta,
+      otherFieldName: "images",
+    },
+
+    {
+      kind: "m2o",
+      fieldName: "publisher",
+      required: false,
+      otherMetadata: () => publisherMeta,
+      otherFieldName: "images",
+    },
+  ],
+  config: imageConfig,
+};
+
+(Image as any).metadata = imageMeta;
+
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
@@ -407,6 +532,14 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       fieldName: "authors",
       required: false,
       otherMetadata: () => authorMeta,
+      otherFieldName: "publisher",
+    },
+
+    {
+      kind: "o2m",
+      fieldName: "images",
+      required: false,
+      otherMetadata: () => imageMeta,
       otherFieldName: "publisher",
     },
   ],
@@ -472,5 +605,5 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-const allMetadata = [authorMeta, bookMeta, bookReviewMeta, publisherMeta, tagMeta];
+const allMetadata = [authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta, tagMeta];
 configureMetadata(allMetadata);

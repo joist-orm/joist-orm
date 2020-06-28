@@ -44,6 +44,7 @@ export type EnumField = {
   notNull: boolean;
 };
 
+/** I.e. a `Book.author` reference pointing to an `Author`. */
 export type ManyToOneField = {
   fieldName: string;
   columnName: string;
@@ -52,7 +53,17 @@ export type ManyToOneField = {
   notNull: boolean;
 };
 
+/** I.e. a `Author.books` collection. */
 export type OneToManyField = {
+  fieldName: string;
+  otherEntity: Entity;
+  otherFieldName: string;
+  otherColumnName: string;
+  otherColumnNotNull: boolean;
+};
+
+/** I.e. a `Author.image` reference when `image.author_id` is unique. */
+export type OneToOneField = {
   fieldName: string;
   otherEntity: Entity;
   otherFieldName: string;
@@ -76,6 +87,7 @@ export class EntityDbMetadata {
   enums: EnumField[];
   manyToOnes: ManyToOneField[];
   oneToManys: OneToManyField[];
+  oneToOnes: OneToOneField[];
   manyToManys: ManyToManyField[];
   tableName: string;
 
@@ -93,7 +105,14 @@ export class EntityDbMetadata {
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
+      .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(this.entity, r));
+    this.oneToOnes = table.o2mRelations
+      // ManyToMany join tables also show up as OneToMany tables in pg-structure
+      .filter((r) => !isJoinTable(r.targetTable))
+      .filter((r) => !isMultiColumnForeignKey(r))
+      .filter((r) => isOneToOneRelation(r))
+      .map((r) => newOneToOne(this.entity, r));
     this.manyToManys = table.m2mRelations
       // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
       // that has a foreign key to us, and a foreign key to something else, is automatically
@@ -108,6 +127,15 @@ export class EntityDbMetadata {
 
 function isMultiColumnForeignKey(r: M2ORelation) {
   return r.foreignKey.columns.length > 1;
+}
+
+function isOneToOneRelation(r: O2MRelation) {
+  // otherColumn will be the images.book_id in the other table
+  const otherColumn = r.foreignKey.columns[0];
+  // r.foreignKey.index is the index on _us_ (i.e. our Book primary key), so look up indexes in the target table
+  const indexes = r.targetTable.columns.find((c) => c.name == otherColumn.name)?.uniqueIndexes || [];
+  // If the column is the only column in an unique index, it's a one-to-one
+  return indexes.find((i) => i.columns.length === 1) !== undefined;
 }
 
 function newPrimitive(column: Column, table: Table): PrimitiveField {
@@ -137,7 +165,8 @@ function newManyToOneField(entity: Entity, r: M2ORelation): ManyToOneField {
   const columnName = column.name;
   const fieldName = camelCase(column.name.replace("_id", ""));
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  const otherFieldName = collectionName(otherEntity, entity);
+  const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
+  const otherFieldName = isOneToOne ? camelCase(entity.name) : collectionName(otherEntity, entity);
   const notNull = column.notNull;
   return { fieldName, columnName, otherEntity, otherFieldName, notNull };
 }
@@ -148,6 +177,18 @@ function newOneToMany(entity: Entity, r: O2MRelation): OneToManyField {
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
   const fieldName = collectionName(entity, otherEntity);
+  const otherFieldName = camelCase(column.name.replace("_id", ""));
+  const otherColumnName = column.name;
+  const otherColumnNotNull = column.notNull;
+  return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull };
+}
+
+function newOneToOne(entity: Entity, r: O2MRelation): OneToOneField {
+  const column = r.foreignKey.columns[0];
+  // source == parent i.e. the reference of the foreign key column
+  // target == child i.e. the table with the foreign key column in it
+  const otherEntity = makeEntity(tableToEntityName(r.targetTable));
+  const fieldName = camelCase(otherEntity.name);
   const otherFieldName = camelCase(column.name.replace("_id", ""));
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;

@@ -14,6 +14,7 @@ export const EntityMetadata = imp("EntityMetadata@joist-orm");
 export const Lens = imp("Lens@joist-orm");
 export const PrimaryKeySerde = imp("PrimaryKeySerde@joist-orm");
 export const ManyToOneReference = imp("ManyToOneReference@joist-orm");
+export const OneToOneReference = imp("OneToOneReference@joist-orm");
 export const ManyToManyCollection = imp("ManyToManyCollection@joist-orm");
 export const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
 export const ForeignKeySerde = imp("ForeignKeySerde@joist-orm");

@@ -152,6 +152,22 @@ describe("OneToManyCollection", () => {
     expect(books[1].id).toEqual("1");
   });
 
+  it("combines both pre-loaded and post-loaded removed entities", async () => {
+    // Given an author with one book
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
+    const b1 = await em.load(Book, "1", "author");
+
+    // When we assign a new author
+    b1.author.set(a2);
+
+    // Then when we later load the author's books, it is empty
+    expect((await a1.books.load()).length).toEqual(0);
+  });
+
   it("removes deleted entities from other collections", async () => {
     // Given an author with a publisher
     await insertPublisher({ name: "p1" });

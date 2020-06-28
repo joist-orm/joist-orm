@@ -1,0 +1,125 @@
+import { EntityManager } from "joist-orm";
+import { Author, Image, ImageType } from "../entities";
+import { insertAuthor, insertImage } from "../entities/factories";
+import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
+
+describe("OneToOneReference", () => {
+  it("can load a set reference", async () => {
+    await insertAuthor({ first_name: "f" });
+    await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const author = await em.load(Author, "1");
+    const image = await author.image.load();
+    expect(image?.fileName).toEqual("f1");
+  });
+
+  it("can load an unset reference", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = new EntityManager(knex);
+    const author = await em.load(Author, "1", "image");
+    expect(author.image.get).toBeUndefined();
+  });
+
+  it("can save when set", async () => {
+    const em = new EntityManager(knex);
+    const author = new Author(em, { firstName: "a1" });
+    const image = new Image(em, { fileName: "f1", type: ImageType.AuthorImage });
+    author.image.set(image);
+    await em.flush();
+
+    const rows = await knex.select("*").from("images");
+    expect(rows[0].author_id).toEqual(1);
+  });
+
+  it("batch loads references keys", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
+    await insertImage({ type_id: 2, file_name: "f2", author_id: 2 });
+
+    const em = new EntityManager(knex);
+    const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
+    resetQueryCount();
+    const [i1, i2] = await Promise.all([a1.image.load(), a2.image.load()]);
+    expect(i1?.fileName).toEqual("f1");
+    expect(i2?.fileName).toEqual("f2");
+    expect(numberOfQueries).toEqual(1);
+  });
+
+  it("can unset a reference indirectly", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
+
+    const em = new EntityManager(knex);
+    const [a1, a2] = await em.find(Author, { id: ["1", "2"] }, { populate: "image" });
+    const i1 = await em.load(Image, "1", "author");
+    i1.author.set(a2);
+    expect(a1.image.get).toBeUndefined();
+    expect(a2.image.get).toEqual(i1);
+  });
+
+  it("can be passed as an opt", async () => {
+    const em = new EntityManager(knex);
+    const image = em.create(Image, { type: ImageType.AuthorImage, fileName: "f1" });
+    const author = em.create(Author, { firstName: "a1", image });
+    expect(author.image.get).toEqual(image);
+  });
+
+  it("can have get called on a new instance", async () => {
+    const em = new EntityManager(knex);
+    const author = em.create(Author, { firstName: "a1" });
+    expect(author.image.get).toBeUndefined();
+  });
+
+  it("cannot call get if not loaded", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    expect(() => {
+      // @ts-expect-error
+      a1.image.get;
+    }).toThrow("get was called when not preloaded");
+  });
+
+  it("can be set without being loaded", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = em.create(Author, { firstName: "a1" });
+    const i1 = em.create(Image, { type: ImageType.AuthorImage, fileName: "f1" });
+    a1.image.set(i1);
+    expect(a1.image.get).toEqual(i1);
+  });
+
+  /*
+  it("can save changes to a foreign key", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+
+    const em = new EntityManager(knex);
+    const a2 = await em.load(Author, "2");
+    const b1 = await em.load(Book, "1");
+    b1.author.set(a2);
+    await em.flush();
+
+    const rows = await knex.select("*").from("books");
+    expect(rows[0].author_id).toEqual(2);
+  });
+
+  it("removes deleted entities from collections", async () => {
+    // Given an author with a publisher
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = new EntityManager(knex);
+    // And we load the author with a1.publisher already populated
+    const a1 = await em.load(Author, "1", "publisher");
+    const p1 = a1.publisher.get!;
+    // When we delete the publisher
+    em.delete(p1);
+    await em.flush();
+    // Then the a1.publisher field should be undefined
+    expect(a1.publisher.get).toBeUndefined();
+  });
+   */
+});

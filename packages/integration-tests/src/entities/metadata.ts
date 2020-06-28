@@ -178,14 +178,6 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "author",
     },
-
-    {
-      kind: "o2m",
-      fieldName: "images",
-      required: false,
-      otherMetadata: () => imageMeta,
-      otherFieldName: "author",
-    },
   ],
   config: authorConfig,
 };
@@ -266,14 +258,6 @@ export const bookMeta: EntityMetadata<Book> = {
       fieldName: "reviews",
       required: false,
       otherMetadata: () => bookReviewMeta,
-      otherFieldName: "book",
-    },
-
-    {
-      kind: "o2m",
-      fieldName: "images",
-      required: false,
-      otherMetadata: () => imageMeta,
       otherFieldName: "book",
     },
 
@@ -412,9 +396,9 @@ export const imageMeta: EntityMetadata<Image> = {
 
     {
       fieldName: "publisher",
-      columnName: "publisher",
+      columnName: "publisher_id",
       dbType: "int",
-      serde: new ForeignKeySerde("publisher", "publisher", () => publisherMeta),
+      serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
     },
   ],
   fields: [
@@ -446,7 +430,7 @@ export const imageMeta: EntityMetadata<Image> = {
       fieldName: "author",
       required: false,
       otherMetadata: () => authorMeta,
-      otherFieldName: "images",
+      otherFieldName: "image",
     },
 
     {
@@ -454,7 +438,7 @@ export const imageMeta: EntityMetadata<Image> = {
       fieldName: "book",
       required: false,
       otherMetadata: () => bookMeta,
-      otherFieldName: "images",
+      otherFieldName: "image",
     },
 
     {
@@ -462,7 +446,7 @@ export const imageMeta: EntityMetadata<Image> = {
       fieldName: "publisher",
       required: false,
       otherMetadata: () => publisherMeta,
-      otherFieldName: "images",
+      otherFieldName: "image",
     },
   ],
   config: imageConfig,
@@ -532,14 +516,6 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       fieldName: "authors",
       required: false,
       otherMetadata: () => authorMeta,
-      otherFieldName: "publisher",
-    },
-
-    {
-      kind: "o2m",
-      fieldName: "images",
-      required: false,
-      otherMetadata: () => imageMeta,
       otherFieldName: "publisher",
     },
   ],

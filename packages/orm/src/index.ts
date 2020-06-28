@@ -26,6 +26,7 @@ export * from "./contexty";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export { fail } from "./utils";
 export { OneToManyCollection } from "./collections/OneToManyCollection";
+export { OneToOneReference } from "./collections/OneToOneReference";
 export { ManyToOneReference } from "./collections/ManyToOneReference";
 export { ManyToManyCollection } from "./collections/ManyToManyCollection";
 export { CustomReference } from "./collections/CustomReference";
@@ -117,7 +118,7 @@ interface Flavoring<FlavorT> {
 }
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
-export function setField(entity: Entity, fieldName: string, newValue: any): void {
+export function setField(entity: Entity, fieldName: string, newValue: any): boolean {
   ensureNotDeleted(entity, { ignore: "pending" });
   const em = getEm(entity);
 
@@ -134,24 +135,28 @@ export function setField(entity: Entity, fieldName: string, newValue: any): void
   }
 
   const { data, originalData } = entity.__orm;
+
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
     if (originalData[fieldName] === newValue) {
       data[fieldName] = newValue;
       delete originalData[fieldName];
-      return;
+      return true;
     }
   }
+
   // Push this logic into a field serde type abstraction?
   const currentValue = data[fieldName];
   if (currentValue === newValue) {
-    return;
+    return false;
   }
+
   // Only save the currentValue on the 1st change of this field
   if (!(fieldName in originalData)) {
     originalData[fieldName] = currentValue;
   }
   data[fieldName] = newValue;
+  return true;
 }
 
 /**

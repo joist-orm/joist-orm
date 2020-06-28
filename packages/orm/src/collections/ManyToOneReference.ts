@@ -1,7 +1,15 @@
 import { Entity, EntityConstructor, getMetadata, IdOf, isEntity } from "../EntityManager";
-import { ensureNotDeleted, fail, getEm, maybeResolveReferenceToId, Reference, setField } from "../index";
-import { OneToManyCollection } from "./OneToManyCollection";
+import {
+  ensureNotDeleted,
+  fail,
+  getEm,
+  maybeResolveReferenceToId,
+  OneToOneReference,
+  Reference,
+  setField,
+} from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { OneToManyCollection } from "./OneToManyCollection";
 
 /**
  * Manages a foreign key from one entity to another, i.e. `Book.author --> Author`.
@@ -9,6 +17,10 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
  * We keep the current `author` / `author_id` value in the `__orm.data` hash, where the
  * current value could be either the (string) author id from the database, or an entity
  * `Author` that the user has set.
+ *
+ * Note that if our `images.author_id` column is unique, this `ManyToOneReference` will essentially
+ * be half of a one-to-one relationship, but we'll keep using this reference on the "owning"
+ * side; the other side, i.e. `Author.image` will use a `OneToOneReference` to point back to us.
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
@@ -111,8 +123,12 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   async onEntityDeletedAndFlushing(): Promise<void> {
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
-      const o2m = ((current as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
-      o2m.remove(this.entity, { requireLoaded: false });
+      const o2m = this.getOtherRelation(current);
+      if (o2m instanceof OneToManyCollection) {
+        o2m.remove(this.entity, { requireLoaded: false });
+      } else {
+        o2m.set(undefined as any);
+      }
     }
     setField(this.entity, this.fieldName as string, undefined);
     this.loaded = undefined as any;
@@ -130,18 +146,29 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     ensureNotDeleted(this.entity, { ignore: "pending" });
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName as string, other?.id ?? other);
+    const changed = setField(this.entity, this.fieldName as string, other?.id ?? other);
+    if (!changed) {
+      return;
+    }
     this.loaded = other;
     this.isLoaded = true;
 
     // If had an existing value, remove us from its collection
     if (previousLoaded) {
-      const previousCollection = ((previousLoaded as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
-      previousCollection.removeIfLoaded(this.entity);
+      const prevRelation = this.getOtherRelation(previousLoaded);
+      if (prevRelation instanceof OneToManyCollection) {
+        prevRelation.removeIfLoaded(this.entity);
+      } else {
+        prevRelation.set(undefined as any);
+      }
     }
     if (other !== undefined) {
-      const newCollection = ((other as U)[this.otherFieldName] as any) as OneToManyCollection<U, T>;
-      newCollection.add(this.entity);
+      const newRelation = this.getOtherRelation(other);
+      if (newRelation instanceof OneToManyCollection) {
+        newRelation.add(this.entity);
+      } else {
+        newRelation.set(this.entity);
+      }
     }
   }
 
@@ -154,11 +181,16 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return current;
   }
 
+  public toString(): string {
+    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherType.name}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+  }
+
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
     return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
   }
 
-  public toString(): string {
-    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherType.name}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+  /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
+  private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<U, T> {
+    return (other as U)[this.otherFieldName] as any;
   }
 }

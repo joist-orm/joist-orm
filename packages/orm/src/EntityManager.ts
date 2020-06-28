@@ -429,9 +429,11 @@ export class EntityManager {
         } else if (Array.isArray(hint)) {
           return (hint as string[]).map((key) => (entity as any)[key].load());
         } else if (typeof hint === "object") {
-          return Object.entries(hint as object).map(([key, nestedHint]) =>
-            (entity as any)[key].load().then((result: any) => this.populate(result, nestedHint)),
-          );
+          return Object.entries(hint as object).map(async ([key, nestedHint]) => {
+            const relation = (entity as any)[key];
+            const result = await relation.load();
+            return this.populate(result, nestedHint);
+          });
         } else {
           throw new Error(`Unexpected hint ${hint}`);
         }

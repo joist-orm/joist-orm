@@ -3,8 +3,8 @@ import { ensureNotDeleted, fail, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
-  // We don't capture the return value of load b/c we purposefully want get to re-calc from `entity`
-  // each time so that it picks up any changed values.
+  // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
+  // each time it's invoked so that it reflects any changed values.
   load: (entity: T) => Promise<void>;
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
@@ -33,23 +33,12 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     super();
   }
 
-  private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
-  }
-
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
-    ensureNewOrLoaded(this);
-
-    return this.filterDeleted(this.opts.get(this.entity), opts);
+  get get(): U | N {
+    return this.doGet({ withDeleted: false });
   }
 
   get getWithDeleted(): U | N {
     return this.doGet({ withDeleted: true });
-  }
-
-  get get(): U | N {
-    return this.doGet({ withDeleted: false });
   }
 
   get isLoaded(): boolean {
@@ -86,14 +75,12 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   isSet(): boolean {
     ensureNewOrLoaded(this);
-
     const { get } = this.opts;
     return get(this.entity) !== undefined;
   }
 
   set(value: U): void {
     ensureNewOrLoaded(this);
-
     const { set } = this.opts;
     if (set === undefined) {
       throw new Error(`'set' not implemented on ${this}`);
@@ -110,13 +97,23 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   onEntityDelete(): void {}
   async refreshIfLoaded(): Promise<void> {}
 
+  /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
+  get fieldName(): string {
+    return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+  }
+
   toString(): string {
     return `CustomReference(entity: ${this.entity}, fieldName: ${this.fieldName})`;
   }
 
-  /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
-  get fieldName(): string {
-    return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+  private doGet(opts?: { withDeleted?: boolean }): U | N {
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNewOrLoaded(this);
+    return this.filterDeleted(this.opts.get(this.entity), opts);
+  }
+
+  private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
+    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
   }
 }
 

@@ -68,8 +68,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "images", {
     type_id: foreignKey("image_type", { notNull: true }),
     file_name: { type: "varchar(255)", notNull: true },
-    book_id: foreignKey("books", { notNull: false }),
-    author_id: foreignKey("authors", { notNull: false }),
-    publisher: foreignKey("publishers", { notNull: false }),
+    book_id: foreignKey("books", { notNull: false, unique: true }),
+    author_id: foreignKey("authors", { notNull: false, unique: true }),
+    publisher_id: foreignKey("publishers", { notNull: false, unique: true }),
   });
 }

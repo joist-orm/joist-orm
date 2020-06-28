@@ -103,7 +103,7 @@ export abstract class ImageCodegen extends BaseEntity {
     this as any,
     Author,
     "author",
-    "images",
+    "image",
     false,
   );
 
@@ -111,7 +111,7 @@ export abstract class ImageCodegen extends BaseEntity {
     this as any,
     Book,
     "book",
-    "images",
+    "image",
     false,
   );
 
@@ -119,7 +119,7 @@ export abstract class ImageCodegen extends BaseEntity {
     this as any,
     Publisher,
     "publisher",
-    "images",
+    "image",
     false,
   );
 

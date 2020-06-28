@@ -61,7 +61,6 @@ In general priority/itch order:
 - LargeCollection support
   - I.e. `joist-config.json` entry to mark (say) `publisher.authors` as "too big to never read at once" and use a different/restricted API, i.e. forced paging
 - JSON support, i.e. `toJSON`
-- Cascading deletions for parent/child relationships
 - First-class support for soft deletion?
 - Op locks/`version` column?
 - An in-memory backend

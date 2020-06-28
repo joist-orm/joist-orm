@@ -29,14 +29,15 @@ import {
   Collection,
   OneToManyCollection,
   ManyToOneReference,
+  OneToOneReference,
   setField,
 } from "joist-orm";
 import {
   Author,
   authorMeta,
   Publisher,
-  Book,
   Image,
+  Book,
   PublisherId,
   PublisherOrder,
   bookMeta,
@@ -53,9 +54,9 @@ export interface AuthorOpts {
   wasEverPopular?: boolean | null;
   mentor?: Author | null;
   publisher?: Publisher | null;
+  image?: Image | null;
   authors?: Author[];
   books?: Book[];
-  images?: Image[];
 }
 
 export interface AuthorFilter {
@@ -133,14 +134,6 @@ export abstract class AuthorCodegen extends BaseEntity {
     "author_id",
   );
 
-  readonly images: Collection<Author, Image> = new OneToManyCollection(
-    this as any,
-    imageMeta,
-    "images",
-    "author",
-    "author_id",
-  );
-
   readonly mentor: Reference<Author, Author, undefined> = new ManyToOneReference<Author, Author, undefined>(
     this as any,
     Author,
@@ -155,6 +148,13 @@ export abstract class AuthorCodegen extends BaseEntity {
     "publisher",
     "authors",
     false,
+  );
+
+  readonly image: Reference<Author, Image, undefined> = new OneToOneReference<Author, Image>(
+    this as any,
+    imageMeta,
+    "image",
+    "author",
   );
 
   constructor(em: EntityManager, opts: AuthorOpts) {

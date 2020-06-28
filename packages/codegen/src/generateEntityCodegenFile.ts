@@ -29,6 +29,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   OneToManyCollection,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -154,6 +155,20 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     `;
   });
 
+  // Add OneToOne
+  const o2o = meta.oneToOnes.map((o2o) => {
+    const { fieldName, otherEntity, otherFieldName } = o2o;
+    return code`
+      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, undefined> =
+        new ${OneToOneReference}<${entity.type}, ${otherEntity.type}>(
+          this as any,
+          ${otherEntity.metaType},
+          "${fieldName}",
+          "${otherFieldName}",
+        );
+    `;
+  });
+
   // Add ManyToMany
   const m2m = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
@@ -210,7 +225,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       readonly __gqlFilterType: ${entityName}GraphQLFilter = null!;
       readonly __orderType: ${entityName}Order = null!;
       readonly __optsType: ${entityName}Opts = null!;
-      ${[o2m, m2o, m2m]}
+      ${[o2m, m2o, o2o, m2m]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         ${hasDefaultValues ? code`super(em, ${metadata}, {...${defaultValuesName}})` : code`super(em, ${metadata})`};
@@ -319,13 +334,16 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
   });
+  const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${otherEntity.type} | null;`;
+  });
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
-  return [...primitives, ...enums, ...m2o, ...o2m, ...m2m];
+  return [...primitives, ...enums, ...m2o, ...o2o, ...o2m, ...m2m];
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {

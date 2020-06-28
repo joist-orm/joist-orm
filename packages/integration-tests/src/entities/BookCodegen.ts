@@ -27,6 +27,7 @@ import {
   Collection,
   OneToManyCollection,
   ManyToOneReference,
+  OneToOneReference,
   ManyToManyCollection,
   setField,
 } from "joist-orm";
@@ -34,8 +35,8 @@ import {
   Book,
   bookMeta,
   Author,
-  BookReview,
   Image,
+  BookReview,
   Tag,
   AuthorId,
   AuthorOrder,
@@ -49,8 +50,8 @@ export interface BookOpts {
   title: string;
   order?: number | null;
   author: Author;
+  image?: Image | null;
   reviews?: BookReview[];
-  images?: Image[];
   tags?: Tag[];
 }
 
@@ -104,20 +105,19 @@ export abstract class BookCodegen extends BaseEntity {
     "book_id",
   );
 
-  readonly images: Collection<Book, Image> = new OneToManyCollection(
-    this as any,
-    imageMeta,
-    "images",
-    "book",
-    "book_id",
-  );
-
   readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
     this as any,
     Author,
     "author",
     "books",
     true,
+  );
+
+  readonly image: Reference<Book, Image, undefined> = new OneToOneReference<Book, Image>(
+    this as any,
+    imageMeta,
+    "image",
+    "book",
   );
 
   readonly tags: Collection<Book, Tag> = new ManyToManyCollection(

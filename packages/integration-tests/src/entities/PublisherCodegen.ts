@@ -24,16 +24,17 @@ import {
   setField,
   Collection,
   OneToManyCollection,
+  OneToOneReference,
 } from "joist-orm";
-import { Publisher, publisherMeta, PublisherSize, Author, Image, authorMeta, imageMeta } from "./entities";
+import { Publisher, publisherMeta, PublisherSize, Image, Author, authorMeta, imageMeta } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherOpts {
   name: string;
   size?: PublisherSize | null;
+  image?: Image | null;
   authors?: Author[];
-  images?: Image[];
 }
 
 export interface PublisherFilter {
@@ -80,11 +81,10 @@ export abstract class PublisherCodegen extends BaseEntity {
     "publisher_id",
   );
 
-  readonly images: Collection<Publisher, Image> = new OneToManyCollection(
+  readonly image: Reference<Publisher, Image, undefined> = new OneToOneReference<Publisher, Image>(
     this as any,
     imageMeta,
-    "images",
-    "publisher",
+    "image",
     "publisher",
   );
 

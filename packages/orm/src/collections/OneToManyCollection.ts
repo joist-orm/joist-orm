@@ -9,6 +9,10 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
+  // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
+  // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
+  // groups the hydrated rows by their _current parent m2o field value_, which for a removed child will no
+  // longer be us, so it will effectively not show up in our post-load `loaded` array.
   private addedBeforeLoaded: U[] = [];
   private isCascadeDelete: boolean;
 
@@ -22,10 +26,6 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   ) {
     super();
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
-  }
-
-  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
   }
 
   // opts is an internal parameter
@@ -46,19 +46,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     return (await this.load()).find((u) => u.id === id);
   }
 
-  add(other: U): void {
-    ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
-      if (!this.addedBeforeLoaded.includes(other)) {
-        this.addedBeforeLoaded.push(other);
-      }
-    } else {
-      if (!this.loaded.includes(other)) {
-        this.loaded.push(other);
-      }
-    }
-    // This will no-op and mark other dirty if necessary
-    ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(this.entity);
+  get get(): U[] {
+    return this.filterDeleted(this.doGet(), { withDeleted: false });
+  }
+
+  get getWithDeleted(): U[] {
+    return this.filterDeleted(this.doGet(), { withDeleted: true });
   }
 
   private doGet(): U[] {
@@ -72,14 +65,6 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       }
     }
     return this.loaded;
-  }
-
-  get getWithDeleted(): U[] {
-    return this.filterDeleted(this.doGet(), { withDeleted: true });
-  }
-
-  get get(): U[] {
-    return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
   set(values: U[]): void {
@@ -102,6 +87,21 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     }
   }
 
+  add(other: U): void {
+    ensureNotDeleted(this.entity);
+    if (this.loaded === undefined) {
+      if (!this.addedBeforeLoaded.includes(other)) {
+        this.addedBeforeLoaded.push(other);
+      }
+    } else {
+      if (!this.loaded.includes(other)) {
+        this.loaded.push(other);
+      }
+    }
+    // This will no-op and mark other dirty if necessary
+    this.getOtherRelation(other).set(this.entity);
+  }
+
   // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
   // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
   remove(other: U, opts: { requireLoaded: boolean } = { requireLoaded: true }) {
@@ -109,9 +109,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
     if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
-    // This will no-op and mark other dirty if necessary
     remove(this.loaded || this.addedBeforeLoaded, other);
-    ((other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>).set(undefined);
+    // This will no-op and mark other dirty if necessary
+    this.getOtherRelation(other).set(undefined);
   }
 
   removeAll(): void {
@@ -165,7 +165,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   async onEntityDeletedAndFlushing(): Promise<void> {
     const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
-      const m2o = (other[this.otherFieldName] as any) as ManyToOneReference<U, T, any>;
+      const m2o = this.getOtherRelation(other);
       if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
         // TODO What if other.otherFieldName is required/not-null?
         m2o.set(undefined);
@@ -189,6 +189,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
 
   public toString(): string {
     return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+  }
+
+  private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
+    return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
+  }
+
+  /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */
+  private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
+    return (other as U)[this.otherFieldName] as any;
   }
 }
 

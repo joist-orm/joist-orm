@@ -62,7 +62,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   initializeForNewEntity(): void {
-    // TODO Add a test for this
+    // Normally we flag relations as loaded if created on a new entity, however CustomReferences
+    // might require crawling N-layers down from our initial opts, i.e. if creating a BookReview
+    // with a book, accessing review.author maybe not necessarily be safe to do immediately b/c
+    // we need to load book.author to successfully evaluated review -> book -> author synchronously.
     // this._isLoaded = true;
   }
 

@@ -1,5 +1,5 @@
 import { EntityManager } from "joist-orm";
-import { Author, BookReview, Image, ImageType } from "../entities";
+import { Author, Book, BookReview, Image, ImageType } from "../entities";
 import { insertAuthor, insertBook, insertBookReview, insertImage } from "../entities/factories";
 import { knex } from "../setupDbTests";
 
@@ -83,5 +83,15 @@ describe("CustomReference", () => {
     const r1 = await em.load(BookReview, "1");
 
     expect(() => r1.author.set(a2)).toThrow("BookReview#1.author was not loaded");
+  });
+
+  it("can load against a new entity", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "1");
+    const review = em.createPartial(BookReview, { book, rating: 5 });
+    const author = await review.author.load();
+    expect(author.firstName).toEqual("a1");
   });
 });

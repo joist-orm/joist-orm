@@ -62,7 +62,8 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   initializeForNewEntity(): void {
-    this._isLoaded = true;
+    // TODO Add a test for this
+    // this._isLoaded = true;
   }
 
   get id(): IdOf<U> | undefined {

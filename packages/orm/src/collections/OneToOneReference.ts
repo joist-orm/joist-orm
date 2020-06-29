@@ -99,7 +99,12 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     this.isLoaded = true;
   }
 
-  async refreshIfLoaded(): Promise<void> {}
+  async refreshIfLoaded(): Promise<void> {
+    if (this.isLoaded) {
+      this.isLoaded = false;
+      await this.load();
+    }
+  }
 
   onEntityDelete(): void {
     // if (this.isCascadeDelete) {

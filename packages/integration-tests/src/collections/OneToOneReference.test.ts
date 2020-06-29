@@ -91,35 +91,13 @@ describe("OneToOneReference", () => {
     expect(a1.image.get).toEqual(i1);
   });
 
-  /*
-  it("can save changes to a foreign key", async () => {
+  it("can refresh", async () => {
     await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    await insertBook({ title: "b1", author_id: 1 });
-
     const em = new EntityManager(knex);
-    const a2 = await em.load(Author, "2");
-    const b1 = await em.load(Book, "1");
-    b1.author.set(a2);
-    await em.flush();
-
-    const rows = await knex.select("*").from("books");
-    expect(rows[0].author_id).toEqual(2);
+    const a1 = await em.load(Author, "1", "image");
+    expect(a1.image.get).toBeUndefined();
+    await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
+    await em.refresh();
+    expect(a1.image.get?.fileName).toEqual("f1");
   });
-
-  it("removes deleted entities from collections", async () => {
-    // Given an author with a publisher
-    await insertPublisher({ name: "p1" });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = new EntityManager(knex);
-    // And we load the author with a1.publisher already populated
-    const a1 = await em.load(Author, "1", "publisher");
-    const p1 = a1.publisher.get!;
-    // When we delete the publisher
-    em.delete(p1);
-    await em.flush();
-    // Then the a1.publisher field should be undefined
-    expect(a1.publisher.get).toBeUndefined();
-  });
-   */
 });

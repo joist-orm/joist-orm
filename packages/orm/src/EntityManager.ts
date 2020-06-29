@@ -622,6 +622,7 @@ export class EntityManager {
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
+    this.findLoaders = {};
     const list =
       entityOrListOrUndefined === undefined
         ? this.entities

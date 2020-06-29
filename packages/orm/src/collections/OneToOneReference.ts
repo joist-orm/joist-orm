@@ -1,8 +1,25 @@
-import { ensureNotDeleted, fail, getEm, IdOf, OneToManyCollection, Reference } from "../";
+import { ensureNotDeleted, fail, getEm, IdOf, Reference } from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
 
+/**
+ * Represents the "many" side of a one-to-one relationship.
+ *
+ * I.e. in a one-to-many from Book -> Reviews, there is a review.book_id that can have many books.
+ *
+ * This class is for when that `review.book_id` column is itself unique, i.e. like `image.book_id`, and
+ * so instead of `Book.images: OneToManyCollection` we have a `Book.image: OneToOneReference`.
+ *
+ * This class implements `Reference` because it is essentially like "one entity pointing/refereing to another",
+ * however because we require a `.load` call to lazily know the value of other side (unlike ManyToOneReference
+ * which has it's `book_id` column immediately available in the entity `data` hash), there is some wonkiness
+ * around methods like `Reference.id` that are usually callable without `load`/`populate`, that for this
+ * class can actually only be called post `load`/`populate`.
+ *
+ * Currently we enforce this with a runtime check, which is not great, but the trade-off of implementing
+ * `Reference` seemed worth the downside of a un-type-safe `.id` property.
+ */
 export class OneToOneReference<T extends Entity, U extends Entity> extends AbstractRelationImpl<U>
   implements Reference<T, U, undefined> {
   private loaded: U | undefined;
@@ -22,18 +39,17 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
 
   get id(): IdOf<U> | undefined {
     if (this.isLoaded) {
-      return this.loaded?.id as IdOf<U>;
+      return this.loaded?.id as IdOf<U> | undefined;
     }
-    // TODO Should fail if not loaded?
-    return undefined;
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   get idOrFail(): IdOf<U> {
-    return this.id || fail("Entity has no id yet");
+    return this.id || fail(`${this.entity}.${this.fieldName} has no id yet`);
   }
 
   isSet(): boolean {
-    // TODO This will be inaccurate if not loaded?
+    // This will failure if we're not loaded yet
     return this.id !== undefined;
   }
 

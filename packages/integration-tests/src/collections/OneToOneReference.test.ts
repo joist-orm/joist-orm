@@ -100,4 +100,13 @@ describe("OneToOneReference", () => {
     await em.refresh();
     expect(a1.image.get?.fileName).toEqual("f1");
   });
+
+  it("id fails if not loaded", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.load(Author, "1");
+    expect(() => a1.image.id).toThrow("Author#1.image was not loaded");
+    await a1.image.load();
+    expect(a1.image.id).toBeUndefined();
+  });
 });

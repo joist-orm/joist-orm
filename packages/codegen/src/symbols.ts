@@ -44,3 +44,7 @@ export const Loaded = imp("Loaded@joist-orm");
 export const getEm = imp("getEm@joist-orm");
 export const loadLens = imp("loadLens@joist-orm");
 export const hasOneThrough = imp("hasOneThrough@joist-orm");
+export const hasMany = imp("hasMany@joist-orm");
+export const hasOne = imp("hasOne@joist-orm");
+export const hasOneToOne = imp("hasOneToOne@joist-orm");
+export const hasManyToMany = imp("hasManyToMany@joist-orm");

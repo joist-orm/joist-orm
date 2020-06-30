@@ -13,9 +13,6 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
-  Entity,
-  Reference,
-  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -26,10 +23,11 @@ import {
   EntityGraphQLFilter,
   GraphQLFilterOf,
   newRequiredRule,
-  ManyToOneReference,
+  Reference,
+  hasOne,
   setField,
 } from "joist-orm";
-import { BookReview, bookReviewMeta, Book, BookId, BookOrder } from "./entities";
+import { BookReview, bookReviewMeta, Book, BookId, BookOrder, bookMeta } from "./entities";
 
 export type BookReviewId = Flavor<string, "BookReview">;
 
@@ -79,13 +77,7 @@ export abstract class BookReviewCodegen extends BaseEntity {
   readonly __orderType: BookReviewOrder = null!;
   readonly __optsType: BookReviewOpts = null!;
 
-  readonly book: Reference<BookReview, Book, never> = new ManyToOneReference<BookReview, Book, never>(
-    this as any,
-    Book,
-    "book",
-    "reviews",
-    true,
-  );
+  readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta);
@@ -133,12 +125,6 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<BookReview>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as BookReview, fn);
-  }
-
-  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
-    fn: (lens: Lens<BookReview>) => Lens<V>,
-  ): Reference<BookReview, U, N> {
-    return hasOneThrough((this as any) as BookReview, fn);
   }
 
   async populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>> {

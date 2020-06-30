@@ -13,18 +13,15 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
-  Entity,
-  Reference,
-  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
   newRequiredRule,
   Collection,
-  ManyToManyCollection,
+  hasManyToMany,
   setField,
 } from "joist-orm";
-import { Tag, tagMeta, Book } from "./entities";
+import { Tag, tagMeta, Book, bookMeta } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -66,12 +63,11 @@ export abstract class TagCodegen extends BaseEntity {
   readonly __orderType: TagOrder = null!;
   readonly __optsType: TagOpts = null!;
 
-  readonly books: Collection<Tag, Book> = new ManyToManyCollection(
+  readonly books: Collection<Tag, Book> = hasManyToMany(
     "books_to_tags",
-    this,
     "books",
     "tag_id",
-    Book,
+    bookMeta,
     "tags",
     "book_id",
   );
@@ -115,12 +111,6 @@ export abstract class TagCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Tag, fn);
-  }
-
-  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
-    fn: (lens: Lens<Tag>) => Lens<V>,
-  ): Reference<Tag, U, N> {
-    return hasOneThrough((this as any) as Tag, fn);
   }
 
   async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {

@@ -13,9 +13,6 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
-  Entity,
-  Reference,
-  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -26,7 +23,8 @@ import {
   GraphQLFilterOf,
   newRequiredRule,
   setField,
-  ManyToOneReference,
+  Reference,
+  hasOne,
 } from "joist-orm";
 import {
   Image,
@@ -41,6 +39,9 @@ import {
   AuthorOrder,
   BookOrder,
   PublisherOrder,
+  authorMeta,
+  bookMeta,
+  publisherMeta,
 } from "./entities";
 
 export type ImageId = Flavor<string, "Image">;
@@ -99,29 +100,11 @@ export abstract class ImageCodegen extends BaseEntity {
   readonly __orderType: ImageOrder = null!;
   readonly __optsType: ImageOpts = null!;
 
-  readonly author: Reference<Image, Author, undefined> = new ManyToOneReference<Image, Author, undefined>(
-    this as any,
-    Author,
-    "author",
-    "image",
-    false,
-  );
+  readonly author: Reference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
 
-  readonly book: Reference<Image, Book, undefined> = new ManyToOneReference<Image, Book, undefined>(
-    this as any,
-    Book,
-    "book",
-    "image",
-    false,
-  );
+  readonly book: Reference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
 
-  readonly publisher: Reference<Image, Publisher, undefined> = new ManyToOneReference<Image, Publisher, undefined>(
-    this as any,
-    Publisher,
-    "publisher",
-    "image",
-    false,
-  );
+  readonly publisher: Reference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "image");
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta);
@@ -170,12 +153,6 @@ export abstract class ImageCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Image, fn);
-  }
-
-  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
-    fn: (lens: Lens<Image>) => Lens<V>,
-  ): Reference<Image, U, N> {
-    return hasOneThrough((this as any) as Image, fn);
   }
 
   async populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>> {

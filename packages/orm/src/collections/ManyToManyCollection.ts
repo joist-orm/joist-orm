@@ -1,9 +1,8 @@
 import DataLoader from "dataloader";
-import { Collection, ensureNotDeleted, Entity, EntityConstructor, getEm, IdOf } from "../";
+import { Collection, ensureNotDeleted, Entity, EntityMetadata, getEm, IdOf } from "../";
 import { getOrSet, remove } from "../utils";
 import { keyToNumber, keyToString } from "../serde";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { getMetadata } from "../EntityManager";
 
 export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
@@ -22,12 +21,12 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     public entity: T,
     public fieldName: keyof T,
     public columnName: string,
-    public otherType: EntityConstructor<U>,
+    public otherMeta: EntityMetadata<U>,
     public otherFieldName: keyof U,
     public otherColumnName: string,
   ) {
     super();
-    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
@@ -201,7 +200,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   }
 
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherType.name}, otherFieldName: ${this.otherFieldName})`;
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 }
 
@@ -261,7 +260,7 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
   const column1 = collection.columnName;
   const cstr1 = collection.entity.__orm.metadata.cstr;
   const column2 = collection.otherColumnName;
-  const cstr2 = collection.otherType;
+  const cstr2 = collection.otherMeta.cstr;
 
   // For each join table row, we use `EntityManager.load` to get both entities loaded.
   // This will be another 1 or 2 queries (depending on whether we're loading just

@@ -13,9 +13,6 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
-  Entity,
-  Reference,
-  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -25,10 +22,11 @@ import {
   GraphQLFilterOf,
   newRequiredRule,
   Collection,
-  OneToManyCollection,
-  ManyToOneReference,
-  OneToOneReference,
-  ManyToManyCollection,
+  hasMany,
+  Reference,
+  hasOne,
+  hasOneToOne,
+  hasManyToMany,
   setField,
 } from "joist-orm";
 import {
@@ -41,7 +39,9 @@ import {
   AuthorId,
   AuthorOrder,
   bookReviewMeta,
+  authorMeta,
   imageMeta,
+  tagMeta,
 } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
@@ -97,38 +97,13 @@ export abstract class BookCodegen extends BaseEntity {
   readonly __orderType: BookOrder = null!;
   readonly __optsType: BookOpts = null!;
 
-  readonly reviews: Collection<Book, BookReview> = new OneToManyCollection(
-    this as any,
-    bookReviewMeta,
-    "reviews",
-    "book",
-    "book_id",
-  );
+  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
 
-  readonly author: Reference<Book, Author, never> = new ManyToOneReference<Book, Author, never>(
-    this as any,
-    Author,
-    "author",
-    "books",
-    true,
-  );
+  readonly author: Reference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
-  readonly image: Reference<Book, Image, undefined> = new OneToOneReference<Book, Image>(
-    this as any,
-    imageMeta,
-    "image",
-    "book",
-  );
+  readonly image: Reference<Book, Image, undefined> = hasOneToOne(imageMeta, "image", "book");
 
-  readonly tags: Collection<Book, Tag> = new ManyToManyCollection(
-    "books_to_tags",
-    this,
-    "tags",
-    "book_id",
-    Tag,
-    "books",
-    "tag_id",
-  );
+  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, { ...bookDefaultValues });
@@ -177,12 +152,6 @@ export abstract class BookCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Book, fn);
-  }
-
-  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
-    fn: (lens: Lens<Book>) => Lens<V>,
-  ): Reference<Book, U, N> {
-    return hasOneThrough((this as any) as Book, fn);
   }
 
   async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {

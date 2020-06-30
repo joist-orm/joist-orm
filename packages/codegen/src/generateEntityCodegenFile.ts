@@ -10,7 +10,6 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  Entity as EntitySym,
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
@@ -19,17 +18,16 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasOneThrough,
+  hasMany,
+  hasManyToMany,
+  hasOne,
+  hasOneToOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToManyCollection,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  OneToManyCollection,
-  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -106,7 +104,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     return code`${getter} ${setter}`;
   });
 
-  // Add ManyToOne
+  // Add ManyToOne enums
   meta.enums.forEach((e) => {
     const { fieldName, enumType, notNull } = e;
     const maybeOptional = notNull ? "" : " | undefined";
@@ -125,18 +123,16 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     primitives.push(setter);
   });
 
-  // Add ManyToOne
+  // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
       readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
-        new ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>(
-          this as any,
-          ${otherEntity.type},
+        ${hasOne}(
+          ${otherEntity.metaType},
           "${fieldName}",
           "${otherFieldName}",
-          ${notNull},
         );
     `;
   });
@@ -145,8 +141,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const o2m = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${OneToManyCollection}(
-        this as any,
+      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasMany}(
         ${otherEntity.metaType},
         "${fieldName}",
         "${otherFieldName}",
@@ -160,8 +155,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const { fieldName, otherEntity, otherFieldName } = o2o;
     return code`
       readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, undefined> =
-        new ${OneToOneReference}<${entity.type}, ${otherEntity.type}>(
-          this as any,
+        ${hasOneToOne}(
           ${otherEntity.metaType},
           "${fieldName}",
           "${otherFieldName}",
@@ -173,12 +167,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const m2m = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = new ${ManyToManyCollection}(
+      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasManyToMany}(
         "${joinTableName}",
-        this,
         "${fieldName}",
         "${columnName}",
-        ${otherEntity.type},
+        ${otherEntity.metaType},
         "${otherFieldName}",
         "${otherColumnName}",
       );
@@ -252,12 +245,6 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       async load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn);
-      }
-
-      hasOneThrough<U extends ${EntitySym}, N extends undefined | never, V extends U | N>(
-        fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<V>
-      ): ${Reference}<${entity.type}, U, N> {
-        return ${hasOneThrough}(this as any as ${entity.type}, fn);
       }
 
       async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {

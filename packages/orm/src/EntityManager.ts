@@ -62,6 +62,8 @@ export interface EntityOrmField {
   em: EntityManager;
 }
 
+export let currentlyInstantiatingEntity: Entity | undefined;
+
 /** A marker/base interface for all of our entity types. */
 export interface Entity {
   id: string | undefined;
@@ -481,6 +483,7 @@ export class EntityManager {
     entity.__orm.data["createdAt"] = new Date();
     entity.__orm.data["updatedAt"] = new Date();
     this.entities.push(entity);
+    currentlyInstantiatingEntity = entity;
   }
 
   /**
@@ -1092,7 +1095,7 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
         if (hasChanged && originalValue) {
           const originalEntityMaybePromise = isEntity(originalValue)
             ? originalValue
-            : getEm(c).load((c as any)[fieldName].otherType, originalValue);
+            : getEm(c).load((c as any)[fieldName].otherMeta.cstr, originalValue);
           return [currentValuePromise, originalEntityMaybePromise];
         }
         return [currentValuePromise];

@@ -13,9 +13,6 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
-  Entity,
-  Reference,
-  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -23,8 +20,9 @@ import {
   newRequiredRule,
   setField,
   Collection,
-  OneToManyCollection,
-  OneToOneReference,
+  hasMany,
+  Reference,
+  hasOneToOne,
 } from "joist-orm";
 import { Publisher, publisherMeta, PublisherSize, Image, Author, authorMeta, imageMeta } from "./entities";
 
@@ -73,20 +71,9 @@ export abstract class PublisherCodegen extends BaseEntity {
   readonly __orderType: PublisherOrder = null!;
   readonly __optsType: PublisherOpts = null!;
 
-  readonly authors: Collection<Publisher, Author> = new OneToManyCollection(
-    this as any,
-    authorMeta,
-    "authors",
-    "publisher",
-    "publisher_id",
-  );
+  readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 
-  readonly image: Reference<Publisher, Image, undefined> = new OneToOneReference<Publisher, Image>(
-    this as any,
-    imageMeta,
-    "image",
-    "publisher",
-  );
+  readonly image: Reference<Publisher, Image, undefined> = hasOneToOne(imageMeta, "image", "publisher");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta);
@@ -135,12 +122,6 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Publisher, fn);
-  }
-
-  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
-    fn: (lens: Lens<Publisher>) => Lens<V>,
-  ): Reference<Publisher, U, N> {
-    return hasOneThrough((this as any) as Publisher, fn);
   }
 
   async populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>> {

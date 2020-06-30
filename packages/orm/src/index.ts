@@ -1,3 +1,4 @@
+import { CustomReference } from "./collections/CustomReference";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import { ManyToManyCollection } from "./collections/ManyToManyCollection";
 import { ManyToOneReference } from "./collections/ManyToOneReference";
@@ -25,12 +26,7 @@ export * from "./changes";
 export * from "./contexty";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export { fail } from "./utils";
-export { OneToManyCollection } from "./collections/OneToManyCollection";
-export { OneToOneReference } from "./collections/OneToOneReference";
-export { ManyToOneReference } from "./collections/ManyToOneReference";
-export { ManyToManyCollection } from "./collections/ManyToManyCollection";
-export { CustomReference } from "./collections/CustomReference";
-export { hasOneThrough } from "./collections/hasOneThrough";
+export * from "./collections";
 export * from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
 export * from "./loadLens";

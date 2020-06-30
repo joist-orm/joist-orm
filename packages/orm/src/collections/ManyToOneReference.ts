@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, getMetadata, IdOf, isEntity } from "../EntityManager";
+import { Entity, EntityConstructor, EntityMetadata, getMetadata, IdOf, isEntity } from "../EntityManager";
 import {
   ensureNotDeleted,
   fail,
@@ -32,13 +32,12 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   constructor(
     private entity: T,
-    public otherType: EntityConstructor<U>,
+    public otherMeta: EntityMetadata<U>,
     private fieldName: keyof T,
     public otherFieldName: keyof U,
-    private notNull: boolean,
   ) {
     super();
-    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
@@ -46,7 +45,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
+      this.loaded = ((await getEm(this.entity).load(this.otherMeta.cstr, current)) as any) as U;
     }
     this.isLoaded = true;
     return this.filterDeleted(this.loaded, opts);
@@ -104,7 +103,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (this.isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
-        this.loaded = ((await getEm(this.entity).load(this.otherType, current)) as any) as U;
+        this.loaded = ((await getEm(this.entity).load(this.otherMeta.cstr, current)) as any) as U;
       } else {
         this.loaded = current;
       }
@@ -182,7 +181,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   public toString(): string {
-    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherType.name}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {

@@ -13,9 +13,6 @@ import {
   newChangesProxy,
   Lens,
   loadLens,
-  Entity,
-  Reference,
-  hasOneThrough,
   LoadHint,
   Loaded,
   getEm,
@@ -27,9 +24,10 @@ import {
   GraphQLFilterOf,
   newRequiredRule,
   Collection,
-  OneToManyCollection,
-  ManyToOneReference,
-  OneToOneReference,
+  hasMany,
+  Reference,
+  hasOne,
+  hasOneToOne,
   setField,
 } from "joist-orm";
 import {
@@ -41,6 +39,7 @@ import {
   PublisherId,
   PublisherOrder,
   bookMeta,
+  publisherMeta,
   imageMeta,
 } from "./entities";
 
@@ -118,44 +117,15 @@ export abstract class AuthorCodegen extends BaseEntity {
   readonly __orderType: AuthorOrder = null!;
   readonly __optsType: AuthorOpts = null!;
 
-  readonly authors: Collection<Author, Author> = new OneToManyCollection(
-    this as any,
-    authorMeta,
-    "authors",
-    "mentor",
-    "mentor_id",
-  );
+  readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 
-  readonly books: Collection<Author, Book> = new OneToManyCollection(
-    this as any,
-    bookMeta,
-    "books",
-    "author",
-    "author_id",
-  );
+  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
 
-  readonly mentor: Reference<Author, Author, undefined> = new ManyToOneReference<Author, Author, undefined>(
-    this as any,
-    Author,
-    "mentor",
-    "authors",
-    false,
-  );
+  readonly mentor: Reference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 
-  readonly publisher: Reference<Author, Publisher, undefined> = new ManyToOneReference<Author, Publisher, undefined>(
-    this as any,
-    Publisher,
-    "publisher",
-    "authors",
-    false,
-  );
+  readonly publisher: Reference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
-  readonly image: Reference<Author, Image, undefined> = new OneToOneReference<Author, Image>(
-    this as any,
-    imageMeta,
-    "image",
-    "author",
-  );
+  readonly image: Reference<Author, Image, undefined> = hasOneToOne(imageMeta, "image", "author");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta);
@@ -237,12 +207,6 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   async load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
     return loadLens((this as any) as Author, fn);
-  }
-
-  hasOneThrough<U extends Entity, N extends undefined | never, V extends U | N>(
-    fn: (lens: Lens<Author>) => Lens<V>,
-  ): Reference<Author, U, N> {
-    return hasOneThrough((this as any) as Author, fn);
   }
 
   async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {

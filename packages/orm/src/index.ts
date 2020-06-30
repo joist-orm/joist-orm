@@ -30,6 +30,7 @@ export * from "./collections";
 export * from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
 export * from "./loadLens";
+export * from "./getRelationNames";
 
 const F = Symbol();
 const G = Symbol();

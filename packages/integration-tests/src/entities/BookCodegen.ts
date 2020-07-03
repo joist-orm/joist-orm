@@ -34,10 +34,12 @@ import {
   bookMeta,
   Author,
   Image,
+  BookAdvance,
   BookReview,
   Tag,
   AuthorId,
   AuthorOrder,
+  bookAdvanceMeta,
   bookReviewMeta,
   authorMeta,
   imageMeta,
@@ -51,6 +53,7 @@ export interface BookOpts {
   order?: number | null;
   author: Author;
   image?: Image | null;
+  advances?: BookAdvance[];
   reviews?: BookReview[];
   tags?: Tag[];
 }
@@ -96,6 +99,8 @@ export abstract class BookCodegen extends BaseEntity {
   readonly __gqlFilterType: BookGraphQLFilter = null!;
   readonly __orderType: BookOrder = null!;
   readonly __optsType: BookOpts = null!;
+
+  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
 
   readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
 

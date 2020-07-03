@@ -17,6 +17,7 @@ export function generateEntitiesFile(entities: EntityDbMetadata[], enums: Table[
     ${entities.map((meta) => {
       return `export * from "./${meta.entity.name}";`;
     })}
+    export * from "./factories";
     export * from "./metadata";
   `;
 }

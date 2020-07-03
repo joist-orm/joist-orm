@@ -1,16 +1,18 @@
-import pgStructure, { Db } from "pg-structure";
 import { promises as fs } from "fs";
-import { Client } from "pg";
-import { code, Code } from "ts-poet";
-import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 import { newPgConnectionConfig } from "joist-utils";
-import { generateMetadataFile } from "./generateMetadataFile";
-import { generateEntitiesFile } from "./generateEntitiesFile";
-import { generateEnumFile } from "./generateEnumFile";
-import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
-import { generateInitialEntityFile } from "./generateInitialEntityFile";
+import { Client } from "pg";
+import pgStructure, { Db } from "pg-structure";
+import { code, Code } from "ts-poet";
+import { Config, defaultConfig } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
+import { generateEntitiesFile } from "./generateEntitiesFile";
+import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
+import { generateEnumFile } from "./generateEnumFile";
+import { generateFactoriesFiles } from "./generateFactoriesFiles";
+import { generateInitialEntityFile } from "./generateInitialEntityFile";
+import { generateMetadataFile } from "./generateMetadataFile";
 import { configureMetadata } from "./symbols";
+import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 
 export { EntityDbMetadata };
 
@@ -23,22 +25,6 @@ export interface CodeGenFile {
 /** A map from Enum table name to the rows currently in the table. */
 export type EnumRows = Record<string, EnumRow[]>;
 export type EnumRow = { id: number; code: string; name: string };
-
-export interface Config {
-  entitiesDirectory: string;
-  derivedFields: string[];
-  asyncDerivedFields: string[];
-  protectedFields: string[];
-  codegenPlugins: string[];
-}
-
-const defaultConfig: Config = {
-  entitiesDirectory: "./src/entities",
-  derivedFields: [],
-  asyncDerivedFields: [],
-  protectedFields: [],
-  codegenPlugins: [],
-};
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(config: Config, db: Db, enumRows: EnumRows): Promise<void> {
@@ -61,7 +47,7 @@ export async function generateAndSaveFiles(config: Config, db: Db, enumRows: Enu
 export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeGenFile[] {
   const entityTables = db.tables.filter(isEntityTable).sortBy("name");
   const enums = db.tables.filter(isEnumTable).sortBy("name");
-  const entities = entityTables.map((table) => new EntityDbMetadata(table));
+  const entities = entityTables.map((table) => new EntityDbMetadata(config, table));
 
   const entityFiles = entities
     .map((meta) => {
@@ -101,6 +87,8 @@ export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeG
     overwrite: true,
   };
 
+  const factoriesFiles: CodeGenFile[] = generateFactoriesFiles(entities);
+
   const indexFile: CodeGenFile = {
     name: "./index.ts",
     contents: code`export * from "./entities"`,
@@ -115,7 +103,7 @@ export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeG
     })
     .flat();
 
-  return [...entityFiles, ...enumFiles, entitiesFile, metadataFile, indexFile, ...pluginFiles];
+  return [...entityFiles, ...enumFiles, entitiesFile, ...factoriesFiles, metadataFile, indexFile, ...pluginFiles];
 }
 
 export async function loadEnumRows(db: Db, client: Client): Promise<EnumRows> {

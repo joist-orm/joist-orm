@@ -48,3 +48,6 @@ export const hasMany = imp("hasMany@joist-orm");
 export const hasOne = imp("hasOne@joist-orm");
 export const hasOneToOne = imp("hasOneToOne@joist-orm");
 export const hasManyToMany = imp("hasManyToMany@joist-orm");
+export const newTestInstance = imp("newTestInstance@joist-orm");
+export const New = imp("New@joist-orm");
+export const FactoryOpts = imp("FactoryOpts@joist-orm");

@@ -1,13 +1,17 @@
 import DataLoader from "dataloader";
 import Knex, { QueryBuilder } from "knex";
+import hash from "object-hash";
+import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
+import { JoinRow } from "./collections/ManyToManyCollection";
+import { Contexty } from "./contexty";
+import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
-import { fail, getOrSet, indexBy } from "./utils";
-import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
 import {
   Collection,
   ConfigApi,
   DeepPartialOrNull,
   EntityHook,
+  FactoryOpts,
   getEm,
   LoadedCollection,
   LoadedReference,
@@ -19,12 +23,9 @@ import {
   ValidationError,
   ValidationErrors,
 } from "./index";
-import { JoinRow } from "./collections/ManyToManyCollection";
 import { buildQuery, FilterAndSettings } from "./QueryBuilder";
-import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
-import hash from "object-hash";
-import { createOrUpdatePartial } from "./createOrUpdatePartial";
-import { Contexty } from "./contexty";
+import { ColumnSerde, keyToString, maybeResolveReferenceToId } from "./serde";
+import { fail, getOrSet, indexBy, NullOrDefinedOr } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -90,21 +91,34 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
-  : P;
+  : unknown;
 
-// Helper type for New b/c "O[K] extends Entity" doesn't seem to narrow
-// correctly when inlined into New as a nested ternary.
-type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends Entity
-  ? T[K] extends Reference<T, infer U, infer N>
-    ? LoadedReference<T, O[K], N>
-    : never
-  : O[K] extends Array<infer OU>
-  ? OU extends Entity
-    ? T[K] extends Collection<T, infer U>
-      ? LoadedCollection<T, OU>
+/**
+ * A helper type for `New` that marks every `Reference` and `LoadedCollection` in `T` as loaded.
+ *
+ * We also look in opts `O` for the "`U`" type, i.e. the next level up/down in the graph,
+ * because the call site's opts may be using an also-marked loaded parent/child as an opt,
+ * so this will infer the type of that parent/child and use that for the `U` type.
+ *
+ * This means things like `entity.parent.get.grandParent.get` will work on the resulting
+ * type.
+ *
+ * Note that this is also purposefully broken out of `New` because of some weirdness
+ * around type narrowing that wasn't working when inlined into `New`.
+ */
+type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
+  ? OK extends Entity
+    ? T[K] extends Reference<T, infer U, infer N>
+      ? LoadedReference<T, OK, N>
       : never
-    : never
-  : T[K];
+    : OK extends Array<infer OU>
+    ? OU extends Entity
+      ? T[K] extends Collection<T, infer U>
+        ? LoadedCollection<T, OU>
+        : never
+      : never
+    : T[K]
+  : never;
 
 /**
  * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
@@ -115,6 +129,14 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
  */
 export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
   {
+    // K will be `keyof T` and `keyof O` for codegen'd relations, but custom relations
+    // line `hasOneThrough` and `hasOneDerived` will not pass `keyof O` and so use the
+    // `: MarkLoaded`.
+    //
+    // Note that the safest thing is to probably make this `: unknown` instead so that
+    // custom relations are not marked loaded, b/c they will very likely require a `.load`
+    // to work. However, we have some tests that currently expect `author.image.get` to work
+    // on a new author, so keeping the `MarkLoaded` behavior for now.
     [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
   };
 
@@ -128,11 +150,12 @@ export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
       : LoadedIfInKeyHint<T, K, H>;
   };
 
+// We can use unknown here because everything non-loaded is pulled in from `T &`
 type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
   ? MarkLoaded<T, T[K], H[K]>
-  : T[K];
+  : unknown;
 
-type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : T[K];
+type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : unknown;
 
 /** From any non-`Relations` field in `T`, i.e. for loader hints. */
 export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
@@ -152,7 +175,7 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 export class EntityManager {
   constructor(public knex: Knex) {}
 
-  private entities: Entity[] = [];
+  private _entities: Entity[] = [];
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
@@ -165,6 +188,10 @@ export class EntityManager {
 
   get context() {
     return this.contexty?.context || {};
+  }
+
+  get entities(): ReadonlyArray<Entity> {
+    return [...this._entities];
   }
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
@@ -482,7 +509,7 @@ export class EntityManager {
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     entity.__orm.data["createdAt"] = new Date();
     entity.__orm.data["updatedAt"] = new Date();
-    this.entities.push(entity);
+    this._entities.push(entity);
     currentlyInstantiatingEntity = entity;
   }
 
@@ -628,7 +655,7 @@ export class EntityManager {
     this.findLoaders = {};
     const list =
       entityOrListOrUndefined === undefined
-        ? this.entities
+        ? this._entities
         : Array.isArray(entityOrListOrUndefined)
         ? entityOrListOrUndefined
         : [entityOrListOrUndefined];
@@ -653,6 +680,10 @@ export class EntityManager {
         }
       }),
     );
+  }
+
+  public get numberOfEntities(): number {
+    return this.entities.length;
   }
 
   private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<FilterAndSettings<T>, unknown[]> {
@@ -682,7 +713,7 @@ export class EntityManager {
           if (uniqueQueries.length === 1) {
             const rows = await buildQuery(this.knex, type, queries[0]);
             // Reuse this same result for however many callers asked for it.
-            return queries.map((q) => rows);
+            return queries.map(() => rows);
           }
 
           // TODO: Instead of this tagged approach, we could probably check if the each
@@ -823,6 +854,7 @@ export interface EntityMetadata<T extends Entity> {
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   fields: Array<Field>;
   config: ConfigApi<T>;
+  factory: (em: EntityManager, opts?: FactoryOpts<T>) => New<T>;
 }
 
 export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;
@@ -837,13 +869,16 @@ export type PrimitiveField = {
   kind: "primitive";
   fieldName: string;
   required: boolean;
-  derived?: boolean;
+  derived: "orm" | "sync" | "async" | false;
+  protected: boolean;
+  type: string | Function;
 };
 
 export type EnumField = {
   kind: "enum";
   fieldName: string;
   required: boolean;
+  enumDetailType: { getValues(): ReadonlyArray<unknown> };
 };
 
 export type OneToManyField = {
@@ -1028,7 +1063,7 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
     .filter((e) => !e.isDeletedEntity);
   const derivedFieldsByMeta = new Map(
     [...new Set(entities.map(getMetadata))].map((m) => {
-      return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived).map((f) => f.fieldName)];
+      return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived === "sync").map((f) => f.fieldName)];
     }),
   );
 

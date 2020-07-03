@@ -1,5 +1,5 @@
 import { Author, BookReview } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview } from "@src/entities/factories";
+import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
 import { knex } from "@src/setupDbTests";
 import { EntityManager } from "joist-orm";
 

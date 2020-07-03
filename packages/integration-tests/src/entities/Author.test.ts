@@ -4,7 +4,7 @@ import pgStructure from "pg-structure";
 import { Author, Book, BookId, BookReview, Publisher } from "../entities";
 import { knex } from "../setupDbTests";
 import { zeroTo } from "../utils";
-import { insertAuthor, insertBook, insertPublisher } from "./factories";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 
 describe("Author", () => {
   it("can have business logic methods", async () => {
@@ -25,7 +25,7 @@ describe("Author", () => {
     const em = new EntityManager(knex);
     new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
     await expect(em.flush()).rejects.toThrow(
-      "Validation errors: firstName and lastName must be different, lastName is invalid",
+      "Validation errors (2): firstName and lastName must be different, lastName is invalid",
     );
   });
 

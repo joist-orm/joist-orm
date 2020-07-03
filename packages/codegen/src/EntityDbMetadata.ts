@@ -1,8 +1,9 @@
 import { camelCase } from "change-case";
-import { Table, M2ORelation, M2MRelation, O2MRelation, Column } from "pg-structure";
+import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import pluralize from "pluralize";
 import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
+import { Config, isAsyncDerived, isDerived, isProtected, ormMaintainedFields } from "./config";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
 import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./utils";
 
@@ -24,6 +25,7 @@ export type Entity = {
   orderType: SymbolSpec;
   /** The symbol pointing to the entity's config const. */
   configConst: SymbolSpec;
+  optsType: SymbolSpec;
 };
 
 export type PrimitiveField = {
@@ -33,6 +35,8 @@ export type PrimitiveField = {
   columnDefault: number | boolean | string | null;
   fieldType: string | SymbolSpec;
   notNull: boolean;
+  derived: "orm" | "sync" | "async" | false;
+  protected: boolean;
 };
 
 export type EnumField = {
@@ -91,11 +95,11 @@ export class EntityDbMetadata {
   manyToManys: ManyToManyField[];
   tableName: string;
 
-  constructor(table: Table) {
+  constructor(config: Config, table: Table) {
     this.entity = makeEntity(tableToEntityName(table));
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
-      .map((column) => newPrimitive(column, table));
+      .map((column) => newPrimitive(config, this.entity, column, table));
     this.enums = table.m2oRelations.filter((r) => isEnumTable(r.targetTable)).map((r) => newEnumField(r));
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
@@ -138,15 +142,31 @@ function isOneToOneRelation(r: O2MRelation) {
   return indexes.find((i) => i.columns.length === 1) !== undefined;
 }
 
-function newPrimitive(column: Column, table: Table): PrimitiveField {
+function newPrimitive(config: Config, entity: Entity, column: Column, table: Table): PrimitiveField {
   const fieldName = camelCase(column.name);
   const columnName = column.name;
-  const columnType = column.type.shortName || column.type.name;
-  const maybeCustomType = mapType(table.name, columnName, columnType);
-  const fieldType = maybeCustomType.fieldType;
-  const notNull = column.notNull;
-  const columnDefault = column.default;
-  return { fieldName, columnName, columnType, fieldType, notNull, columnDefault };
+  return {
+    fieldName,
+    columnName,
+    columnType: column.type.shortName || column.type.name,
+    fieldType: mapType(table.name, columnName, column.type.shortName || column.type.name).fieldType,
+    notNull: column.notNull,
+    columnDefault: column.default,
+    derived: fieldDerived(config, entity, fieldName),
+    protected: isProtected(config, entity, fieldName),
+  };
+}
+
+function fieldDerived(config: Config, entity: Entity, fieldName: string): PrimitiveField["derived"] {
+  if (ormMaintainedFields.includes(fieldName)) {
+    return "orm";
+  } else if (isDerived(config, entity, fieldName)) {
+    return "sync";
+  } else if (isAsyncDerived(config, entity, fieldName)) {
+    return "async";
+  } else {
+    return false;
+  }
 }
 
 function newEnumField(r: M2ORelation): EnumField {
@@ -227,6 +247,7 @@ export function makeEntity(entityName: string): Entity {
     metaType: metaType(entityName),
     idType: imp(`${entityName}Id@./entities`, { definedIn: `./${entityName}Codegen` }),
     orderType: imp(`${entityName}Order@./entities`, { definedIn: `./${entityName}Codegen` }),
+    optsType: imp(`${entityName}Opts@./entities`, { definedIn: `./${entityName}Codegen` }),
     configConst: imp(`${camelCase(entityName)}Config@./entities`, { definedIn: `./${entityName}Codegen` }),
   };
 }

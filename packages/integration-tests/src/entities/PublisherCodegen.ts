@@ -24,7 +24,17 @@ import {
   Reference,
   hasOneToOne,
 } from "joist-orm";
-import { Publisher, publisherMeta, PublisherSize, Image, Author, authorMeta, imageMeta } from "./entities";
+import {
+  Publisher,
+  publisherMeta,
+  PublisherSize,
+  Image,
+  Author,
+  BookAdvance,
+  authorMeta,
+  bookAdvanceMeta,
+  imageMeta,
+} from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -33,6 +43,7 @@ export interface PublisherOpts {
   size?: PublisherSize | null;
   image?: Image | null;
   authors?: Author[];
+  bookAdvances?: BookAdvance[];
 }
 
 export interface PublisherFilter {
@@ -72,6 +83,13 @@ export abstract class PublisherCodegen extends BaseEntity {
   readonly __optsType: PublisherOpts = null!;
 
   readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
+
+  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
+    bookAdvanceMeta,
+    "bookAdvances",
+    "publisher",
+    "publisher_id",
+  );
 
   readonly image: Reference<Publisher, Image, undefined> = hasOneToOne(imageMeta, "image", "publisher");
 

@@ -5,6 +5,7 @@ describe("getProperties", () => {
   it("should work", () => {
     expect(getProperties(bookMeta)).toMatchInlineSnapshot(`
       Array [
+        "advances",
         "reviews",
         "author",
         "image",

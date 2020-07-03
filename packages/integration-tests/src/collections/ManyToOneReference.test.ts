@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book } from "../entities";
-import { insertAuthor, insertBook, insertPublisher } from "../entities/factories";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {

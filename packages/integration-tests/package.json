@@ -11,16 +11,16 @@
     "joist-orm": "0.1.0-bump"
   },
   "devDependencies": {
-    "@types/jest": "^25.2.1",
+    "@types/jest": "^26.0.3",
     "@types/node": "^13.13.4",
     "dotenv": "^8.2.0",
-    "jest": "^25.5.3",
+    "jest": "^26.1.0",
     "joist-codegen": "0.1.0-bump",
     "joist-graphql-codegen": "0.1.0-bump",
     "joist-migration-utils": "0.1.0-bump",
     "prettier": "^2.0.5",
-    "ts-jest": "^25.4.0",
-    "ts-node": "^8.9.1",
+    "ts-jest": "^26.1.1",
+    "ts-node": "^8.10.2",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^3.9.5"
   }

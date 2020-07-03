@@ -44,3 +44,6 @@ export function indexBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
   });
   return result;
 }
+
+// Utility type to strip off null and defined and infer only T.
+export type NullOrDefinedOr<T> = T | null | undefined;

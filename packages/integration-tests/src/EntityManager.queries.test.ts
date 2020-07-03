@@ -1,6 +1,6 @@
 import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
-import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {

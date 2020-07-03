@@ -1,4 +1,3 @@
-import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import * as EM from "./EntityManager";
 import { Entity, EntityMetadata } from "./EntityManager";
 

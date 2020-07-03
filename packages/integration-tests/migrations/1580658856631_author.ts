@@ -39,11 +39,25 @@ export function up(b: MigrationBuilder): void {
     mentor_id: foreignKey("authors", { notNull: false }),
   });
 
+  // for testing required enums
+  createEnumTable(b, "advance_status", [
+    ["PENDING", "Pending"],
+    ["SIGNED", "Signed"],
+    ["PAID", "Paid"],
+  ]);
+
   createEntityTable(b, "books", {
     title: { type: "varchar(255)", notNull: true },
     author_id: foreignKey("authors", { notNull: true }),
     // for testing columns that are keywords
     order: { type: "integer", notNull: false, default: 0 },
+  });
+
+  createEntityTable(b, "book_advances", {
+    // for testing required enums
+    status_id: foreignKey("advance_status", { notNull: true }),
+    publisher_id: foreignKey("publishers", { notNull: true }),
+    book_id: foreignKey("books", { notNull: true }),
   });
 
   // for testing children that are named a prefix of their parent

@@ -2,7 +2,7 @@ import { EntityManager } from "joist-orm";
 import { zeroTo } from "../utils";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book, Tag } from "../entities";
-import { insertAuthor, insertBook, insertBookToTag, insertTag } from "../entities/factories";
+import { insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {

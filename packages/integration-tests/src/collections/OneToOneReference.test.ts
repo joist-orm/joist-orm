@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { Author, Image, ImageType } from "../entities";
-import { insertAuthor, insertImage } from "../entities/factories";
+import { insertAuthor, insertImage } from "@src/entities/inserts";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToOneReference", () => {

@@ -8,7 +8,7 @@ import {
   insertBookToTag,
   insertPublisher,
   insertTag,
-} from "./entities/factories";
+} from "@src/entities/inserts";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {

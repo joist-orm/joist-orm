@@ -1,6 +1,6 @@
 import { EntityManager } from "joist-orm";
 import { Author, Book, BookReview, Image, ImageType } from "../entities";
-import { insertAuthor, insertBook, insertBookReview, insertImage } from "../entities/factories";
+import { insertAuthor, insertBook, insertBookReview, insertImage } from "@src/entities/inserts";
 import { knex } from "../setupDbTests";
 
 describe("CustomReference", () => {

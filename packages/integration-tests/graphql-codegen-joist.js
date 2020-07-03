@@ -1,6 +1,8 @@
 const mappers = {
+  AdvanceStatusDetail: "@src/entities#AdvanceStatus",
   Author: "@src/entities#AuthorId",
   Book: "@src/entities#BookId",
+  BookAdvance: "@src/entities#BookAdvanceId",
   BookReview: "@src/entities#BookReviewId",
   Image: "@src/entities#ImageId",
   ImageTypeDetail: "@src/entities#ImageType",
@@ -10,6 +12,7 @@ const mappers = {
 };
 
 const enumValues = {
+  AdvanceStatus: "@src/entities#AdvanceStatus",
   ImageType: "@src/entities#ImageType",
   PublisherSize: "@src/entities#PublisherSize",
 };

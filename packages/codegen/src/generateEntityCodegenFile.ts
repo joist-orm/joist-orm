@@ -1,8 +1,8 @@
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { Entity, EntityDbMetadata, PrimitiveField } from "./EntityDbMetadata";
-import { Config } from "./index";
+import { Config } from "./config";
+import { EntityDbMetadata, PrimitiveField } from "./EntityDbMetadata";
 import {
   BaseEntity,
   BooleanFilter,
@@ -54,7 +54,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const maybeOptional = notNull ? "" : " | undefined";
 
     let getter: Code;
-    if (isAsyncDerived(config, entity, fieldName)) {
+    if (p.derived === "async") {
       getter = code`
         get ${fieldName}(): ${fieldType}${maybeOptional} {
           if (!("${fieldName}" in this.__orm.data)) {
@@ -63,7 +63,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
           return this.__orm.data["${fieldName}"];
         }
      `;
-    } else if (isDerived(config, entity, fieldName)) {
+    } else if (p.derived === "sync") {
       getter = code`
         abstract get ${fieldName}(): ${fieldType}${maybeOptional};
      `;
@@ -76,7 +76,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     }
 
     let setter: Code | string;
-    if (isProtected(config, entity, fieldName)) {
+    if (p.protected) {
       // TODO Allow making the getter to be protected as well. And so probably remove it
       // from the Opts as well. Wonder how that works for required protected fields?
       //
@@ -87,11 +87,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
           ${setField}(this, "${fieldName}", ${fieldName});
         }
       `;
-    } else if (
-      ormMaintainedFields.includes(fieldName) ||
-      isDerived(config, entity, fieldName) ||
-      isAsyncDerived(config, entity, fieldName)
-    ) {
+    } else if (p.derived) {
       setter = "";
     } else {
       setter = code`
@@ -267,11 +263,7 @@ function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: Pri
   columnDefault = columnDefault.toString();
 
   // if this value should be set elsewhere, return false
-  if (
-    ormMaintainedFields.includes(fieldName) ||
-    isDerived(config, meta.entity, fieldName) ||
-    isAsyncDerived(config, meta.entity, fieldName)
-  ) {
+  if (field.derived !== false) {
     return false;
   }
 
@@ -303,12 +295,8 @@ function generateDefaultValidationRules(meta: EntityDbMetadata, configName: stri
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   // Make our opts type
   const primitives = meta.primitives.map((field) => {
-    const { fieldName, fieldType, notNull, columnDefault } = field;
-    if (
-      ormMaintainedFields.includes(fieldName) ||
-      isDerived(config, meta.entity, fieldName) ||
-      isAsyncDerived(config, meta.entity, fieldName)
-    ) {
+    const { fieldName, fieldType, notNull, derived } = field;
+    if (derived) {
       return code``;
     }
     return code`${fieldName}${maybeOptional(
@@ -393,18 +381,4 @@ function maybeUnionNull(notNull: boolean): string {
 
 function nullOrNever(notNull: boolean): string {
   return notNull ? "never" : " null | undefined";
-}
-
-const ormMaintainedFields = ["createdAt", "updatedAt"];
-
-export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
-  return config.derivedFields.includes(`${entity.name}.${fieldName}`);
-}
-
-export function isAsyncDerived(config: Config, entity: Entity, fieldName: string): boolean {
-  return config.asyncDerivedFields.includes(`${entity.name}.${fieldName}`);
-}
-
-export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
-  return config.protectedFields.includes(`${entity.name}.${fieldName}`);
 }

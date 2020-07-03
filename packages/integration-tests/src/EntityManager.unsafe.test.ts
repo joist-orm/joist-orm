@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "./setupDbTests";
 import { Author, Book } from "./entities";
-import { insertAuthor, insertBook } from "./entities/factories";
+import { insertAuthor, insertBook } from "@src/entities/inserts";
 
 describe("EntityManager", () => {
   it("can create new entity with valid data", async () => {

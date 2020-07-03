@@ -1,8 +1,6 @@
-// Utility type to strip off null and defined and infer only T.
+import { NullOrDefinedOr } from "./utils";
 import { Entity, EntityConstructor, EntityManager, getMetadata, IdOf, isEntity, isKey, OptsOf } from "./EntityManager";
 import { PartialOrNull } from "./index";
-
-type NullOrDefinedOr<T> = T | null | undefined;
 
 /**
  * The type for `EntityManager.createOrUpdateUnsafe` that allows "upsert"-ish behavior.

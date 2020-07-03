@@ -1,7 +1,7 @@
 import { EntityManager } from "joist-orm";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 import { Author, Book, Publisher } from "./entities";
-import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {

@@ -1,8 +1,7 @@
-import { code, Code } from "ts-poet";
+import { code, Code, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
-import { isDerived } from "./generateEntityCodegenFile";
-import { Config } from "./index";
+import { Config } from "./config";
 
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
   const { entity } = dbMetadata;
@@ -21,6 +20,7 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
       fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ],
       config: ${entity.configConst},
+      factory: ${imp(`new${entity.name}@./entities`)},
     };
 
     (${entity.name} as any).metadata = ${entity.metaName};
@@ -88,25 +88,25 @@ function generateFields(
   `;
 
   const primitiveFields = dbMetadata.primitives.map((p) => {
-    const { fieldName } = p;
+    const { fieldName, derived } = p;
     return code`
       {
         kind: "primitive",
         fieldName: "${fieldName}",
-        ${
-          isDerived(config, dbMetadata.entity, fieldName)
-            ? "derived: true, required: false,"
-            : `required: ${p.notNull},`
-        }
+        derived: ${!derived ? false : `"${derived}"`},
+        required: ${!derived && p.notNull},
+        protected: ${p.protected},
+        type: ${typeof p.fieldType === "string" ? `"${p.fieldType}"` : p.fieldType},
       },`;
   });
 
-  const enumFields = dbMetadata.enums.map(({ fieldName, notNull }) => {
+  const enumFields = dbMetadata.enums.map(({ fieldName, enumDetailType, notNull }) => {
     return code`
       {
         kind: "enum",
         fieldName: "${fieldName}",
         required: ${notNull},
+        enumDetailType: ${enumDetailType},
       },
     `;
   });

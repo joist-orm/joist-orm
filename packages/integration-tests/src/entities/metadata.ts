@@ -9,16 +9,26 @@ import {
 import {
   Author,
   authorConfig,
+  newAuthor,
   Book,
   bookConfig,
+  newBook,
+  BookAdvance,
+  bookAdvanceConfig,
+  newBookAdvance,
   BookReview,
   bookReviewConfig,
+  newBookReview,
   Image,
   imageConfig,
+  newImage,
   Publisher,
   publisherConfig,
+  newPublisher,
   Tag,
   tagConfig,
+  newTag,
+  AdvanceStatuses,
   ImageTypes,
   PublisherSizes,
 } from "./entities";
@@ -104,48 +114,74 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "firstName",
+      derived: false,
       required: true,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "lastName",
+      derived: false,
       required: false,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "initials",
-      derived: true,
+      derived: "sync",
       required: false,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "numberOfBooks",
-      required: true,
+      derived: "async",
+      required: false,
+      protected: false,
+      type: "number",
     },
     {
       kind: "primitive",
       fieldName: "isPopular",
+      derived: false,
       required: false,
+      protected: false,
+      type: "boolean",
     },
     {
       kind: "primitive",
       fieldName: "age",
+      derived: false,
       required: false,
+      protected: false,
+      type: "number",
     },
     {
       kind: "primitive",
       fieldName: "wasEverPopular",
+      derived: false,
       required: false,
+      protected: true,
+      type: "boolean",
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "m2o",
@@ -180,6 +216,7 @@ export const authorMeta: EntityMetadata<Author> = {
     },
   ],
   config: authorConfig,
+  factory: newAuthor,
 };
 
 (Author as any).metadata = authorMeta;
@@ -228,22 +265,34 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "primitive",
       fieldName: "title",
+      derived: false,
       required: true,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "order",
+      derived: false,
       required: false,
+      protected: false,
+      type: "number",
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "m2o",
@@ -251,6 +300,14 @@ export const bookMeta: EntityMetadata<Book> = {
       required: true,
       otherMetadata: () => authorMeta,
       otherFieldName: "books",
+    },
+
+    {
+      kind: "o2m",
+      fieldName: "advances",
+      required: false,
+      otherMetadata: () => bookAdvanceMeta,
+      otherFieldName: "book",
     },
 
     {
@@ -270,9 +327,98 @@ export const bookMeta: EntityMetadata<Book> = {
     },
   ],
   config: bookConfig,
+  factory: newBook,
 };
 
 (Book as any).metadata = bookMeta;
+
+export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
+  cstr: BookAdvance,
+  type: "BookAdvance",
+  tableName: "book_advances",
+  columns: [
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
+
+    {
+      fieldName: "status",
+      columnName: "status_id",
+      dbType: "int",
+      serde: new EnumFieldSerde("status", "status_id", AdvanceStatuses),
+    },
+
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamptz",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+    {
+      fieldName: "book",
+      columnName: "book_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("book", "book_id", () => bookMeta),
+    },
+
+    {
+      fieldName: "publisher",
+      columnName: "publisher_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id", required: true },
+
+    {
+      kind: "enum",
+      fieldName: "status",
+      required: true,
+      enumDetailType: AdvanceStatuses,
+    },
+
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
+    },
+    {
+      kind: "m2o",
+      fieldName: "book",
+      required: true,
+      otherMetadata: () => bookMeta,
+      otherFieldName: "advances",
+    },
+
+    {
+      kind: "m2o",
+      fieldName: "publisher",
+      required: true,
+      otherMetadata: () => publisherMeta,
+      otherFieldName: "bookAdvances",
+    },
+  ],
+  config: bookAdvanceConfig,
+  factory: newBookAdvance,
+};
+
+(BookAdvance as any).metadata = bookAdvanceMeta;
 
 export const bookReviewMeta: EntityMetadata<BookReview> = {
   cstr: BookReview,
@@ -318,22 +464,34 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "primitive",
       fieldName: "rating",
+      derived: false,
       required: true,
+      protected: false,
+      type: "number",
     },
     {
       kind: "primitive",
       fieldName: "isPublic",
-      required: true,
+      derived: "async",
+      required: false,
+      protected: false,
+      type: "boolean",
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "m2o",
@@ -344,6 +502,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     },
   ],
   config: bookReviewConfig,
+  factory: newBookReview,
 };
 
 (BookReview as any).metadata = bookReviewMeta;
@@ -408,22 +567,32 @@ export const imageMeta: EntityMetadata<Image> = {
       kind: "enum",
       fieldName: "type",
       required: true,
+      enumDetailType: ImageTypes,
     },
 
     {
       kind: "primitive",
       fieldName: "fileName",
+      derived: false,
       required: true,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "m2o",
@@ -450,6 +619,7 @@ export const imageMeta: EntityMetadata<Image> = {
     },
   ],
   config: imageConfig,
+  factory: newImage,
 };
 
 (Image as any).metadata = imageMeta;
@@ -494,22 +664,32 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       kind: "enum",
       fieldName: "size",
       required: false,
+      enumDetailType: PublisherSizes,
     },
 
     {
       kind: "primitive",
       fieldName: "name",
+      derived: false,
       required: true,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "o2m",
@@ -518,8 +698,17 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       otherMetadata: () => authorMeta,
       otherFieldName: "publisher",
     },
+
+    {
+      kind: "o2m",
+      fieldName: "bookAdvances",
+      required: false,
+      otherMetadata: () => bookAdvanceMeta,
+      otherFieldName: "publisher",
+    },
   ],
   config: publisherConfig,
+  factory: newPublisher,
 };
 
 (Publisher as any).metadata = publisherMeta;
@@ -556,17 +745,26 @@ export const tagMeta: EntityMetadata<Tag> = {
     {
       kind: "primitive",
       fieldName: "name",
+      derived: false,
       required: true,
+      protected: false,
+      type: "string",
     },
     {
       kind: "primitive",
       fieldName: "createdAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",
       fieldName: "updatedAt",
-      required: true,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "m2m",
@@ -577,9 +775,10 @@ export const tagMeta: EntityMetadata<Tag> = {
     },
   ],
   config: tagConfig,
+  factory: newTag,
 };
 
 (Tag as any).metadata = tagMeta;
 
-const allMetadata = [authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta, tagMeta];
+const allMetadata = [authorMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, imageMeta, publisherMeta, tagMeta];
 configureMetadata(allMetadata);

@@ -1,3 +1,4 @@
+import { FactoryOpts } from "newTestInstance";
 import { CustomReference } from "./collections/CustomReference";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import { ManyToManyCollection } from "./collections/ManyToManyCollection";
@@ -31,6 +32,7 @@ export * from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
 export * from "./loadLens";
 export * from "./getProperties";
+export * from "./newTestInstance";
 
 const F = Symbol();
 const G = Symbol();
@@ -248,10 +250,8 @@ export function newRequiredRule<T extends Entity>(key: keyof T): ValidationRule<
 function errorMessage(errors: ValidationError[]): string {
   if (errors.length === 1) {
     return `Validation error: ${errors[0].message}`;
-  } else if (errors.length === 2) {
-    return `Validation errors: ${errors.map((e) => e.message).join(", ")}`;
   } else {
-    return `Validation errors (${errors.length})`;
+    return `Validation errors (${errors.length}): ${errors.map((e) => e.message).join(", ")}`;
   }
 }
 

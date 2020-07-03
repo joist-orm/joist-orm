@@ -1,6 +1,6 @@
 import { EntityManager, Lens } from "joist-orm";
 import { Author, Book, Publisher } from "./entities";
-import { insertAuthor, insertBook, insertPublisher } from "./entities/factories";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.lens", () => {

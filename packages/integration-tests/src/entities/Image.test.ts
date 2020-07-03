@@ -1,5 +1,5 @@
 import { Author, Image, ImageType, Publisher } from "@src/entities";
-import { insertAuthor, insertImage } from "@src/entities/factories";
+import { insertAuthor, insertImage } from "@src/entities/inserts";
 import { knex } from "@src/setupDbTests";
 import { EntityManager } from "joist-orm";
 

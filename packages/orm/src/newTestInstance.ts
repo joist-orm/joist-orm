@@ -20,7 +20,7 @@ import {
  *
  * 2. Works specifically against the constructor/entity opts fields.
  */
-export type FactoryOpts<T extends Entity> = (DeepPartialOpts<T> | {}) & { use?: Entity | Entity[] };
+export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & { use?: Entity | Entity[] };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
 export const jan1 = new Date(2018, 0, 1);

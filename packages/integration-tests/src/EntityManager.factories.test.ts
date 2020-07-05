@@ -128,4 +128,10 @@ describe("EntityManager.factories", () => {
     // Then the status field is set to the 1st enum value
     expect(ba.status).toEqual(AdvanceStatus.Pending);
   });
+
+  it("can tweak opts in the factory", async () => {
+    const em = new EntityManager(knex);
+    const a = newAuthor(em, { isPopular: true });
+    expect(a.age).toEqual(50);
+  });
 });

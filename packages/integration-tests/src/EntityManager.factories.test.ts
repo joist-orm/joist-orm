@@ -32,6 +32,15 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a1");
   });
 
+  it("can create a child and a required parent if opt is undefined", async () => {
+    const em = new EntityManager(knex);
+    // Given we make a book with no existing/passed authors
+    const b1 = newBook(em, { author: undefined });
+    await em.flush();
+    // Then we create the author b/c it's required
+    expect(b1.author.get.firstName).toEqual("a1");
+  });
+
   it("can create a child and a required parent with opts", async () => {
     const em = new EntityManager(knex);
     // Given we make a book with no existing/passed authors

@@ -56,7 +56,7 @@ export function newTestInstance<T extends Entity>(
           if (field.kind === "m2o") {
             if (isEntity(optValue)) {
               return [fieldName, optValue];
-            } else if (!isPlainObject(optValue)) {
+            } else if (optValue && !isPlainObject(optValue)) {
               return field.otherMetadata().factory(em, opts);
             }
             return [fieldName, field.otherMetadata().factory(em, { ...optValue, use: opts.use })];
@@ -67,8 +67,7 @@ export function newTestInstance<T extends Entity>(
             const values = (optValue as Array<any>).map((optValue) => {
               if (isEntity(optValue)) {
                 return optValue;
-              }
-              if (!isPlainObject(optValue)) {
+              } else if (optValue && !isPlainObject(optValue)) {
                 return field.otherMetadata().factory(em, optValue);
               }
               return field.otherMetadata().factory(em, {

@@ -32,6 +32,7 @@ import {
 } from "joist-orm";
 import {
   Author,
+  newAuthor,
   authorMeta,
   Publisher,
   Image,
@@ -112,10 +113,13 @@ authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorCodegen extends BaseEntity {
-  readonly __filterType: AuthorFilter = null!;
-  readonly __gqlFilterType: AuthorGraphQLFilter = null!;
-  readonly __orderType: AuthorOrder = null!;
-  readonly __optsType: AuthorOpts = null!;
+  readonly __types: {
+    filterType: AuthorFilter;
+    gqlFilterType: AuthorGraphQLFilter;
+    orderType: AuthorOrder;
+    optsType: AuthorOpts;
+    factoryOptsType: Parameters<typeof newAuthor>[1];
+  } = null!;
 
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 

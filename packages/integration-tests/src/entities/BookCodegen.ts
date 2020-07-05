@@ -31,6 +31,7 @@ import {
 } from "joist-orm";
 import {
   Book,
+  newBook,
   bookMeta,
   Author,
   Image,
@@ -95,10 +96,13 @@ bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity {
-  readonly __filterType: BookFilter = null!;
-  readonly __gqlFilterType: BookGraphQLFilter = null!;
-  readonly __orderType: BookOrder = null!;
-  readonly __optsType: BookOpts = null!;
+  readonly __types: {
+    filterType: BookFilter;
+    gqlFilterType: BookGraphQLFilter;
+    orderType: BookOrder;
+    optsType: BookOpts;
+    factoryOptsType: Parameters<typeof newBook>[1];
+  } = null!;
 
   readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
 

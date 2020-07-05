@@ -21,7 +21,7 @@ import {
   hasManyToMany,
   setField,
 } from "joist-orm";
-import { Tag, tagMeta, Book, bookMeta } from "./entities";
+import { Tag, newTag, tagMeta, Book, bookMeta } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -58,10 +58,13 @@ tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class TagCodegen extends BaseEntity {
-  readonly __filterType: TagFilter = null!;
-  readonly __gqlFilterType: TagGraphQLFilter = null!;
-  readonly __orderType: TagOrder = null!;
-  readonly __optsType: TagOpts = null!;
+  readonly __types: {
+    filterType: TagFilter;
+    gqlFilterType: TagGraphQLFilter;
+    orderType: TagOrder;
+    optsType: TagOpts;
+    factoryOptsType: Parameters<typeof newTag>[1];
+  } = null!;
 
   readonly books: Collection<Tag, Book> = hasManyToMany(
     "books_to_tags",

@@ -181,6 +181,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const hasDefaultValues = defaultValues.length > 0;
   const defaultValuesName = `${camelCase(entityName)}DefaultValues`;
 
+  const factoryMethod = imp(`new${entity.name}@./entities`);
+
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
@@ -210,10 +212,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     ${generateDefaultValidationRules(meta, configName)}
   
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
-      readonly __filterType: ${entityName}Filter = null!;
-      readonly __gqlFilterType: ${entityName}GraphQLFilter = null!;
-      readonly __orderType: ${entityName}Order = null!;
-      readonly __optsType: ${entityName}Opts = null!;
+      readonly __types: {
+        filterType: ${entityName}Filter;
+        gqlFilterType: ${entityName}GraphQLFilter;
+        orderType: ${entityName}Order;
+        optsType: ${entityName}Opts;
+        factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
+      } = null!;
       ${[o2m, m2o, o2o, m2m]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {

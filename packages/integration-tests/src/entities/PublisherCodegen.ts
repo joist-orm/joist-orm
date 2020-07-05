@@ -26,6 +26,7 @@ import {
 } from "joist-orm";
 import {
   Publisher,
+  newPublisher,
   publisherMeta,
   PublisherSize,
   Image,
@@ -77,10 +78,13 @@ publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class PublisherCodegen extends BaseEntity {
-  readonly __filterType: PublisherFilter = null!;
-  readonly __gqlFilterType: PublisherGraphQLFilter = null!;
-  readonly __orderType: PublisherOrder = null!;
-  readonly __optsType: PublisherOpts = null!;
+  readonly __types: {
+    filterType: PublisherFilter;
+    gqlFilterType: PublisherGraphQLFilter;
+    orderType: PublisherOrder;
+    optsType: PublisherOpts;
+    factoryOptsType: Parameters<typeof newPublisher>[1];
+  } = null!;
 
   readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 

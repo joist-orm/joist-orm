@@ -1,4 +1,6 @@
+import isPlainObject from "is-plain-object";
 import {
+  ActualFactoryOpts,
   Entity,
   EntityConstructor,
   EntityManager,
@@ -51,24 +53,33 @@ export function newTestInstance<T extends Entity>(
           }
 
           // If this is a partial with defaults for the entity, call newTestInstance to get it created
-          if (field.kind === "m2o" && !isEntity(optValue)) {
+          if (field.kind === "m2o") {
+            if (isEntity(optValue)) {
+              return [fieldName, optValue];
+            } else if (!isPlainObject(optValue)) {
+              return field.otherMetadata().factory(em, opts);
+            }
             return [fieldName, field.otherMetadata().factory(em, { ...optValue, use: opts.use })];
           }
 
           // If this is a list of children, watch for partials that should be newTestInstance'd
-          if (field.kind === "o2m") {
-            const values = (optValue as Array<any>).map((value) => {
-              return isEntity(value)
-                ? value
-                : newTestInstance(em, field.otherMetadata().cstr, {
-                    ...value,
-                    // We include null as a marker for "don't create the parent"; even if it's required,
-                    // once the child has been created, the act of adding it to our collection will get the
-                    // parent set. It might be better to do o2ms as a 2nd-pass, after we've done the em.create
-                    // call and could directly pass this entity instead of null.
-                    [field.otherFieldName]: null,
-                    use: opts.use,
-                  });
+          if (field.kind === "o2m" || field.kind == "m2m") {
+            const values = (optValue as Array<any>).map((optValue) => {
+              if (isEntity(optValue)) {
+                return optValue;
+              }
+              if (!isPlainObject(optValue)) {
+                return field.otherMetadata().factory(em, optValue);
+              }
+              return field.otherMetadata().factory(em, {
+                ...optValue,
+                // We include null as a marker for "don't create the parent"; even if it's required,
+                // once the child has been created, the act of adding it to our collection will get the
+                // parent set. It might be better to do o2ms as a 2nd-pass, after we've done the em.create
+                // call and could directly pass this entity instead of null.
+                [field.otherFieldName]: null,
+                use: opts.use,
+              });
             });
             return [fieldName, values];
           }
@@ -112,7 +123,7 @@ export function newTestInstance<T extends Entity>(
       })
       .filter((t) => t.length > 0),
   );
-  return (em.create(meta.cstr, fullOpts) as any) as New<T>;
+  return (em.create(meta.cstr, fullOpts as any) as any) as New<T>;
 }
 
 /**
@@ -158,10 +169,10 @@ type AllowRelationsOrPartials<T> = {
   [P in keyof T]?: T[P] extends DefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<V | DeepPartialOpts<V>>
+        ? Array<V | ActualFactoryOpts<V>>
         : T[P]
       : U extends Entity
-      ? U | DeepPartialOpts<U>
+      ? U | ActualFactoryOpts<U>
       : T[P]
     : T[P];
 };

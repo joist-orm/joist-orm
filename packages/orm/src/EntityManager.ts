@@ -32,19 +32,26 @@ export interface EntityConstructor<T> {
 }
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
-export type OptsOf<T> = T extends { __optsType: infer O } ? O : never;
+export type OptsOf<T> = T extends { __types: { optsType: infer O } } ? O : never;
 
 /** Return the `Foo` type for a given `Foo` entity constructor. */
 export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
 
 /** Pulls the entity query type out of a given entity type T. */
-export type FilterOf<T> = T extends { __filterType: infer Q } ? Q : never;
+export type FilterOf<T> = T extends { __types: { filterType: infer Q } } ? Q : never;
 
 /** Pulls the entity GraphQL query type out of a given entity type T. */
-export type GraphQLFilterOf<T> = T extends { __gqlFilterType: infer Q } ? Q : never;
+export type GraphQLFilterOf<T> = T extends { __types: { gqlFilterType: infer Q } } ? Q : never;
 
 /** Pulls the entity order type out of a given entity type T. */
-export type OrderOf<T> = T extends { __orderType: infer Q } ? Q : never;
+export type OrderOf<T> = T extends { __types: { orderType: infer Q } } ? Q : never;
+
+/**
+ * Returns the opts of the entity's `newEntity` factory method, as exists in the actual file.
+ *
+ * This is because `FactoryOpts` is a set of defaults, but the user can customize it if they want.
+ */
+export type ActualFactoryOpts<T> = T extends { __types: { factoryOptsType: infer Q } } ? Q : never;
 
 /** Pulls the entity's id type out of a given entity type T. */
 export type IdOf<T> = T extends { id: infer I | undefined } ? I : never;
@@ -854,7 +861,7 @@ export interface EntityMetadata<T extends Entity> {
   columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
   fields: Array<Field>;
   config: ConfigApi<T>;
-  factory: (em: EntityManager, opts?: FactoryOpts<T>) => New<T>;
+  factory: (em: EntityManager, opts?: any) => New<T>;
 }
 
 export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;

@@ -28,6 +28,7 @@ import {
 } from "joist-orm";
 import {
   Image,
+  newImage,
   imageMeta,
   ImageType,
   Author,
@@ -95,10 +96,13 @@ imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
 export abstract class ImageCodegen extends BaseEntity {
-  readonly __filterType: ImageFilter = null!;
-  readonly __gqlFilterType: ImageGraphQLFilter = null!;
-  readonly __orderType: ImageOrder = null!;
-  readonly __optsType: ImageOpts = null!;
+  readonly __types: {
+    filterType: ImageFilter;
+    gqlFilterType: ImageGraphQLFilter;
+    orderType: ImageOrder;
+    optsType: ImageOpts;
+    factoryOptsType: Parameters<typeof newImage>[1];
+  } = null!;
 
   readonly author: Reference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
 

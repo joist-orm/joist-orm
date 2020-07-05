@@ -27,7 +27,7 @@ import {
   hasOne,
   setField,
 } from "joist-orm";
-import { BookReview, bookReviewMeta, Book, BookId, BookOrder, bookMeta } from "./entities";
+import { BookReview, newBookReview, bookReviewMeta, Book, BookId, BookOrder, bookMeta } from "./entities";
 
 export type BookReviewId = Flavor<string, "BookReview">;
 
@@ -72,10 +72,13 @@ bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity {
-  readonly __filterType: BookReviewFilter = null!;
-  readonly __gqlFilterType: BookReviewGraphQLFilter = null!;
-  readonly __orderType: BookReviewOrder = null!;
-  readonly __optsType: BookReviewOpts = null!;
+  readonly __types: {
+    filterType: BookReviewFilter;
+    gqlFilterType: BookReviewGraphQLFilter;
+    orderType: BookReviewOrder;
+    optsType: BookReviewOpts;
+    factoryOptsType: Parameters<typeof newBookReview>[1];
+  } = null!;
 
   readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 

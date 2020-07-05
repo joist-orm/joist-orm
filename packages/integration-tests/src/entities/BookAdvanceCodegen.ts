@@ -28,6 +28,7 @@ import {
 } from "joist-orm";
 import {
   BookAdvance,
+  newBookAdvance,
   bookAdvanceMeta,
   AdvanceStatus,
   Book,
@@ -84,10 +85,13 @@ bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
 export abstract class BookAdvanceCodegen extends BaseEntity {
-  readonly __filterType: BookAdvanceFilter = null!;
-  readonly __gqlFilterType: BookAdvanceGraphQLFilter = null!;
-  readonly __orderType: BookAdvanceOrder = null!;
-  readonly __optsType: BookAdvanceOpts = null!;
+  readonly __types: {
+    filterType: BookAdvanceFilter;
+    gqlFilterType: BookAdvanceGraphQLFilter;
+    orderType: BookAdvanceOrder;
+    optsType: BookAdvanceOpts;
+    factoryOptsType: Parameters<typeof newBookAdvance>[1];
+  } = null!;
 
   readonly book: Reference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
 

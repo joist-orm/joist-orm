@@ -22,14 +22,6 @@ import {
  */
 export type FactoryOpts<T extends Entity> = (DeepPartialOpts<T> | {}) & { use?: Entity | Entity[] };
 
-/**
- * A marker value for later replacement with the test instance's "unique-ish" index.
- *
- * This is meant to just be a helpful identifier in fields like entity names/descriptions for
- * debugging purposes.
- */
-export const testIndex = "TEST_INDEX";
-
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
 export const jan1 = new Date(2018, 0, 1);
 export let testDate = jan1;
@@ -83,9 +75,7 @@ export function newTestInstance<T extends Entity>(
 
           // Look for strings that want to use the test index
           if (typeof optValue === "string" && optValue.includes(testIndex)) {
-            // Find a unique-ish test index for putting in `name` fields
-            const existing = em.entities.filter((e) => e instanceof meta.cstr);
-            const actualIndex = existing.length + 1;
+            const actualIndex = getTestIndex(em, meta.cstr);
             return [fieldName, optValue.replace(testIndex, String(actualIndex))];
           }
 
@@ -123,6 +113,28 @@ export function newTestInstance<T extends Entity>(
       .filter((t) => t.length > 0),
   );
   return (em.create(meta.cstr, fullOpts) as any) as New<T>;
+}
+
+/**
+ * A marker value for later replacement with the test instance's "unique-ish" index.
+ *
+ * This is meant to just be a helpful identifier in fields like entity names/descriptions for
+ * debugging purposes.
+ */
+export const testIndex = "TEST_INDEX";
+
+/**
+ * Returns a unique-ish test index for putting in `name` fields.
+ *
+ * Note that `testIndex` is easier to just include in a string, because it doesn't require passing
+ * the `EntityManger` and `type`. But if a factory really wants the test index as a number, they can
+ * call this method.
+ *
+ * Despite the name, these are 1-based, i.e. the first `Author` is `a1`.
+ */
+export function getTestIndex<T extends Entity>(em: EntityManager, type: EntityConstructor<T>): number {
+  const existing = em.entities.filter((e) => e instanceof type);
+  return existing.length + 1;
 }
 
 function defaultValue(field: PrimitiveField): unknown {

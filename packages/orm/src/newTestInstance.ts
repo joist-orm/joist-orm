@@ -103,7 +103,7 @@ export function newTestInstance<T extends Entity>(
 
           // Otherwise only make a new entity only if the field is required
           if (field.required) {
-            return [fieldName, otherMeta.factory(em)];
+            return [fieldName, otherMeta.factory(em, { use: opts.use })];
           }
         } else if (field.kind === "enum" && field.required) {
           return [fieldName, field.enumDetailType.getValues()[0]];

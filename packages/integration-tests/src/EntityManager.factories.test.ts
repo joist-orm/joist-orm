@@ -78,9 +78,10 @@ describe("EntityManager.factories", () => {
 
   it("can create a grandchild and specify the grandparent", async () => {
     const em = new EntityManager(knex);
-    // Given there is an existing publisher
+    // Given there are multiple existing publishers
     const p1 = newPublisher(em);
-    // When we make a book and pass along the publisher
+    newPublisher(em);
+    // When we make a book and pass along the specific publisher p1
     const b1 = newBook(em, { use: p1 });
     await em.flush();
     // Then we create a new author

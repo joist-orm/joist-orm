@@ -55,7 +55,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     this.setImpl(other);
   }
 
-  isSet(): boolean {
+  get isSet(): boolean {
     return this.current() !== undefined;
   }
 

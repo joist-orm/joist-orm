@@ -69,7 +69,7 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
   set(other: U | N): void;
 
   /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
-  isSet(): boolean;
+  isSet: boolean;
 
   [H]?: N;
 }

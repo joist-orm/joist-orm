@@ -68,14 +68,14 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: null });
-    expect(a1.mentor.isSet()).toBeFalsy();
+    expect(a1.mentor.isSet).toBeFalsy();
   });
 
   it("references can refer to undefined", async () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: undefined });
-    expect(a1.mentor.isSet()).toBeFalsy();
+    expect(a1.mentor.isSet).toBeFalsy();
   });
 
   it("references can refer to entity", async () => {

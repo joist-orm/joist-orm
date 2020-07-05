@@ -77,7 +77,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return fail(`CustomReference cannot resolve 'idOrFail'`);
   }
 
-  isSet(): boolean {
+  get isSet(): boolean {
     ensureNewOrLoaded(this);
     const { get } = this.opts;
     return get(this.entity) !== undefined;

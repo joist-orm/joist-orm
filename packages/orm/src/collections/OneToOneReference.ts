@@ -48,7 +48,7 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     return this.id || fail(`${this.entity}.${this.fieldName} has no id yet`);
   }
 
-  isSet(): boolean {
+  get isSet(): boolean {
     // This will failure if we're not loaded yet
     return this.id !== undefined;
   }

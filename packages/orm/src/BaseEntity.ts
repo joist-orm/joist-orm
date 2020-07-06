@@ -1,4 +1,5 @@
 import {
+  deTagIds,
   Entity,
   EntityManager,
   EntityOrmField,
@@ -23,6 +24,13 @@ export abstract class BaseEntity implements Entity {
   protected constructor(em: EntityManager, metadata: any, data?: Record<string, any>) {
     this.__orm = { em, metadata, data: data || {}, originalData: {} };
     em.register(this);
+  }
+
+  get idUntagged(): string | undefined {
+    if (this.id) {
+      return deTagIds(getMetadata(this), [this.id])[0];
+    }
+    return undefined;
   }
 
   abstract set(values: Partial<OptsOf<this>>): void;

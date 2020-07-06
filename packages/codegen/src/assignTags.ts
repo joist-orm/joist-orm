@@ -26,7 +26,7 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
       const tagName = existingTagNames.includes(abbreviatedTag) ? camelCase(e.name) : abbreviatedTag;
       const oc = config.entities[e.name];
       if (!oc) {
-        config.entities[e.name] = { tag: tagName, fields: {} };
+        config.entities[e.name] = { tag: tagName };
       } else {
         oc.tag = tagName;
       }

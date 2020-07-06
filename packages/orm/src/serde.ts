@@ -47,7 +47,7 @@ export class PrimaryKeySerde implements ColumnSerde {
   }
 
   mapToDb(value: any) {
-    return value;
+    return keyToNumber(this.meta(), value);
   }
 }
 

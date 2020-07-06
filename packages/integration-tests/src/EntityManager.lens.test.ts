@@ -96,6 +96,6 @@ describe("EntityManager.lens", () => {
     const em = new EntityManager(knex);
     const b1 = await em.load(Book, "1");
     const p1Id = await b1.load((b) => b.author.publisher.idOrFail);
-    expect(p1Id).toEqual("publisher:1");
+    expect(p1Id).toEqual("p:1");
   });
 });

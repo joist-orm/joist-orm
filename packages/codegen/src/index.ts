@@ -1,8 +1,7 @@
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
-import pgStructure, { Db } from "pg-structure";
-import Table from "pg-structure/dist/pg-structure/entity/table";
+import pgStructure, { Db, Table } from "pg-structure";
 import { code, Code } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
@@ -141,12 +140,8 @@ if (require.main === module) {
     const entities = entityTables.map((table) => new EntityDbMetadata(config, table));
     const dbMetadata: DbMetadata = { entityTables, enumTables, entities, enumRows };
 
-    const { needsManuallyAssigned } = assignTags(config, dbMetadata);
+    assignTags(config, dbMetadata);
     await writeConfig(config);
-
-    if (needsManuallyAssigned.length > 0) {
-      throw new Error(`Please manually assign tags for ${needsManuallyAssigned.join(", ")} in joist-codegen.json`);
-    }
 
     await generateAndSaveFiles(config, dbMetadata);
   })().catch((err) => {

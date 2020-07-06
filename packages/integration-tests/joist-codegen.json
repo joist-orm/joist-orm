@@ -11,10 +11,10 @@
       "tag": "a"
     },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
-    "Book": { "tag": "b", "fields": {} },
-    "Image": { "tag": "i", "fields": {} },
-    "Publisher": { "tag": "p", "fields": {} },
-    "Tag": { "tag": "t", "fields": {} },
-    "BookAdvance": { "tag": "ba", "fields": {} }
+    "Book": { "tag": "b" },
+    "Image": { "tag": "i" },
+    "Publisher": { "tag": "p" },
+    "Tag": { "tag": "t" },
+    "BookAdvance": { "tag": "ba" }
   }
 }

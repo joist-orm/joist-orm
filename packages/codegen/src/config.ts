@@ -10,7 +10,7 @@ export interface FieldConfig {
 
 export interface EntityConfig {
   tag: string;
-  fields: Record<string, FieldConfig>;
+  fields?: Record<string, FieldConfig>;
 }
 
 export interface Config {

@@ -214,6 +214,14 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
   });
 
+  it("can find by tagged ids", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ name: "p2" });
+    const em = new EntityManager(knex);
+    const pubs = await em.find(Publisher, { id: ["p:1", "p:2"] });
+    expect(pubs.length).toEqual(2);
+  });
+
   it("can find by enums", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     await insertPublisher({ name: "p2", size_id: 2 });

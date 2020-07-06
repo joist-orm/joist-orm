@@ -127,6 +127,10 @@ export class EntityDbMetadata {
       .map((r) => newManyToManyField(r));
     this.tableName = table.name;
   }
+
+  get name(): string {
+    return this.entity.name;
+  }
 }
 
 function isMultiColumnForeignKey(r: M2ORelation) {

@@ -1,43 +1,45 @@
-import { snakeCase } from "change-case";
+import { snakeCase, camelCase } from "change-case";
 import { DbMetadata } from "./index";
 import { Config } from "./config";
 
 /**
  * Looks for any entities that don't have tags in `config` yet, and guesses at what a good tag would be.
  *
- * The current guess is `BookReview` -> `br`.
+ * The current guess is `BookReview` -> `br`. If that guess is already taken, we use the full entity name,
+ * i.e. `bookReview`. The user can then customize the tags as they want directly in `joist-codegen.json`.
  *
- * We also mutate `config` by putting the guessed tag (assuming it's not already taken) on the entity's config.
- *
- * If a guessed tag name is already taken, we'll prompt the user to set their own tag in joist-codegen.json.
+ * We also mutate `config` by putting the new tag into the `config`'s entity entry.
  */
-export function assignTags(config: Config, dbMetadata: DbMetadata): { needsManuallyAssigned: string[] } {
+export function assignTags(config: Config, dbMetadata: DbMetadata): void {
   const existingTags = Object.fromEntries(
     Object.entries(config.entities).map(([name, conf]) => {
       return [name, conf.tag];
     }),
   );
 
-  const needsManuallyAssigned: string[] = [];
+  const existingTagNames = Object.values(existingTags);
 
   dbMetadata.entities
-    .filter((e) => !existingTags[e.entity.name])
+    .filter((e) => !existingTags[e.name])
     .forEach((e) => {
-      // Abbreviate BookReview -> book_review -> br
-      const potentialTag = snakeCase(e.entity.name)
-        .split("_")
-        .map((w) => w[0])
-        .join("");
-      if (Object.values(existingTags).includes(potentialTag)) {
-        needsManuallyAssigned.push(e.entity.name);
+      const abbreviatedTag = guessTagName(e.name);
+      const tagName = existingTagNames.includes(abbreviatedTag) ? camelCase(e.name) : abbreviatedTag;
+      const oc = config.entities[e.name];
+      if (!oc) {
+        config.entities[e.name] = { tag: tagName, fields: {} };
       } else {
-        let oc = config.entities[e.entity.name];
-        if (!oc) {
-          oc = config.entities[e.entity.name] = { tag: potentialTag, fields: {} };
-        }
-        oc.tag = potentialTag;
+        oc.tag = tagName;
       }
+      existingTagNames.push(tagName);
     });
 
-  return { needsManuallyAssigned };
+  // TODO ensure tags are unique
+}
+
+/** Abbreviates `BookReview` -> `book_review` -> `br`. */
+function guessTagName(name: string): string {
+  return snakeCase(name)
+    .split("_")
+    .map((w) => w[0])
+    .join("");
 }

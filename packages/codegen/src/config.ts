@@ -50,7 +50,7 @@ export async function loadConfig(): Promise<Config> {
 }
 
 /**
- * Writes the potentially-updated config entry back to `joist-codegen.json.
+ * Writes the potentially-updated config entry back to `joist-codegen.json`.
  *
  * We format the output with prettier so it should both a) look nice and b) be deterministic,
  * such that no changes to the config show up as noops to the scm.

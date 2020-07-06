@@ -90,7 +90,7 @@ describe("OneToManyCollection", () => {
     // And the book association to a2 is persisted to the database.
     await em.flush();
     const rows = await knex.select("*").from("books");
-    expect(`author:${rows[0].author_id}`).toEqual(a2.id);
+    expect(`a:${rows[0].author_id}`).toEqual(a2.id);
   });
 
   it("can add to one collection and remove from other when already persisted", async () => {
@@ -121,7 +121,7 @@ describe("OneToManyCollection", () => {
     // And the book association to a2 is persisted to the database.
     await em2.flush();
     const rows = await knex.select("*").from("books");
-    expect(`author:${rows[0].author_id}`).toEqual(a2_2.id);
+    expect(`a:${rows[0].author_id}`).toEqual(a2_2.id);
   });
 
   it("can add to collection from the other side", async () => {
@@ -148,7 +148,7 @@ describe("OneToManyCollection", () => {
     // Then the collection has both books in it
     expect(books.length).toEqual(2);
     expect(books[0].id).toEqual(undefined);
-    expect(books[1].id).toEqual("book:1");
+    expect(books[1].id).toEqual("b:1");
   });
 
   it("combines both pre-loaded and post-loaded removed entities", async () => {

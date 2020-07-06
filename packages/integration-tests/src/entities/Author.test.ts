@@ -284,7 +284,7 @@ describe("Author", () => {
       expect(a1.changes.publisher.originalValue).toBeUndefined();
       a1.publisher.set(await em.load(Publisher, "2"));
       expect(a1.changes.publisher.hasChanged).toBeTruthy();
-      expect(a1.changes.publisher.originalValue).toEqual("publisher:1");
+      expect(a1.changes.publisher.originalValue).toEqual("p:1");
     });
   });
 

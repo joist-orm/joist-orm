@@ -2,8 +2,10 @@ import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure, { Db } from "pg-structure";
+import Table from "pg-structure/dist/pg-structure/entity/table";
 import { code, Code } from "ts-poet";
-import { Config, defaultConfig } from "./config";
+import { assignTags } from "./assignTags";
+import { Config, loadConfig, writeConfig } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
@@ -27,8 +29,8 @@ export type EnumRows = Record<string, EnumRow[]>;
 export type EnumRow = { id: number; code: string; name: string };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
-export async function generateAndSaveFiles(config: Config, db: Db, enumRows: EnumRows): Promise<void> {
-  const files = generateFiles(config, db, enumRows);
+export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): Promise<void> {
+  const files = generateFiles(config, dbMeta);
   await fs.mkdir(config.entitiesDirectory, { recursive: true });
   for await (const file of files) {
     const path = `${config.entitiesDirectory}/${file.name}`;
@@ -44,11 +46,8 @@ export async function generateAndSaveFiles(config: Config, db: Db, enumRows: Enu
 }
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
-export function generateFiles(config: Config, db: Db, enumRows: EnumRows): CodeGenFile[] {
-  const entityTables = db.tables.filter(isEntityTable).sortBy("name");
-  const enums = db.tables.filter(isEnumTable).sortBy("name");
-  const entities = entityTables.map((table) => new EntityDbMetadata(config, table));
-
+export function generateFiles(config: Config, dbMeta: DbMetadata): CodeGenFile[] {
+  const { entities, enumTables: enums, enumRows } = dbMeta;
   const entityFiles = entities
     .map((meta) => {
       const entityName = meta.entity.name;
@@ -122,16 +121,6 @@ export async function contentToString(content: Code | string, fileName: string):
   return await content.toStringWithImports(fileName);
 }
 
-async function loadConfig(): Promise<Config> {
-  const configPath = "./joist-codegen.json";
-  const exists = await trueIfResolved(fs.access(configPath));
-  if (exists) {
-    const content = await fs.readFile(configPath);
-    return { ...defaultConfig, ...(JSON.parse(content.toString()) as Config) };
-  }
-  return defaultConfig;
-}
-
 if (require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
@@ -146,9 +135,29 @@ if (require.main === module) {
     await client.end();
 
     const config = await loadConfig();
-    await generateAndSaveFiles(config, db, enumRows);
+
+    const entityTables = db.tables.filter(isEntityTable).sortBy("name");
+    const enumTables = db.tables.filter(isEnumTable).sortBy("name");
+    const entities = entityTables.map((table) => new EntityDbMetadata(config, table));
+    const dbMetadata: DbMetadata = { entityTables, enumTables, entities, enumRows };
+
+    const { needsManuallyAssigned } = assignTags(config, dbMetadata);
+    await writeConfig(config);
+
+    if (needsManuallyAssigned.length > 0) {
+      throw new Error(`Please manually assign tags for ${needsManuallyAssigned.join(", ")} in joist-codegen.json`);
+    }
+
+    await generateAndSaveFiles(config, dbMetadata);
   })().catch((err) => {
     console.error(err);
     process.exit(1);
   });
+}
+
+export interface DbMetadata {
+  entityTables: Table[];
+  enumTables: Table[];
+  entities: EntityDbMetadata[];
+  enumRows: EnumRows;
 }

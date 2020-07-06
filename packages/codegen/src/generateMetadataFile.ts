@@ -17,7 +17,7 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
-      tagName: "${camelCase(entity.name)}",
+      tagName: "${config.entities[entity.name].tag}",
       tableName: "${dbMetadata.tableName}",
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
       fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ],

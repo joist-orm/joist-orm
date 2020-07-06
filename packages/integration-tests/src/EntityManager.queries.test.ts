@@ -148,7 +148,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
-    const publisherId: PublisherId = "publisher:1";
+    const publisherId: PublisherId = "p:1";
     const authors = await em.find(Author, { publisher: publisherId });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
@@ -159,9 +159,9 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
     const em = new EntityManager(knex);
-    const publisherId: PublisherId = "author:1";
+    const publisherId: PublisherId = "a:1";
     await expect(em.find(Author, { publisher: publisherId })).rejects.toThrow(
-      "Invalid tagged id, expected tag publisher, got author:1",
+      "Invalid tagged id, expected tag p, got a:1",
     );
   });
 

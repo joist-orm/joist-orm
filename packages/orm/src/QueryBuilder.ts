@@ -156,7 +156,7 @@ export function buildQuery<T extends Entity>(
           if (value === null || value === undefined) {
             query = query.whereNotNull(`${alias}.${column.columnName}`);
           } else if (typeof value === "string") {
-            query = query.whereNot(`${alias}.${column.columnName}`, value);
+            query = query.whereNot(`${alias}.${column.columnName}`, column.serde.mapToDb(value));
           } else {
             throw new Error("Not implemented");
           }
@@ -178,25 +178,25 @@ export function buildQuery<T extends Entity>(
         }
       } else {
         // This is not a foreign key column, so it'll have the primitive filters/order bys
-        if (clause instanceof Object && operators.find((p) => Object.keys(clause).includes(p))) {
+        if (clause instanceof Object && operators.find((op) => Object.keys(clause).includes(op))) {
           // I.e. `{ primitiveField: { op: value } }`
-          const p = Object.keys(clause)[0] as Operator;
-          const value = (clause as any)[p];
+          const op = Object.keys(clause)[0] as Operator;
+          const value = (clause as any)[op];
           if (value === null || value === undefined) {
-            if (p === "ne") {
+            if (op === "ne") {
               query = query.whereNotNull(`${alias}.${column.columnName}`);
-            } else if (p === "eq") {
+            } else if (op === "eq") {
               query = query.whereNull(`${alias}.${column.columnName}`);
             } else {
               throw new Error("Only ne is supported when the value is undefined or null");
             }
-          } else if (p === "in") {
+          } else if (op === "in") {
             query = query.whereIn(
               `${alias}.${column.columnName}`,
               (value as Array<any>).map((v) => column.serde.mapToDb(v)),
             );
           } else {
-            const fn = opToFn[p];
+            const fn = opToFn[op];
             query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
           }
         } else if (Array.isArray(clause)) {

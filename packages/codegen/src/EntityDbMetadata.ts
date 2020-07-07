@@ -190,7 +190,7 @@ function newManyToOneField(entity: Entity, r: M2ORelation): ManyToOneField {
   const fieldName = camelCase(column.name.replace("_id", ""));
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
-  const otherFieldName = isOneToOne ? camelCase(entity.name) : collectionName(otherEntity, entity);
+  const otherFieldName = isOneToOne ? camelCase(entity.name) : collectionName(otherEntity, entity, r);
   const notNull = column.notNull;
   return { fieldName, columnName, otherEntity, otherFieldName, notNull };
 }
@@ -200,7 +200,7 @@ function newOneToMany(entity: Entity, r: O2MRelation): OneToManyField {
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  const fieldName = collectionName(entity, otherEntity);
+  const fieldName = collectionName(entity, otherEntity, r);
   const otherFieldName = camelCase(column.name.replace("_id", ""));
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
@@ -220,11 +220,16 @@ function newOneToOne(entity: Entity, r: O2MRelation): OneToOneField {
 }
 
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
-export function collectionName(entity: Entity, otherEntity: Entity): string {
-  // TODO Handle multiple fks from otherEntity --> entity
+export function collectionName(entity: Entity, otherEntity: Entity, r: M2ORelation | O2MRelation): string {
   // TODO Handle conflicts in names
   // I.e. if the other side is `child.project_id`, use `children`.
   let fieldName = otherEntity.name;
+  // check if we multiple FKs from otherEntity --> entity and prefix with FK name if so
+  const sourceTable = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
+  const targetTable = r instanceof M2ORelation ? r.targetTable : r.sourceTable;
+  if (sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
+    fieldName = `${r.foreignKey.columns[0].name.replace("_id", "")}_${fieldName}`;
+  }
   // If the other side is `book_reviews.book_id`, use `reviews`.
   if (fieldName.length > entity.name.length) {
     fieldName = fieldName.replace(entity.name, "");

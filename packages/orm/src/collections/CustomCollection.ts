@@ -73,11 +73,16 @@ export class CustomCollection<T extends Entity, U extends Entity> extends Abstra
 
   set(values: U[]): void {
     ensureNewOrLoaded(this);
-    const { set } = this.opts;
-    if (set === undefined) {
-      fail(`'set' not implemented on ${this}`);
+    const { set, add, remove } = this.opts;
+    if (set !== undefined) {
+      set(this.entity, values);
+    } else if (add !== undefined && remove !== undefined) {
+      const current = this.get;
+      current.filter((value) => !values.includes(value)).forEach((value) => this.remove(value));
+      values.filter((value) => !current.includes(value)).forEach((value) => this.add(value));
+    } else {
+      fail(`'set' not implemented and not inferrable from 'add'/'remove' on ${this}`);
     }
-    set(this.entity, values);
   }
 
   setFromOpts(values: U[]): void {

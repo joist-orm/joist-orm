@@ -14,11 +14,6 @@ export class Publisher extends PublisherCodegen {
       });
       return images.filter((imageOrUndefined) => imageOrUndefined !== undefined) as Image[];
     },
-    set: (entity, values) => {
-      const allImages = (entity as Loaded<Publisher, "allImages">).allImages;
-      values.forEach((image) => allImages.add(image));
-      allImages.get.filter((image) => !values.includes(image)).forEach((image) => allImages.remove(image));
-    },
     add: (entity, value) => {
       const allImages = (entity as Loaded<Publisher, "allImages">).allImages;
       if (!allImages.get.includes(value)) {

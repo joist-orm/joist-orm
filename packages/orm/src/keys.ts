@@ -57,3 +57,8 @@ export function tagIfNeeded(meta: HasTagName, id: string): string {
 export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly string[] {
   return keys.map((k) => keyToNumber(meta, k)).map((n) => n.toString());
 }
+
+/** Removes the tag prefixes so we can use the keys for SQL operations. */
+export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
+  return keys.map((k) => k.split(tagDelimiter)).map((t) => (t.length === 0 ? t[0] : t[1]));
+}

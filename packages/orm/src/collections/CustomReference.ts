@@ -1,5 +1,5 @@
 import { Entity, IdOf } from "../EntityManager";
-import { ensureNotDeleted, fail, Reference } from "../index";
+import { deTagIds, ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
@@ -75,6 +75,15 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   get idOrFail(): IdOf<U> {
     return fail(`CustomReference cannot resolve 'idOrFail'`);
+  }
+
+  get idUntagged(): string | undefined {
+    // We don't know the meta here but that is probably a feature in case this is polymorphic
+    return this.id && unsafeDeTagIds([this.id])[0];
+  }
+
+  get idUntaggedOrFail(): string {
+    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
   }
 
   get isSet(): boolean {

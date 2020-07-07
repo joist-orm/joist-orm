@@ -33,6 +33,10 @@ export abstract class BaseEntity implements Entity {
     return undefined;
   }
 
+  get idUntaggedOrFail(): string {
+    return this.idUntagged || fail("Entity has no id yet");
+  }
+
   abstract set(values: Partial<OptsOf<this>>): void;
 
   /**

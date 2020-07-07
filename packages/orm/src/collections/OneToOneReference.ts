@@ -1,4 +1,4 @@
-import { ensureNotDeleted, fail, getEm, IdOf, Reference } from "../";
+import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, unsafeDeTagIds } from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -46,6 +46,14 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
 
   get idOrFail(): IdOf<U> {
     return this.id || fail(`${this.entity}.${this.fieldName} has no id yet`);
+  }
+
+  get idUntagged(): string | undefined {
+    return this.id && deTagIds(this.otherMeta, [this.id])[0];
+  }
+
+  get idUntaggedOrFail(): string {
+    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
   }
 
   get isSet(): boolean {

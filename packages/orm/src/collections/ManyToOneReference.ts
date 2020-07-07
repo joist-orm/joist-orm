@@ -1,5 +1,6 @@
 import { Entity, EntityConstructor, EntityMetadata, getMetadata, IdOf, isEntity } from "../EntityManager";
 import {
+  deTagIds,
   ensureNotDeleted,
   fail,
   getEm,
@@ -85,6 +86,14 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   get idOrFail(): IdOf<U> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     return this.id || fail("Reference is unset or assigned to a new entity");
+  }
+
+  get idUntagged(): string | undefined {
+    return this.id && deTagIds(this.otherMeta, [this.id])[0];
+  }
+
+  get idUntaggedOrFail(): string {
+    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
   }
 
   // private impl

@@ -65,6 +65,10 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
   /** Returns the id of the current assigned entity or a runtime error if it's either a) unset or b) set to a new entity that doesn't have an `id` yet. */
   idOrFail: IdOf<U>;
 
+  idUntagged: string | undefined;
+
+  idUntaggedOrFail: string;
+
   load(opts?: { withDeleted: boolean }): Promise<U | N>;
 
   set(other: U | N): void;

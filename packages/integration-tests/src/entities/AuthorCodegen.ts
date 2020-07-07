@@ -49,6 +49,8 @@ export type AuthorId = Flavor<string, "Author">;
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
+  initials: string;
+  numberOfBooks: number;
   isPopular?: boolean | null;
   age?: number | null;
   wasEverPopular?: boolean | null;
@@ -156,13 +158,20 @@ export abstract class AuthorCodegen extends BaseEntity {
     setField(this, "lastName", lastName);
   }
 
-  abstract get initials(): string;
+  get initials(): string {
+    return this.__orm.data["initials"];
+  }
+
+  set initials(initials: string) {
+    setField(this, "initials", initials);
+  }
 
   get numberOfBooks(): number {
-    if (!("numberOfBooks" in this.__orm.data)) {
-      throw new Error("numberOfBooks has not been derived yet");
-    }
     return this.__orm.data["numberOfBooks"];
+  }
+
+  set numberOfBooks(numberOfBooks: number) {
+    setField(this, "numberOfBooks", numberOfBooks);
   }
 
   get isPopular(): boolean | undefined {
@@ -185,7 +194,7 @@ export abstract class AuthorCodegen extends BaseEntity {
     return this.__orm.data["wasEverPopular"];
   }
 
-  protected setWasEverPopular(wasEverPopular: boolean | undefined) {
+  set wasEverPopular(wasEverPopular: boolean | undefined) {
     setField(this, "wasEverPopular", wasEverPopular);
   }
 

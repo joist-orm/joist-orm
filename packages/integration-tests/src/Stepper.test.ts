@@ -23,18 +23,20 @@ export class Stepper {
     }
 
     // Start the next step after this one is done
-    result.finally(() => {
-      this.step = step + 1;
-      const nextStep = this.pendingSteps[this.step];
-      if (nextStep) {
-        // ...maybe do this as a setTimeout? It seems to be working fine as-is.
-        nextStep.resolve();
-      }
-    }).catch(() => {
-      // The new `.finally` is technically a new promise that we want to keep
-      // from hitting the uncaught error handler. The caller should be `.catch`ing
-      // the `result` that we return to them, so we can ignore it here.
-    });
+    result
+      .finally(() => {
+        this.step = step + 1;
+        const nextStep = this.pendingSteps[this.step];
+        if (nextStep) {
+          // ...maybe do this as a setTimeout? It seems to be working fine as-is.
+          nextStep.resolve();
+        }
+      })
+      .catch(() => {
+        // The new `.finally` is technically a new promise that we want to keep
+        // from hitting the uncaught error handler. The caller should be `.catch`ing
+        // the `result` that we return to them, so we can ignore it here.
+      });
 
     return result;
   }

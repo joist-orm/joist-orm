@@ -36,10 +36,9 @@ import {
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
-  tagName: "a",
   tableName: "authors",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => authorMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "firstName",
@@ -131,16 +130,16 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "initials",
-      derived: "sync",
-      required: false,
+      derived: false,
+      required: true,
       protected: false,
       type: "string",
     },
     {
       kind: "primitive",
       fieldName: "numberOfBooks",
-      derived: "async",
-      required: false,
+      derived: false,
+      required: true,
       protected: false,
       type: "number",
     },
@@ -165,7 +164,7 @@ export const authorMeta: EntityMetadata<Author> = {
       fieldName: "wasEverPopular",
       derived: false,
       required: false,
-      protected: true,
+      protected: false,
       type: "boolean",
     },
     {
@@ -215,14 +214,6 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "author",
     },
-
-    {
-      kind: "o2o",
-      fieldName: "image",
-      required: false,
-      otherMetadata: () => imageMeta,
-      otherFieldName: "author",
-    },
   ],
   config: authorConfig,
   factory: newAuthor,
@@ -233,10 +224,9 @@ export const authorMeta: EntityMetadata<Author> = {
 export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
-  tagName: "b",
   tableName: "books",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => bookMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "title",
@@ -335,14 +325,6 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => tagMeta,
       otherFieldName: "books",
     },
-
-    {
-      kind: "o2o",
-      fieldName: "image",
-      required: false,
-      otherMetadata: () => imageMeta,
-      otherFieldName: "book",
-    },
   ],
   config: bookConfig,
   factory: newBook,
@@ -353,10 +335,9 @@ export const bookMeta: EntityMetadata<Book> = {
 export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   cstr: BookAdvance,
   type: "BookAdvance",
-  tagName: "ba",
   tableName: "book_advances",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => bookAdvanceMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "status",
@@ -442,10 +423,9 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
 export const bookReviewMeta: EntityMetadata<BookReview> = {
   cstr: BookReview,
   type: "BookReview",
-  tagName: "br",
   tableName: "book_reviews",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => bookReviewMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "rating",
@@ -492,8 +472,8 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "primitive",
       fieldName: "isPublic",
-      derived: "async",
-      required: false,
+      derived: false,
+      required: true,
       protected: false,
       type: "boolean",
     },
@@ -530,10 +510,9 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
-  tagName: "i",
   tableName: "images",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => imageMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "type",
@@ -636,7 +615,7 @@ export const imageMeta: EntityMetadata<Image> = {
       fieldName: "publisher",
       required: false,
       otherMetadata: () => publisherMeta,
-      otherFieldName: "image",
+      otherFieldName: "images",
     },
   ],
   config: imageConfig,
@@ -648,10 +627,9 @@ export const imageMeta: EntityMetadata<Image> = {
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
-  tagName: "p",
   tableName: "publishers",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => publisherMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "size",
@@ -730,8 +708,8 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     },
 
     {
-      kind: "o2o",
-      fieldName: "image",
+      kind: "o2m",
+      fieldName: "images",
       required: false,
       otherMetadata: () => imageMeta,
       otherFieldName: "publisher",
@@ -746,10 +724,9 @@ export const publisherMeta: EntityMetadata<Publisher> = {
 export const tagMeta: EntityMetadata<Tag> = {
   cstr: Tag,
   type: "Tag",
-  tagName: "t",
   tableName: "tags",
   columns: [
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => tagMeta, "id", "id") },
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde("id", "id") },
 
     {
       fieldName: "name",

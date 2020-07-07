@@ -1,9 +1,4 @@
-import { FactoryOpts } from "newTestInstance";
-import { CustomReference } from "./collections/CustomReference";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
-import { ManyToManyCollection } from "./collections/ManyToManyCollection";
-import { ManyToOneReference } from "./collections/ManyToOneReference";
-import { OneToManyCollection } from "./collections/OneToManyCollection";
 import {
   Entity,
   EntityConstructor,

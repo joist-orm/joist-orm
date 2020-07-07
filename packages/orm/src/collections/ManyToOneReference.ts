@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, EntityMetadata, getMetadata, IdOf, isEntity } from "../EntityManager";
+import { Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
 import {
   deTagIds,
   ensureNotDeleted,
@@ -145,11 +145,14 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N): void {
-    if (this.isLoaded && other === this.loaded) {
+    if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
       return;
     }
 
-    const previousLoaded = this.loaded;
+    // we may not be loaded yet, but our previous entity might already be in the UoW
+    const previousLoaded =
+      this.loaded ??
+      (this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.otherMeta.cstr, this.id) : undefined);
 
     ensureNotDeleted(this.entity, { ignore: "pending" });
 

@@ -2,6 +2,7 @@ import { Image, ImageType, PublisherCodegen, publisherConfig } from "./entities"
 import { Collection, CustomCollection, getEm, Loaded } from "joist-orm";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
+
 export class Publisher extends PublisherCodegen {
   readonly allImages: Collection<Publisher, Image> = new CustomCollection(this, {
     load: (entity) => entity.populate(allImagesHint),

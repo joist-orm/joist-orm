@@ -224,7 +224,7 @@ export function collectionName(entity: Entity, otherEntity: Entity, r: M2ORelati
   // TODO Handle conflicts in names
   // I.e. if the other side is `child.project_id`, use `children`.
   let fieldName = otherEntity.name;
-  // check if we multiple FKs from otherEntity --> entity and prefix with FK name if so
+  // check if we have multiple FKs from otherEntity --> entity and prefix with FK name if so
   const sourceTable = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
   const targetTable = r instanceof M2ORelation ? r.targetTable : r.sourceTable;
   if (sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {

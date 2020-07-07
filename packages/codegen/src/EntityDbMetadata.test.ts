@@ -1,6 +1,7 @@
 import { collectionName, makeEntity } from "./EntityDbMetadata";
 
 const relationDummy: any = { targetTable: { m2oRelations: [] } };
+
 describe("EntityDbMetadata", () => {
   describe("collectionName", () => {
     it("handles base case", () => {

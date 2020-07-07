@@ -21,12 +21,9 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
   opts: HasManyDerivedOpts<T, U, H>,
 ): Collection<T, U> {
   const entity: T = currentlyInstantiatingEntity as T;
-  const { load, get, set, add, remove } = opts;
+  const { load, ...rest } = opts;
   return new CustomCollection<T, U>(entity, {
     load: load ?? (async (entity) => await getEm(entity).populate(entity, loadHint)),
-    get: () => get(entity as Loaded<T, H>),
-    set: set !== undefined ? (_, values) => set(entity as Loaded<T, H>, values) : undefined,
-    add: add !== undefined ? (_, value) => add(entity as Loaded<T, H>, value) : undefined,
-    remove: remove !== undefined ? (_, value) => remove(entity as Loaded<T, H>, value) : undefined,
-  });
+    ...rest,
+  } as any);
 }

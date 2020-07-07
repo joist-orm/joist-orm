@@ -5,7 +5,7 @@ describe("connection", () => {
     const info = parsePgConnectionConfig(
       `{"host":"db","port":5432,"username":"joist","password":"local","dbname":"joist"}`,
     );
-    expect(info).toMatchObject({
+    expect(info).toEqual({
       database: "joist",
       host: "db",
       password: "local",
@@ -16,7 +16,7 @@ describe("connection", () => {
 
   it("should parse connection-string-style", () => {
     const info = parsePgConnectionConfig("postgres://joist:local@db:5432/joist");
-    expect(info).toMatchObject({
+    expect(info).toEqual({
       database: "joist",
       host: "db",
       password: "local",

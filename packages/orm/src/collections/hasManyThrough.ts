@@ -15,6 +15,6 @@ export function hasManyThrough<T extends Entity, U extends Entity>(
     load: async (entity) => {
       await loadLens(entity, lens);
     },
-    get: () => getLens(entity, lens) as U[],
+    get: () => getLens(entity, lens),
   });
 }

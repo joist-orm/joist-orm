@@ -75,7 +75,7 @@ function maybeLoad(object: any, path: string): unknown {
  *
  * This assumes you've first evaluated the lens with `loadLens` and now can access it synchronously.
  */
-export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V | V[] {
+export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V {
   const paths = collectPaths(fn);
   let current: any = start;
   // Now evaluate each step of the path

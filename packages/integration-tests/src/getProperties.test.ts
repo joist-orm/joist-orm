@@ -1,9 +1,9 @@
-import { authorMeta, bookMeta, bookReviewMeta, imageMeta } from "@src/entities";
+import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "@src/entities";
 import { getProperties } from "joist-orm";
 
 describe("getProperties", () => {
   it("should work", () => {
-    expect(getProperties(bookMeta)).toEqual(expect.arrayContaining(["advances", "reviews", "author", "image", "tags"]));
+    expect(getProperties(bookMeta)).toEqual(["advances", "reviews", "author", "image", "tags"]);
   });
 
   it("works for custom references", () => {
@@ -11,7 +11,7 @@ describe("getProperties", () => {
   });
 
   it("works for custom collections", () => {
-    expect(getProperties(imageMeta)).toEqual(expect.arrayContaining(["owner"]));
+    expect(getProperties(publisherMeta)).toEqual(expect.arrayContaining(["allImages"]));
   });
 
   it("works for hasOneThrough and hasOneDerived", () => {

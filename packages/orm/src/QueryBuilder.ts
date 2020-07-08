@@ -1,6 +1,15 @@
 import Knex, { QueryBuilder } from "knex";
 import { fail } from "./utils";
-import { Entity, EntityConstructor, EntityMetadata, getMetadata, isEntity, FilterOf, OrderOf } from "./EntityManager";
+import {
+  Entity,
+  EntityConstructor,
+  EntityMetadata,
+  getMetadata,
+  isEntity,
+  FilterOf,
+  OrderOf,
+  entityLimit,
+} from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
 
 export type OrderBy = "ASC" | "DESC";
@@ -216,9 +225,7 @@ export function buildQuery<T extends Entity>(
   if (!orderBy) {
     query = query.orderBy(`${alias}.id`);
   }
-  if (limit) {
-    query = query.limit(limit);
-  }
+  query = query.limit(limit || entityLimit);
   if (offset) {
     query = query.offset(offset);
   }

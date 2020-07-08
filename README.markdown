@@ -1,4 +1,3 @@
-
 ![npm](https://img.shields.io/npm/v/joist-orm)
 [![CircleCI](https://circleci.com/gh/stephenh/joist-ts.svg?style=svg)](https://circleci.com/gh/stephenh/joist-ts)
 
@@ -49,13 +48,13 @@ After checkout:
 ### Todo
 
 In general priority/itch order:
- 
+
 - Open source a `joist-graphql-utils` with the `entityResolver` logic in it
 - Fix reactive rules not catching "middle-references" changing (fixed?)
-- Support `documentId`-style props in unsafe methods
+- Support `documentId`-style props in partial methods
 - Optionally move `begin` to the start of Unit of Work
 - `readonly asyncValue` that integrations into `populate`
-- Codegen'd test builders 
+- Codegen'd test builders
 - Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)
 - Support user-defined types
 - LargeCollection support
@@ -64,6 +63,8 @@ In general priority/itch order:
 - First-class support for soft deletion?
 - Op locks/`version` column?
 - An in-memory backend
+- `hasOneThrough` that can be used as `find`/SQL filters
+  - Need to declare in codegen to a) add to FilterType + b) verify once traverses relations
 
 ### History / Inspiration
 
@@ -76,5 +77,3 @@ The `EntityManager.find` syntax is heavily inspired from [MikroORM](https://mikr
 ### License
 
 MIT
-
-

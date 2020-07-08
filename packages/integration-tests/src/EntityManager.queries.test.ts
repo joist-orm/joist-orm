@@ -1,4 +1,4 @@
-import { EntityManager, NotFoundError, TooManyError } from "joist-orm";
+import { EntityManager, NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
 import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
@@ -441,6 +441,20 @@ describe("EntityManager.queries", () => {
     expect(p43.length).toEqual(2);
     expect(p43[0].name).toEqual("p2");
     expect(p43[1].name).toEqual("p1");
+  });
+
+  it("cannot find too many entities", async () => {
+    try {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      setEntityLimit(3);
+      const em = new EntityManager(knex);
+      await expect(em.find(Author, {})).rejects.toThrow("Query returned more than 3 rows");
+    } finally {
+      setDefaultEntityLimit();
+    }
   });
 });
 

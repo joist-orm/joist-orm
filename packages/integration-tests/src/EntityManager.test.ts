@@ -1,4 +1,4 @@
-import { EntityManager, Loaded } from "joist-orm";
+import { entityLimit, EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 import {
@@ -616,7 +616,7 @@ describe("EntityManager", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toMatchInlineSnapshot(`
       Array [
-        "select \\"p0\\".* from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc",
+        "select \\"p0\\".* from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc limit ?",
       ]
     `);
     // And both results are the same
@@ -639,7 +639,7 @@ describe("EntityManager", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       Array [
-        "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" ASC, \\"p0\\".\\"id\\" ASC) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" DESC, \\"p0\\".\\"id\\" DESC) order by \\"__tag\\" asc",
+        "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" ASC, \\"p0\\".\\"id\\" ASC limit ?) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" DESC, \\"p0\\".\\"id\\" DESC limit ?) order by \\"__tag\\" asc",
       ]
     `);
     // And the results are the expected reverse of each other
@@ -830,6 +830,21 @@ describe("EntityManager", () => {
       firstName: "a1",
       publisher: "Publisher#undefined",
     });
+  });
+
+  it("cannot load too many entities", async () => {
+    try {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertPublisher({ name: "p1" });
+
+      setEntityLimit(3);
+      const em = new EntityManager(knex);
+      await em.find(Author, {});
+      await expect(em.find(Publisher, {})).rejects.toThrow("More than 3 entities have been instantiated");
+    } finally {
+      setDefaultEntityLimit();
+    }
   });
 });
 

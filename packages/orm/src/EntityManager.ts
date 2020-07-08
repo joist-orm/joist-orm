@@ -11,7 +11,6 @@ import {
   ConfigApi,
   DeepPartialOrNull,
   EntityHook,
-  FactoryOpts,
   getEm,
   LoadedCollection,
   LoadedReference,
@@ -517,6 +516,9 @@ export class EntityManager {
     entity.__orm.data["createdAt"] = new Date();
     entity.__orm.data["updatedAt"] = new Date();
     this._entities.push(entity);
+    if (this._entities.length >= entityLimit) {
+      throw new Error(`More than ${entityLimit} entities have been instantiated`);
+    }
     currentlyInstantiatingEntity = entity;
   }
 
@@ -697,9 +699,16 @@ export class EntityManager {
     return getOrSet(this.findLoaders, type.name, () => {
       return new DataLoader<FilterAndSettings<T>, unknown[], string>(
         async (queries) => {
+          function ensureUnderLimit(rows: unknown[]): unknown[] {
+            if (rows.length >= entityLimit) {
+              throw new Error(`Query returned more than ${entityLimit} rows`);
+            }
+            return rows;
+          }
+
           // If there is only 1 query, we can skip the tagging step.
           if (queries.length === 1) {
-            return [await buildQuery(this.knex, type, queries[0])];
+            return [ensureUnderLimit(await buildQuery(this.knex, type, queries[0]))];
           }
 
           const { knex } = this;
@@ -718,7 +727,7 @@ export class EntityManager {
 
           // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
           if (uniqueQueries.length === 1) {
-            const rows = await buildQuery(this.knex, type, queries[0]);
+            const rows = ensureUnderLimit(await buildQuery(this.knex, type, queries[0]));
             // Reuse this same result for however many callers asked for it.
             return queries.map(() => rows);
           }
@@ -760,7 +769,7 @@ export class EntityManager {
           });
 
           // Issue a single SQL statement for all of them
-          const rows = await query;
+          const rows = ensureUnderLimit(await query);
 
           const resultForUniques: any[][] = [];
           uniqueQueries.forEach((q, i) => {
@@ -851,6 +860,16 @@ export class EntityManager {
   public toString(): string {
     return "EntityManager";
   }
+}
+
+export let entityLimit = 10_000;
+
+export function setEntityLimit(limit: number) {
+  entityLimit = limit;
+}
+
+export function setDefaultEntityLimit() {
+  entityLimit = 10_000;
 }
 
 export interface EntityMetadata<T extends Entity> {

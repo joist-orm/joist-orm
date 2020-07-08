@@ -3,7 +3,7 @@ import { Entity, Loaded, LoadHint } from "../EntityManager";
 import { CustomCollection } from "./CustomCollection";
 
 type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T>> = {
-  load?: (entity: T) => Promise<void | any>;
+  load?: (entity: T) => Promise<any>;
   get: (entity: Loaded<T, H>) => U[];
   set?: (entity: Loaded<T, H>, values: U[]) => void;
   add?: (entity: Loaded<T, H>, value: U) => void;
@@ -23,7 +23,7 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
   const entity: T = currentlyInstantiatingEntity as T;
   const { load, ...rest } = opts;
   return new CustomCollection<T, U>(entity, {
-    load: load ?? (async (entity) => await getEm(entity).populate(entity, loadHint)),
-    ...rest,
-  } as any);
+    load: load ?? ((entity) => getEm(entity).populate(entity, loadHint)),
+    ...(rest as any),
+  });
 }

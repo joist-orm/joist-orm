@@ -5,7 +5,7 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
   // each time it's invoked so that it reflects any changed values.
-  load: (entity: T) => Promise<void | any>;
+  load: (entity: T) => Promise<any>;
   get: (entity: T) => readonly U[];
   set?: (entity: T, other: U[]) => void;
   find?: (entity: T, id: IdOf<U>) => U | undefined;
@@ -28,7 +28,7 @@ export class CustomCollection<T extends Entity, U extends Entity> extends Abstra
   implements Collection<T, U> {
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the values can become stale; we want to each `.get` call to repeatedly evaluate the latest values.
-  private loadPromise: Promise<void> | undefined;
+  private loadPromise: Promise<any> | undefined;
   private _isLoaded = false;
 
   constructor(public entity: T, private opts: CustomCollectionOpts<T, U>) {

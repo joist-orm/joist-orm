@@ -351,23 +351,29 @@ export class EntityManager {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<T extends Entity, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
+  public create<T extends Entity, O extends OptsOf<T>>(
+    type: EntityConstructor<T>,
+    opts: Exact<OptsOf<T>, O>,
+  ): New<T, O> {
     // The constructor will run setOpts which handles defaulting collections to the right state.
-    return (new type(this, opts) as any) as New<T, O>;
+    return new type(this, opts) as New<T, O>;
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createPartial<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+  public createPartial<T extends Entity, O>(type: EntityConstructor<T>, opts: Exact<PartialOrNull<OptsOf<T>>, O>): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
     // `calledFromConstructor` because this is _basically_ like calling `new`.
-    const entity = new (type as any)(this) as T;
-    setOpts(entity, opts as any, { ignoreUndefined: true, calledFromConstructor: true });
+    const entity = new type(this, undefined!);
+    setOpts(entity, opts, { ignoreUndefined: true, calledFromConstructor: true });
     return entity;
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createOrUpdatePartial<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
+  public createOrUpdatePartial<T extends Entity, O>(
+    type: EntityConstructor<T>,
+    opts: Exact<DeepPartialOrNull<T>, O>,
+  ): Promise<T> {
     return createOrUpdatePartial(this, type, opts);
   }
 
@@ -892,7 +898,14 @@ export interface EntityMetadata<T extends Entity> {
   factory: (em: EntityManager, opts?: any) => New<T>;
 }
 
-export type Field = PrimaryKeyField | PrimitiveField | EnumField | OneToManyField | ManyToOneField | ManyToManyField;
+export type Field =
+  | PrimaryKeyField
+  | PrimitiveField
+  | EnumField
+  | OneToManyField
+  | ManyToOneField
+  | ManyToManyField
+  | OneToOneField;
 
 export type PrimaryKeyField = {
   kind: "primaryKey";
@@ -934,6 +947,14 @@ export type ManyToOneField = {
 
 export type ManyToManyField = {
   kind: "m2m";
+  fieldName: string;
+  required: boolean;
+  otherMetadata: () => EntityMetadata<any>;
+  otherFieldName: string;
+};
+
+export type OneToOneField = {
+  kind: "o2o";
   fieldName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
@@ -1177,3 +1198,14 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   }
   return current;
 }
+
+type Impossible<K extends keyof any> = {
+  [P in K]: never;
+};
+
+// https://stackoverflow.com/a/57117594/355031 with tweaks
+// T is the exact type, U is the user's passed type.
+// We added `T &` so that U doesn't have to `extend T` to make declarations shorter.
+// We renamed to from `NoExtraProperties` to `Exact` to make TS issue https://github.com/Microsoft/TypeScript/issues/12936
+// We still need `T & U & ...` for some generic use cases.
+export type Exact<T, U> = T & U & Impossible<Exclude<keyof U, keyof T>>;

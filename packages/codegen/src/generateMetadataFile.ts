@@ -8,7 +8,7 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
   const { entity } = dbMetadata;
 
   const { primaryKey, primitives, enums, m2o } = generateColumns(dbMetadata);
-  const { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields } = generateFields(
+  const { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields, o2oFields } = generateFields(
     config,
     dbMetadata,
   );
@@ -20,7 +20,7 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
       tagName: "${config.entities[entity.name].tag}",
       tableName: "${dbMetadata.tableName}",
       columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
-      fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ],
+      fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ${o2oFields} ],
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
     };
@@ -84,6 +84,7 @@ function generateFields(
   m2oFields: Code[];
   o2mFields: Code[];
   m2mFields: Code[];
+  o2oFields: Code[];
 } {
   const primaryKeyField = code`
     { kind: "primaryKey", fieldName: "id", required: true },
@@ -152,5 +153,18 @@ function generateFields(
     `;
   });
 
-  return { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields };
+  const o2oFields = dbMetadata.oneToOnes.map((o2o) => {
+    const { fieldName, otherEntity, otherFieldName } = o2o;
+    return code`
+      {
+        kind: "o2o",
+        fieldName: "${fieldName}",
+        required: false,
+        otherMetadata: () => ${otherEntity.metaName},
+        otherFieldName: "${otherFieldName}",
+      },
+    `;
+  });
+
+  return { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields, o2oFields };
 }

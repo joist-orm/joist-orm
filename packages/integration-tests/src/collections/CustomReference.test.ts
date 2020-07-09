@@ -47,16 +47,6 @@ describe("CustomReference", () => {
     expect(rows[0].author_id).toEqual(1);
   });
 
-  it("can set a reference through opts", async () => {
-    const em = new EntityManager(knex);
-    const author = em.create(Author, { firstName: "a1" });
-    em.createPartial(Image, { type: ImageType.AuthorImage, owner: author, fileName: "f1" } as any);
-    await em.flush();
-
-    const rows = await knex.select("*").from("images");
-    expect(rows[0].author_id).toEqual(1);
-  });
-
   it("can set changes to a loaded reference", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

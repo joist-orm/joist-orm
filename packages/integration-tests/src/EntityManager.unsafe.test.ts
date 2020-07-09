@@ -116,4 +116,26 @@ describe("EntityManager", () => {
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: [await em.load(Book, "1")] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
+
+  it("createOrUpdatePartial doesnt allow unknown fields to be passed", async () => {
+    const em = new EntityManager(knex);
+    // Given an opt `publisherId` (instead of `publisher`) that don't match exactly what Author supports
+    const opts = { firstName: "a2", publisherId: "1" };
+    // Then we get a compile error
+    await expect(async () => {
+      // @ts-ignore-error
+      await em.createOrUpdatePartial(Author, opts);
+    }).rejects.toThrow("Unknown field publisherId");
+  });
+
+  it("createPartial doesnt allow unknown fields to be passed", async () => {
+    const em = new EntityManager(knex);
+    // Given an opt `publisherId` (instead of `publisher`) that don't match exactly what Author supports
+    const opts = { firstName: "a2", publisherId: "1" };
+    // Then we get a compile error
+    await expect(async () => {
+      // @ts-ignore-error
+      await em.createPartial(Author, opts);
+    }).rejects.toThrow("Unknown field publisherId");
+  });
 });

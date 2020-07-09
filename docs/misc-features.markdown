@@ -256,7 +256,7 @@ export function newBook(em: EntityManager, opts?: FactoryOpts<Book>): New<Book> 
 
 Tests can then invoke `newBook` with as little opts as they want, and all of the required defaults (both fields and entities) will be filled in.
 
-I.e. since `book.author_id` is a not-null column, cailling `const b1 = newBook()` will create both a `Book` with a `title` (required primitive field) as well as create a new `Author` and assign it to `b1.author`:
+I.e. since `book.author_id` is a not-null column, cailling `const b1 = newBook()` will create both a `Book` with a `title` (required primitive field) as well as create a new `Author` (required foreign key/many-to-one field) and assign it to `b1.author`:
 
 ```typescript
 const b = newBook();
@@ -264,19 +264,21 @@ expect(b.title).toEqual("title");
 expect(b.author.get.firstName).toEqual("firstName");
 ```
 
-This creation is recursive, i.e. `newBookReview()` with make a new `BookReview`, a new `Book` (required for `bookReview.book`), and a new `Author` (required for `book.author`).
+This creation is recursive, i.e. `newBookReview()` will make a new `BookReview`, a new `Book` (required for `bookReview.book`), and a new `Author` (required for `book.author`).
 
 You can also pass partials for either the book or the author:
 
 ```typescript
 const b = newBook({ author: { firstName: "a1" } });
+// title was not in opts, so it gets the same default
 expect(b.title).toEqual("title");
+// author.firstName was in opts, so it's used for the firstName field
 expect(b.author.get.firstName).toEqual("a1");
 ```
 
-The factories will usually make new entities for require fields, but will reuse an existing instance if:
+The factories will usually make new entities for required fields, but will reuse an existing instance if:
 
-1. The unit of work already as a _single_ instance of that entity. I.e.:
+1. The `EntityManager` already as a _single_ instance of that entity. I.e.:
 
    ```typescript
    // We have a single author
@@ -296,7 +298,9 @@ The factories will usually make new entities for require fields, but will reuse 
    const br = newBookReview({ use: a2 });
    ```
    
-   This will make a new `BookReview` and a new `Book`, but when filling in `Book.author`, it will use `a2`.
+   This will make a new `BookReview`, and a new `Book`, but when filling in `Book.author`, it will use `a2`.
+   
+   (Note that `use` is specifically useful for passing entities to use "several levels up the tree", i.e. if you were making a `newBook` you could directly pass `newBook({ author: a2 })`. In the `newBookReview` example, author is not immediately set on the `BookReview` itself, so we put `a2` in the `use` opt for the factories to "use it as needed/up the tree".)
 
 The factory files can be customized, i.e.:
 
@@ -311,6 +315,16 @@ export function newBook(em: EntityManager, opts?: FactoryOpts<Book>): New<Book> 
     title: `b${testIndex}`
     ...opts
   });
+}
+```
+
+And then every caller of `newBook` will get these defaults.
+
+Note that you can also customize the `opts` type to add your own application-specific hints, i.e.:
+
+```typescript
+export function newBook(em: EntityManager, opts?: FactoryOpts<Book> & { withManyReview?: boolean }): New<Book> {
+ // if opts?.withManyReview then make 10 reviews
 }
 ```
 

@@ -197,11 +197,11 @@ This is generated at the end of the `joist-migation-utils` set only if `ADD_FLUS
 
 (Some ORMs invoke tests in a transaction, and then rollback the transaction before the next test, but this a) makes debugging failed tests extremely difficult b/c the data you want to investigate via `psql` has disappeared/been rolled back, and b) means your tests cannot test any behavior that uses transactions.)
 
-### `EntityManager.refresh()`
+### Auto-Refreshing Test Instances
 
-The `EntityManager.refresh` method reloads all currently-loaded entities from the database, as well as any of their loaded relations (i.e. if you have `author1.books` loaded and a new `books` row is added with `author_id=1`, after `refresh()`, the `author1.books` collection will have the newly-added book in it.
+The `EntityManager.refresh` method reloads all currently-loaded entities from the database, as well as any of their loaded relations (i.e. if you have `author1.books` loaded and a new `books` row is added with `author_id=1`, then after `refresh()` the `author1.books` collection will have the newly-added book in it).
 
-This is primarily useful for unit tests, where you want to do behavior like:
+This is primarily useful for tests, where you want to do behavior like:
 
 ```typescript
 // Given an author
@@ -209,14 +209,148 @@ const a = em.create(Author, { ... });
 // When we perform the business logic
 // (...assumme this is a test helper method that invokes the logic and
 // then calls EntityManager.refresh before returning)
-await runBusinessLogic();
+await run(em, (em) => invokeBusinessLogicUnderTest(em));
 // Then we have a new book
 expect(a.books.get.length).toEqual(1);
+
+// Defined as a helper method
+async function run<T>(em, fn: async () => Promise<T>): Promise<T> {
+  // Flush existing test data to the db
+  await em.flush();
+  // Make a new `em` however that is done for your app
+  const em2 = newEntityManager();
+  // Invoke business logic under test
+  const result = await fn(em2);
+  // Reload our test's em to have the latest data
+  await em.refresh();
+}
 ```
 
-But `runBusinessLogic` is run it its own transaction/`EntityManager` instance (which is generally a good idea to avoid accidentally relying on the test's `EntityManager` state), but after `runBusinessLogic` completes, you want to see the latest & great version of `a`.
+This runs `invokeBusinessLogicUnderTest` in its own transaction/`EntityManager` instance (to avoid accidentally relying on the test's `EntityManager` state), but after `invokeBusinessLogicUnderTest` completes, the test's Author `a` local variable can be used for assertions and will have the latest & great data from the database.
 
-Without `EntityManager.refresh`, tests must jump through various hoops like managing `a1`/`a1Reloaded` variables.
+Without this approach, tests often jump through various hoops like having duplicate `a1`/`a1Reloaded` variables that are explicitly loaded:
+
+```typescript
+const a1 = em.create(Author, { ... });
+await invokeBusinessLogicUnderTest(em);
+// load the latest a1
+await a1_2 = em.load(Author, a1.idOrFail);
+```
+
+Joist's `EntityManager.refresh` method and the `run` helper method convention let's you avoid doing this "load the latest X" in all of your tests.
+
+### Test Factories
+
+Joist generates customizables factories for easily creating test data.
+
+I.e. for a `Book` entity, Joist will one-time generate a `Book.factories.ts` file that looks like:
+
+```typescript
+import { EntityManager, FactoryOpts, New, newTestInstance } from "joist-orm";
+import { Book } from "./entities";
+
+export function newBook(em: EntityManager, opts?: FactoryOpts<Book>): New<Book> {
+  return newTestInstance(em, Book, opts);
+}
+```
+
+Tests can then invoke `newBook` with as little opts as they want, and all of the required defaults (both fields and entities) will be filled in.
+
+I.e. since `book.author_id` is a not-null column, cailling `const b1 = newBook()` will create both a `Book` with a `title` (required primitive field) as well as create a new `Author` and assign it to `b1.author`:
+
+```typescript
+const b = newBook();
+expect(b.title).toEqual("title");
+expect(b.author.get.firstName).toEqual("firstName");
+```
+
+This creation is recursive, i.e. `newBookReview()` with make a new `BookReview`, a new `Book` (required for `bookReview.book`), and a new `Author` (required for `book.author`).
+
+You can also pass partials for either the book or the author:
+
+```typescript
+const b = newBook({ author: { firstName: "a1" } });
+expect(b.title).toEqual("title");
+expect(b.author.get.firstName).toEqual("a1");
+```
+
+The factories will usually make new entities for require fields, but will reuse an existing instance if:
+
+1. The unit of work already as a _single_ instance of that entity. I.e.:
+
+   ```typescript
+   // We have a single author
+   const a = newAuthor();
+   // Making a new book will see "there is only 1 author" and assume we want to use that
+   const b = newBook();
+   expect(b.author.get).toEqual(a);
+   ```
+
+2. If you pass entities as a `use` parameter. I.e.:
+
+   ```typescript
+   // We have multiple authors
+   const a1 = newAuthor();
+   const a2 = newAuthor();
+   // Make a new book review, but use a2 instead of creating a new Author
+   const br = newBookReview({ use: a2 });
+   ```
+   
+   This will make a new `BookReview` and a new `Book`, but when filling in `Book.author`, it will use `a2`.
+
+The factory files can be customized, i.e.:
+
+```typescript
+export function newBook(em: EntityManager, opts?: FactoryOpts<Book>): New<Book> {
+  return newTestInstance(em, Book, {
+    // Assume every book should have 1 review by default. This can be a partial that will
+    // be recursively filled in. It will also be ignored if the caller passes
+    // their own `newBook(em, { reviews: ... })` opt.
+    reviews: [{}]
+    // Give a unique-ish name, testIndex will be 1/2/etc increasing and reset per-test
+    title: `b${testIndex}`
+    ...opts
+  });
+}
+```
+
+### Tagged Ids
+
+Joist automagically "tags" entity ids, which means prefixing them with a per-entity identifer.
+
+For example, the value of `author1.id` is `"a:1"` instead of the number `1`.
+
+There are a few reasons for this:
+
+- It eliminates a class of bugs where ids are passed incorrectly across entity types.
+
+  For example, a bug like:
+  
+  ```typescript
+  const authorId = someAuthor.id;
+  // Ops this is the wrong id
+  const book = em.load(Book, authorId);
+  ```
+  
+  Often these "wrong id" bugs will work during local unit tests because every table only has a few rows of `id 1`, `id 2`, so it's easy to have `id 1` taken from the `authors` table and accidentally work when looking it up in the `books` table.
+  
+  Note that Joist also has strongly-typed ids (i.e. `AuthorId`) to help prevent this, but those can only fix "wrong id" bugs that are internal to the application layer's codebase, i.e. the above example of reading an id from an entity and then immediately using it to look up the "wrong" entity (specifically the above code, even without tagged ids, is a compile error in Joist).
+  
+  However, tagged ids extends this same "strongly-typed ids" protection to API calls, i.e. if a client calls the API and gets back "author id 1" and then makes a follow up API call but accidentally uses that author id as a book id. Because we've crossed an API boundary (which generally have more generic id types, i.e. GraphQL's `ID` type is used for all objects), we need to use a runtime value to catch that "this id is not for the right entity".
+
+  Granted, this will be a runtime error, but it will be a runtime error everytime time (i.e. even in local development when the "wrong id" often works by accident) instead of only showing up in production.
+
+- It makes debugging easier because seeing ids like `a:1` in the logs, you immediately know which entity that is for, without having to also prefix your logging statements with `authorId=${...}`.
+
+- GraphQL already uses essentially-strings/opaque `ID` types, and while Joist is technically GraphQL-agnostic, pragmatically implementing a GraphQL system is what drove most of Joist's development, so it was generally easy to support this in our APIs, so seemed like a low-hanging-fruit/easy-win.
+
+Note that, in the database, the entity primary keys are still numeric / `serial` integers. Joist just auto-tags/detags them for you/for free.
+
+For the tags, Joist will guess a tag name to use by abbreviating the entity name, i.e. `BookReview` --> `br`. If there is a collision, i.e. `br` is already taken, it will use the full entity name, i.e. `bookReview`. Tags are stored `joist-codegen.json` so you can easily change them if Joist initially guesses wrong.
+ 
+Once you have a given tagged id deployed in production, you should probably never change it, i.e. in case id values like `a:1` ends up in a 3rd party system, changing your tagged id to `author:1` may break things.
+
+Note that Joist will still look up "untagged ids" i.e. if you do `em.load(Author, "1")` it will not complain about the lack of a tag. However, if the tag value is wrong, i.e. `em.load(Author, "b:1")`, then it will be a runtime failure.
 
 ### Unit of Work-Level Query Cache
 

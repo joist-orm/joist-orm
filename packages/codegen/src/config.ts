@@ -8,9 +8,14 @@ export interface FieldConfig {
   protected?: boolean;
 }
 
+export interface RelationConfig {
+  name?: string;
+}
+
 export interface EntityConfig {
   tag: string;
   fields?: Record<string, FieldConfig>;
+  relations?: Record<string, RelationConfig>;
 }
 
 export interface Config {
@@ -37,6 +42,10 @@ export function isAsyncDerived(config: Config, entity: Entity, fieldName: string
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
+}
+
+export function relationName(config: Config, entity: Entity, relationName: string): string {
+  return config.entities[entity.name]?.relations?.[relationName]?.name ?? relationName;
 }
 
 const configPath = "./joist-codegen.json";

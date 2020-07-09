@@ -3,7 +3,7 @@ import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structu
 import pluralize from "pluralize";
 import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { Config, isAsyncDerived, isDerived, isProtected, ormMaintainedFields } from "./config";
+import { Config, isAsyncDerived, isDerived, isProtected, ormMaintainedFields, relationName } from "./config";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
 import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./utils";
 
@@ -104,19 +104,19 @@ export class EntityDbMetadata {
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
-      .map((r) => newManyToOneField(this.entity, r));
+      .map((r) => newManyToOneField(config, this.entity, r));
     this.oneToManys = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
-      .map((r) => newOneToMany(this.entity, r));
+      .map((r) => newOneToMany(config, this.entity, r));
     this.oneToOnes = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => isOneToOneRelation(r))
-      .map((r) => newOneToOne(this.entity, r));
+      .map((r) => newOneToOne(config, this.entity, r));
     this.manyToManys = table.m2mRelations
       // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
       // that has a foreign key to us, and a foreign key to something else, is automatically
@@ -124,7 +124,7 @@ export class EntityDbMetadata {
       // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
       .filter((r) => isJoinTable(r.joinTable))
       .filter((r) => !isMultiColumnForeignKey(r))
-      .map((r) => newManyToManyField(r));
+      .map((r) => newManyToManyField(config, this.entity, r));
     this.tableName = table.name;
   }
 
@@ -184,43 +184,79 @@ function newEnumField(r: M2ORelation): EnumField {
   return { fieldName, columnName, enumName, enumType, enumDetailType, notNull };
 }
 
-function newManyToOneField(entity: Entity, r: M2ORelation): ManyToOneField {
+function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
-  const fieldName = camelCase(column.name.replace("_id", ""));
+  const fieldName = referenceName(config, entity, r);
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
-  const otherFieldName = isOneToOne ? camelCase(entity.name) : collectionName(otherEntity, entity, r);
+  const otherFieldName = isOneToOne
+    ? oneToOneName(config, otherEntity, entity)
+    : collectionName(config, otherEntity, entity, r);
   const notNull = column.notNull;
   return { fieldName, columnName, otherEntity, otherFieldName, notNull };
 }
 
-function newOneToMany(entity: Entity, r: O2MRelation): OneToManyField {
+function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {
   const column = r.foreignKey.columns[0];
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  const fieldName = collectionName(entity, otherEntity, r);
-  const otherFieldName = camelCase(column.name.replace("_id", ""));
+  const fieldName = collectionName(config, entity, otherEntity, r);
+  const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
   return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull };
 }
 
-function newOneToOne(entity: Entity, r: O2MRelation): OneToOneField {
+function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneField {
   const column = r.foreignKey.columns[0];
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  const fieldName = camelCase(otherEntity.name);
-  const otherFieldName = camelCase(column.name.replace("_id", ""));
+  const fieldName = oneToOneName(config, entity, otherEntity);
+  const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
   return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull };
+}
+
+function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): ManyToManyField {
+  const { foreignKey, targetForeignKey, targetTable } = r;
+  const joinTableName = r.joinTable.name;
+  const otherEntity = makeEntity(tableToEntityName(targetTable));
+  const fieldName = relationName(
+    config,
+    entity,
+    camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", ""))),
+  );
+  const otherFieldName = relationName(
+    config,
+    otherEntity,
+    camelCase(pluralize(foreignKey.columns[0].name.replace("_id", ""))),
+  );
+  const columnName = foreignKey.columns[0].name;
+  const otherColumnName = targetForeignKey.columns[0].name;
+  return { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName };
+}
+
+export function oneToOneName(config: Config, entity: Entity, otherEntity: Entity): string {
+  return relationName(config, entity, camelCase(otherEntity.name));
+}
+
+export function referenceName(config: Config, entity: Entity, r: M2ORelation | O2MRelation): string {
+  const column = r.foreignKey.columns[0];
+  const fieldName = camelCase(column.name.replace("_id", ""));
+  return relationName(config, entity, fieldName);
 }
 
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
-export function collectionName(entity: Entity, otherEntity: Entity, r: M2ORelation | O2MRelation): string {
+export function collectionName(
+  config: Config,
+  entity: Entity,
+  otherEntity: Entity,
+  r: M2ORelation | O2MRelation,
+): string {
   // TODO Handle conflicts in names
   // I.e. if the other side is `child.project_id`, use `children`.
   let fieldName = otherEntity.name;
@@ -234,18 +270,12 @@ export function collectionName(entity: Entity, otherEntity: Entity, r: M2ORelati
   if (fieldName.length > entity.name.length) {
     fieldName = fieldName.replace(entity.name, "");
   }
-  return camelCase(pluralize(fieldName));
-}
 
-function newManyToManyField(r: M2MRelation): ManyToManyField {
-  const { foreignKey, targetForeignKey, targetTable } = r;
-  const joinTableName = r.joinTable.name;
-  const otherEntity = makeEntity(tableToEntityName(targetTable));
-  const fieldName = camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", "")));
-  const otherFieldName = camelCase(pluralize(foreignKey.columns[0].name.replace("_id", "")));
-  const columnName = foreignKey.columns[0].name;
-  const otherColumnName = targetForeignKey.columns[0].name;
-  return { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName };
+  // camelize the name
+  fieldName = camelCase(pluralize(fieldName));
+
+  // check if we have an override
+  return relationName(config, entity, fieldName);
 }
 
 export function makeEntity(entityName: string): Entity {

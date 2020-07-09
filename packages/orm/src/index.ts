@@ -184,7 +184,14 @@ export function setOpts<T extends Entity>(
   }
   const requiredKeys = getRequiredKeys(entity);
   const { calledFromConstructor, ignoreUndefined } = opts;
+  const meta = getMetadata(entity);
+
   Object.entries(values as {}).forEach(([key, _value]) => {
+    const field = meta.fields.find((f) => f.fieldName === key);
+    if (!field) {
+      throw new Error(`Unknown field ${key}`);
+    }
+
     // If ignoreUndefined is set, we treat undefined as a noop
     if (ignoreUndefined && _value === undefined) {
       return;

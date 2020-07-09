@@ -215,6 +215,14 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "author",
     },
+
+    {
+      kind: "o2o",
+      fieldName: "image",
+      required: false,
+      otherMetadata: () => imageMeta,
+      otherFieldName: "author",
+    },
   ],
   config: authorConfig,
   factory: newAuthor,
@@ -326,6 +334,14 @@ export const bookMeta: EntityMetadata<Book> = {
       required: false,
       otherMetadata: () => tagMeta,
       otherFieldName: "books",
+    },
+
+    {
+      kind: "o2o",
+      fieldName: "image",
+      required: false,
+      otherMetadata: () => imageMeta,
+      otherFieldName: "book",
     },
   ],
   config: bookConfig,
@@ -710,6 +726,14 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       fieldName: "bookAdvances",
       required: false,
       otherMetadata: () => bookAdvanceMeta,
+      otherFieldName: "publisher",
+    },
+
+    {
+      kind: "o2o",
+      fieldName: "image",
+      required: false,
+      otherMetadata: () => imageMeta,
       otherFieldName: "publisher",
     },
   ],

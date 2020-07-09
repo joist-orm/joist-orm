@@ -1,5 +1,15 @@
 import { NullOrDefinedOr } from "./utils";
-import { Entity, EntityConstructor, EntityManager, getMetadata, IdOf, isEntity, isKey, OptsOf } from "./EntityManager";
+import {
+  Entity,
+  EntityConstructor,
+  EntityManager,
+  Exact,
+  getMetadata,
+  IdOf,
+  isEntity,
+  isKey,
+  OptsOf,
+} from "./EntityManager";
 import { PartialOrNull } from "./index";
 
 /**
@@ -29,17 +39,20 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
 /**
  * A utility function to create-or-update entities coming from a partial-update style API.
  */
-export async function createOrUpdatePartial<T extends Entity>(
+export async function createOrUpdatePartial<T extends Entity, O>(
   em: EntityManager,
   constructor: EntityConstructor<T>,
-  opts: DeepPartialOrNull<T>,
+  opts: Exact<DeepPartialOrNull<T>, O>,
 ): Promise<T> {
   const { id, ...others } = opts;
   const meta = getMetadata(constructor);
 
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
-    const field = meta.fields.find((f) => f.fieldName === key)!;
+    const field = meta.fields.find((f) => f.fieldName === key);
+    if (!field) {
+      throw new Error(`Unknown field ${key}`);
+    }
     if (field.kind === "m2o" && !isEntity(value)) {
       if (!value || isEntity(value)) {
         return [key, value];

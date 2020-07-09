@@ -28,9 +28,7 @@ describe("EntityManager", () => {
   it("fails to load an entity by an invalid tagged id", async () => {
     await insertAuthor({ first_name: "f" });
     const em = new EntityManager(knex);
-    await expect(em.load(Author, "p:1")).rejects.toThrow(
-      "Invalid tagged id, expected tag a, got p:1",
-    );
+    await expect(em.load(Author, "p:1")).rejects.toThrow("Invalid tagged id, expected tag a, got p:1");
   });
 
   it("can load multiple entities with one query", async () => {
@@ -860,6 +858,14 @@ describe("EntityManager", () => {
     } finally {
       setDefaultEntityLimit();
     }
+  });
+
+  it("doesnt allow unknown fields to create", async () => {
+    const em = new EntityManager(knex);
+    expect(() => {
+      // @ts-ignore-error
+      em.create(Author, { firstName: "a1", invalidKey: 1 });
+    }).toThrow("Unknown field invalidKey");
   });
 });
 

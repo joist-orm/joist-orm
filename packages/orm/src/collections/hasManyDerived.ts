@@ -4,7 +4,7 @@ import { CustomCollection } from "./CustomCollection";
 
 type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T>> = {
   load?: (entity: T) => Promise<any>;
-  get: (entity: Loaded<T, H>) => U[];
+  get: (entity: Loaded<T, H>) => readonly U[];
   set?: (entity: Loaded<T, H>, values: U[]) => void;
   add?: (entity: Loaded<T, H>, value: U) => void;
   remove?: (entity: Loaded<T, H>, value: U) => void;

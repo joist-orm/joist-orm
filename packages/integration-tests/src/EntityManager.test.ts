@@ -927,7 +927,7 @@ describe("EntityManager", () => {
   it("doesnt allow unknown fields to create", async () => {
     const em = newEntityManager();
     expect(() => {
-      // @ts-ignore-error
+      // @ts-expect-error
       em.create(Author, { firstName: "a1", invalidKey: 1 });
     }).toThrow("Unknown field invalidKey");
   });

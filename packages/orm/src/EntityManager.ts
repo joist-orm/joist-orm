@@ -403,7 +403,10 @@ export class EntityManager<C = {}> {
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createPartial<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+  public createPartial<T extends Entity, O extends PartialOrNull<OptsOf<T>>>(
+    type: EntityConstructor<T>,
+    opts: Exact<PartialOrNull<OptsOf<T>>, O>,
+  ): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
     // `calledFromConstructor` because this is _basically_ like calling `new`.
@@ -414,7 +417,10 @@ export class EntityManager<C = {}> {
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createOrUpdatePartial<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
+  public createOrUpdatePartial<T extends Entity, O extends DeepPartialOrNull<T>>(
+    type: EntityConstructor<T>,
+    opts: Exact<DeepPartialOrNull<T>, O>,
+  ): Promise<T> {
     return createOrUpdatePartial(this, type, opts);
   }
 
@@ -1269,3 +1275,18 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   }
   return current;
 }
+
+export type Exact<T, U> = T &
+  {
+    [K in keyof U]: K extends keyof T
+      ? T[K] extends Array<infer TU> | undefined | null
+        ? U[K] extends Array<infer UU> | undefined | null
+          ? U extends Entity
+            ? Array<U> | undefined | null
+            : T extends Entity
+            ? Array<U> | undefined | null
+            : Array<Exact<TU, UU>> | undefined | null
+          : never
+        : U[K]
+      : never;
+  };

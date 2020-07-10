@@ -48,7 +48,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
 /**
  * A utility function to create-or-update entities coming from a partial-update style API.
  */
-export async function createOrUpdatePartial<T extends Entity>(
+export async function createOrUpdatePartial<T extends Entity, O extends DeepPartialOrNull<T>>(
   em: EntityManager,
   constructor: EntityConstructor<T>,
   opts: DeepPartialOrNull<T>,
@@ -160,10 +160,11 @@ export async function createOrUpdatePartial<T extends Entity>(
       return [name, value];
     }
   });
-  const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
+
+  const _opts = Object.fromEntries(await Promise.all(p)) as PartialOrNull<OptsOf<T>>;
 
   if (isNew) {
-    return em.createPartial(constructor, _opts);
+    return em.createPartial(constructor, _opts as any);
   } else {
     const entity = await em.load(constructor, id);
     // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.

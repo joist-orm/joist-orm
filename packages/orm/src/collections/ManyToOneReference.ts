@@ -1,4 +1,4 @@
-import { Entity, EntityConstructor, EntityMetadata, getMetadata, IdOf, isEntity } from "../EntityManager";
+import { Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
 import {
   deTagIds,
   ensureNotDeleted,
@@ -62,9 +62,15 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    // This should only be callable in the type system if we've already resolved this to an instance
+    // This should only be callable in the type system if we've already resolved this to an instance,
+    // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
     if (!this.isLoaded) {
-      throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+      const existing = this.maybeFindExisting();
+      if (existing === undefined) {
+        throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+      }
+      this.loaded = existing;
+      this.isLoaded = true;
     }
 
     return this.filterDeleted(this.loaded, opts);
@@ -145,11 +151,12 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N): void {
-    if (this.isLoaded && other === this.loaded) {
+    if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
       return;
     }
 
-    const previousLoaded = this.loaded;
+    // we may not be loaded yet, but our previous entity might already be in the UoW
+    const previousLoaded = this.loaded ?? this.maybeFindExisting();
 
     ensureNotDeleted(this.entity, { ignore: "pending" });
 
@@ -200,5 +207,9 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
   private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<U, T> {
     return (other as U)[this.otherFieldName] as any;
+  }
+
+  private maybeFindExisting(): U | undefined {
+    return this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.otherMeta.cstr, this.id) : undefined;
   }
 }

@@ -1,7 +1,33 @@
-import { Loaded } from "joist-orm";
-import { AuthorCodegen, authorConfig } from "./entities";
+import { Collection, Loaded, hasManyThrough, getEm, hasManyDerived } from "joist-orm";
+import { AuthorCodegen, authorConfig, Book, BookReview } from "./entities";
 
 export class Author extends AuthorCodegen {
+  readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
+  readonly reviewedBooks: Collection<Author, Book> = hasManyDerived({ books: "reviews" } as const, {
+    get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
+    // set / add / remove callbacks are totally contrived to test that they work
+    set: (author, values) => {
+      values.forEach((book) => {
+        this.reviewedBooks.add(book);
+      });
+      author.books.get.filter((book) => !values.includes(book)).forEach((book) => author.reviewedBooks.remove(book));
+    },
+    // needs a Loaded<Book, "reviews"> or will throw
+    add: (author, book) => {
+      const loaded = book as Loaded<Book, "reviews">;
+      author.books.add(book);
+
+      if (loaded.reviews.get.length === 0) {
+        getEm(author).create(BookReview, { rating: 5, book });
+      }
+    },
+    // needs a Loaded<Book, "reviews"> or will throw
+    remove: (author, book) => {
+      const loaded = book as Loaded<Book, "reviews">;
+      loaded.reviews.get.forEach((r) => getEm(author).delete(r));
+    },
+  });
+
   public beforeFlushRan = false;
   public beforeDeleteRan = false;
   public afterCommitRan = false;

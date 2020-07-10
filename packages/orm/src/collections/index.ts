@@ -17,6 +17,9 @@ export { ManyToManyCollection } from "./ManyToManyCollection";
 export { CustomReference } from "./CustomReference";
 export { hasOneThrough } from "./hasOneThrough";
 export { hasOneDerived } from "./hasOneDerived";
+export { CustomCollection } from "./CustomCollection";
+export { hasManyThrough } from "./hasManyThrough";
+export { hasManyDerived } from "./hasManyDerived";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(

@@ -84,6 +84,6 @@ export function up(b: MigrationBuilder): void {
     file_name: { type: "varchar(255)", notNull: true },
     book_id: foreignKey("books", { notNull: false, unique: true }),
     author_id: foreignKey("authors", { notNull: false, unique: true }),
-    publisher_id: foreignKey("publishers", { notNull: false, unique: true }),
+    publisher_id: foreignKey("publishers", { notNull: false }),
   });
 }

@@ -636,7 +636,7 @@ export const imageMeta: EntityMetadata<Image> = {
       fieldName: "publisher",
       required: false,
       otherMetadata: () => publisherMeta,
-      otherFieldName: "image",
+      otherFieldName: "images",
     },
   ],
   config: imageConfig,
@@ -730,8 +730,8 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     },
 
     {
-      kind: "o2o",
-      fieldName: "image",
+      kind: "o2m",
+      fieldName: "images",
       required: false,
       otherMetadata: () => imageMeta,
       otherFieldName: "publisher",

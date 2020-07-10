@@ -627,11 +627,9 @@ describe("EntityManager", () => {
     // Then we issue a single SQL query
     expect(numberOfQueries).toEqual(1);
     // And it's the regular/sane query, i.e. not auto-batched
-    expect(queries).toMatchInlineSnapshot(`
-      Array [
-        "select \\"p0\\".* from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" asc limit ?",
-      ]
-    `);
+    expect(queries).toEqual([
+      'select "p0".* from "publishers" as "p0" where "p0"."id" = ? order by "p0"."id" asc limit ?',
+    ]);
     // And both results are the same
     expect(p1.length).toEqual(1);
     expect(p1).toEqual(p2);
@@ -650,11 +648,9 @@ describe("EntityManager", () => {
     // Then we issue a single SQL query
     expect(numberOfQueries).toEqual(1);
     // And it is still auto-batched
-    expect(queries).toMatchInlineSnapshot(`
-      Array [
-        "select *, -1 as __tag, -1 as __row from \\"publishers\\" where \\"id\\" = ? union all (select \\"p0\\".*, 0 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" ASC, \\"p0\\".\\"id\\" ASC limit ?) union all (select \\"p0\\".*, 1 as __tag, row_number() over () as __row from \\"publishers\\" as \\"p0\\" where \\"p0\\".\\"id\\" = ? and \\"p0\\".\\"id\\" = ? order by \\"p0\\".\\"id\\" DESC, \\"p0\\".\\"id\\" DESC limit ?) order by \\"__tag\\" asc",
-      ]
-    `);
+    expect(queries).toEqual([
+      'select *, -1 as __tag, -1 as __row from "publishers" where "id" = ? union all (select "p0".*, 0 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" ASC, "p0"."id" ASC limit ?) union all (select "p0".*, 1 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" DESC, "p0"."id" DESC limit ?) order by "__tag" asc',
+    ]);
     // And the results are the expected reverse of each other
     expect(p1.reverse()).toEqual(p2);
   });

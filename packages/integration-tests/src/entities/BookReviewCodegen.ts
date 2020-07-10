@@ -33,7 +33,6 @@ export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewOpts {
   rating: number;
-  isPublic: boolean;
   book: Book;
 }
 
@@ -101,11 +100,10 @@ export abstract class BookReviewCodegen extends BaseEntity {
   }
 
   get isPublic(): boolean {
+    if (!("isPublic" in this.__orm.data)) {
+      throw new Error("isPublic has not been derived yet");
+    }
     return this.__orm.data["isPublic"];
-  }
-
-  set isPublic(isPublic: boolean) {
-    setField(this, "isPublic", isPublic);
   }
 
   get createdAt(): Date {

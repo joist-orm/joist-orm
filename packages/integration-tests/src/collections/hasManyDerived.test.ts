@@ -57,22 +57,6 @@ describe("hasManyDerived", () => {
     expect(author.reviewedBooks.get).toEqual([b2]);
   });
 
-  it("can set a collection through opts", async () => {
-    await insertAuthor({ first_name: "a1" });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 1 });
-    await insertBookReview({ rating: 5, book_id: 1 });
-
-    const em = new EntityManager(knex);
-    const [b1, b2] = await em.find(Book, { id: ["1", "2"] });
-    const author = await em.load(Author, "1", "reviewedBooks");
-
-    expect(author.reviewedBooks.get).toEqual([b1]);
-    author.setPartial({ reviewedBooks: [b2] } as any);
-    await em.flush();
-    expect(author.reviewedBooks.get).toEqual([b2]);
-  });
-
   it("can add to a collection", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

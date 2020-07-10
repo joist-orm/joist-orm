@@ -7,6 +7,7 @@ import {
   EntityOrmField,
   getMetadata,
   IdOf,
+  isEntity,
   Loaded,
   LoadHint,
   OptsOf,
@@ -171,14 +172,14 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 export function setOpts<T extends Entity>(
   entity: T,
   values: Partial<OptsOf<T>>,
-  opts: { calledFromConstructor?: boolean; ignoreUndefined?: boolean },
+  opts?: { calledFromConstructor?: boolean; partial?: boolean },
 ): void {
   // If `values` is undefined, this instance is being hydrated from a database row, so skip all this.
   if (values === undefined) {
     return;
   }
   const requiredKeys = getRequiredKeys(entity);
-  const { calledFromConstructor, ignoreUndefined } = opts;
+  const { calledFromConstructor, partial } = opts || {};
   const meta = getMetadata(entity);
 
   Object.entries(values as {}).forEach(([key, _value]) => {
@@ -188,7 +189,7 @@ export function setOpts<T extends Entity>(
     }
 
     // If ignoreUndefined is set, we treat undefined as a noop
-    if (ignoreUndefined && _value === undefined) {
+    if (partial && _value === undefined) {
       return;
     }
     // We let optional opts fields be `| null` for convenience, and convert to undefined.
@@ -200,6 +201,19 @@ export function setOpts<T extends Entity>(
     if (current instanceof AbstractRelationImpl) {
       if (calledFromConstructor) {
         current.setFromOpts(value);
+      } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
+        // For setPartial collections, we individually add/remove instead of set.
+        const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
+        const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
+        (value as any[]).forEach((e) => {
+          if (allowDelete && e.delete === true) {
+            getEm(entity).delete(e);
+          } else if (allowRemove && e.remove === true) {
+            (current as any).remove(e);
+          } else {
+            (current as any).add(e);
+          }
+        });
       } else {
         current.set(value);
       }

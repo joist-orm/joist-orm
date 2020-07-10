@@ -147,8 +147,8 @@ describe("OneToManyCollection", () => {
 
     // Then the collection has both books in it
     expect(books.length).toEqual(2);
-    expect(books[0].id).toEqual(undefined);
-    expect(books[1].id).toEqual("b:1");
+    expect(books[0].id).toEqual("b:1");
+    expect(books[1].id).toEqual(undefined);
   });
 
   it("combines both pre-loaded and post-loaded removed entities", async () => {

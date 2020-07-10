@@ -7,8 +7,8 @@ import {
   BaseEntity,
   EntityManager,
   setOpts,
-  OptsOf,
   PartialOrNull,
+  OptsOf,
   Changes,
   newChangesProxy,
   Lens,
@@ -77,7 +77,7 @@ export abstract class TagCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta);
-    this.set(opts as TagOpts, { calledFromConstructor: true } as any);
+    setOpts((this as any) as Tag, opts, { calledFromConstructor: true });
   }
 
   get id(): TagId | undefined {
@@ -100,12 +100,12 @@ export abstract class TagCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  set(values: Partial<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, opts);
+  set(opts: Partial<TagOpts>): void {
+    setOpts((this as any) as Tag, opts);
   }
 
-  setPartial(values: PartialOrNull<TagOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  setPartial(opts: PartialOrNull<TagOpts>): void {
+    setOpts((this as any) as Tag, opts as OptsOf<Tag>, { partial: true });
   }
 
   get changes(): Changes<Tag> {

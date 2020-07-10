@@ -7,8 +7,8 @@ import {
   BaseEntity,
   EntityManager,
   setOpts,
-  OptsOf,
   PartialOrNull,
+  OptsOf,
   Changes,
   newChangesProxy,
   Lens,
@@ -112,7 +112,7 @@ export abstract class ImageCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta);
-    this.set(opts as ImageOpts, { calledFromConstructor: true } as any);
+    setOpts((this as any) as Image, opts, { calledFromConstructor: true });
   }
 
   get id(): ImageId | undefined {
@@ -143,12 +143,12 @@ export abstract class ImageCodegen extends BaseEntity {
     setField(this, "type", type);
   }
 
-  set(values: Partial<ImageOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, opts);
+  set(opts: Partial<ImageOpts>): void {
+    setOpts((this as any) as Image, opts);
   }
 
-  setPartial(values: PartialOrNull<ImageOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  setPartial(opts: PartialOrNull<ImageOpts>): void {
+    setOpts((this as any) as Image, opts as OptsOf<Image>, { partial: true });
   }
 
   get changes(): Changes<Image> {

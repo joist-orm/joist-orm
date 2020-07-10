@@ -7,8 +7,8 @@ import {
   BaseEntity,
   EntityManager,
   setOpts,
-  OptsOf,
   PartialOrNull,
+  OptsOf,
   Changes,
   newChangesProxy,
   Lens,
@@ -97,7 +97,7 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta);
-    this.set(opts as PublisherOpts, { calledFromConstructor: true } as any);
+    setOpts((this as any) as Publisher, opts, { calledFromConstructor: true });
   }
 
   get id(): PublisherId | undefined {
@@ -128,12 +128,12 @@ export abstract class PublisherCodegen extends BaseEntity {
     setField(this, "size", size);
   }
 
-  set(values: Partial<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, opts);
+  set(opts: Partial<PublisherOpts>): void {
+    setOpts((this as any) as Publisher, opts);
   }
 
-  setPartial(values: PartialOrNull<PublisherOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  setPartial(opts: PartialOrNull<PublisherOpts>): void {
+    setOpts((this as any) as Publisher, opts as OptsOf<Publisher>, { partial: true });
   }
 
   get changes(): Changes<Publisher> {

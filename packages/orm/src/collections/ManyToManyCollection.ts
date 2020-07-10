@@ -60,6 +60,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
 
   add(other: U, percolated = false): void {
     ensureNotDeleted(this.entity);
+
     if (this.loaded !== undefined) {
       if (this.loaded.includes(other)) {
         return;
@@ -84,12 +85,26 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
-  remove(other: U): void {
+  remove(other: U, percolated = false): void {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    const joinRows = getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []);
-    const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
-    if (row) {
-      row.deleted = true;
+
+    if (!percolated) {
+      const joinRows = getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []);
+      const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
+      if (row) {
+        row.deleted = true;
+      } else {
+        const joinRow: JoinRow = {
+          // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
+          id: -1,
+          m2m: this,
+          [this.columnName]: this.entity,
+          [this.otherColumnName]: other,
+          deleted: true,
+        };
+        getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
+      }
+      ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).remove(this.entity, true);
     }
 
     if (this.loaded !== undefined) {
@@ -213,6 +228,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     return this.filterDeleted(this.loaded || this.addedBeforeLoaded, opts);
   }
 
+  public get meta(): EntityMetadata<T> {
+    return getMetadata(this.entity);
+  }
+
   public toString(): string {
     return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
@@ -305,6 +324,10 @@ async function loadFromJoinTable<T extends Entity, U extends Entity>(
         const [e1, e2] = await Promise.all([p1, p2]);
         emRow = { id: dbRow.id, m2m: collection, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
         emJoinRows.push(emRow);
+      } else {
+        // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
+        // a subsequent load/query, update its id to be what is in the database.
+        emRow.id = dbRow.id;
       }
 
       // Put this row into the map for both join table columns, i.e. `book_id=2` and `tag_id=3`

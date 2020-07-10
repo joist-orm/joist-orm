@@ -187,7 +187,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   private maybeAppendAddedBeforeLoaded(): void {
     if (this.loaded) {
       const newEntities = this.addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
-      this.loaded.unshift(...newEntities);
+      // Push on the end to better match the db order of "newer things come last"
+      for (const e of newEntities) {
+        this.loaded.push(e);
+      }
       this.addedBeforeLoaded = [];
     }
   }

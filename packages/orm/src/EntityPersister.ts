@@ -1,6 +1,15 @@
 import Knex from "knex";
 import { JoinRow, ManyToManyCollection } from "./collections/ManyToManyCollection";
-import { Entity, EntityMetadata, getMetadata, keyToNumber, keyToString, maybeResolveReferenceToId } from "./index";
+import {
+  deTagIds,
+  Entity,
+  EntityMetadata,
+  getMetadata,
+  keyToNumber,
+  keyToString,
+  maybeResolveReferenceToId,
+} from "./index";
+import { partition } from "./utils";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
@@ -164,7 +173,7 @@ export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
 }
 
 export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinRowTodo>): Promise<void> {
-  for await (const [joinTableName, { newRows, deletedRows }] of Object.entries(joinRows)) {
+  for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
     if (newRows.length > 0) {
       const ids = await knex
         .batchInsert(
@@ -185,12 +194,28 @@ export async function flushJoinTables(knex: Knex, joinRows: Record<string, JoinR
       }
     }
     if (deletedRows.length > 0) {
-      await knex(joinTableName)
-        .del()
-        .whereIn(
-          "id",
-          deletedRows.map((e) => e.id!),
+      // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
+      const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
+
+      if (haveIds.length > 0) {
+        await knex(joinTableName)
+          .del()
+          .whereIn(
+            "id",
+            haveIds.map((e) => e.id!),
+          );
+      }
+
+      if (noIds.length > 0) {
+        const data = noIds.map(
+          (e) =>
+            [
+              deTagIds(m2m.meta, [maybeResolveReferenceToId(e[m2m.columnName])!])[0],
+              deTagIds(m2m.otherMeta, [maybeResolveReferenceToId(e[m2m.otherColumnName])!])[0],
+            ] as any,
         );
+        await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
+      }
     }
   }
 }

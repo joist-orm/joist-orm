@@ -223,7 +223,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         ${hasDefaultValues ? code`super(em, ${metadata}, {...${defaultValuesName}})` : code`super(em, ${metadata})`};
-        this.set(opts as ${entityName}Opts, { calledFromConstructor: true } as any);
+        ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
       }
 
       get id(): ${entityName}Id | undefined {
@@ -231,13 +231,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       }
 
       ${primitives}
-      
-      set(values: Partial<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
-        ${setOpts}(this, values as ${OptsOf}<this>, opts);
+
+      set(opts: Partial<${entityName}Opts>): void {
+        ${setOpts}(this as any as ${entityName}, opts);
       }
 
-      setPartial(values: ${PartialOrNull}<${entityName}Opts>, opts: { ignoreUndefined?: boolean } = {}): void {
-        ${setOpts}(this, values as ${OptsOf}<this>, { ignoreUndefined: true, ...opts });
+      setPartial(opts: ${PartialOrNull}<${entityName}Opts>): void {
+        ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
       }
 
       get changes(): ${Changes}<${entityName}> {

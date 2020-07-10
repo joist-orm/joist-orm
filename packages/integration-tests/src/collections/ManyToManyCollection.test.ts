@@ -2,7 +2,7 @@ import { EntityManager } from "joist-orm";
 import { zeroTo } from "../utils";
 import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { Author, Book, Tag } from "../entities";
-import { insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
+import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {
@@ -127,7 +127,7 @@ describe("ManyToManyCollection", () => {
 
     await em.flush();
 
-    expect((await knex.count().from("books_to_tags"))[0]).toEqual({ count: "1" });
+    expect(await countOfBookToTags()).toEqual(1);
   });
 
   it("can remove a tag from a book", async () => {
@@ -162,14 +162,32 @@ describe("ManyToManyCollection", () => {
     const tag = await em.load(Tag, "3");
     // When the tag is removed before book.tags is loaded
     book.tags.remove(tag);
-    // Then the removed tag is still not present
+    // And book.tags is loaded
     const tags = await book.tags.load();
+    // Then the removed tag is still not present
     expect(tags.length).toEqual(1);
     expect(tags[0].name).toEqual("t2");
     await em.flush();
 
-    const rows = await knex.select("*").from("books_to_tags");
-    expect(rows.length).toEqual(1);
+    expect(await countOfBookToTags()).toEqual(1);
+  });
+
+  it("can remove a tag from a book without ever being loaded", async () => {
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    await insertTag({ id: 4, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+
+    const em = new EntityManager(knex);
+    const book = await em.load(Book, "2");
+    const tag = await em.load(Tag, "3");
+    // When the tag is removed when book.tags is unloaded
+    book.tags.remove(tag);
+    await em.flush();
+
+    expect(await countOfBookToTags()).toEqual(1);
   });
 
   it("can delete a tag that is on a book", async () => {

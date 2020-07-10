@@ -1,7 +1,15 @@
 import { EntityManager } from "joist-orm";
 import { knex } from "./setupDbTests";
 import { Author, Book } from "./entities";
-import { insertAuthor, insertBook } from "@src/entities/inserts";
+import {
+  countOfBooks,
+  countOfBookToTags,
+  countOfTags,
+  insertAuthor,
+  insertBook,
+  insertBookToTag,
+  insertTag,
+} from "@src/entities/inserts";
 
 describe("EntityManager", () => {
   it("can create new entity with valid data", async () => {
@@ -107,6 +115,56 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: undefined });
     expect(await a1.books.load()).toEqual([]);
+  });
+
+  it("collections are upserted", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ title: "b2" }] });
+    await em.flush();
+    const books = await a1.books.load();
+    expect(books.length).toEqual(2);
+    const [b1, b2] = books;
+    expect(b1.title).toEqual("b1");
+    expect(b2.title).toEqual("b2");
+  });
+
+  it("collections can delete children", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = new EntityManager(knex);
+    await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", delete: true }] });
+    await em.flush();
+    const rows = await knex.select("*").from("books");
+    expect(rows.length).toEqual(1);
+  });
+
+  it("collections wont delete children when delete is false", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = new EntityManager(knex);
+    await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", title: "b1changed", delete: false }] });
+    await em.flush();
+    expect(await countOfBooks()).toEqual(2);
+    const b1 = await em.load(Book, "b:1");
+    expect(b1.title).toEqual("b1changed");
+  });
+
+  it("collections can remove children", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertBookToTag({ tag_id: 1, book_id: 1 });
+    await insertBookToTag({ tag_id: 2, book_id: 1 });
+    const em = new EntityManager(knex);
+    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", remove: true }] });
+    await em.flush();
+    expect(await countOfTags()).toEqual(2);
+    expect(await countOfBookToTags()).toEqual(1);
   });
 
   it("collections can refer to entities", async () => {

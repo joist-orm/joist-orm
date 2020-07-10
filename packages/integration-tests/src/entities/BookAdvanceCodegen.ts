@@ -7,8 +7,8 @@ import {
   BaseEntity,
   EntityManager,
   setOpts,
-  OptsOf,
   PartialOrNull,
+  OptsOf,
   Changes,
   newChangesProxy,
   Lens,
@@ -99,7 +99,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta);
-    this.set(opts as BookAdvanceOpts, { calledFromConstructor: true } as any);
+    setOpts((this as any) as BookAdvance, opts, { calledFromConstructor: true });
   }
 
   get id(): BookAdvanceId | undefined {
@@ -122,12 +122,12 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
     setField(this, "status", status);
   }
 
-  set(values: Partial<BookAdvanceOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, opts);
+  set(opts: Partial<BookAdvanceOpts>): void {
+    setOpts((this as any) as BookAdvance, opts);
   }
 
-  setPartial(values: PartialOrNull<BookAdvanceOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  setPartial(opts: PartialOrNull<BookAdvanceOpts>): void {
+    setOpts((this as any) as BookAdvance, opts as OptsOf<BookAdvance>, { partial: true });
   }
 
   get changes(): Changes<BookAdvance> {

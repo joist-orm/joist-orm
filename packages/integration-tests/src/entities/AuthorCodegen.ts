@@ -7,8 +7,8 @@ import {
   BaseEntity,
   EntityManager,
   setOpts,
-  OptsOf,
   PartialOrNull,
+  OptsOf,
   Changes,
   newChangesProxy,
   Lens,
@@ -133,7 +133,7 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta);
-    this.set(opts as AuthorOpts, { calledFromConstructor: true } as any);
+    setOpts((this as any) as Author, opts, { calledFromConstructor: true });
   }
 
   get id(): AuthorId | undefined {
@@ -197,12 +197,12 @@ export abstract class AuthorCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  set(values: Partial<AuthorOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, opts);
+  set(opts: Partial<AuthorOpts>): void {
+    setOpts((this as any) as Author, opts);
   }
 
-  setPartial(values: PartialOrNull<AuthorOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  setPartial(opts: PartialOrNull<AuthorOpts>): void {
+    setOpts((this as any) as Author, opts as OptsOf<Author>, { partial: true });
   }
 
   get changes(): Changes<Author> {

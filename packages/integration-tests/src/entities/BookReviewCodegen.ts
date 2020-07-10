@@ -7,8 +7,8 @@ import {
   BaseEntity,
   EntityManager,
   setOpts,
-  OptsOf,
   PartialOrNull,
+  OptsOf,
   Changes,
   newChangesProxy,
   Lens,
@@ -84,7 +84,7 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta);
-    this.set(opts as BookReviewOpts, { calledFromConstructor: true } as any);
+    setOpts((this as any) as BookReview, opts, { calledFromConstructor: true });
   }
 
   get id(): BookReviewId | undefined {
@@ -114,12 +114,12 @@ export abstract class BookReviewCodegen extends BaseEntity {
     return this.__orm.data["updatedAt"];
   }
 
-  set(values: Partial<BookReviewOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, opts);
+  set(opts: Partial<BookReviewOpts>): void {
+    setOpts((this as any) as BookReview, opts);
   }
 
-  setPartial(values: PartialOrNull<BookReviewOpts>, opts: { ignoreUndefined?: boolean } = {}): void {
-    setOpts(this, values as OptsOf<this>, { ignoreUndefined: true, ...opts });
+  setPartial(opts: PartialOrNull<BookReviewOpts>): void {
+    setOpts((this as any) as BookReview, opts as OptsOf<BookReview>, { partial: true });
   }
 
   get changes(): Changes<BookReview> {

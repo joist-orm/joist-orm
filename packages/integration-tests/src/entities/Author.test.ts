@@ -333,7 +333,7 @@ describe("Author", () => {
   it("set can treat undefined as leave", () => {
     const em = new EntityManager(knex);
     const author = new Author(em, { firstName: "a1" });
-    author.set({ firstName: undefined }, { ignoreUndefined: true });
+    author.setPartial({ firstName: undefined });
     expect(author.firstName).toEqual("a1");
   });
 

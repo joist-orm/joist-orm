@@ -46,5 +46,18 @@ export function indexBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
   return result;
 }
 
+export function partition<T>(array: ReadonlyArray<T>, f: (el: T) => boolean): [T[], T[]] {
+  const trueElements: T[] = [];
+  const falseElements: T[] = [];
+  array.forEach((el) => {
+    if (f(el)) {
+      trueElements.push(el);
+    } else {
+      falseElements.push(el);
+    }
+  });
+  return [trueElements, falseElements];
+}
+
 // Utility type to strip off null and defined and infer only T.
 export type NullOrDefinedOr<T> = T | null | undefined;

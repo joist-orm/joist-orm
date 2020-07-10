@@ -32,6 +32,7 @@ export async function insertBookToTag(row: { id?: number; book_id: number; tag_i
 export async function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
   await knex.insert({ is_public: true, ...row }).into("book_reviews");
 }
+
 export async function insertImage(row: {
   id?: number;
   type_id: number;
@@ -41,4 +42,16 @@ export async function insertImage(row: {
   file_name: string;
 }) {
   await knex.insert(row).into("images");
+}
+
+export async function countOfBooks() {
+  return (await knex.select("*").from("books")).length;
+}
+
+export async function countOfTags() {
+  return (await knex.select("*").from("tags")).length;
+}
+
+export async function countOfBookToTags() {
+  return (await knex.select("*").from("books_to_tags")).length;
 }

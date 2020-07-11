@@ -30,6 +30,9 @@ import {
   Author,
   BookAdvance,
   Image,
+  AuthorId,
+  BookAdvanceId,
+  ImageId,
   authorMeta,
   bookAdvanceMeta,
   imageMeta,
@@ -43,6 +46,12 @@ export interface PublisherOpts {
   authors?: Author[];
   bookAdvances?: BookAdvance[];
   images?: Image[];
+}
+
+export interface PublisherIdsOpts {
+  authorIds?: AuthorId[] | null;
+  bookAdvanceIds?: BookAdvanceId[] | null;
+  imageIds?: ImageId[] | null;
 }
 
 export interface PublisherFilter {
@@ -81,6 +90,7 @@ export abstract class PublisherCodegen extends BaseEntity {
     gqlFilterType: PublisherGraphQLFilter;
     orderType: PublisherOrder;
     optsType: PublisherOpts;
+    optIdsType: PublisherIdsOpts;
     factoryOptsType: Parameters<typeof newPublisher>[1];
   } = null!;
 

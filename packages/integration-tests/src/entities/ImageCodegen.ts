@@ -55,6 +55,12 @@ export interface ImageOpts {
   publisher?: Publisher | null;
 }
 
+export interface ImageIdsOpts {
+  authorId?: AuthorId | null;
+  bookId?: BookId | null;
+  publisherId?: PublisherId | null;
+}
+
 export interface ImageFilter {
   id?: ValueFilter<ImageId, never>;
   fileName?: ValueFilter<string, never>;
@@ -101,6 +107,7 @@ export abstract class ImageCodegen extends BaseEntity {
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;
     optsType: ImageOpts;
+    optIdsType: ImageIdsOpts;
     factoryOptsType: Parameters<typeof newImage>[1];
   } = null!;
 

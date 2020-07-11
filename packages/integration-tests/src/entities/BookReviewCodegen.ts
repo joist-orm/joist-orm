@@ -36,6 +36,10 @@ export interface BookReviewOpts {
   book: Book;
 }
 
+export interface BookReviewIdsOpts {
+  bookId?: BookId | null;
+}
+
 export interface BookReviewFilter {
   id?: ValueFilter<BookReviewId, never>;
   rating?: ValueFilter<number, never>;
@@ -77,6 +81,7 @@ export abstract class BookReviewCodegen extends BaseEntity {
     gqlFilterType: BookReviewGraphQLFilter;
     orderType: BookReviewOrder;
     optsType: BookReviewOpts;
+    optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   } = null!;
 

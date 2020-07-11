@@ -38,6 +38,8 @@ export interface EntityConstructor<T> {
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
 export type OptsOf<T> = T extends { __types: { optsType: infer O } } ? O : never;
 
+export type OptIdsOf<T> = T extends { __types: { optIdsType: infer O } } ? O : never;
+
 /** Return the `Foo` type for a given `Foo` entity constructor. */
 export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
 
@@ -905,12 +907,14 @@ export type Field =
 export type PrimaryKeyField = {
   kind: "primaryKey";
   fieldName: string;
+  fieldIdName: undefined;
   required: true;
 };
 
 export type PrimitiveField = {
   kind: "primitive";
   fieldName: string;
+  fieldIdName: undefined;
   required: boolean;
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
@@ -920,6 +924,7 @@ export type PrimitiveField = {
 export type EnumField = {
   kind: "enum";
   fieldName: string;
+  fieldIdName: undefined;
   required: boolean;
   enumDetailType: { getValues(): ReadonlyArray<unknown> };
 };
@@ -927,6 +932,7 @@ export type EnumField = {
 export type OneToManyField = {
   kind: "o2m";
   fieldName: string;
+  fieldIdName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
@@ -935,6 +941,7 @@ export type OneToManyField = {
 export type ManyToOneField = {
   kind: "m2o";
   fieldName: string;
+  fieldIdName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
@@ -943,6 +950,7 @@ export type ManyToOneField = {
 export type ManyToManyField = {
   kind: "m2m";
   fieldName: string;
+  fieldIdName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
@@ -951,6 +959,7 @@ export type ManyToManyField = {
 export type OneToOneField = {
   kind: "o2o";
   fieldName: string;
+  fieldIdName: string;
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;

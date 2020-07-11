@@ -1,6 +1,3 @@
-import { EntityManager } from "joist-orm";
-import { knex } from "./setupDbTests";
-import { Author, Book } from "./entities";
 import {
   countOfBooks,
   countOfBookToTags,
@@ -10,6 +7,9 @@ import {
   insertBookToTag,
   insertTag,
 } from "@src/entities/inserts";
+import { EntityManager } from "joist-orm";
+import { Author, Book } from "./entities";
+import { knex } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can create new entity with valid data", async () => {
@@ -72,6 +72,13 @@ describe("EntityManager", () => {
     expect((await a1.mentor.load())!.firstName).toEqual("m1");
   });
 
+  it("references can refer to entities by id opt", async () => {
+    await insertAuthor({ first_name: "m1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentorId: "1" });
+    expect((await a1.mentor.load())!.firstName).toEqual("m1");
+  });
+
   it("references can refer to null", async () => {
     await insertAuthor({ first_name: "m1" });
     const em = new EntityManager(knex);
@@ -98,6 +105,14 @@ describe("EntityManager", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = new EntityManager(knex);
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: ["1"] });
+    expect((await a1.books.load())[0].title).toEqual("b1");
+  });
+
+  it("collections can refer to entities by id opts", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", bookIds: ["1"] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
 
@@ -177,23 +192,21 @@ describe("EntityManager", () => {
 
   it("createOrUpdatePartial doesnt allow unknown fields to be passed", async () => {
     const em = new EntityManager(knex);
-    // Given an opt `publisherId` (instead of `publisher`) that don't match exactly what Author supports
-    const opts = { firstName: "a2", publisherId: "1" };
-    // Then we get a compile error
+    // Given an opt `publisherTypo` (instead of `publisher`) that don't match exactly what Author supports
     await expect(async () => {
-      // @ts-ignore-error
-      await em.createOrUpdatePartial(Author, opts);
-    }).rejects.toThrow("Unknown field publisherId");
+      // Then we get a compile error
+      // @ts-expect-error
+      await em.createOrUpdatePartial(Author, { firstName: "a2", publisherTypo: "1" });
+    }).rejects.toThrow("Unknown field publisherTypo");
   });
 
   it("createPartial doesnt allow unknown fields to be passed", async () => {
     const em = new EntityManager(knex);
     // Given an opt `publisherId` (instead of `publisher`) that don't match exactly what Author supports
-    const opts = { firstName: "a2", publisherId: "1" };
-    // Then we get a compile error
     await expect(async () => {
-      // @ts-ignore-error
-      await em.createPartial(Author, opts);
+      // Then we get a compile error
+      // @ts-expect-error
+      await em.createPartial(Author, { firstName: "a2", publisherId: "1" });
     }).rejects.toThrow("Unknown field publisherId");
   });
 });

@@ -21,13 +21,17 @@ import {
   hasManyToMany,
   setField,
 } from "joist-orm";
-import { Tag, newTag, tagMeta, Book, bookMeta } from "./entities";
+import { Tag, newTag, tagMeta, Book, BookId, bookMeta } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 
 export interface TagOpts {
   name: string;
   books?: Book[];
+}
+
+export interface TagIdsOpts {
+  bookIds?: BookId[] | null;
 }
 
 export interface TagFilter {
@@ -63,6 +67,7 @@ export abstract class TagCodegen extends BaseEntity {
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;
     optsType: TagOpts;
+    optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
   } = null!;
 

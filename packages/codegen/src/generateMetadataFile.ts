@@ -87,7 +87,7 @@ function generateFields(
   o2oFields: Code[];
 } {
   const primaryKeyField = code`
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
   `;
 
   const primitiveFields = dbMetadata.primitives.map((p) => {
@@ -96,6 +96,7 @@ function generateFields(
       {
         kind: "primitive",
         fieldName: "${fieldName}",
+        fieldIdName: undefined,
         derived: ${!derived ? false : `"${derived}"`},
         required: ${!derived && p.notNull},
         protected: ${p.protected},
@@ -108,6 +109,7 @@ function generateFields(
       {
         kind: "enum",
         fieldName: "${fieldName}",
+        fieldIdName: undefined,
         required: ${notNull},
         enumDetailType: ${enumDetailType},
       },
@@ -120,6 +122,7 @@ function generateFields(
       {
         kind: "m2o",
         fieldName: "${fieldName}",
+        fieldIdName: "${fieldName}Id",
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
@@ -128,11 +131,12 @@ function generateFields(
   });
 
   const o2mFields = dbMetadata.oneToManys.map((m2o) => {
-    const { fieldName, otherEntity, otherFieldName } = m2o;
+    const { fieldName, singularName, otherEntity, otherFieldName } = m2o;
     return code`
       {
         kind: "o2m",
         fieldName: "${fieldName}",
+        fieldIdName: "${singularName}Ids",
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
@@ -141,11 +145,12 @@ function generateFields(
   });
 
   const m2mFields = dbMetadata.manyToManys.map((m2o) => {
-    const { fieldName, otherEntity, otherFieldName } = m2o;
+    const { fieldName, singularName, otherEntity, otherFieldName } = m2o;
     return code`
       {
         kind: "m2m",
         fieldName: "${fieldName}",
+        fieldIdName: "${singularName}Ids",
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
@@ -159,6 +164,7 @@ function generateFields(
       {
         kind: "o2o",
         fieldName: "${fieldName}",
+        fieldIdName: "${fieldName}Id",
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",

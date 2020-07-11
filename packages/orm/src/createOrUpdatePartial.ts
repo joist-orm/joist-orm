@@ -1,5 +1,15 @@
 import { NullOrDefinedOr } from "./utils";
-import { Entity, EntityConstructor, EntityManager, getMetadata, IdOf, isEntity, isKey, OptsOf } from "./EntityManager";
+import {
+  Entity,
+  EntityConstructor,
+  EntityManager,
+  getMetadata,
+  IdOf,
+  isEntity,
+  isKey,
+  OptIdsOf,
+  OptsOf,
+} from "./EntityManager";
 import { PartialOrNull } from "./index";
 
 /**
@@ -11,8 +21,9 @@ import { PartialOrNull } from "./index";
  * with the appropriate partial-update behavior, or 4) partials.
  */
 export type DeepPartialOrNull<T extends Entity> = { id?: IdOf<T> | null } & AllowRelationsToBeIdsOrEntitiesOrPartials<
-  PartialOrNull<OptsOf<T>>
->;
+  PartialOrNull<OptsOf<T> & OptIdsOf<T>>
+> &
+  OptIdsOf<T>;
 
 type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>
@@ -34,12 +45,14 @@ export async function createOrUpdatePartial<T extends Entity>(
   constructor: EntityConstructor<T>,
   opts: DeepPartialOrNull<T>,
 ): Promise<T> {
-  const { id, ...others } = opts;
+  const { id, ...others } = opts as any;
   const meta = getMetadata(constructor);
 
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
-    const field = meta.fields.find((f) => f.fieldName === key);
+    // Watch for the `bookId` / `bookIds` aliases
+    const field = meta.fields.find((f) => f.fieldName === key) || meta.fields.find((f) => f.fieldIdName === key);
+
     if (!field) {
       // Allow delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically
       // allowed, i.e. this isn't the Rails form bug where users can POST in any random field they want.
@@ -50,17 +63,21 @@ export async function createOrUpdatePartial<T extends Entity>(
       }
       throw new Error(`Unknown field ${key}`);
     }
+
+    // Don't use key b/c it might be the bookId alias
+    const name = field.fieldName;
+
     if (field.kind === "m2o" && !isEntity(value)) {
       if (!value || isEntity(value)) {
-        return [key, value];
+        return [name, value];
       } else if (isKey(value)) {
         // This is a many-to-one reference
         const entity = await em.load(field.otherMetadata().cstr, value);
-        return [key, entity];
+        return [name, entity];
       } else {
         // This is a many-to-one partial
         const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
-        return [key, entity];
+        return [name, entity];
       }
     } else if (field.kind === "o2m" || field.kind === "m2m") {
       // Look for one-to-many/many-to-many partials
@@ -91,9 +108,9 @@ export async function createOrUpdatePartial<T extends Entity>(
               return entity;
             }
           });
-      return [key, await Promise.all(entities)];
+      return [name, await Promise.all(entities)];
     } else {
-      return [key, value];
+      return [name, value];
     }
   });
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;

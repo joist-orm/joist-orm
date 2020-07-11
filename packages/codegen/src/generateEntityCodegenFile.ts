@@ -189,6 +189,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     export interface ${entityName}Opts {
       ${generateOptsFields(config, meta)}
     }
+    
+    export interface ${entityName}IdsOpts {
+      ${generateOptIdsFields(config, meta)}
+    }
 
     export interface ${entityName}Filter {
       id?: ${ValueFilter}<${entityName}Id, never>;
@@ -217,6 +221,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         gqlFilterType: ${entityName}GraphQLFilter;
         orderType: ${entityName}Order;
         optsType: ${entityName}Opts;
+        optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       } = null!;
       ${[o2m, m2o, o2o, m2m]}
@@ -297,8 +302,8 @@ function generateDefaultValidationRules(meta: EntityDbMetadata, configName: stri
     });
 }
 
+// Make our opts type
 function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
-  // Make our opts type
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, derived } = field;
     if (derived) {
@@ -324,6 +329,25 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   return [...primitives, ...enums, ...m2o, ...o2o, ...o2m, ...m2m];
+}
+
+// We know the OptIds types are only used in partials, so we make everything optional.
+// This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
+// in the partial type and of course the caller will only be setting one.
+function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
+  });
+  const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
+  });
+  const o2m = meta.oneToManys.map(({ singularName, otherEntity }) => {
+    return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
+  });
+  const m2m = meta.manyToManys.map(({ singularName, otherEntity }) => {
+    return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
+  });
+  return [...m2o, ...o2o, ...o2m, ...m2m];
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {

@@ -110,11 +110,12 @@ export const authorMeta: EntityMetadata<Author> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "primitive",
       fieldName: "firstName",
+      fieldIdName: undefined,
       derived: false,
       required: true,
       protected: false,
@@ -123,6 +124,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "lastName",
+      fieldIdName: undefined,
       derived: false,
       required: false,
       protected: false,
@@ -131,6 +133,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "initials",
+      fieldIdName: undefined,
       derived: "sync",
       required: false,
       protected: false,
@@ -139,6 +142,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "numberOfBooks",
+      fieldIdName: undefined,
       derived: "async",
       required: false,
       protected: false,
@@ -147,6 +151,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "isPopular",
+      fieldIdName: undefined,
       derived: false,
       required: false,
       protected: false,
@@ -155,6 +160,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "age",
+      fieldIdName: undefined,
       derived: false,
       required: false,
       protected: false,
@@ -163,6 +169,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "wasEverPopular",
+      fieldIdName: undefined,
       derived: false,
       required: false,
       protected: true,
@@ -171,6 +178,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -179,6 +187,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -187,6 +196,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "m2o",
       fieldName: "mentor",
+      fieldIdName: "mentorId",
       required: false,
       otherMetadata: () => authorMeta,
       otherFieldName: "authors",
@@ -195,6 +205,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "m2o",
       fieldName: "publisher",
+      fieldIdName: "publisherId",
       required: false,
       otherMetadata: () => publisherMeta,
       otherFieldName: "authors",
@@ -203,6 +214,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "o2m",
       fieldName: "authors",
+      fieldIdName: "authorIds",
       required: false,
       otherMetadata: () => authorMeta,
       otherFieldName: "mentor",
@@ -211,6 +223,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "o2m",
       fieldName: "books",
+      fieldIdName: "bookIds",
       required: false,
       otherMetadata: () => bookMeta,
       otherFieldName: "author",
@@ -219,6 +232,7 @@ export const authorMeta: EntityMetadata<Author> = {
     {
       kind: "o2o",
       fieldName: "image",
+      fieldIdName: "imageId",
       required: false,
       otherMetadata: () => imageMeta,
       otherFieldName: "author",
@@ -270,11 +284,12 @@ export const bookMeta: EntityMetadata<Book> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "primitive",
       fieldName: "title",
+      fieldIdName: undefined,
       derived: false,
       required: true,
       protected: false,
@@ -283,6 +298,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "primitive",
       fieldName: "order",
+      fieldIdName: undefined,
       derived: false,
       required: false,
       protected: false,
@@ -291,6 +307,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -299,6 +316,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -307,6 +325,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "m2o",
       fieldName: "author",
+      fieldIdName: "authorId",
       required: true,
       otherMetadata: () => authorMeta,
       otherFieldName: "books",
@@ -315,6 +334,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "o2m",
       fieldName: "advances",
+      fieldIdName: "advanceIds",
       required: false,
       otherMetadata: () => bookAdvanceMeta,
       otherFieldName: "book",
@@ -323,6 +343,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "o2m",
       fieldName: "reviews",
+      fieldIdName: "reviewIds",
       required: false,
       otherMetadata: () => bookReviewMeta,
       otherFieldName: "book",
@@ -331,6 +352,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "m2m",
       fieldName: "tags",
+      fieldIdName: "tagIds",
       required: false,
       otherMetadata: () => tagMeta,
       otherFieldName: "books",
@@ -339,6 +361,7 @@ export const bookMeta: EntityMetadata<Book> = {
     {
       kind: "o2o",
       fieldName: "image",
+      fieldIdName: "imageId",
       required: false,
       otherMetadata: () => imageMeta,
       otherFieldName: "book",
@@ -392,11 +415,12 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "enum",
       fieldName: "status",
+      fieldIdName: undefined,
       required: true,
       enumDetailType: AdvanceStatuses,
     },
@@ -404,6 +428,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -412,6 +437,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -420,6 +446,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     {
       kind: "m2o",
       fieldName: "book",
+      fieldIdName: "bookId",
       required: true,
       otherMetadata: () => bookMeta,
       otherFieldName: "advances",
@@ -428,6 +455,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     {
       kind: "m2o",
       fieldName: "publisher",
+      fieldIdName: "publisherId",
       required: true,
       otherMetadata: () => publisherMeta,
       otherFieldName: "bookAdvances",
@@ -479,11 +507,12 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "primitive",
       fieldName: "rating",
+      fieldIdName: undefined,
       derived: false,
       required: true,
       protected: false,
@@ -492,6 +521,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "primitive",
       fieldName: "isPublic",
+      fieldIdName: undefined,
       derived: "async",
       required: false,
       protected: false,
@@ -500,6 +530,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -508,6 +539,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -516,6 +548,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     {
       kind: "m2o",
       fieldName: "book",
+      fieldIdName: "bookId",
       required: true,
       otherMetadata: () => bookMeta,
       otherFieldName: "reviews",
@@ -582,11 +615,12 @@ export const imageMeta: EntityMetadata<Image> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "enum",
       fieldName: "type",
+      fieldIdName: undefined,
       required: true,
       enumDetailType: ImageTypes,
     },
@@ -594,6 +628,7 @@ export const imageMeta: EntityMetadata<Image> = {
     {
       kind: "primitive",
       fieldName: "fileName",
+      fieldIdName: undefined,
       derived: false,
       required: true,
       protected: false,
@@ -602,6 +637,7 @@ export const imageMeta: EntityMetadata<Image> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -610,6 +646,7 @@ export const imageMeta: EntityMetadata<Image> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -618,6 +655,7 @@ export const imageMeta: EntityMetadata<Image> = {
     {
       kind: "m2o",
       fieldName: "author",
+      fieldIdName: "authorId",
       required: false,
       otherMetadata: () => authorMeta,
       otherFieldName: "image",
@@ -626,6 +664,7 @@ export const imageMeta: EntityMetadata<Image> = {
     {
       kind: "m2o",
       fieldName: "book",
+      fieldIdName: "bookId",
       required: false,
       otherMetadata: () => bookMeta,
       otherFieldName: "image",
@@ -634,6 +673,7 @@ export const imageMeta: EntityMetadata<Image> = {
     {
       kind: "m2o",
       fieldName: "publisher",
+      fieldIdName: "publisherId",
       required: false,
       otherMetadata: () => publisherMeta,
       otherFieldName: "images",
@@ -680,11 +720,12 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "enum",
       fieldName: "size",
+      fieldIdName: undefined,
       required: false,
       enumDetailType: PublisherSizes,
     },
@@ -692,6 +733,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "primitive",
       fieldName: "name",
+      fieldIdName: undefined,
       derived: false,
       required: true,
       protected: false,
@@ -700,6 +742,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -708,6 +751,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -716,6 +760,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "o2m",
       fieldName: "authors",
+      fieldIdName: "authorIds",
       required: false,
       otherMetadata: () => authorMeta,
       otherFieldName: "publisher",
@@ -724,6 +769,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "o2m",
       fieldName: "bookAdvances",
+      fieldIdName: "bookAdvanceIds",
       required: false,
       otherMetadata: () => bookAdvanceMeta,
       otherFieldName: "publisher",
@@ -732,6 +778,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "o2m",
       fieldName: "images",
+      fieldIdName: "imageIds",
       required: false,
       otherMetadata: () => imageMeta,
       otherFieldName: "publisher",
@@ -771,11 +818,12 @@ export const tagMeta: EntityMetadata<Tag> = {
     },
   ],
   fields: [
-    { kind: "primaryKey", fieldName: "id", required: true },
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
 
     {
       kind: "primitive",
       fieldName: "name",
+      fieldIdName: undefined,
       derived: false,
       required: true,
       protected: false,
@@ -784,6 +832,7 @@ export const tagMeta: EntityMetadata<Tag> = {
     {
       kind: "primitive",
       fieldName: "createdAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -792,6 +841,7 @@ export const tagMeta: EntityMetadata<Tag> = {
     {
       kind: "primitive",
       fieldName: "updatedAt",
+      fieldIdName: undefined,
       derived: "orm",
       required: false,
       protected: false,
@@ -800,6 +850,7 @@ export const tagMeta: EntityMetadata<Tag> = {
     {
       kind: "m2m",
       fieldName: "books",
+      fieldIdName: "bookIds",
       required: false,
       otherMetadata: () => bookMeta,
       otherFieldName: "tags",

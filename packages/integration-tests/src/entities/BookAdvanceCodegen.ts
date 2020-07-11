@@ -49,6 +49,11 @@ export interface BookAdvanceOpts {
   publisher: Publisher;
 }
 
+export interface BookAdvanceIdsOpts {
+  bookId?: BookId | null;
+  publisherId?: PublisherId | null;
+}
+
 export interface BookAdvanceFilter {
   id?: ValueFilter<BookAdvanceId, never>;
   createdAt?: ValueFilter<Date, never>;
@@ -90,6 +95,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
     gqlFilterType: BookAdvanceGraphQLFilter;
     orderType: BookAdvanceOrder;
     optsType: BookAdvanceOpts;
+    optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   } = null!;
 

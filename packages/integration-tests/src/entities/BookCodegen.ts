@@ -39,6 +39,10 @@ import {
   BookReview,
   Tag,
   AuthorId,
+  ImageId,
+  BookAdvanceId,
+  BookReviewId,
+  TagId,
   AuthorOrder,
   bookAdvanceMeta,
   bookReviewMeta,
@@ -57,6 +61,14 @@ export interface BookOpts {
   advances?: BookAdvance[];
   reviews?: BookReview[];
   tags?: Tag[];
+}
+
+export interface BookIdsOpts {
+  authorId?: AuthorId | null;
+  imageId?: ImageId | null;
+  advanceIds?: BookAdvanceId[] | null;
+  reviewIds?: BookReviewId[] | null;
+  tagIds?: TagId[] | null;
 }
 
 export interface BookFilter {
@@ -101,6 +113,7 @@ export abstract class BookCodegen extends BaseEntity {
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;
     optsType: BookOpts;
+    optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   } = null!;
 

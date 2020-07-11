@@ -1,6 +1,6 @@
 import { camelCase } from "change-case";
 import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
-import pluralize from "pluralize";
+import { plural, singular } from "pluralize";
 import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Config, isAsyncDerived, isDerived, isProtected, ormMaintainedFields, relationName } from "./config";
@@ -60,6 +60,7 @@ export type ManyToOneField = {
 /** I.e. a `Author.books` collection. */
 export type OneToManyField = {
   fieldName: string;
+  singularName: string;
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
@@ -78,6 +79,7 @@ export type OneToOneField = {
 export type ManyToManyField = {
   joinTableName: string;
   fieldName: string;
+  singularName: string;
   columnName: string;
   otherEntity: Entity;
   otherFieldName: string;
@@ -179,7 +181,7 @@ function newEnumField(r: M2ORelation): EnumField {
   const fieldName = camelCase(column.name.replace("_id", ""));
   const enumName = tableToEntityName(r.targetTable);
   const enumType = imp(`${enumName}@./entities`);
-  const enumDetailType = imp(`${pluralize(enumName)}@./entities`);
+  const enumDetailType = imp(`${plural(enumName)}@./entities`);
   const notNull = column.notNull;
   return { fieldName, columnName, enumName, enumType, enumDetailType, notNull };
 }
@@ -192,7 +194,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
   const otherFieldName = isOneToOne
     ? oneToOneName(config, otherEntity, entity)
-    : collectionName(config, otherEntity, entity, r);
+    : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   return { fieldName, columnName, otherEntity, otherFieldName, notNull };
 }
@@ -202,11 +204,11 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(r.targetTable));
-  const fieldName = collectionName(config, entity, otherEntity, r);
+  const { singularName, fieldName } = collectionName(config, entity, otherEntity, r);
   const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
-  return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull };
+  return { fieldName, singularName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull };
 }
 
 function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneField {
@@ -228,16 +230,17 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   const fieldName = relationName(
     config,
     entity,
-    camelCase(pluralize(targetForeignKey.columns[0].name.replace("_id", ""))),
+    camelCase(plural(targetForeignKey.columns[0].name.replace("_id", ""))),
   );
   const otherFieldName = relationName(
     config,
     otherEntity,
-    camelCase(pluralize(foreignKey.columns[0].name.replace("_id", ""))),
+    camelCase(plural(foreignKey.columns[0].name.replace("_id", ""))),
   );
   const columnName = foreignKey.columns[0].name;
   const otherColumnName = targetForeignKey.columns[0].name;
-  return { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName };
+  const singularName = singular(fieldName);
+  return { joinTableName, fieldName, singularName, columnName, otherEntity, otherFieldName, otherColumnName };
 }
 
 export function oneToOneName(config: Config, entity: Entity, otherEntity: Entity): string {
@@ -256,7 +259,7 @@ export function collectionName(
   entity: Entity,
   otherEntity: Entity,
   r: M2ORelation | O2MRelation,
-): string {
+): { fieldName: string; singularName: string } {
   // TODO Handle conflicts in names
   // I.e. if the other side is `child.project_id`, use `children`.
   let fieldName = otherEntity.name;
@@ -272,10 +275,17 @@ export function collectionName(
   }
 
   // camelize the name
-  fieldName = camelCase(pluralize(fieldName));
+  let singularName = camelCase(fieldName);
+  fieldName = camelCase(plural(fieldName));
 
-  // check if we have an override
-  return relationName(config, entity, fieldName);
+  // If the name is overridden, use that, but also singularize it
+  const maybeOverriddenName = relationName(config, entity, fieldName);
+  if (maybeOverriddenName !== fieldName) {
+    singularName = singular(maybeOverriddenName);
+    fieldName = maybeOverriddenName;
+  }
+
+  return { singularName, fieldName };
 }
 
 export function makeEntity(entityName: string): Entity {

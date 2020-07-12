@@ -1,4 +1,5 @@
 import {
+  countOfAuthors,
   countOfBooks,
   countOfBookToTags,
   countOfTags,
@@ -62,7 +63,36 @@ describe("EntityManager", () => {
     expect(a1.firstName).toEqual("a1");
     expect((await a1.mentor.load())!.firstName).toEqual("m2");
     await em.flush();
-    expect((await knex.count().from("authors"))[0]).toEqual({ count: "2" });
+    expect(await countOfAuthors()).toEqual(2);
+  });
+
+  it("can update existing references without an id", async () => {
+    await insertAuthor({ first_name: "m1" });
+    await insertAuthor({ first_name: "a1", mentor_id: 1 });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdatePartial(Author, {
+      id: "a:2",
+      firstName: "a2",
+      mentor: { firstName: "m2" },
+    });
+    expect(a1.firstName).toEqual("a2");
+    expect((await a1.mentor.load())!.firstName).toEqual("m2");
+    await em.flush();
+    expect(await countOfAuthors()).toEqual(2);
+  });
+
+  it("can update existing references without an id that is not set", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = new EntityManager(knex);
+    const a1 = await em.createOrUpdatePartial(Author, {
+      id: "a:1",
+      firstName: "a2",
+      mentor: { firstName: "m2" },
+    });
+    expect(a1.firstName).toEqual("a2");
+    expect((await a1.mentor.load())!.firstName).toEqual("m2");
+    await em.flush();
+    expect(await countOfAuthors()).toEqual(2);
   });
 
   it("references can refer to entities by id", async () => {

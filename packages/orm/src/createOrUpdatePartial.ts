@@ -47,6 +47,7 @@ export async function createOrUpdatePartial<T extends Entity>(
 ): Promise<T> {
   const { id, ...others } = opts as any;
   const meta = getMetadata(constructor);
+  const isNew = id === null || id === undefined;
 
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
@@ -74,8 +75,26 @@ export async function createOrUpdatePartial<T extends Entity>(
         // This is a many-to-one reference
         const entity = await em.load(field.otherMetadata().cstr, value);
         return [name, entity];
+      } else if (typeof value === "object" && value && !("id" in value)) {
+        // This is a many-to-one partial into an existing reference that we need to resolve
+        let currentValue: any;
+        if (isNew) {
+          // The parent is brand new so the child is defacto brand new as well
+          currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+        } else {
+          // The parent exists, see if it has an existing child we can update
+          const parentEntity = await em.load(constructor, id, [name] as any);
+          currentValue = (parentEntity as any)[name].get;
+          if (currentValue) {
+            await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: currentValue.id, ...value });
+          } else {
+            // If it doesn't, go ahead and create a new one
+            currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+          }
+        }
+        return [name, currentValue];
       } else {
-        // This is a many-to-one partial
+        // This is a many-to-one partial into a new entity
         const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
         return [name, entity];
       }
@@ -115,7 +134,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   });
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
 
-  if (id === null || id === undefined) {
+  if (isNew) {
     return em.createPartial(constructor, _opts);
   } else {
     const entity = await em.load(constructor, id);

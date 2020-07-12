@@ -7,6 +7,7 @@ export async function insertAuthor(row: {
   age?: number | null;
   is_popular?: boolean | null;
   publisher_id?: number | null;
+  mentor_id?: number | null;
   initials?: string;
   number_of_books?: number;
 }) {
@@ -54,4 +55,8 @@ export async function countOfTags() {
 
 export async function countOfBookToTags() {
   return (await knex.select("*").from("books_to_tags")).length;
+}
+
+export async function countOfAuthors() {
+  return (await knex.select("*").from("authors")).length;
 }

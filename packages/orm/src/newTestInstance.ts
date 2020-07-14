@@ -155,6 +155,8 @@ function defaultValue(field: PrimitiveField): unknown {
       return 0;
     case "Date":
       return testDate;
+    case "boolean":
+      return false;
   }
   return null;
 }

@@ -304,6 +304,12 @@ describe("Author", () => {
     expect(author.lastName).toEqual("a2");
   });
 
+  it("cannot set empty string names", async () => {
+    const em = new EntityManager(knex);
+    new Author(em, { firstName: "" });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
+  });
+
   it("has strongly typed reference ids", () => {
     const author: Author = null!;
     let bookId: BookId = "1";

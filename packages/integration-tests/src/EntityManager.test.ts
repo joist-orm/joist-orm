@@ -469,18 +469,16 @@ describe("EntityManager", () => {
     const em = new EntityManager(knex);
     // @ts-expect-error
     em.create(Author, {});
-    expect(() => {
-      // @ts-expect-error
-      em.create(Author, { firstName: null });
-    }).toThrow("firstName is required");
+    // @ts-expect-error
+    em.create(Author, { firstName: null });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("cannot createPartial without a required field as null", async () => {
     const em = new EntityManager(knex);
-    expect(() => {
-      // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
-      em.createPartial(Author, { firstName: null });
-    }).toThrow("firstName is required");
+    // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
+    em.createPartial(Author, { firstName: null });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("cannot createPartial without a required field as undefined", async () => {
@@ -505,19 +503,17 @@ describe("EntityManager", () => {
   it("cannot set with a null required field", async () => {
     const em = new EntityManager(knex);
     const a1 = em.create(Author, { firstName: "a1" });
-    expect(() => {
-      // @ts-expect-error
-      a1.set({ firstName: null });
-    }).toThrow("firstName is required");
+    // @ts-expect-error
+    a1.set({ firstName: null });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can setPartial with a null required field", async () => {
     const em = new EntityManager(knex);
     const a1 = em.create(Author, { firstName: "a1" });
-    expect(() => {
-      // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
-      a1.setPartial({ firstName: null });
-    }).toThrow("firstName is required");
+    // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
+    a1.setPartial({ firstName: null });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("setPartial defaults to ignoredUndefined", async () => {

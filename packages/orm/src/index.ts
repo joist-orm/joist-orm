@@ -178,7 +178,6 @@ export function setOpts<T extends Entity>(
   if (values === undefined || typeof values === "string") {
     return;
   }
-  const requiredKeys = getRequiredKeys(entity);
   const { calledFromConstructor, partial } = opts || {};
   const meta = getMetadata(entity);
 
@@ -193,10 +192,7 @@ export function setOpts<T extends Entity>(
       return;
     }
     // We let optional opts fields be `| null` for convenience, and convert to undefined.
-    const value = _value === null ? undefined : _value;
-    if (value === undefined && requiredKeys.includes(key)) {
-      throw new Error(`${key} is required`);
-    }
+    const value = _value === null || (typeof _value === "string" && _value.trim() === "") ? undefined : _value;
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {
       if (calledFromConstructor) {

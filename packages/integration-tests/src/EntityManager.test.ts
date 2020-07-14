@@ -1,4 +1,4 @@
-import { entityLimit, EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 import {

@@ -227,7 +227,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${[o2m, m2o, o2o, m2m]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        ${hasDefaultValues ? code`super(em, ${metadata}, {...${defaultValuesName}})` : code`super(em, ${metadata})`};
+        super(em, ${metadata}, ${hasDefaultValues ? `${defaultValuesName}` : "{}"}, opts);
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
       }
 

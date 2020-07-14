@@ -21,9 +21,13 @@ export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
   readonly __orm: EntityOrmField;
 
-  protected constructor(em: EntityManager, metadata: any, data?: Record<string, any>) {
-    this.__orm = { em, metadata, data: data || {}, originalData: {} };
-    em.register(this);
+  protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
+    this.__orm = { em, metadata, data: { ...defaultValues }, originalData: {} };
+    // Ensure we have at least id set so the `EntityManager.register` works
+    if (typeof opts === "string") {
+      this.__orm.data["id"] = opts;
+    }
+    em.register(metadata, this);
   }
 
   get idUntagged(): string | undefined {

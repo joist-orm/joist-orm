@@ -128,7 +128,7 @@ export abstract class BookCodegen extends BaseEntity {
   readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super(em, bookMeta, { ...bookDefaultValues });
+    super(em, bookMeta, bookDefaultValues, opts);
     setOpts((this as any) as Book, opts, { calledFromConstructor: true });
   }
 

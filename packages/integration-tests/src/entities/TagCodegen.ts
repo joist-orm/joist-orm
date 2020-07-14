@@ -81,7 +81,7 @@ export abstract class TagCodegen extends BaseEntity {
   );
 
   constructor(em: EntityManager, opts: TagOpts) {
-    super(em, tagMeta);
+    super(em, tagMeta, {}, opts);
     setOpts((this as any) as Tag, opts, { calledFromConstructor: true });
   }
 

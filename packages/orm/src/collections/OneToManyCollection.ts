@@ -222,7 +222,7 @@ function loaderForCollection<T extends Entity, U extends Entity>(
   const loaderName = `${meta.tableName}.${collection.fieldName}`;
   return getOrSet(em.__data.loaders, loaderName, () => {
     return new DataLoader<string, U[]>(async (_keys) => {
-      const otherMeta = collection.otherMeta;
+      const { otherMeta } = collection;
 
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);

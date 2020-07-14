@@ -104,7 +104,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
   readonly publisher: Reference<BookAdvance, Publisher, never> = hasOne(publisherMeta, "publisher", "bookAdvances");
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
-    super(em, bookAdvanceMeta);
+    super(em, bookAdvanceMeta, {}, opts);
     setOpts((this as any) as BookAdvance, opts, { calledFromConstructor: true });
   }
 

@@ -106,7 +106,7 @@ export abstract class PublisherCodegen extends BaseEntity {
   readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    super(em, publisherMeta);
+    super(em, publisherMeta, {}, opts);
     setOpts((this as any) as Publisher, opts, { calledFromConstructor: true });
   }
 

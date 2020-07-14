@@ -210,6 +210,6 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   }
 
   private maybeFindExisting(): U | undefined {
-    return this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.otherMeta.cstr, this.id) : undefined;
+    return this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined;
   }
 }

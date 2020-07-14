@@ -189,6 +189,9 @@ export class EntityManager {
   constructor(public knex: Knex) {}
 
   private _entities: Entity[] = [];
+  // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
+  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
+  private _entityIndex: Map<string, Entity> = new Map();
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
@@ -392,7 +395,7 @@ export class EntityManager {
     }
     const meta = getMetadata(type);
     const tagged = tagIfNeeded(meta, id);
-    const entity = this.findExistingInstance(meta.cstr, tagged) || (await this.loaderForEntity(type).load(tagged));
+    const entity = this.findExistingInstance<T>(tagged) || (await this.loaderForEntity(meta).load(tagged));
     if (!entity) {
       throw new Error(`${tagged} was not found`);
     }
@@ -414,7 +417,7 @@ export class EntityManager {
     const ids = _ids.map((id) => tagIfNeeded(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(meta.cstr, id) || this.loaderForEntity(type).load(id);
+        return this.findExistingInstance(id) || this.loaderForEntity(meta).load(id);
       }),
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
@@ -520,17 +523,24 @@ export class EntityManager {
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
-  register(entity: Entity): void {
-    if (entity.id && this.findExistingInstance(getMetadata(entity).cstr, entity.id) !== undefined) {
+  register(meta: EntityMetadata<any>, entity: Entity): void {
+    if (entity.id && this.findExistingInstance(entity.id) !== undefined) {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     entity.__orm.data["createdAt"] = new Date();
     entity.__orm.data["updatedAt"] = new Date();
+
     this._entities.push(entity);
+    if (entity.id) {
+      assertIdsAreTagged([entity.id]);
+      this._entityIndex.set(entity.id, entity);
+    }
+
     if (this._entities.length >= entityLimit) {
       throw new Error(`More than ${entityLimit} entities have been instantiated`);
     }
+
     currentlyInstantiatingEntity = entity;
   }
 
@@ -633,6 +643,10 @@ export class EntityManager {
       // is going to make multiple `em.flush()` calls?
       await afterCommit(entityTodos);
 
+      Object.values(entityTodos).forEach((todo) => {
+        todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
+      });
+
       // Reset the find caches b/c data will have changed in the db
       this.findLoaders = {};
       this.__data.loaders = {};
@@ -684,7 +698,7 @@ export class EntityManager {
       list.map(async (entity) => {
         if (entity.id) {
           // Clear the original cached loader result and fetch the new primitives
-          const loader = this.loaderForEntity(getMetadata(entity).cstr);
+          const loader = this.loaderForEntity(getMetadata(entity));
           loader.clear(entity.id);
           await loader.load(entity.id);
           if (entity.__orm.deleted === undefined) {
@@ -806,17 +820,16 @@ export class EntityManager {
     });
   }
 
-  private loaderForEntity<T extends Entity>(type: EntityConstructor<T>): DataLoader<string, T | undefined> {
-    return getOrSet(this.__data.loaders, type.name, () => {
+  private loaderForEntity<T extends Entity>(meta: EntityMetadata<T>): DataLoader<string, T | undefined> {
+    return getOrSet(this.__data.loaders, meta.type, () => {
       return new DataLoader<string, T | undefined>(async (_keys) => {
-        const meta = getMetadata(type);
         assertIdsAreTagged(_keys);
         const keys = deTagIds(meta, _keys);
 
         const rows = await this.knex.select("*").from(meta.tableName).whereIn("id", keys);
 
         // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
-        const entities = rows.map((row) => this.hydrate(type, row, { overwriteExisting: true }));
+        const entities = rows.map((row) => this.hydrate(meta.cstr, row, { overwriteExisting: true }));
         const entitiesById = indexBy(entities, (e) => e.id!);
 
         // Return the results back in the same order as the keys
@@ -826,7 +839,7 @@ export class EntityManager {
           // `findOneOrFail` or for `EntityManager.refresh` when the entity has been deleted out from
           // under us.
           if (entity === undefined) {
-            const existingEntity = this.findExistingInstance(type, k);
+            const existingEntity = this.findExistingInstance<T>(k);
             if (existingEntity) {
               existingEntity.__orm.deleted = "deleted";
             }
@@ -838,8 +851,9 @@ export class EntityManager {
   }
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
-  private findExistingInstance<T extends Entity>(type: EntityConstructor<T>, id: string): T | undefined {
-    return this.entities.find((e) => getMetadata(e).cstr === type && e.id === id) as T | undefined;
+  private findExistingInstance<T>(id: string): T | undefined {
+    assertIdsAreTagged([id]);
+    return this._entityIndex.get(id) as T | undefined;
   }
 
   /**
@@ -855,9 +869,10 @@ export class EntityManager {
     const meta = getMetadata(type);
     const id = keyToString(meta, row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
-    let entity = this.findExistingInstance(type, id) as T;
+    let entity = this.findExistingInstance(id) as T;
     if (!entity) {
-      entity = (new type(this, undefined) as any) as T;
+      // Pass id as a hint that we're in hydrate mode
+      entity = new type(this, id);
       meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       // Usually if the entity alrady exists, we don't write over it, but in this case
@@ -986,7 +1001,9 @@ export function sameEntity(a: Entity, bMeta: EntityMetadata<any>, bCurrent: Enti
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructor<T>): EntityMetadata<T> {
-  return (isEntity(entityOrType) ? entityOrType.__orm.metadata : (entityOrType as any).metadata) as EntityMetadata<T>;
+  return (typeof entityOrType === "function"
+    ? (entityOrType as any).metadata
+    : entityOrType.__orm.metadata) as EntityMetadata<T>;
 }
 
 /** Thrown by `findOneOrFail` if an entity is not found. */

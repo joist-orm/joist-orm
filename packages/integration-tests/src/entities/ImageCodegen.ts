@@ -118,7 +118,7 @@ export abstract class ImageCodegen extends BaseEntity {
   readonly publisher: Reference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
 
   constructor(em: EntityManager, opts: ImageOpts) {
-    super(em, imageMeta);
+    super(em, imageMeta, {}, opts);
     setOpts((this as any) as Image, opts, { calledFromConstructor: true });
   }
 

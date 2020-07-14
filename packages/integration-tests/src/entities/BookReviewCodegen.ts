@@ -88,7 +88,7 @@ export abstract class BookReviewCodegen extends BaseEntity {
   readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
-    super(em, bookReviewMeta);
+    super(em, bookReviewMeta, {}, opts);
     setOpts((this as any) as BookReview, opts, { calledFromConstructor: true });
   }
 

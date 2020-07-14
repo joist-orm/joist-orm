@@ -7,7 +7,6 @@ import {
   EntityOrmField,
   getMetadata,
   IdOf,
-  isEntity,
   Loaded,
   LoadHint,
   OptsOf,
@@ -171,11 +170,12 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
  */
 export function setOpts<T extends Entity>(
   entity: T,
-  values: Partial<OptsOf<T>>,
+  values: Partial<OptsOf<T>> | string | undefined,
   opts?: { calledFromConstructor?: boolean; partial?: boolean },
 ): void {
-  // If `values` is undefined, this instance is being hydrated from a database row, so skip all this.
-  if (values === undefined) {
+  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row, so skip all this.
+  // If `values` is undefined, we're being called by `createPartial` that will do its own opt handling.
+  if (values === undefined || typeof values === "string") {
     return;
   }
   const requiredKeys = getRequiredKeys(entity);

@@ -16,7 +16,7 @@ export function getProperties<T extends Entity>(meta: EntityMetadata<T>): string
     ...Object.keys(
       new meta.cstr(
         {
-          register: (entity: any) => {
+          register: (metadata: any, entity: any) => {
             em.currentlyInstantiatingEntity = entity;
           },
         } as any,

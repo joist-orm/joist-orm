@@ -178,7 +178,7 @@ export function buildQuery<T extends Entity>(
         }
       } else {
         // This is not a foreign key column, so it'll have the primitive filters/order bys
-        if (clause instanceof Object && operators.find((op) => Object.keys(clause).includes(op))) {
+        if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
           // I.e. `{ primitiveField: { op: value } }`
           const op = Object.keys(clause)[0] as Operator;
           const value = (clause as any)[op];

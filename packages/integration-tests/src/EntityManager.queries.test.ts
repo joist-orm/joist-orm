@@ -279,7 +279,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2" });
     const em = new EntityManager(knex);
-    const authors = await em.find(Author, { age: null });
+    const authors = await em.find(Author, { age: null, firstName: undefined });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });

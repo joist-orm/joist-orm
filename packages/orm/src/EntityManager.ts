@@ -966,7 +966,7 @@ export type OneToOneField = {
 };
 
 export function isEntity(maybeEntity: any): maybeEntity is Entity {
-  return maybeEntity !== undefined && maybeEntity instanceof Object && "id" in maybeEntity && "__orm" in maybeEntity;
+  return maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
 }
 
 export function isKey(k: any): k is string {

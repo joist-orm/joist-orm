@@ -21,9 +21,8 @@ describe("EntityManager", () => {
 
   it("fails to create new entity with invalid data", async () => {
     const em = new EntityManager(knex);
-    await expect(em.createOrUpdatePartial(Author, { id: null, firstName: null })).rejects.toThrow(
-      "firstName is required",
-    );
+    await em.createOrUpdatePartial(Author, { id: null, firstName: null });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can update an entity with valid data", async () => {
@@ -36,9 +35,8 @@ describe("EntityManager", () => {
   it("fails to update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = new EntityManager(knex);
-    await expect(em.createOrUpdatePartial(Author, { id: "1", firstName: null })).rejects.toThrow(
-      "firstName is required",
-    );
+    await em.createOrUpdatePartial(Author, { id: "1", firstName: null });
+    await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can create new children with valid data", async () => {

@@ -3,23 +3,23 @@ export enum PublisherSize {
   Large = "LARGE",
 }
 
-type Details = { id: number; code: PublisherSize; name: string };
+export type PublisherSizeDetails = { id: number; code: PublisherSize; name: string };
 
-const details: Record<PublisherSize, Details> = {
+const details: Record<PublisherSize, PublisherSizeDetails> = {
   [PublisherSize.Small]: { id: 1, code: PublisherSize.Small, name: "Small" },
   [PublisherSize.Large]: { id: 2, code: PublisherSize.Large, name: "Large" },
 };
 
 export const PublisherSizes = {
-  getByCode(code: PublisherSize): Details {
+  getByCode(code: PublisherSize): PublisherSizeDetails {
     return details[code];
   },
 
-  findByCode(code: string): Details | undefined {
+  findByCode(code: string): PublisherSizeDetails | undefined {
     return details[code as PublisherSize];
   },
 
-  findById(id: number): Details | undefined {
+  findById(id: number): PublisherSizeDetails | undefined {
     return Object.values(details).find((d) => d.id === id);
   },
 
@@ -27,7 +27,7 @@ export const PublisherSizes = {
     return Object.values(PublisherSize);
   },
 
-  getDetails(): ReadonlyArray<Details> {
+  getDetails(): ReadonlyArray<PublisherSizeDetails> {
     return Object.values(details);
   },
 };

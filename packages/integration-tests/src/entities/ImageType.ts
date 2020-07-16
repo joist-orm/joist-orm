@@ -4,24 +4,24 @@ export enum ImageType {
   PublisherImage = "PUBLISHER_IMAGE",
 }
 
-type Details = { id: number; code: ImageType; name: string };
+export type ImageTypeDetails = { id: number; code: ImageType; name: string; sortOrder: number };
 
-const details: Record<ImageType, Details> = {
-  [ImageType.BookImage]: { id: 1, code: ImageType.BookImage, name: "Book Image" },
-  [ImageType.AuthorImage]: { id: 2, code: ImageType.AuthorImage, name: "Author Image" },
-  [ImageType.PublisherImage]: { id: 3, code: ImageType.PublisherImage, name: "Publisher Image" },
+const details: Record<ImageType, ImageTypeDetails> = {
+  [ImageType.BookImage]: { id: 1, code: ImageType.BookImage, name: "Book Image", sortOrder: 100 },
+  [ImageType.AuthorImage]: { id: 2, code: ImageType.AuthorImage, name: "Author Image", sortOrder: 200 },
+  [ImageType.PublisherImage]: { id: 3, code: ImageType.PublisherImage, name: "Publisher Image", sortOrder: 300 },
 };
 
 export const ImageTypes = {
-  getByCode(code: ImageType): Details {
+  getByCode(code: ImageType): ImageTypeDetails {
     return details[code];
   },
 
-  findByCode(code: string): Details | undefined {
+  findByCode(code: string): ImageTypeDetails | undefined {
     return details[code as ImageType];
   },
 
-  findById(id: number): Details | undefined {
+  findById(id: number): ImageTypeDetails | undefined {
     return Object.values(details).find((d) => d.id === id);
   },
 
@@ -29,7 +29,7 @@ export const ImageTypes = {
     return Object.values(ImageType);
   },
 
-  getDetails(): ReadonlyArray<Details> {
+  getDetails(): ReadonlyArray<ImageTypeDetails> {
     return Object.values(details);
   },
 };

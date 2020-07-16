@@ -79,6 +79,11 @@ export function up(b: MigrationBuilder): void {
     ["PUBLISHER_IMAGE", "Publisher Image"],
   ]);
 
+  b.addColumn("image_type", { sort_order: { type: "integer", notNull: true, default: 1_000_000 } });
+  Object.entries({ BOOK_IMAGE: 100, AUTHOR_IMAGE: 200, PUBLISHER_IMAGE: 300 }).forEach(([code, sortOrder]) =>
+    b.sql(`UPDATE image_type SET sort_order=${sortOrder} WHERE code='${code}'`),
+  );
+
   createEntityTable(b, "images", {
     type_id: foreignKey("image_type", { notNull: true }),
     file_name: { type: "varchar(255)", notNull: true },

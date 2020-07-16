@@ -4,24 +4,24 @@ export enum AdvanceStatus {
   Paid = "PAID",
 }
 
-type Details = { id: number; code: AdvanceStatus; name: string };
+export type AdvanceStatusDetails = { id: number; code: AdvanceStatus; name: string };
 
-const details: Record<AdvanceStatus, Details> = {
+const details: Record<AdvanceStatus, AdvanceStatusDetails> = {
   [AdvanceStatus.Pending]: { id: 1, code: AdvanceStatus.Pending, name: "Pending" },
   [AdvanceStatus.Signed]: { id: 2, code: AdvanceStatus.Signed, name: "Signed" },
   [AdvanceStatus.Paid]: { id: 3, code: AdvanceStatus.Paid, name: "Paid" },
 };
 
 export const AdvanceStatuses = {
-  getByCode(code: AdvanceStatus): Details {
+  getByCode(code: AdvanceStatus): AdvanceStatusDetails {
     return details[code];
   },
 
-  findByCode(code: string): Details | undefined {
+  findByCode(code: string): AdvanceStatusDetails | undefined {
     return details[code as AdvanceStatus];
   },
 
-  findById(id: number): Details | undefined {
+  findById(id: number): AdvanceStatusDetails | undefined {
     return Object.values(details).find((d) => d.id === id);
   },
 
@@ -29,7 +29,7 @@ export const AdvanceStatuses = {
     return Object.values(AdvanceStatus);
   },
 
-  getDetails(): ReadonlyArray<Details> {
+  getDetails(): ReadonlyArray<AdvanceStatusDetails> {
     return Object.values(details);
   },
 };

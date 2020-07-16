@@ -107,7 +107,7 @@ export function generateFiles(config: Config, dbMeta: DbMetadata): CodeGenFile[]
 export async function loadEnumRows(db: Db, client: Client): Promise<EnumRows> {
   const promises = db.tables.filter(isEnumTable).map(async (table) => {
     const result = await client.query(`SELECT * FROM ${table.name} ORDER BY id`);
-    const rows = result.rows.map((row) => ({ id: row.id, code: row.code, name: row.name } as EnumRow));
+    const rows = result.rows.map((row) => row as EnumRow);
     return [table.name, rows] as [string, EnumRow[]];
   });
   return Object.fromEntries(await Promise.all(promises));

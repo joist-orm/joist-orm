@@ -60,10 +60,11 @@ describe("CustomCollection", () => {
     const [i1, i2, i3] = await em.loadAll(Image, ["1", "2", "3"], "owner");
     const i4 = em.createPartial(Image, { fileName: "i4" });
 
-    expect(publisher.allImages.get).toEqual([i1, i2, i3]);
+    // need to account for sorting based on image type
+    expect(publisher.allImages.get).toEqual([i3, i2, i1]);
     publisher.allImages.set([i2, i4]);
     await em.flush();
-    expect(publisher.allImages.get).toEqual([i4, i2]);
+    expect(publisher.allImages.get).toEqual([i2, i4]);
   });
 
   it("can add to a collection", async () => {
@@ -79,10 +80,11 @@ describe("CustomCollection", () => {
     const [i1, i2, i3] = await em.loadAll(Image, ["1", "2", "3"], "owner");
     const i4 = em.createPartial(Image, { fileName: "i4" });
 
-    expect(publisher.allImages.get).toEqual([i1, i2, i3]);
+    // need to account for sorting based on image type
+    expect(publisher.allImages.get).toEqual([i3, i2, i1]);
     publisher.allImages.add(i4);
     await em.flush();
-    expect(publisher.allImages.get).toEqual([i1, i4, i2, i3]);
+    expect(publisher.allImages.get).toEqual([i3, i2, i1, i4]);
   });
 
   it("can remove from a collection", async () => {
@@ -97,9 +99,10 @@ describe("CustomCollection", () => {
     const publisher = await em.load(Publisher, "1", "allImages");
     const [i1, i2, i3] = await em.loadAll(Image, ["1", "2", "3"], "owner");
 
-    expect(publisher.allImages.get).toEqual([i1, i2, i3]);
+    // need to account for sorting based on image type
+    expect(publisher.allImages.get).toEqual([i3, i2, i1]);
     publisher.allImages.remove(i2);
     await em.flush();
-    expect(publisher.allImages.get).toEqual([i1, i3]);
+    expect(publisher.allImages.get).toEqual([i3, i1]);
   });
 });

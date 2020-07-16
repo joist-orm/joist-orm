@@ -272,7 +272,7 @@ function errorMessage(errors: ValidationError[]): string {
   }
 }
 
-export type EntityHook = "beforeFlush" | "beforeDelete" | "afterCommit";
+export type EntityHook = "beforeFlush" | "beforeDelete" | "afterValidation" | "afterCommit";
 type HookFn<T extends Entity> = (entity: T) => MaybePromise<void>;
 
 export class ConfigData<T extends Entity> {
@@ -285,6 +285,7 @@ export class ConfigData<T extends Entity> {
     beforeDelete: [],
     beforeFlush: [],
     afterCommit: [],
+    afterValidation: [],
   };
   // Load-hint-ish structures that point back to instances that depend on us for validation rules.
   reactiveRules: string[][] = [];
@@ -356,6 +357,12 @@ export class ConfigApi<T extends Entity> {
   beforeFlush(fn: HookFn<T>): void;
   beforeFlush(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
     this.hook("beforeFlush", ruleOrHint, maybeFn);
+  }
+
+  afterValidation<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
+  afterValidation(fn: HookFn<T>): void;
+  afterValidation(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
+    this.hook("afterValidation", ruleOrHint, maybeFn);
   }
 
   afterCommit(fn: HookFn<T>): void {

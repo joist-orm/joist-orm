@@ -614,6 +614,7 @@ export class EntityManager {
       recalcDerivedFields(todos);
       await recalcAsyncDerivedFields(this, todos);
       await validate(todos);
+      await afterValidation(todos);
 
       entitiesToFlush.push(...pendingEntities);
       pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
@@ -1104,6 +1105,10 @@ async function beforeDelete(todos: Record<string, Todo>): Promise<void> {
 
 async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
   await runHook("beforeFlush", todos, ["inserts", "updates"]);
+}
+
+async function afterValidation(todos: Record<string, Todo>): Promise<void> {
+  await runHook("afterValidation", todos, ["inserts", "updates"]);
 }
 
 async function afterCommit(todos: Record<string, Todo>): Promise<void> {

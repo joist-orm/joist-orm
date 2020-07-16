@@ -147,15 +147,29 @@ describe("EntityManager.factories", () => {
 
   it("can completely customize opts in the factory", async () => {
     const em = new EntityManager(knex);
-    const b = newBook(em, { tags: ["t1", "t2"] });
+    const b = newBook(em, { tags: [1, 2] });
     const tags = b.tags.get as New<Tag>[];
-    expect(tags[0].name).toEqual("t1");
-    expect(tags[1].name).toEqual("t2");
+    expect(tags[0].name).toEqual("1");
+    expect(tags[1].name).toEqual("2");
   });
 
   it("cannot pass invalid customized opts", async () => {
     const em = new EntityManager(knex);
     // @ts-expect-error
     newBook(em, { tags: [{ name: "t1" }] });
+  });
+
+  it("can use tagged ids as shortcuts", async () => {
+    const em = new EntityManager(knex);
+    const a1 = newAuthor(em);
+    const b1 = newBook(em, { author: "a:1" });
+    expect(b1.author.get).toEqual(a1);
+  });
+
+  it("can use tagged ids as shortcuts in list", async () => {
+    const em = new EntityManager(knex);
+    const a1 = newAuthor(em);
+    const p1 = newPublisher(em, { authors: ["a:1"] });
+    expect(p1.authors.get).toEqual([a1]);
   });
 });

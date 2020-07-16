@@ -5,11 +5,14 @@ import {
   EntityConstructor,
   EntityManager,
   getMetadata,
+  IdOf,
   isEntity,
   New,
   OptsOf,
   PrimitiveField,
 } from "./EntityManager";
+import { tagIfNeeded } from "./keys";
+import { fail } from "./utils";
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -56,6 +59,12 @@ export function newTestInstance<T extends Entity>(
           if (field.kind === "m2o") {
             if (isEntity(optValue)) {
               return [fieldName, optValue];
+            } else if (optValue && typeof optValue === "string") {
+              return [
+                fieldName,
+                em.entities.find((e) => e.id === optValue || getTestId(em, e) === optValue) ||
+                  fail(`Did not find tagged id ${optValue}`),
+              ];
             } else if (optValue && !isPlainObject(optValue)) {
               return field.otherMetadata().factory(em, opts);
             }
@@ -67,6 +76,11 @@ export function newTestInstance<T extends Entity>(
             const values = (optValue as Array<any>).map((optValue) => {
               if (isEntity(optValue)) {
                 return optValue;
+              } else if (optValue && typeof optValue === "string") {
+                return (
+                  em.entities.find((e) => e.id === optValue || getTestId(em, e) === optValue) ||
+                  fail(`Did not find tagged id ${optValue}`)
+                );
               } else if (optValue && !isPlainObject(optValue)) {
                 return field.otherMetadata().factory(em, optValue);
               }
@@ -122,7 +136,8 @@ export function newTestInstance<T extends Entity>(
       })
       .filter((t) => t.length > 0),
   );
-  return (em.create(meta.cstr, fullOpts as any) as any) as New<T>;
+
+  return em.create(meta.cstr, fullOpts as any) as New<T>;
 }
 
 /**
@@ -145,6 +160,13 @@ export const testIndex = "TEST_INDEX";
 export function getTestIndex<T extends Entity>(em: EntityManager, type: EntityConstructor<T>): number {
   const existing = em.entities.filter((e) => e instanceof type);
   return existing.length + 1;
+}
+
+/** Fakes a probably-right id for un-persisted entities. Solely used for quick lookups in tests/factories. */
+function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
+  const meta = getMetadata(entity);
+  const sameType = em.entities.filter((e) => e instanceof meta.cstr);
+  return tagIfNeeded(meta, String(sameType.indexOf(entity) + 1));
 }
 
 function defaultValue(field: PrimitiveField): unknown {
@@ -170,10 +192,10 @@ type AllowRelationsOrPartials<T> = {
   [P in keyof T]?: T[P] extends DefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<V | ActualFactoryOpts<V>>
+        ? Array<V | IdOf<V> | ActualFactoryOpts<V>>
         : T[P]
       : U extends Entity
-      ? U | ActualFactoryOpts<U>
+      ? U | IdOf<U> | ActualFactoryOpts<U>
       : T[P]
     : T[P];
 };

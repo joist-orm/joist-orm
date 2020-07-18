@@ -120,7 +120,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }),
     ];
     const fs = newFs({
-      // And an existing graphql file without the firstName  a custom field
+      // And an existing graphql file without the firstName
       "author.graphql": "type Author { id: ID! }",
       // And the history file said we've already added it
       ".history.json": JSON.stringify({ Author: ["firstName"] }),
@@ -155,7 +155,11 @@ describe("generateGraphqlSchemaFiles", () => {
     ];
     // And an existing graphql file
     const fs = newFs({
-      "author.graphql": `""" The author """ type Author { """ The id """ id: ID! } input SaveAuthorInput { id: ID }`,
+      "author.graphql": `
+        """ The author """
+        type Author { """ The id """ id: ID! }
+        input SaveAuthorInput { id: ID }
+      `,
     });
     // When ran
     await generateGraphqlSchemaFiles(fs, entities);

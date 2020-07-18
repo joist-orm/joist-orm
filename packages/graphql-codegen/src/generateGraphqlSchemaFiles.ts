@@ -15,28 +15,32 @@ import { Fs } from "./utils";
  * without this stomping over their changes.
  */
 export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetadata[]): Promise<void> {
+  // Generate all of the "ideal" fields based solely on the domain model
   const fields = [
     ...createEntityFields(entities),
     ...createSaveEntityInputFields(entities),
     ...createSaveEntityResultFields(entities),
   ];
 
+  // Load the history and filter out only "new" / not-yet-added-to-.graphql fields
   const history = await loadHistory(fs);
   const newFields = fields.filter(({ objectType, fieldName }) => !history[objectType]?.includes(fieldName));
   if (newFields.length === 0) {
     return;
   }
 
-  newFields.forEach(({ objectName, fieldName }) => {
-    (history[objectName] = history[objectName] || []).push(fieldName);
-  });
-  await writeHistory(fs, history);
-
+  // Update the `.graphql` files with our new types/fields
   await Promise.all(
     Object.entries(groupBy(newFields, (f) => f.file)).map(([file, fields]) => {
       return upsertIntoFile(fs, file, fields);
     }),
   );
+
+  // Record the current batch of fields back to the history file
+  newFields.forEach(({ objectName, fieldName }) => {
+    (history[objectName] = history[objectName] || []).push(fieldName);
+  });
+  await writeHistory(fs, history);
 }
 
 /** Make all of the fields for `type Author`, `type Book`, etc. */

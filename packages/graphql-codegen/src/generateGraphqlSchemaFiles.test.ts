@@ -21,6 +21,10 @@ describe("generateGraphqlSchemaFiles", () => {
       input SaveAuthorInput {
         id: ID
       }
+
+      type SaveAuthorResult {
+        author: Author!
+      }
       "
     `);
   });
@@ -49,6 +53,10 @@ describe("generateGraphqlSchemaFiles", () => {
         id: ID
         firstName: String
       }
+
+      type SaveAuthorResult {
+        author: Author!
+      }
       "
     `);
     // And saved it in the history
@@ -61,6 +69,9 @@ describe("generateGraphqlSchemaFiles", () => {
         "SaveAuthorInput": Array [
           "id",
           "firstName",
+        ],
+        "SaveAuthorResult": Array [
+          "author",
         ],
       }
     `);
@@ -93,6 +104,10 @@ describe("generateGraphqlSchemaFiles", () => {
         customField: String
         firstName: String
       }
+
+      type SaveAuthorResult {
+        author: Author!
+      }
       "
     `);
   });
@@ -122,6 +137,10 @@ describe("generateGraphqlSchemaFiles", () => {
       input SaveAuthorInput {
         id: ID
         firstName: String
+      }
+
+      type SaveAuthorResult {
+        author: Author!
       }
       "
     `);

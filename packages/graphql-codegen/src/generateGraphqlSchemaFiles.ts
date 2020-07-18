@@ -15,7 +15,11 @@ import { Fs } from "./utils";
  * without this stomping over their changes.
  */
 export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetadata[]): Promise<void> {
-  const fields = [...createEntityFields(entities), ...createEntityInputFields(entities)];
+  const fields = [
+    ...createEntityFields(entities),
+    ...createSaveEntityInputFields(entities),
+    ...createSaveEntityResultFields(entities),
+  ];
 
   const history = await loadHistory(fs);
   const newFields = fields.filter(({ objectType, fieldName }) => !history[objectType]?.includes(fieldName));
@@ -79,7 +83,7 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
 }
 
 /** Make all of the fields for `type SaveAuthorInput`, `type SaveBookBook`, etc. */
-function createEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
+function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
   return entities.flatMap((e) => {
     const file = fileName(e);
     const objectType = "input" as const;
@@ -102,6 +106,21 @@ function createEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
     });
 
     return [id, ...primitives, ...enums, ...m2os];
+  });
+}
+
+/** Makes the fields for `type SaveAuthorResult`, `type SaveBookResult`, etc. */
+function createSaveEntityResultFields(entities: EntityDbMetadata[]): GqlField[] {
+  return entities.flatMap((e) => {
+    const file = fileName(e);
+    const {
+      entity: { name },
+    } = e;
+    const objectType = "output" as const;
+    const objectName = `Save${name}Result`;
+    const fieldName = camelCase(name);
+    const entity: GqlField = { file, objectType, objectName, fieldName, fieldType: `${name}!` };
+    return [entity];
   });
 }
 

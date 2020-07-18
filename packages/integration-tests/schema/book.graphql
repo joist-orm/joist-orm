@@ -19,3 +19,7 @@ input SaveBookInput {
   updatedAt: Date
   authorId: ID
 }
+
+type SaveBookResult {
+  book: Book!
+}

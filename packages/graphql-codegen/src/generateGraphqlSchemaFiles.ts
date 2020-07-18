@@ -38,7 +38,10 @@ export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetad
 
   // Record the current batch of fields back to the history file
   newFields.forEach(({ objectName, fieldName }) => {
-    (history[objectName] = history[objectName] || []).push(fieldName);
+    const fields = (history[objectName] = history[objectName] || []);
+    if (!fields.includes(fieldName)) {
+      fields.push(fieldName);
+    }
   });
   await writeHistory(fs, history);
 }

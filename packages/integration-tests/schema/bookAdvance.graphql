@@ -15,3 +15,7 @@ input SaveBookAdvanceInput {
   bookId: ID
   publisherId: ID
 }
+
+type SaveBookAdvanceResult {
+  bookAdvance: BookAdvance!
+}

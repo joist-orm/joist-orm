@@ -15,3 +15,7 @@ input SaveBookReviewInput {
   updatedAt: Date
   bookId: ID
 }
+
+type SaveBookReviewResult {
+  bookReview: BookReview!
+}

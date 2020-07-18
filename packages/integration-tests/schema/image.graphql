@@ -19,3 +19,7 @@ input SaveImageInput {
   bookId: ID
   publisherId: ID
 }
+
+type SaveImageResult {
+  image: Image!
+}

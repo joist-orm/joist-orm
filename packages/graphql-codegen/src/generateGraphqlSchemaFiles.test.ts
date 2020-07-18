@@ -39,6 +39,8 @@ describe("generateGraphqlSchemaFiles", () => {
     // And an existing graphql file
     const fs = newFs({
       "author.graphql": "type Author { id: ID! } input SaveAuthorInput { id: ID }",
+      // And the history file doesn't have firstName yet
+      ".history.json": JSON.stringify({ Author: ["id"] }),
     });
     // When ran
     await generateGraphqlSchemaFiles(fs, entities);

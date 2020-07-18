@@ -16,3 +16,7 @@ input SavePublisherInput {
   updatedAt: Date
   size: PublisherSize
 }
+
+type SavePublisherResult {
+  publisher: Publisher!
+}

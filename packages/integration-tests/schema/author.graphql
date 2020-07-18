@@ -30,3 +30,7 @@ input SaveAuthorInput {
   mentorId: ID
   publisherId: ID
 }
+
+type SaveAuthorResult {
+  author: Author!
+}

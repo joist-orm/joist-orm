@@ -1,6 +1,7 @@
 import prettier, { resolveConfig } from "prettier";
 import { Fs } from "./utils";
 
+/** A map from GraphQL object type name -> its field names that have already been scaffolded. */
 export type History = Record<string, string[]>;
 
 const configPath = ".history.json";

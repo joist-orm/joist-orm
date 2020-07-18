@@ -12,3 +12,7 @@ input SaveTagInput {
   createdAt: Date
   updatedAt: Date
 }
+
+type SaveTagResult {
+  tag: Tag!
+}

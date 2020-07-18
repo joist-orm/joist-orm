@@ -145,6 +145,44 @@ describe("generateGraphqlSchemaFiles", () => {
       "
     `);
   });
+
+  it("keeps comments", async () => {
+    // Given an author with a primitive field
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Author", {
+        primitives: [newPrimitiveField("firstName")],
+      }),
+    ];
+    // And an existing graphql file
+    const fs = newFs({
+      "author.graphql": `""" The author """ type Author { """ The id """ id: ID! } input SaveAuthorInput { id: ID }`,
+    });
+    // When ran
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then we added the new field
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+      "\\"\\"\\"
+       The author
+      \\"\\"\\"
+      type Author {
+        \\"\\"\\"
+         The id
+        \\"\\"\\"
+        id: ID!
+        firstName: String!
+      }
+
+      input SaveAuthorInput {
+        id: ID
+        firstName: String
+      }
+
+      type SaveAuthorResult {
+        author: Author!
+      }
+      "
+    `);
+  });
 });
 
 function newFs(files: Record<string, string>): Fs {

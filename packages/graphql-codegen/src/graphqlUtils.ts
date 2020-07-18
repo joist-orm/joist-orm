@@ -1,5 +1,6 @@
 import { DocumentNode, InputObjectTypeDefinitionNode, ObjectTypeDefinitionNode, parse, print, visit } from "graphql";
 import { groupBy } from "joist-utils";
+import prettier, { resolveConfig } from "prettier";
 import { Fs } from "./utils";
 
 /** A type for the fields we want to add to `*.graphql` files. */
@@ -20,7 +21,11 @@ export async function upsertIntoFile(fs: Fs, file: string, fields: GqlField[]): 
     return [objectName, createNewDoc(objectName, fields)] as [string, DocumentNode];
   });
 
-  await fs.save(file, print(mergeDocs(existingDoc, newDocs)));
+  const content = print(mergeDocs(existingDoc, newDocs));
+  const prettierConfig = await resolveConfig("./");
+  const formatted = prettier.format(content, { parser: "graphql", ...prettierConfig });
+
+  await fs.save(file, formatted);
 }
 
 function createNewDoc(objectName: string, fields: GqlField[]): DocumentNode {

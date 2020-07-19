@@ -158,8 +158,8 @@ describe("generateGraphqlSchemaFiles", () => {
     // And an existing graphql file
     const fs = newFs({
       "author.graphql": `
-        """ The author """
-        type Author { """ The id """ id: ID! }
+        " The author. "
+        type Author { " The id. " id: ID! }
         input SaveAuthorInput { id: ID }
       `,
     });
@@ -167,13 +167,9 @@ describe("generateGraphqlSchemaFiles", () => {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then we added the new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "\\"\\"\\"
-       The author
-      \\"\\"\\"
+      "\\" The author. \\"
       type Author {
-        \\"\\"\\"
-         The id
-        \\"\\"\\"
+        \\" The id. \\"
         id: ID!
         firstName: String!
       }

@@ -107,7 +107,7 @@ export function newTestInstance<T extends Entity>(
           return [fieldName, optValue];
         }
 
-        if (field.kind === "primitive" && !field.derived && !field.protected) {
+        if (field.kind === "primitive" && field.required && !field.derived && !field.protected) {
           return [fieldName, defaultValue(field)];
         } else if (field.kind === "m2o") {
           const otherMeta = field.otherMetadata();

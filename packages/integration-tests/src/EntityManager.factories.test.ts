@@ -172,4 +172,11 @@ describe("EntityManager.factories", () => {
     const p1 = newPublisher(em, { authors: ["a:1"] });
     expect(p1.authors.get).toEqual([a1]);
   });
+
+  it("can omit default values for non-required primitive fields", async () => {
+    const em = new EntityManager(knex);
+    const a1 = newAuthor(em);
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.lastName).toBeUndefined();
+  });
 });

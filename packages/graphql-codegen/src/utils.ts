@@ -7,7 +7,7 @@ export interface Fs {
   save(fileName: string, content: string): Promise<void>;
 }
 
-/** A real implementatoin of `Fs` that writes to the `prefix` directory. */
+/** A real implementation of `Fs` that writes to the `prefix` directory. */
 export function newFsImpl(prefix: string): Fs {
   return {
     load: async (fileName) => {
@@ -29,7 +29,12 @@ export function sortKeys<T extends object>(o: T): T {
     .sort()
     .reduce((acc, key) => {
       const value = o[key as keyof T];
-      const newValue = typeof value === "object" && isPlainObject(value) ? sortKeys((value as any) as object) : value;
+      const newValue =
+        typeof value === "object" && isPlainObject(value)
+          ? sortKeys((value as any) as object)
+          : Array.isArray(value)
+          ? value.sort()
+          : value;
       acc[key as keyof T] = newValue as any;
       return acc;
     }, ({} as any) as T);

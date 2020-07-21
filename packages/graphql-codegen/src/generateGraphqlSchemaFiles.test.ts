@@ -65,12 +65,12 @@ describe("generateGraphqlSchemaFiles", () => {
     expect(JSON.parse((await fs.load(".history.json")) || "")).toMatchInlineSnapshot(`
       Object {
         "Author": Array [
-          "id",
           "firstName",
+          "id",
         ],
         "SaveAuthorInput": Array [
-          "id",
           "firstName",
+          "id",
         ],
         "SaveAuthorResult": Array [
           "author",

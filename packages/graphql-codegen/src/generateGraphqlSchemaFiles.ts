@@ -24,7 +24,7 @@ export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetad
 
   // Load the history and filter out only "new" / not-yet-added-to-.graphql fields
   const history = await loadHistory(fs);
-  const newFields = fields.filter(({ objectType, fieldName }) => !history[objectType]?.includes(fieldName));
+  const newFields = fields.filter(({ objectName, fieldName }) => !history[objectName]?.includes(fieldName));
   if (newFields.length === 0) {
     return;
   }

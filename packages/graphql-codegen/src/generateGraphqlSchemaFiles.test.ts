@@ -133,7 +133,6 @@ describe("generateGraphqlSchemaFiles", () => {
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "type Author {
         id: ID!
-        firstName: String!
       }
 
       input SaveAuthorInput {

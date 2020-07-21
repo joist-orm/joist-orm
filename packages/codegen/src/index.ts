@@ -63,8 +63,14 @@ export function generateFiles(config: Config, dbMeta: DbMetadata): CodeGenFile[]
 
   const enumFiles = enums
     .map((table) => {
-      const enumName = tableToEntityName(table);
-      return [{ name: `${enumName}.ts`, contents: generateEnumFile(table, enumRows, enumName), overwrite: true }];
+      const enumName = tableToEntityName(config, table);
+      return [
+        {
+          name: `${enumName}.ts`,
+          contents: generateEnumFile(config, table, enumRows, enumName),
+          overwrite: true,
+        },
+      ];
     })
     .reduce(merge, []);
 
@@ -81,7 +87,7 @@ export function generateFiles(config: Config, dbMeta: DbMetadata): CodeGenFile[]
 
   const entitiesFile: CodeGenFile = {
     name: "./entities.ts",
-    contents: generateEntitiesFile(entities, enums),
+    contents: generateEntitiesFile(config, entities, enums),
     overwrite: true,
   };
 

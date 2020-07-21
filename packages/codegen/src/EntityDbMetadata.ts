@@ -98,11 +98,11 @@ export class EntityDbMetadata {
   tableName: string;
 
   constructor(config: Config, table: Table) {
-    this.entity = makeEntity(tableToEntityName(table));
+    this.entity = makeEntity(tableToEntityName(config, table));
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
       .map((column) => newPrimitive(config, this.entity, column, table));
-    this.enums = table.m2oRelations.filter((r) => isEnumTable(r.targetTable)).map((r) => newEnumField(r));
+    this.enums = table.m2oRelations.filter((r) => isEnumTable(r.targetTable)).map((r) => newEnumField(config, r));
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
@@ -175,11 +175,11 @@ function fieldDerived(config: Config, entity: Entity, fieldName: string): Primit
   }
 }
 
-function newEnumField(r: M2ORelation): EnumField {
+function newEnumField(config: Config, r: M2ORelation): EnumField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const fieldName = camelCase(column.name.replace("_id", ""));
-  const enumName = tableToEntityName(r.targetTable);
+  const enumName = tableToEntityName(config, r.targetTable);
   const enumType = imp(`${enumName}@./entities`);
   const enumDetailType = imp(`${plural(enumName)}@./entities`);
   const notNull = column.notNull;
@@ -190,7 +190,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const fieldName = referenceName(config, entity, r);
-  const otherEntity = makeEntity(tableToEntityName(r.targetTable));
+  const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
   const otherFieldName = isOneToOne
     ? oneToOneName(config, otherEntity, entity)
@@ -203,7 +203,7 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
   const column = r.foreignKey.columns[0];
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
-  const otherEntity = makeEntity(tableToEntityName(r.targetTable));
+  const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const { singularName, fieldName } = collectionName(config, entity, otherEntity, r);
   const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
@@ -215,7 +215,7 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
   const column = r.foreignKey.columns[0];
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
-  const otherEntity = makeEntity(tableToEntityName(r.targetTable));
+  const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const fieldName = oneToOneName(config, entity, otherEntity);
   const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
@@ -226,7 +226,7 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
 function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): ManyToManyField {
   const { foreignKey, targetForeignKey, targetTable } = r;
   const joinTableName = r.joinTable.name;
-  const otherEntity = makeEntity(tableToEntityName(targetTable));
+  const otherEntity = makeEntity(tableToEntityName(config, targetTable));
   const fieldName = relationName(
     config,
     entity,

@@ -1,5 +1,4 @@
 {
-  "entitiesDirectory": "./src/entities",
   "codegenPlugins": ["joist-graphql-codegen"],
   "entities": {
     "Author": {
@@ -10,11 +9,12 @@
       },
       "tag": "a"
     },
-    "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
     "Book": { "tag": "b" },
+    "BookAdvance": { "tag": "ba" },
+    "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
     "Image": { "tag": "i" },
     "Publisher": { "tag": "p" },
-    "Tag": { "tag": "t" },
-    "BookAdvance": { "tag": "ba" }
-  }
+    "Tag": { "tag": "t" }
+  },
+  "entitiesDirectory": "./src/entities"
 }

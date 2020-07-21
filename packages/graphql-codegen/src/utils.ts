@@ -1,4 +1,5 @@
 import { promises as fs } from "fs";
+import isPlainObject from "is-plain-object";
 
 /** A super-simple file system abstraction for testing. */
 export interface Fs {
@@ -21,4 +22,15 @@ export function newFsImpl(prefix: string): Fs {
       await fs.writeFile(`${prefix}/${fileName}`, content);
     },
   };
+}
+
+export function sortKeys<T extends object>(o: T): T {
+  return Object.keys(o)
+    .sort()
+    .reduce((acc, key) => {
+      const value = o[key as keyof T];
+      const newValue = typeof value === "object" && isPlainObject(value) ? sortKeys((value as any) as object) : value;
+      acc[key as keyof T] = newValue as any;
+      return acc;
+    }, ({} as any) as T);
 }

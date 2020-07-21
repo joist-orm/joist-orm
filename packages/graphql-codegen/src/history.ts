@@ -1,5 +1,5 @@
 import prettier, { resolveConfig } from "prettier";
-import { Fs } from "./utils";
+import { Fs, sortKeys } from "./utils";
 
 /** A map from GraphQL object type name -> its field names that have already been scaffolded. */
 export type History = Record<string, string[]>;
@@ -13,7 +13,7 @@ export async function loadHistory(fs: Fs): Promise<History> {
 
 export async function writeHistory(fs: Fs, history: History): Promise<void> {
   const prettierConfig = await resolveConfig("./");
-  const input = JSON.stringify(history);
+  const input = JSON.stringify(sortKeys(history));
   const content = prettier.format(input.trim(), { parser: "json", ...prettierConfig });
   await fs.save(configPath, content);
 }

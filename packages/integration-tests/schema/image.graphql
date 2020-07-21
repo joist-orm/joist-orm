@@ -1,0 +1,25 @@
+type Image {
+  id: ID!
+  fileName: String!
+  createdAt: Date!
+  updatedAt: Date!
+  type: ImageType!
+  author: Author
+  book: Book
+  publisher: Publisher
+}
+
+input SaveImageInput {
+  id: ID
+  fileName: String
+  createdAt: Date
+  updatedAt: Date
+  type: ImageType
+  authorId: ID
+  bookId: ID
+  publisherId: ID
+}
+
+type SaveImageResult {
+  image: Image!
+}

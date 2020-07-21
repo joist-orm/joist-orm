@@ -65,7 +65,7 @@ export function merge<T>(a: T[], b: T[]): T[] {
 
 /** Returns true if `p` is resolved, otherwise false if it is rejected. */
 export async function trueIfResolved(p: Promise<unknown>): Promise<boolean> {
-  return await p.then(
+  return p.then(
     () => true,
     () => false,
   );

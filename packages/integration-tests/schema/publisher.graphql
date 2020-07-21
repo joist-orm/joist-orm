@@ -1,0 +1,22 @@
+type Publisher {
+  id: ID!
+  name: String!
+  createdAt: Date!
+  updatedAt: Date!
+  size: PublisherSize
+  authors: [Author!]!
+  bookAdvances: [BookAdvance!]!
+  images: [Image!]!
+}
+
+input SavePublisherInput {
+  id: ID
+  name: String
+  createdAt: Date
+  updatedAt: Date
+  size: PublisherSize
+}
+
+type SavePublisherResult {
+  publisher: Publisher!
+}

@@ -1,0 +1,36 @@
+type Author {
+  id: ID!
+  firstName: String!
+  lastName: String
+  initials: String!
+  numberOfBooks: Int!
+  isPopular: Boolean
+  age: Int
+  wasEverPopular: Boolean
+  createdAt: Date!
+  updatedAt: Date!
+  mentor: Author
+  publisher: Publisher
+  authors: [Author!]!
+  books: [Book!]!
+  image: Image
+}
+
+input SaveAuthorInput {
+  id: ID
+  firstName: String
+  lastName: String
+  initials: String
+  numberOfBooks: Int
+  isPopular: Boolean
+  age: Int
+  wasEverPopular: Boolean
+  createdAt: Date
+  updatedAt: Date
+  mentorId: ID
+  publisherId: ID
+}
+
+type SaveAuthorResult {
+  author: Author!
+}

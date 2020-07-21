@@ -1,0 +1,25 @@
+type Book {
+  id: ID!
+  title: String!
+  order: Int
+  createdAt: Date!
+  updatedAt: Date!
+  author: Author!
+  advances: [BookAdvance!]!
+  reviews: [BookReview!]!
+  tags: [Tag!]!
+  image: Image
+}
+
+input SaveBookInput {
+  id: ID
+  title: String
+  order: Int
+  createdAt: Date
+  updatedAt: Date
+  authorId: ID
+}
+
+type SaveBookResult {
+  book: Book!
+}

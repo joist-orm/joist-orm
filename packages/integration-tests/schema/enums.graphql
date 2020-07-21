@@ -1,3 +1,4 @@
+
 enum AdvanceStatus { PENDING SIGNED PAID }
 type AdvanceStatusDetail { code: AdvanceStatus! name: String! }
 

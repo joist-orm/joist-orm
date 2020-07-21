@@ -1,0 +1,18 @@
+type Tag {
+  id: ID!
+  name: String!
+  createdAt: Date!
+  updatedAt: Date!
+  books: [Book!]!
+}
+
+input SaveTagInput {
+  id: ID
+  name: String
+  createdAt: Date
+  updatedAt: Date
+}
+
+type SaveTagResult {
+  tag: Tag!
+}

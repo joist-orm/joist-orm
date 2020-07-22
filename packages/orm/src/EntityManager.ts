@@ -82,6 +82,8 @@ export let currentlyInstantiatingEntity: Entity | undefined;
 export interface Entity {
   id: string | undefined;
 
+  idOrFail: string;
+
   __orm: EntityOrmField;
 
   readonly isNewEntity: boolean;

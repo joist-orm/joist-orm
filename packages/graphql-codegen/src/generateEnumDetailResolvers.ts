@@ -8,7 +8,7 @@ export function generateEnumDetailResolvers(enums: EnumRows): CodeGenFile {
   const enumNames = Object.keys(enums).map((name) => pascalCase(name));
 
   const resolvers = enumNames.map((name) => {
-    const type = imp(`${pluralize(name)}@@src/entities`);
+    const type = imp(`${pluralize(name)}@src/entities`);
     return code`
       ${name}Detail: {
         code: (root) => root,
@@ -17,7 +17,7 @@ export function generateEnumDetailResolvers(enums: EnumRows): CodeGenFile {
     `;
   });
 
-  const Resolvers = imp("Resolvers@@src/generated/graphql-types");
+  const Resolvers = imp("Resolvers@src/generated/graphql-types");
 
   const contents = code`
     type EnumDetails = ${enumNames.map((n) => `"${n}Detail"`).join(" | ")};

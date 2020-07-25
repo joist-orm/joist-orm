@@ -9,8 +9,8 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
   // Combine the entity mapped types and enum detail mapped types
   const mappedTypes = sortObject(
     Object.fromEntries([
-      ...entities.map(({ entity }) => [entity.name, `@src/entities#${entity.idType.value}`]),
-      ...enumNames.map((name) => [`${name}Detail`, `@src/entities#${name}`]),
+      ...entities.map(({ entity }) => [entity.name, `src/entities#${entity.idType.value}`]),
+      ...enumNames.map((name) => [`${name}Detail`, `src/entities#${name}`]),
     ]),
   );
 
@@ -20,7 +20,7 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
     };
 
     const enumValues = {
-      ${enumNames.map((name) => `${name}: "@src/entities#${name}",`)}
+      ${enumNames.map((name) => `${name}: "src/entities#${name}",`)}
     };
 
     module.exports = { mappers, enumValues };

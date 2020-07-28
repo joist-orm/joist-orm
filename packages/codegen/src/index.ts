@@ -28,7 +28,7 @@ export {
 
 export interface CodeGenFile {
   name: string;
-  contents: Code;
+  contents: Code | string;
   overwrite: boolean;
 }
 

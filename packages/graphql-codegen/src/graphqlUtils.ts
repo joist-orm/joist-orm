@@ -25,10 +25,14 @@ export async function upsertIntoFile(fs: Fs, file: string, fields: GqlField[]): 
 
   // Merge each `newDoc` object definition into the file's existing types
   const content = print(mergeDocs(existingDoc, newDocs));
-  const prettierConfig = await resolveConfig("./");
-  const formatted = prettier.format(content, { parser: "graphql", ...prettierConfig });
+  const formatted = await formatGraphQL(content);
 
   await fs.save(file, formatted);
+}
+
+export async function formatGraphQL(content: string): Promise<string> {
+  const prettierConfig = await resolveConfig("./");
+  return prettier.format(content, { parser: "graphql", ...prettierConfig });
 }
 
 /**

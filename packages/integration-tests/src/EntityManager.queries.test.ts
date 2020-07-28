@@ -192,16 +192,37 @@ describe("EntityManager.queries", () => {
   });
 
   it("can find by foreign key using only an id", async () => {
-    await insertAuthor({
-      id: 3,
-      first_name: "a1",
-    });
+    await insertAuthor({ id: 3, first_name: "a1" });
     await insertAuthor({ id: 4, first_name: "a2" });
     await insertBook({ title: "b1", author_id: 3 });
     await insertBook({ title: "b2", author_id: 4 });
 
     const em = new EntityManager(knex);
     const books = await em.find(Book, { author: { id: "4" } });
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+  });
+
+  it("can find by foreign key using only a tagged id", async () => {
+    await insertAuthor({ id: 3, first_name: "a1" });
+    await insertAuthor({ id: 4, first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 3 });
+    await insertBook({ title: "b2", author_id: 4 });
+
+    const em = new EntityManager(knex);
+    const books = await em.find(Book, { author: { id: "a:4" } });
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+  });
+
+  it("can find by foreign key using a tagged id list", async () => {
+    await insertAuthor({ id: 3, first_name: "a1" });
+    await insertAuthor({ id: 4, first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 3 });
+    await insertBook({ title: "b2", author_id: 4 });
+
+    const em = new EntityManager(knex);
+    const books = await em.find(Book, { author: { id: ["a:4"] } });
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
   });

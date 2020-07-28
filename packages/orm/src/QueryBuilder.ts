@@ -146,9 +146,12 @@ export function buildQuery<T extends Entity>(
           // If only querying on the id, we can skip the join
           const value = (clause as any)["id"];
           if (Array.isArray(value)) {
-            query = query.whereIn(`${alias}.${column.columnName}`, value);
+            query = query.whereIn(
+              `${alias}.${column.columnName}`,
+              value.map((id) => column.serde.mapToDb(id)),
+            );
           } else {
-            query = query.where(`${alias}.${column.columnName}`, value);
+            query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(value));
           }
         } else if (clauseKeys.length === 1 && clauseKeys[0] === "ne") {
           // I.e. { authorFk: { id: { ne: string | null | undefined } } }

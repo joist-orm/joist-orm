@@ -477,6 +477,14 @@ describe("EntityManager.queries", () => {
     expect(publishers.length).toEqual(1);
   });
 
+  it("can find with GQL by greater than with op/value", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = new EntityManager(knex);
+    const authors = await em.findGql(Author, { age: { op: "gt", value: 1 } });
+    expect(authors.length).toEqual(1);
+  });
+
   it("can offset/limit", async () => {
     await insertPublisher({ name: "p1" });
     await insertPublisher({ name: "p2" });

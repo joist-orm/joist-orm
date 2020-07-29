@@ -907,11 +907,13 @@ export interface EntityMetadata<T extends Entity> {
   tableName: string;
   tagName: string;
   // Eventually our dbType should go away to support N-column fields
-  columns: Array<{ fieldName: string; columnName: string; dbType: string; serde: ColumnSerde }>;
+  columns: Array<ColumnMeta>;
   fields: Array<Field>;
   config: ConfigApi<T>;
   factory: (em: EntityManager, opts?: any) => New<T>;
 }
+
+export type ColumnMeta = { fieldName: string; columnName: string; dbType: string; serde: ColumnSerde };
 
 export type Field =
   | PrimaryKeyField

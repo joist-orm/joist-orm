@@ -476,6 +476,10 @@ const gqlFilter: GraphQLAuthorFilter = {
 const authors = await em.findGql(Author, gqlFilter);
 ```
 
+Also note that while the `age: { eq: 2 }` is a really clean way to write filters by hand, it can be annoying to dynamically create, i.e. in a UI that needs to conditionally change the operator from "equals" to "not equals", because there is not a single key to bind against in the input type.
+
+To make building these UIs easier, `findGql` also accepts a "more-boring" `{ op: "gt", value: 1 }` syntax. The value of the `op` key can be any of the supported operators, i.e. `gt`, `lt`, `gte`, `ne`, etc.
+
 ### hasOneThrough
 
 You can define common paths through your entity graph with `hasOneThrough`:

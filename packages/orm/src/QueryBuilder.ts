@@ -1,16 +1,17 @@
 import Knex, { QueryBuilder } from "knex";
-import { fail } from "./utils";
 import {
+  ColumnMeta,
   Entity,
   EntityConstructor,
+  entityLimit,
   EntityMetadata,
+  FilterOf,
   getMetadata,
   isEntity,
-  FilterOf,
   OrderOf,
-  entityLimit,
 } from "./EntityManager";
 import { ForeignKeySerde } from "./serde";
+import { fail } from "./utils";
 
 export type OrderBy = "ASC" | "DESC";
 
@@ -35,6 +36,8 @@ export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { ne: T | I | N };
 
 export type BooleanGraphQLFilter = true | false | null;
 
+export type Primitive = string | boolean | Date | number;
+
 /** This essentially matches the ValueFilter but with looser types to placate GraphQL. */
 export type ValueGraphQLFilter<V> =
   | {
@@ -47,6 +50,7 @@ export type ValueGraphQLFilter<V> =
       lte?: V | null;
       like?: V | null;
     }
+  | { op: Operator; value: Primitive }
   | V
   | V[]
   | null;
@@ -57,7 +61,7 @@ export type EnumGraphQLFilter<V> = V[] | null | undefined;
 export type EntityGraphQLFilter<T, I, F> = T | I | I[] | F | { ne: T | I } | null | undefined;
 
 const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "in"] as const;
-type Operator = typeof operators[number];
+export type Operator = typeof operators[number];
 const opToFn: Record<Operator, string> = {
   eq: "=",
   gt: ">",
@@ -182,26 +186,12 @@ export function buildQuery<T extends Entity>(
       } else {
         // This is not a foreign key column, so it'll have the primitive filters/order bys
         if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
-          // I.e. `{ primitiveField: { op: value } }`
+          // I.e. `{ primitiveField: { gt: value } }`
           const op = Object.keys(clause)[0] as Operator;
-          const value = (clause as any)[op];
-          if (value === null || value === undefined) {
-            if (op === "ne") {
-              query = query.whereNotNull(`${alias}.${column.columnName}`);
-            } else if (op === "eq") {
-              query = query.whereNull(`${alias}.${column.columnName}`);
-            } else {
-              throw new Error("Only ne is supported when the value is undefined or null");
-            }
-          } else if (op === "in") {
-            query = query.whereIn(
-              `${alias}.${column.columnName}`,
-              (value as Array<any>).map((v) => column.serde.mapToDb(v)),
-            );
-          } else {
-            const fn = opToFn[op];
-            query = query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
-          }
+          query = addPrimitiveOperator(query, alias, column, op, (clause as any)[op]);
+        } else if (clause && typeof clause === "object" && "op" in clause) {
+          // I.e. { primitiveField: { op: "gt", value: 1 } }`
+          query = addPrimitiveOperator(query, alias, column, clause.op, clause.value);
         } else if (Array.isArray(clause)) {
           // I.e. `{ primitiveField: value[] }`
           query = query.whereIn(
@@ -241,4 +231,30 @@ function abbreviation(tableName: string): string {
     .split("_")
     .map((w) => w[0])
     .join("");
+}
+
+function addPrimitiveOperator(
+  query: QueryBuilder,
+  alias: string,
+  column: ColumnMeta,
+  op: Operator,
+  value: any,
+): QueryBuilder {
+  if (value === null || value === undefined) {
+    if (op === "ne") {
+      return query.whereNotNull(`${alias}.${column.columnName}`);
+    } else if (op === "eq") {
+      return query.whereNull(`${alias}.${column.columnName}`);
+    } else {
+      throw new Error("Only ne is supported when the value is undefined or null");
+    }
+  } else if (op === "in") {
+    return query.whereIn(
+      `${alias}.${column.columnName}`,
+      (value as Array<any>).map((v) => column.serde.mapToDb(v)),
+    );
+  } else {
+    const fn = opToFn[op] || fail(`Invalid operator ${op}`);
+    return query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
+  }
 }

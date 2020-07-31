@@ -119,59 +119,17 @@ export function buildQuery<T extends Entity>(
     keys.forEach((key) => {
       const column = meta.columns.find((c) => c.fieldName === key) || fail(`${key} not found`);
 
-      // We may/may not have a where clause or orderBy for the key, but we should have at least one of them.
+      // We may/may not have a where clause or orderBy for this key, but we should have at least one of them.
       const clause = where && (where as any)[key];
       const order = orderBy && (orderBy as any)[key];
 
       if (column.serde instanceof ForeignKeySerde) {
-        // I.e. this could be { authorFk: authorEntity | null | id | { ...recurse... } }
-        const clauseKeys = typeof clause === "object" && clause !== null ? Object.keys(clause as object) : [];
-        // Assume we have to join to the next level based on whether the key in each hash it set
-        let joinForClause = false;
-        let joinForOrder = order !== undefined;
-        if (isEntity(clause) || typeof clause == "string" || Array.isArray(clause)) {
-          // I.e. { authorFk: authorEntity | id | id[] }
-          if (isEntity(clause) && clause.id === undefined) {
-            // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
-            query = query.where(`${alias}.${column.columnName}`, -1);
-          } else if (Array.isArray(clause)) {
-            query = query.whereIn(
-              `${alias}.${column.columnName}`,
-              clause.map((id) => column.serde.mapToDb(id)),
-            );
-          } else {
-            query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
-          }
-        } else if ((clause === null || clause === undefined) && where && Object.keys(where).includes(key)) {
-          // I.e. { authorFk: null | undefined }
-          query = query.whereNull(`${alias}.${column.columnName}`);
-        } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
-          // I.e. { authorFk: { id: string } } || { authorFk: { id: string[] } }
-          // If only querying on the id, we can skip the join
-          const value = (clause as any)["id"];
-          if (Array.isArray(value)) {
-            query = query.whereIn(
-              `${alias}.${column.columnName}`,
-              value.map((id) => column.serde.mapToDb(id)),
-            );
-          } else {
-            query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(value));
-          }
-        } else if (clauseKeys.length === 1 && clauseKeys[0] === "ne") {
-          // I.e. { authorFk: { id: { ne: string | null | undefined } } }
-          const value = (clause as any)["ne"];
-          if (value === null || value === undefined) {
-            query = query.whereNotNull(`${alias}.${column.columnName}`);
-          } else if (typeof value === "string") {
-            query = query.whereNot(`${alias}.${column.columnName}`, column.serde.mapToDb(value));
-          } else {
-            throw new Error("Not implemented");
-          }
-        } else {
-          // I.e. { authorFk: { ...authorFilter... } }
-          joinForClause = clause !== undefined;
-        }
-        if (joinForClause || joinForOrder) {
+        // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
+        let [whereNeedsJoin, _query] =
+          where && key in where ? addForeignKeyClause(query, alias, column, clause) : [false, query];
+        query = _query;
+        let orderNeedsJoin = order !== undefined;
+        if (whereNeedsJoin || orderNeedsJoin) {
           // Add a join for this column
           const otherMeta = column.serde.otherMeta();
           const otherAlias = getAlias(otherMeta.tableName);
@@ -181,7 +139,7 @@ export function buildQuery<T extends Entity>(
             `${otherAlias}.id`,
           );
           // Then recurse to add its conditions to the query
-          addClauses(otherMeta, otherAlias, joinForClause ? clause : undefined, joinForOrder ? order : undefined);
+          addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, orderNeedsJoin ? order : undefined);
         }
       } else {
         // This is not a foreign key column, so it'll have the primitive filters/order bys
@@ -231,6 +189,64 @@ function abbreviation(tableName: string): string {
     .split("_")
     .map((w) => w[0])
     .join("");
+}
+
+function addForeignKeyClause(
+  query: QueryBuilder,
+  alias: string,
+  column: ColumnMeta,
+  clause: any,
+): [boolean, QueryBuilder] {
+  // I.e. this could be { authorFk: authorEntity | null | id | { ...recurse... } }
+  const clauseKeys = typeof clause === "object" && clause !== null ? Object.keys(clause as object) : [];
+  if (isEntity(clause) || typeof clause == "string" || Array.isArray(clause)) {
+    // I.e. { authorFk: authorEntity | id | id[] }
+    if (isEntity(clause) && clause.id === undefined) {
+      // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
+      return [false, query.where(`${alias}.${column.columnName}`, -1)];
+    } else if (Array.isArray(clause)) {
+      return [
+        false,
+        query.whereIn(
+          `${alias}.${column.columnName}`,
+          clause.map((id) => column.serde.mapToDb(id)),
+        ),
+      ];
+    } else {
+      return [false, query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause))];
+    }
+  } else if (clause === null || clause === undefined) {
+    // I.e. { authorFk: null | undefined }
+    return [false, query.whereNull(`${alias}.${column.columnName}`)];
+  } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
+    // I.e. { authorFk: { id: string } } || { authorFk: { id: string[] } }
+    // If only querying on the id, we can skip the join
+    const value = (clause as any)["id"];
+    if (Array.isArray(value)) {
+      return [
+        false,
+        query.whereIn(
+          `${alias}.${column.columnName}`,
+          value.map((id) => column.serde.mapToDb(id)),
+        ),
+      ];
+    } else {
+      return [false, query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(value))];
+    }
+  } else if (clauseKeys.length === 1 && clauseKeys[0] === "ne") {
+    // I.e. { authorFk: { ne: string | null | undefined } }
+    const value = (clause as any)["ne"];
+    if (value === null || value === undefined) {
+      return [false, query.whereNotNull(`${alias}.${column.columnName}`)];
+    } else if (typeof value === "string") {
+      return [false, query.whereNot(`${alias}.${column.columnName}`, column.serde.mapToDb(value))];
+    } else {
+      throw new Error("Not implemented");
+    }
+  } else {
+    // I.e. { authorFk: { ...authorFilter... } }
+    return [clause !== undefined, query];
+  }
 }
 
 function addPrimitiveOperator(

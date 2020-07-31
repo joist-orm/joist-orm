@@ -246,10 +246,17 @@ function addPrimitiveClause(query: QueryBuilder, alias: string, column: ColumnMe
   } else if (clause === null) {
     // I.e. `{ primitiveField: null }`
     return query.whereNull(`${alias}.${column.columnName}`);
+  } else if (clause === undefined) {
+    // I.e. `{ primitiveField: undefined }`
+    // Currently we treat this like a partial filter, i.e. don't include it. Seems odd
+    // unless this is opt-in, i.e. maybe only do this for `findGql`?
+    return query;
   } else if (clause !== undefined) {
     // I.e. `{ primitiveField: value }`
     // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
     return query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+  } else {
+    return fail(`Unhandled primitive clause ${clause}`);
   }
 }
 

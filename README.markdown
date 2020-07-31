@@ -49,14 +49,14 @@ After checkout:
 
 In general priority/itch order:
 
-- Open source a `joist-graphql-utils` with the `entityResolver` logic in it
+- Open source `joist-graphql-utils` with the `entityResolver` logic in it
 - Fix reactive rules not catching "middle-references" changing (fixed?)
-- Support `documentId`-style props in partial methods
 - Optionally move `begin` to the start of Unit of Work
 - `readonly asyncValue` that integrations into `populate`
-- Codegen'd test builders
 - Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)
 - Support user-defined types
+  - Hack day: `CalendarInterval` that matches `*_start_date`, `*_end_date`, `_duration_in_days`
+    - Would need to be able to add to `Opts`, `Filters`, `derivedValue`?
 - LargeCollection support
   - I.e. `joist-config.json` entry to mark (say) `publisher.authors` as "too big to never read at once" and use a different/restricted API, i.e. forced paging
 - JSON support, i.e. `toJSON`

@@ -121,15 +121,15 @@ export function buildQuery<T extends Entity>(
 
       // We may/may not have a where clause or orderBy for this key, but we should have at least one of them.
       const clause = where && (where as any)[key];
+      const hasClause = where && key in where;
       const order = orderBy && (orderBy as any)[key];
+      const hasOrder = !!order;
 
       if (column.serde instanceof ForeignKeySerde) {
         // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
-        let [whereNeedsJoin, _query] =
-          where && key in where ? addForeignKeyClause(query, alias, column, clause) : [false, query];
+        let [whereNeedsJoin, _query] = hasClause ? addForeignKeyClause(query, alias, column, clause) : [false, query];
         query = _query;
-        let orderNeedsJoin = order !== undefined;
-        if (whereNeedsJoin || orderNeedsJoin) {
+        if (whereNeedsJoin || hasOrder) {
           // Add a join for this column
           const otherMeta = column.serde.otherMeta();
           const otherAlias = getAlias(otherMeta.tableName);
@@ -139,31 +139,11 @@ export function buildQuery<T extends Entity>(
             `${otherAlias}.id`,
           );
           // Then recurse to add its conditions to the query
-          addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, orderNeedsJoin ? order : undefined);
+          addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
         }
       } else {
+        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
         // This is not a foreign key column, so it'll have the primitive filters/order bys
-        if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
-          // I.e. `{ primitiveField: { gt: value } }`
-          const op = Object.keys(clause)[0] as Operator;
-          query = addPrimitiveOperator(query, alias, column, op, (clause as any)[op]);
-        } else if (clause && typeof clause === "object" && "op" in clause) {
-          // I.e. { primitiveField: { op: "gt", value: 1 } }`
-          query = addPrimitiveOperator(query, alias, column, clause.op, clause.value);
-        } else if (Array.isArray(clause)) {
-          // I.e. `{ primitiveField: value[] }`
-          query = query.whereIn(
-            `${alias}.${column.columnName}`,
-            clause.map((v) => column.serde.mapToDb(v)),
-          );
-        } else if (clause === null) {
-          // I.e. `{ primitiveField: null }`
-          query = query.whereNull(`${alias}.${column.columnName}`);
-        } else if (clause !== undefined) {
-          // I.e. `{ primitiveField: value }`
-          // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
-          query = query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
-        }
         if (order) {
           query = query.orderBy(`${alias}.${column.columnName}`, order);
         }
@@ -246,6 +226,30 @@ function addForeignKeyClause(
   } else {
     // I.e. { authorFk: { ...authorFilter... } }
     return [clause !== undefined, query];
+  }
+}
+
+function addPrimitiveClause(query: QueryBuilder, alias: string, column: ColumnMeta, clause: any): QueryBuilder {
+  if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
+    // I.e. `{ primitiveField: { gt: value } }`
+    const op = Object.keys(clause)[0] as Operator;
+    return addPrimitiveOperator(query, alias, column, op, (clause as any)[op]);
+  } else if (clause && typeof clause === "object" && "op" in clause) {
+    // I.e. { primitiveField: { op: "gt", value: 1 } }`
+    return addPrimitiveOperator(query, alias, column, clause.op, clause.value);
+  } else if (Array.isArray(clause)) {
+    // I.e. `{ primitiveField: value[] }`
+    return query.whereIn(
+      `${alias}.${column.columnName}`,
+      clause.map((v) => column.serde.mapToDb(v)),
+    );
+  } else if (clause === null) {
+    // I.e. `{ primitiveField: null }`
+    return query.whereNull(`${alias}.${column.columnName}`);
+  } else if (clause !== undefined) {
+    // I.e. `{ primitiveField: value }`
+    // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
+    return query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
   }
 }
 

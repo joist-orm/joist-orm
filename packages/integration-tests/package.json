@@ -4,7 +4,7 @@
   "license": "MIT",
   "scripts": {
     "migrate": "./run.sh ../../node_modules/joist-migration-utils",
-    "test": "./node_modules/.bin/jest --runInBand --detectOpenHandles",
+    "test": "./node_modules/.bin/jest --runInBand --detectOpenHandles --logHeapUsage",
     "codegen": "./run.sh ../codegen"
   },
   "dependencies": {

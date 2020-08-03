@@ -600,64 +600,66 @@ export class EntityManager {
     await new Promise((res) => setTimeout(res, 0));
     const context = this.contexty.create();
 
-    while (pendingEntities.length > 0) {
-      context.flushSecret = this.flushSecret;
-      const todos = sortEntities(pendingEntities);
+    try {
+      while (pendingEntities.length > 0) {
+        context.flushSecret = this.flushSecret;
+        const todos = sortEntities(pendingEntities);
 
-      // add objects to todos that have reactive hooks
-      await addReactiveAsyncDerivedValues(todos);
-      await addReactiveValidations(todos);
+        // add objects to todos that have reactive hooks
+        await addReactiveAsyncDerivedValues(todos);
+        await addReactiveValidations(todos);
 
-      // run our hooks
-      await beforeDelete(todos);
-      // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-      await cascadeDeletesIntoRelations(todos);
-      await beforeFlush(todos);
-      recalcDerivedFields(todos);
-      await recalcAsyncDerivedFields(this, todos);
-      await validate(todos);
-      await afterValidation(todos);
+        // run our hooks
+        await beforeDelete(todos);
+        // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
+        await cascadeDeletesIntoRelations(todos);
+        await beforeFlush(todos);
+        recalcDerivedFields(todos);
+        await recalcAsyncDerivedFields(this, todos);
+        await validate(todos);
+        await afterValidation(todos);
 
-      entitiesToFlush.push(...pendingEntities);
-      pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
-      this.flushSecret += 1;
-    }
-
-    const entityTodos = sortEntities(entitiesToFlush);
-    const joinRowTodos = sortJoinRows(this.__data.joinRows);
-
-    if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
-      const alreadyInTxn = "commit" in this.knex;
-
-      if (!alreadyInTxn) {
-        await this.knex.transaction(async (knex) => {
-          await flushEntities(knex, entityTodos);
-          await flushJoinTables(knex, joinRowTodos);
-          // When using `.transaction` with a lambda, we don't explicitly call commit
-          // await knex.commit();
-        });
-      } else {
-        await flushEntities(this.knex, entityTodos);
-        await flushJoinTables(this.knex, joinRowTodos);
-        // Defer to the caller to commit the transaction
+        entitiesToFlush.push(...pendingEntities);
+        pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
+        this.flushSecret += 1;
       }
 
-      // TODO: This is really "after flush" if we're being called from a transaction that
-      // is going to make multiple `em.flush()` calls?
-      await afterCommit(entityTodos);
+      const entityTodos = sortEntities(entitiesToFlush);
+      const joinRowTodos = sortJoinRows(this.__data.joinRows);
 
-      Object.values(entityTodos).forEach((todo) => {
-        todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
-      });
+      if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
+        const alreadyInTxn = "commit" in this.knex;
 
-      // Reset the find caches b/c data will have changed in the db
-      this.findLoaders = {};
-      this.__data.loaders = {};
+        if (!alreadyInTxn) {
+          await this.knex.transaction(async (knex) => {
+            await flushEntities(knex, entityTodos);
+            await flushJoinTables(knex, joinRowTodos);
+            // When using `.transaction` with a lambda, we don't explicitly call commit
+            // await knex.commit();
+          });
+        } else {
+          await flushEntities(this.knex, entityTodos);
+          await flushJoinTables(this.knex, joinRowTodos);
+          // Defer to the caller to commit the transaction
+        }
+
+        // TODO: This is really "after flush" if we're being called from a transaction that
+        // is going to make multiple `em.flush()` calls?
+        await afterCommit(entityTodos);
+
+        Object.values(entityTodos).forEach((todo) => {
+          todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
+        });
+
+        // Reset the find caches b/c data will have changed in the db
+        this.findLoaders = {};
+        this.__data.loaders = {};
+      }
+    } finally {
+      this.contexty.cleanup();
+      this.contexty = undefined;
+      this._isFlushing = false;
     }
-
-    this.contexty.cleanup();
-    this.contexty = undefined;
-    this._isFlushing = false;
   }
 
   get isFlushing(): boolean {

@@ -11,5 +11,9 @@ export async function run(entities: EntityDbMetadata[], enums: EnumRows): Promis
   // We upsert directly into schema files so we don't use the usual `CodeGenFile[]` return type;
   await generateGraphqlSchemaFiles(fs, entities);
 
-  return [await generateEnumsGraphql(enums), generateEnumDetailResolvers(enums), generateGraphqlCodegen(entities, enums)];
+  return [
+    await generateEnumsGraphql(enums),
+    generateEnumDetailResolvers(enums),
+    generateGraphqlCodegen(entities, enums),
+  ];
 }

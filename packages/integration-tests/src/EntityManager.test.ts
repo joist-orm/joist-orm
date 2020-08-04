@@ -859,6 +859,33 @@ describe("EntityManager", () => {
       em.create(Author, { firstName: "a1", invalidKey: 1 });
     }).toThrow("Unknown field invalidKey");
   });
+
+  it("runs a beforeTransaction once on flush", async () => {
+    const em = new EntityManager(knex);
+    let beforeTransactionCount = 0;
+    em.beforeTransaction(() => {
+      beforeTransactionCount += 1;
+    });
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+    expect(beforeTransactionCount).toEqual(1);
+  });
+
+  it("runs a beforeTransaction once on a transaction", async () => {
+    const em = new EntityManager(knex);
+    let beforeTransactionCount = 0;
+    em.beforeTransaction(() => {
+      beforeTransactionCount += 1;
+    });
+    await em.transaction(async () => {
+      em.create(Author, { firstName: "a1" });
+      await em.flush();
+
+      em.create(Author, { firstName: "a2" });
+      await em.flush();
+    });
+    expect(beforeTransactionCount).toEqual(1);
+  });
 });
 
 function delay(ms: number): Promise<void> {

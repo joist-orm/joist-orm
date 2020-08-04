@@ -1,3 +1,6 @@
+import { getMetadata, Entity } from "./EntityManager";
+import { BaseEntity } from "./BaseEntity";
+
 const tagDelimiter = ":";
 
 // I'm not entirely sure this is still necessary, but use a small subset of EntityMetadata so
@@ -55,7 +58,15 @@ export function tagIfNeeded(meta: HasTagName, id: string): string {
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */
 export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly string[] {
-  return keys.map((k) => keyToNumber(meta, k)).map((n) => n.toString());
+  return keys.map((k) => deTagId(meta, k));
+}
+
+export function deTagId(meta: HasTagName, id: string): string;
+export function deTagId(entity: Entity): string;
+export function deTagId(entityOrMeta: Entity | HasTagName, id?: string): string {
+  const meta = entityOrMeta instanceof BaseEntity ? getMetadata(entityOrMeta) : (entityOrMeta as HasTagName);
+  id = id ?? (entityOrMeta as Entity).id;
+  return keyToNumber(meta, id!).toString();
 }
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */

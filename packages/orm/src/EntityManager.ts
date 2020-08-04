@@ -187,8 +187,24 @@ type NestedLoadHint<T extends Entity> = {
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
+type MaybePromise<T> = T | PromiseLike<T>;
+export type EntityManagerHook = "beforeTransaction";
+type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
+
 export class EntityManager {
-  constructor(public knex: Knex) {}
+  public knex: Knex;
+
+  constructor(em: EntityManager);
+  constructor(knex: Knex);
+  constructor(emOrKnex: EntityManager | Knex) {
+    if (emOrKnex instanceof EntityManager) {
+      const em = emOrKnex;
+      this.knex = em.knex;
+      this.hooks = { beforeTransaction: [...em.hooks.beforeTransaction] };
+    } else {
+      this.knex = emOrKnex;
+    }
+  }
 
   private _entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
@@ -197,11 +213,18 @@ export class EntityManager {
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
+  // we create a private contexty per flush instead of using a global module level one
+  // so that we don't accidentally start capturing arbitrary scopes on every await and
+  // cause a massive memory leak
   private contexty?: Contexty;
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
     joinRows: {} as Record<string, JoinRow[]>,
+  };
+
+  private hooks: Record<EntityManagerHook, HookFn[]> = {
+    beforeTransaction: [],
   };
 
   get context() {
@@ -501,13 +524,14 @@ export class EntityManager {
    * transaction, which is useful for enforcing cross-table/application-level invariants that
    * cannot be enforced with database-level constraints.
    */
-  public async transaction<T>(fn: () => Promise<T>): Promise<T> {
+  public async transaction<T>(fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
     const originalKnex = this.knex;
     const txn = await this.knex.transaction();
     this.knex = txn;
     try {
       await txn.raw("set transaction isolation level serializable;");
-      const result = await fn();
+      await beforeTransaction(this, txn);
+      const result = await fn(txn);
       // The lambda may have done some interstitial flushes (that would not
       // have committed the transaction), but go ahead and do a final one
       // in case they didn't explicitly call flush.
@@ -629,9 +653,9 @@ export class EntityManager {
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         const alreadyInTxn = "commit" in this.knex;
-
         if (!alreadyInTxn) {
           await this.knex.transaction(async (knex) => {
+            await beforeTransaction(this, knex);
             await flushEntities(knex, entityTodos);
             await flushJoinTables(knex, joinRowTodos);
             // When using `.transaction` with a lambda, we don't explicitly call commit
@@ -888,6 +912,10 @@ export class EntityManager {
     return entity;
   }
 
+  public beforeTransaction(fn: HookFn) {
+    this.hooks.beforeTransaction.push(fn);
+  }
+
   public toString(): string {
     return "EntityManager";
   }
@@ -1086,6 +1114,10 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }
+}
+
+async function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
+  await Promise.all(em["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
 }
 
 async function runHook(

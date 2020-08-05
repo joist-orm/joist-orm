@@ -1,6 +1,3 @@
-import { EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Publisher, PublisherSize } from "./entities";
-import { knex, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 import {
   insertAuthor,
   insertBook,
@@ -9,25 +6,28 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
+import { EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { Author, Book, Publisher, PublisherSize } from "./entities";
+import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
     await insertAuthor({ first_name: "f" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     expect(author.firstName).toEqual("f");
   });
 
   it("can load an entity by tagged id", async () => {
     await insertAuthor({ first_name: "f" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "a:1");
     expect(author.firstName).toEqual("f");
   });
 
   it("fails to load an entity by an invalid tagged id", async () => {
     await insertAuthor({ first_name: "f" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     await expect(em.load(Author, "p:1")).rejects.toThrow("Invalid tagged id, expected tag a, got p:1");
   });
 
@@ -36,7 +36,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a2" });
     resetQueryCount();
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [author1, author2] = await Promise.all([em.load(Author, "1"), em.load(Author, "2")]);
     expect(author1.firstName).toEqual("a1");
     expect(author2.firstName).toEqual("a2");
@@ -47,7 +47,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [author2, author1] = await Promise.all([em.load(Author, "2"), em.load(Author, "1")]);
     expect(author1.firstName).toEqual("a1");
     expect(author2.firstName).toEqual("a2");
@@ -55,14 +55,14 @@ describe("EntityManager", () => {
 
   it("maintains a single entity instance", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author1a = await em.load(Author, "1");
     const author1b = await em.load(Author, "1");
     expect(author1a).toStrictEqual(author1b);
   });
 
   it("inserts a new entity", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
 
@@ -72,7 +72,7 @@ describe("EntityManager", () => {
   });
 
   it("inserts then updates new entity", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
     author.firstName = "a2";
@@ -84,7 +84,7 @@ describe("EntityManager", () => {
   });
 
   it("inserts multiple entities in bulk", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1" });
     new Author(em, { firstName: "a2" });
     await em.flush();
@@ -95,7 +95,7 @@ describe("EntityManager", () => {
   });
 
   it("updates an entity", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
     expect(author.id).toEqual("a:1");
@@ -109,7 +109,7 @@ describe("EntityManager", () => {
   });
 
   it("does not update inserted-then-unchanged entities", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1" });
     await em.flush();
     resetQueryCount();
@@ -118,7 +118,7 @@ describe("EntityManager", () => {
   });
 
   it("does not update updated-then-unchanged entities", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     await em.flush();
     author.firstName = "a2";
@@ -130,7 +130,7 @@ describe("EntityManager", () => {
 
   it("does not update changed-then-unchanged entities", async () => {
     await insertAuthor({ first_name: "a1", initials: "a" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.firstName = "a2";
     a1.firstName = "a3";
@@ -141,42 +141,42 @@ describe("EntityManager", () => {
   });
 
   it("createdAt / updatedAt are always non-null", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = em.create(Author, { firstName: "author" });
     expect(author.createdAt).not.toBeUndefined();
     expect(author.updatedAt).not.toBeUndefined();
   });
 
   it("createdAt does not change", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     a1.firstName = "a2";
     await em.flush();
 
-    const em2 = new EntityManager(knex);
+    const em2 = newEntityManager();
     const a2 = await em2.load(Author, "1");
     expect(a2.createdAt).toEqual(a1.createdAt);
   });
 
   it("updatedAt does change", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     await em.flush();
 
     await new Promise((resolve) => setTimeout(resolve, 10));
 
-    const em2 = new EntityManager(knex);
+    const em2 = newEntityManager();
     const a2 = await em2.load(Author, "1");
     a2.firstName = "a2";
     await em2.flush();
 
-    const em3 = new EntityManager(knex);
+    const em3 = newEntityManager();
     const a3 = await em3.load(Author, "1");
     expect(a3.updatedAt).not.toEqual(a1.updatedAt);
   });
 
   it("can insert falsey values", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     em.create(Author, { firstName: "a1", isPopular: false });
     await em.flush();
     const rows = await knex.select("*").from("authors");
@@ -185,7 +185,7 @@ describe("EntityManager", () => {
 
   it("can update falsey values", async () => {
     await insertAuthor({ first_name: "a1", is_popular: true });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.isPopular = false;
     await em.flush();
@@ -195,7 +195,7 @@ describe("EntityManager", () => {
 
   it("can update undefined values", async () => {
     await insertAuthor({ first_name: "a1", is_popular: true });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.isPopular = undefined;
     await em.flush();
@@ -205,21 +205,21 @@ describe("EntityManager", () => {
 
   it("can load null values as undefined", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     expect(a1.isPopular).toBeUndefined();
   });
 
   it("can load custom queries", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
     expect(authors.length).toEqual(1);
   });
 
   it("can load custom queries and maintain identity", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"));
     expect(authors[0]).toStrictEqual(a1);
@@ -227,26 +227,26 @@ describe("EntityManager", () => {
 
   it("can load custom queries and populate", async () => {
     await insertAuthor({ first_name: "a1", is_popular: null });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const authors = await em.loadFromQuery(Author, knex.select("*").from("authors"), "books");
     expect(authors[0].books.get).toEqual([]);
   });
 
   it("can save enums", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     em.create(Publisher, { name: "a1", size: PublisherSize.Large });
     await em.flush();
     const rows = await knex.select("*").from("publishers");
     expect(rows[0].size_id).toEqual(2);
 
-    const em2 = new EntityManager(knex);
+    const em2 = newEntityManager();
     const p2 = await em2.load(Publisher, "1");
     expect(p2.size).toEqual(PublisherSize.Large);
   });
 
   it("can load null enums", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     expect(p1.size).toBeUndefined();
   });
@@ -254,7 +254,7 @@ describe("EntityManager", () => {
   it("can delete an entity", async () => {
     // Given a publisher
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     // When its deleted
     await em.delete(p1);
@@ -268,7 +268,7 @@ describe("EntityManager", () => {
     // Given several publishers publisher
     await insertPublisher({ name: "p1" });
     await insertPublisher({ name: "p2" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const p2 = await em.load(Publisher, "2");
     // When they are deleted
@@ -282,7 +282,7 @@ describe("EntityManager", () => {
   it("does not re-delete an already deleted entity", async () => {
     // Given a publisher
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     // And its deleted
     await em.delete(p1);
@@ -296,7 +296,7 @@ describe("EntityManager", () => {
 
   it("cannot modify a deleted entity", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     em.delete(p1);
     await em.flush();
@@ -305,7 +305,7 @@ describe("EntityManager", () => {
 
   it("cannot modify a deleted entity's o2m collection", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     em.delete(p1);
     await em.flush();
@@ -314,7 +314,7 @@ describe("EntityManager", () => {
 
   it("cannot modify a deleted entity's m2o collection", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     em.delete(a1);
     await em.flush();
@@ -324,7 +324,7 @@ describe("EntityManager", () => {
   it("refresh an entity", async () => {
     await insertPublisher({ name: "p1" });
     // Given we've loaded an entity
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     expect(p1.name).toEqual("p1");
     // And it's updated by something else
@@ -339,7 +339,7 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a collection
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1", "authors");
     expect(p1.authors.get.length).toEqual(1);
     // And a new row is added by something else
@@ -354,7 +354,7 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a reference
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the foreign key is changed by something else
@@ -372,7 +372,7 @@ describe("EntityManager", () => {
     await insertTag({ name: "t1" });
     await insertBookToTag({ tag_id: 1, book_id: 1 });
     // Given we've loaded an entity with a
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "1", "tags");
     expect(b1.tags.get.length).toEqual(1);
     // And a new join row is added by someone else
@@ -388,7 +388,7 @@ describe("EntityManager", () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a reference
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the entity is deleted
@@ -403,13 +403,13 @@ describe("EntityManager", () => {
   it("can access a m2o id without loading", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "2");
     expect(b1.author.id).toEqual("a:1");
   });
 
   it("can create and cast to nested m2o hints", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const bookHint = { author: "publisher" } as const;
     // Given we make an author, which we know as a loaded (and unset) publisher reference
     const a1 = em.create(Author, { firstName: "a1" });
@@ -429,7 +429,7 @@ describe("EntityManager", () => {
   });
 
   it("can create and cast to nested o2m hints", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const publisherHint = { authors: "books" } as const;
     // Given we make a author, which we know as a loaded (and unset) books collection
     const a1 = em.create(Author, { firstName: "a1" });
@@ -447,7 +447,7 @@ describe("EntityManager", () => {
 
   it("does not add duplicate rows when using 'new'", async () => {
     // Given we create both an author and publisher
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = new Publisher(em, { name: "p1" });
     new Author(em, { firstName: "a1", publisher: p1 });
     // And we've flush all the entities to the db
@@ -459,14 +459,14 @@ describe("EntityManager", () => {
   });
 
   it("can create and pass null to optional fields in opts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1", lastName: null });
     await em.flush();
     expect(a1.lastName).toBeUndefined();
   });
 
   it("cannot create without a required field", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // @ts-expect-error
     em.create(Author, {});
     // @ts-expect-error
@@ -475,33 +475,33 @@ describe("EntityManager", () => {
   });
 
   it("cannot createPartial without a required field as null", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
     em.createPartial(Author, { firstName: null });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("cannot createPartial without a required field as undefined", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // `undefined` is treated as ignore, and caught at flush time
     em.createPartial(Author, { firstName: undefined });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can createPartial with an optional reference being undefined", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     em.createPartial(Author, { firstName: "a1", mentor: undefined });
     await em.flush();
   });
 
   it("cannot createPartial with a required reference being undefined", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     em.createPartial(Book, { title: "b1", author: undefined });
     await expect(em.flush()).rejects.toThrow("author is required");
   });
 
   it("cannot set with a null required field", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     // @ts-expect-error
     a1.set({ firstName: null });
@@ -509,7 +509,7 @@ describe("EntityManager", () => {
   });
 
   it("can setPartial with a null required field", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     // Accepting partial-update style inputs is allowed at compile-time, but throws at runtime
     a1.setPartial({ firstName: null });
@@ -517,7 +517,7 @@ describe("EntityManager", () => {
   });
 
   it("setPartial defaults to ignoredUndefined", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     a1.setPartial({ firstName: undefined });
     expect(a1.firstName).toEqual("a1");
@@ -525,14 +525,14 @@ describe("EntityManager", () => {
 
   it("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
     expect(a1.firstName).toEqual("a1");
   });
 
   it("can hydrate into an existing instance", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await knex.update({ first_name: "a1b" }).into("authors");
     const a1b = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
@@ -542,7 +542,7 @@ describe("EntityManager", () => {
 
   it("ignores sets of the same value", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.firstName = "a1";
     expect(a1.__orm.originalData).toEqual({});
@@ -551,7 +551,7 @@ describe("EntityManager", () => {
   it("cannot flush while another flush is in progress", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
     const flushPromise = em.flush();
@@ -562,7 +562,7 @@ describe("EntityManager", () => {
 
   it("can modify an entity inside a hook", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
     author.ageForBeforeFlush = 27;
@@ -572,7 +572,7 @@ describe("EntityManager", () => {
 
   it("cannot modify an entity during a flush outside hooks", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
     const flushPromise = em.flush();
@@ -585,7 +585,7 @@ describe("EntityManager", () => {
 
   it("cannot modify an entity's o2m collection during a flush outside hooks", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const a1 = em.create(Author, { firstName: "a1" });
     p1.name = "new name";
@@ -599,7 +599,7 @@ describe("EntityManager", () => {
 
   it("cannot modify an entity's m2o collection during a flush outside hooks", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const p1 = em.create(Publisher, { name: "p1" });
     a1.firstName = a1.firstName + "b";
@@ -613,7 +613,7 @@ describe("EntityManager", () => {
 
   it("will dedup queries that are loaded at the same time", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause
     const p1p = em.find(Publisher, { id: "1" });
@@ -634,7 +634,7 @@ describe("EntityManager", () => {
   it("does dedup queries with different order bys", async () => {
     await insertPublisher({ name: "p1" });
     await insertPublisher({ name: "p2" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
     const p1p = em.find(Publisher, { id: "1" }, { orderBy: { id: "ASC" } });
@@ -652,7 +652,7 @@ describe("EntityManager", () => {
   });
 
   it("can save tables with self-references", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const mentor = new Author(em, { firstName: "m1" });
     new Author(em, { firstName: "a1", mentor });
     await em.flush();
@@ -663,7 +663,7 @@ describe("EntityManager", () => {
   });
 
   it("can save entities with columns that are keywords", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     const b1 = new Book(em, { title: "b1", author: a1 });
     await em.flush();
@@ -674,7 +674,7 @@ describe("EntityManager", () => {
   });
 
   it("can find with findOrCreate", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a1" }, {});
@@ -682,7 +682,7 @@ describe("EntityManager", () => {
   });
 
   it("can find by optional field with findOrCreate", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1", age: 20 });
     await em.flush();
     const a = await em.findOrCreate(Author, { age: 20 }, { firstName: "a2" });
@@ -692,7 +692,7 @@ describe("EntityManager", () => {
   });
 
   it("can create with findOrCreate", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a2" }, { age: 20 }, { lastName: "l" });
@@ -702,7 +702,7 @@ describe("EntityManager", () => {
   });
 
   it("can upsert with findOrCreate", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a1" }, { age: 20 }, { lastName: "l" });
@@ -712,7 +712,7 @@ describe("EntityManager", () => {
   });
 
   it("findOrCreate doesn't compile if required field is missing", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // @ts-expect-error
     await em.findOrCreate(Author, { age: 20 }, { lastName: "l" });
   });
@@ -720,14 +720,14 @@ describe("EntityManager", () => {
   it("can find and populate with findOrCreate", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const b1 = await em.findOrCreate(Book, { title: "b1", author: a1 }, {}, {}, "author");
     expect(b1.author.get).toEqual(a1);
   });
 
   it("can set derived values", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1", lastName: "last" });
     expect(a1.initials).toEqual("al");
     await em.flush();
@@ -749,7 +749,7 @@ describe("EntityManager", () => {
 
   it("can delete entities that have derived values", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await em.delete(a1);
     await em.flush();
@@ -760,7 +760,7 @@ describe("EntityManager", () => {
   it("can cascade deletes into other entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await em.delete(a1);
     await em.flush();
@@ -771,7 +771,7 @@ describe("EntityManager", () => {
   it("can cascade deletes into other loaded entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await em.load(Book, "1");
     await em.delete(a1);
@@ -784,7 +784,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBookReview({ book_id: 1, rating: 5 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await em.delete(a1);
     await em.flush();
@@ -796,7 +796,7 @@ describe("EntityManager", () => {
 
   it("caches finds within a UnitOfWork", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause
     await em.find(Publisher, { id: "1" });
@@ -808,7 +808,7 @@ describe("EntityManager", () => {
 
   it("resets the find cache after a flush", async () => {
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given two queries with exactly the same where clause
     await em.find(Publisher, { id: "1" });
     // And we flush before executing the next query
@@ -821,13 +821,13 @@ describe("EntityManager", () => {
   });
 
   it("has a simple toJSON", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     expect(JSON.stringify(em)).toEqual(`"<EntityManager 0>"`);
   });
 
   it("has a simple toJSON for entities", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.publisher.set(em.create(Publisher, { name: "p1" }));
     expect(a1.toJSON()).toMatchObject({
@@ -844,7 +844,7 @@ describe("EntityManager", () => {
       await insertPublisher({ name: "p1" });
 
       setEntityLimit(3);
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       await em.find(Author, {});
       await expect(em.find(Publisher, {})).rejects.toThrow("More than 3 entities have been instantiated");
     } finally {
@@ -853,7 +853,7 @@ describe("EntityManager", () => {
   });
 
   it("doesnt allow unknown fields to create", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     expect(() => {
       // @ts-ignore-error
       em.create(Author, { firstName: "a1", invalidKey: 1 });
@@ -861,7 +861,7 @@ describe("EntityManager", () => {
   });
 
   it("runs a beforeTransaction once on flush", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     let beforeTransactionCount = 0;
     em.beforeTransaction(() => {
       beforeTransactionCount += 1;
@@ -872,7 +872,7 @@ describe("EntityManager", () => {
   });
 
   it("runs a beforeTransaction once on a transaction", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     let beforeTransactionCount = 0;
     em.beforeTransaction(() => {
       beforeTransactionCount += 1;

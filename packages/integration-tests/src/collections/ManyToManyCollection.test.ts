@@ -1,8 +1,7 @@
-import { EntityManager } from "joist-orm";
-import { zeroTo } from "../utils";
-import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
-import { Author, Book, Tag } from "../entities";
 import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
+import { Author, Book, Tag } from "../entities";
+import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {
@@ -11,7 +10,7 @@ describe("ManyToManyCollection", () => {
     await insertTag({ id: 3, name: "t1" });
     await insertBookToTag({ id: 4, book_id: 2, tag_id: 3 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2");
     const tags = await book.tags.load();
     expect(tags.length).toEqual(1);
@@ -24,7 +23,7 @@ describe("ManyToManyCollection", () => {
     await insertTag({ id: 3, name: "t1" });
     await insertBookToTag({ id: 4, book_id: 2, tag_id: 3 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2", "tags");
     const tag = await em.load(Tag, "3", "books");
     expect(book.tags.get.length).toEqual(1);
@@ -45,7 +44,7 @@ describe("ManyToManyCollection", () => {
       }),
     );
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1");
     resetQueryCount();
     const tags = await book.tags.load();
@@ -72,7 +71,7 @@ describe("ManyToManyCollection", () => {
       }),
     );
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1");
     const tag = await em.load(Tag, "1");
     resetQueryCount();
@@ -88,7 +87,7 @@ describe("ManyToManyCollection", () => {
     await insertBook({ id: 2, title: "b1", author_id: 1 });
     await insertTag({ id: 3, name: `t1` });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2");
     const tag = await em.load(Tag, "3");
 
@@ -104,7 +103,7 @@ describe("ManyToManyCollection", () => {
     await insertBook({ id: 2, title: "b1", author_id: 1 });
     await insertTag({ id: 3, name: `t1` });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2");
     const tag = await em.load(Tag, "3");
 
@@ -116,7 +115,7 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can add a new tag to a new book", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = em.create(Author, { firstName: "a1" });
     const book = em.create(Book, { title: "b1", author });
     const tag = em.create(Tag, { name: "t3" });
@@ -138,7 +137,7 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 2, tag_id: 3 });
     await insertBookToTag({ book_id: 2, tag_id: 4 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2", "tags");
     const tag = await em.load(Tag, "3");
     book.tags.remove(tag);
@@ -157,7 +156,7 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 2, tag_id: 3 });
     await insertBookToTag({ book_id: 2, tag_id: 4 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2");
     const tag = await em.load(Tag, "3");
     // When the tag is removed before book.tags is loaded
@@ -180,7 +179,7 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 2, tag_id: 3 });
     await insertBookToTag({ book_id: 2, tag_id: 4 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2");
     const tag = await em.load(Tag, "3");
     // When the tag is removed when book.tags is unloaded
@@ -198,7 +197,7 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 2, tag_id: 3 });
     await insertBookToTag({ book_id: 2, tag_id: 4 });
     // Given a book with two tags
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "2", "tags");
     const t1 = await em.load(Tag, "3");
     const t2 = await em.load(Tag, "4");
@@ -221,7 +220,7 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 2, tag_id: 3 });
     await insertBookToTag({ book_id: 2, tag_id: 4 });
     // Given a book with two tags
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "2", "tags");
     const t1 = await em.load(Tag, "3");
     const t2 = await em.load(Tag, "4");
@@ -240,7 +239,7 @@ describe("ManyToManyCollection", () => {
     await insertBook({ id: 2, title: "b1", author_id: 1 });
     await insertTag({ id: 3, name: "t1" });
     // Given a book with two tags
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "2");
     const t1 = await em.load(Tag, "3");
     // And the book is deleted
@@ -254,7 +253,7 @@ describe("ManyToManyCollection", () => {
     await insertBook({ id: 2, title: "b1", author_id: 1 });
     await insertTag({ id: 3, name: "t1" });
     // Given a book with two tags
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "2");
     const t1 = await em.load(Tag, "3");
     // And the book is deleted
@@ -275,7 +274,7 @@ describe("ManyToManyCollection", () => {
     await insertBookToTag({ book_id: 2, tag_id: 4 });
 
     // When we set t2 and t3
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "2", "tags");
     const [t2, t3] = await em.loadAll(Tag, ["4", "5"]);
     book.tags.set([t2, t3]);

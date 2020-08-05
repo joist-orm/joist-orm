@@ -1,14 +1,13 @@
-import { EntityManager } from "joist-orm";
-import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
-import { Author, Book } from "../entities";
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { Author, Book } from "../entities";
+import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
     await insertAuthor({ first_name: "f" });
     await insertBook({ title: "t", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1");
     const author = await book.author.load();
     expect(author.firstName).toEqual("f");
@@ -16,13 +15,13 @@ describe("ManyToOneReference", () => {
 
   it("can load a null foreign key", async () => {
     await insertAuthor({ first_name: "f" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1", "publisher");
     expect(author.publisher.get).toBeUndefined();
   });
 
   it("can save a foreign key", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     new Book(em, { title: "t1", author });
     await em.flush();
@@ -37,7 +36,7 @@ describe("ManyToOneReference", () => {
     await insertBook({ title: "t1", author_id: 1 });
     await insertBook({ title: "t2", author_id: 2 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [b1, b2] = await Promise.all([em.load(Book, "1"), em.load(Book, "2")]);
     resetQueryCount();
     const [a1, a2] = await Promise.all([b1.author.load(), b2.author.load()]);
@@ -51,7 +50,7 @@ describe("ManyToOneReference", () => {
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a2 = await em.load(Author, "2");
     const b1 = await em.load(Book, "1");
     b1.author.set(a2);
@@ -65,7 +64,7 @@ describe("ManyToOneReference", () => {
     // Given an author with a publisher
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // And we load the author with a1.publisher already populated
     const a1 = await em.load(Author, "1", "publisher");
     const p1 = a1.publisher.get!;

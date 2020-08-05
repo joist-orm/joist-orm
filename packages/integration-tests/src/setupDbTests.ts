@@ -1,6 +1,7 @@
-import Knex from "knex";
 import { config } from "dotenv";
+import { EntityManager } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
+import Knex from "knex";
 
 if (process.env.DATABASE_CONNECTION_INFO === undefined) {
   config({ path: "./local.env" });
@@ -8,6 +9,11 @@ if (process.env.DATABASE_CONNECTION_INFO === undefined) {
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
+export const makeApiCall = jest.fn();
+
+export function newEntityManager() {
+  return new EntityManager({ knex, makeApiCall });
+}
 
 export let numberOfQueries = 0;
 export let queries: string[] = [];

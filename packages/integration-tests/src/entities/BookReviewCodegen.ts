@@ -28,6 +28,7 @@ import {
   setField,
 } from "joist-orm";
 import { BookReview, newBookReview, bookReviewMeta, Book, BookId, BookOrder, bookMeta } from "./entities";
+import { Context } from "src/context";
 
 export type BookReviewId = Flavor<string, "BookReview">;
 
@@ -67,7 +68,7 @@ export interface BookReviewOrder {
   book?: BookOrder;
 }
 
-export const bookReviewConfig = new ConfigApi<BookReview>();
+export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("isPublic"));

@@ -181,6 +181,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const hasDefaultValues = defaultValues.length > 0;
   const defaultValuesName = `${camelCase(entityName)}DefaultValues`;
 
+  const contextType = config.contextType ? imp(config.contextType) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities`);
 
   return code`
@@ -211,7 +212,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     
     ${hasDefaultValues ? code`export const ${defaultValuesName} = { ${defaultValues} };` : ""}
 
-    export const ${configName} = new ${ConfigApi}<${entity.type}>();
+    export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(meta, configName)}
   

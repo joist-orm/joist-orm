@@ -100,7 +100,8 @@ authorConfig.addRule("books", async (a) => {
 
 authorConfig.cascadeDelete("books");
 
-authorConfig.beforeFlush((author) => {
+authorConfig.beforeFlush(async (author, ctx) => {
+  await ctx.makeApiCall("Author.beforeFlush");
   author.beforeFlushRan = true;
   if (author.ageForBeforeFlush !== undefined) {
     author.age = author.ageForBeforeFlush;

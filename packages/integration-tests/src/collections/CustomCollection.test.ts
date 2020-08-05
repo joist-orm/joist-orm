@@ -1,7 +1,6 @@
-import { EntityManager } from "joist-orm";
-import { Book, Image, ImageType, Publisher } from "../entities";
 import { insertAuthor, insertBook, insertImage, insertPublisher } from "@src/entities/inserts";
-import { knex } from "../setupDbTests";
+import { Book, Image, ImageType, Publisher } from "../entities";
+import { newEntityManager } from "../setupDbTests";
 
 describe("CustomCollection", () => {
   it("can load a collection", async () => {
@@ -12,7 +11,7 @@ describe("CustomCollection", () => {
     await insertImage({ file_name: "i2", type_id: 2, author_id: 1 });
     await insertImage({ file_name: "i3", type_id: 1, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const publisher = await em.load(Publisher, "1");
     const images = await publisher.allImages.load();
     expect(images).toHaveLength(3);
@@ -26,7 +25,7 @@ describe("CustomCollection", () => {
     await insertImage({ file_name: "i2", type_id: 2, author_id: 1 });
     await insertImage({ file_name: "i3", type_id: 1, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const publisher = await em.load(Publisher, "1", "allImages");
     expect(publisher.allImages.get).toHaveLength(3);
   });
@@ -38,7 +37,7 @@ describe("CustomCollection", () => {
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });
     await insertImage({ file_name: "i2", type_id: 2, author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1", "image");
     const publisher = await em.load(Publisher, "1", "allImages");
 
@@ -55,7 +54,7 @@ describe("CustomCollection", () => {
     await insertImage({ file_name: "i2", type_id: 2, author_id: 1 });
     await insertImage({ file_name: "i3", type_id: 1, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const publisher = await em.load(Publisher, "1", "allImages");
     const [i1, i2, i3] = await em.loadAll(Image, ["1", "2", "3"], "owner");
     const i4 = em.createPartial(Image, { fileName: "i4" });
@@ -75,7 +74,7 @@ describe("CustomCollection", () => {
     await insertImage({ file_name: "i2", type_id: 2, author_id: 1 });
     await insertImage({ file_name: "i3", type_id: 1, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const publisher = await em.load(Publisher, "1", "allImages");
     const [i1, i2, i3] = await em.loadAll(Image, ["1", "2", "3"], "owner");
     const i4 = em.createPartial(Image, { fileName: "i4" });
@@ -95,7 +94,7 @@ describe("CustomCollection", () => {
     await insertImage({ file_name: "i2", type_id: 2, author_id: 1 });
     await insertImage({ file_name: "i3", type_id: 1, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const publisher = await em.load(Publisher, "1", "allImages");
     const [i1, i2, i3] = await em.loadAll(Image, ["1", "2", "3"], "owner");
 

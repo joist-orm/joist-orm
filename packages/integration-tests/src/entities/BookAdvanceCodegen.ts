@@ -40,6 +40,7 @@ import {
   bookMeta,
   publisherMeta,
 } from "./entities";
+import { Context } from "src/context";
 
 export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
@@ -81,7 +82,7 @@ export interface BookAdvanceOrder {
   publisher?: PublisherOrder;
 }
 
-export const bookAdvanceConfig = new ConfigApi<BookAdvance>();
+export const bookAdvanceConfig = new ConfigApi<BookAdvance, Context>();
 
 bookAdvanceConfig.addRule(newRequiredRule("createdAt"));
 bookAdvanceConfig.addRule(newRequiredRule("updatedAt"));

@@ -1,7 +1,6 @@
 import { Author, BookReview } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
-import { knex } from "@src/setupDbTests";
-import { EntityManager } from "joist-orm";
+import { newEntityManager } from "@src/setupDbTests";
 
 describe("hasOneThrough", () => {
   it("can load a reference", async () => {
@@ -9,7 +8,7 @@ describe("hasOneThrough", () => {
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const review = await em.load(BookReview, "1");
     const author = await review.author.load();
     expect(author.firstName).toEqual("f");
@@ -20,7 +19,7 @@ describe("hasOneThrough", () => {
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const review = await em.load(BookReview, "1", "author");
     expect(review.author.get.firstName).toEqual("f");
   });
@@ -31,7 +30,7 @@ describe("hasOneThrough", () => {
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a2 = await em.load(Author, "2");
     const review = await em.load(BookReview, "1", ["author", "book"]);
     expect(review.author.get.firstName).toEqual("a1");

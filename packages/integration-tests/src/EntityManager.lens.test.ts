@@ -1,14 +1,14 @@
-import { EntityManager, Lens } from "joist-orm";
-import { Author, Book, Publisher } from "./entities";
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
-import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import { Lens } from "joist-orm";
+import { Author, Book, Publisher } from "./entities";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.lens", () => {
   it("can navigate references", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "1");
     const p1 = await b1.load((b) => b.author.publisher);
     expect(p1?.name).toEqual("p1");
@@ -23,7 +23,7 @@ describe("EntityManager.lens", () => {
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [b1, b2] = await em.find(Book, {});
     resetQueryCount();
     const [p1, p2] = await Promise.all([b1, b2].map((book) => book.load((b) => b.author.publisher)));
@@ -48,7 +48,7 @@ describe("EntityManager.lens", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
     await insertBook({ title: "b3", author_id: 2 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     resetQueryCount();
     const authors = await p1.load((p) => p.authors);
@@ -65,7 +65,7 @@ describe("EntityManager.lens", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
     await insertBook({ title: "b3", author_id: 2 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     // This ends in a singular author (which is cyclic, but just b/c our test schema is small, it doesn't matter)
     const authors = await p1.load((p) => p.authors.books.author);
@@ -75,7 +75,7 @@ describe("EntityManager.lens", () => {
   it("can navigate into async helper methods", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const hasBooks: boolean[] = await p1.load((p) => p.authors.hasBooks);
     expect(hasBooks).toEqual([false]);
@@ -83,7 +83,7 @@ describe("EntityManager.lens", () => {
 
   it("can navigate across undefined references", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const publisherName: string | undefined = await a1.load((a) => a.publisher.name);
     expect(publisherName).toEqual(undefined);
@@ -93,7 +93,7 @@ describe("EntityManager.lens", () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "1");
     const p1Id = await b1.load((b) => b.author.publisher.idOrFail);
     expect(p1Id).toEqual("p:1");

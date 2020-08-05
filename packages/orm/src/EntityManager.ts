@@ -191,18 +191,23 @@ type MaybePromise<T> = T | PromiseLike<T>;
 export type EntityManagerHook = "beforeTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
-export class EntityManager {
+export type HasKnex = { knex: Knex };
+
+export class EntityManager<C extends HasKnex = HasKnex> {
+  private readonly ctx: C;
   public knex: Knex;
 
-  constructor(em: EntityManager);
-  constructor(knex: Knex);
-  constructor(emOrKnex: EntityManager | Knex) {
-    if (emOrKnex instanceof EntityManager) {
-      const em = emOrKnex;
+  constructor(em: EntityManager<C>);
+  constructor(ctx: C);
+  constructor(emOrCtx: EntityManager<C> | C) {
+    if (emOrCtx instanceof EntityManager) {
+      const em = emOrCtx;
       this.knex = em.knex;
       this.hooks = { beforeTransaction: [...em.hooks.beforeTransaction] };
+      this.ctx = em.ctx!;
     } else {
-      this.knex = emOrKnex;
+      this.ctx = emOrCtx!;
+      this.knex = emOrCtx.knex;
     }
   }
 
@@ -634,14 +639,14 @@ export class EntityManager {
         await addReactiveValidations(todos);
 
         // run our hooks
-        await beforeDelete(todos);
+        await beforeDelete(this.ctx, todos);
         // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
         await cascadeDeletesIntoRelations(todos);
-        await beforeFlush(todos);
+        await beforeFlush(this.ctx, todos);
         recalcDerivedFields(todos);
         await recalcAsyncDerivedFields(this, todos);
         await validate(todos);
-        await afterValidation(todos);
+        await afterValidation(this.ctx, todos);
 
         entitiesToFlush.push(...pendingEntities);
         pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
@@ -669,7 +674,7 @@ export class EntityManager {
 
         // TODO: This is really "after flush" if we're being called from a transaction that
         // is going to make multiple `em.flush()` calls?
-        await afterCommit(entityTodos);
+        await afterCommit(this.ctx, entityTodos);
 
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
@@ -939,7 +944,7 @@ export interface EntityMetadata<T extends Entity> {
   // Eventually our dbType should go away to support N-column fields
   columns: Array<ColumnMeta>;
   fields: Array<Field>;
-  config: ConfigApi<T>;
+  config: ConfigApi<T, any>;
   factory: (em: EntityManager, opts?: any) => New<T>;
 }
 
@@ -1121,6 +1126,7 @@ async function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Pro
 }
 
 async function runHook(
+  ctx: unknown,
   hook: EntityHook,
   todos: Record<string, Todo>,
   keys: ("inserts" | "deletes" | "updates" | "validates")[],
@@ -1131,26 +1137,26 @@ async function runHook(
     return keys
       .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
       .flatMap((entity) => {
-        return hookFns.map(async (fn) => fn(entity));
+        return hookFns.map(async (fn) => fn(entity, ctx as any));
       });
   });
   await Promise.all(p);
 }
 
-async function beforeDelete(todos: Record<string, Todo>): Promise<void> {
-  await runHook("beforeDelete", todos, ["deletes"]);
+async function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runHook(ctx, "beforeDelete", todos, ["deletes"]);
 }
 
-async function beforeFlush(todos: Record<string, Todo>): Promise<void> {
-  await runHook("beforeFlush", todos, ["inserts", "updates"]);
+async function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runHook(ctx, "beforeFlush", todos, ["inserts", "updates"]);
 }
 
-async function afterValidation(todos: Record<string, Todo>): Promise<void> {
-  await runHook("afterValidation", todos, ["inserts", "updates"]);
+async function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runHook(ctx, "afterValidation", todos, ["inserts", "updates"]);
 }
 
-async function afterCommit(todos: Record<string, Todo>): Promise<void> {
-  await runHook("afterCommit", todos, ["inserts", "updates"]);
+async function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runHook(ctx, "afterCommit", todos, ["inserts", "updates"]);
 }
 
 function coerceError(

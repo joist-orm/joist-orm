@@ -273,15 +273,15 @@ function errorMessage(errors: ValidationError[]): string {
 }
 
 export type EntityHook = "beforeFlush" | "beforeDelete" | "afterValidation" | "afterCommit";
-type HookFn<T extends Entity> = (entity: T) => MaybePromise<void>;
+type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
-export class ConfigData<T extends Entity> {
+export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRule<T>[] = [];
   /** The async derived fields for this entity type. */
   asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
   /** The hooks for this instance. */
-  hooks: Record<EntityHook, HookFn<T>[]> = {
+  hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
     beforeFlush: [],
     afterCommit: [],
@@ -294,8 +294,8 @@ export class ConfigData<T extends Entity> {
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
 }
 
-export class ConfigApi<T extends Entity> {
-  __data = new ConfigData<T>();
+export class ConfigApi<T extends Entity, C> {
+  __data = new ConfigData<T, C>();
 
   addRule<H extends LoadHint<T>>(populate: H, rule: ValidationRule<Loaded<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
@@ -331,15 +331,15 @@ export class ConfigApi<T extends Entity> {
     this.__data.asyncDerivedFields[key] = [populate, fn as any];
   }
 
-  private hook(hook: EntityHook, ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>) {
+  private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
     if (typeof ruleOrHint === "function") {
       this.__data.hooks[hook].push(ruleOrHint);
     } else {
-      const fn = async (entity: T) => {
+      const fn = async (entity: T, ctx: C) => {
         // TODO Use this for reactive beforeFlush
         const em = getEm(entity);
         const loaded = await em.populate(entity, ruleOrHint);
-        return maybeFn!(loaded);
+        return maybeFn!(loaded, ctx);
       };
       // Squirrel our hint away where configureMetadata can find it
       (fn as any).hint = ruleOrHint;
@@ -347,26 +347,26 @@ export class ConfigApi<T extends Entity> {
     }
   }
 
-  beforeDelete<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
-  beforeDelete(fn: HookFn<T>): void;
-  beforeDelete(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
-    this.hook("beforeDelete", ruleOrHint, maybeFn);
+  beforeDelete<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
+  beforeDelete(fn: HookFn<T, C>): void;
+  beforeDelete(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
+    this.addHook("beforeDelete", ruleOrHint, maybeFn);
   }
 
-  beforeFlush<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
-  beforeFlush(fn: HookFn<T>): void;
-  beforeFlush(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
-    this.hook("beforeFlush", ruleOrHint, maybeFn);
+  beforeFlush<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
+  beforeFlush(fn: HookFn<T, C>): void;
+  beforeFlush(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
+    this.addHook("beforeFlush", ruleOrHint, maybeFn);
   }
 
-  afterValidation<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>>): void;
-  afterValidation(fn: HookFn<T>): void;
-  afterValidation(ruleOrHint: HookFn<T> | any, maybeFn?: HookFn<Loaded<T, any>>): void {
-    this.hook("afterValidation", ruleOrHint, maybeFn);
+  afterValidation<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
+  afterValidation(fn: HookFn<T, C>): void;
+  afterValidation(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
+    this.addHook("afterValidation", ruleOrHint, maybeFn);
   }
 
-  afterCommit(fn: HookFn<T>): void {
-    this.hook("afterCommit", fn);
+  afterCommit(fn: HookFn<T, C>): void {
+    this.addHook("afterCommit", fn);
   }
 }
 
@@ -385,7 +385,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
       }
     });
     // Look for reactive async derived values rules to reverse
-    Object.entries(meta.config.__data.asyncDerivedFields).forEach(([key, entry]) => {
+    Object.entries(meta.config.__data.asyncDerivedFields).forEach(([, entry]) => {
       const hint = entry![0];
       const reversals = reverseHint(meta.cstr, hint);
       reversals.forEach(([otherEntity, reverseHint]) => {

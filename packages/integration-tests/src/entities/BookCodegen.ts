@@ -50,6 +50,7 @@ import {
   imageMeta,
   tagMeta,
 } from "./entities";
+import { Context } from "src/context";
 
 export type BookId = Flavor<string, "Book">;
 
@@ -100,7 +101,7 @@ export interface BookOrder {
 
 export const bookDefaultValues = { order: 0 };
 
-export const bookConfig = new ConfigApi<Book>();
+export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("createdAt"));

@@ -1,7 +1,6 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
-import { EntityManager } from "joist-orm";
 import { Author, Book, BookOpts, Publisher } from "../entities";
-import { knex } from "../setupDbTests";
+import { knex, newEntityManager } from "../setupDbTests";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -9,7 +8,7 @@ describe("OneToManyCollection", () => {
     await insertBook({ title: "t1", author_id: 1 });
     await insertBook({ title: "t2", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
     expect(books.length).toEqual(2);
@@ -20,7 +19,7 @@ describe("OneToManyCollection", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "1");
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
@@ -31,7 +30,7 @@ describe("OneToManyCollection", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given b1.author is already populated with a1
     const b1 = await em.load(Book, "1", "author");
     const a1 = await em.load(Author, "1");
@@ -48,7 +47,7 @@ describe("OneToManyCollection", () => {
     await insertBook({ title: "t1", author_id: 1 });
     await insertBook({ title: "t2", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
     // Pretend this is a reference
@@ -57,7 +56,7 @@ describe("OneToManyCollection", () => {
   });
 
   it("can add to collection", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = em.create(Book, ({ title: "b1" } as any) as BookOpts); // as any b/c we're testing .add
     const a1 = em.create(Author, { firstName: "a1" });
     a1.books.add(b1);
@@ -70,7 +69,7 @@ describe("OneToManyCollection", () => {
 
   it("can add to one collection and remove from other", async () => {
     // Given a book that has two potential authors as all new objects.
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = em.create(Book, ({ title: "b1" } as any) as BookOpts); // as any b/c we're testing add
     const a1 = em.create(Author, { firstName: "a1" });
     const a2 = em.create(Author, { firstName: "a2" });
@@ -96,7 +95,7 @@ describe("OneToManyCollection", () => {
   it("can add to one collection and remove from other when already persisted", async () => {
     // Given a book that has two potential authors as already persisted entities
     {
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing add
       const a1 = em.create(Author, { firstName: "a1" });
       em.create(Author, { firstName: "a2" });
@@ -104,7 +103,7 @@ describe("OneToManyCollection", () => {
       await em.flush();
     }
 
-    const em2 = new EntityManager(knex);
+    const em2 = newEntityManager();
     // TODO Use populate when we have it.
     const b1_2 = await em2.load(Book, "1");
     const a1_2 = await em2.load(Author, "1");
@@ -125,7 +124,7 @@ describe("OneToManyCollection", () => {
   });
 
   it("can add to collection from the other side", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing set
     const a1 = em.create(Author, { firstName: "a1" });
     b1.author.set(a1);
@@ -137,7 +136,7 @@ describe("OneToManyCollection", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     // And we load the author
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
 
     // When we give the author a new book
@@ -156,7 +155,7 @@ describe("OneToManyCollection", () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
     const b1 = await em.load(Book, "1", "author");
 
@@ -171,7 +170,7 @@ describe("OneToManyCollection", () => {
     // Given an author with a publisher
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // And the a1.publishers collection is loaded
     const a1 = await em.load(Author, "1", { publisher: "authors" });
     const p1 = a1.publisher.get!;
@@ -187,7 +186,7 @@ describe("OneToManyCollection", () => {
     // Given an author with a publisher
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // And the a1.publishers collection is not loaded
     const a1 = await em.load(Author, "1");
     // And we delete the author
@@ -207,7 +206,7 @@ describe("OneToManyCollection", () => {
     await insertAuthor({ id: 3, first_name: "a3" });
 
     // When we set a2 and a3
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1", "authors");
     const [a2, a3] = await em.loadAll(Author, ["2", "3"]);
     p1.authors.set([a2, a3]);
@@ -227,7 +226,7 @@ describe("OneToManyCollection", () => {
     await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
 
     // And we re-add a1 to the unloaded publisher collection
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const a1 = await em.load(Author, "1");
     p1.authors.add(a1);

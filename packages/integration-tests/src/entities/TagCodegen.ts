@@ -22,6 +22,7 @@ import {
   setField,
 } from "joist-orm";
 import { Tag, newTag, tagMeta, Book, BookId, bookMeta } from "./entities";
+import { Context } from "src/context";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -55,7 +56,7 @@ export interface TagOrder {
   updatedAt?: OrderBy;
 }
 
-export const tagConfig = new ConfigApi<Tag>();
+export const tagConfig = new ConfigApi<Tag, Context>();
 
 tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));

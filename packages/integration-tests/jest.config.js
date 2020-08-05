@@ -8,4 +8,5 @@ module.exports = {
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   testEnvironment: "node",
   maxConcurrency: 1,
+  resetMocks: true,
 };

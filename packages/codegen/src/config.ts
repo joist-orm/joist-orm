@@ -20,6 +20,7 @@ export interface EntityConfig {
 }
 
 export interface Config {
+  contextType?: string;
   entitiesDirectory: string;
   codegenPlugins: string[];
   entities: Record<string, EntityConfig>;

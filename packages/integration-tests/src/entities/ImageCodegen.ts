@@ -44,6 +44,7 @@ import {
   bookMeta,
   publisherMeta,
 } from "./entities";
+import { Context } from "src/context";
 
 export type ImageId = Flavor<string, "Image">;
 
@@ -94,7 +95,7 @@ export interface ImageOrder {
   publisher?: PublisherOrder;
 }
 
-export const imageConfig = new ConfigApi<Image>();
+export const imageConfig = new ConfigApi<Image, Context>();
 
 imageConfig.addRule(newRequiredRule("fileName"));
 imageConfig.addRule(newRequiredRule("createdAt"));

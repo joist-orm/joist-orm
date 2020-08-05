@@ -1,3 +1,4 @@
+import { Context } from "@src/context";
 import { EntityManager } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
@@ -7,9 +8,11 @@ import { zeroTo } from "../utils";
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 
 describe("Author", () => {
+  const ctx: Context = { makeApiCall: jest.fn() };
+
   it("can have business logic methods", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = new EntityManager(knex, ctx);
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
     expect(books.length).toEqual(0);
@@ -129,6 +132,13 @@ describe("Author", () => {
     em.delete(a1);
     await em.flush();
     expect(a1.beforeDeleteRan).toBeTruthy();
+  });
+
+  it("can access the context in hooks", async () => {
+    const em = new EntityManager(knex, ctx);
+    new Author(em, { firstName: "a1" });
+    await em.flush();
+    expect(ctx.makeApiCall).toHaveBeenCalledWith("Author.beforeFlush");
   });
 
   it("can have async derived values", async () => {

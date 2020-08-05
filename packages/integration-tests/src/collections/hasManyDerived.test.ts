@@ -1,7 +1,6 @@
-import { EntityManager } from "joist-orm";
-import { Author, Book, BookReview } from "../entities";
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
-import { knex } from "../setupDbTests";
+import { Author, Book, BookReview } from "../entities";
+import { newEntityManager } from "../setupDbTests";
 
 describe("hasManyDerived", () => {
   it("can load a collection", async () => {
@@ -9,7 +8,7 @@ describe("hasManyDerived", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     const books = await author.reviewedBooks.load();
     expect(books.length).toBeGreaterThan(0);
@@ -20,7 +19,7 @@ describe("hasManyDerived", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1", "reviewedBooks");
     expect(author.reviewedBooks.get.length).toBeGreaterThan(0);
   });
@@ -31,7 +30,7 @@ describe("hasManyDerived", () => {
     await insertBook({ title: "b2", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [b1, b2] = await em.find(Book, { id: ["1", "2"] });
     const author = await em.load(Author, "1", "reviewedBooks");
     const review = await em.load(BookReview, "1");
@@ -47,7 +46,7 @@ describe("hasManyDerived", () => {
     await insertBook({ title: "b2", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [b1, b2] = await em.find(Book, { id: ["1", "2"] });
     const author = await em.load(Author, "1", "reviewedBooks");
 
@@ -61,7 +60,7 @@ describe("hasManyDerived", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1", "reviews");
     const author = await em.load(Author, "1", "reviewedBooks");
 
@@ -76,7 +75,7 @@ describe("hasManyDerived", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1", "reviews");
     const author = await em.load(Author, "1", "reviewedBooks");
 

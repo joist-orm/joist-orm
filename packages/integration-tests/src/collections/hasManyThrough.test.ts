@@ -1,7 +1,6 @@
-import { EntityManager } from "joist-orm";
-import { Author, BookReview } from "../entities";
-import { knex } from "../setupDbTests";
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
+import { Author, BookReview } from "../entities";
+import { newEntityManager } from "../setupDbTests";
 
 describe("hasManyThrough", () => {
   it("can load a collection", async () => {
@@ -9,7 +8,7 @@ describe("hasManyThrough", () => {
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     const reviews = await author.reviews.load();
     expect(reviews).toHaveLength(1);
@@ -20,7 +19,7 @@ describe("hasManyThrough", () => {
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1", "reviews");
     expect(author.reviews.get).toHaveLength(1);
   });
@@ -30,7 +29,7 @@ describe("hasManyThrough", () => {
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1", ["books", "reviews"]);
     const book = author.books.get[0];
     expect(author.reviews.get).toHaveLength(1);

@@ -10,37 +10,37 @@ import {
 } from "@src/entities/inserts";
 import { EntityManager } from "joist-orm";
 import { Author, Book } from "./entities";
-import { knex } from "./setupDbTests";
+import { knex, newEntityManager } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can create new entity with valid data", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1" });
     expect(a1.firstName).toEqual("a1");
   });
 
   it("fails to create new entity with invalid data", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     await em.createOrUpdatePartial(Author, { id: null, firstName: null });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { id: "1", firstName: "a2" });
     expect(a1.firstName).toEqual("a2");
   });
 
   it("fails to update an entity with valid data", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     await em.createOrUpdatePartial(Author, { id: "1", firstName: null });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
 
   it("can create new children with valid data", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, {
       firstName: "a1",
       mentor: { firstName: "m1" },
@@ -53,7 +53,7 @@ describe("EntityManager", () => {
 
   it("can update existing references with valid data", async () => {
     await insertAuthor({ first_name: "m1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, {
       firstName: "a1",
       mentor: { id: "1", firstName: "m2" },
@@ -67,7 +67,7 @@ describe("EntityManager", () => {
   it("can update existing references without an id", async () => {
     await insertAuthor({ first_name: "m1" });
     await insertAuthor({ first_name: "a1", mentor_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, {
       id: "a:2",
       firstName: "a2",
@@ -81,7 +81,7 @@ describe("EntityManager", () => {
 
   it("can update existing references without an id that is not set", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, {
       id: "a:1",
       firstName: "a2",
@@ -95,35 +95,35 @@ describe("EntityManager", () => {
 
   it("references can refer to entities by id", async () => {
     await insertAuthor({ first_name: "m1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: "1" });
     expect((await a1.mentor.load())!.firstName).toEqual("m1");
   });
 
   it("references can refer to entities by id opt", async () => {
     await insertAuthor({ first_name: "m1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentorId: "1" });
     expect((await a1.mentor.load())!.firstName).toEqual("m1");
   });
 
   it("references can refer to null", async () => {
     await insertAuthor({ first_name: "m1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: null });
     expect(a1.mentor.isSet).toBeFalsy();
   });
 
   it("references can refer to undefined", async () => {
     await insertAuthor({ first_name: "m1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: undefined });
     expect(a1.mentor.isSet).toBeFalsy();
   });
 
   it("references can refer to entity", async () => {
     await insertAuthor({ first_name: "m1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1", mentor: await em.load(Author, "1") });
     expect(a1.mentor.id).toEqual("a:1");
   });
@@ -131,7 +131,7 @@ describe("EntityManager", () => {
   it("collections can refer to entities by id", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: ["1"] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
@@ -139,7 +139,7 @@ describe("EntityManager", () => {
   it("collections can refer to entities by id opts", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", bookIds: ["1"] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
@@ -147,7 +147,7 @@ describe("EntityManager", () => {
   it("collections can refer to null", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: null });
     expect(await a1.books.load()).toEqual([]);
   });
@@ -155,7 +155,7 @@ describe("EntityManager", () => {
   it("collections can refer to undefined", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: undefined });
     expect(await a1.books.load()).toEqual([]);
   });
@@ -163,7 +163,7 @@ describe("EntityManager", () => {
   it("collections are upserted", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ title: "b2" }] });
     await em.flush();
     const books = await a1.books.load();
@@ -177,7 +177,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", delete: true }] });
     await em.flush();
     const rows = await knex.select("*").from("books");
@@ -188,7 +188,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", title: "b1changed", delete: false }] });
     await em.flush();
     expect(await countOfBooks()).toEqual(2);
@@ -203,7 +203,7 @@ describe("EntityManager", () => {
     await insertTag({ name: "t2" });
     await insertBookToTag({ tag_id: 1, book_id: 1 });
     await insertBookToTag({ tag_id: 2, book_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", remove: true }] });
     await em.flush();
     expect(await countOfTags()).toEqual(2);
@@ -213,13 +213,13 @@ describe("EntityManager", () => {
   it("collections can refer to entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: [await em.load(Book, "1")] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
 
   it("createOrUpdatePartial doesnt allow unknown fields to be passed", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given an opt `publisherTypo` (instead of `publisher`) that don't match exactly what Author supports
     await expect(async () => {
       // Then we get a compile error
@@ -229,7 +229,7 @@ describe("EntityManager", () => {
   });
 
   it("createPartial doesnt allow unknown fields to be passed", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given an opt `publisherId` (instead of `publisher`) that don't match exactly what Author supports
     await expect(async () => {
       // Then we get a compile error

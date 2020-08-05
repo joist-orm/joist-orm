@@ -1,31 +1,27 @@
-import { Context } from "@src/context";
-import { EntityManager } from "joist-orm";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, BookReview, Publisher } from "../entities";
-import { knex } from "../setupDbTests";
+import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 
 describe("Author", () => {
-  const ctx: Context = { makeApiCall: jest.fn() };
-
   it("can have business logic methods", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex, ctx);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const books = await a1.books.load();
     expect(books.length).toEqual(0);
   });
 
   it("can have validation logic", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1", lastName: "a1" });
     await expect(em.flush()).rejects.toThrow("firstName and lastName must be different");
   });
 
   it("can have multiple validation rules", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
     await expect(em.flush()).rejects.toThrow(
       "Validation errors (2): firstName and lastName must be different, lastName is invalid",
@@ -33,14 +29,14 @@ describe("Author", () => {
   });
 
   it("can have async validation rules", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "a1", author: a1 });
     await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
   });
 
   it("can have reactive validation rules", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given the book and author start out with acceptable names
     const a1 = new Author(em, { firstName: "a1" });
     const b1 = new Book(em, { title: "b1", author: a1 });
@@ -55,7 +51,7 @@ describe("Author", () => {
     // Given the author has 12 books
     await insertAuthor({ first_name: "a1" });
     await Promise.all(zeroTo(12).map((n) => insertBook({ title: `b${n}`, author_id: 1 })));
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // When we add a 13th book
     const a1 = await em.load(Author, "1");
     const b1 = new Book(em, { title: "b1", author: a1 });
@@ -67,7 +63,7 @@ describe("Author", () => {
     // Given the author has 14 books
     await insertAuthor({ first_name: "a1" });
     await Promise.all(zeroTo(14).map((n) => insertBook({ title: `b${n}`, author_id: 1 })));
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // When we delete the 14th book
     em.delete(await em.load(Book, "14"));
     // Then the Author validation rule fails
@@ -78,7 +74,7 @@ describe("Author", () => {
     // Given the author has no publisher
     await insertAuthor({ first_name: "a1" });
     await insertPublisher({ name: "p1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // When we set the publisher
     const a1 = await em.load(Author, "1");
     a1.publisher.set(await em.load(Publisher, "1"));
@@ -90,7 +86,7 @@ describe("Author", () => {
     // Given an author and book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const b1 = await em.load(Book, "1");
     // When we change the book
@@ -105,7 +101,7 @@ describe("Author", () => {
     // Given an author and book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const b1 = await em.load(Book, "1");
     // When we change the book
@@ -119,7 +115,7 @@ describe("Author", () => {
   });
 
   it("can have lifecycle hooks", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     expect(a1.beforeFlushRan).toBeFalsy();
     expect(a1.afterCommitRan).toBeFalsy();
@@ -135,14 +131,14 @@ describe("Author", () => {
   });
 
   it("can access the context in hooks", async () => {
-    const em = new EntityManager(knex, ctx);
+    const em = newEntityManager();
     new Author(em, { firstName: "a1" });
     await em.flush();
-    expect(ctx.makeApiCall).toHaveBeenCalledWith("Author.beforeFlush");
+    expect(makeApiCall).toHaveBeenCalledWith("Author.beforeFlush");
   });
 
   it("can have async derived values", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "b1", author: a1 });
     await em.flush();
@@ -152,7 +148,7 @@ describe("Author", () => {
   });
 
   it("has async derived values automatically recalced", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given an author with initially no books
     const a1 = new Author(em, { firstName: "a1" });
     await em.flush();
@@ -167,7 +163,7 @@ describe("Author", () => {
   });
 
   it("can save when async derived values don't change", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given an author with a book
     const a1 = new Author(em, { firstName: "a1" });
     const b1 = new Book(em, { author: a1, title: "b1" });
@@ -181,7 +177,7 @@ describe("Author", () => {
   });
 
   it("has async derived values triggered on both old and new value", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given two authors
     const a1 = new Author(em, { firstName: "a1" });
     const a2 = new Author(em, { firstName: "a2" });
@@ -199,7 +195,7 @@ describe("Author", () => {
   });
 
   it("has async derived values triggered on both lazy-loaded old and new value", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given a book & author already in the databaseo
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -215,7 +211,7 @@ describe("Author", () => {
   });
 
   it("cannot set async derived value", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     expect(() => {
       // @ts-expect-error
@@ -224,7 +220,7 @@ describe("Author", () => {
   });
 
   it("cannot access async derived value before flush", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     expect(() => a1.numberOfBooks).toThrow("numberOfBooks has not been derived yet");
   });
@@ -234,7 +230,7 @@ describe("Author", () => {
     await insertAuthor({ first_name: "a1", age: 10 });
     await insertBook({ title: "b1", author_id: 1 });
     // And a new book review is created
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b1 = await em.load(Book, "1");
     em.create(BookReview, { rating: 1, book: b1 });
     await em.flush();
@@ -243,7 +239,7 @@ describe("Author", () => {
     expect(rows[0].is_public).toBe(false);
 
     // And when the author age changes
-    const em2 = new EntityManager(knex);
+    const em2 = newEntityManager();
     const a1 = await em2.load(Author, "1");
     a1.age = 30;
     await em2.flush();
@@ -254,7 +250,7 @@ describe("Author", () => {
 
   describe("changes", () => {
     it("on create nothing is considered changed", async () => {
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
@@ -262,7 +258,7 @@ describe("Author", () => {
 
     it("after initial load nothing is considered changed", async () => {
       await insertAuthor({ first_name: "a1" });
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
@@ -270,7 +266,7 @@ describe("Author", () => {
 
     it("after initial load and mutate then hasChanged is true", async () => {
       await insertAuthor({ first_name: "a1" });
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
@@ -280,7 +276,7 @@ describe("Author", () => {
     });
 
     it("does not have collections", async () => {
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
       // @ts-expect-error
       a1.changes.books;
@@ -290,7 +286,7 @@ describe("Author", () => {
       await insertPublisher({ name: "p1" });
       await insertPublisher({ name: "p2" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       const a1 = await em.load(Author, "1");
       expect(a1.changes.publisher.hasChanged).toBeFalsy();
       expect(a1.changes.publisher.originalValue).toBeUndefined();
@@ -302,14 +298,14 @@ describe("Author", () => {
 
   it("can enforce validation rules", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.lastName = "l2";
     await expect(em.flush()).rejects.toThrow("Validation error: lastName cannot be changed");
   });
 
   it("can set new opts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1", lastName: "a1" });
     author.set({ firstName: "a2", lastName: "a2" });
     expect(author.firstName).toEqual("a2");
@@ -317,7 +313,7 @@ describe("Author", () => {
   });
 
   it("cannot set empty string names", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     new Author(em, { firstName: "" });
     await expect(em.flush()).rejects.toThrow("firstName is required");
   });
@@ -330,7 +326,7 @@ describe("Author", () => {
   });
 
   it("can set protected fields", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1", isPopular: true });
     expect(author.wasEverPopular).toEqual(true);
     await em.flush();
@@ -342,21 +338,21 @@ describe("Author", () => {
   });
 
   it("setting optional fields to null is allowed", () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     author.set({ lastName: null });
     expect(author.lastName).toBeUndefined();
   });
 
   it("set can treat undefined as leave", () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     author.setPartial({ firstName: undefined });
     expect(author.firstName).toEqual("a1");
   });
 
   it("gets not-null validation rules for free", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     em.createPartial(Author, {});
     await expect(em.flush()).rejects.toThrow("Validation error: firstName is required");
   });
@@ -371,7 +367,7 @@ describe("Author", () => {
   });
 
   it("has isNewEntity", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.create(Author, { firstName: "a1" });
     expect(a1.isNewEntity).toBeTruthy();
     await em.flush();
@@ -381,7 +377,7 @@ describe("Author", () => {
   it("can populate itself easily", async () => {
     await insertAuthor({ first_name: "a1", age: 10 });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     const a2 = await a1.withLoadedBooks;
     expect(a2.books.get.length).toEqual(1);

@@ -9,12 +9,12 @@ import {
   Publisher,
   Tag,
 } from "@src/entities";
-import { EntityManager, New } from "joist-orm";
-import { knex } from "./setupDbTests";
+import { New } from "joist-orm";
+import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given a simple entity that has no required parents/children
     const p1 = newPublisher(em);
     await em.flush();
@@ -24,7 +24,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a child and a required parent", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em);
     await em.flush();
@@ -33,7 +33,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a child and a required parent if opt is undefined", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em, { author: undefined });
     await em.flush();
@@ -42,7 +42,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a child and a required parent with opts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em, { author: { firstName: "long name" } });
     await em.flush();
@@ -51,7 +51,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a child and use an existing parent from opt", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given there is an existing author
     const a1 = newAuthor(em);
     // When we explicitly pass it as an opt
@@ -62,7 +62,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a child and use an existing parent from EntityManager", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given there is only a single author
     const a1 = newAuthor(em);
     // When we make a book and don't specify the author
@@ -73,7 +73,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a child and create a new parent if already many existing", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given there are already several authors
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);
@@ -87,7 +87,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a grandchild and specify the grandparent", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given there are multiple existing publishers
     const p1 = newPublisher(em);
     newPublisher(em);
@@ -102,7 +102,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a grandchild and specify the grandparents opts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // When we make a book and have opts for the grandparent
     const b1 = newBook(em, { author: { publisher: { name: "p1" } } });
     await em.flush();
@@ -115,7 +115,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can create a parent and child with opts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given we make a new parent + two children
     const a1 = newAuthor(em, { books: [{ title: "b1" }, {}] });
     await em.flush();
@@ -132,7 +132,7 @@ describe("EntityManager.factories", () => {
   });
 
   it("can default a required enum", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // Given we make a book advance
     const ba = newBookAdvance(em);
     // Then the status field is set to the 1st enum value
@@ -140,13 +140,13 @@ describe("EntityManager.factories", () => {
   });
 
   it("can tweak opts in the factory", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a = newAuthor(em, { isPopular: true });
     expect(a.age).toEqual(50);
   });
 
   it("can completely customize opts in the factory", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const b = newBook(em, { tags: [1, 2] });
     const tags = b.tags.get as New<Tag>[];
     expect(tags[0].name).toEqual("1");
@@ -154,27 +154,27 @@ describe("EntityManager.factories", () => {
   });
 
   it("cannot pass invalid customized opts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     // @ts-expect-error
     newBook(em, { tags: [{ name: "t1" }] });
   });
 
   it("can use tagged ids as shortcuts", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = newAuthor(em);
     const b1 = newBook(em, { author: "a:1" });
     expect(b1.author.get).toEqual(a1);
   });
 
   it("can use tagged ids as shortcuts in list", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = newAuthor(em);
     const p1 = newPublisher(em, { authors: ["a:1"] });
     expect(p1.authors.get).toEqual([a1]);
   });
 
   it("can omit default values for non-required primitive fields", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = newAuthor(em);
     expect(a1.firstName).toEqual("a1");
     expect(a1.lastName).toBeUndefined();

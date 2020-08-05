@@ -191,21 +191,23 @@ type MaybePromise<T> = T | PromiseLike<T>;
 export type EntityManagerHook = "beforeTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
-export class EntityManager<C = {}> {
+export type HasKnex = { knex: Knex };
+
+export class EntityManager<C extends HasKnex = HasKnex> {
   private readonly ctx: C;
   public knex: Knex;
 
   constructor(em: EntityManager<C>);
-  constructor(knex: Knex, context?: C);
-  constructor(emOrKnex: EntityManager<C> | Knex, ctx?: C) {
-    if (emOrKnex instanceof EntityManager) {
-      const em = emOrKnex;
+  constructor(ctx: C);
+  constructor(emOrCtx: EntityManager<C> | C) {
+    if (emOrCtx instanceof EntityManager) {
+      const em = emOrCtx;
       this.knex = em.knex;
       this.hooks = { beforeTransaction: [...em.hooks.beforeTransaction] };
       this.ctx = em.ctx!;
     } else {
-      this.knex = emOrKnex;
-      this.ctx = ctx!;
+      this.ctx = emOrCtx!;
+      this.knex = emOrCtx.knex;
     }
   }
 

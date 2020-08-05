@@ -1,13 +1,12 @@
-import { EntityManager } from "joist-orm";
-import { knex, numberOfQueries, resetQueryCount } from "./setupDbTests";
-import { Author, Book, Publisher } from "./entities";
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { Author, Book, Publisher } from "./entities";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, "author");
     expect(bookb.author.get.firstName).toEqual("a1");
@@ -16,7 +15,7 @@ describe("EntityManager.populate", () => {
   it("can populate many-to-one with multiple keys", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, ["author", "tags"]);
     expect(bookb.author.get.firstName).toEqual("a1");
@@ -27,7 +26,7 @@ describe("EntityManager.populate", () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const booka = await em.load(Book, "1");
     const bookb = await em.populate(booka, { author: "publisher" });
     expect(bookb.author.get.firstName).toEqual("a1");
@@ -42,7 +41,7 @@ describe("EntityManager.populate", () => {
     await insertBook({ title: "b2", author_id: 1 });
     await insertBook({ title: "b3", author_id: 2 });
     await insertBook({ title: "b4", author_id: 2 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
 
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
@@ -61,7 +60,7 @@ describe("EntityManager.populate", () => {
     await insertBook({ title: "b2", author_id: 1 });
     await insertBook({ title: "b3", author_id: 2 });
     await insertBook({ title: "b4", author_id: 2 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
 
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
@@ -75,7 +74,7 @@ describe("EntityManager.populate", () => {
   it("can populate via load", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1", ["author", "tags"]);
     expect(book.author.get.firstName).toEqual("a1");
     expect(book.tags.get.length).toEqual(0);
@@ -86,7 +85,7 @@ describe("EntityManager.populate", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const _b1 = await em.load(Book, "1");
     const _b2 = await em.load(Book, "1");
     const [b1, b2] = await em.populate([_b1, _b2], "author");
@@ -99,7 +98,7 @@ describe("EntityManager.populate", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const _b1 = await em.load(Book, "1");
     const _b2 = await em.load(Book, "1");
     resetQueryCount();
@@ -118,7 +117,7 @@ describe("EntityManager.populate", () => {
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     resetQueryCount();
     const books = await em.find(Book, {}, { populate: "author" });
     expect(books[0].author.get.firstName).toEqual("a1");
@@ -128,7 +127,7 @@ describe("EntityManager.populate", () => {
 
   it("does not break when populating through null relations  ", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1", { publisher: "authors" });
     expect(a1.publisher.get).toBeUndefined();
   });
@@ -136,7 +135,7 @@ describe("EntityManager.populate", () => {
   it("populate assumes ids are loaded", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const book = await em.load(Book, "1", "author");
     const authorId: string = book.author.id;
     expect(authorId).toEqual("a:1");
@@ -144,7 +143,7 @@ describe("EntityManager.populate", () => {
 
   it("can populate two literals", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1", { publisher: {}, books: { reviews: "book" } } as const);
     expect(a1.publisher.get).toEqual(undefined);
     expect(a1.books.get.flatMap((b) => b.reviews.get)).toEqual([]);

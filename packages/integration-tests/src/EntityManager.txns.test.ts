@@ -2,7 +2,7 @@ import { Publisher } from "@src/entities";
 import { Stepper } from "@src/Stepper.test";
 import { EntityManager, newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
-import { knex } from "./setupDbTests";
+import { knex, newEntityManager } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("reproduces anomalies w/o transactions", async () => {
@@ -125,7 +125,7 @@ describe("EntityManager", () => {
     const steps = new Stepper();
 
     const t1 = (async () => {
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       await em.transaction(async () => {
         await steps.on(1, async () => em.find(Publisher, { name: "foo" }));
         await steps.on(3, async () => em.create(Publisher, { name: "foo" }));
@@ -134,7 +134,7 @@ describe("EntityManager", () => {
     })();
 
     const t2 = (async () => {
-      const em = new EntityManager(knex);
+      const em = newEntityManager();
       await em.transaction(async () => {
         await steps.on(2, async () => em.find(Publisher, { name: "foo" }));
         await steps.on(4, async () => em.create(Publisher, { name: "foo" }));

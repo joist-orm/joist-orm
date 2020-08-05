@@ -1,13 +1,12 @@
-import { EntityManager } from "joist-orm";
-import { Author, Image, ImageType } from "../entities";
 import { insertAuthor, insertImage } from "@src/entities/inserts";
-import { knex, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { Author, Image, ImageType } from "../entities";
+import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToOneReference", () => {
   it("can load a set reference", async () => {
     await insertAuthor({ first_name: "f" });
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1");
     const image = await author.image.load();
     expect(image?.fileName).toEqual("f1");
@@ -15,13 +14,13 @@ describe("OneToOneReference", () => {
 
   it("can load an unset reference", async () => {
     await insertAuthor({ first_name: "f" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = await em.load(Author, "1", "image");
     expect(author.image.get).toBeUndefined();
   });
 
   it("can save when set", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });
     const image = new Image(em, { fileName: "f1", type: ImageType.AuthorImage });
     author.image.set(image);
@@ -37,7 +36,7 @@ describe("OneToOneReference", () => {
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
     await insertImage({ type_id: 2, file_name: "f2", author_id: 2 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
     resetQueryCount();
     const [i1, i2] = await Promise.all([a1.image.load(), a2.image.load()]);
@@ -51,7 +50,7 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a2" });
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
 
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const [a1, a2] = await em.find(Author, { id: ["1", "2"] }, { populate: "image" });
     const i1 = await em.load(Image, "1", "author");
     i1.author.set(a2);
@@ -60,21 +59,21 @@ describe("OneToOneReference", () => {
   });
 
   it("can be passed as an opt", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const image = em.create(Image, { type: ImageType.AuthorImage, fileName: "f1" });
     const author = em.create(Author, { firstName: "a1", image });
     expect(author.image.get).toEqual(image);
   });
 
   it("can have get called on a new instance", async () => {
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const author = em.create(Author, { firstName: "a1" });
     expect(author.image.get).toBeUndefined();
   });
 
   it("cannot call get if not loaded", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     expect(() => {
       // @ts-expect-error
@@ -84,7 +83,7 @@ describe("OneToOneReference", () => {
 
   it("can be set without being loaded", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = em.create(Author, { firstName: "a1" });
     const i1 = em.create(Image, { type: ImageType.AuthorImage, fileName: "f1" });
     a1.image.set(i1);
@@ -93,7 +92,7 @@ describe("OneToOneReference", () => {
 
   it("can refresh", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1", "image");
     expect(a1.image.get).toBeUndefined();
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
@@ -103,7 +102,7 @@ describe("OneToOneReference", () => {
 
   it("id fails if not loaded", async () => {
     await insertAuthor({ first_name: "a1" });
-    const em = new EntityManager(knex);
+    const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     expect(() => a1.image.id).toThrow("Author:1.image was not loaded");
     await a1.image.load();

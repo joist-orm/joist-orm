@@ -1,4 +1,5 @@
 import {
+  EntityManager as EntityManager1,
   configureMetadata,
   EntityMetadata,
   PrimaryKeySerde,
@@ -6,6 +7,7 @@ import {
   ForeignKeySerde,
   EnumFieldSerde,
 } from "joist-orm";
+import { Context } from "src/context";
 import {
   Author,
   authorConfig,
@@ -32,6 +34,8 @@ import {
   ImageTypes,
   PublisherSizes,
 } from "./entities";
+
+export class EntityManager extends EntityManager1<Context> {}
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,

@@ -645,7 +645,7 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(1);
     // And it is still auto-batched
     expect(queries).toEqual([
-      'select *, -1 as __tag, -1 as __row from "publishers" where "id" = ? union all (select "p0".*, 0 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" ASC, "p0"."id" ASC limit ?) union all (select "p0".*, 1 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" DESC, "p0"."id" DESC limit ?) order by "__tag" asc',
+      'select *, -1 as __tag, -1 as __row from "publishers" where "id" = ? union all (select "p0".*, 0 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" ASC, "p0"."id" ASC, "p0"."id" asc limit ?) union all (select "p0".*, 1 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" DESC, "p0"."id" DESC, "p0"."id" asc limit ?) order by "__tag" asc',
     ]);
     // And the results are the expected reverse of each other
     expect(p1.reverse()).toEqual(p2);

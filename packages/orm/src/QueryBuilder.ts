@@ -153,9 +153,8 @@ export function buildQuery<T extends Entity>(
 
   addClauses(meta, alias, where as object, orderBy as object);
 
-  if (!orderBy) {
-    query = query.orderBy(`${alias}.id`);
-  }
+  // Even if they already added orders, add id as the last one to get deterministic output
+  query = query.orderBy(`${alias}.id`);
   query = query.limit(limit || entityLimit);
   if (offset) {
     query = query.offset(offset);

@@ -276,7 +276,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   >(
     type: EntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: { populate?: H; orderBy?: OrderOf<T> },
+    options?: { populate?: H; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: EntityConstructor<T>,

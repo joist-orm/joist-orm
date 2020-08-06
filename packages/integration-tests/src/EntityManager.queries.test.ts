@@ -470,9 +470,7 @@ describe("EntityManager.queries", () => {
   it("can find with GQL filters with enums", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     const em = newEntityManager();
-    const gqlFilter: GraphQLPublisherFilter = {
-      size: [PublisherSize.Small],
-    };
+    const gqlFilter: GraphQLPublisherFilter = { size: [PublisherSize.Small] };
     const publishers = await em.findGql(Publisher, gqlFilter);
     expect(publishers.length).toEqual(1);
   });
@@ -483,6 +481,16 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const authors = await em.findGql(Author, { age: { op: "gt", value: 1 } });
     expect(authors.length).toEqual(1);
+  });
+
+  it("can find with GQL filters with offset/limit", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const gqlFilter: GraphQLAuthorFilter = { age: { gt: 0 } };
+    const authors = await em.findGql(Author, gqlFilter, { offset: 1, limit: 1 });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
   });
 
   it("can offset/limit", async () => {

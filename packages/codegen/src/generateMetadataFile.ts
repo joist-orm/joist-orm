@@ -1,4 +1,3 @@
-import { camelCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";

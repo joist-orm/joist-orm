@@ -1,5 +1,5 @@
+import { EntityManager } from "@src/entities";
 import { config } from "dotenv";
-import { EntityManager } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import Knex from "knex";
 

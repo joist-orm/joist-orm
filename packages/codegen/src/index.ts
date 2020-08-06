@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure, { Db, Table } from "pg-structure";
-import { code, Code } from "ts-poet";
+import { code, Code, def, imp } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
@@ -12,7 +12,7 @@ import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
-import { configureMetadata } from "./symbols";
+import { configureMetadata, EntityManager } from "./symbols";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 
 export { EntityDbMetadata };
@@ -83,9 +83,13 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     })
     .reduce(merge, []);
 
+  const contextType = config.contextType ? imp(config.contextType) : "{}";
+
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
     contents: code`
+      export class ${def("EntityManager")} extends ${EntityManager}<${contextType}> {}
+
       ${entities.map((meta) => generateMetadataFile(config, meta))}
 
       const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];

@@ -29,7 +29,8 @@ export type ValueFilter<V, N> =
   | { ne: V | N }
   | { lt: V }
   | { lte: V }
-  | { like: V };
+  | { like: V }
+  | { ilike: V };
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { ne: T | I | N };
@@ -49,6 +50,7 @@ export type ValueGraphQLFilter<V> =
       lt?: V | null;
       lte?: V | null;
       like?: V | null;
+      ilike?: V | null;
     }
   | { op: Operator; value: Primitive }
   | V
@@ -60,7 +62,7 @@ export type EnumGraphQLFilter<V> = V[] | null | undefined;
 /** A GraphQL version of EntityFilter. */
 export type EntityGraphQLFilter<T, I, F> = T | I | I[] | F | { ne: T | I } | null | undefined;
 
-const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "in"] as const;
+const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "ilike", "in"] as const;
 export type Operator = typeof operators[number];
 const opToFn: Record<Operator, string> = {
   eq: "=",
@@ -70,6 +72,7 @@ const opToFn: Record<Operator, string> = {
   lt: "<",
   lte: "<=",
   like: "LIKE",
+  ilike: "ILIKE",
   in: "...",
 };
 

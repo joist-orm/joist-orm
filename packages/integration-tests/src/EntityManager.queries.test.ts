@@ -338,6 +338,14 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(2);
   });
 
+  it("can find by ilike", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { firstName: { ilike: "A%" } });
+    expect(authors.length).toEqual(2);
+  });
+
   it("can find by like and join with not equal enum", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     await insertPublisher({ name: "p2", size_id: 2 });

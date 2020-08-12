@@ -5,7 +5,7 @@
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "dependencies": {
-    "pg": "^8.2.1",
+    "pg": "^8.3.0",
     "pg-connection-string": "^2.2.3"
   },
   "devDependencies": {

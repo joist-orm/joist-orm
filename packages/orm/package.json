@@ -10,9 +10,9 @@
     "dataloader": "^2.0.0",
     "is-plain-object": "^3.0.1",
     "joist-utils": "0.1.0-bump",
-    "knex": "^0.21.1",
+    "knex": "^0.21.4",
     "object-hash": "^2.0.3",
-    "pg": "^8.2.1"
+    "pg": "^8.3.0"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",

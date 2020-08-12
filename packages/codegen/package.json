@@ -7,10 +7,10 @@
   "dependencies": {
     "@types/pluralize": "0.0.29",
     "change-case": "^4.1.1",
-    "knex": "^0.21.1",
+    "knex": "^0.21.4",
     "is-plain-object": "^3.0.1",
-    "pg": "^8.2.1",
-    "pg-structure": "^5.10.10",
+    "pg": "^8.3.0",
+    "pg-structure": "^5.10.13",
     "pluralize": "^8.0.0",
     "ts-poet": "^3.2.2",
     "joist-utils": "0.1.0-bump"

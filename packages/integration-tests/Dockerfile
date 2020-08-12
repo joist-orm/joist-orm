@@ -1,5 +1,5 @@
 # Run codegen and build first
-FROM node:14.0.0 as build
+FROM node:14.8.0 as build
 WORKDIR /home/node/app
 COPY ../orm package-lock.json .npmrc ./
 RUN npm ci
@@ -13,7 +13,7 @@ RUN npm run graphql-codegen
 RUN npm run build
 
 # Now start over with out dev dependencies
-FROM node:14.0.0 as runtime
+FROM node:14.8.0 as runtime
 WORKDIR /home/node/app
 COPY ../orm package-lock.json ./
 RUN npm ci --only=production

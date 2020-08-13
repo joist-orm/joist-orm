@@ -1,9 +1,9 @@
+import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import Knex, { QueryBuilder } from "knex";
 import hash from "object-hash";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import { JoinRow } from "./collections/ManyToManyCollection";
-import { Contexty } from "./contexty";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
 import {
@@ -193,6 +193,8 @@ type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 export type HasKnex = { knex: Knex };
 
+export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
+
 export class EntityManager<C extends HasKnex = HasKnex> {
   private readonly ctx: C;
   public knex: Knex;
@@ -218,10 +220,6 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   private findLoaders: LoaderCache = {};
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
-  // we create a private contexty per flush instead of using a global module level one
-  // so that we don't accidentally start capturing arbitrary scopes on every await and
-  // cause a massive memory leak
-  private contexty?: Contexty;
   // This is attempting to be internal/module private
   __data = {
     loaders: {} as LoaderCache,
@@ -231,10 +229,6 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   private hooks: Record<EntityManagerHook, HookFn[]> = {
     beforeTransaction: [],
   };
-
-  get context() {
-    return this.contexty?.context || {};
-  }
 
   get entities(): ReadonlyArray<Entity> {
     return [...this._entities];
@@ -618,39 +612,40 @@ export class EntityManager<C extends HasKnex = HasKnex> {
 
     this._isFlushing = true;
 
-    this.contexty = new Contexty();
-    this.contexty.create();
-
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
 
-    // We need to split the thread so that Node's executionAsyncId changes and in turn
-    // Contexty give us a context that's distinct from whatever called flush
-    await new Promise((res) => setTimeout(res, 0));
-    const context = this.contexty.create();
-
     try {
       while (pendingEntities.length > 0) {
-        context.flushSecret = this.flushSecret;
-        const todos = sortEntities(pendingEntities);
+        await new Promise((resolve, reject) => {
+          currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
+            try {
+              const todos = sortEntities(pendingEntities);
 
-        // add objects to todos that have reactive hooks
-        await addReactiveAsyncDerivedValues(todos);
-        await addReactiveValidations(todos);
+              // add objects to todos that have reactive hooks
+              await addReactiveAsyncDerivedValues(todos);
+              await addReactiveValidations(todos);
 
-        // run our hooks
-        await beforeDelete(this.ctx, todos);
-        // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-        await cascadeDeletesIntoRelations(todos);
-        await beforeFlush(this.ctx, todos);
-        recalcDerivedFields(todos);
-        await recalcAsyncDerivedFields(this, todos);
-        await validate(todos);
-        await afterValidation(this.ctx, todos);
+              // run our hooks
+              await beforeDelete(this.ctx, todos);
+              // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
+              await cascadeDeletesIntoRelations(todos);
+              await beforeFlush(this.ctx, todos);
+              recalcDerivedFields(todos);
+              await recalcAsyncDerivedFields(this, todos);
+              await validate(todos);
+              await afterValidation(this.ctx, todos);
 
-        entitiesToFlush.push(...pendingEntities);
-        pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
-        this.flushSecret += 1;
+              entitiesToFlush.push(...pendingEntities);
+              pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
+              this.flushSecret += 1;
+
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          });
+        });
       }
 
       const entityTodos = sortEntities(entitiesToFlush);
@@ -685,8 +680,6 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         this.__data.loaders = {};
       }
     } finally {
-      this.contexty.cleanup();
-      this.contexty = undefined;
       this._isFlushing = false;
     }
   }

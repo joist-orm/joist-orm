@@ -1,5 +1,6 @@
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import {
+  currentFlushSecret,
   Entity,
   EntityConstructor,
   EntityManager,
@@ -20,7 +21,6 @@ export * from "./EntityManager";
 export { newPgConnectionConfig } from "joist-utils";
 export * from "./reverseHint";
 export * from "./changes";
-export * from "./contexty";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export { fail } from "./utils";
 export * from "./collections";
@@ -122,7 +122,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   const em = getEm(entity);
 
   if (em.isFlushing) {
-    const { flushSecret } = em.context;
+    const { flushSecret } = currentFlushSecret.getStore() || {};
 
     if (flushSecret === undefined) {
       throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);

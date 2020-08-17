@@ -2,6 +2,11 @@
   "name": "joist-codegen",
   "version": "0.1.0-bump",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stephenh/joist-ts.git",
+    "directory": "packages/codegen"
+  },
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "dependencies": {

@@ -1,6 +1,6 @@
 {
   "name": "joist-migration-utils",
-  "version": "0.1.0-bump",
+  "version": "1.0.0-bump",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -10,7 +10,7 @@
     "pg": "^8.3.0",
     "pg-structure": "^5.10.13",
     "pluralize": "^8.0.0",
-    "joist-utils": "0.1.0-bump"
+    "joist-utils": "1.0.0-bump"
   },
   "devDependencies": {
     "@types/jest": "^26.0.3",

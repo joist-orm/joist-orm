@@ -29,8 +29,6 @@ An opinionated ORM for TypeScript/node.
 
 Joist is currently used in production at [Homebound](https://www.homebound.com/). All of the features should generally be solid/working, with a caveat that fill a bug report if you run into anything.
 
-The versioning is currently `0.1.x`, but Joist is basically ready for a `v1.0`, we just haven't gotten around to it.
-
 ### Install
 
 See [Getting Started](./docs/getting-started.markdown) and the [integration-tests](./packages/integration-tests), which is essentially a sample app with a domain model of `Author`, `Book`, etc. entities.

@@ -1,6 +1,6 @@
 {
   "name": "joist-orm",
-  "version": "0.1.0-bump",
+  "version": "1.0.0-bump",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",
@@ -9,7 +9,7 @@
     "contexty": "^1.0.0",
     "dataloader": "^2.0.0",
     "is-plain-object": "^3.0.1",
-    "joist-utils": "0.1.0-bump",
+    "joist-utils": "1.0.0-bump",
     "knex": "^0.21.4",
     "object-hash": "^2.0.3",
     "pg": "^8.3.0"

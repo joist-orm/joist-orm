@@ -47,6 +47,7 @@ export function mapSimpleDbType(dbType: string): string {
     case "bool":
       return "boolean";
     case "int":
+    case "numeric":
       return "number";
     case "text":
     case "varchar":

@@ -10,8 +10,9 @@
 #
 
 file=$1
-pattern=$(grep -o "0\.[[:digit:]]\+\.0-bump" < "${file}" | head -n 1)
-minor=$(echo "${pattern}"| grep -o "^0\.[[:digit:]]\+")
+pattern="1.0.0-bump"
+major="1"
+minor="0"
 patch=$(git log --first-parent --format=%H | wc -l)
-version="${minor}.${patch}"
+version="${major}.${minor}.${patch}"
 sed -i.bak "s/${pattern}/${version}/g" "${file}"

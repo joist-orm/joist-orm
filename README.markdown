@@ -40,7 +40,7 @@ Lack of documentation is currently Joist's biggest pain point.
 The current "best" documentation sources are:
 
 * [Misc Features](./docs/misc-features.markdown),
-* [Getting Started](./docs/getting-started), and
+* [Getting Started](./docs/getting-started.markdown), and
 * the [integration-tests](./packages/integration-tests) setup for copy/pasting a docker-compose setup
 
 ### Building Joist

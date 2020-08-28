@@ -25,7 +25,7 @@ export interface Config {
   codegenPlugins: string[];
   entities: Record<string, EntityConfig>;
   // We don't persist this, and instead just use it as a cache
-  __tableToEntityName: Record<string, string>;
+  __tableToEntityName?: Record<string, string>;
 }
 
 export const defaultConfig: Config = {

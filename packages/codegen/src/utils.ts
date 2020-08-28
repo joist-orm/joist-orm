@@ -30,13 +30,13 @@ function includesAllOf(set: string[], subset: string[]): boolean {
 
 /** Converts `projects` to `Project`. */
 export function tableToEntityName(config: Config, table: Table): string {
-  let entityName = config.__tableToEntityName[table.name];
+  let entityName = config.__tableToEntityName?.[table.name];
   if (!entityName) {
     const configEntityName = Object.entries(config.entities)
       .filter(([, conf]) => conf.tableName === table.name)
       .map(([entityName]) => entityName)[0];
     entityName = configEntityName || pascalCase(pluralize.singular(table.name));
-    config.__tableToEntityName[table.name] = entityName;
+    (config.__tableToEntityName ??= {})[table.name] = entityName;
   }
   return entityName;
 }

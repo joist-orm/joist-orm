@@ -188,7 +188,7 @@ type NestedLoadHint<T extends Entity> = {
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
 type MaybePromise<T> = T | PromiseLike<T>;
-export type EntityManagerHook = "beforeTransaction";
+export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 export type HasKnex = { knex: Knex };
@@ -205,7 +205,10 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
       this.knex = em.knex;
-      this.hooks = { beforeTransaction: [...em.hooks.beforeTransaction] };
+      this.hooks = {
+        beforeTransaction: [...em.hooks.beforeTransaction],
+        afterTransaction: [...em.hooks.afterTransaction],
+      };
       this.ctx = em.ctx!;
     } else {
       this.ctx = emOrCtx!;
@@ -228,6 +231,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
 
   private hooks: Record<EntityManagerHook, HookFn[]> = {
     beforeTransaction: [],
+    afterTransaction: [],
   };
 
   get entities(): ReadonlyArray<Entity> {
@@ -536,6 +540,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       // in case they didn't explicitly call flush.
       await this.flush();
       await txn.commit();
+      await afterTransaction(this, txn);
       return result;
     } finally {
       if (!txn.isCompleted()) {
@@ -660,6 +665,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
             await flushJoinTables(knex, joinRowTodos);
             // When using `.transaction` with a lambda, we don't explicitly call commit
             // await knex.commit();
+            await afterTransaction(this, knex);
           });
         } else {
           await flushEntities(this.knex, entityTodos);
@@ -914,6 +920,10 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     this.hooks.beforeTransaction.push(fn);
   }
 
+  public afterTransaction(fn: HookFn) {
+    this.hooks.afterTransaction.push(fn);
+  }
+
   public toString(): string {
     return "EntityManager";
   }
@@ -1116,6 +1126,10 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
 
 async function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
   await Promise.all(em["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
+}
+
+async function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
+  await Promise.all(em["hooks"].afterTransaction.map((fn) => fn(em, knex)));
 }
 
 async function runHook(

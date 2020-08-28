@@ -886,6 +886,33 @@ describe("EntityManager", () => {
     });
     expect(beforeTransactionCount).toEqual(1);
   });
+
+  it("runs a afterTransaction once on flush", async () => {
+    const em = newEntityManager();
+    let afterTransactionCount = 0;
+    em.afterTransaction(() => {
+      afterTransactionCount += 1;
+    });
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+    expect(afterTransactionCount).toEqual(1);
+  });
+
+  it("runs a afterTransaction once on a transaction", async () => {
+    const em = newEntityManager();
+    let afterTransactionCount = 0;
+    em.afterTransaction(() => {
+      afterTransactionCount += 1;
+    });
+    await em.transaction(async () => {
+      em.create(Author, { firstName: "a1" });
+      await em.flush();
+
+      em.create(Author, { firstName: "a2" });
+      await em.flush();
+    });
+    expect(afterTransactionCount).toEqual(1);
+  });
 });
 
 function delay(ms: number): Promise<void> {

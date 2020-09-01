@@ -57,8 +57,10 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   get isSet(): boolean {
-    // This will failure if we're not loaded yet
-    return this.id !== undefined;
+    if (this.isLoaded) {
+      return this.loaded !== undefined;
+    }
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   // opts is an internal parameter
@@ -131,12 +133,23 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   onEntityDelete(): void {
-    // if (this.isCascadeDelete) {
-    //   this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
-    // }
+    if (this.isCascadeDelete && this.loaded) {
+      getEm(this.entity).delete(this.loaded);
+    }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {}
+  current(opts?: { withDeleted: boolean; }): U | undefined {
+    return this.filterDeleted(this.loaded, opts);
+  }
+
+  async onEntityDeletedAndFlushing(): Promise<void> {
+    if (this.isCascadeDelete) {
+      const other = await this.load();
+      if (other) {
+        getEm(this.entity).delete(other);
+      }
+    }
+  }
 
   public toString(): string {
     return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;

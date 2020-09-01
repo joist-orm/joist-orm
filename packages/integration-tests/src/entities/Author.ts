@@ -65,6 +65,7 @@ export class Author extends AuthorCodegen {
 }
 
 authorConfig.cascadeDelete("books");
+authorConfig.cascadeDelete("image");
 
 authorConfig.addRule((a) => {
   if (a.firstName && a.firstName === a.lastName) {

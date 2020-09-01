@@ -81,7 +81,9 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   set(other: U): void {
-    ensureNotDeleted(this.entity);
+    if (this.entity.__orm.deleted) {
+      return;
+    }
     if (other === this.loaded) {
       return;
     }
@@ -136,10 +138,6 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     if (this.isCascadeDelete && this.loaded) {
       getEm(this.entity).delete(this.loaded);
     }
-  }
-
-  current(opts?: { withDeleted: boolean; }): U | undefined {
-    return this.filterDeleted(this.loaded, opts);
   }
 
   async onEntityDeletedAndFlushing(): Promise<void> {

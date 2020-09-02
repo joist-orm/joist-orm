@@ -1,4 +1,12 @@
-import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, unsafeDeTagIds } from "../";
+import {
+  deTagIds,
+  ensureNotDeleted,
+  fail,
+  getEm,
+  IdOf,
+  Reference,
+  setField,
+} from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -81,9 +89,7 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   set(other: U): void {
-    if (this.entity.__orm.deleted) {
-      return;
-    }
+    ensureNotDeleted(this.entity, { ignore: "pending" })
     if (other === this.loaded) {
       return;
     }
@@ -140,7 +146,15 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {}
+  async onEntityDeletedAndFlushing(): Promise<void> {
+    const current = await this.load({ withDeleted: true });
+    if (current !== undefined) {
+      this.getOtherRelation(current).set(undefined as any)
+      setField(current, this.otherFieldName as string, undefined);
+    }
+    this.loaded = undefined as any;
+    this.isLoaded = true;
+  }
 
   public toString(): string {
     return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;

@@ -1,4 +1,12 @@
-import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, unsafeDeTagIds } from "../";
+import {
+  deTagIds,
+  ensureNotDeleted,
+  fail,
+  getEm,
+  IdOf,
+  Reference,
+  setField,
+} from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -57,8 +65,10 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   get isSet(): boolean {
-    // This will failure if we're not loaded yet
-    return this.id !== undefined;
+    if (this.isLoaded) {
+      return this.loaded !== undefined;
+    }
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   // opts is an internal parameter
@@ -79,7 +89,7 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   set(other: U): void {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.entity, { ignore: "pending" })
     if (other === this.loaded) {
       return;
     }
@@ -131,12 +141,20 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   onEntityDelete(): void {
-    // if (this.isCascadeDelete) {
-    //   this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
-    // }
+    if (this.isCascadeDelete && this.loaded) {
+      getEm(this.entity).delete(this.loaded);
+    }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {}
+  async onEntityDeletedAndFlushing(): Promise<void> {
+    const current = await this.load({ withDeleted: true });
+    if (current !== undefined) {
+      this.getOtherRelation(current).set(undefined as any)
+      setField(current, this.otherFieldName as string, undefined);
+    }
+    this.loaded = undefined as any;
+    this.isLoaded = true;
+  }
 
   public toString(): string {
     return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;

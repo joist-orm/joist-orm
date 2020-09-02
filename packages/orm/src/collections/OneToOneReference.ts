@@ -140,14 +140,7 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {
-    if (this.isCascadeDelete) {
-      const other = await this.load();
-      if (other) {
-        getEm(this.entity).delete(other);
-      }
-    }
-  }
+  async onEntityDeletedAndFlushing(): Promise<void> {}
 
   public toString(): string {
     return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;

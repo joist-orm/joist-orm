@@ -30,6 +30,35 @@ export class SimpleSerde implements ColumnSerde {
   }
 }
 
+/**
+ * Maps `decimal(...)` database types to the JS `number`.
+ *
+ * Note that we assume the db values are within the range of the JS `number`;
+ * we should eventually sanity check that.
+ *
+ * Also note that knex/pg accept `number`s as input, so we only need
+ * to handle from-database -> to JS translation.
+ */
+export class DecimalToNumberSerde implements ColumnSerde {
+  constructor(private fieldName: string, private columnName: string) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = Number(maybeNullToUndefined(row[this.columnName]));
+  }
+
+  setOnRow(data: any, row: any): void {
+    row[this.columnName] = data[this.fieldName];
+  }
+
+  getFromEntity(data: any) {
+    return data[this.fieldName];
+  }
+
+  mapToDb(value: any) {
+    return value;
+  }
+}
+
 /** Maps integer primary keys ot strings "because GraphQL". */
 export class PrimaryKeySerde implements ColumnSerde {
   constructor(private meta: () => EntityMetadata<any>, private fieldName: string, private columnName: string) {}

@@ -19,6 +19,7 @@ export const ManyToManyCollection = imp("ManyToManyCollection@joist-orm");
 export const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
 export const ForeignKeySerde = imp("ForeignKeySerde@joist-orm");
 export const SimpleSerde = imp("SimpleSerde@joist-orm");
+export const DecimalToNumberSerde = imp("DecimalToNumberSerde@joist-orm");
 export const fail = imp("fail@joist-orm");
 export const setOpts = imp("setOpts@joist-orm");
 export const setField = imp("setField@joist-orm");

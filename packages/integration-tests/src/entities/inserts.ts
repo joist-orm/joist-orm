@@ -18,7 +18,14 @@ export async function insertBook(row: { id?: number; title: string; author_id: n
   await knex.insert(row).into("books");
 }
 
-export async function insertPublisher(row: { id?: number; name: string; size_id?: number }) {
+export async function insertPublisher(row: {
+  id?: number;
+  name: string;
+  longitude?: string | number;
+  latitude?: string | number;
+  huge_number?: string | number;
+  size_id?: number;
+}) {
   await knex.insert(row).into("publishers");
 }
 

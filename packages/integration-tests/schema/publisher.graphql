@@ -7,6 +7,9 @@ type Publisher {
   authors: [Author!]!
   bookAdvances: [BookAdvance!]!
   images: [Image!]!
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
 }
 
 input SavePublisherInput {
@@ -15,6 +18,9 @@ input SavePublisherInput {
   createdAt: Date
   updatedAt: Date
   size: PublisherSize
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
 }
 
 type SavePublisherResult {

@@ -1,3 +1,4 @@
+import { insertPublisher } from "@src/entities/inserts";
 import { EntityManager } from "joist-orm";
 import { Publisher } from "./entities";
 import { knex, newEntityManager } from "./setupDbTests";
@@ -17,5 +18,16 @@ describe("EntityManager", () => {
     const p1 = await em2.load(Publisher, "p:1");
     expect(p1.latitude).toEqual(38.46281);
     expect(p1.longitude).toEqual(-122.72805);
+  });
+
+  it("doesn't blow up on huge decimals", async () => {
+    await insertPublisher({
+      name: "foo",
+      // This is above max integer's 2^51 - 1
+      huge_number: "10,000,000,000,000,000".replace(/,/g, ""),
+    });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    expect(p1.hugeNumber).toEqual(10_000_000_000_000_000);
   });
 });

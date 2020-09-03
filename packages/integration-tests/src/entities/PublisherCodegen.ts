@@ -45,6 +45,7 @@ export interface PublisherOpts {
   name: string;
   latitude?: number | null;
   longitude?: number | null;
+  hugeNumber?: number | null;
   size?: PublisherSize | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
@@ -62,6 +63,7 @@ export interface PublisherFilter {
   name?: ValueFilter<string, never>;
   latitude?: ValueFilter<number, null | undefined>;
   longitude?: ValueFilter<number, null | undefined>;
+  hugeNumber?: ValueFilter<number, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null | undefined>;
@@ -72,6 +74,7 @@ export interface PublisherGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   latitude?: ValueGraphQLFilter<number>;
   longitude?: ValueGraphQLFilter<number>;
+  hugeNumber?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: EnumGraphQLFilter<PublisherSize>;
@@ -82,6 +85,7 @@ export interface PublisherOrder {
   name?: OrderBy;
   latitude?: OrderBy;
   longitude?: OrderBy;
+  hugeNumber?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
@@ -145,6 +149,14 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   set longitude(longitude: number | undefined) {
     setField(this, "longitude", longitude);
+  }
+
+  get hugeNumber(): number | undefined {
+    return this.__orm.data["hugeNumber"];
+  }
+
+  set hugeNumber(hugeNumber: number | undefined) {
+    setField(this, "hugeNumber", hugeNumber);
   }
 
   get createdAt(): Date {

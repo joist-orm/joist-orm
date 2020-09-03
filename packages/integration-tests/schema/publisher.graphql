@@ -9,6 +9,7 @@ type Publisher {
   images: [Image!]!
   latitude: Int
   longitude: Int
+  hugeNumber: Int
 }
 
 input SavePublisherInput {
@@ -19,6 +20,7 @@ input SavePublisherInput {
   size: PublisherSize
   latitude: Int
   longitude: Int
+  hugeNumber: Int
 }
 
 type SavePublisherResult {

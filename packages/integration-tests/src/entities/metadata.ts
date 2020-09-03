@@ -724,6 +724,12 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       serde: new DecimalToNumberSerde("longitude", "longitude"),
     },
     {
+      fieldName: "hugeNumber",
+      columnName: "huge_number",
+      dbType: "numeric",
+      serde: new DecimalToNumberSerde("hugeNumber", "huge_number"),
+    },
+    {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamptz",
@@ -768,6 +774,15 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     {
       kind: "primitive",
       fieldName: "longitude",
+      fieldIdName: undefined,
+      derived: false,
+      required: false,
+      protected: false,
+      type: "number",
+    },
+    {
+      kind: "primitive",
+      fieldName: "hugeNumber",
       fieldIdName: undefined,
       derived: false,
       required: false,

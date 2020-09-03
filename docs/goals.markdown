@@ -8,7 +8,15 @@ Obviously this is a lofty goal, and Joist has only just started down that road, 
 
 Joist generates your domain objects/classes from your database schema, i.e. for a given `authors` table, Joist will generate an `Author` type with all of the respective fields (`first_name`, `last_name`) and collections (`author.books` loads/joins the `books` rows for that author id).
 
-It does this continually, i.e. after every migration/schema change, so that you never have to maintain a tedious/error-prone mapping from your schema to your object model. Similar to "evergreen" browsers, this is "evergreen" code generation.
+This means you're domain model is extremely clean, i.e. `Author.ts` starts out:
+
+```typescript
+export class Author extends AuthorCodegen {}
+```
+
+Which is "Rails-ish" clean & minimal.
+
+The code generation is run continually, i.e. after every migration/schema change instead of a 1-time scaffolding, so you never have to maintain a tedious/error-prone mapping from your schema to your object model. Similar to "evergreen" browsers, this is "evergreen" code generation.
 
 To keep your `Author` type as clean as possible, and not overwrite any custom business logic you've added, the boilerplate of getters/setters/collections are isolated into "codegen" base classes, i.e. `AuthorCodegen.ts`, that are always overwritten.
 

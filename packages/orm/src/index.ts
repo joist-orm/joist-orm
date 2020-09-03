@@ -218,11 +218,7 @@ export function setOpts<T extends Entity>(
     }
   });
   if (calledFromConstructor) {
-    Object.values(entity).forEach((v) => {
-      if (v instanceof AbstractRelationImpl) {
-        v.initializeForNewEntity();
-      }
-    });
+    getRelations(entity).forEach((v) => v.initializeForNewEntity());
   }
 }
 
@@ -317,8 +313,8 @@ export class ConfigApi<T extends Entity, C> {
   cascadeDelete(relationship: keyof RelationsIn<T>): void {
     this.__data.cascadeDeleteFields.push(relationship);
     this.beforeDelete(relationship, (entity) => {
-      const relation = (entity[relationship] as any) as AbstractRelationImpl<T>;
-      relation.onEntityDelete();
+      const relation = (entity[relationship] as any) as AbstractRelationImpl<any>;
+      relation.maybeCascadeDelete();
     });
   }
 
@@ -397,4 +393,8 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
 export function getEm(entity: Entity): EntityManager {
   return entity.__orm.em;
+}
+
+export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
+  return Object.values(entity).filter((v) => v instanceof AbstractRelationImpl);
 }

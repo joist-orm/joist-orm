@@ -16,13 +16,14 @@ export abstract class AbstractRelationImpl<U> {
 
   /**
    * Called when our entity has been `EntityManager.delete`'d _and_ `EntityManager.flush` is being called,
-   * so we can unset any foreign keys to the being-deleted entity.
+   * so we can unset any foreign keys to the being-deleted entity and clear out any pointers to it.
    */
-  abstract async onEntityDeletedAndFlushing(): Promise<void>;
+  abstract async cleanupOnEntityDeleted(): Promise<void>;
 
   /**
-   * Called when our entity has been `EntityManager.delete`'d so that we can run any special behavior
-   * like cascades
+   * Called to cascade deletes into the relation if it has cascade behavior enabled.  This function is called twice,
+   * once on the initial `EntityManager.delete` call in a potentially unloaded state, then again from a `beforeDelete`
+   * hook after the relation is fully loaded.
    */
-  abstract onEntityDelete(): void;
+  abstract maybeCascadeDelete(): void;
 }

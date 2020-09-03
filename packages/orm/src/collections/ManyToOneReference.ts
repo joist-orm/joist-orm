@@ -125,7 +125,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  onEntityDelete(): void {
+  maybeCascadeDelete(): void {
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
       if (current !== undefined && typeof current !== "string") {
@@ -134,7 +134,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {
+  async cleanupOnEntityDeleted(): Promise<void> {
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
       const o2m = this.getOtherRelation(current);

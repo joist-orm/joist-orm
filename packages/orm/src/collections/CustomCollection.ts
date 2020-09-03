@@ -120,8 +120,8 @@ export class CustomCollection<T extends Entity, U extends Entity> extends Abstra
   }
 
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
-  async onEntityDeletedAndFlushing(): Promise<void> {}
-  onEntityDelete(): void {}
+  async cleanupOnEntityDeleted(): Promise<void> {}
+  maybeCascadeDelete(): void {}
   async refreshIfLoaded(): Promise<void> {}
 
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */

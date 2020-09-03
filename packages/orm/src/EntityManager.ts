@@ -15,6 +15,7 @@ import {
   deTagIds,
   EntityHook,
   getEm,
+  getRelations,
   keyToString,
   LoadedCollection,
   LoadedReference,
@@ -592,11 +593,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     }
     deletedEntity.__orm.deleted = "pending";
 
-    Object.values(deletedEntity)
-      .filter((v) => v instanceof AbstractRelationImpl)
-      .map((relation: AbstractRelationImpl<any>) => {
-        relation.onEntityDelete();
-      });
+    getRelations(deletedEntity).forEach((relation) => relation.maybeCascadeDelete());
   }
 
   /**
@@ -634,7 +631,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
               // run our hooks
               await beforeDelete(this.ctx, todos);
               // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-              await cascadeDeletesIntoRelations(todos);
+              await cleanupDeletedRelations(todos);
               await beforeFlush(this.ctx, todos);
               recalcDerivedFields(todos);
               await recalcAsyncDerivedFields(this, todos);
@@ -736,14 +733,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
           await loader.load(entity.id);
           if (entity.__orm.deleted === undefined) {
             // Then refresh any loaded collections
-            await Promise.all(
-              Object.values(entity).map((c) => {
-                if (c instanceof AbstractRelationImpl) {
-                  return c.refreshIfLoaded();
-                }
-                return undefined;
-              }),
-            );
+            await Promise.all(getRelations(entity).map((r) => r.refreshIfLoaded()));
           }
         }
       }),
@@ -1097,16 +1087,9 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
 }
 
 /** Find all deleted entities and ensure their references all know about their deleted-ness. */
-async function cascadeDeletesIntoRelations(todos: Record<string, Todo>): Promise<void> {
+async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<void> {
   const entities = Object.values(todos).flatMap((todo) => todo.deletes);
-  await Promise.all(
-    entities
-      .flatMap((e) => Object.values(e))
-      .filter((v) => v instanceof AbstractRelationImpl)
-      .map((relation: AbstractRelationImpl<any>) => {
-        return relation.onEntityDeletedAndFlushing();
-      }),
-  );
+  await Promise.all(entities.flatMap(getRelations).map((relation) => relation.cleanupOnEntityDeleted()));
 }
 
 async function validate(todos: Record<string, Todo>): Promise<void> {

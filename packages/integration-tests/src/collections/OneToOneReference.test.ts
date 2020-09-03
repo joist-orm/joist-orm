@@ -114,8 +114,8 @@ describe("OneToOneReference", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1", "image");
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
-    await em.refresh()
-    expect(a1.image.isSet).toBeTruthy()
+    await em.refresh();
+    expect(a1.image.isSet).toBeTruthy();
     em.delete(a1);
     await em.flush();
     expect((await knex.select("*").from("images")).length).toEqual(0);
@@ -125,7 +125,7 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1", "image");
-    expect(a1.image.isSet).toBeFalsy()
+    expect(a1.image.isSet).toBeFalsy();
     em.delete(a1);
     await em.flush();
     expect((await knex.select("*").from("authors")).length).toEqual(0);
@@ -135,7 +135,7 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    await em.refresh()
-    expect(() => a1.image.isSet).toThrow("Author:1.image was not loaded")
+    await em.refresh();
+    expect(() => a1.image.isSet).toThrow("Author:1.image was not loaded");
   });
 });

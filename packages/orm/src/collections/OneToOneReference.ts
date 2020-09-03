@@ -1,12 +1,4 @@
-import {
-  deTagIds,
-  ensureNotDeleted,
-  fail,
-  getEm,
-  IdOf,
-  Reference,
-  setField,
-} from "../";
+import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
@@ -89,7 +81,7 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
   }
 
   set(other: U): void {
-    ensureNotDeleted(this.entity, { ignore: "pending" })
+    ensureNotDeleted(this.entity, { ignore: "pending" });
     if (other === this.loaded) {
       return;
     }
@@ -140,16 +132,16 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     }
   }
 
-  onEntityDelete(): void {
+  maybeCascadeDelete(): void {
     if (this.isCascadeDelete && this.loaded) {
       getEm(this.entity).delete(this.loaded);
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {
+  async cleanupOnEntityDeleted(): Promise<void> {
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
-      this.getOtherRelation(current).set(undefined as any)
+      this.getOtherRelation(current).set(undefined as any);
       setField(current, this.otherFieldName as string, undefined);
     }
     this.loaded = undefined as any;

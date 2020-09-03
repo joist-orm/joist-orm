@@ -191,13 +191,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     }
   }
 
-  onEntityDelete() {
+  maybeCascadeDelete() {
     if (this.isCascadeDelete) {
       this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
     }
   }
 
-  async onEntityDeletedAndFlushing(): Promise<void> {
+  async cleanupOnEntityDeleted(): Promise<void> {
     const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = (other[this.otherFieldName] as any) as ManyToManyCollection<U, T>;

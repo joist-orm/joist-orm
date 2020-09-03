@@ -1,5 +1,5 @@
 import { Entity, IdOf } from "../EntityManager";
-import { deTagIds, ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
+import { ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
@@ -106,8 +106,8 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
-  async onEntityDeletedAndFlushing(): Promise<void> {}
-  onEntityDelete(): void {}
+  async cleanupOnEntityDeleted(): Promise<void> {}
+  maybeCascadeDelete(): void {}
   async refreshIfLoaded(): Promise<void> {}
 
   /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */

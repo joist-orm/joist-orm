@@ -6,6 +6,7 @@ import {
   SimpleSerde,
   ForeignKeySerde,
   EnumFieldSerde,
+  DecimalToNumberSerde,
 } from "joist-orm";
 import { Context } from "src/context";
 import {
@@ -711,6 +712,18 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       serde: new SimpleSerde("name", "name"),
     },
     {
+      fieldName: "latitude",
+      columnName: "latitude",
+      dbType: "numeric",
+      serde: new DecimalToNumberSerde("latitude", "latitude"),
+    },
+    {
+      fieldName: "longitude",
+      columnName: "longitude",
+      dbType: "numeric",
+      serde: new DecimalToNumberSerde("longitude", "longitude"),
+    },
+    {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamptz",
@@ -742,6 +755,24 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       required: true,
       protected: false,
       type: "string",
+    },
+    {
+      kind: "primitive",
+      fieldName: "latitude",
+      fieldIdName: undefined,
+      derived: false,
+      required: false,
+      protected: false,
+      type: "number",
+    },
+    {
+      kind: "primitive",
+      fieldName: "longitude",
+      fieldIdName: undefined,
+      derived: false,
+      required: false,
+      protected: false,
+      type: "number",
     },
     {
       kind: "primitive",

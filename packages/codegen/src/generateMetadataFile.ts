@@ -1,7 +1,14 @@
 import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
-import { EntityMetadata, EnumFieldSerde, ForeignKeySerde, PrimaryKeySerde, SimpleSerde } from "./symbols";
+import {
+  DecimalToNumberSerde,
+  EntityMetadata,
+  EnumFieldSerde,
+  ForeignKeySerde,
+  PrimaryKeySerde,
+  SimpleSerde,
+} from "./symbols";
 
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
   const { entity } = dbMetadata;
@@ -37,12 +44,13 @@ function generateColumns(
 
   const primitives = dbMetadata.primitives.map((p) => {
     const { fieldName, columnName, columnType } = p;
+    const serdeType = columnType === "numeric" ? DecimalToNumberSerde : SimpleSerde;
     return code`
       {
         fieldName: "${fieldName}",
         columnName: "${columnName}",
         dbType: "${columnType}",
-        serde: new ${SimpleSerde}("${fieldName}", "${columnName}"),
+        serde: new ${serdeType}("${fieldName}", "${columnName}"),
       },`;
   });
 

@@ -43,7 +43,8 @@ export class DecimalToNumberSerde implements ColumnSerde {
   constructor(private fieldName: string, private columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = Number(maybeNullToUndefined(row[this.columnName]));
+    const value = maybeNullToUndefined(row[this.columnName]);
+    data[this.fieldName] = value !== undefined ? Number(value) : value;
   }
 
   setOnRow(data: any, row: any): void {

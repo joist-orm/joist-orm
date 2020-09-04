@@ -30,4 +30,15 @@ describe("EntityManager", () => {
     const p1 = await em.load(Publisher, "p:1");
     expect(p1.hugeNumber).toEqual(10_000_000_000_000_000);
   });
+
+  it("supports null decimals", async () => {
+    const em = newEntityManager();
+    // Given longitude is left null
+    await em.create(Publisher, { name: "p1", latitude: 38.46281 });
+    await em.flush();
+    // Then we'll read it as undefined
+    const em2 = newEntityManager();
+    const p1 = await em2.load(Publisher, "p:1");
+    expect(p1.longitude).toBeUndefined();
+  });
 });

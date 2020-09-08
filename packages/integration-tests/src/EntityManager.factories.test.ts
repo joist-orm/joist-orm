@@ -86,6 +86,26 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a3");
   });
 
+  it("can create a author and set mentor automatically", async () => {
+    const em = newEntityManager();
+    // Given there is an existing author
+    const a1 = newAuthor(em);
+    // When we create the second author
+    const a2 = newAuthor(em);
+    // Then we expect it to be mentored by the first
+    expect(a2.mentor.get).toBe(a1);
+  });
+
+  it("can create a author and configure to not set the mentor", async () => {
+    const em = newEntityManager();
+    // Given there is an existing author
+    newAuthor(em);
+    // When we create the second author
+    const a2 = newAuthor(em, { associateOptionalEntities: { mentor: false }});
+    // Then we expect a2 not to have a mentor
+    expect(a2.mentor.get).toBeUndefined();
+  });
+
   it("can create a grandchild and specify the grandparent", async () => {
     const em = newEntityManager();
     // Given there are multiple existing publishers

@@ -3,7 +3,7 @@ import {
   ActualFactoryOpts,
   Entity,
   EntityConstructor,
-  EntityManager,
+  EntityManager, Field,
   getMetadata,
   IdOf,
   isEntity,
@@ -24,8 +24,11 @@ import { fail } from "./utils";
  * use the one in `use` instead of making a new one).
  *
  * 2. Works specifically against the constructor/entity opts fields.
+ *
+ * 3. Adds `associateOptionalEntities` to indicate whether optional fk's to other entities should be populated when
+ * there is a single entity or not. If no value is specified for a field, it will default to true for backwards compatibility.
  */
-export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & { use?: Entity | Entity[] };
+export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & { use?: Entity | Entity[], associateOptionalEntities?: Partial<Record<keyof OptsOf<T>, boolean>> };
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
 export const jan1 = new Date(2018, 0, 1);
@@ -113,9 +116,9 @@ export function newTestInstance<T extends Entity>(
           const otherMeta = field.otherMetadata();
 
           // If there is a single existing instance of this type, assume the caller is fine with that,
-          // even if the field is not required.
+          // even if the field is not required, unless they specified otherwise via `opts.associateOptionalEntities`.
           const existing = em.entities.filter((e) => e instanceof otherMeta.cstr);
-          if (existing.length === 1) {
+          if (existing.length === 1 && associateOptionalEntities(field, opts)) {
             return [fieldName, existing[0]];
           }
 
@@ -202,4 +205,14 @@ type AllowRelationsOrPartials<T> = {
 
 function maybeArray<T>(array: T | T[] | undefined): T[] | undefined {
   return array ? (Array.isArray(array) ? array : [array]) : undefined;
+}
+
+function associateOptionalEntities<T extends Entity>(field: Field, opts: FactoryOpts<T>): boolean {
+  if (field.required) {
+    // This field isn't optional, associate entities if you have them!
+    return true;
+  }
+
+  // Default to true if a specific value hasn't been set
+  return opts.associateOptionalEntities?.[field.fieldName as keyof OptsOf<T>] ?? true;
 }

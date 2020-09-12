@@ -137,7 +137,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
-    if (originalData[fieldName] === newValue) {
+    if (equal(originalData[fieldName], newValue)) {
       data[fieldName] = newValue;
       delete originalData[fieldName];
       return true;
@@ -397,4 +397,8 @@ export function getEm(entity: Entity): EntityManager {
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
   return Object.values(entity).filter((v) => v instanceof AbstractRelationImpl);
+}
+
+function equal(a: any, b: any): boolean {
+  return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
 }

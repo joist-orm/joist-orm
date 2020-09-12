@@ -175,6 +175,27 @@ describe("EntityManager", () => {
     expect(a3.updatedAt).not.toEqual(a1.updatedAt);
   });
 
+  it("updatedAt does not change on noops on dates", async () => {
+    const jan1 = new Date(2000, 0, 1);
+    const jan2 = new Date(2000, 0, 2);
+
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1", graduated: jan1 });
+    await em.flush();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, "1");
+    // Change graduated but then put it back
+    a2.graduated = jan2;
+    a2.graduated = jan1;
+    await em2.flush();
+
+    const em3 = newEntityManager();
+    const a3 = await em3.load(Author, "1");
+    expect(a3.updatedAt).toEqual(a1.updatedAt);
+  });
+
   it("can insert falsey values", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1", isPopular: false });

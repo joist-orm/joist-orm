@@ -14,6 +14,7 @@ type Author {
   authors: [Author!]!
   books: [Book!]!
   image: Image
+  graduated: Date
 }
 
 input SaveAuthorInput {
@@ -29,6 +30,7 @@ input SaveAuthorInput {
   updatedAt: Date
   mentorId: ID
   publisherId: ID
+  graduated: Date
 }
 
 type SaveAuthorResult {

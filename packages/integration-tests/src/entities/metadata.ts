@@ -83,6 +83,12 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new SimpleSerde("age", "age"),
     },
     {
+      fieldName: "graduated",
+      columnName: "graduated",
+      dbType: "date",
+      serde: new SimpleSerde("graduated", "graduated"),
+    },
+    {
       fieldName: "wasEverPopular",
       columnName: "was_ever_popular",
       dbType: "bool",
@@ -170,6 +176,15 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "number",
+    },
+    {
+      kind: "primitive",
+      fieldName: "graduated",
+      fieldIdName: undefined,
+      derived: false,
+      required: false,
+      protected: false,
+      type: "Date",
     },
     {
       kind: "primitive",

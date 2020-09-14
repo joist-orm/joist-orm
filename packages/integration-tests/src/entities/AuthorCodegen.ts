@@ -54,6 +54,7 @@ export interface AuthorOpts {
   lastName?: string | null;
   isPopular?: boolean | null;
   age?: number | null;
+  graduated?: Date | null;
   wasEverPopular?: boolean | null;
   mentor?: Author | null;
   publisher?: Publisher | null;
@@ -78,6 +79,7 @@ export interface AuthorFilter {
   numberOfBooks?: ValueFilter<number, never>;
   isPopular?: BooleanFilter<null | undefined>;
   age?: ValueFilter<number, null | undefined>;
+  graduated?: ValueFilter<Date, null | undefined>;
   wasEverPopular?: BooleanFilter<null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
@@ -93,6 +95,7 @@ export interface AuthorGraphQLFilter {
   numberOfBooks?: ValueGraphQLFilter<number>;
   isPopular?: BooleanGraphQLFilter;
   age?: ValueGraphQLFilter<number>;
+  graduated?: ValueGraphQLFilter<Date>;
   wasEverPopular?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
@@ -108,6 +111,7 @@ export interface AuthorOrder {
   numberOfBooks?: OrderBy;
   isPopular?: OrderBy;
   age?: OrderBy;
+  graduated?: OrderBy;
   wasEverPopular?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
@@ -191,6 +195,14 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   set age(age: number | undefined) {
     setField(this, "age", age);
+  }
+
+  get graduated(): Date | undefined {
+    return this.__orm.data["graduated"];
+  }
+
+  set graduated(graduated: Date | undefined) {
+    setField(this, "graduated", graduated);
   }
 
   get wasEverPopular(): boolean | undefined {

@@ -36,6 +36,8 @@ export function up(b: MigrationBuilder): void {
     is_popular: { type: "boolean", notNull: false },
     // for testing integers
     age: { type: "integer", notNull: false },
+    // for testing dates
+    graduated: { type: "date", notNull: false },
     // for testing protected fields
     was_ever_popular: { type: "boolean", notNull: false },
     publisher_id: foreignKey("publishers", { notNull: false }),

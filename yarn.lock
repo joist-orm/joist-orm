@@ -247,10 +247,10 @@
     exec-sh "^0.3.2"
     minimist "^1.2.0"
 
-"@homebound/pg-structure@^7.2.4":
-  version "7.2.4"
-  resolved "https://registry.yarnpkg.com/@homebound/pg-structure/-/pg-structure-7.2.4.tgz#80ecb1a984697847d52773b9da95743feffb262e"
-  integrity sha512-3vIR09Urcg5Ri7GibaANkN1fEOEfEX823mJL1VKKtSdpJXH8btzQQWBc9Y37rvgaiBeCZYfnr6/Ae176Ad62HA==
+"@homebound/pg-structure@^7.2.5":
+  version "7.2.5"
+  resolved "https://registry.yarnpkg.com/@homebound/pg-structure/-/pg-structure-7.2.5.tgz#7d473328bb49afe3c1233abab4b1c38c229e768f"
+  integrity sha512-740CphDjNq9UstGra+C4vkpAt0R5pFcvJOSwJ9q9BMQuEM/4BeUSlJnX6I5PYnyLQEv7QfAakC198rbbA9x3ww==
   dependencies:
     "@types/pg" "^7.14.3"
     "@typescript-plus/fast-memoize-decorator" "^0.1.0"
@@ -3518,21 +3518,6 @@ pg-protocol@^1.2.5:
   version "1.2.5"
   resolved "https://registry.yarnpkg.com/pg-protocol/-/pg-protocol-1.2.5.tgz#28a1492cde11646ff2d2d06bdee42a3ba05f126c"
   integrity sha512-1uYCckkuTfzz/FCefvavRywkowa6M5FohNMF5OjKrqo9PSR8gYc8poVmwwYQaBxhmQdBjhtP514eXy9/Us2xKg==
-
-pg-structure@^5.10.13:
-  version "5.10.13"
-  resolved "https://registry.yarnpkg.com/pg-structure/-/pg-structure-5.10.13.tgz#6eb69622435e72f4d62ee11bcfa42fca7bd02592"
-  integrity sha512-ViPwrNI6y1lMR5ko2P9WauOTQ8dLGinJKmI+rz6PvMiPg5btotdKCnuwOBnxMPWnkeKDeloTFRsH3JvRyllodg==
-  dependencies:
-    "@types/pg" "^7.14.3"
-    "@typescript-plus/fast-memoize-decorator" "^0.1.0"
-    fast-memoize "^2.5.2"
-    indexable-array "^0.6.4"
-    inflection "^1.12.0"
-    json5 "^2.1.3"
-    lodash.get "^4.4.2"
-    pg "^8.0.3"
-    pg-connection-string "^2.2.1"
 
 pg-types@^2.1.0:
   version "2.2.0"

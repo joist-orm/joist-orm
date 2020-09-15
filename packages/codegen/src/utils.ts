@@ -1,6 +1,6 @@
 import isPlainObject from "is-plain-object";
 import { Config } from "./config";
-import { Table } from "pg-structure";
+import { Table } from "@homebound/pg-structure";
 import pluralize from "pluralize";
 import { pascalCase } from "change-case";
 

@@ -1,5 +1,5 @@
 import { pascalCase } from "change-case";
-import { Table } from "pg-structure";
+import { Table } from "@homebound/pg-structure";
 import pluralize from "pluralize";
 import { code, Code } from "ts-poet";
 import { Config } from "./config";

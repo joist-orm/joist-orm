@@ -8,7 +8,7 @@
     "@types/pluralize": "0.0.29",
     "node-pg-migrate": "^5.0.0",
     "pg": "^8.3.0",
-    "pg-structure": "^5.10.13",
+    "@homebound/pg-structure": "^7.2.5",
     "pluralize": "^8.0.0",
     "joist-utils": "1.0.0-bump"
   },

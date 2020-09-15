@@ -10,7 +10,7 @@
     "knex": "^0.21.4",
     "is-plain-object": "^3.0.1",
     "pg": "^8.3.0",
-    "pg-structure": "^5.10.13",
+    "@homebound/pg-structure": "^7.2.5",
     "pluralize": "^8.0.0",
     "ts-poet": "^3.2.2",
     "joist-utils": "1.0.0-bump"

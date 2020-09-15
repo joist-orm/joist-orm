@@ -1,7 +1,7 @@
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
-import pgStructure, { Db, Table } from "pg-structure";
+import pgStructure, { Db, Table } from "@homebound/pg-structure";
 import { code, Code, def, imp } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";

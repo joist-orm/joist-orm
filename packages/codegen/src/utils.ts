@@ -1,6 +1,6 @@
 import isPlainObject from "is-plain-object";
 import { Config } from "./config";
-import { Table } from "pg-structure";
+import { Table } from "@homebound/pg-structure";
 import pluralize from "pluralize";
 import { pascalCase } from "change-case";
 
@@ -44,19 +44,19 @@ export function tableToEntityName(config: Config, table: Table): string {
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
 export function mapSimpleDbType(dbType: string): string {
   switch (dbType) {
-    case "bool":
+    case "boolean":
       return "boolean";
     case "int":
     case "numeric":
       return "number";
     case "text":
-    case "varchar":
+    case "character varying":
       return "string";
-    case "timestamptz":
+    case "timestamp with time zone":
     case "date":
       return "Date";
     default:
-      throw new Error(`Unrecognized type ${dbType}`);
+      throw new Error(`Unrecognized type "${dbType}"`);
   }
 }
 

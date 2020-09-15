@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { newPgConnectionConfig } from "joist-utils";
-import pgStructure from "pg-structure";
+import pgStructure from "@homebound/pg-structure";
 import { Author, Book, BookId, BookReview, Publisher } from "../entities";
 import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";

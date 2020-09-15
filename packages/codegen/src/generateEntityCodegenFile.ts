@@ -262,7 +262,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 }
 
 function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: PrimitiveField): boolean {
-  let { fieldName, columnDefault, columnType } = field;
+  let { fieldType, columnDefault, derived } = field;
 
   // if there's no default at all, return false
   if (columnDefault === null) {
@@ -274,15 +274,15 @@ function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: Pri
   columnDefault = columnDefault.toString();
 
   // if this value should be set elsewhere, return false
-  if (field.derived !== false) {
+  if (derived !== false) {
     return false;
   }
 
   // try to validate that we actually got a primitive value and not arbitrary SQL
   return (
-    (["smallint", "int", "bigint"].includes(columnType) && !isNaN(parseInt(columnDefault))) ||
-    (["varchar", "text"].includes(columnType) && /^'.*'$/.test(columnDefault)) ||
-    ("bool" === columnType && ["true", "false"].includes(columnDefault))
+    (fieldType === "number" && !isNaN(parseInt(columnDefault))) ||
+    (fieldType === "string" && /^'.*'$/.test(columnDefault)) ||
+    (fieldType === "boolean" && ["true", "false"].includes(columnDefault))
   );
 }
 

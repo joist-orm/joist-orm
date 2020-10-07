@@ -16,7 +16,7 @@ Run `npm install --save-dev joist-codegen`.
 Define your local postgres creds in a `DATABASE_CONNECTION_INFO` environment variable, i.e. in an `local.env` file similar to:
 
 ```dotenv
-DATABASE_CONNETION_INFO=postgres://joist:local@localhost:5435/joist
+DATABASE_CONNECTION_INFO=postgres://joist:local@localhost:5435/joist
 // the AWS RDS/SecretsManager JSON format is also supported natively 
 DATABASE_CONNECTION_INFO={"host":"localhost","port":5435,"username":"joist","password":"local","dbname":"joist"}
 ```

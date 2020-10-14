@@ -146,7 +146,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   // Push this logic into a field serde type abstraction?
   const currentValue = data[fieldName];
-  if (currentValue === newValue) {
+  if (equal(currentValue, newValue)) {
     return false;
   }
 

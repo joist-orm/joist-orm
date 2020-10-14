@@ -569,6 +569,14 @@ describe("EntityManager", () => {
     expect(a1.__orm.originalData).toEqual({});
   });
 
+  it("ignores date sets of the same value", async () => {
+    await knex.insert({ first_name: "a1", initials: "a", number_of_books: 1, graduated: "2000-01-01" }).into("authors");
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "1");
+    a1.graduated = new Date(2000, 0, 1);
+    expect(a1.__orm.originalData).toEqual({});
+  });
+
   it("cannot flush while another flush is in progress", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });

@@ -2,6 +2,11 @@
   "name": "joist-integration-tests",
   "version": "1.0.0-bump",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stephenh/joist-ts.git",
+    "directory": "packages/integration-tests"
+  },
   "scripts": {
     "migrate": "./run.sh ../../node_modules/joist-migration-utils",
     "test": "./node_modules/.bin/jest --runInBand --detectOpenHandles --logHeapUsage",

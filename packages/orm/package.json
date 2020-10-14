@@ -2,6 +2,11 @@
   "name": "joist-orm",
   "version": "1.0.0-bump",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stephenh/joist-ts.git",
+    "directory": "packages/joist-orm"
+  },
   "main": "build/index.js",
   "types": "build/index.d.ts",
   "dependencies": {

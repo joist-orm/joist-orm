@@ -11,7 +11,7 @@ build:
 
 # Create/recreate the database for applying migrations from scratch.
 db:
-	docker-compose up -d db
+	docker-compose up db-wait
 	docker-compose exec db ./reset.sh
 	npm run migrate
 	npm run codegen

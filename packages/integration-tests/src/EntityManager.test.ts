@@ -25,6 +25,32 @@ describe("EntityManager", () => {
     expect(author.firstName).toEqual("f");
   });
 
+  it("can load all entities by id", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+
+    const em = newEntityManager();
+    const [author1, author2] = await em.loadAll(Author, ["a:1", "a:2"]);
+    expect(author1.firstName).toEqual("a1");
+    expect(author2.firstName).toEqual("a2");
+  });
+
+  it("fails to load all entities by id when any of the ids do not exist", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    await expect(em.loadAll(Author, ["a:1", "a:2"])).rejects.toThrowError("a:2 were not found");
+  });
+
+  it("can load all entities by id without throwing an error when any of the ids do not exist", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    const authors = await em.loadAllIfExists(Author, ["a:1", "a:2"]);
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
   it("fails to load an entity by an invalid tagged id", async () => {
     await insertAuthor({ first_name: "f" });
     const em = newEntityManager();

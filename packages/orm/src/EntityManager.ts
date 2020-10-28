@@ -459,6 +459,32 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     return entities as T[];
   }
 
+  /**
+   * Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. Ignores
+   * IDs that are not found.
+   */
+  public async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
+  public async loadAllIfExists<
+    T extends Entity,
+    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
+    N extends Narrowable
+  >(type: EntityConstructor<T>, ids: string[], populate: H): Promise<Loaded<T, H>[]>;
+  async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
+    const meta = getMetadata(type);
+    const ids = _ids.map((id) => tagIfNeeded(meta, id));
+    const entities = (
+      await Promise.all(
+        ids.map((id) => {
+          return this.findExistingInstance(id) || this.loaderForEntity(meta).load(id);
+        }),
+      )
+    ).filter(Boolean);
+    if (hint) {
+      await this.populate(entities as T[], hint);
+    }
+    return entities as T[];
+  }
+
   /** Loads entities from a knex QueryBuilder. */
   public async loadFromQuery<T extends Entity>(type: EntityConstructor<T>, query: QueryBuilder): Promise<T[]>;
   public async loadFromQuery<T extends Entity, H extends LoadHint<T>>(

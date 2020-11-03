@@ -1,17 +1,12 @@
-import { Table } from "@homebound/pg-structure";
 import { pascalCase } from "change-case";
 import pluralize from "pluralize";
 import { code, Code } from "ts-poet";
 import { Config } from "./config";
-import { EntityDbMetadata, EnumRows } from "./index";
+import { EnumTableData } from "./index";
 
-export function generateEnumFile(config: Config, table: Table, enumRows: EnumRows, enumName: string): Code {
-  const rows = enumRows[table.name];
+export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
+  const { rows, extraPrimitives } = enumData;
   const detailsName = `${enumName}Details`;
-  // We're not really an entity, but appropriate EntityDbMetadata's `primitives` filtering
-  const extraPrimitives = new EntityDbMetadata(config, table).primitives.filter(
-    (p) => !["code", "name"].includes(p.fieldName),
-  );
   const detailsDefinition = [
     "id: number;",
     `code: ${enumName};`,

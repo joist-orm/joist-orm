@@ -1,10 +1,9 @@
-import { pascalCase } from "change-case";
-import { CodeGenFile, EntityDbMetadata, EnumRows } from "joist-codegen";
+import { CodeGenFile, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { code } from "ts-poet";
 
 /** Generates a `graphql-codegen-joist.js` with the auto-generated mapped type/enum value settings. */
-export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: EnumRows): CodeGenFile {
-  const enumNames = Object.keys(enums).map((name) => pascalCase(name));
+export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: EnumMetadata): CodeGenFile {
+  const enumNames = Object.values(enums).map(({ name }) => name);
 
   // Combine the entity mapped types and enum detail mapped types
   const mappedTypes = sortObject(

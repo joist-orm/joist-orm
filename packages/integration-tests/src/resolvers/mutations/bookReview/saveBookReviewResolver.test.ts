@@ -1,8 +1,7 @@
 import { Context } from "src/context";
 import { SaveBookReviewInput } from "src/generated/graphql-types";
-import { run } from "src/resolvers/testUtils";
 import { saveBookReview } from "src/resolvers/mutations/bookReview/saveBookReviewResolver";
-
+import { run } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveBookReview", () => {

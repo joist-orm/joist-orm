@@ -8,7 +8,6 @@ import {
   insertBookToTag,
   insertTag,
 } from "@src/entities/inserts";
-import { EntityManager } from "joist-orm";
 import { Author, Book } from "./entities";
 import { knex, newEntityManager } from "./setupDbTests";
 

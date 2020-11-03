@@ -1,4 +1,4 @@
-import { Collection, Loaded, hasManyThrough, getEm, hasManyDerived } from "joist-orm";
+import { Collection, getEm, hasManyDerived, hasManyThrough, Loaded } from "joist-orm";
 import { AuthorCodegen, authorConfig, Book, BookReview } from "./entities";
 
 export class Author extends AuthorCodegen {

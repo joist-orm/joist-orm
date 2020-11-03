@@ -1,4 +1,3 @@
-import { MigrationBuilder } from "node-pg-migrate";
 import {
   createCreatedAtFunction,
   createEntityTable,
@@ -7,6 +6,7 @@ import {
   createUpdatedAtFunction,
   foreignKey,
 } from "joist-migration-utils";
+import { MigrationBuilder } from "node-pg-migrate";
 
 export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);

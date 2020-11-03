@@ -1,8 +1,8 @@
-import { dirname } from "path";
+import pgStructure, { Db, Table } from "@homebound/pg-structure";
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
+import { dirname } from "path";
 import { Client } from "pg";
-import pgStructure, { Db, Table } from "@homebound/pg-structure";
 import { code, Code, def, imp } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
@@ -16,16 +16,16 @@ import { generateMetadataFile } from "./generateMetadataFile";
 import { configureMetadata, EntityManager } from "./symbols";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 
-export { Config, EntityDbMetadata };
 export {
-  PrimitiveField,
   EnumField,
+  makeEntity,
+  ManyToManyField,
   ManyToOneField,
   OneToManyField,
-  ManyToManyField,
   OneToOneField,
-  makeEntity,
+  PrimitiveField,
 } from "./EntityDbMetadata";
+export { Config, EntityDbMetadata };
 
 export interface CodeGenFile {
   name: string;

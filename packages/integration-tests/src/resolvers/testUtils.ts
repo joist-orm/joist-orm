@@ -1,6 +1,6 @@
 import { Context } from "@src/context";
-import { Entity } from "joist-orm";
 import { Resolver } from "@src/generated/graphql-types";
+import { Entity } from "joist-orm";
 
 // Returns the keys of resolver T that only take no arguments.
 type NoArgKeys<T> = keyof {

@@ -1,7 +1,7 @@
-import { newImage, ImageId } from "src/entities";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { ImageId, newImage } from "src/entities";
 import { ImageResolvers } from "src/generated/graphql-types";
 import { imageResolvers } from "src/resolvers/objects/image/imageResolvers";
+import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
 describe("imageResolvers", () => {
   it.withCtx("can return", async (ctx) => {

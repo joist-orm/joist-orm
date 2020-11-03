@@ -1,4 +1,4 @@
-import { Collection, CustomCollection, currentlyInstantiatingEntity, Entity, getLens, Lens, loadLens } from "../index";
+import { Collection, currentlyInstantiatingEntity, CustomCollection, Entity, getLens, Lens, loadLens } from "../index";
 
 /**
  * Creates a CustomCollection that will walk across references in the object graph.

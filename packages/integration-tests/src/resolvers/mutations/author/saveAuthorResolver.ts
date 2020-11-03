@@ -1,6 +1,6 @@
+import { Author } from "src/entities";
 import { MutationResolvers } from "src/generated/graphql-types";
 import { saveEntities } from "src/resolvers/mutations/utils";
-import { Author } from "src/entities";
 
 export const saveAuthor: Pick<MutationResolvers, "saveAuthor"> = {
   async saveAuthor(root, args, ctx) {

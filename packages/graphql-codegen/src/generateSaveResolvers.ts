@@ -1,6 +1,6 @@
 import { camelCase } from "change-case";
+import { CodeGenFile, Config, EntityDbMetadata } from "joist-codgen";
 import { code, imp } from "ts-poet";
-import { Config, CodeGenFile, EntityDbMetadata } from "joist-codgen";
 
 const context = imp("Context@src/context");
 const saveEntities = imp("saveEntities@src/resolvers/mutations/utils");

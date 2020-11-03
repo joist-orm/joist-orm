@@ -1,7 +1,7 @@
 import { Context } from "src/context";
 import { SaveTagInput } from "src/generated/graphql-types";
-import { run } from "src/resolvers/testUtils";
 import { saveTag } from "src/resolvers/mutations/tag/saveTagResolver";
+import { run } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveTag", () => {

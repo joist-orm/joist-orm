@@ -1,7 +1,7 @@
 import { newPublisher, PublisherId } from "src/entities";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
 import { PublisherResolvers } from "src/generated/graphql-types";
 import { publisherResolvers } from "src/resolvers/objects/publisher/publisherResolvers";
+import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
 describe("publisherResolvers", () => {
   it.withCtx("can return", async (ctx) => {

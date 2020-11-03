@@ -1,8 +1,8 @@
+import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
 import { config } from "dotenv";
 import { newPgConnectionConfig } from "joist-utils";
 import Knex from "knex";
-import { Context } from "@src/context";
 
 if (process.env.DATABASE_CONNECTION_INFO === undefined) {
   config({ path: "./local.env" });

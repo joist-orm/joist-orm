@@ -1,7 +1,7 @@
-import { newAuthor, AuthorId } from "src/entities";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { AuthorId, newAuthor } from "src/entities";
 import { AuthorResolvers } from "src/generated/graphql-types";
 import { authorResolvers } from "src/resolvers/objects/author/authorResolvers";
+import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
 describe("authorResolvers", () => {
   it.withCtx("can return", async (ctx) => {

@@ -1,7 +1,7 @@
 import { newTag, TagId } from "src/entities";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
 import { TagResolvers } from "src/generated/graphql-types";
 import { tagResolvers } from "src/resolvers/objects/tag/tagResolvers";
+import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
 describe("tagResolvers", () => {
   it.withCtx("can return", async (ctx) => {

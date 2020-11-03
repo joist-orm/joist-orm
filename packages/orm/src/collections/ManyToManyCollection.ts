@@ -13,7 +13,8 @@ import {
 import { getOrSet, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
-export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
+export class ManyToManyCollection<T extends Entity, U extends Entity>
+  extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];

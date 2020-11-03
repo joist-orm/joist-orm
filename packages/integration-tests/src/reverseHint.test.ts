@@ -1,5 +1,5 @@
-import { Author, Book, BookReview } from "./entities";
 import { reverseHint as reverse } from "joist-orm";
+import { Author, Book, BookReview } from "./entities";
 
 describe("reverseHint", () => {
   it("can do string hint", () => {

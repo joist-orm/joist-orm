@@ -1,5 +1,5 @@
-import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig } from "./entities";
 import { Collection, CustomCollection, getEm, Loaded } from "joist-orm";
+import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 

@@ -1,8 +1,8 @@
-import isPlainObject from "is-plain-object";
-import { Config } from "./config";
 import { Table } from "@homebound/pg-structure";
-import pluralize from "pluralize";
 import { pascalCase } from "change-case";
+import isPlainObject from "is-plain-object";
+import pluralize from "pluralize";
+import { Config } from "./config";
 
 export function isEntityTable(t: Table): boolean {
   const columnNames = t.columns.map((c) => c.name);

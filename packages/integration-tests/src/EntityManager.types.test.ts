@@ -1,5 +1,4 @@
 import { insertPublisher } from "@src/entities/inserts";
-import { EntityManager } from "joist-orm";
 import { Publisher } from "./entities";
 import { knex, newEntityManager } from "./setupDbTests";
 

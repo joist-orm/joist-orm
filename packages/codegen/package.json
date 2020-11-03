@@ -9,22 +9,26 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "scripts": {
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+  },
   "dependencies": {
+    "@homebound/pg-structure": "^7.2.5",
     "@types/pluralize": "0.0.29",
     "change-case": "^4.1.1",
-    "knex": "^0.21.4",
     "is-plain-object": "^3.0.1",
+    "joist-utils": "1.0.0-bump",
+    "knex": "^0.21.4",
     "pg": "^8.3.0",
-    "@homebound/pg-structure": "^7.2.5",
     "pluralize": "^8.0.0",
-    "ts-poet": "^3.2.2",
-    "joist-utils": "1.0.0-bump"
+    "ts-poet": "^3.2.2"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",
     "@types/node": "^13.13.4",
     "jest": "^26.4.2",
-    "prettier": "^2.0.5",
+    "prettier": "^2.1.2",
+    "prettier-plugin-organize-imports": "^1.1.1",
     "ts-jest": "^26.3.0",
     "ts-node-dev": "^1.0.0-pre.50",
     "tsconfig-paths": "^3.9.0",

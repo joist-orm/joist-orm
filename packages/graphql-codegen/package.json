@@ -9,6 +9,9 @@
   },
   "main": "build/index.js",
   "types": "build/index.d.ts",
+  "scripts": {
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+  },
   "dependencies": {
     "change-case": "^4.1.1",
     "graphql": "^15.3.0",
@@ -22,7 +25,8 @@
     "@types/jest": "^26.0.3",
     "@types/node": "^13.13.4",
     "jest": "^26.4.2",
-    "prettier": "^2.0.5",
+    "prettier": "^2.1.2",
+    "prettier-plugin-organize-imports": "^1.1.1",
     "ts-jest": "^26.3.0",
     "tsconfig-paths": "^3.9.0",
     "typescript": "^4.0.2"

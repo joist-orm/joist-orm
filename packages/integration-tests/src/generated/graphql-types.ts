@@ -13,6 +13,24 @@ export type ImageResolvers = {};
 export type PublisherResolvers = {};
 export type TagResolvers = {};
 
+export type SaveAuthorInput = {};
+export type SaveBookInput = {};
+export type SaveBookAdvanceInput = {};
+export type SaveBookReviewInput = {};
+export type SaveImageInput = {};
+export type SavePublisherInput = {};
+export type SaveTagInput = {};
+
+export type MutationResolvers = {
+  saveAuthor(root: any, args: any, ctx: Context, info: any): any;
+  saveBook(root: any, args: any, ctx: Context, info: any): any;
+  saveBookAdvance(root: any, args: any, ctx: Context, info: any): any;
+  saveBookReview(root: any, args: any, ctx: Context, info: any): any;
+  saveImage(root: any, args: any, ctx: Context, info: any): any;
+  savePublisher(root: any, args: any, ctx: Context, info: any): any;
+  saveTag(root: any, args: any, ctx: Context, info: any): any;
+};
+
 export type Resolvers = {
   PublisherSizeDetail: {
     code: (root: PublisherSize) => string;

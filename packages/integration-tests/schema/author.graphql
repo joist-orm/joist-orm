@@ -36,3 +36,7 @@ input SaveAuthorInput {
 type SaveAuthorResult {
   author: Author!
 }
+
+extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}

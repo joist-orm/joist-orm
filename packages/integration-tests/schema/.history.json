@@ -21,6 +21,7 @@
   "BookAdvance": ["book", "createdAt", "id", "publisher", "status", "updatedAt"],
   "BookReview": ["book", "createdAt", "id", "isPublic", "rating", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
+  "Mutation": ["saveAuthor", "saveBook", "saveBookAdvance", "saveBookReview", "saveImage", "savePublisher", "saveTag"],
   "Publisher": [
     "authors",
     "bookAdvances",

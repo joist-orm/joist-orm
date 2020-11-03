@@ -23,3 +23,7 @@ input SaveBookInput {
 type SaveBookResult {
   book: Book!
 }
+
+extend type Mutation {
+  saveBook(input: SaveBookInput!): SaveBookResult!
+}

@@ -19,3 +19,7 @@ input SaveBookAdvanceInput {
 type SaveBookAdvanceResult {
   bookAdvance: BookAdvance!
 }
+
+extend type Mutation {
+  saveBookAdvance(input: SaveBookAdvanceInput!): SaveBookAdvanceResult!
+}

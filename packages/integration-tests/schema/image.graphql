@@ -23,3 +23,7 @@ input SaveImageInput {
 type SaveImageResult {
   image: Image!
 }
+
+extend type Mutation {
+  saveImage(input: SaveImageInput!): SaveImageResult!
+}

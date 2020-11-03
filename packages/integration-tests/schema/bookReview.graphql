@@ -19,3 +19,7 @@ input SaveBookReviewInput {
 type SaveBookReviewResult {
   bookReview: BookReview!
 }
+
+extend type Mutation {
+  saveBookReview(input: SaveBookReviewInput!): SaveBookReviewResult!
+}

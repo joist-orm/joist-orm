@@ -1,0 +1,32 @@
+{
+  "files": [
+    "resolvers/mutations/author/saveAuthorResolver.test.ts",
+    "resolvers/mutations/author/saveAuthorResolver.ts",
+    "resolvers/mutations/book/saveBookResolver.test.ts",
+    "resolvers/mutations/book/saveBookResolver.ts",
+    "resolvers/mutations/bookAdvance/saveBookAdvanceResolver.test.ts",
+    "resolvers/mutations/bookAdvance/saveBookAdvanceResolver.ts",
+    "resolvers/mutations/bookReview/saveBookReviewResolver.test.ts",
+    "resolvers/mutations/bookReview/saveBookReviewResolver.ts",
+    "resolvers/mutations/image/saveImageResolver.test.ts",
+    "resolvers/mutations/image/saveImageResolver.ts",
+    "resolvers/mutations/publisher/savePublisherResolver.test.ts",
+    "resolvers/mutations/publisher/savePublisherResolver.ts",
+    "resolvers/mutations/tag/saveTagResolver.test.ts",
+    "resolvers/mutations/tag/saveTagResolver.ts",
+    "resolvers/objects/author/authorResolvers.test.ts",
+    "resolvers/objects/author/authorResolvers.ts",
+    "resolvers/objects/book/bookResolvers.test.ts",
+    "resolvers/objects/book/bookResolvers.ts",
+    "resolvers/objects/bookAdvance/bookAdvanceResolvers.test.ts",
+    "resolvers/objects/bookAdvance/bookAdvanceResolvers.ts",
+    "resolvers/objects/bookReview/bookReviewResolvers.test.ts",
+    "resolvers/objects/bookReview/bookReviewResolvers.ts",
+    "resolvers/objects/image/imageResolvers.test.ts",
+    "resolvers/objects/image/imageResolvers.ts",
+    "resolvers/objects/publisher/publisherResolvers.test.ts",
+    "resolvers/objects/publisher/publisherResolvers.ts",
+    "resolvers/objects/tag/tagResolvers.test.ts",
+    "resolvers/objects/tag/tagResolvers.ts"
+  ]
+}

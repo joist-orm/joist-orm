@@ -18,6 +18,7 @@ export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetad
   // Generate all of the "ideal" fields based solely on the domain model
   const fields = [
     ...createEntityFields(entities),
+    ...createSaveMutation(entities),
     ...createSaveEntityInputFields(entities),
     ...createSaveEntityResultFields(entities),
   ];
@@ -86,6 +87,24 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
     });
 
     return [id, ...primitives, ...enums, ...m2os, ...o2ms, ...m2ms, ...o2os];
+  });
+}
+
+/** Makes the `Mutations.save${entity}` placeholder. */
+function createSaveMutation(entities: EntityDbMetadata[]): GqlField[] {
+  return entities.map((e) => {
+    const file = fileName(e);
+    const inputType = `Save${e.entity.name}Input`;
+    const outputType = `Save${e.entity.name}Result`;
+    return {
+      file,
+      objectType: "output",
+      objectName: "Mutation",
+      fieldName: `save${e.entity.name}`,
+      fieldType: `${outputType}!`,
+      argsString: `input: ${inputType}!`,
+      extends: true,
+    };
   });
 }
 

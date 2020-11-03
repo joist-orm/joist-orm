@@ -26,3 +26,7 @@ input SavePublisherInput {
 type SavePublisherResult {
   publisher: Publisher!
 }
+
+extend type Mutation {
+  savePublisher(input: SavePublisherInput!): SavePublisherResult!
+}

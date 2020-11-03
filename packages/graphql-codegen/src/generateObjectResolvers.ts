@@ -26,7 +26,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
         ...${entityResolver}(${getMetadata}(${type})),
       };
     `;
-    return { name: `../resolvers/objects/${camelName}/${camelName}Resolvers.ts`, overwrite: false, contents };
+    return { name: `resolvers/objects/${camelName}/${camelName}Resolvers.ts`, overwrite: false, contents };
   });
 
   const testFiles = entities.map((e) => {
@@ -53,7 +53,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
 
       const run${name} = ${makeRunResolverKeys}<${resolverType}, ${idType}>(${resolverConst});
     `;
-    return { name: `../resolvers/objects/${camelName}/${camelName}Resolvers.test.ts`, overwrite: false, contents };
+    return { name: `resolvers/objects/${camelName}/${camelName}Resolvers.test.ts`, overwrite: false, contents };
   });
 
   return [...resolvers, ...testFiles];

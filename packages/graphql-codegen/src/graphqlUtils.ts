@@ -10,6 +10,9 @@ export type GqlField = {
   objectName: string;
   fieldName: string;
   fieldType: string;
+  // Not a true AST, but just `foo: Bar, zaz: number`
+  argsString?: string;
+  extends?: boolean;
 };
 
 /** Given a `file` and `fields` to go in it (for potentially different objects), upserts into the existing types. */
@@ -44,8 +47,10 @@ export async function formatGraphQL(content: string): Promise<string> {
  */
 function createNewDoc(objectName: string, fields: GqlField[]): DocumentNode {
   const type = fields[0].objectType === "input" ? "input" : "type";
-  return parse(`${type} ${objectName} {
-    ${fields.map((f) => `${f.fieldName}: ${f.fieldType}`)}
+  const maybeArgs = (f: GqlField) => (f.argsString ? `(${f.argsString})` : "");
+  const maybeExtends = fields.some((f: GqlField) => f.extends) ? "extend " : "";
+  return parse(`${maybeExtends}${type} ${objectName} {
+    ${fields.map((f) => `${f.fieldName}${maybeArgs(f)}: ${f.fieldType}`)}
   }`);
 }
 

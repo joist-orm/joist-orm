@@ -188,7 +188,8 @@ describe("generateGraphqlSchemaFiles", () => {
 
 function newFs(files: Record<string, string>): Fs {
   return {
-    load: (fileName) => Promise.resolve(files[fileName]),
+    exists: async (fileName) => !!files[fileName],
+    load: async (fileName) => files[fileName],
     save: async (fileName, content) => {
       files[fileName] = content;
     },

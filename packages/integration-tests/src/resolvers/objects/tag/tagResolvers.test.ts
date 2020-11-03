@@ -9,7 +9,7 @@ describe("tagResolvers", () => {
     // Given a Tag
     const t = newTag(em, 0);
     // Then we can query it
-    const result = await runTag(ctx, t as any, []);
+    const result = await runTag(ctx, t, []);
     expect(result).toMatchObject({});
   });
 });

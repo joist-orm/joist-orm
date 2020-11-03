@@ -16,3 +16,7 @@ input SaveTagInput {
 type SaveTagResult {
   tag: Tag!
 }
+
+extend type Mutation {
+  saveTag(input: SaveTagInput!): SaveTagResult!
+}

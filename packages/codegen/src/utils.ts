@@ -50,6 +50,7 @@ export function mapSimpleDbType(dbType: string): string {
     case "numeric":
       return "number";
     case "text":
+    case "citext":
     case "character varying":
       return "string";
     case "timestamp with time zone":

@@ -8,7 +8,7 @@ if (require.main === module) {
   if (Object.fromEntries === undefined) {
     throw new Error("Joist requires Node v12.4.0+");
   }
-  runMigrationsIfNeeded("./migrations").catch(err => {
+  runMigrationsIfNeeded("./migrations").catch((err) => {
     console.error(err);
     process.exit(1);
   });

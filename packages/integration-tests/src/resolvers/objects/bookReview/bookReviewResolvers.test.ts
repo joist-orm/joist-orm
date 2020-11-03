@@ -1,7 +1,7 @@
-import { newBookReview, BookReviewId } from "src/entities";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { BookReviewId, newBookReview } from "src/entities";
 import { BookReviewResolvers } from "src/generated/graphql-types";
 import { bookReviewResolvers } from "src/resolvers/objects/bookReview/bookReviewResolvers";
+import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
 describe("bookReviewResolvers", () => {
   it.withCtx("can return", async (ctx) => {

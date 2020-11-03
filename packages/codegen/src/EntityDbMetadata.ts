@@ -1,5 +1,5 @@
-import { camelCase } from "change-case";
 import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "@homebound/pg-structure";
+import { camelCase } from "change-case";
 import { plural, singular } from "pluralize";
 import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";

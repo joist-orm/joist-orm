@@ -1,5 +1,5 @@
+import { CodeGenFile, Config, EntityDbMetadata, EnumRows } from "joist-codegen";
 import { Code } from "ts-poet";
-import { Config, CodeGenFile, EntityDbMetadata, EnumRows } from "joist-codegen";
 import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { generateEnumsGraphql } from "./generateEnumsGraphql";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";

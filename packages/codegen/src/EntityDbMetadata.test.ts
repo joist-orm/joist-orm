@@ -1,5 +1,5 @@
 import { defaultConfig } from "./config";
-import { collectionName, EntityDbMetadata, makeEntity } from "./EntityDbMetadata";
+import { collectionName, makeEntity } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
 const relationDummy: any = { targetTable: { m2oRelations: [] } };

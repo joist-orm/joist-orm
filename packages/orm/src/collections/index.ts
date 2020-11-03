@@ -10,16 +10,16 @@ import {
   Reference,
 } from "../";
 
+export { CustomCollection } from "./CustomCollection";
+export { CustomReference } from "./CustomReference";
+export { hasManyDerived } from "./hasManyDerived";
+export { hasManyThrough } from "./hasManyThrough";
+export { hasOneDerived } from "./hasOneDerived";
+export { hasOneThrough } from "./hasOneThrough";
+export { ManyToManyCollection } from "./ManyToManyCollection";
+export { ManyToOneReference } from "./ManyToOneReference";
 export { OneToManyCollection } from "./OneToManyCollection";
 export { OneToOneReference } from "./OneToOneReference";
-export { ManyToOneReference } from "./ManyToOneReference";
-export { ManyToManyCollection } from "./ManyToManyCollection";
-export { CustomReference } from "./CustomReference";
-export { hasOneThrough } from "./hasOneThrough";
-export { hasOneDerived } from "./hasOneDerived";
-export { CustomCollection } from "./CustomCollection";
-export { hasManyThrough } from "./hasManyThrough";
-export { hasManyDerived } from "./hasManyDerived";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(

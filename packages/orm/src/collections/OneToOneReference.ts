@@ -20,7 +20,8 @@ import { ManyToOneReference } from "./ManyToOneReference";
  * Currently we enforce this with a runtime check, which is not great, but the trade-off of implementing
  * `Reference` seemed worth the downside of a un-type-safe `.id` property.
  */
-export class OneToOneReference<T extends Entity, U extends Entity> extends AbstractRelationImpl<U>
+export class OneToOneReference<T extends Entity, U extends Entity>
+  extends AbstractRelationImpl<U>
   implements Reference<T, U, undefined> {
   private loaded: U | undefined;
   private isLoaded: boolean = false;

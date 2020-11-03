@@ -1,4 +1,4 @@
-import { currentlyInstantiatingEntity, getEm, Collection } from "../";
+import { Collection, currentlyInstantiatingEntity, getEm } from "../";
 import { Entity, Loaded, LoadHint } from "../EntityManager";
 import { CustomCollection } from "./CustomCollection";
 

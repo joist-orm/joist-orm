@@ -6,7 +6,7 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
-import { EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 

@@ -1,4 +1,3 @@
-import { NullOrDefinedOr } from "./utils";
 import {
   Entity,
   EntityConstructor,
@@ -11,6 +10,7 @@ import {
   OptsOf,
 } from "./EntityManager";
 import { PartialOrNull } from "./index";
+import { NullOrDefinedOr } from "./utils";
 
 /**
  * The type for `EntityManager.createOrUpdateUnsafe` that allows "upsert"-ish behavior.

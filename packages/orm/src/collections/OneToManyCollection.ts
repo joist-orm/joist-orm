@@ -15,7 +15,8 @@ import { getOrSet, groupBy, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
 
-export class OneToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
+export class OneToManyCollection<T extends Entity, U extends Entity>
+  extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,

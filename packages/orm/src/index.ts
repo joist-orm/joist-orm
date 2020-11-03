@@ -15,20 +15,20 @@ import {
 } from "./EntityManager";
 import { reverseHint } from "./reverseHint";
 
-export * from "./keys";
-export * from "./serde";
-export * from "./EntityManager";
 export { newPgConnectionConfig } from "joist-utils";
-export * from "./reverseHint";
-export * from "./changes";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export { fail } from "./utils";
-export * from "./collections";
-export * from "./QueryBuilder";
 export { BaseEntity } from "./BaseEntity";
-export * from "./loadLens";
+export * from "./changes";
+export * from "./collections";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./EntityManager";
 export * from "./getProperties";
+export * from "./keys";
+export * from "./loadLens";
 export * from "./newTestInstance";
+export * from "./QueryBuilder";
+export * from "./reverseHint";
+export * from "./serde";
+export { fail } from "./utils";
 
 const F = Symbol();
 const G = Symbol();

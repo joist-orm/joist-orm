@@ -1,6 +1,6 @@
-import { snakeCase, camelCase } from "change-case";
-import { DbMetadata } from "./index";
+import { camelCase, snakeCase } from "change-case";
 import { Config } from "./config";
+import { DbMetadata } from "./index";
 
 /**
  * Looks for any entities that don't have tags in `config` yet, and guesses at what a good tag would be.

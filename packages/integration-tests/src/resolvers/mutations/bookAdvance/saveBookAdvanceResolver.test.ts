@@ -1,8 +1,7 @@
 import { Context } from "src/context";
 import { SaveBookAdvanceInput } from "src/generated/graphql-types";
-import { run } from "src/resolvers/testUtils";
 import { saveBookAdvance } from "src/resolvers/mutations/bookAdvance/saveBookAdvanceResolver";
-
+import { run } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveBookAdvance", () => {

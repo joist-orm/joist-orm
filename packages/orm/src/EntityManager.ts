@@ -2,7 +2,6 @@ import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import Knex, { QueryBuilder } from "knex";
 import hash from "object-hash";
-import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";

@@ -1,3 +1,4 @@
+import { dirname } from "path";
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
@@ -15,7 +16,7 @@ import { generateMetadataFile } from "./generateMetadataFile";
 import { configureMetadata, EntityManager } from "./symbols";
 import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
 
-export { EntityDbMetadata };
+export { Config, EntityDbMetadata };
 export {
   PrimitiveField,
   EnumField,
@@ -39,9 +40,10 @@ export type EnumRow = { id: number; code: string; name: string };
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): Promise<void> {
   const files = await generateFiles(config, dbMeta);
-  await fs.mkdir(config.entitiesDirectory, { recursive: true });
   for await (const file of files) {
     const path = `${config.entitiesDirectory}/${file.name}`;
+    // We might be writing to a non-entities directory i.e. for the graphql plugin, so check this for each file
+    await fs.mkdir(dirname(path), { recursive: true });
     if (file.overwrite) {
       await fs.writeFile(path, await contentToString(file.contents, file.name));
     } else {
@@ -118,7 +120,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     await Promise.all(
       config.codegenPlugins.map((p) => {
         const plugin = require(p);
-        return plugin.run(entities, enumRows);
+        return plugin.run(config, entities, enumRows);
       }),
     )
   ).flat();

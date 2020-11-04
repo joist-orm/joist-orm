@@ -3,7 +3,7 @@ import { groupBy } from "joist-utils";
 import prettier, { resolveConfig } from "prettier";
 import { Fs } from "./utils";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { mapSimpleDbTypeToTypescriptType } from "joist-codgen";
+import { mapSimpleDbTypeToTypescriptType } from "joist-codegen";
 
 /** A type for the fields we want to add to `*.graphql` files. */
 export type GqlField = {

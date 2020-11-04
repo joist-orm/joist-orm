@@ -15,7 +15,7 @@
     "baseUrl": "./src",
     "paths": {
       "joist-utils": ["../../utils/src"],
-      "joist-codgen": ["../../codegen/src"]
+      "joist-codegen": ["../../codegen/src"]
     }
   },
   "references": [{ "path": "../utils" }, { "path": "../codegen" }]

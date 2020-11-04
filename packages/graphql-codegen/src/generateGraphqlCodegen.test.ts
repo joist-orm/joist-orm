@@ -1,4 +1,4 @@
-import { EntityDbMetadata, EnumMetadata } from "joist-codgen";
+import { EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
 
 describe("generateGraphqlCodegen", () => {

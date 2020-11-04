@@ -1,4 +1,5 @@
 import pgStructure, { Db, Table } from "@homebound/pg-structure";
+import { pascalCase } from "change-case";
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { dirname } from "path";
@@ -14,8 +15,14 @@ import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { configureMetadata, EntityManager } from "./symbols";
-import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
-import { pascalCase } from "change-case";
+import {
+  isEntityTable,
+  isEnumTable,
+  mapSimpleDbTypeToTypescriptType,
+  merge,
+  tableToEntityName,
+  trueIfResolved,
+} from "./utils";
 
 export {
   EnumField,
@@ -26,7 +33,7 @@ export {
   OneToOneField,
   PrimitiveField,
 } from "./EntityDbMetadata";
-export { Config, EntityDbMetadata };
+export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 export interface CodeGenFile {
   name: string;
@@ -41,7 +48,7 @@ export type EnumTableData = {
   name: string;
   rows: EnumRow[];
   extraPrimitives: PrimitiveField[];
-}
+};
 export type EnumMetadata = Record<string, EnumTableData>;
 export type EnumRow = { id: number; code: string; name: string; [key: string]: any };
 
@@ -108,7 +115,9 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     overwrite: true,
   };
 
-  const enumsTables = Object.values(enums).map(({ table }) => table).sort((a, b) => a.name.localeCompare(b.name));
+  const enumsTables = Object.values(enums)
+    .map(({ table }) => table)
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   const entitiesFile: CodeGenFile = {
     name: "./entities.ts",
@@ -144,13 +153,17 @@ export async function loadEnumMetadata(db: Db, client: Client, config: Config): 
     const rows = result.rows.map((row) => row as EnumRow);
     // We're not really an entity, but appropriate EntityDbMetadata's `primitives` filtering
     const extraPrimitives = new EntityDbMetadata(config, table).primitives.filter(
-      (p) => !["code", "name"].includes(p.fieldName));
-    return [table.name, {
-      table,
-      name: pascalCase(table.name), // use tableToEntityName?
-      rows,
-      extraPrimitives,
-    }] as [string, EnumTableData];
+      (p) => !["code", "name"].includes(p.fieldName),
+    );
+    return [
+      table.name,
+      {
+        table,
+        name: pascalCase(table.name), // use tableToEntityName?
+        rows,
+        extraPrimitives,
+      },
+    ] as [string, EnumTableData];
   });
   return Object.fromEntries(await Promise.all(promises));
 }

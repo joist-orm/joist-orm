@@ -5,7 +5,7 @@ import { code, imp } from "ts-poet";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
 export function generateEnumDetailResolvers(enums: EnumMetadata): CodeGenFile {
-  const enumNames = Object.values(enums).map(({name}) => name);
+  const enumNames = Object.values(enums).map(({ name }) => name);
 
   const resolvers = Object.values(enums).map(({ name, extraPrimitives }) => {
     const type = imp(`${pluralize(name)}@src/entities`);
@@ -14,8 +14,8 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodeGenFile {
         code: (root) => root,
         name: (root) => ${type}.getByCode(root).name,
         ${extraPrimitives
-          .map(p => camelCase(p.columnName))
-          .map(fieldName => code`${fieldName}: (root) => ${type}.getByCode(root).${fieldName},`)}
+          .map((p) => camelCase(p.columnName))
+          .map((fieldName) => code`${fieldName}: (root) => ${type}.getByCode(root).${fieldName},`)}
       },
     `;
   });

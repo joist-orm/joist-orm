@@ -1,6 +1,6 @@
+import { camelCase } from "change-case";
 import { CodeGenFile, EnumMetadata } from "joist-codegen";
 import { formatGraphQL, mapSimpleDbTypeToGraphQLType } from "./graphqlUtils";
-import { camelCase } from "change-case";
 
 /** Generates a `schema/enums.graphql` with GQL enums that match all of our domain enums. */
 export async function generateEnumsGraphql(enums: EnumMetadata): Promise<CodeGenFile> {
@@ -8,7 +8,8 @@ export async function generateEnumsGraphql(enums: EnumMetadata): Promise<CodeGen
     .map(({ name, rows, extraPrimitives }) => {
       const enumDecl = `enum ${name} { ${rows.map((r) => r.code).join(" ")} }`;
       const detailDecl = `type ${name}Detail { code: ${name}! name: String! ${extraPrimitives
-        .map(p => `${camelCase(p.columnName)}: ${mapSimpleDbTypeToGraphQLType(p.columnType)}!`).join(" ")} }`;
+        .map((p) => `${camelCase(p.columnName)}: ${mapSimpleDbTypeToGraphQLType(p.columnType)}!`)
+        .join(" ")} }`;
       return [enumDecl, "", detailDecl, ""];
     })
     .flat()

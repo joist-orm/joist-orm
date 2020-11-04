@@ -1,7 +1,6 @@
 import { promises as fs } from "fs";
 import isPlainObject from "is-plain-object";
 import { dirname } from "path";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 
 /** A super-simple file system abstraction for testing. */
 export interface Fs {

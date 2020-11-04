@@ -1,7 +1,7 @@
 import { camelCase } from "change-case";
 import { EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
-import { GqlField, upsertIntoFile, mapTypescriptTypeToGraphQLType } from "./graphqlUtils";
+import { GqlField, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
 import { Fs } from "./utils";
 

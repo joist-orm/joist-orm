@@ -14,7 +14,7 @@ import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { configureMetadata, EntityManager } from "./symbols";
-import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved } from "./utils";
+import { isEntityTable, isEnumTable, merge, tableToEntityName, trueIfResolved, mapSimpleDbTypeToTypescriptType } from "./utils";
 import { pascalCase } from "change-case";
 
 export {
@@ -26,7 +26,7 @@ export {
   OneToOneField,
   PrimitiveField,
 } from "./EntityDbMetadata";
-export { Config, EntityDbMetadata };
+export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 export interface CodeGenFile {
   name: string;

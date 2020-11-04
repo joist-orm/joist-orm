@@ -2,6 +2,8 @@ import { DocumentNode, InputObjectTypeDefinitionNode, ObjectTypeDefinitionNode, 
 import { groupBy } from "joist-utils";
 import prettier, { resolveConfig } from "prettier";
 import { Fs } from "./utils";
+import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
+import { mapSimpleDbTypeToTypescriptType } from "joist-codgen";
 
 /** A type for the fields we want to add to `*.graphql` files. */
 export type GqlField = {
@@ -136,4 +138,21 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
       return node;
     },
   });
+}
+
+export function mapTypescriptTypeToGraphQLType(type: string | SymbolSpec): string | SymbolSpec {
+  switch (type) {
+    case "string":
+      return "String";
+    case "boolean":
+      return "Boolean";
+    case "number":
+      return "Int";
+    default:
+      return type;
+  }
+}
+
+export function mapSimpleDbTypeToGraphQLType(type: string): string | SymbolSpec {
+  return mapTypescriptTypeToGraphQLType(mapSimpleDbTypeToTypescriptType(type));
 }

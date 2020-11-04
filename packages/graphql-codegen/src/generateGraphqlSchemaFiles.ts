@@ -1,8 +1,7 @@
 import { camelCase } from "change-case";
 import { EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
-import { GqlField, upsertIntoFile } from "./graphqlUtils";
+import { GqlField, upsertIntoFile, mapTypescriptTypeToGraphQLType } from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
 import { Fs } from "./utils";
 
@@ -58,7 +57,7 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID!" };
 
     const primitives = e.primitives.map(({ fieldName, fieldType: tsType, notNull }) => {
-      const fieldType = `${mapFieldTypeToGraphQLType(tsType)}${maybeRequired(notNull)}`;
+      const fieldType = `${mapTypescriptTypeToGraphQLType(tsType)}${maybeRequired(notNull)}`;
       return { ...common, fieldName, fieldType };
     });
 
@@ -119,7 +118,7 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID" };
 
     const primitives = e.primitives.map(({ fieldName, fieldType: tsType }) => {
-      const fieldType = `${mapFieldTypeToGraphQLType(tsType)}`;
+      const fieldType = `${mapTypescriptTypeToGraphQLType(tsType)}`;
       return { ...common, fieldName, fieldType };
     });
 
@@ -148,19 +147,6 @@ function createSaveEntityResultFields(entities: EntityDbMetadata[]): GqlField[] 
     const entity: GqlField = { file, objectType, objectName, fieldName, fieldType: `${name}!` };
     return [entity];
   });
-}
-
-function mapFieldTypeToGraphQLType(type: string | SymbolSpec): string | SymbolSpec {
-  switch (type) {
-    case "string":
-      return "String";
-    case "boolean":
-      return "Boolean";
-    case "number":
-      return "Int";
-    default:
-      return type;
-  }
 }
 
 function maybeRequired(notNull: boolean): string {

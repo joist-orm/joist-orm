@@ -1,4 +1,4 @@
-import { CodeGenFile, Config, EntityDbMetadata, EnumRows } from "joist-codegen";
+import { CodeGenFile, Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
 import { Code } from "ts-poet";
 import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { generateEnumsGraphql } from "./generateEnumsGraphql";
@@ -9,7 +9,7 @@ import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
 import { Fs, newFsImpl } from "./utils";
 
-export async function run(config: Config, entities: EntityDbMetadata[], enums: EnumRows): Promise<CodeGenFile[]> {
+export async function run(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): Promise<CodeGenFile[]> {
   const fs = newFsImpl("./schema");
 
   // We upsert directly into schema files so we don't use the usual `CodeGenFile[]` return type;

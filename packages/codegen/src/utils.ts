@@ -42,7 +42,7 @@ export function tableToEntityName(config: Config, table: Table): string {
 }
 
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
-export function mapSimpleDbType(dbType: string): string {
+export function mapSimpleDbTypeToTypescriptType(dbType: string): string {
   switch (dbType) {
     case "boolean":
       return "boolean";

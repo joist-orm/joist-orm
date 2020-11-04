@@ -1,5 +1,5 @@
 import { camelCase } from "change-case";
-import { CodeGenFile, Config, EntityDbMetadata } from "joist-codgen";
+import { CodeGenFile, Config, EntityDbMetadata } from "joist-codegen";
 import { code, imp } from "ts-poet";
 
 const context = imp("Context@src/context");

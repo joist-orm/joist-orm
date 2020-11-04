@@ -5,7 +5,7 @@ import { imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Config, isAsyncDerived, isDerived, isProtected, ormMaintainedFields, relationName } from "./config";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
-import { isEnumTable, isJoinTable, mapSimpleDbType, tableToEntityName } from "./utils";
+import { isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
 
 // TODO Populate from config
 const columnCustomizations: Record<string, ColumnMetaData> = {};
@@ -316,7 +316,7 @@ function entityType(entityName: string): SymbolSpec {
 function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {
   return (
     columnCustomizations[`${tableName}.${columnName}`] || {
-      fieldType: mapSimpleDbType(dbColumnType),
+      fieldType: mapSimpleDbTypeToTypescriptType(dbColumnType),
     }
   );
 }

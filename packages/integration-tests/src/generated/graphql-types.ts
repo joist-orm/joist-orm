@@ -40,6 +40,7 @@ export type Resolvers = {
   ImageTypeDetail: {
     code: (root: ImageType) => string;
     name: (root: ImageType) => string;
+    sortOrder: (root: ImageType) => number;
   };
 
   AdvanceStatusDetail: {

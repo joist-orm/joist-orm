@@ -12,6 +12,7 @@ export const enumResolvers: Pick<Resolvers, EnumDetails> = {
   ImageTypeDetail: {
     code: (root) => root,
     name: (root) => ImageTypes.getByCode(root).name,
+    sortOrder: (root) => ImageTypes.getByCode(root).sortOrder,
   },
 
   PublisherSizeDetail: {

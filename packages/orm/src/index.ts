@@ -268,7 +268,13 @@ function errorMessage(errors: ValidationError[]): string {
   }
 }
 
-export type EntityHook = "beforeFlush" | "beforeDelete" | "afterValidation" | "afterCommit";
+export type EntityHook =
+  | "beforeFlush"
+  | "beforeCreate"
+  | "beforeUpdate"
+  | "beforeDelete"
+  | "afterValidation"
+  | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
 export class ConfigData<T extends Entity, C> {
@@ -280,6 +286,8 @@ export class ConfigData<T extends Entity, C> {
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
     beforeFlush: [],
+    beforeCreate: [],
+    beforeUpdate: [],
     afterCommit: [],
     afterValidation: [],
   };
@@ -353,6 +361,20 @@ export class ConfigApi<T extends Entity, C> {
   beforeFlush(fn: HookFn<T, C>): void;
   beforeFlush(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
     this.addHook("beforeFlush", ruleOrHint, maybeFn);
+  }
+
+  // beforeCreate still needs to take a hint because even though the entity itself is New<T>, we might want to load
+  // a nested relation that isn't loaded yet
+  beforeCreate<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
+  beforeCreate(fn: HookFn<T, C>): void;
+  beforeCreate(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
+    this.addHook("beforeCreate", ruleOrHint, maybeFn);
+  }
+
+  beforeUpdate<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
+  beforeUpdate(fn: HookFn<T, C>): void;
+  beforeUpdate(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
+    this.addHook("beforeUpdate", ruleOrHint, maybeFn);
   }
 
   afterValidation<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;

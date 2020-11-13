@@ -29,6 +29,8 @@ export class Author extends AuthorCodegen {
   });
 
   public beforeFlushRan = false;
+  public beforeCreateRan = false;
+  public beforeUpdateRan = false;
   public beforeDeleteRan = false;
   public afterValidationRan = false;
   public afterCommitRan = false;
@@ -107,6 +109,14 @@ authorConfig.beforeFlush(async (author, ctx) => {
   if (author.ageForBeforeFlush !== undefined) {
     author.age = author.ageForBeforeFlush;
   }
+});
+
+authorConfig.beforeCreate((author) => {
+  author.beforeCreateRan = true;
+});
+
+authorConfig.beforeUpdate((author) => {
+  author.beforeUpdateRan = true;
 });
 
 authorConfig.afterValidation((author) => {

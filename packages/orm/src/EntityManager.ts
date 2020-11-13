@@ -658,6 +658,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
               // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
               await cleanupDeletedRelations(todos);
               await beforeFlush(this.ctx, todos);
+              await beforeCreate(this.ctx, todos);
+              await beforeUpdate(this.ctx, todos);
               recalcDerivedFields(todos);
               await recalcAsyncDerivedFields(this, todos);
               await validate(todos);
@@ -1164,6 +1166,14 @@ async function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<
 
 async function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
   await runHook(ctx, "beforeFlush", todos, ["inserts", "updates"]);
+}
+
+async function beforeCreate(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runHook(ctx, "beforeCreate", todos, ["inserts"]);
+}
+
+async function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runHook(ctx, "beforeUpdate", todos, ["updates"]);
 }
 
 async function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<void> {

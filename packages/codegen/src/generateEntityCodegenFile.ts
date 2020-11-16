@@ -2,7 +2,7 @@ import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Config } from "./config";
-import { EntityDbMetadata, PrimitiveField } from "./EntityDbMetadata";
+import { EntityDbMetadata, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
   BaseEntity,
   BooleanFilter,
@@ -40,7 +40,7 @@ import {
 
 export interface ColumnMetaData {
   typeConverter?: SymbolSpec;
-  fieldType: SymbolSpec | string;
+  fieldType: PrimitiveTypescriptType;
 }
 
 /** Creates the base class with the boilerplate annotations. */

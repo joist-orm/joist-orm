@@ -3,6 +3,11 @@ import { pascalCase } from "change-case";
 import isPlainObject from "is-plain-object";
 import pluralize from "pluralize";
 import { Config } from "./config";
+import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
+
+export function assertNever(x: never): never {
+  throw new Error("Unexpected object: " + x);
+}
 
 export function isEntityTable(t: Table): boolean {
   const columnNames = t.columns.map((c) => c.name);
@@ -42,7 +47,7 @@ export function tableToEntityName(config: Config, table: Table): string {
 }
 
 /** Maps db types, i.e. `int`, to JS types, i.e. `number`. */
-export function mapSimpleDbTypeToTypescriptType(dbType: string): string {
+export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): PrimitiveTypescriptType {
   switch (dbType) {
     case "boolean":
       return "boolean";
@@ -52,12 +57,13 @@ export function mapSimpleDbTypeToTypescriptType(dbType: string): string {
     case "text":
     case "citext":
     case "character varying":
+    case "varchar":
       return "string";
     case "timestamp with time zone":
     case "date":
       return "Date";
     default:
-      throw new Error(`Unrecognized type "${dbType}"`);
+      assertNever(dbType);
   }
 }
 

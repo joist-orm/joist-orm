@@ -18,6 +18,10 @@ describe("generateGraphqlSchemaFiles", () => {
         id: ID!
       }
 
+      extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+
       input SaveAuthorInput {
         id: ID
       }
@@ -56,6 +60,10 @@ describe("generateGraphqlSchemaFiles", () => {
         firstName: String
       }
 
+      extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+
       type SaveAuthorResult {
         author: Author!
       }
@@ -67,6 +75,9 @@ describe("generateGraphqlSchemaFiles", () => {
         "Author": Array [
           "firstName",
           "id",
+        ],
+        "Mutation": Array [
+          "saveAuthor",
         ],
         "SaveAuthorInput": Array [
           "firstName",
@@ -107,6 +118,10 @@ describe("generateGraphqlSchemaFiles", () => {
         firstName: String
       }
 
+      extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+
       type SaveAuthorResult {
         author: Author!
       }
@@ -133,6 +148,10 @@ describe("generateGraphqlSchemaFiles", () => {
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "type Author {
         id: ID!
+      }
+
+      extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
       }
 
       input SaveAuthorInput {
@@ -176,6 +195,10 @@ describe("generateGraphqlSchemaFiles", () => {
       input SaveAuthorInput {
         id: ID
         firstName: String
+      }
+
+      extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
       }
 
       type SaveAuthorResult {

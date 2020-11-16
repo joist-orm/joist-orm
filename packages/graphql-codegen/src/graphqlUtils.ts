@@ -1,8 +1,7 @@
 import { DocumentNode, InputObjectTypeDefinitionNode, ObjectTypeDefinitionNode, parse, print, visit } from "graphql";
-import { mapSimpleDbTypeToTypescriptType } from "joist-codegen";
+import { PrimitiveTypescriptType } from "joist-codegen/build/EntityDbMetadata";
 import { groupBy } from "joist-utils";
 import prettier, { resolveConfig } from "prettier";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
 import { Fs } from "./utils";
 
 /** A type for the fields we want to add to `*.graphql` files. */
@@ -140,7 +139,9 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
   });
 }
 
-export function mapTypescriptTypeToGraphQLType(type: string | SymbolSpec): string | SymbolSpec {
+export type GraphQLType = "Boolean" | "String" | "Int" | "Date";
+
+export function mapTypescriptTypeToGraphQLType(type: PrimitiveTypescriptType): GraphQLType {
   switch (type) {
     case "string":
       return "String";
@@ -151,8 +152,4 @@ export function mapTypescriptTypeToGraphQLType(type: string | SymbolSpec): strin
     default:
       return type;
   }
-}
-
-export function mapSimpleDbTypeToGraphQLType(type: string): string | SymbolSpec {
-  return mapTypescriptTypeToGraphQLType(mapSimpleDbTypeToTypescriptType(type));
 }

@@ -28,12 +28,25 @@ export type Entity = {
   optsType: SymbolSpec;
 };
 
+export type DatabaseColumnType =
+  | "boolean"
+  | "int"
+  | "numeric"
+  | "text"
+  | "citext"
+  | "character varying"
+  | "varchar"
+  | "timestamp with time zone"
+  | "date";
+
+export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date";
+
 export type PrimitiveField = {
   fieldName: string;
   columnName: string;
-  columnType: string;
+  columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
-  fieldType: string | SymbolSpec;
+  fieldType: PrimitiveTypescriptType;
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
@@ -151,11 +164,12 @@ function isOneToOneRelation(r: O2MRelation) {
 function newPrimitive(config: Config, entity: Entity, column: Column, table: Table): PrimitiveField {
   const fieldName = camelCase(column.name);
   const columnName = column.name;
+  const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   return {
     fieldName,
     columnName,
-    columnType: column.type.shortName || column.type.name,
-    fieldType: mapType(table.name, columnName, column.type.shortName || column.type.name).fieldType,
+    columnType,
+    fieldType: mapType(table.name, columnName, columnType).fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
     derived: fieldDerived(config, entity, fieldName),
@@ -313,7 +327,7 @@ function entityType(entityName: string): SymbolSpec {
   return imp(`${entityName}@./entities`);
 }
 
-function mapType(tableName: string, columnName: string, dbColumnType: string): ColumnMetaData {
+function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): ColumnMetaData {
   return (
     columnCustomizations[`${tableName}.${columnName}`] || {
       fieldType: mapSimpleDbTypeToTypescriptType(dbColumnType),

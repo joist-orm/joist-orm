@@ -73,3 +73,11 @@ export function deTagId(entityOrMeta: Entity | HasTagName, id?: string): string 
 export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
   return keys.map((k) => k.split(tagDelimiter)).map((t) => (t.length === 0 ? t[0] : t[1]));
 }
+
+export function tagFromId(key: string): string {
+  const parts = key.split(tagDelimiter);
+  if (parts.length !== 2) {
+    fail(`Unknown tagged id format: "${key}"`);
+  }
+  return parts[0];
+}

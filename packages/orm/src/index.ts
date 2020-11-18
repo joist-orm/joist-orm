@@ -13,7 +13,9 @@ import {
   OptsOf,
   RelationsIn,
 } from "./EntityManager";
+import { tagFromId } from "./keys";
 import { reverseHint } from "./reverseHint";
+import { fail } from "./utils";
 
 export { newPgConnectionConfig } from "joist-utils";
 export { BaseEntity } from "./BaseEntity";
@@ -388,9 +390,14 @@ export class ConfigApi<T extends Entity, C> {
   }
 }
 
+const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
+
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
   metas.forEach((meta) => {
+    // Add each constructor into our tag -> constructor map for future lookups
+    tagToConstructorMap.set(meta.tagName, meta.cstr);
+
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
       if ((rule as any).hint) {
@@ -419,6 +426,11 @@ export function getEm(entity: Entity): EntityManager {
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
   return Object.values(entity).filter((v) => v instanceof AbstractRelationImpl);
+}
+
+export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
+  const tag = tagFromId(id);
+  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
 }
 
 function equal(a: any, b: any): boolean {

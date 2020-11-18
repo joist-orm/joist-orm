@@ -13,6 +13,7 @@ import {
   OptsOf,
   RelationsIn,
 } from "./EntityManager";
+import { tagFromId } from "./keys";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
 
@@ -390,6 +391,7 @@ export class ConfigApi<T extends Entity, C> {
 }
 
 const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
+
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
   metas.forEach((meta) => {
@@ -427,7 +429,7 @@ export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
 }
 
 export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
-  const [tag] = id.split(":");
+  const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
 }
 

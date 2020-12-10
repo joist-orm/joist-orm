@@ -20,6 +20,7 @@ import {
   LoadedReference,
   maybeResolveReferenceToId,
   PartialOrNull,
+  ReactiveEntityHook,
   Reference,
   Relation,
   setField,
@@ -164,6 +165,10 @@ export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
       ? LoadedIfInKeyHint<T, K, U>
       : LoadedIfInKeyHint<T, K, H>;
   };
+
+export type MergedLoaded<T extends Entity, A extends LoadHint<T>, B extends LoadHint<T>> = T &
+  Loaded<T, A> &
+  Loaded<T, B>;
 
 // We can use unknown here because everything non-loaded is pulled in from `T &`
 type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
@@ -652,6 +657,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
               // add objects to todos that have reactive hooks
               await addReactiveAsyncDerivedValues(todos);
               await addReactiveValidations(todos);
+              await addReactiveHooks(todos);
 
               // run our hooks
               await beforeDelete(this.ctx, todos);
@@ -662,6 +668,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
               await beforeUpdate(this.ctx, todos);
               recalcDerivedFields(todos);
               await recalcAsyncDerivedFields(this, todos);
+              await reactiveBeforeFlush(this.ctx, todos);
               await validate(todos);
               await afterValidation(this.ctx, todos);
 
@@ -1113,6 +1120,21 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
   await Promise.all(p);
 }
 
+async function addReactiveHooks(todos: Record<string, Todo>): Promise<void> {
+  const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
+    const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
+    return todo.metadata.config.__data.reversedHintsForReactiveHooks.map(async (reverseHint) => {
+      (await followReverseHint(entities, reverseHint)).forEach((entity) => {
+        const todo = getTodo(todos, entity);
+        if (!todo.reactiveHooks.includes(entity) && !entity.isDeletedEntity) {
+          todo.reactiveHooks.push(entity);
+        }
+      });
+    });
+  });
+  await Promise.all(p);
+}
+
 /** Find all deleted entities and ensure their references all know about their deleted-ness. */
 async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<void> {
   const entities = Object.values(todos).flatMap((todo) => todo.deletes);
@@ -1182,6 +1204,23 @@ async function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promi
 
 async function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
   await runHook(ctx, "afterCommit", todos, ["inserts", "updates"]);
+}
+
+async function runReactiveHook(ctx: unknown, hook: ReactiveEntityHook, todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap((todo) => {
+    const hookFns = todo.metadata.config.__data.reactiveHooks[hook].map(([, , fn]) => fn);
+
+    return todo.reactiveHooks
+      .filter((e) => !e.isDeletedEntity)
+      .flatMap((entity) => {
+        return hookFns.map(async (fn) => fn(entity, ctx as any));
+      });
+  });
+  await Promise.all(p);
+}
+
+async function reactiveBeforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
+  await runReactiveHook(ctx, "beforeFlush", todos);
 }
 
 function coerceError(

@@ -10,6 +10,7 @@ import {
   IdOf,
   Loaded,
   LoadHint,
+  MergedLoaded,
   OptsOf,
   RelationsIn,
 } from "./EntityManager";
@@ -279,6 +280,8 @@ export type EntityHook =
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
+export type ReactiveEntityHook = "beforeFlush";
+
 export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRule<T>[] = [];
@@ -293,6 +296,10 @@ export class ConfigData<T extends Entity, C> {
     afterCommit: [],
     afterValidation: [],
   };
+  reactiveHooks: Record<ReactiveEntityHook, [LoadHint<T>, LoadHint<T> | undefined, HookFn<T, C>][]> = {
+    beforeFlush: [],
+  };
+  reversedHintsForReactiveHooks: string[][] = [];
   // Load-hint-ish structures that point back to instances that depend on us for validation rules.
   reactiveRules: string[][] = [];
   // Load-hint-ish structures that point back to instances that depend on us for derived values.
@@ -388,6 +395,43 @@ export class ConfigApi<T extends Entity, C> {
   afterCommit(fn: HookFn<T, C>): void {
     this.addHook("afterCommit", fn);
   }
+
+  private addReactiveHook<RH extends LoadHint<T>, PH extends LoadHint<T>>(
+    hook: ReactiveEntityHook,
+    reactTo: RH,
+    populateOrFn: PH | HookFn<Loaded<T, RH>, C>,
+    maybeFn?: HookFn<MergedLoaded<T, RH, PH>, C>,
+  ) {
+    const fn =
+      typeof populateOrFn === "function"
+        ? populateOrFn
+        : async (entity: T, ctx: C) => {
+            const em = getEm(entity);
+            const loaded = await em.populate(entity, populateOrFn);
+            return maybeFn!(loaded as any, ctx);
+          };
+    const populate = typeof populateOrFn !== "function" ? populateOrFn : undefined;
+    this.__data.reactiveHooks[hook].push([reactTo, populate, fn as any]);
+  }
+
+  /*
+   * Warning: Be very careful to only put entities that are absolutely necessary into the `reactTo` hint.
+   * Careless use of this hint can result in a large number of queries and/or entities being loaded.  Entities that
+   * don't need to be reacted to can simply be passed in the populate hint instead
+   */
+  reactiveBeforeFlush<RH extends LoadHint<T>, PH extends LoadHint<T>>(
+    reactTo: RH,
+    populate: PH,
+    fn: HookFn<MergedLoaded<T, RH, PH>, C>,
+  ): void;
+  reactiveBeforeFlush<RH extends LoadHint<T>>(reactTo: RH, fn: HookFn<Loaded<T, RH>, C>): void;
+  reactiveBeforeFlush<RH extends LoadHint<T>, PH extends LoadHint<T>>(
+    reactTo: RH,
+    populateOrFn: PH | HookFn<Loaded<T, RH>, C> | any,
+    maybeFn?: HookFn<MergedLoaded<T, RH, PH>, C>,
+  ): void {
+    this.addReactiveHook("beforeFlush", reactTo, populateOrFn, maybeFn);
+  }
 }
 
 const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
@@ -417,6 +461,18 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         getMetadata(otherEntity).config.__data.reactiveDerivedValues.push(reverseHint);
       });
     });
+    // Look for reactive hooks to reverse
+    Object.entries(meta.config.__data.reactiveHooks)
+      .flatMap(([, hooks]) => hooks)
+      .forEach((hook) => {
+        const [hint] = hook;
+        const reversals = reverseHint(meta.cstr, hint);
+        // For each reversal, tell its config about the reverse hint to force-re-validate
+        // the original rule's instance any time it changes.
+        reversals.forEach(([otherEntity, reverseHint]) => {
+          getMetadata(otherEntity).config.__data.reversedHintsForReactiveHooks.push(reverseHint);
+        });
+      });
   });
 }
 

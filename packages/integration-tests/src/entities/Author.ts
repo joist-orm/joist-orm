@@ -34,6 +34,7 @@ export class Author extends AuthorCodegen {
   public beforeDeleteRan = false;
   public afterValidationRan = false;
   public afterCommitRan = false;
+  public reactiveBeforeFlushRan = false;
   public ageForBeforeFlush?: number;
 
   /** Example of using populate within an entity on itself. */
@@ -129,6 +130,12 @@ authorConfig.beforeDelete((author) => {
 
 authorConfig.afterCommit((author) => {
   author.afterCommitRan = true;
+});
+
+authorConfig.reactiveBeforeFlush("mentor", { publisher: [] }, (author) => {
+  // this logic is here just to ensure that MergedLoaded compiles correctly and actually does the proper loads.
+  // It should be equivalent to just `author.reactiveBeforeFlushRan = true` for the test case in Author.test.ts
+  author.reactiveBeforeFlushRan = author.mentor.get !== undefined && author.publisher.get === undefined;
 });
 
 authorConfig.setAsyncDerivedField("numberOfBooks", "books", (author) => {

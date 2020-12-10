@@ -18,6 +18,7 @@ export interface Todo {
   updates: Entity[];
   deletes: Entity[];
   validates: Entity[];
+  reactiveHooks: Entity[];
 }
 
 export async function flushEntities(knex: Knex, todos: Record<string, Todo>): Promise<void> {
@@ -166,7 +167,7 @@ export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
   const meta = getMetadata(entity);
   let todo = todos[meta.type];
   if (!todo) {
-    todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
+    todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [], reactiveHooks: [] };
     todos[meta.type] = todo;
   }
   return todo;

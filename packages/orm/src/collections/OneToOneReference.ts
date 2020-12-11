@@ -1,5 +1,17 @@
-import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
+import DataLoader from "dataloader";
+import {
+  assertIdsAreTagged,
+  deTagIds,
+  ensureNotDeleted,
+  fail,
+  getEm,
+  IdOf,
+  maybeResolveReferenceToId,
+  Reference,
+  setField,
+} from "../";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
+import { getOrSet, groupBy } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
 
@@ -26,6 +38,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   private loaded: U | undefined;
   private isLoaded: boolean = false;
   private isCascadeDelete: boolean;
+  public otherColumnName: string;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -35,6 +48,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
     public otherFieldName: keyof U,
   ) {
     super();
+    this.otherColumnName = otherMeta.columns.find((field) => field.fieldName === otherFieldName)!.columnName;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
@@ -68,14 +82,11 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   async load(opts?: { withDeleted?: boolean }): Promise<U | undefined> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this.isLoaded) {
-      if (this.entity.id !== undefined) {
-        this.loaded = (
-          await getEm(this.entity).find(this.otherMeta.cstr, {
-            [this.otherFieldName]: this.entity,
-          } as any)
-        )[0];
+      if (!this.entity.isNewEntity) {
+        const result = await loaderForOneToOne(this).load(this.entity.idOrFail);
+
+        this.loaded = result[0];
       }
-      // this.maybeAppendAddedBeforeLoaded();
       this.isLoaded = true;
     }
     return this.filterDeleted(this.loaded, opts);
@@ -161,4 +172,39 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
+}
+
+function loaderForOneToOne<T extends Entity, U extends Entity>(
+  reference: OneToOneReference<T, U>,
+): DataLoader<string, U[]> {
+  const em = getEm(reference.entity);
+  // The metadata for the entity that contains the reference
+  const meta = getMetadata(reference.entity);
+  const loaderName = `${meta.tableName}.${reference.fieldName}`;
+  return getOrSet(em.__data.loaders, loaderName, () => {
+    return new DataLoader<string, U[]>(async (_keys) => {
+      const { otherMeta, otherFieldName, otherColumnName } = reference;
+
+      assertIdsAreTagged(_keys);
+      const keys = deTagIds(meta, _keys);
+
+      const rows = await em.knex.select("*").from(otherMeta.tableName).whereIn(otherColumnName, keys).orderBy("id");
+
+      const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
+
+      const rowsById = groupBy(entities, (entity) => {
+        // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
+        const ownerId = maybeResolveReferenceToId(entity.__orm.data[otherFieldName]);
+        // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
+        // directly from a SQL row with owner_id=X, however we might be loading this reference
+        // (i.e. find all children where owner_id=X) when the SQL thinks a child is still pointing
+        // at the parent (i.e. owner_id=X in the db), but our already-loaded child has had its
+        // `child.owner` field either changed to some other owner, or set to undefined. In either,
+        // that child should no longer be parent of this owner's collection, so just return a
+        // dummy value.
+        return ownerId ?? "dummyNoLongerOwned";
+      });
+      return _keys.map((k) => rowsById.get(k) || []);
+    });
+  });
 }

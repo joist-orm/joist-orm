@@ -745,6 +745,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
     this.findLoaders = {};
+    this.__data.loaders = {};
     const list =
       entityOrListOrUndefined === undefined
         ? this._entities

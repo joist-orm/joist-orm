@@ -5,7 +5,7 @@ There are two primary ways of finding entities in GQL:
 1. Finding entities via a top-level query
 2. Finding entities via a graph navigation
 
-For example, finding `Book` entities via a top-level query would look like:
+For example, finding books via a top-level query would look like:
 
 ```graphql
 query {
@@ -16,7 +16,7 @@ query {
 }
 ```
 
-Where as finding `Book` entities via graph navigation would be first finding authors and then finding the author's books:
+Where as books via graph navigation would be first finding authors and then finding the author's books:
 
 ```graphql
 query {
@@ -29,19 +29,19 @@ query {
 }
 ```
 
-In general, Joist supports both of these patterns equally well (i.e. without N+1s in the `authors / books` case).
+In general, Joist supports both of these patterns equally well (i.e. without N+1s in the `authors / books` case), especially in this vanilla use case with minimal filtering.
 
-However, complex filtering can be problematic and so is worth highlighting, pragmatically, how to handle to avoid performance issues.
+However, finding entities combined with complex/database-driven filtering logic can be problematic when using _graph navigation_, so this doc highlights what those issues are, and how to avoid them.
 
 ### Top-Level Queries Can Use Complex Filters
 
-When issuing a top-level query like `query / books(filter: ...)`, Joist's `EntityManager` has a `findGql` method that makes it generally very easy to map non-trivial/idiomatic GQL filtering onto an efficient/join-backed database filter.
+When issuing a top-level query like `query / books(filter: ...)`, Joist's `EntityManager` has a `findGql` method that makes it generally easy to map idiomatic GQL filtering conventions onto an efficient/join-backed database filter.
 
-So if you want to do a query like "find books who's total royalties is >= \$100k", it's kosher to build this like:
+So if you want to do a query like "find books who's total royalties is >= $100", it's kosher to build this like:
 
 ```graphql
 query {
-  books(filter: { totalRoyalties: { gt: 100000 } }) {
+  books(filter: { totalRoyalties: { gt: 100 } }) {
     id
     title
     author {
@@ -55,7 +55,7 @@ And then in your resolver map `totalRoyalties` to a join in `em.find` or `em.fin
 
 At runtime, the GraphQL execution flow is:
 
-1. Find all `Book`s by calling `queryResolvers.books`, which will probably make an `em.find` call
+1. Find all `Book`s by calling `queryResolvers.books`, which will probably make an `em.find(Book, ...)` call
 2. For each found `Book`, call `bookN.authorRef.load()` _per book_, which Joist automatically batches into a single `SELECT * FROM authors WHERE book_id IN (...)`
 
 So this is a safe pattern because we've done 1 initial "potentially complex filter" `em.find` and then a series of "known to be really simple" `one-to-many` / `many-to-one` loads/navigations that Joist knows how to efficiently batch.
@@ -64,13 +64,13 @@ So this is a safe pattern because we've done 1 initial "potentially complex filt
 
 However, unlike the previous top-level queries, graph-navigation _complex_ queries can run into performance issues.
 
-To see why, let's turn the previous top-level "books with \$100k in royalties" into a graph-navigation query by starting first at `authors`, i.e.:
+To see why, let's turn the previous top-level "books with $100 in royalties" into a graph-navigation query by starting first at `authors`, i.e.:
 
 ```graphql
 query {
   authors {
     firstName
-    books(filter: { totalRoyalties: { gt: 100000 } }) {
+    books(filter: { totalRoyalties: { gt: 100 } }) {
       id
       title
     }

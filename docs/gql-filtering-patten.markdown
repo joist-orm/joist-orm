@@ -29,9 +29,9 @@ query {
 }
 ```
 
-In general, Joist supports both of these patterns equally well (i.e. without N+1s in the `authors / books` case) when doing vanilla graph traversal/i.e. minimal filtering.
+In general, Joist supports both of these patterns equally well (i.e. without N+1s) as long as you're vanilla graph traversal, i.e. with no/minimal filtering and are just following foreign key references/collections.
 
-However, finding entities combined with complex/database-driven filtering logic can be problematic when using _graph navigation_, so this doc highlights what those issues are, and how to avoid them.
+However, finding entities with complex/database-driven filtering logic can be problematic _when using graph navigation_, so this doc highlights what that issue is, and how to avoid it.
 
 ### Top-Level Queries Can Use Complex Filters
 
@@ -55,11 +55,11 @@ And then in your resolver, implement the `totalRoyalties` filter logic via a joi
 
 At runtime, the GraphQL execution flow is:
 
-1. Find all `Book`s by calling `queryResolvers.books` once, which will probably make an `em.find(Book, ...)` call.
+1. Find all books by calling `queryResolvers.books` once, which will probably make an `em.find(Book, ...)` call.
    
-2. For each found `Book`, call `booksResolver.author`, which calls `bookN.authorRef.load()`.
+2. For each found book, call `booksResolver.author(bookIdN, ...)`, which calls `em.load(bookIdN).authorRef.load()`.
    
-   Joist automatically batches all of these individual `authorRef.load()` calls into a single `SELECT * FROM authors WHERE book_id IN (...)`.
+   Joist automatically batches all of these individual `load()` calls into a single `SELECT * FROM authors WHERE book_id IN (...)`.
 
 So this is a safe pattern because we've done 1 initial "potentially complex filter" `em.find` and then a series of "known to be really simple" `one-to-many` / `many-to-one` loads/navigations that Joist knows how to efficiently batch.
 
@@ -85,11 +85,11 @@ Note how we're using the same complex filter, but now at one nested level deeper
 
 At runtime, the GraphQL execution flow for this query is:
 
-1. Find all authors that match `authors` using `em.find`.
+1. Find all authors that match `authors` using `em.find` (in this case all authors, because we didn't use a top-level filter).
    
-2. For each found `Author`, call `authorResolvers.books(root: authorIdN, filter: ...)`, which, assuming the `filter` is implemented by database-backed filtering, makes another `em.find` call _per author_.
+2. For each found author, call `authorResolvers.books(authorIdN, args)`, which, assuming the `filter` is implemented by database-backed filtering, makes an additional `em.find` call _per author_.
 
-And so here is the difference: in 1st example of calling `books(...) / author` we're calling many `reference.load` calls--but they are easily batched; however, in the 2nd example of `authors / books(...)` we're calling many `em.find` calls--and they are more complicated to batch.
+And so here is the difference: in 1st example of calling `books(...) / author` we're calling many `reference.load` calls--but that's okay because they are easily batched. However, in the 2nd example of `authors / books(...)` we're calling many `em.find` calls--and they are more complicated to batch.
 
 Joist does _attempt_ to batch these multiple `em.find` calls into a N+1 safe/single physical database query, however, because the `em.find`s `where` clause paramater can be arbitrarily complex, it's just not as efficient as batched `reference.load` calls.
 
@@ -114,11 +114,11 @@ This is cute, and technically works, but it only works well in the small.
 
 If you have a GraphQL query that returns 500 authors, and then asks for each author's books with an `em.find` call, you'll end up with a single SQL call with 500 separate queries all `UNION ALL`'d together. Which a) just seems terrible even in theory, and b) is also actually terrible in practice and can lead to ~30-second plus CPU spikes/stalls that completely block the event loop.
 
-The upshot from all of this: don't auto-batch lots of `em.find` calls because the performance will probably suck.
+The takeaway from this is: don't auto-batch lots of `em.find` calls because the performance will probably suck.
 
 ### Tldr Recommended Pattern
 
-Joist's current recommendation is:
+To avoid this issue with complex filtering in sub-navigation, Joist's current recommendation is:
 
 1. Only do complex/database-level filtering on top-level queries.
 

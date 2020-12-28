@@ -1,5 +1,5 @@
 import Knex from "knex";
-import { JoinRow, ManyToManyCollection } from "./collections/ManyToManyCollection";
+import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
 import {
   deTagIds,
   Entity,
@@ -8,8 +8,8 @@ import {
   keyToNumber,
   keyToString,
   maybeResolveReferenceToId,
-} from "./index";
-import { partition } from "./utils";
+} from "../index";
+import { partition } from "../utils";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {

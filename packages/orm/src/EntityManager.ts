@@ -4,7 +4,7 @@ import Knex, { QueryBuilder } from "knex";
 import hash from "object-hash";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
-import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
+import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./drivers/EntityPersister";
 import {
   assertIdsAreTagged,
   Collection,

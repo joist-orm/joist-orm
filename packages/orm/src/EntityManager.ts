@@ -212,6 +212,22 @@ export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>
 export class EntityManager<C extends HasKnex = HasKnex> {
   private readonly ctx: C;
   public knex: Knex;
+  private _entities: Entity[] = [];
+  // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
+  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
+  private _entityIndex: Map<string, Entity> = new Map();
+  private findLoaders: LoaderCache = {};
+  private flushSecret: number = 0;
+  private _isFlushing: boolean = false;
+  // This is attempting to be internal/module private
+  __data = {
+    loaders: {} as LoaderCache,
+    joinRows: {} as Record<string, JoinRow[]>,
+  };
+  private hooks: Record<EntityManagerHook, HookFn[]> = {
+    beforeTransaction: [],
+    afterTransaction: [],
+  };
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C);
@@ -229,24 +245,6 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       this.knex = emOrCtx.knex;
     }
   }
-
-  private _entities: Entity[] = [];
-  // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
-  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
-  private _entityIndex: Map<string, Entity> = new Map();
-  private findLoaders: LoaderCache = {};
-  private flushSecret: number = 0;
-  private _isFlushing: boolean = false;
-  // This is attempting to be internal/module private
-  __data = {
-    loaders: {} as LoaderCache,
-    joinRows: {} as Record<string, JoinRow[]>,
-  };
-
-  private hooks: Record<EntityManagerHook, HookFn[]> = {
-    beforeTransaction: [],
-    afterTransaction: [],
-  };
 
   get entities(): ReadonlyArray<Entity> {
     return [...this._entities];

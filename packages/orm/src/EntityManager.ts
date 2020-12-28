@@ -193,6 +193,20 @@ type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 export type HasKnex = { knex: Knex };
 
+/**
+ * A marker to prevent setter calls during `flush` calls.
+ *
+ * The `flush` process does a dirty check + SQL flush and generally doesn't want
+ * entities to re-dirtied after it's done the initial dirty check. So we'd like
+ * to prevent all setter calls while `flush` is running.
+ *
+ * That said, lifecycle code like hooks actually can make setter calls b/c `flush`
+ * invokes them at a specific point in its process.
+ *
+ * We solve this by using node's `AsyncLocalStorage` to mark certain callbacks (promise
+ * handlers) as blessed / invoked-from-`flush`-itself, and they are allowed to call setters,
+ * but any external callers (i.e. application code) will be rejected.
+ */
 export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
 
 export class EntityManager<C extends HasKnex = HasKnex> {

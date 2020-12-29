@@ -6,7 +6,7 @@ import { buildQuery, FilterAndSettings } from "../QueryBuilder";
 import { getOrSet } from "../utils";
 import { LoaderCache } from "./EntityPersister";
 
-export function loaderForFind<T extends Entity>(
+export function findDataLoader<T extends Entity>(
   knex: Knex,
   cache: LoaderCache,
   type: EntityConstructor<T>,

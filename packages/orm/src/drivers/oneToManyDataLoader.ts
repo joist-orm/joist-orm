@@ -5,7 +5,7 @@ import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToMa
 import { getOrSet, groupBy } from "../utils";
 import { LoaderCache } from "./EntityPersister";
 
-export function loaderForCollection<T extends Entity, U extends Entity>(
+export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   knex: Knex,
   cache: LoaderCache,
   collection: OneToManyCollection<T, U>,

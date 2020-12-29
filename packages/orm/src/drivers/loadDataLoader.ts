@@ -5,7 +5,7 @@ import { assertIdsAreTagged, deTagIds } from "../keys";
 import { getOrSet, indexBy } from "../utils";
 import { LoaderCache } from "./EntityPersister";
 
-export function loaderForEntity<T extends Entity>(
+export function loadDataLoader<T extends Entity>(
   em: EntityManager,
   knex: Knex,
   cache: LoaderCache,

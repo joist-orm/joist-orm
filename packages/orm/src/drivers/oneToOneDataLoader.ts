@@ -5,7 +5,7 @@ import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToOn
 import { getOrSet, groupBy } from "../utils";
 import { LoaderCache } from "./EntityPersister";
 
-export function loaderForOneToOne<T extends Entity, U extends Entity>(
+export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   knex: Knex,
   cache: LoaderCache,
   reference: OneToOneReference<T, U>,

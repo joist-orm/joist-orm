@@ -20,11 +20,11 @@ import {
 } from "../index";
 import { partition } from "../utils";
 import { Driver } from "./driver";
-import { loaderForFind } from "./findDataLoader";
-import { loaderForJoinTable } from "./joinTableDataLoader";
-import { loaderForEntity } from "./loadDataLoader";
-import { loaderForCollection } from "./oneToManyDataLoader";
-import { loaderForOneToOne } from "./oneToOneDataLoader";
+import { findDataLoader } from "./findDataLoader";
+import { manyToManyDataLoader } from "./manyToManyDataLoader";
+import { loadDataLoader } from "./loadDataLoader";
+import { oneToManyDataLoader } from "./oneToManyDataLoader";
+import { oneToOneDataLoader } from "./oneToOneDataLoader";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
@@ -49,7 +49,7 @@ export class EntityPersister implements Driver {
   }
 
   load<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, id: string): Promise<T | undefined> {
-    return loaderForEntity(em, this.knex, this.loadLoaders, meta).load(id);
+    return loadDataLoader(em, this.knex, this.loadLoaders, meta).load(id);
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(
@@ -58,21 +58,21 @@ export class EntityPersister implements Driver {
   ): Promise<U[]> {
     const { columnName, entity } = collection;
     const key = `${columnName}=${entity.id}`;
-    return loaderForJoinTable(this.knex, this.loadLoaders, collection).load(key);
+    return manyToManyDataLoader(this.knex, this.loadLoaders, collection).load(key);
   }
 
   loadOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
   ): Promise<U[]> {
-    return loaderForCollection(this.knex, this.loadLoaders, collection).load(collection.entity.id!);
+    return oneToManyDataLoader(this.knex, this.loadLoaders, collection).load(collection.entity.id!);
   }
 
   async loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
     reference: OneToOneReference<T, U>,
   ): Promise<U | undefined> {
-    return (await loaderForOneToOne(this.knex, this.loadLoaders, reference).load(reference.entity.idOrFail))[0];
+    return (await oneToOneDataLoader(this.knex, this.loadLoaders, reference).load(reference.entity.idOrFail))[0];
   }
 
   find<T extends Entity>(
@@ -81,7 +81,7 @@ export class EntityPersister implements Driver {
     where: FilterOf<T>,
     options?: { orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<unknown[]> {
-    return loaderForFind(this.knex, this.findLoaders, type).load({ where, ...options });
+    return findDataLoader(this.knex, this.findLoaders, type).load({ where, ...options });
   }
 
   async transaction<T>(

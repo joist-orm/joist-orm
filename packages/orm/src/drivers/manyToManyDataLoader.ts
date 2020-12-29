@@ -6,14 +6,14 @@ import { Entity, getMetadata } from "../EntityManager";
 import { getEm, keyToNumber, keyToString, ManyToManyCollection } from "../index";
 import { getOrSet } from "../utils";
 
-export function loaderForJoinTable<T extends Entity, U extends Entity>(
+export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   knex: Knex,
   cache: LoaderCache,
   collection: ManyToManyCollection<T, U>,
 ) {
   const { joinTableName } = collection;
   return getOrSet(cache, joinTableName, () => {
-    return new DataLoader<string, Entity[]>(async (keys) => loadFromJoinTable(knex, collection, keys));
+    return new DataLoader<string, Entity[]>(async (keys) => load(knex, collection, keys));
   });
 }
 
@@ -23,7 +23,7 @@ export function loaderForJoinTable<T extends Entity, U extends Entity>(
  * I.e. we can load the `books_to_tags` join rows for multiple `Book`s at a time, or even
  * load `books_to_tags` for several `Book`s and several `Tag`s in a single SQL query.
  */
-async function loadFromJoinTable<T extends Entity, U extends Entity>(
+async function load<T extends Entity, U extends Entity>(
   knex: Knex,
   collection: ManyToManyCollection<T, U>,
   keys: ReadonlyArray<string>,

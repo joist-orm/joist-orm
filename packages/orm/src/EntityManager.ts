@@ -181,8 +181,6 @@ type MaybePromise<T> = T | PromiseLike<T>;
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
-export type HasKnex = { knex: Knex };
-
 /**
  * A marker to prevent setter calls during `flush` calls.
  *
@@ -201,7 +199,7 @@ export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
-export class EntityManager<C extends HasKnex = HasKnex> {
+export class EntityManager<C = {}> {
   private readonly ctx: C;
   public driver: Driver;
   private _entities: Entity[] = [];
@@ -223,8 +221,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   };
 
   constructor(em: EntityManager<C>);
-  constructor(ctx: C);
-  constructor(emOrCtx: EntityManager<C> | C) {
+  constructor(ctx: C, driver: Driver);
+  constructor(emOrCtx: EntityManager<C> | C, driver?: Driver) {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
       this.driver = em.driver;
@@ -235,7 +233,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       this.ctx = em.ctx!;
     } else {
       this.ctx = emOrCtx!;
-      this.driver = new PostgresDriver(emOrCtx.knex);
+      this.driver = driver!;
     }
   }
 

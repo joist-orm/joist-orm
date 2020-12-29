@@ -8,5 +8,6 @@ declare namespace jest {
   interface It {
     withCtx(name: string, fn: itWithCtxFn);
     withCtx(name: string, opts: ContextOpts, fn: itWithCtxFn);
+    withMemoryCtx(name: string, fn: itWithCtxFn);
   }
 }

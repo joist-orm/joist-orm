@@ -1,6 +1,7 @@
 import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
 import { config } from "dotenv";
+import { PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import Knex from "knex";
 
@@ -14,7 +15,7 @@ export const makeApiCall = jest.fn();
 
 export function newEntityManager() {
   const ctx = { knex };
-  const em = new EntityManager(ctx as any);
+  const em = new EntityManager(ctx as any, new PostgresDriver(knex));
   Object.assign(ctx, { em, makeApiCall });
   return em;
 }
@@ -51,6 +52,5 @@ export function resetQueryCount() {
 type itWithCtxFn = (ctx: Context) => Promise<void>;
 it.withCtx = (name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) => {
   const fn: itWithCtxFn = typeof fnOrOpts === "function" ? fnOrOpts : maybeFn!;
-  const opts: ContextOpts = typeof fnOrOpts === "function" ? {} : fnOrOpts;
   it(name, async () => fn({ em: newEntityManager(), knex, makeApiCall: async () => {} }));
 };

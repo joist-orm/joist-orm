@@ -22,6 +22,8 @@ export { BaseEntity } from "./BaseEntity";
 export * from "./changes";
 export * from "./collections";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers/InMemoryDriver";
+export * from "./drivers/PostgresDriver";
 export * from "./EntityManager";
 export * from "./getProperties";
 export * from "./keys";

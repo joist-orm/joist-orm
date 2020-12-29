@@ -42,8 +42,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
       if (this.entity.id === undefined) {
         this.loaded = [];
       } else {
-        const em = getEm(this.entity);
-        this.loaded = await oneToManyDataLoader(em.loadLoaders, this).load(this.entity.id);
+        this.loaded = await oneToManyDataLoader(getEm(this.entity), this).load(this.entity.id);
       }
       this.maybeAppendAddedBeforeLoaded();
     }
@@ -157,8 +156,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity> extends Abs
   async refreshIfLoaded(): Promise<void> {
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.loaded !== undefined && this.entity.id !== undefined) {
-      const em = getEm(this.entity);
-      this.loaded = await oneToManyDataLoader(em.loadLoaders, this).load(this.entity.id);
+      this.loaded = await oneToManyDataLoader(getEm(this.entity), this).load(this.entity.id);
     }
   }
 

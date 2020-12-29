@@ -257,7 +257,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await findDataLoader(this, this.loadLoaders, type).load({ where, ...options });
+    const rows = await findDataLoader(this, type).load({ where, ...options });
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -285,7 +285,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await findDataLoader(this, this.loadLoaders, type).load({ where, ...options });
+    const rows = await findDataLoader(this, type).load({ where, ...options });
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -427,8 +427,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     }
     const meta = getMetadata(type);
     const tagged = tagIfNeeded(meta, id);
-    const entity =
-      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, this.loadLoaders, meta).load(tagged));
+    const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
     if (!entity) {
       throw new Error(`${tagged} was not found`);
     }
@@ -450,7 +449,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     const ids = _ids.map((id) => tagIfNeeded(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || loadDataLoader(this, this.loadLoaders, meta).load(id);
+        return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
       }),
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
@@ -479,7 +478,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || loadDataLoader(this, this.loadLoaders, meta).load(id);
+          return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
         }),
       )
     ).filter(Boolean);
@@ -748,7 +747,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       list.map(async (entity) => {
         if (entity.id) {
           // Clear the original cached loader result and fetch the new primitives
-          await loadDataLoader(this, this.loadLoaders, getMetadata(entity)).load(entity.id);
+          await loadDataLoader(this, getMetadata(entity)).load(entity.id);
           if (entity.__orm.deleted === undefined) {
             // Then refresh any loaded collections
             await Promise.all(getRelations(entity).map((r) => r.refreshIfLoaded()));

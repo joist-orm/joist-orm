@@ -1,16 +1,16 @@
 import DataLoader from "dataloader";
-import { Entity, getMetadata, LoaderCache } from "../EntityManager";
+import { Entity, EntityManager, getMetadata, LoaderCache } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToManyCollection } from "../index";
 import { getOrSet, groupBy } from "../utils";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
-  cache: LoaderCache,
+  em: EntityManager,
   collection: OneToManyCollection<T, U>,
 ): DataLoader<string, U[]> {
   // The metadata for the entity that contains the collection
   const meta = getMetadata(collection.entity);
   const loaderName = `${meta.tableName}.${collection.fieldName}`;
-  return getOrSet(cache, loaderName, () => {
+  return getOrSet(em.loadLoaders, loaderName, () => {
     return new DataLoader<string, U[]>(async (_keys) => {
       const { otherMeta } = collection;
 

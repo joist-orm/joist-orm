@@ -37,8 +37,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     if (this.loaded === undefined) {
       const { columnName, entity } = this;
       const key = `${columnName}=${entity.id}`;
-      const em = getEm(this.entity);
-      this.loaded = await manyToManyDataLoader(em.loadLoaders, this).load(key);
+      this.loaded = await manyToManyDataLoader(getEm(this.entity), this).load(key);
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
@@ -176,8 +175,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     if (this.loaded !== undefined && this.entity.id !== undefined) {
       const { columnName, entity } = this;
       const key = `${columnName}=${entity.id}`;
-      const em = getEm(this.entity);
-      this.loaded = await manyToManyDataLoader(em.loadLoaders, this).load(key);
+      this.loaded = await manyToManyDataLoader(getEm(this.entity), this).load(key);
     }
   }
 

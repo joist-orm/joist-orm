@@ -1,16 +1,16 @@
 import DataLoader from "dataloader";
-import { Entity, getMetadata, LoaderCache } from "../EntityManager";
+import { Entity, EntityManager, getMetadata, LoaderCache } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToOneReference } from "../index";
 import { getOrSet, groupBy } from "../utils";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
-  cache: LoaderCache,
+  em: EntityManager,
   reference: OneToOneReference<T, U>,
 ): DataLoader<string, U | undefined> {
   // The metadata for the entity that contains the reference
   const meta = getMetadata(reference.entity);
   const loaderName = `${meta.tableName}.${reference.fieldName}`;
-  return getOrSet(cache, loaderName, () => {
+  return getOrSet(em.loadLoaders, loaderName, () => {
     return new DataLoader<string, U | undefined>(async (_keys) => {
       const { otherMeta, otherFieldName } = reference;
 

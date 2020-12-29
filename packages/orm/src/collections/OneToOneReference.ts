@@ -71,8 +71,7 @@ export class OneToOneReference<T extends Entity, U extends Entity> extends Abstr
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this.isLoaded) {
       if (!this.entity.isNewEntity) {
-        const em = getEm(this.entity);
-        this.loaded = await oneToOneDataLoader(em.loadLoaders, this).load(this.entity.idOrFail);
+        this.loaded = await oneToOneDataLoader(getEm(this.entity), this).load(this.entity.idOrFail);
       }
       this.isLoaded = true;
     }

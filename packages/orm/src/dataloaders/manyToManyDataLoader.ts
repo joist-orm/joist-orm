@@ -1,14 +1,14 @@
 import DataLoader from "dataloader";
 import { JoinRow } from "../collections/ManyToManyCollection";
-import { Entity, LoaderCache } from "../EntityManager";
+import { Entity, EntityManager, LoaderCache } from "../EntityManager";
 import { getEm, keyToString, ManyToManyCollection } from "../index";
 import { getOrSet } from "../utils";
 
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(
-  cache: LoaderCache,
+  em: EntityManager,
   collection: ManyToManyCollection<T, U>,
 ) {
-  return getOrSet(cache, collection.joinTableName, () => {
+  return getOrSet(em.loadLoaders, collection.joinTableName, () => {
     return new DataLoader<string, Entity[]>((keys) => load(collection, keys));
   });
 }

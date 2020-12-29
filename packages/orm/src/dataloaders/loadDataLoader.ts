@@ -1,14 +1,13 @@
 import DataLoader from "dataloader";
-import { Entity, EntityManager, EntityMetadata, LoaderCache } from "../EntityManager";
+import { Entity, EntityManager, EntityMetadata } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds } from "../keys";
 import { getOrSet, indexBy } from "../utils";
 
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,
-  cache: LoaderCache,
   meta: EntityMetadata<T>,
 ): DataLoader<string, T | undefined> {
-  return getOrSet(cache, meta.type, () => {
+  return getOrSet(em.loadLoaders, meta.type, () => {
     return new DataLoader<string, T | undefined>(async (_keys) => {
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);

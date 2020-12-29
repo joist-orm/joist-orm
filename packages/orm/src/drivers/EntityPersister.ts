@@ -34,12 +34,11 @@ export interface Todo {
 export class EntityPersister implements Driver {
   constructor(private knex: Knex) {}
 
-  load<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, keys: readonly string[]): Promise<unknown[]> {
+  load<T extends Entity>(meta: EntityMetadata<T>, keys: readonly string[]): Promise<unknown[]> {
     return this.knex.select("*").from(meta.tableName).whereIn("id", keys);
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
@@ -65,7 +64,6 @@ export class EntityPersister implements Driver {
   }
 
   loadOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
     collection: OneToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<U[]> {
@@ -77,7 +75,6 @@ export class EntityPersister implements Driver {
   }
 
   loadOneToOne<T extends Entity, U extends Entity>(
-    em: EntityManager,
     reference: OneToOneReference<T, U>,
     keys: readonly string[],
   ): Promise<unknown[]> {
@@ -88,11 +85,7 @@ export class EntityPersister implements Driver {
       .orderBy("id");
   }
 
-  async find<T extends Entity>(
-    em: EntityManager,
-    type: EntityConstructor<T>,
-    queries: FilterAndSettings<T>[],
-  ): Promise<unknown[][]> {
+  async find<T extends Entity>(type: EntityConstructor<T>, queries: FilterAndSettings<T>[]): Promise<unknown[][]> {
     const { knex } = this;
 
     // If there is only 1 query, we can skip the tagging step.

@@ -11,8 +11,8 @@ export function findDataLoader<T extends Entity>(
 ): DataLoader<FilterAndSettings<T>, unknown[]> {
   return getOrSet(cache, type.name, () => {
     return new DataLoader<FilterAndSettings<T>, unknown[], string>(
-      async (queries) => {
-        return em.driver.find(em, type, queries);
+      (queries) => {
+        return em.driver.find(type, queries);
       },
       {
         // Our filter/order tuple is a complex object, so object-hash it to ensure caching works

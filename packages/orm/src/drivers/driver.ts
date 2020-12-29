@@ -7,31 +7,24 @@ import { JoinRowTodo, Todo } from "./EntityPersister";
 import { FilterAndSettings } from "../QueryBuilder";
 
 export interface Driver {
-  load<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, ids: readonly string[]): Promise<unknown[]>;
+  load<T extends Entity>(meta: EntityMetadata<T>, ids: readonly string[]): Promise<unknown[]>;
 
   loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]>;
 
   loadOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
     collection: OneToManyCollection<T, U>,
     ids: readonly string[],
   ): Promise<unknown[]>;
 
   loadOneToOne<T extends Entity, U extends Entity>(
-    em: EntityManager,
     reference: OneToOneReference<T, U>,
     ids: readonly string[],
   ): Promise<unknown[]>;
 
-  find<T extends Entity>(
-    em: EntityManager,
-    type: EntityConstructor<T>,
-    queries: readonly FilterAndSettings<T>[],
-  ): Promise<unknown[][]>;
+  find<T extends Entity>(type: EntityConstructor<T>, queries: readonly FilterAndSettings<T>[]): Promise<unknown[][]>;
 
   transaction<T>(
     em: EntityManager,

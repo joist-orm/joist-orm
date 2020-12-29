@@ -18,7 +18,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       const keys = deTagIds(meta, _keys);
 
       const em = getEm(collection.entity);
-      const rows = await em.driver.loadOneToMany(em, collection, keys);
+      const rows = await em.driver.loadOneToMany(collection, keys);
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
       // .filter((e) => !e.isDeletedEntity);

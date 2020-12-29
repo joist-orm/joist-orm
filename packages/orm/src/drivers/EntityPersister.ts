@@ -1,30 +1,26 @@
-import DataLoader from "dataloader";
-import Knex from "knex";
+import Knex, { QueryBuilder } from "knex";
 import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
 import {
   afterTransaction,
   beforeTransaction,
+  buildQuery,
   deTagIds,
   Entity,
   EntityConstructor,
+  entityLimit,
   EntityManager,
   EntityMetadata,
-  FilterOf,
+  FilterAndSettings,
   getMetadata,
   keyToNumber,
   keyToString,
   maybeResolveReferenceToId,
   OneToManyCollection,
   OneToOneReference,
-  OrderOf,
 } from "../index";
-import { partition } from "../utils";
+import { getOrSet, partition } from "../utils";
 import { Driver } from "./driver";
-import { findDataLoader } from "../dataloaders/findDataLoader";
-import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
-import { loadDataLoader } from "../dataloaders/loadDataLoader";
-import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
-import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
+import { whereFilterHash } from "../dataloaders/findDataLoader";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {
@@ -35,53 +31,147 @@ export interface Todo {
   validates: Entity[];
 }
 
-export type LoaderCache = Record<string, DataLoader<any, any>>;
-
 export class EntityPersister implements Driver {
-  private loadLoaders: LoaderCache = {};
-  private findLoaders: LoaderCache = {};
-
   constructor(private knex: Knex) {}
 
-  resetDataLoaderCache() {
-    this.loadLoaders = {};
-    this.findLoaders = {};
-  }
-
-  load<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, id: string): Promise<T | undefined> {
-    return loadDataLoader(em, this.knex, this.loadLoaders, meta).load(id);
+  load<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, keys: readonly string[]): Promise<unknown[]> {
+    return this.knex.select("*").from(meta.tableName).whereIn("id", keys);
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: ManyToManyCollection<T, U>,
-  ): Promise<U[]> {
-    const { columnName, entity } = collection;
-    const key = `${columnName}=${entity.id}`;
-    return manyToManyDataLoader(this.knex, this.loadLoaders, collection).load(key);
+    keys: readonly string[],
+  ): Promise<JoinRow[]> {
+    // Break out `column_id=string` keys out
+    const columns: Record<string, string[]> = {};
+    keys.forEach((key) => {
+      const [columnId, id] = key.split("=");
+      getOrSet(columns, columnId, []).push(id);
+    });
+
+    // Or together `where tag_id in (...)` and `book_id in (...)`
+    let query = this.knex.select("*").from(collection.joinTableName);
+    Object.entries(columns).forEach(([columnId, values]) => {
+      // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
+      const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
+      query = query.orWhereIn(
+        columnId,
+        values.map((id) => keyToNumber(meta, id)!),
+      );
+    });
+
+    return query.orderBy("id");
   }
 
   loadOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
+    keys: readonly string[],
   ): Promise<U[]> {
-    return oneToManyDataLoader(this.knex, this.loadLoaders, collection).load(collection.entity.id!);
+    return this.knex
+      .select("*")
+      .from(collection.otherMeta.tableName)
+      .whereIn(collection.otherColumnName, keys)
+      .orderBy("id");
   }
 
-  async loadOneToOne<T extends Entity, U extends Entity>(
+  loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
     reference: OneToOneReference<T, U>,
-  ): Promise<U | undefined> {
-    return (await oneToOneDataLoader(this.knex, this.loadLoaders, reference).load(reference.entity.idOrFail))[0];
+    keys: readonly string[],
+  ): Promise<unknown[]> {
+    return this.knex
+      .select("*")
+      .from(reference.otherMeta.tableName)
+      .whereIn(reference.otherColumnName, keys)
+      .orderBy("id");
   }
 
-  find<T extends Entity>(
+  async find<T extends Entity>(
     em: EntityManager,
     type: EntityConstructor<T>,
-    where: FilterOf<T>,
-    options?: { orderBy?: OrderOf<T>; limit?: number; offset?: number },
-  ): Promise<unknown[]> {
-    return findDataLoader(this.knex, this.findLoaders, type).load({ where, ...options });
+    queries: FilterAndSettings<T>[],
+  ): Promise<unknown[][]> {
+    const { knex } = this;
+
+    // If there is only 1 query, we can skip the tagging step.
+    if (queries.length === 1) {
+      return [ensureUnderLimit(await buildQuery(knex, type, queries[0]))];
+    }
+
+    // Map each incoming query[i] to itself or a previous dup
+    const uniqueQueries: FilterAndSettings<T>[] = [];
+    const queryToUnique: Record<number, number> = {};
+    queries.forEach((q, i) => {
+      let j = uniqueQueries.findIndex((uq) => whereFilterHash(uq) === whereFilterHash(q));
+      if (j === -1) {
+        uniqueQueries.push(q);
+        j = uniqueQueries.length - 1;
+      }
+      queryToUnique[i] = j;
+    });
+
+    // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
+    if (uniqueQueries.length === 1) {
+      const rows = ensureUnderLimit(await buildQuery(knex, type, queries[0]));
+      // Reuse this same result for however many callers asked for it.
+      return queries.map(() => rows);
+    }
+
+    // TODO: Instead of this tagged approach, we could probably check if the each
+    // where cause: a) has the same structure for joins, and b) has conditions that
+    // we can evaluate client-side, and then combine it into a query like:
+    //
+    // SELECT entity.*, t1.foo as condition1, t2.bar as condition2 FROM ...
+    // WHERE t1.foo (union of each queries condition)
+    //
+    // And then use the `condition1` and `condition2` to tease the combined result set
+    // back apart into each condition's result list.
+
+    // For each query, add an additional `__tag` column that will identify that query's
+    // corresponding rows in the combined/UNION ALL'd result set.
+    //
+    // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
+    // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
+    // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
+    // not gaurantee order).
+    const tagged = uniqueQueries.map((queryAndSettings, i) => {
+      const query = buildQuery(knex, type, queryAndSettings) as QueryBuilder;
+      return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
+    });
+
+    const meta = getMetadata(type);
+
+    // Kind of dumb, but make a dummy row to start our query with
+    let query = knex
+      .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
+      .from(meta.tableName)
+      .orderBy("__tag", "__row")
+      .where({ id: -1 });
+
+    // Use the dummy query as a base, then `UNION ALL` in all the rest
+    tagged.forEach((add) => {
+      query = query.unionAll(add, true);
+    });
+
+    // Issue a single SQL statement for all of them
+    const rows = ensureUnderLimit(await query);
+
+    const resultForUniques: any[][] = [];
+    uniqueQueries.forEach((q, i) => {
+      resultForUniques[i] = [];
+    });
+    rows.forEach((row: any) => {
+      resultForUniques[row["__tag"]].push(row);
+    });
+
+    // We return an array-of-arrays, where result[i] is the rows for queries[i]
+    const result: any[][] = [];
+    queries.forEach((q, i) => {
+      result[i] = resultForUniques[queryToUnique[i]];
+    });
+    return result;
   }
 
   async transaction<T>(
@@ -335,4 +425,11 @@ export function sortJoinRows(joinRows: Record<string, JoinRow[]>): Record<string
     }
   }
   return todos;
+}
+
+function ensureUnderLimit(rows: unknown[]): unknown[] {
+  if (rows.length >= entityLimit) {
+    throw new Error(`Query returned more than ${entityLimit} rows`);
+  }
+  return rows;
 }

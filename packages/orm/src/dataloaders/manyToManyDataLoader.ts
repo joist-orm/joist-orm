@@ -1,19 +1,15 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
 import { JoinRow } from "../collections/ManyToManyCollection";
-import { LoaderCache } from "../drivers/EntityPersister";
-import { Entity, getMetadata } from "../EntityManager";
-import { getEm, keyToNumber, keyToString, ManyToManyCollection } from "../index";
+import { Entity, LoaderCache } from "../EntityManager";
+import { getEm, keyToString, ManyToManyCollection } from "../index";
 import { getOrSet } from "../utils";
 
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(
-  knex: Knex,
   cache: LoaderCache,
   collection: ManyToManyCollection<T, U>,
 ) {
-  const { joinTableName } = collection;
-  return getOrSet(cache, joinTableName, () => {
-    return new DataLoader<string, Entity[]>(async (keys) => load(knex, collection, keys));
+  return getOrSet(cache, collection.joinTableName, () => {
+    return new DataLoader<string, Entity[]>((keys) => load(collection, keys));
   });
 }
 
@@ -24,38 +20,19 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
  * load `books_to_tags` for several `Book`s and several `Tag`s in a single SQL query.
  */
 async function load<T extends Entity, U extends Entity>(
-  knex: Knex,
   collection: ManyToManyCollection<T, U>,
   keys: ReadonlyArray<string>,
 ): Promise<Entity[][]> {
   const { joinTableName } = collection;
   const em = getEm(collection.entity);
 
-  // Break out `column_id=string` keys out
-  const columns: Record<string, string[]> = {};
-  keys.forEach((key) => {
-    const [columnId, id] = key.split("=");
-    getOrSet(columns, columnId, []).push(id);
-  });
-
-  // Or together `where tag_id in (...)` and `book_id in (...)`
-  let query = knex.select("*").from(joinTableName);
-  Object.entries(columns).forEach(([columnId, values]) => {
-    // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-    const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
-    query = query.orWhereIn(
-      columnId,
-      values.map((id) => keyToNumber(meta, id)!),
-    );
-  });
-
-  const rows: JoinRow[] = await query.orderBy("id");
-
   // Make a map that will be both `tag_id=2 -> [...]` and `book_id=3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};
 
   // Keep a reference to our row to track updates/deletes
   const emJoinRows = getOrSet(em.__data.joinRows, joinTableName, []);
+
+  const rows = await em.driver.loadManyToMany(em, collection, keys);
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
   const column1 = collection.columnName;

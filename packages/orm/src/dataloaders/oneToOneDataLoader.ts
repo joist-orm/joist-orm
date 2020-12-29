@@ -1,27 +1,24 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
-import { Entity, getMetadata } from "../EntityManager";
+import { Entity, getMetadata, LoaderCache } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToOneReference } from "../index";
 import { getOrSet, groupBy } from "../utils";
-import { LoaderCache } from "../drivers/EntityPersister";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
-  knex: Knex,
   cache: LoaderCache,
   reference: OneToOneReference<T, U>,
-): DataLoader<string, U[]> {
-  const em = getEm(reference.entity);
+): DataLoader<string, U | undefined> {
   // The metadata for the entity that contains the reference
   const meta = getMetadata(reference.entity);
   const loaderName = `${meta.tableName}.${reference.fieldName}`;
   return getOrSet(cache, loaderName, () => {
-    return new DataLoader<string, U[]>(async (_keys) => {
-      const { otherMeta, otherFieldName, otherColumnName } = reference;
+    return new DataLoader<string, U | undefined>(async (_keys) => {
+      const { otherMeta, otherFieldName } = reference;
 
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const rows = await knex.select("*").from(otherMeta.tableName).whereIn(otherColumnName, keys).orderBy("id");
+      const em = getEm(reference.entity);
+      const rows = await em.driver.loadOneToOne(em, reference, keys);
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
 
@@ -37,7 +34,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
         // dummy value.
         return ownerId ?? "dummyNoLongerOwned";
       });
-      return _keys.map((k) => rowsById.get(k) || []);
+      return _keys.map((k) => rowsById.get(k)?.[0]);
     });
   });
 }

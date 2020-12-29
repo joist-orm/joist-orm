@@ -3,11 +3,10 @@ import Knex from "knex";
 import { Entity, EntityManager, EntityMetadata } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds } from "../keys";
 import { getOrSet, indexBy } from "../utils";
-import { LoaderCache } from "../drivers/EntityPersister";
+import { LoaderCache } from "../EntityManager";
 
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,
-  knex: Knex,
   cache: LoaderCache,
   meta: EntityMetadata<T>,
 ): DataLoader<string, T | undefined> {
@@ -16,7 +15,7 @@ export function loadDataLoader<T extends Entity>(
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const rows = await knex.select("*").from(meta.tableName).whereIn("id", keys);
+      const rows = await em.driver.load(em, meta, keys);
 
       // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
       const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));

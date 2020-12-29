@@ -1,12 +1,9 @@
 import DataLoader from "dataloader";
-import Knex from "knex";
-import { Entity, getMetadata } from "../EntityManager";
+import { Entity, getMetadata, LoaderCache } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToManyCollection } from "../index";
 import { getOrSet, groupBy } from "../utils";
-import { LoaderCache } from "../drivers/EntityPersister";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
-  knex: Knex,
   cache: LoaderCache,
   collection: OneToManyCollection<T, U>,
 ): DataLoader<string, U[]> {
@@ -20,13 +17,9 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const rows = await knex
-        .select("*")
-        .from(otherMeta.tableName)
-        .whereIn(collection.otherColumnName, keys)
-        .orderBy("id");
-
       const em = getEm(collection.entity);
+      const rows = await em.driver.loadOneToMany(em, collection, keys);
+
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
       // .filter((e) => !e.isDeletedEntity);
 

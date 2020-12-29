@@ -1,3 +1,4 @@
+import DataLoader from "dataloader";
 import { AsyncLocalStorage } from "async_hooks";
 import Knex, { QueryBuilder } from "knex";
 import { JoinRow } from "./collections/ManyToManyCollection";
@@ -27,6 +28,8 @@ import {
   ValidationErrors,
 } from "./index";
 import { fail, NullOrDefinedOr } from "./utils";
+import { loadDataLoader } from "./dataloaders/loadDataLoader";
+import { findDataLoader } from "./dataloaders/findDataLoader";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -78,23 +81,14 @@ export let currentlyInstantiatingEntity: Entity | undefined;
 /** A marker/base interface for all of our entity types. */
 export interface Entity {
   id: string | undefined;
-
   idOrFail: string;
-
   __orm: EntityOrmField;
-
   readonly isNewEntity: boolean;
-
   readonly isDeletedEntity: boolean;
-
   readonly isDirtyEntity: boolean;
-
   readonly isPendingFlush: boolean;
-
   readonly isPendingDelete: boolean;
-
   set(opts: Partial<OptsOf<this>>): void;
-
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
 }
 
@@ -204,6 +198,8 @@ export type HasKnex = { knex: Knex };
  */
 export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
 
+export type LoaderCache = Record<string, DataLoader<any, any>>;
+
 export class EntityManager<C extends HasKnex = HasKnex> {
   private readonly ctx: C;
   public driver: Driver;
@@ -213,6 +209,9 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   private _entityIndex: Map<string, Entity> = new Map();
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
+  // TODO Make these private
+  public loadLoaders: LoaderCache = {};
+  public findLoaders: LoaderCache = {};
   // This is attempting to be internal/module private
   __data = {
     joinRows: {} as Record<string, JoinRow[]>,
@@ -258,7 +257,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await this.driver.find(this, type, where, options);
+    const rows = await findDataLoader(this, this.loadLoaders, type).load({ where, ...options });
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -286,7 +285,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await this.driver.find(this, type, where, options);
+    const rows = await findDataLoader(this, this.loadLoaders, type).load({ where, ...options });
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -428,7 +427,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     }
     const meta = getMetadata(type);
     const tagged = tagIfNeeded(meta, id);
-    const entity = this.findExistingInstance<T>(tagged) || (await this.driver.load(this, meta, tagged));
+    const entity =
+      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, this.loadLoaders, meta).load(tagged));
     if (!entity) {
       throw new Error(`${tagged} was not found`);
     }
@@ -450,7 +450,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     const ids = _ids.map((id) => tagIfNeeded(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || this.driver.load(this, meta, id);
+        return this.findExistingInstance(id) || loadDataLoader(this, this.loadLoaders, meta).load(id);
       }),
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
@@ -479,7 +479,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || this.driver.load(this, meta, id);
+          return this.findExistingInstance(id) || loadDataLoader(this, this.loadLoaders, meta).load(id);
         }),
       )
     ).filter(Boolean);
@@ -698,7 +698,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         });
 
         // Reset the find caches b/c data will have changed in the db
-        this.driver.resetDataLoaderCache();
+        this.loadLoaders = {};
+        this.findLoaders = {};
       }
     } finally {
       this._isFlushing = false;
@@ -735,7 +736,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
-    this.driver.resetDataLoaderCache();
+    this.loadLoaders = {};
+    this.findLoaders = {};
     const list =
       entityOrListOrUndefined === undefined
         ? this._entities
@@ -746,7 +748,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       list.map(async (entity) => {
         if (entity.id) {
           // Clear the original cached loader result and fetch the new primitives
-          await this.driver.load(this, getMetadata(entity), entity.id);
+          await loadDataLoader(this, this.loadLoaders, getMetadata(entity)).load(entity.id);
           if (entity.__orm.deleted === undefined) {
             // Then refresh any loaded collections
             await Promise.all(getRelations(entity).map((r) => r.refreshIfLoaded()));

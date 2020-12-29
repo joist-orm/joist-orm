@@ -23,6 +23,20 @@ import { Driver } from "./driver";
 import { whereFilterHash } from "../dataloaders/findDataLoader";
 import { JoinRowTodo, Todo } from "../Todo";
 
+/**
+ * Implements the `Driver` interface for Postgres.
+ *
+ * This is the canonical driver implementation and leverages several aspects of
+ * Postgres for the best performance, i.e.:
+ *
+ * - Deferred foreign key constraints are used to allow bulk inserting/updating
+ * all entities without any topographic sorting/ordering issues.
+ *
+ * - Sequences are used to bulk-assign + then bulk-insert all entities, to again
+ * avoid issues with ordering issues (cannot bulk insert A w/o knowing the id of B).
+ *
+ * - We use a pg-specific bulk update syntax.
+ */
 export class PostgresDriver implements Driver {
   constructor(private knex: Knex) {}
 
@@ -354,6 +368,7 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   entities.forEach((entity) => (entity.__orm.deleted = "deleted"));
 }
 
+/** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */
 function cleanSql(sql: string): string {
   return sql.trim().replace(/\n/g, "").replace(/  +/g, " ");
 }

@@ -6,6 +6,7 @@ import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../Ent
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
 
+/** Isolates all SQL calls that joist needs to make to fetch/save data. */
 export interface Driver {
   load<T extends Entity>(meta: EntityMetadata<T>, ids: readonly string[]): Promise<unknown[]>;
 

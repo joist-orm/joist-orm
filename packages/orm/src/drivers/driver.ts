@@ -3,8 +3,8 @@ import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollecti
 import { OneToManyCollection } from "../collections/OneToManyCollection";
 import { OneToOneReference } from "../collections/OneToOneReference";
 import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../EntityManager";
-import { JoinRowTodo, Todo } from "./PostgresDriver";
 import { FilterAndSettings } from "../QueryBuilder";
+import { JoinRowTodo, Todo } from "../Todo";
 
 export interface Driver {
   load<T extends Entity>(meta: EntityMetadata<T>, ids: readonly string[]): Promise<unknown[]>;

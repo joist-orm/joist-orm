@@ -4,7 +4,7 @@ import Knex, { QueryBuilder } from "knex";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { Driver } from "./drivers/driver";
-import { PostgresDriver, getTodo, sortEntities, sortJoinRows, Todo } from "./drivers/PostgresDriver";
+import { PostgresDriver } from "./drivers/PostgresDriver";
 import {
   assertIdsAreTagged,
   Collection,
@@ -30,6 +30,7 @@ import {
 import { fail, NullOrDefinedOr } from "./utils";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
+import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -644,7 +645,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         await new Promise((resolve, reject) => {
           currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
             try {
-              const todos = sortEntities(pendingEntities);
+              const todos = createTodos(pendingEntities);
 
               // add objects to todos that have reactive hooks
               await addReactiveAsyncDerivedValues(todos);
@@ -674,8 +675,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         });
       }
 
-      const entityTodos = sortEntities(entitiesToFlush);
-      const joinRowTodos = sortJoinRows(this.__data.joinRows);
+      const entityTodos = createTodos(entitiesToFlush);
+      const joinRowTodos = combineJoinRows(this.__data.joinRows);
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle  the right thing if we're already in an existing transaction.

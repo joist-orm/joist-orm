@@ -21,15 +21,7 @@ import {
 import { getOrSet, partition } from "../utils";
 import { Driver } from "./driver";
 import { whereFilterHash } from "../dataloaders/findDataLoader";
-
-/** The operations for a given entity type, so they can be executed in bulk. */
-export interface Todo {
-  metadata: EntityMetadata<any>;
-  inserts: Entity[];
-  updates: Entity[];
-  deletes: Entity[];
-  validates: Entity[];
-}
+import { JoinRowTodo, Todo } from "../Todo";
 
 export class PostgresDriver implements Driver {
   constructor(private knex: Knex) {}
@@ -128,7 +120,7 @@ export class PostgresDriver implements Driver {
     // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
     // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
     // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
-    // not gaurantee order).
+    // not guarantee order).
     const tagged = uniqueQueries.map((queryAndSettings, i) => {
       const query = buildQuery(knex, type, queryAndSettings) as QueryBuilder;
       return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
@@ -227,7 +219,7 @@ export class PostgresDriver implements Driver {
           .batchInsert(
             joinTableName,
             newRows.map((row) => {
-              // The rows in EntityManager.joinRows point to entities, change those to ints
+              // The rows in EntityManager.joinRows point to entities, change those to integers
               const { id, created_at, m2m, ...fkColumns } = row;
               Object.keys(fkColumns).forEach((key) => {
                 const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
@@ -364,60 +356,6 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 
 function cleanSql(sql: string): string {
   return sql.trim().replace(/\n/g, "").replace(/  +/g, " ");
-}
-
-/**
- * Scans `entities` for new/updated entities and arranges them per-type in entity order.
- *
- * This currently assumes the entity types in the schema can be topographically sorted
- * and have no cycles, i.e. `books` always depend on `authors` (due to the `books.author_id`
- * foreign key), but `authors` never (via a required foreign key) depend on `books`.
- */
-export function sortEntities(entities: Entity[]): Record<string, Todo> {
-  const todos: Record<string, Todo> = {};
-  for (const entity of entities) {
-    if (entity.isPendingFlush) {
-      const todo = getTodo(todos, entity);
-      if (entity.isPendingDelete) {
-        todo.deletes.push(entity);
-      } else if (entity.isNewEntity) {
-        todo.inserts.push(entity);
-      } else {
-        todo.updates.push(entity);
-      }
-    }
-  }
-  return todos;
-}
-
-/** getOrSets a `Todo` for `entity` in `todos`. */
-export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
-  const meta = getMetadata(entity);
-  let todo = todos[meta.type];
-  if (!todo) {
-    todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
-    todos[meta.type] = todo;
-  }
-  return todo;
-}
-
-export interface JoinRowTodo {
-  // Store the m2m reference (either side of the m2m, it doesn't matter which) to help tag/untag the foreign keys
-  m2m: ManyToManyCollection<any, any>;
-  newRows: JoinRow[];
-  deletedRows: JoinRow[];
-}
-
-export function sortJoinRows(joinRows: Record<string, JoinRow[]>): Record<string, JoinRowTodo> {
-  const todos: Record<string, JoinRowTodo> = {};
-  for (const [joinTableName, rows] of Object.entries(joinRows)) {
-    const newRows = rows.filter((r) => r.id === undefined && r.deleted !== true);
-    const deletedRows = rows.filter((r) => r.id !== undefined && r.deleted === true);
-    if (newRows.length > 0 || deletedRows.length > 0) {
-      todos[joinTableName] = { newRows, deletedRows, m2m: rows[0].m2m };
-    }
-  }
-  return todos;
 }
 
 function ensureUnderLimit(rows: unknown[]): unknown[] {

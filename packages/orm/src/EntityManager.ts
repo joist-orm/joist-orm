@@ -4,7 +4,7 @@ import Knex, { QueryBuilder } from "knex";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { Driver } from "./drivers/driver";
-import { EntityPersister, getTodo, sortEntities, sortJoinRows, Todo } from "./drivers/EntityPersister";
+import { PostgresDriver, getTodo, sortEntities, sortJoinRows, Todo } from "./drivers/PostgresDriver";
 import {
   assertIdsAreTagged,
   Collection,
@@ -234,7 +234,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       this.ctx = em.ctx!;
     } else {
       this.ctx = emOrCtx!;
-      this.driver = new EntityPersister(emOrCtx.knex);
+      this.driver = new PostgresDriver(emOrCtx.knex);
     }
   }
 

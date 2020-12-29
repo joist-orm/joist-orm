@@ -31,7 +31,7 @@ export interface Todo {
   validates: Entity[];
 }
 
-export class EntityPersister implements Driver {
+export class PostgresDriver implements Driver {
   constructor(private knex: Knex) {}
 
   load<T extends Entity>(meta: EntityMetadata<T>, keys: readonly string[]): Promise<unknown[]> {

@@ -2,8 +2,8 @@ import Knex from "knex";
 import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
 import { OneToManyCollection } from "../collections/OneToManyCollection";
 import { OneToOneReference } from "../collections/OneToOneReference";
-import { Entity, EntityConstructor, EntityManager, EntityMetadata, FilterOf, OrderOf } from "../EntityManager";
-import { JoinRowTodo, Todo } from "./EntityPersister";
+import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../EntityManager";
+import { JoinRowTodo, Todo } from "./PostgresDriver";
 import { FilterAndSettings } from "../QueryBuilder";
 
 export interface Driver {

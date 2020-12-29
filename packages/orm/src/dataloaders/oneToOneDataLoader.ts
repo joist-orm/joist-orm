@@ -3,7 +3,7 @@ import Knex from "knex";
 import { Entity, getMetadata } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToOneReference } from "../index";
 import { getOrSet, groupBy } from "../utils";
-import { LoaderCache } from "./EntityPersister";
+import { LoaderCache } from "../drivers/EntityPersister";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   knex: Knex,

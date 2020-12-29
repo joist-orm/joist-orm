@@ -20,11 +20,11 @@ import {
 } from "../index";
 import { partition } from "../utils";
 import { Driver } from "./driver";
-import { findDataLoader } from "./findDataLoader";
-import { manyToManyDataLoader } from "./manyToManyDataLoader";
-import { loadDataLoader } from "./loadDataLoader";
-import { oneToManyDataLoader } from "./oneToManyDataLoader";
-import { oneToOneDataLoader } from "./oneToOneDataLoader";
+import { findDataLoader } from "../dataloaders/findDataLoader";
+import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { loadDataLoader } from "../dataloaders/loadDataLoader";
+import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
+import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 
 /** The operations for a given entity type, so they can be executed in bulk. */
 export interface Todo {

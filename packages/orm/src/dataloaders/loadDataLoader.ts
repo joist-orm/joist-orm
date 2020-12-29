@@ -3,7 +3,7 @@ import Knex from "knex";
 import { Entity, EntityManager, EntityMetadata } from "../EntityManager";
 import { assertIdsAreTagged, deTagIds } from "../keys";
 import { getOrSet, indexBy } from "../utils";
-import { LoaderCache } from "./EntityPersister";
+import { LoaderCache } from "../drivers/EntityPersister";
 
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,

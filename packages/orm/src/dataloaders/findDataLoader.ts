@@ -4,7 +4,7 @@ import hash from "object-hash";
 import { Entity, EntityConstructor, entityLimit, getMetadata, isEntity } from "../EntityManager";
 import { buildQuery, FilterAndSettings } from "../QueryBuilder";
 import { getOrSet } from "../utils";
-import { LoaderCache } from "./EntityPersister";
+import { LoaderCache } from "../drivers/EntityPersister";
 
 export function findDataLoader<T extends Entity>(
   knex: Knex,

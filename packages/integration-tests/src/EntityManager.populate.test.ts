@@ -144,7 +144,7 @@ describe("EntityManager.populate", () => {
   it("can populate two literals", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const a1 = await em.load(Author, "1", { publisher: {}, books: { reviews: "book" } } as const);
+    const a1 = await em.load(Author, "1", { publisher: {}, books: { reviews: "book" } });
     expect(a1.publisher.get).toEqual(undefined);
     expect(a1.books.get.flatMap((b) => b.reviews.get)).toEqual([]);
   });

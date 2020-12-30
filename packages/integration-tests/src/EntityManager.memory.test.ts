@@ -389,7 +389,6 @@ describe("EntityManager", () => {
     expect(p1.authors.get[1].firstName).toEqual("a2");
   });
 
-  /*
   it("refresh an entity with a loaded m2o reference", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
@@ -399,13 +398,14 @@ describe("EntityManager", () => {
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the foreign key is changed by something else
     await insertPublisher({ name: "p2" });
-    await knex.update({ publisher_id: 2 }).where({ id: 1 }).from("authors");
+    await driver.update("authors", { id: "1", publisher_id: 2 });
     // When we refresh the entity
     await em.refresh(a1);
     // Then we have the new data
     expect(a1.publisher.get!.name).toEqual("p2");
   });
 
+  /*
   it("refresh an entity with a loaded m2m collection", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

@@ -1,4 +1,5 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts-memory";
+import { Loaded } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { driver, newEntityManager } from "./setupMemoryTests";
 
@@ -423,7 +424,6 @@ describe("EntityManager", () => {
     expect(b1.tags.get!.length).toEqual(2);
   });
 
-  /*
   it("refresh an entity that is deleted", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
@@ -432,7 +432,7 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the entity is deleted
-    await knex("authors").where("id", 1).del();
+    await driver.delete("authors", "1");
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted
@@ -563,6 +563,7 @@ describe("EntityManager", () => {
     expect(a1.firstName).toEqual("a1");
   });
 
+  /*
   it("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

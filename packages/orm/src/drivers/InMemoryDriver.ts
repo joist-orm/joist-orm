@@ -26,6 +26,10 @@ export class InMemoryDriver implements Driver {
     this.rowsOfTable(tableName)[row.id] = { ...existingRow, ...row };
   }
 
+  delete(tableName: string, id: string): void {
+    delete this.rowsOfTable(tableName)[id];
+  }
+
   clear(): void {
     this.data = {};
   }

@@ -19,7 +19,7 @@ export async function insertAuthor(row: {
 }
 
 export async function insertBook(row: { id?: number; title: string; author_id: number | null }) {
-  // await knex.insert(row).into("books");
+  driver.insert("books", { ...triggers(), ...row });
 }
 
 export async function insertPublisher(row: {
@@ -34,15 +34,15 @@ export async function insertPublisher(row: {
 }
 
 export async function insertTag(row: { id?: number; name: string }) {
-  // await knex.insert(row).into("tags");
+  driver.insert("tags", { ...triggers(), ...row });
 }
 
 export async function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
-  // await knex.insert(row).into("books_to_tags");
+  driver.insert("books_to_tags", row);
 }
 
 export async function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
-  // await knex.insert({ is_public: true, ...row }).into("book_reviews");
+  driver.insert("book_reviews", { ...triggers(), is_public: true, ...row });
 }
 
 export async function insertImage(row: {
@@ -53,7 +53,7 @@ export async function insertImage(row: {
   publisher_id?: number | null;
   file_name: string;
 }) {
-  // await knex.insert(row).into("images");
+  driver.insert("images", { ...triggers(), ...row });
 }
 
 export async function countOfBooks() {

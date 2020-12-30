@@ -5,7 +5,7 @@ import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../Ent
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
 import { Driver } from "./driver";
-import {deTagId, keyToString} from "../keys";
+import {deTagId, keyToString, unsafeDeTagIds} from "../keys";
 
 export class InMemoryDriver implements Driver {
   // Map from table name --> string untagged id --> record
@@ -73,11 +73,19 @@ export class InMemoryDriver implements Driver {
     return rows.filter((row) => ids.includes(String(row["id"])));
   }
 
-  loadManyToMany<T extends Entity, U extends Entity>(
+  async loadManyToMany<T extends Entity, U extends Entity>(
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
-    return Promise.resolve([]);
+    const ids: Record<string, string[]> = {};
+    keys.forEach(key => {
+      const [column, id] = key.split("=");
+      (ids[column] ||= []).push(unsafeDeTagIds([id])[0]);
+    })
+    const rows = Object.values(this.rowsOfTable(collection.joinTableName));
+    return rows.filter(row => {
+      return Object.entries(ids).some(([column, ids]) => ids.includes(String(row[column])));
+    });
   }
 
   async loadOneToMany<T extends Entity, U extends Entity>(
@@ -85,8 +93,7 @@ export class InMemoryDriver implements Driver {
     ids: readonly string[],
   ): Promise<unknown[]> {
     const rows = Object.values(this.rowsOfTable(collection.otherMeta.tableName));
-    return rows.filter(row => ids.includes(String(row[collection.otherColumnName]))
-    );
+    return rows.filter(row => ids.includes(String(row[collection.otherColumnName])));
   }
 
   loadOneToOne<T extends Entity, U extends Entity>(

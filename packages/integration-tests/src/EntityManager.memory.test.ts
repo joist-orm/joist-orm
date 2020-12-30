@@ -1,5 +1,5 @@
-import { insertAuthor, insertPublisher } from "@src/entities/inserts-memory";
-import { Author, Publisher, PublisherSize } from "./entities";
+import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts-memory";
+import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { driver, newEntityManager } from "./setupMemoryTests";
 
 describe("EntityManager", () => {
@@ -405,7 +405,6 @@ describe("EntityManager", () => {
     expect(a1.publisher.get!.name).toEqual("p2");
   });
 
-  /*
   it("refresh an entity with a loaded m2m collection", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -424,6 +423,7 @@ describe("EntityManager", () => {
     expect(b1.tags.get!.length).toEqual(2);
   });
 
+  /*
   it("refresh an entity that is deleted", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });

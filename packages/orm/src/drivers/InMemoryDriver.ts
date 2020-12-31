@@ -40,7 +40,7 @@ export class InMemoryDriver implements Driver {
 
   async flushEntities(todos: Record<string, Todo>): Promise<void> {
     const updatedAt = new Date();
-    Object.entries(todos).forEach(([entityName, todo]) => {
+    Object.entries(todos).forEach(([_, todo]) => {
       todo.inserts.forEach((i) => {
         const row: Record<string, any> = {};
         todo.metadata.columns.forEach((c) => {
@@ -120,7 +120,7 @@ export class InMemoryDriver implements Driver {
     return (this.data[tableName] ||= {});
   }
 
-  private nextId(tableName: string): string {
-    return String(Object.values(this.data[tableName] || {}).length + 1);
+  private nextId(tableName: string): number {
+    return Object.values(this.data[tableName] || {}).length + 1;
   }
 }

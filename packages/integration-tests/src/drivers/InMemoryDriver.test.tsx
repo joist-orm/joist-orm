@@ -25,9 +25,32 @@ describe("InMemoryDriver", () => {
       });
       const authors = driver.select("authors");
       expect(authors.length).toEqual(1);
-      expect(authors[0].id).toEqual("1");
+      expect(authors[0].id).toEqual(1);
       expect(authors[0].first_name).toEqual("a1");
       expect(authors[0].graduated).toEqual(null);
+    });
+
+    it("can update", async () => {
+      await insertAuthor({ first_name: "a1" });
+
+      const em = newEntityManager();
+      const author = new Author(em, { firstName: "a1" });
+      author.__orm.data.id = "a:1";
+      author.firstName = "changed";
+      await em.driver.flushEntities({
+        Author: {
+          metadata: getMetadata(Author),
+          inserts: [],
+          deletes: [],
+          updates: [author],
+          validates: [],
+        },
+      });
+
+      const authors = driver.select("authors");
+      expect(authors.length).toEqual(1);
+      expect(authors[0].id).toEqual(1);
+      expect(authors[0].first_name).toEqual("changed");
     });
   });
 

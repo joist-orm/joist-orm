@@ -432,7 +432,7 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the entity is deleted
-    await driver.delete("authors", "1");
+    await driver.delete("authors", 1);
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted

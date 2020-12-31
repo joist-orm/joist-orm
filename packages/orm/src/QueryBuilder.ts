@@ -38,11 +38,11 @@ export type ValueFilter<V, N> =
  * The ValueFilter is a
  */
 export type ParsedValueFilter<V> =
-  | { kind: "eq"; value: V | undefined | null }
+  | { kind: "eq"; value: V | null }
   | { kind: "in"; value: V[] }
   | { kind: "gt"; value: V }
   | { kind: "gte"; value: V }
-  | { kind: "ne"; value: V | undefined | null }
+  | { kind: "ne"; value: V | null }
   | { kind: "lt"; value: V }
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
@@ -50,7 +50,7 @@ export type ParsedValueFilter<V> =
 
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
   if (filter === null || filter === undefined) {
-    return { kind: "eq", value: filter };
+    return { kind: "eq", value: filter ?? null };
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
     if (keys.length !== 1) {
@@ -59,14 +59,14 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     const key = keys[0];
     switch (key) {
       case "eq":
-        return { kind: "eq", value: filter[key] };
+        return { kind: "eq", value: filter[key] ?? null };
       case "ne":
-        return { kind: "ne", value: filter[key] };
+        return { kind: "ne", value: filter[key] ?? null };
     }
     throw new Error("unsupported");
   } else {
     // This is a primitive like a string, number
-    return { kind: "eq", value: filter };
+    return { kind: "eq", value: filter ?? null };
   }
 }
 

@@ -49,13 +49,13 @@ export class InMemoryDriver implements Driver {
             case "primitive":
               // TODO Add column data to the fields
               const column = meta.columns.find((c) => c.fieldName === field.fieldName) || fail();
-              const currentValue = row[column.columnName];
+              const currentValue = row[column.columnName] ?? null;
               const filter = parseValueFilter(value as ValueFilter<any, any>);
               switch (filter.kind) {
                 case "eq":
-                  return currentValue == filter.value;
+                  return currentValue === filter.value;
                 case "ne":
-                  return currentValue != filter.value;
+                  return currentValue !== filter.value;
                 default:
                   throw new Error("Unsupported");
               }

@@ -1,8 +1,8 @@
 import Knex from "knex";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "../collections";
 import { JoinRow } from "../collections/ManyToManyCollection";
-import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../EntityManager";
-import { deTagId, keyToString, unsafeDeTagIds } from "../keys";
+import { Entity, EntityConstructor, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
+import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
 import { Driver } from "./driver";
@@ -68,8 +68,21 @@ export class InMemoryDriver implements Driver {
     });
   }
 
-  flushJoinTables(joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    return Promise.resolve(undefined);
+  async flushJoinTables(joinRows: Record<string, JoinRowTodo>): Promise<void> {
+    for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
+      if (newRows.length > 0) {
+        newRows.forEach((row) => {
+          // The rows in EntityManager.joinRows point to entities, change those to integers
+          const { id, created_at, m2m, ...fkColumns } = row;
+          Object.keys(fkColumns).forEach((key) => {
+            const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
+            fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
+          });
+          this.insert(joinTableName, fkColumns);
+          row.id = fkColumns.id as number;
+        });
+      }
+    }
   }
 
   async load<T extends Entity>(meta: EntityMetadata<T>, untaggedIds: readonly string[]): Promise<unknown[]> {

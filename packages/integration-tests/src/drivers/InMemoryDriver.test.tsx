@@ -1,4 +1,4 @@
-import { Author, Book, Publisher } from "@src/entities";
+import { Author, Book, newBook, newTag, Publisher } from "@src/entities";
 import {
   insertAuthor,
   insertBook,
@@ -51,6 +51,18 @@ describe("InMemoryDriver", () => {
       expect(authors.length).toEqual(1);
       expect(authors[0].id).toEqual(1);
       expect(authors[0].first_name).toEqual("changed");
+    });
+  });
+
+  describe("flushJoinTables", () => {
+    it("can add rows", async () => {
+      const em = newEntityManager();
+      const b1 = newBook(em);
+      const t1 = newTag(em, 1);
+      b1.tags.add(t1);
+      await em.flush();
+      const rows = driver.select("books_to_tags");
+      expect(rows).toMatchObject([{ id: 1, book_id: 1, tag_id: 1 }]);
     });
   });
 

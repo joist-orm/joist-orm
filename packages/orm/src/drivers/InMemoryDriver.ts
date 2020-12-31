@@ -3,9 +3,9 @@ import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "..
 import { JoinRow } from "../collections/ManyToManyCollection";
 import { Entity, EntityConstructor, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
-import { FilterAndSettings } from "../QueryBuilder";
+import { FilterAndSettings, parseValueFilter, ValueFilter } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
-import { partition } from "../utils";
+import { fail, partition } from "../utils";
 import { Driver } from "./driver";
 
 export class InMemoryDriver implements Driver {
@@ -35,8 +35,39 @@ export class InMemoryDriver implements Driver {
     this.data = {};
   }
 
-  find<T extends Entity>(type: EntityConstructor<T>, queries: readonly FilterAndSettings<T>[]): Promise<unknown[][]> {
-    return Promise.resolve([]);
+  async find<T extends Entity>(
+    type: EntityConstructor<T>,
+    queries: readonly FilterAndSettings<T>[],
+  ): Promise<unknown[][]> {
+    return queries.map((query) => {
+      const meta = getMetadata(type);
+      const rows = Object.values(this.rowsOfTable(meta.tableName));
+      const matched = rows.filter((row) => {
+        return Object.entries(query.where as any).every(([fieldName, value]) => {
+          const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
+          switch (field.kind) {
+            case "primitive":
+              // TODO Add column data to the fields
+              const column = meta.columns.find((c) => c.fieldName === field.fieldName) || fail();
+              const currentValue = row[column.columnName];
+              const filter = parseValueFilter(value as ValueFilter<any, any>);
+              switch (filter.kind) {
+                case "eq":
+                  return currentValue == filter.value;
+                case "ne":
+                  return currentValue != filter.value;
+                default:
+                  throw new Error("Unsupported");
+              }
+            default:
+              throw new Error("Unsupported");
+          }
+          return true;
+        });
+      });
+      // TODO Handle limit and filter
+      return matched;
+    });
   }
 
   async flushEntities(todos: Record<string, Todo>): Promise<void> {

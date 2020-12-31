@@ -5,7 +5,7 @@ import {
   afterTransaction,
   beforeTransaction,
   buildQuery,
-  deTagIds,
+  deTagId,
   Entity,
   EntityConstructor,
   entityLimit,
@@ -264,8 +264,8 @@ export class PostgresDriver implements Driver {
           const data = noIds.map(
             (e) =>
               [
-                deTagIds(m2m.meta, [maybeResolveReferenceToId(e[m2m.columnName])!])[0],
-                deTagIds(m2m.otherMeta, [maybeResolveReferenceToId(e[m2m.otherColumnName])!])[0],
+                deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName])!),
+                deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName])!),
               ] as any,
           );
           await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);

@@ -1,4 +1,4 @@
-import { Author, Book, newBook, newTag, Publisher } from "@src/entities";
+import { Author, Book, newBook, newTag, Publisher, Tag } from "@src/entities";
 import {
   insertAuthor,
   insertBook,
@@ -63,6 +63,36 @@ describe("InMemoryDriver", () => {
       await em.flush();
       const rows = driver.select("books_to_tags");
       expect(rows).toMatchObject([{ id: 1, book_id: 1, tag_id: 1 }]);
+    });
+
+    it("can remove loaded rows", async () => {
+      const em = newEntityManager();
+      const b1 = newBook(em);
+      const t1 = newTag(em, 1);
+      b1.tags.add(t1);
+      await em.flush();
+      b1.tags.remove(t1);
+      await em.flush();
+      const rows = driver.select("books_to_tags");
+      expect(rows).toMatchObject([]);
+    });
+
+    it("can remove unloaded rows", async () => {
+      // Given an existing books_to_tags
+      await insertBook({ title: "b1", author_id: 0 });
+      await insertTag({ name: "t1 " });
+      await insertBookToTag({ book_id: 1, tag_id: 1 });
+      // And we load the book & tag
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "b:1");
+      const t1 = await em.load(Tag, "t:1");
+      // And we remove t1 against the unloaded collection
+      b1.tags.remove(t1);
+      // When we flush
+      await em.flush();
+      // Then the row is deleted
+      const rows = driver.select("books_to_tags");
+      expect(rows).toMatchObject([]);
     });
   });
 

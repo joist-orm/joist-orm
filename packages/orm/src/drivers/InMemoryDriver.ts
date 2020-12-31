@@ -5,11 +5,12 @@ import { Entity, EntityConstructor, EntityManager, EntityMetadata, getMetadata }
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
+import { partition } from "../utils";
 import { Driver } from "./driver";
 
 export class InMemoryDriver implements Driver {
   // Map from table name --> string untagged id --> record
-  private data: Record<string, Record<string, any>> = {};
+  private data: Record<string, Record<number, any>> = {};
 
   select(tableName: string): readonly any[] {
     return Object.values(this.data[tableName] || {});
@@ -26,7 +27,7 @@ export class InMemoryDriver implements Driver {
     this.rowsOfTable(tableName)[row.id] = { ...existingRow, ...row };
   }
 
-  delete(tableName: string, id: string): void {
+  delete(tableName: string, id: number): void {
     delete this.rowsOfTable(tableName)[id];
   }
 
@@ -70,18 +71,35 @@ export class InMemoryDriver implements Driver {
 
   async flushJoinTables(joinRows: Record<string, JoinRowTodo>): Promise<void> {
     for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
-      if (newRows.length > 0) {
-        newRows.forEach((row) => {
-          // The rows in EntityManager.joinRows point to entities, change those to integers
-          const { id, created_at, m2m, ...fkColumns } = row;
-          Object.keys(fkColumns).forEach((key) => {
-            const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
-            fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
-          });
-          this.insert(joinTableName, fkColumns);
-          row.id = fkColumns.id as number;
+      newRows.forEach((row) => {
+        const { id, created_at, m2m, ...fkColumns } = row;
+        // The rows in EntityManager.joinRows point to entities, change those to integers
+        Object.keys(fkColumns).forEach((key) => {
+          const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
+          fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
         });
-      }
+        this.insert(joinTableName, fkColumns);
+        row.id = fkColumns.id as number;
+      });
+
+      // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
+      const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
+
+      haveIds.forEach((row) => this.delete(joinTableName, row.id!));
+
+      noIds.forEach((noIdRow) => {
+        const rows = Object.values(this.rowsOfTable(joinTableName));
+        rows
+          .filter((row) => {
+            const a =
+              String(row[m2m.columnName]) === deTagId(m2m.meta, maybeResolveReferenceToId(noIdRow[m2m.columnName])!);
+            const b =
+              String(row[m2m.otherColumnName]) ===
+              deTagId(m2m.otherMeta, maybeResolveReferenceToId(noIdRow[m2m.otherColumnName])!);
+            return a || b;
+          })
+          .forEach((found) => this.delete(joinTableName, found.id));
+      });
     }
   }
 

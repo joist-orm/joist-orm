@@ -1,9 +1,10 @@
 import { Collection, ensureNotDeleted, Entity, EntityMetadata, getEm, getMetadata, IdOf } from "../";
+import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { getOrSet, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 
-export class ManyToManyCollection<T extends Entity, U extends Entity> extends AbstractRelationImpl<U[]>
+export class ManyToManyCollection<T extends Entity, U extends Entity>
+  extends AbstractRelationImpl<U[]>
   implements Collection<T, U> {
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
@@ -35,8 +36,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
   async load(opts?: { withDeleted?: boolean }): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
-      const { columnName, entity } = this;
-      const key = `${columnName}=${entity.id}`;
+      const key = `${this.columnName}=${this.entity.id}`;
       this.loaded = await manyToManyDataLoader(getEm(this.entity), this).load(key);
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
@@ -173,8 +173,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity> extends Ab
     ensureNotDeleted(this.entity);
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.loaded !== undefined && this.entity.id !== undefined) {
-      const { columnName, entity } = this;
-      const key = `${columnName}=${entity.id}`;
+      const key = `${this.columnName}=${this.entity.id}`;
       this.loaded = await manyToManyDataLoader(getEm(this.entity), this).load(key);
     }
   }

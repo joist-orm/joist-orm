@@ -483,7 +483,6 @@ describe("EntityManager.queries.memory", () => {
     expect(publishers.length).toEqual(1);
   });
 
-  /*
   it("can find with GQL by greater than with op/value", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
@@ -492,6 +491,7 @@ describe("EntityManager.queries.memory", () => {
     expect(authors.length).toEqual(1);
   });
 
+  /*
   it("can find with GQL filters with offset/limit", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

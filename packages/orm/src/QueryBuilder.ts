@@ -59,8 +59,17 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     return { kind: "in", value: filter };
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
+    if (keys.length === 2) {
+      // Probe for `findGql` op & value
+      const op = filter["op"];
+      const value = filter["value"];
+      if (op === undefined && value === undefined) {
+        throw new Error(`ValueFilter only supports a single field being set ${filter}`);
+      }
+      return { kind: op, value: value ?? null };
+    }
     if (keys.length !== 1) {
-      throw new Error("unsupported");
+      throw new Error(`ValueFilter only supports a single field being set ${filter}`);
     }
     const key = keys[0];
     switch (key) {

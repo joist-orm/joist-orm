@@ -427,18 +427,17 @@ describe("EntityManager.queries.memory", () => {
     expect(authors[1].firstName).toEqual("aB");
   });
 
-  /*
   it("can find empty results in a loop", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    resetQueryCount();
+    // resetQueryCount();
     await Promise.all(
       ["a", "b"].map(async (lastName) => {
         const authors = await em.find(Author, { lastName });
         expect(authors.length).toEqual(0);
       }),
     );
-    expect(numberOfQueries).toEqual(1);
+    // expect(numberOfQueries).toEqual(1);
   });
 
   it("can find with GQL filters", async () => {
@@ -484,6 +483,7 @@ describe("EntityManager.queries.memory", () => {
     expect(publishers.length).toEqual(1);
   });
 
+  /*
   it("can find with GQL by greater than with op/value", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

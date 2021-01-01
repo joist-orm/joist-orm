@@ -10,6 +10,7 @@ import {
   isEntity,
   OrderOf,
 } from "./EntityManager";
+import { keyToNumber } from "./keys";
 import { ForeignKeySerde } from "./serde";
 import { fail } from "./utils";
 
@@ -46,11 +47,16 @@ export type ParsedValueFilter<V> =
   | { kind: "lt"; value: V }
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
-  | { kind: "ilike"; value: V };
+  | { kind: "ilike"; value: V }
+  | { kind: "pass" };
 
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
-  if (filter === null || filter === undefined) {
-    return { kind: "eq", value: filter ?? null };
+  if (filter === null) {
+    return { kind: "eq", value: filter };
+  } else if (filter === undefined) {
+    return { kind: "pass" };
+  } else if (Array.isArray(filter)) {
+    return { kind: "in", value: filter };
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
     if (keys.length !== 1) {
@@ -62,6 +68,15 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
         return { kind: "eq", value: filter[key] ?? null };
       case "ne":
         return { kind: "ne", value: filter[key] ?? null };
+      case "in":
+        return { kind: "in", value: filter[key] };
+      case "gt":
+      case "gte":
+      case "lt":
+      case "lte":
+      case "like":
+      case "ilike":
+        return { kind: key, value: filter[key] };
     }
     throw new Error("unsupported");
   } else {
@@ -72,6 +87,41 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { ne: T | I | N };
+
+export type ParsedEntityFilter =
+  | { kind: "eq"; id: number | null }
+  | { kind: "ne"; id: number | null }
+  | { kind: "in"; ids: number[] }
+  | { kind: "join"; subFilter: any };
+
+export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): ParsedEntityFilter {
+  if (filter === null || filter === undefined) {
+    return { kind: "eq", id: null };
+  } else if (typeof filter === "string" || typeof filter === "number") {
+    return { kind: "eq", id: keyToNumber(meta, filter) };
+  } else if (Array.isArray(filter)) {
+    return { kind: "in", ids: filter.map((id: string | number) => keyToNumber(meta, id)) };
+  } else if (isEntity(filter)) {
+    return { kind: "eq", id: keyToNumber(meta, filter.id || -1) };
+  } else if (typeof filter === "object") {
+    const keys = Object.keys(filter);
+    if (keys.length === 1 && keys[0] === "ne") {
+      const value = filter["ne"];
+      if (value === null || value === undefined) {
+        return { kind: "ne", id: null };
+      } else if (typeof value === "string" || typeof value === "number") {
+        return { kind: "ne", id: keyToNumber(meta, value) };
+      } else if (isEntity(value)) {
+        return { kind: "ne", id: keyToNumber(meta, value.id || -1) };
+      } else {
+        throw new Error(`Unsupported "ne" value ${value}`);
+      }
+    }
+    return { kind: "join", subFilter: filter };
+  } else {
+    throw new Error(`Unrecognized filter ${filter}`);
+  }
+}
 
 export type BooleanGraphQLFilter = true | false | null;
 

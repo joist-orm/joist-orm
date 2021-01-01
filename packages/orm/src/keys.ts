@@ -14,8 +14,8 @@ export function maybeResolveReferenceToId(value: any): string | undefined {
 }
 
 /** Converts `value` to a number, i.e. for string ids, unless its undefined. */
-export function keyToNumber(meta: HasTagName, value: string): number;
-export function keyToNumber(meta: HasTagName, value: any): number | undefined;
+export function keyToNumber(meta: HasTagName, value: string | number): number;
+export function keyToNumber(meta: HasTagName, value: string | number | undefined): number | undefined;
 export function keyToNumber(meta: HasTagName, value: any): number | undefined {
   if (value === undefined || value === null) {
     return undefined;
@@ -61,9 +61,9 @@ export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly st
   return keys.map((k) => deTagId(meta, k));
 }
 
-export function deTagId(meta: HasTagName, id: string): string;
+export function deTagId(meta: HasTagName, id: string | number): string;
 export function deTagId(entity: Entity): string;
-export function deTagId(entityOrMeta: Entity | HasTagName, id?: string): string {
+export function deTagId(entityOrMeta: Entity | HasTagName, id?: string | number): string {
   const meta = entityOrMeta instanceof BaseEntity ? getMetadata(entityOrMeta) : (entityOrMeta as HasTagName);
   id = id ?? (entityOrMeta as Entity).id;
   return keyToNumber(meta, id!).toString();

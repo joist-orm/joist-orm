@@ -1,5 +1,6 @@
-import { insertAuthor } from "@src/entities/inserts-memory";
-import { Author, PublisherSize } from "./entities";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts-memory";
+import { NotFoundError, TooManyError } from "joist-orm";
+import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
 import { newEntityManager } from "./setupMemoryTests";
 
 describe("EntityManager.queries.memory", () => {
@@ -40,7 +41,6 @@ describe("EntityManager.queries.memory", () => {
     expect(authors[0].firstName).toEqual("a1");
   });
 
-  /*
   it("can find by varchar through join", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -165,16 +165,16 @@ describe("EntityManager.queries.memory", () => {
     );
   });
 
-  it("can find by foreign key is not flavor", async () => {
-    await insertPublisher({ id: 1, name: "p1" });
-    await insertAuthor({ id: 2, first_name: "a1" });
-    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
-    const em = newEntityManager();
-    const publisherId: PublisherId = "1";
-    // Technically id != 1 does not match the a1.publisher_id is null. Might fix this.
-    const authors = await em.find(Author, { publisher: { ne: publisherId } });
-    expect(authors.length).toEqual(0);
-  });
+  // it("can find by foreign key is not flavor", async () => {
+  //   await insertPublisher({ id: 1, name: "p1" });
+  //   await insertAuthor({ id: 2, first_name: "a1" });
+  //   await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+  //   const em = newEntityManager();
+  //   const publisherId: PublisherId = "1";
+  //   Technically id != 1 does not match the a1.publisher_id is null. Might fix this.
+  // const authors = await em.find(Author, { publisher: { ne: publisherId } });
+  // expect(authors.length).toEqual(0);
+  // });
 
   it("can find books by publisher", async () => {
     await insertPublisher({ name: "p1" });
@@ -395,6 +395,7 @@ describe("EntityManager.queries.memory", () => {
     );
   });
 
+  /*
   it("can order by string asc", async () => {
     await insertAuthor({ first_name: "a2" });
     await insertAuthor({ first_name: "a1" });

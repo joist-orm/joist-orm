@@ -3,7 +3,7 @@ import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "..
 import { JoinRow } from "../collections/ManyToManyCollection";
 import { Entity, EntityConstructor, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
-import { FilterAndSettings, parseValueFilter, ValueFilter } from "../QueryBuilder";
+import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
 import { Driver } from "./driver";
@@ -42,29 +42,7 @@ export class InMemoryDriver implements Driver {
     return queries.map((query) => {
       const meta = getMetadata(type);
       const rows = Object.values(this.rowsOfTable(meta.tableName));
-      const matched = rows.filter((row) => {
-        return Object.entries(query.where as any).every(([fieldName, value]) => {
-          const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
-          switch (field.kind) {
-            case "primitive":
-              // TODO Add column data to the fields
-              const column = meta.columns.find((c) => c.fieldName === field.fieldName) || fail();
-              const currentValue = row[column.columnName] ?? null;
-              const filter = parseValueFilter(value as ValueFilter<any, any>);
-              switch (filter.kind) {
-                case "eq":
-                  return currentValue === filter.value;
-                case "ne":
-                  return currentValue !== filter.value;
-                default:
-                  throw new Error("Unsupported");
-              }
-            default:
-              throw new Error("Unsupported");
-          }
-          return true;
-        });
-      });
+      const matched = rows.filter((row) => rowMatches(this, meta, row, query.where));
       // TODO Handle limit and filter
       return matched;
     });
@@ -178,11 +156,103 @@ export class InMemoryDriver implements Driver {
     return fn(undefined!);
   }
 
-  private rowsOfTable(tableName: string): Record<string, any> {
+  rowsOfTable(tableName: string): Record<string, any> {
     return (this.data[tableName] ||= {});
   }
 
   private nextId(tableName: string): number {
     return Object.values(this.data[tableName] || {}).length + 1;
   }
+}
+
+/** In SQL `a !== null` is false. */
+function notEqual(a: any, b: any): boolean {
+  if (a === null || b === null) {
+    return !(a === null && b === null);
+  } else {
+    return a !== b;
+  }
+}
+
+const ops = {
+  gt: (a: number, b: number) => a > b,
+  gte: (a: number, b: number) => a >= b,
+  lt: (a: number, b: number) => a < b,
+  lte: (a: number, b: number) => a <= b,
+  like: (a: any, b: any) => new RegExp(b.replace("%", ".*")).test(a),
+  ilike: (a: any, b: any) => new RegExp(b.replace("%", ".*"), "i").test(a),
+};
+
+function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any, where: unknown): boolean {
+  return Object.entries(where as any).every(([fieldName, value]) => {
+    const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
+    // TODO Add column data to the fields
+    const column = meta.columns.find((c) => c.fieldName === field.fieldName) || fail();
+    const currentValue = row[column.columnName] ?? null;
+    switch (field.kind) {
+      case "primaryKey":
+        // This is a lot like the "case primitive" but we detag the value
+        const pkf = parseValueFilter(value as ValueFilter<any, any>);
+        switch (pkf.kind) {
+          case "eq":
+            return currentValue === keyToNumber(meta, pkf.value as any);
+          case "ne":
+            return notEqual(currentValue, keyToNumber(meta, pkf.value as any));
+          case "in":
+            return pkf.value.map((v) => keyToNumber(meta, v as any)).includes(currentValue);
+          default:
+            throw new Error("Unsupported");
+        }
+      case "primitive":
+      case "enum":
+        let fn = (a: any) => a;
+        if (field.kind === "enum") {
+          fn = (v) => (field.enumDetailType as any).getByCode(v).id;
+        }
+        const filter = parseValueFilter(value as ValueFilter<any, any>);
+        switch (filter.kind) {
+          case "eq":
+            return currentValue === fn(filter.value);
+          case "ne":
+            return notEqual(currentValue, fn(filter.value));
+          case "in":
+            return filter.value.map(fn).includes(currentValue);
+          case "gt":
+          case "gte":
+          case "lt":
+          case "lte":
+          case "like":
+          case "ilike":
+            const a = currentValue;
+            const b = fn(filter.value);
+            const op = ops[filter.kind];
+            return op(a, b);
+          case "pass":
+            return true;
+          default:
+            throw new Error("Unsupported");
+        }
+      case "m2o":
+        const otherMeta = field.otherMetadata();
+        const ef = parseEntityFilter(otherMeta, value);
+        switch (ef.kind) {
+          case "eq":
+            return currentValue === ef.id;
+          case "ne":
+            return notEqual(currentValue, ef.id);
+          case "in":
+            return ef.ids.includes(currentValue);
+          case "join":
+            if (currentValue === null) {
+              return false;
+            }
+            const otherRow = driver.rowsOfTable(otherMeta.tableName)[currentValue];
+            return rowMatches(driver, otherMeta, otherRow, ef.subFilter);
+          default:
+            throw new Error("Unsupported");
+        }
+      default:
+        throw new Error("Unsupported");
+    }
+  });
 }

@@ -40,37 +40,12 @@ export class InMemoryDriver implements Driver {
     queries: readonly FilterAndSettings<T>[],
   ): Promise<unknown[][]> {
     return queries.map((query) => {
+      const { where, orderBy, limit, offset = 0 } = query;
       const meta = getMetadata(type);
-      const rows = Object.values(this.rowsOfTable(meta.tableName));
-      const matched = rows.filter((row) => rowMatches(this, meta, row, query.where));
-
-      const sort = (meta: EntityMetadata<any>, orderBy: object, a: any, b: any): number => {
-        const fieldName = Object.keys(orderBy)[0];
-        const value = (orderBy as any)[fieldName];
-        if (value !== "ASC" && value !== "DESC") {
-          // I.e. value is something like `{ book: { author: { ... } }`
-          const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
-          if (field.kind === "m2o") {
-            const newMeta = field.otherMetadata();
-            const newA = this.rowsOfTable(newMeta.tableName)[a.id];
-            const newB = this.rowsOfTable(newMeta.tableName)[b.id];
-            return sort(newMeta, value, newA, newB);
-          } else {
-            throw new Error(`Unsupported order by field ${fieldName}`);
-          }
-        }
-        const flip = value === "DESC" ? -1 : 1;
-        const column = meta.columns.find((c) => c.fieldName === fieldName) || fail();
-        const key = column.columnName;
-        // TODO Handle sorting by more than just strings
-        return a[key].localeCompare(b[key]) * flip;
-      };
-
-      const sorted = !query.orderBy ? matched : matched.sort((a, b) => sort(meta, query.orderBy as any, a, b));
-
-      // TODO Handle limit
-
-      return sorted;
+      const allRows = Object.values(this.rowsOfTable(meta.tableName));
+      const matched = allRows.filter((row) => rowMatches(this, meta, row, where));
+      const sorted = !orderBy ? matched : matched.sort((a, b) => sort(this, meta, orderBy as any, a, b));
+      return sorted.slice(offset, offset + (limit ?? sorted.length));
     });
   }
 
@@ -281,4 +256,26 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
         throw new Error("Unsupported");
     }
   });
+}
+
+function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object, a: any, b: any): number {
+  const fieldName = Object.keys(orderBy)[0];
+  const value = (orderBy as any)[fieldName];
+  if (value !== "ASC" && value !== "DESC") {
+    // I.e. value is something like `{ book: { author: { ... } }`
+    const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
+    if (field.kind === "m2o") {
+      const newMeta = field.otherMetadata();
+      const newA = driver.rowsOfTable(newMeta.tableName)[a.id];
+      const newB = driver.rowsOfTable(newMeta.tableName)[b.id];
+      return sort(driver, newMeta, value, newA, newB);
+    } else {
+      throw new Error(`Unsupported order by field ${fieldName}`);
+    }
+  }
+  const flip = value === "DESC" ? -1 : 1;
+  const column = meta.columns.find((c) => c.fieldName === fieldName) || fail();
+  const key = column.columnName;
+  // TODO Handle sorting by more than just strings
+  return a[key].localeCompare(b[key]) * flip;
 }

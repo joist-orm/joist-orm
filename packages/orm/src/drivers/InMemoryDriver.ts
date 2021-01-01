@@ -1,7 +1,7 @@
 import Knex from "knex";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "../collections";
 import { JoinRow } from "../collections/ManyToManyCollection";
-import { Entity, EntityConstructor, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
+import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -45,7 +45,7 @@ export class InMemoryDriver implements Driver {
       const allRows = Object.values(this.rowsOfTable(meta.tableName));
       const matched = allRows.filter((row) => rowMatches(this, meta, row, where));
       const sorted = !orderBy ? matched : matched.sort((a, b) => sort(this, meta, orderBy as any, a, b));
-      return sorted.slice(offset, offset + (limit ?? sorted.length));
+      return ensureUnderLimit(sorted.slice(offset, offset + (limit ?? sorted.length)));
     });
   }
 
@@ -278,4 +278,11 @@ function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object
   const key = column.columnName;
   // TODO Handle sorting by more than just strings
   return a[key].localeCompare(b[key]) * flip;
+}
+
+function ensureUnderLimit(rows: unknown[]): unknown[] {
+  if (rows.length >= entityLimit) {
+    throw new Error(`Query returned more than ${entityLimit} rows`);
+  }
+  return rows;
 }

@@ -43,7 +43,17 @@ export class InMemoryDriver implements Driver {
       const meta = getMetadata(type);
       const rows = Object.values(this.rowsOfTable(meta.tableName));
       const matched = rows.filter((row) => rowMatches(this, meta, row, query.where));
-      // TODO Handle limit and filter
+      const sorted = !query.orderBy
+        ? matched
+        : matched.sort((a, b) => {
+            const fieldName = Object.keys(query.orderBy as any)[0];
+            const flip = (query.orderBy as any)[fieldName] === "DESC" ? -1 : 1;
+            const column = meta.columns.find((c) => c.fieldName === fieldName) || fail();
+            const key = column.columnName;
+            return a[key].localeCompare(b[key]) * flip;
+          });
+      // TODO Handle limit
+
       return matched;
     });
   }

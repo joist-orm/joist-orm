@@ -395,7 +395,6 @@ describe("EntityManager.queries.memory", () => {
     );
   });
 
-  /*
   it("can order by string asc", async () => {
     await insertAuthor({ first_name: "a2" });
     await insertAuthor({ first_name: "a1" });
@@ -416,6 +415,7 @@ describe("EntityManager.queries.memory", () => {
     expect(authors[1].firstName).toEqual("a1");
   });
 
+  /*
   it("can order by joined string asc", async () => {
     await insertPublisher({ name: "pB" });
     await insertPublisher({ name: "pA" });

@@ -415,7 +415,6 @@ describe("EntityManager.queries.memory", () => {
     expect(authors[1].firstName).toEqual("a1");
   });
 
-  /*
   it("can order by joined string asc", async () => {
     await insertPublisher({ name: "pB" });
     await insertPublisher({ name: "pA" });
@@ -428,6 +427,7 @@ describe("EntityManager.queries.memory", () => {
     expect(authors[1].firstName).toEqual("aB");
   });
 
+  /*
   it("can find empty results in a loop", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

@@ -43,18 +43,34 @@ export class InMemoryDriver implements Driver {
       const meta = getMetadata(type);
       const rows = Object.values(this.rowsOfTable(meta.tableName));
       const matched = rows.filter((row) => rowMatches(this, meta, row, query.where));
-      const sorted = !query.orderBy
-        ? matched
-        : matched.sort((a, b) => {
-            const fieldName = Object.keys(query.orderBy as any)[0];
-            const flip = (query.orderBy as any)[fieldName] === "DESC" ? -1 : 1;
-            const column = meta.columns.find((c) => c.fieldName === fieldName) || fail();
-            const key = column.columnName;
-            return a[key].localeCompare(b[key]) * flip;
-          });
+
+      const sort = (meta: EntityMetadata<any>, orderBy: object, a: any, b: any): number => {
+        const fieldName = Object.keys(orderBy)[0];
+        const value = (orderBy as any)[fieldName];
+        if (value !== "ASC" && value !== "DESC") {
+          // I.e. value is something like `{ book: { author: { ... } }`
+          const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
+          if (field.kind === "m2o") {
+            const newMeta = field.otherMetadata();
+            const newA = this.rowsOfTable(newMeta.tableName)[a.id];
+            const newB = this.rowsOfTable(newMeta.tableName)[b.id];
+            return sort(newMeta, value, newA, newB);
+          } else {
+            throw new Error(`Unsupported order by field ${fieldName}`);
+          }
+        }
+        const flip = value === "DESC" ? -1 : 1;
+        const column = meta.columns.find((c) => c.fieldName === fieldName) || fail();
+        const key = column.columnName;
+        // TODO Handle sorting by more than just strings
+        return a[key].localeCompare(b[key]) * flip;
+      };
+
+      const sorted = !query.orderBy ? matched : matched.sort((a, b) => sort(meta, query.orderBy as any, a, b));
+
       // TODO Handle limit
 
-      return matched;
+      return sorted;
     });
   }
 

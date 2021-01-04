@@ -239,14 +239,10 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   }
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
-  public async find<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(
+  public async find<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
-    options?: { populate?: H; orderBy?: OrderOf<T>; limit?: number; offset?: number },
+    options?: { populate?: Const<H>; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: EntityConstructor<T>,
@@ -267,14 +263,10 @@ export class EntityManager<C extends HasKnex = HasKnex> {
    * I.e. filtering by `null` on fields that are non-`nullable`.
    */
   public async findGql<T extends Entity>(type: EntityConstructor<T>, where: GraphQLFilterOf<T>): Promise<T[]>;
-  public async findGql<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(
+  public async findGql<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: { populate?: H; orderBy?: OrderOf<T>; limit?: number; offset?: number },
+    options?: { populate?: Const<H>; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: EntityConstructor<T>,
@@ -290,11 +282,11 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   }
 
   public async findOne<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T | undefined>;
-  public async findOne<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(type: EntityConstructor<T>, where: FilterOf<T>, options?: { populate: H }): Promise<Loaded<T, H> | undefined>;
+  public async findOne<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: FilterOf<T>,
+    options?: { populate: Const<H> },
+  ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
@@ -312,11 +304,11 @@ export class EntityManager<C extends HasKnex = HasKnex> {
 
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
   public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T>;
-  public async findOneOrFail<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(type: EntityConstructor<T>, where: FilterOf<T>, options: { populate: H }): Promise<Loaded<T, H>>;
+  public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    where: FilterOf<T>,
+    options: { populate: Const<H> },
+  ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends Entity>(
     type: EntityConstructor<T>,
     where: FilterOf<T>,
@@ -354,17 +346,15 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: H): Promise<Loaded<T, H>>;
+    H extends LoadHint<T>
+  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<Loaded<T, H>>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: H): Promise<T> {
+    H extends LoadHint<T>
+  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<T> {
     const entities = await this.find(type, where as FilterOf<T>);
     let entity: T;
     if (entities.length > 1) {
@@ -407,15 +397,15 @@ export class EntityManager<C extends HasKnex = HasKnex> {
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
   public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T>;
-  public async load<T extends Entity, H extends LoadHint<T> & { [k: string]: N | T | [] }, N extends Narrowable>(
+  public async load<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     id: string,
-    populate: H,
+    populate: Const<H>,
   ): Promise<Loaded<T, H>>;
-  public async load<T extends Entity, H extends LoadHint<T> & (N | N[]), N extends Narrowable>(
+  public async load<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     id: string,
-    populate: H,
+    populate: Const<H>,
   ): Promise<Loaded<T, H>>;
   async load<T extends Entity>(type: EntityConstructor<T>, id: string, hint?: any): Promise<T> {
     if (typeof (id as any) !== "string") {
@@ -435,11 +425,11 @@ export class EntityManager<C extends HasKnex = HasKnex> {
 
   /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
   public async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
-  public async loadAll<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(type: EntityConstructor<T>, ids: string[], populate: H): Promise<Loaded<T, H>[]>;
+  public async loadAll<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    ids: string[],
+    populate: Const<H>,
+  ): Promise<Loaded<T, H>[]>;
   async loadAll<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagIfNeeded(meta, id));
@@ -463,11 +453,11 @@ export class EntityManager<C extends HasKnex = HasKnex> {
    * IDs that are not found.
    */
   public async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
-  public async loadAllIfExists<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(type: EntityConstructor<T>, ids: string[], populate: H): Promise<Loaded<T, H>[]>;
+  public async loadAllIfExists<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    ids: string[],
+    populate: Const<H>,
+  ): Promise<Loaded<T, H>[]>;
   async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagIfNeeded(meta, id));
@@ -505,16 +495,11 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
-  public async populate<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(entity: T, hint: H): Promise<Loaded<T, H>>;
-  public async populate<
-    T extends Entity,
-    H extends LoadHint<T> & ({ [k: string]: N | H | [] } | N | N[]),
-    N extends Narrowable
-  >(entities: ReadonlyArray<T>, hint: H): Promise<Loaded<T, H>[]>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: Const<H>): Promise<Loaded<T, H>>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(
+    entities: ReadonlyArray<T>,
+    hint: Const<H>,
+  ): Promise<Loaded<T, H>[]>;
   async populate<T extends Entity, H extends LoadHint<T>>(
     entityOrList: T | T[],
     hint: H,
@@ -1200,7 +1185,13 @@ function coerceError(
   }
 }
 
-type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {};
+// See https://github.com/microsoft/TypeScript/issues/30680#issuecomment-752725353
+type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {} | [];
+type Const<N> =
+  | N
+  | {
+      [K in keyof N]: N[K] extends Narrowable ? N[K] | Const<N[K]> : never;
+    };
 
 /**
  * Evaluates each derived field to see if it's value has changed.

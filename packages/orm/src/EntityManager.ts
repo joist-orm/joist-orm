@@ -1,17 +1,16 @@
-import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
+import { AsyncLocalStorage } from "async_hooks";
 import Knex, { QueryBuilder } from "knex";
-import hash from "object-hash";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
-import { flushEntities, flushJoinTables, getTodo, sortEntities, sortJoinRows, Todo } from "./EntityPersister";
+import { Driver } from "./drivers/driver";
+import { PostgresDriver } from "./drivers/PostgresDriver";
 import {
   assertIdsAreTagged,
   Collection,
   ColumnSerde,
   ConfigApi,
   DeepPartialOrNull,
-  deTagIds,
   EntityHook,
   getEm,
   getRelations,
@@ -28,8 +27,10 @@ import {
   ValidationError,
   ValidationErrors,
 } from "./index";
-import { buildQuery, FilterAndSettings } from "./QueryBuilder";
-import { fail, getOrSet, indexBy, NullOrDefinedOr } from "./utils";
+import { fail, NullOrDefinedOr } from "./utils";
+import { loadDataLoader } from "./dataloaders/loadDataLoader";
+import { findDataLoader } from "./dataloaders/findDataLoader";
+import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -81,23 +82,14 @@ export let currentlyInstantiatingEntity: Entity | undefined;
 /** A marker/base interface for all of our entity types. */
 export interface Entity {
   id: string | undefined;
-
   idOrFail: string;
-
   __orm: EntityOrmField;
-
   readonly isNewEntity: boolean;
-
   readonly isDeletedEntity: boolean;
-
   readonly isDirtyEntity: boolean;
-
   readonly isPendingFlush: boolean;
-
   readonly isPendingDelete: boolean;
-
   set(opts: Partial<OptsOf<this>>): void;
-
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
 }
 
@@ -185,26 +177,57 @@ type NestedLoadHint<T extends Entity> = {
   [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
 };
 
-export type LoaderCache = Record<string, DataLoader<any, any>>;
-
 type MaybePromise<T> = T | PromiseLike<T>;
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 export type HasKnex = { knex: Knex };
 
+/**
+ * A marker to prevent setter calls during `flush` calls.
+ *
+ * The `flush` process does a dirty check + SQL flush and generally doesn't want
+ * entities to re-dirtied after it's done the initial dirty check. So we'd like
+ * to prevent all setter calls while `flush` is running.
+ *
+ * That said, lifecycle code like hooks actually can make setter calls b/c `flush`
+ * invokes them at a specific point in its process.
+ *
+ * We solve this by using node's `AsyncLocalStorage` to mark certain callbacks (promise
+ * handlers) as blessed / invoked-from-`flush`-itself, and they are allowed to call setters,
+ * but any external callers (i.e. application code) will be rejected.
+ */
 export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
+
+export type LoaderCache = Record<string, DataLoader<any, any>>;
 
 export class EntityManager<C extends HasKnex = HasKnex> {
   private readonly ctx: C;
-  public knex: Knex;
+  public driver: Driver;
+  private _entities: Entity[] = [];
+  // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
+  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
+  private _entityIndex: Map<string, Entity> = new Map();
+  private flushSecret: number = 0;
+  private _isFlushing: boolean = false;
+  // TODO Make these private
+  public loadLoaders: LoaderCache = {};
+  public findLoaders: LoaderCache = {};
+  // This is attempting to be internal/module private
+  __data = {
+    joinRows: {} as Record<string, JoinRow[]>,
+  };
+  private hooks: Record<EntityManagerHook, HookFn[]> = {
+    beforeTransaction: [],
+    afterTransaction: [],
+  };
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C);
   constructor(emOrCtx: EntityManager<C> | C) {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
-      this.knex = em.knex;
+      this.driver = em.driver;
       this.hooks = {
         beforeTransaction: [...em.hooks.beforeTransaction],
         afterTransaction: [...em.hooks.afterTransaction],
@@ -212,27 +235,9 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       this.ctx = em.ctx!;
     } else {
       this.ctx = emOrCtx!;
-      this.knex = emOrCtx.knex;
+      this.driver = new PostgresDriver(emOrCtx.knex);
     }
   }
-
-  private _entities: Entity[] = [];
-  // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
-  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
-  private _entityIndex: Map<string, Entity> = new Map();
-  private findLoaders: LoaderCache = {};
-  private flushSecret: number = 0;
-  private _isFlushing: boolean = false;
-  // This is attempting to be internal/module private
-  __data = {
-    loaders: {} as LoaderCache,
-    joinRows: {} as Record<string, JoinRow[]>,
-  };
-
-  private hooks: Record<EntityManagerHook, HookFn[]> = {
-    beforeTransaction: [],
-    afterTransaction: [],
-  };
 
   get entities(): ReadonlyArray<Entity> {
     return [...this._entities];
@@ -249,8 +254,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await this.loaderForFind(type).load({ where, ...options });
-    const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const rows = await findDataLoader(this, type).load({ where, ...options });
+    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
     }
@@ -273,8 +278,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
-    const rows = await this.loaderForFind(type).load({ where, ...options });
-    const result = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const rows = await findDataLoader(this, type).load({ where, ...options });
+    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
     }
@@ -413,7 +418,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     }
     const meta = getMetadata(type);
     const tagged = tagIfNeeded(meta, id);
-    const entity = this.findExistingInstance<T>(tagged) || (await this.loaderForEntity(meta).load(tagged));
+    const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
     if (!entity) {
       throw new Error(`${tagged} was not found`);
     }
@@ -435,7 +440,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     const ids = _ids.map((id) => tagIfNeeded(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || this.loaderForEntity(meta).load(id);
+        return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
       }),
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
@@ -464,7 +469,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || this.loaderForEntity(meta).load(id);
+          return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
         }),
       )
     ).filter(Boolean);
@@ -539,28 +544,21 @@ export class EntityManager<C extends HasKnex = HasKnex> {
    * cannot be enforced with database-level constraints.
    */
   public async transaction<T>(fn: (txn: Knex.Transaction) => Promise<T>): Promise<T> {
-    const originalKnex = this.knex;
-    const txn = await this.knex.transaction();
-    this.knex = txn;
-    try {
-      await txn.raw("set transaction isolation level serializable;");
-      await beforeTransaction(this, txn);
-      const result = await fn(txn);
-      // The lambda may have done some interstitial flushes (that would not
-      // have committed the transaction), but go ahead and do a final one
-      // in case they didn't explicitly call flush.
-      await this.flush();
-      await txn.commit();
-      await afterTransaction(this, txn);
-      return result;
-    } finally {
-      if (!txn.isCompleted()) {
-        txn.rollback().catch((e) => {
-          console.error(e, "Error rolling back");
-        });
-      }
-      this.knex = originalKnex;
-    }
+    return this.driver.transaction(
+      this,
+      async (knex) => {
+        const result = await fn(knex);
+        // The lambda may have done some interstitial flushes (that would not
+        // have committed the transaction), but go ahead and do a final one
+        // in case they didn't explicitly call flush.
+        await this.flush();
+        return result;
+      },
+      // Application-enforced unique constraints (i.e. custom find + conditional insert) can be
+      // serialization anomalies, so we use the highest isolation level b/c it prevents this.
+      // See the EntityManager.txns.test.ts file.
+      "serializable",
+    );
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
@@ -632,7 +630,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         await new Promise((resolve, reject) => {
           currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
             try {
-              const todos = sortEntities(pendingEntities);
+              const todos = createTodos(pendingEntities);
 
               // add objects to todos that have reactive hooks
               await addReactiveAsyncDerivedValues(todos);
@@ -662,25 +660,19 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         });
       }
 
-      const entityTodos = sortEntities(entitiesToFlush);
-      const joinRowTodos = sortJoinRows(this.__data.joinRows);
+      const entityTodos = createTodos(entitiesToFlush);
+      const joinRowTodos = combineJoinRows(this.__data.joinRows);
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
-        const alreadyInTxn = "commit" in this.knex;
-        if (!alreadyInTxn) {
-          await this.knex.transaction(async (knex) => {
-            await beforeTransaction(this, knex);
-            await flushEntities(knex, entityTodos);
-            await flushJoinTables(knex, joinRowTodos);
-            // When using `.transaction` with a lambda, we don't explicitly call commit
-            // await knex.commit();
-            await afterTransaction(this, knex);
-          });
-        } else {
-          await flushEntities(this.knex, entityTodos);
-          await flushJoinTables(this.knex, joinRowTodos);
-          // Defer to the caller to commit the transaction
-        }
+        // The driver will handle  the right thing if we're already in an existing transaction.
+        // We also purposefully don't pass an isolation level b/c if we're only doing
+        // INSERTs and UPDATEs, then we don't really care about overlapping SELECT-then-INSERT
+        // serialization anomalies. (Although should we? Maybe we should run the flush hooks
+        // in this same transaction just as a matter of principle / safest default.)
+        await this.driver.transaction(this, async () => {
+          await this.driver.flushEntities(entityTodos);
+          await this.driver.flushJoinTables(joinRowTodos);
+        });
 
         // TODO: This is really "after flush" if we're being called from a transaction that
         // is going to make multiple `em.flush()` calls?
@@ -691,8 +683,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
         });
 
         // Reset the find caches b/c data will have changed in the db
+        this.loadLoaders = {};
         this.findLoaders = {};
-        this.__data.loaders = {};
       }
     } finally {
       this._isFlushing = false;
@@ -729,8 +721,8 @@ export class EntityManager<C extends HasKnex = HasKnex> {
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
+    this.loadLoaders = {};
     this.findLoaders = {};
-    this.__data.loaders = {};
     const list =
       entityOrListOrUndefined === undefined
         ? this._entities
@@ -741,9 +733,7 @@ export class EntityManager<C extends HasKnex = HasKnex> {
       list.map(async (entity) => {
         if (entity.id) {
           // Clear the original cached loader result and fetch the new primitives
-          const loader = this.loaderForEntity(getMetadata(entity));
-          loader.clear(entity.id);
-          await loader.load(entity.id);
+          await loadDataLoader(this, getMetadata(entity)).load(entity.id);
           if (entity.__orm.deleted === undefined) {
             // Then refresh any loaded collections
             await Promise.all(getRelations(entity).map((r) => r.refreshIfLoaded()));
@@ -757,137 +747,9 @@ export class EntityManager<C extends HasKnex = HasKnex> {
     return this.entities.length;
   }
 
-  private loaderForFind<T extends Entity>(type: EntityConstructor<T>): DataLoader<FilterAndSettings<T>, unknown[]> {
-    return getOrSet(this.findLoaders, type.name, () => {
-      return new DataLoader<FilterAndSettings<T>, unknown[], string>(
-        async (queries) => {
-          function ensureUnderLimit(rows: unknown[]): unknown[] {
-            if (rows.length >= entityLimit) {
-              throw new Error(`Query returned more than ${entityLimit} rows`);
-            }
-            return rows;
-          }
-
-          // If there is only 1 query, we can skip the tagging step.
-          if (queries.length === 1) {
-            return [ensureUnderLimit(await buildQuery(this.knex, type, queries[0]))];
-          }
-
-          const { knex } = this;
-
-          // Map each incoming query[i] to itself or a previous dup
-          const uniqueQueries: FilterAndSettings<T>[] = [];
-          const queryToUnique: Record<number, number> = {};
-          queries.forEach((q, i) => {
-            let j = uniqueQueries.findIndex((uq) => whereFilterHash(uq) === whereFilterHash(q));
-            if (j === -1) {
-              uniqueQueries.push(q);
-              j = uniqueQueries.length - 1;
-            }
-            queryToUnique[i] = j;
-          });
-
-          // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
-          if (uniqueQueries.length === 1) {
-            const rows = ensureUnderLimit(await buildQuery(this.knex, type, queries[0]));
-            // Reuse this same result for however many callers asked for it.
-            return queries.map(() => rows);
-          }
-
-          // TODO: Instead of this tagged approach, we could probably check if the each
-          // where cause: a) has the same structure for joins, and b) has conditions that
-          // we can evaluate client-side, and then combine it into a query like:
-          //
-          // SELECT entity.*, t1.foo as condition1, t2.bar as condition2 FROM ...
-          // WHERE t1.foo (union of each queries condition)
-          //
-          // And then use the `condition1` and `condition2` to tease the combined result set
-          // back apart into each condition's result list.
-
-          // For each query, add an additional `__tag` column that will identify that query's
-          // corresponding rows in the combined/UNION ALL'd result set.
-          //
-          // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
-          // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
-          // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
-          // not gaurantee order).
-          const tagged = uniqueQueries.map((queryAndSettings, i) => {
-            const query = buildQuery(this.knex, type, queryAndSettings) as QueryBuilder;
-            return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
-          });
-
-          const meta = getMetadata(type);
-
-          // Kind of dumb, but make a dummy row to start our query with
-          let query = knex
-            .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
-            .from(meta.tableName)
-            .orderBy("__tag", "__row")
-            .where({ id: -1 });
-
-          // Use the dummy query as a base, then `UNION ALL` in all the rest
-          tagged.forEach((add) => {
-            query = query.unionAll(add, true);
-          });
-
-          // Issue a single SQL statement for all of them
-          const rows = ensureUnderLimit(await query);
-
-          const resultForUniques: any[][] = [];
-          uniqueQueries.forEach((q, i) => {
-            resultForUniques[i] = [];
-          });
-          rows.forEach((row: any) => {
-            resultForUniques[row["__tag"]].push(row);
-          });
-
-          // We return an array-of-arrays, where result[i] is the rows for queries[i]
-          const result: any[][] = [];
-          queries.forEach((q, i) => {
-            result[i] = resultForUniques[queryToUnique[i]];
-          });
-          return result;
-        },
-        {
-          // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
-          cacheKeyFn: whereFilterHash,
-        },
-      );
-    });
-  }
-
-  private loaderForEntity<T extends Entity>(meta: EntityMetadata<T>): DataLoader<string, T | undefined> {
-    return getOrSet(this.__data.loaders, meta.type, () => {
-      return new DataLoader<string, T | undefined>(async (_keys) => {
-        assertIdsAreTagged(_keys);
-        const keys = deTagIds(meta, _keys);
-
-        const rows = await this.knex.select("*").from(meta.tableName).whereIn("id", keys);
-
-        // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
-        const entities = rows.map((row) => this.hydrate(meta.cstr, row, { overwriteExisting: true }));
-        const entitiesById = indexBy(entities, (e) => e.id!);
-
-        // Return the results back in the same order as the keys
-        return _keys.map((k) => {
-          const entity = entitiesById.get(k);
-          // We generally expect all of our entities to be found, but they may not for API calls like
-          // `findOneOrFail` or for `EntityManager.refresh` when the entity has been deleted out from
-          // under us.
-          if (entity === undefined) {
-            const existingEntity = this.findExistingInstance<T>(k);
-            if (existingEntity) {
-              existingEntity.__orm.deleted = "deleted";
-            }
-          }
-          return entity;
-        });
-      });
-    });
-  }
-
   // Handles our Unit of Work-style look up / deduplication of entity instances.
-  private findExistingInstance<T>(id: string): T | undefined {
+  // Currently only public for the driver impls
+  public findExistingInstance<T>(id: string): T | undefined {
     assertIdsAreTagged([id]);
     return this._entityIndex.get(id) as T | undefined;
   }
@@ -1120,11 +982,11 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
   }
 }
 
-async function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
+export async function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
   await Promise.all(em["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
 }
 
-async function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
+export async function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
   await Promise.all(em["hooks"].afterTransaction.map((fn) => fn(em, knex)));
 }
 
@@ -1239,13 +1101,6 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
     await Promise.all(p);
   });
   await Promise.all(p);
-}
-
-// If a where clause includes an entity, object-hash cannot hash it, so just use the id.
-const replacer = (v: any) => (isEntity(v) ? v.id : v);
-
-function whereFilterHash(where: FilterAndSettings<any>): string {
-  return hash(where, { replacer });
 }
 
 /**

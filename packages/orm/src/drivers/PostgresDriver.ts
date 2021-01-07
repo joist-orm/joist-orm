@@ -1,10 +1,11 @@
 import Knex, { QueryBuilder } from "knex";
 import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
+import { whereFilterHash } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
   beforeTransaction,
   buildQuery,
-  deTagIds,
+  deTagId,
   Entity,
   EntityConstructor,
   entityLimit,
@@ -18,10 +19,9 @@ import {
   OneToManyCollection,
   OneToOneReference,
 } from "../index";
+import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition } from "../utils";
 import { Driver } from "./driver";
-import { whereFilterHash } from "../dataloaders/findDataLoader";
-import { JoinRowTodo, Todo } from "../Todo";
 
 /**
  * Implements the `Driver` interface for Postgres.
@@ -40,8 +40,8 @@ import { JoinRowTodo, Todo } from "../Todo";
 export class PostgresDriver implements Driver {
   constructor(private knex: Knex) {}
 
-  load<T extends Entity>(meta: EntityMetadata<T>, keys: readonly string[]): Promise<unknown[]> {
-    return this.knex.select("*").from(meta.tableName).whereIn("id", keys);
+  load<T extends Entity>(meta: EntityMetadata<T>, untaggedIds: readonly string[]): Promise<unknown[]> {
+    return this.knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(
@@ -71,23 +71,23 @@ export class PostgresDriver implements Driver {
 
   loadOneToMany<T extends Entity, U extends Entity>(
     collection: OneToManyCollection<T, U>,
-    keys: readonly string[],
+    untaggedIds: readonly string[],
   ): Promise<U[]> {
     return this.knex
       .select("*")
       .from(collection.otherMeta.tableName)
-      .whereIn(collection.otherColumnName, keys)
+      .whereIn(collection.otherColumnName, untaggedIds)
       .orderBy("id");
   }
 
   loadOneToOne<T extends Entity, U extends Entity>(
     reference: OneToOneReference<T, U>,
-    keys: readonly string[],
+    untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     return this.knex
       .select("*")
       .from(reference.otherMeta.tableName)
-      .whereIn(reference.otherColumnName, keys)
+      .whereIn(reference.otherColumnName, untaggedIds)
       .orderBy("id");
   }
 
@@ -264,8 +264,8 @@ export class PostgresDriver implements Driver {
           const data = noIds.map(
             (e) =>
               [
-                deTagIds(m2m.meta, [maybeResolveReferenceToId(e[m2m.columnName])!])[0],
-                deTagIds(m2m.otherMeta, [maybeResolveReferenceToId(e[m2m.otherColumnName])!])[0],
+                deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName])!),
+                deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName])!),
               ] as any,
           );
           await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);

@@ -26,7 +26,7 @@ async function load<T extends Entity, U extends Entity>(
   const { joinTableName } = collection;
   const em = getEm(collection.entity);
 
-  // Make a map that will be both `tag_id=2 -> [...]` and `book_id=3 -> [...]`
+  // Make a map that will be both `tag_id=t:2 -> [...]` and `book_id=b:3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};
 
   // Keep a reference to our row to track updates/deletes

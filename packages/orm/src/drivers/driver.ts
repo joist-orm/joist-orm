@@ -8,7 +8,7 @@ import { JoinRowTodo, Todo } from "../Todo";
 
 /** Isolates all SQL calls that joist needs to make to fetch/save data. */
 export interface Driver {
-  load<T extends Entity>(meta: EntityMetadata<T>, ids: readonly string[]): Promise<unknown[]>;
+  load<T extends Entity>(meta: EntityMetadata<T>, untaggedIds: readonly string[]): Promise<unknown[]>;
 
   loadManyToMany<T extends Entity, U extends Entity>(
     collection: ManyToManyCollection<T, U>,
@@ -17,12 +17,12 @@ export interface Driver {
 
   loadOneToMany<T extends Entity, U extends Entity>(
     collection: OneToManyCollection<T, U>,
-    ids: readonly string[],
+    untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 
   loadOneToOne<T extends Entity, U extends Entity>(
     reference: OneToOneReference<T, U>,
-    ids: readonly string[],
+    untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 
   find<T extends Entity>(type: EntityConstructor<T>, queries: readonly FilterAndSettings<T>[]): Promise<unknown[][]>;

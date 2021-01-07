@@ -35,7 +35,7 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
   }
 }
 
-/** Converts `value` to a number, i.e. for string ids, unles its undefined. */
+/** Converts `value` to a tagged string, i.e. for string ids, unless its undefined. */
 export function keyToString(meta: HasTagName, value: any): string | undefined {
   return value === undefined || value === null ? undefined : `${meta.tagName}:${value}`;
 }

@@ -963,6 +963,16 @@ describe("EntityManager", () => {
     expect(afterTransactionCount).toEqual(1);
   });
    */
+
+  it("can save entities", async () => {
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1" });
+    expect(a1.isNewEntity).toBeTruthy();
+    expect(a1.isDirtyEntity).toBeTruthy();
+    await em.flush();
+    expect(a1.isNewEntity).toBeFalsy();
+    expect(a1.isDirtyEntity).toBeFalsy();
+  });
 });
 
 function delay(ms: number): Promise<void> {

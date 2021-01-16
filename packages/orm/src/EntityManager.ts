@@ -1,10 +1,11 @@
-import DataLoader from "dataloader";
 import { AsyncLocalStorage } from "async_hooks";
+import DataLoader from "dataloader";
 import Knex, { QueryBuilder } from "knex";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
+import { findDataLoader } from "./dataloaders/findDataLoader";
+import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
-import { PostgresDriver } from "./drivers/PostgresDriver";
 import {
   assertIdsAreTagged,
   Collection,
@@ -27,10 +28,8 @@ import {
   ValidationError,
   ValidationErrors,
 } from "./index";
-import { fail, NullOrDefinedOr } from "./utils";
-import { loadDataLoader } from "./dataloaders/loadDataLoader";
-import { findDataLoader } from "./dataloaders/findDataLoader";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
+import { fail, NullOrDefinedOr } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -678,6 +677,8 @@ export class EntityManager<C = {}> {
 
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
+          todo.inserts.forEach((e) => (e.__orm.originalData = {}));
+          todo.updates.forEach((e) => (e.__orm.originalData = {}));
         });
 
         // Reset the find caches b/c data will have changed in the db

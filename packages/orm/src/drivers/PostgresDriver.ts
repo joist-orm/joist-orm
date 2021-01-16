@@ -314,9 +314,6 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   // We also use `.transacting` b/c even when `knex` is already a Transaction object,
   // `batchInsert` w/o the `transacting` adds savepoints that we don't want/need.
   await knex.batchInsert(meta.tableName, rows).transacting(knex as any);
-  for (let i = 0; i < entities.length; i++) {
-    entities[i].__orm.originalData = {};
-  }
 }
 
 // Uses a pg-specific syntax to issue a bulk update
@@ -355,7 +352,6 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
    `),
     bindings,
   );
-  entities.forEach((entity) => (entity.__orm.originalData = {}));
 }
 
 async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {

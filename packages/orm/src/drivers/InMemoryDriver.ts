@@ -192,23 +192,13 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
     const currentValue = row[column.columnName] ?? null;
     switch (field.kind) {
       case "primaryKey":
-        // This is a lot like the "case primitive" but we detag the value
-        const pkf = parseValueFilter(value as ValueFilter<any, any>);
-        switch (pkf.kind) {
-          case "eq":
-            return currentValue === keyToNumber(meta, pkf.value as any);
-          case "ne":
-            return notEqual(currentValue, keyToNumber(meta, pkf.value as any));
-          case "in":
-            return pkf.value.map((v) => keyToNumber(meta, v as any)).includes(currentValue);
-          default:
-            throw new Error("Unsupported");
-        }
       case "primitive":
       case "enum":
         let fn = (a: any) => a;
         if (field.kind === "enum") {
           fn = (v) => (field.enumDetailType as any).getByCode(v).id;
+        } else if (field.kind === "primaryKey") {
+          fn = (v) => keyToNumber(meta, v as any);
         }
         const filter = parseValueFilter(value as ValueFilter<any, any>);
         switch (filter.kind) {

@@ -191,8 +191,8 @@ export class PostgresDriver implements Driver {
       }
       await beforeTransaction(em, txn);
       const result = await fn(txn);
-      await txn.commit();
       await afterTransaction(em, txn);
+      await txn.commit();
       return result;
     } finally {
       if (!txn.isCompleted()) {

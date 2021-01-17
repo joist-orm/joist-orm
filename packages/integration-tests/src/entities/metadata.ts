@@ -1,5 +1,6 @@
 import {
   EntityManager as EntityManager1,
+  BaseEntity,
   configureMetadata,
   EntityMetadata,
   PrimaryKeySerde,
@@ -37,6 +38,10 @@ import {
 } from "./entities";
 
 export class EntityManager extends EntityManager1<Context> {}
+
+export function getEm(e: BaseEntity): EntityManager {
+  return e.__orm.em as EntityManager;
+}
 
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,

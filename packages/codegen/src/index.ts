@@ -101,11 +101,16 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .reduce(merge, []);
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
+  const BaseEntity = imp("BaseEntity@joist-orm");
 
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
     contents: code`
       export class ${def("EntityManager")} extends ${EntityManager}<${contextType}> {}
+
+      export function getEm(e: ${BaseEntity}): EntityManager {
+        return e.__orm.em as EntityManager;
+      }
 
       ${entities.map((meta) => generateMetadataFile(config, meta))}
 

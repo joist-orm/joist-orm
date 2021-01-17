@@ -199,7 +199,7 @@ export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
 export class EntityManager<C = {}> {
-  private readonly ctx: C;
+  public readonly ctx: C;
   public driver: Driver;
   private _entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world

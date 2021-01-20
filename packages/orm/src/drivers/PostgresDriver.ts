@@ -199,25 +199,20 @@ export class PostgresDriver implements Driver {
     if (alreadyInTxn) {
       return fn(knex as Knex.Transaction);
     }
-    const txn = await knex.transaction();
-    em.currentTxnKnex = txn;
-    try {
-      if (isolationLevel) {
-        await txn.raw("set transaction isolation level serializable;");
+    return await knex.transaction(async (txn) => {
+      em.currentTxnKnex = txn;
+      try {
+        if (isolationLevel) {
+          await txn.raw("set transaction isolation level serializable;");
+        }
+        await beforeTransaction(em, txn);
+        const result = await fn(txn);
+        await afterTransaction(em, txn);
+        return result;
+      } finally {
+        em.currentTxnKnex = undefined;
       }
-      await beforeTransaction(em, txn);
-      const result = await fn(txn);
-      await afterTransaction(em, txn);
-      await txn.commit();
-      return result;
-    } finally {
-      if (!txn.isCompleted()) {
-        txn.rollback().catch((e) => {
-          console.error(e, "Error rolling back");
-        });
-      }
-      em.currentTxnKnex = undefined;
-    }
+    });
   }
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {

@@ -201,6 +201,7 @@ export type LoaderCache = Record<string, DataLoader<any, any>>;
 export class EntityManager<C = {}> {
   public readonly ctx: C;
   public driver: Driver;
+  public currentTxnKnex: Knex | undefined;
   private _entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
@@ -667,8 +668,8 @@ export class EntityManager<C = {}> {
         // serialization anomalies. (Although should we? Maybe we should run the flush hooks
         // in this same transaction just as a matter of principle / safest default.)
         await this.driver.transaction(this, async () => {
-          await this.driver.flushEntities(entityTodos);
-          await this.driver.flushJoinTables(joinRowTodos);
+          await this.driver.flushEntities(this, entityTodos);
+          await this.driver.flushJoinTables(this, joinRowTodos);
         });
 
         // TODO: This is really "after flush" if we're being called from a transaction that

@@ -36,6 +36,7 @@ export class InMemoryDriver implements Driver {
   }
 
   async find<T extends Entity>(
+    em: EntityManager,
     type: EntityConstructor<T>,
     queries: readonly FilterAndSettings<T>[],
   ): Promise<unknown[][]> {
@@ -49,7 +50,7 @@ export class InMemoryDriver implements Driver {
     });
   }
 
-  async flushEntities(todos: Record<string, Todo>): Promise<void> {
+  async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const updatedAt = new Date();
     Object.entries(todos).forEach(([_, todo]) => {
       todo.inserts.forEach((i) => {
@@ -79,7 +80,7 @@ export class InMemoryDriver implements Driver {
     });
   }
 
-  async flushJoinTables(joinRows: Record<string, JoinRowTodo>): Promise<void> {
+  async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       newRows.forEach((row) => {
         const { id, created_at, m2m, ...fkColumns } = row;
@@ -113,12 +114,17 @@ export class InMemoryDriver implements Driver {
     }
   }
 
-  async load<T extends Entity>(meta: EntityMetadata<T>, untaggedIds: readonly string[]): Promise<unknown[]> {
+  async load<T extends Entity>(
+    em: EntityManager,
+    meta: EntityMetadata<T>,
+    untaggedIds: readonly string[],
+  ): Promise<unknown[]> {
     const rows = Object.values(this.data[meta.tableName] || {});
     return rows.filter((row) => untaggedIds.includes(String(row["id"])));
   }
 
   async loadManyToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
@@ -134,6 +140,7 @@ export class InMemoryDriver implements Driver {
   }
 
   async loadOneToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
@@ -142,6 +149,7 @@ export class InMemoryDriver implements Driver {
   }
 
   async loadOneToOne<T extends Entity, U extends Entity>(
+    em: EntityManager,
     reference: OneToOneReference<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {

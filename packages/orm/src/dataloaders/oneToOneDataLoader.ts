@@ -18,7 +18,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
       const keys = deTagIds(meta, _keys);
 
       const em = getEm(reference.entity);
-      const rows = await em.driver.loadOneToOne(reference, keys);
+      const rows = await em.driver.loadOneToOne(em, reference, keys);
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
 

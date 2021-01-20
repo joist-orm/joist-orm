@@ -12,7 +12,7 @@ export function loadDataLoader<T extends Entity>(
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const rows = await em.driver.load(meta, keys);
+      const rows = await em.driver.load(em, meta, keys);
 
       // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
       const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));

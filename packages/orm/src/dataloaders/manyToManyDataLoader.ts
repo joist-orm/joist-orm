@@ -32,7 +32,7 @@ async function load<T extends Entity, U extends Entity>(
   // Keep a reference to our row to track updates/deletes
   const emJoinRows = getOrSet(em.__data.joinRows, joinTableName, []);
 
-  const rows = await em.driver.loadManyToMany(collection, keys);
+  const rows = await em.driver.loadManyToMany(em, collection, keys);
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
   const column1 = collection.columnName;

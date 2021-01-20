@@ -14,7 +14,7 @@ describe("InMemoryDriver", () => {
   describe("flushEntities", () => {
     it("can insert", async () => {
       const em = newEntityManager();
-      await em.driver.flushEntities({
+      await em.driver.flushEntities(em, {
         Author: {
           metadata: getMetadata(Author),
           inserts: [new Author(em, { firstName: "a1" })],
@@ -37,7 +37,7 @@ describe("InMemoryDriver", () => {
       const author = new Author(em, { firstName: "a1" });
       author.__orm.data.id = "a:1";
       author.firstName = "changed";
-      await em.driver.flushEntities({
+      await em.driver.flushEntities(em, {
         Author: {
           metadata: getMetadata(Author),
           inserts: [],
@@ -105,7 +105,7 @@ describe("InMemoryDriver", () => {
     const em = newEntityManager();
     const p2 = em.create(Publisher, { name: "p2" });
     // Purposefully using the non-dummy id 1
-    const rows = await driver.loadOneToMany(p2.authors as any, ["1"]);
+    const rows = await driver.loadOneToMany(em, p2.authors as any, ["1"]);
     expect(rows.length).toEqual(2);
   });
 
@@ -120,7 +120,7 @@ describe("InMemoryDriver", () => {
     const em = newEntityManager();
     const b2 = em.create(Book, { title: "b2", author: undefined! });
     // Purposefully using the non-dummy id 1
-    const rows = await driver.loadManyToMany(b2.tags as any, ["book_id=b:1"]);
+    const rows = await driver.loadManyToMany(em, b2.tags as any, ["book_id=b:1"]);
     expect(rows.length).toEqual(2);
   });
 
@@ -132,7 +132,7 @@ describe("InMemoryDriver", () => {
     const em = newEntityManager();
     const a2 = em.create(Author, { firstName: "a2" });
     // Purposefully using the non-dummy id 1
-    const rows = (await driver.loadOneToOne(a2.image as any, ["1"])) as any;
+    const rows = (await driver.loadOneToOne(em, a2.image as any, ["1"])) as any;
     expect(rows[0].file_name).toEqual("f1");
   });
 });

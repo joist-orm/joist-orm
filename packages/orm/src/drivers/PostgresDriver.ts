@@ -38,16 +38,24 @@ import { Driver } from "./driver";
  * - We use a pg-specific bulk update syntax.
  */
 export class PostgresDriver implements Driver {
-  constructor(private knex: Knex) {}
+  constructor(private readonly knex: Knex) {}
 
-  load<T extends Entity>(meta: EntityMetadata<T>, untaggedIds: readonly string[]): Promise<unknown[]> {
-    return this.knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
+  load<T extends Entity>(
+    em: EntityManager,
+    meta: EntityMetadata<T>,
+    untaggedIds: readonly string[],
+  ): Promise<unknown[]> {
+    const knex = this.getMaybeInTxnKnex(em);
+    return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
+    const knex = this.getMaybeInTxnKnex(em);
+
     // Break out `column_id=string` keys out
     const columns: Record<string, string[]> = {};
     keys.forEach((key) => {
@@ -56,7 +64,7 @@ export class PostgresDriver implements Driver {
     });
 
     // Or together `where tag_id in (...)` and `book_id in (...)`
-    let query = this.knex.select("*").from(collection.joinTableName);
+    let query = knex.select("*").from(collection.joinTableName);
     Object.entries(columns).forEach(([columnId, values]) => {
       // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
       const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
@@ -70,10 +78,12 @@ export class PostgresDriver implements Driver {
   }
 
   loadOneToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
   ): Promise<U[]> {
-    return this.knex
+    const knex = this.getMaybeInTxnKnex(em);
+    return knex
       .select("*")
       .from(collection.otherMeta.tableName)
       .whereIn(collection.otherColumnName, untaggedIds)
@@ -81,18 +91,24 @@ export class PostgresDriver implements Driver {
   }
 
   loadOneToOne<T extends Entity, U extends Entity>(
+    em: EntityManager,
     reference: OneToOneReference<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
-    return this.knex
+    const knex = this.getMaybeInTxnKnex(em);
+    return knex
       .select("*")
       .from(reference.otherMeta.tableName)
       .whereIn(reference.otherColumnName, untaggedIds)
       .orderBy("id");
   }
 
-  async find<T extends Entity>(type: EntityConstructor<T>, queries: FilterAndSettings<T>[]): Promise<unknown[][]> {
-    const { knex } = this;
+  async find<T extends Entity>(
+    em: EntityManager,
+    type: EntityConstructor<T>,
+    queries: FilterAndSettings<T>[],
+  ): Promise<unknown[][]> {
+    const knex = this.getMaybeInTxnKnex(em);
 
     // If there is only 1 query, we can skip the tagging step.
     if (queries.length === 1) {
@@ -178,13 +194,13 @@ export class PostgresDriver implements Driver {
     fn: (txn: Knex.Transaction) => Promise<T>,
     isolationLevel?: "serializable",
   ): Promise<T> {
-    const alreadyInTxn = "commit" in this.knex;
+    const knex = this.getMaybeInTxnKnex(em);
+    const alreadyInTxn = "commit" in knex;
     if (alreadyInTxn) {
-      return fn(this.knex as Knex.Transaction);
+      return fn(knex as Knex.Transaction);
     }
-    const originalKnex = this.knex;
-    const txn = await this.knex.transaction();
-    this.knex = txn;
+    const txn = await knex.transaction();
+    em.currentTxnKnex = txn;
     try {
       if (isolationLevel) {
         await txn.raw("set transaction isolation level serializable;");
@@ -200,12 +216,12 @@ export class PostgresDriver implements Driver {
           console.error(e, "Error rolling back");
         });
       }
-      this.knex = originalKnex;
+      em.currentTxnKnex = undefined;
     }
   }
 
-  async flushEntities(todos: Record<string, Todo>): Promise<void> {
-    const { knex } = this;
+  async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+    const knex = this.getMaybeInTxnKnex(em);
     const updatedAt = new Date();
     await assignNewIds(knex, todos);
     for await (const todo of Object.values(todos)) {
@@ -225,8 +241,8 @@ export class PostgresDriver implements Driver {
     }
   }
 
-  async flushJoinTables(joinRows: Record<string, JoinRowTodo>): Promise<void> {
-    const { knex } = this;
+  async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
+    const knex = this.getMaybeInTxnKnex(em);
     for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
         const ids = await knex
@@ -272,6 +288,10 @@ export class PostgresDriver implements Driver {
         }
       }
     }
+  }
+
+  private getMaybeInTxnKnex(em: EntityManager): Knex {
+    return em.currentTxnKnex || this.knex;
   }
 }
 

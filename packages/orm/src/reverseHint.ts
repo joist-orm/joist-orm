@@ -15,7 +15,7 @@ export function reverseHint<T extends Entity>(
     // and use the metdata to find the otherFieldName, i.e. Author "books"
     const meta = getMetadata(entityType);
     const field = meta.fields.find((f) => f.fieldName === hint) || fail(`Invalid hint ${JSON.stringify(hint)}`);
-    if (field.kind !== "m2m" && field.kind !== "m2o" && field.kind !== "o2m") {
+    if (field.kind !== "m2m" && field.kind !== "m2o" && field.kind !== "o2m" && field.kind !== "o2o") {
       throw new Error("Invalid hint");
     }
     const otherMeta = field.otherMetadata();
@@ -31,7 +31,7 @@ export function reverseHint<T extends Entity>(
     return Object.entries(hint).flatMap(([key, hint]) => {
       const meta = getMetadata(entityType);
       const field = meta.fields.find((f) => f.fieldName === key) || fail(`Invalid hint ${JSON.stringify(hint)}`);
-      if (field.kind !== "m2m" && field.kind !== "m2o" && field.kind !== "o2m") {
+      if (field.kind !== "m2m" && field.kind !== "m2o" && field.kind !== "o2m" && field.kind !== "o2o") {
         throw new Error("Invalid hint");
       }
       const otherMeta = field.otherMetadata();

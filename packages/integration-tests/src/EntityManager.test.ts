@@ -978,6 +978,51 @@ describe("EntityManager", () => {
     expect(a1.isNewEntity).toBeFalsy();
     expect(a1.isDirtyEntity).toBeFalsy();
   });
+
+  it("returns newly created entities from flush()", async () => {
+    const em = newEntityManager();
+
+    // Given a newly created entity
+    const a1 = new Author(em, { firstName: "a1" });
+
+    // When we flush the entity manager
+    const [result] = await em.flush();
+
+    // Then the entity was returned from the flush
+    expect(result).toEqual(a1);
+  });
+
+  it("returns updated entities from flush()", async () => {
+    const em = newEntityManager();
+
+    // Given an entity
+    const a1 = new Author(em, { firstName: "a1" });
+    await em.flush();
+
+    // When we update that entity
+    a1.firstName = "new name";
+    // And we flush the entity manager
+    const [result] = await em.flush();
+
+    // Then the updated entity was returned from the flush
+    expect((result as Author).firstName).toEqual("new name");
+  });
+
+  it("returns deleted entities from flush()", async () => {
+    const em = newEntityManager();
+
+    // Given an entity
+    const a1 = new Author(em, { firstName: "a1" });
+    await em.flush();
+
+    // When we delete that entity
+    em.delete(a1);
+    // And we flush the entity manager
+    const [result] = await em.flush();
+
+    // Then the deleted entity was returned from the flush
+    expect(result).toEqual(a1);
+  });
 });
 
 function delay(ms: number): Promise<void> {

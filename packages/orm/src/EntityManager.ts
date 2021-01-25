@@ -612,8 +612,10 @@ export class EntityManager<C = {}> {
    * If this is run within an existing transaction, i.e. `EntityManager.transaction`,
    * then it will only issue `INSERT`s/etc. and defer to the caller to `COMMIT`
    * the transaction.
+   *
+   * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
-  async flush(): Promise<void> {
+  async flush(): Promise<Entity[]> {
     if (this.isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
@@ -686,6 +688,8 @@ export class EntityManager<C = {}> {
         this.loadLoaders = {};
         this.findLoaders = {};
       }
+
+      return entitiesToFlush;
     } finally {
       this._isFlushing = false;
     }

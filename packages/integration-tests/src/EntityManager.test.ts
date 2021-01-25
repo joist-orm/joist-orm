@@ -9,7 +9,6 @@ import {
 import { Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, PublisherSize } from "./entities";
 import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
-import {assertNever} from "joist-codegen/build/utils";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {

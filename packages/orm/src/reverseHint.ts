@@ -35,9 +35,13 @@ export function reverseHint<T extends Entity>(
         throw new Error("Invalid hint");
       }
       const otherMeta = field.otherMetadata();
-      return reverseHint(otherMeta.cstr, hint).map(([e, hint]) => {
-        return [e, [...hint, field.otherFieldName]] as [EntityConstructor<any>, string[]];
-      });
+      const me = [otherMeta.cstr, [field.otherFieldName]] as [EntityConstructor<any>, string[]];
+      return [
+        me,
+        ...reverseHint(otherMeta.cstr, hint).map(([e, hint]) => {
+          return [e, [...hint, field.otherFieldName]] as [EntityConstructor<any>, string[]];
+        }),
+      ];
     });
   }
 }

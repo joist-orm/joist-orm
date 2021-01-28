@@ -1,3 +1,4 @@
+import { capitalCase } from "change-case";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import {
   currentFlushSecret,
@@ -436,4 +437,35 @@ export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
 
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
+}
+
+// The Entity type doesn't model the `changes` structure yet, so do this for now.
+interface EntityChanges<T> {
+  // Ideally we could use Record<keyof T, { hasChanged: boolean }> but we only want
+  // keys that are actually columns. Right now OptsOf<T> has collections (not in .changed)
+  // and OrderOf<T> has id/createdAt/updatedAt (also not in .changed), so just using an index
+  // type for now.
+  changes: { [key: string]: { hasChanged: boolean } };
+}
+
+const cannotBeChangedRule = Symbol("cannotBeChangedRule");
+
+export function cannotBeChanged<T extends Entity & EntityChanges<T>, K extends keyof T & string>(
+  fieldName: K,
+  unless?: (entity: T) => Promise<boolean>,
+): ValidationRule<T> {
+  const fn: ValidationRule<T> = async (entity) => {
+    if (!entity.isNewEntity && entity.changes[fieldName].hasChanged && (!unless || !(await unless(entity)))) {
+      return `${capitalCase(fieldName)} cannot be updated`;
+    }
+    return undefined;
+  };
+  if (!unless) {
+    (fn as any)[cannotBeChangedRule] = fieldName;
+  }
+  return fn;
+}
+
+export function isCannotBeChangedRule(rule: any, fieldName: string): boolean {
+  return rule[cannotBeChangedRule] === fieldName;
 }

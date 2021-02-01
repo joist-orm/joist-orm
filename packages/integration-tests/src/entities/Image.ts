@@ -1,5 +1,5 @@
-import { cannotBeChanged, CustomReference, Reference } from "joist-orm";
-import { Author, Book, ImageCodegen, imageConfig as config, ImageType, Publisher } from "./entities";
+import { CustomReference, Reference } from "joist-orm";
+import { Author, Book, ImageCodegen, imageConfig, ImageType, Publisher } from "./entities";
 
 type ImageOwner = Book | Publisher | Author;
 
@@ -26,14 +26,11 @@ export class Image extends ImageCodegen {
   }
 }
 
-config.addRule(cannotBeChanged("author"));
+const config = imageConfig;
 
-config.addRule((image) => {
+config.addRule({}, (image) => {
   const set = [image.author.isSet, image.publisher.isSet, image.book.isSet];
   if (set.filter((t) => t).length !== 1) {
     return "One and only one owner must be set";
   }
 });
-
-// Example to test that cannotBeChanged doesn't produce reactive rules
-config.addRule({ author: "publisher" }, async () => undefined);

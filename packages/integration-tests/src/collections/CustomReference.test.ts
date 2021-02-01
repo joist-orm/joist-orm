@@ -48,18 +48,17 @@ describe("CustomReference", () => {
 
   it("can set changes to a loaded reference", async () => {
     await insertAuthor({ first_name: "a1" });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 1 });
-    await insertImage({ type_id: 1, file_name: "f1", book_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
 
     const em = newEntityManager();
-    const b2 = await em.load(Book, "2");
+    const a2 = await em.load(Author, "2");
     const i1 = await em.load(Image, "1", "owner");
-    i1.owner.set(b2);
+    i1.owner.set(a2);
     await em.flush();
 
     const rows = await knex.select("*").from("images");
-    expect(rows[0].book_id).toEqual(2);
+    expect(rows[0].author_id).toEqual(2);
   });
 
   it("cannot set changes to a unloaded reference", async () => {

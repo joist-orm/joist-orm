@@ -29,16 +29,6 @@ describe("reverseHint", () => {
     ]);
   });
 
-  it("ignores hints for read-only fields", () => {
-    // Image.book is not read-only so is reactive
-    expect(reverse(Image, { book: "author" })).toEqual([
-      [Book, ["image"]],
-      [Author, ["books", "image"]],
-    ]);
-    // But Image.author is read-only so is not reactive
-    expect(reverse(Image, { author: "publisher" })).toEqual([]);
-  });
-
   it("can do a o2o relationship from object", () => {
     expect(reverse(Book, "image")).toEqual([[Image, ["book"]]]);
   });

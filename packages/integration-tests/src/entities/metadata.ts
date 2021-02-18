@@ -23,6 +23,9 @@ import {
   BookReview,
   bookReviewConfig,
   newBookReview,
+  Critic,
+  criticConfig,
+  newCritic,
   Image,
   imageConfig,
   newImage,
@@ -585,6 +588,70 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
+export const criticMeta: EntityMetadata<Critic> = {
+  cstr: Critic,
+  type: "Critic",
+  tagName: "c",
+  tableName: "critics",
+  columns: [
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => criticMeta, "id", "id") },
+
+    {
+      fieldName: "name",
+      columnName: "name",
+      dbType: "character varying",
+      serde: new SimpleSerde("name", "name"),
+    },
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+
+    {
+      kind: "primitive",
+      fieldName: "name",
+      fieldIdName: undefined,
+      derived: false,
+      required: true,
+      protected: false,
+      type: "string",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+      fieldIdName: undefined,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+      fieldIdName: undefined,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
+    },
+  ],
+  config: criticConfig,
+  factory: newCritic,
+};
+
+(Critic as any).metadata = criticMeta;
+
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
@@ -932,5 +999,14 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-const allMetadata = [authorMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, imageMeta, publisherMeta, tagMeta];
+const allMetadata = [
+  authorMeta,
+  bookMeta,
+  bookAdvanceMeta,
+  bookReviewMeta,
+  criticMeta,
+  imageMeta,
+  publisherMeta,
+  tagMeta,
+];
 configureMetadata(allMetadata);

@@ -20,8 +20,18 @@
   "Book": ["advances", "author", "createdAt", "id", "image", "order", "reviews", "tags", "title", "updatedAt"],
   "BookAdvance": ["book", "createdAt", "id", "publisher", "status", "updatedAt"],
   "BookReview": ["book", "createdAt", "id", "isPublic", "rating", "updatedAt"],
+  "Critic": ["createdAt", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
-  "Mutation": ["saveAuthor", "saveBook", "saveBookAdvance", "saveBookReview", "saveImage", "savePublisher", "saveTag"],
+  "Mutation": [
+    "saveAuthor",
+    "saveBook",
+    "saveBookAdvance",
+    "saveBookReview",
+    "saveCritic",
+    "saveImage",
+    "savePublisher",
+    "saveTag"
+  ],
   "Publisher": [
     "authors",
     "bookAdvances",
@@ -57,6 +67,8 @@
   "SaveBookResult": ["book"],
   "SaveBookReviewInput": ["bookId", "createdAt", "id", "isPublic", "rating", "updatedAt"],
   "SaveBookReviewResult": ["bookReview"],
+  "SaveCriticInput": ["createdAt", "id", "name", "updatedAt"],
+  "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
   "SavePublisherInput": ["createdAt", "hugeNumber", "id", "latitude", "longitude", "name", "size", "updatedAt"],

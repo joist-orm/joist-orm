@@ -10,7 +10,7 @@ describe("saveCritic", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
     const result = await runSaveCritic(ctx, () => ({}));
-    const c = await em.load(Critic, result.critic);
+    // const c = await em.load(Critic, result.critic);
   });
 });
 

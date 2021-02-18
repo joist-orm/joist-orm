@@ -6,6 +6,7 @@ import { sortKeys, trueIfResolved } from "./utils";
 export interface FieldConfig {
   derived?: "sync" | "async";
   protected?: boolean;
+  softDrop?: true;
 }
 
 export interface RelationConfig {
@@ -47,6 +48,10 @@ export function isAsyncDerived(config: Config, entity: Entity, fieldName: string
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
+}
+
+export function isSoftDrop(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.fields?.[fieldName]?.softDrop === true;
 }
 
 export function relationName(config: Config, entity: Entity, relationName: string): string {

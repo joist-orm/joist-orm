@@ -40,6 +40,10 @@ export function up(b: MigrationBuilder): void {
     graduated: { type: "date", notNull: false },
     // for testing protected fields
     was_ever_popular: { type: "boolean", notNull: false },
+    // for testing FieldConfig.softDrop
+    soft_drop_used_to_be_useful: { type: "boolean", notNull: false, default: true },
+    soft_drop_legacy_fk_id: foreignKey("publisher_size", { notNull: false }),
+    // for foreign key tests
     publisher_id: foreignKey("publishers", { notNull: false }),
     mentor_id: foreignKey("authors", { notNull: false }),
   });
@@ -65,6 +69,13 @@ export function up(b: MigrationBuilder): void {
     book_id: foreignKey("books", { notNull: true }),
   });
 
+  createEntityTable(b, "critics", {
+    name: { type: "varchar(255)", notNull: true },
+    // softDrop test
+    favourite_book_id: foreignKey("books", { notNull: false }),
+    worst_book_id: foreignKey("books", { notNull: false, unique: true }),
+  });
+
   // for testing children that are named a prefix of their parent
   createEntityTable(b, "book_reviews", {
     rating: { type: "integer", notNull: true },
@@ -75,6 +86,9 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "tags", {
     name: { type: "varchar(255)", notNull: true },
   });
+
+  // for testing softDrop of many to many
+  createManyToManyTable(b, "critics_to_tags", "critics", "tags");
 
   createManyToManyTable(b, "books_to_tags", "books", "tags");
 

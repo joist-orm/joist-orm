@@ -1,12 +1,12 @@
 import { Entity } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import prettier, { resolveConfig } from "prettier";
-import { sortKeys, trueIfResolved } from "./utils";
+import { fail, sortKeys, trueIfResolved } from "./utils";
 
 export interface FieldConfig {
   derived?: "sync" | "async";
   protected?: boolean;
-  softDrop?: true;
+  ignore?: true;
 }
 
 export interface RelationConfig {
@@ -50,8 +50,13 @@ export function isProtected(config: Config, entity: Entity, fieldName: string): 
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
 }
 
-export function isSoftDrop(config: Config, entity: Entity, fieldName: string): boolean {
-  return config.entities[entity.name]?.fields?.[fieldName]?.softDrop === true;
+export function isFieldIgnored(config: Config, entity: Entity, fieldName: string, notNull: boolean = false): boolean {
+  const ignore = config.entities[entity.name]?.fields?.[fieldName]?.ignore === true;
+
+  if (ignore && notNull) {
+    fail("notNull fields cannot be ignored. Alter the column to be optional prior to ignoring it.");
+  }
+  return ignore;
 }
 
 export function relationName(config: Config, entity: Entity, relationName: string): string {

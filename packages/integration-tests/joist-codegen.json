@@ -6,8 +6,8 @@
       "fields": {
         "initials": { "derived": "sync" },
         "numberOfBooks": { "derived": "async" },
-        "softDropLegacyFk": { "softDrop": true },
-        "softDropUsedToBeUseful": { "softDrop": true },
+        "softDropLegacyFk": { "ignore": true },
+        "softDropUsedToBeUseful": { "ignore": true },
         "wasEverPopular": { "protected": true }
       },
       "tag": "a"
@@ -16,11 +16,7 @@
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
     "Critic": {
-      "fields": {
-        "favouriteBook": { "softDrop": true },
-        "tags": { "softDrop": true },
-        "worstBook": { "softDrop": true }
-      },
+      "fields": { "favouriteBook": { "ignore": true }, "tags": { "ignore": true }, "worstBook": { "ignore": true } },
       "tag": "c"
     },
     "Image": { "tag": "i" },

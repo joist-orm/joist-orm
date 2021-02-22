@@ -7,8 +7,8 @@ import {
   Config,
   isAsyncDerived,
   isDerived,
+  isFieldIgnored,
   isProtected,
-  isSoftDrop,
   ormMaintainedFields,
   relationName,
 } from "./config";
@@ -47,10 +47,13 @@ export type DatabaseColumnType =
   | "timestamp with time zone"
   | "date";
 
+interface Field {
+  fieldName: string;
+  ignore?: boolean;
+}
 export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date";
 
-export type PrimitiveField = {
-  fieldName: string;
+export type PrimitiveField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
@@ -58,59 +61,48 @@ export type PrimitiveField = {
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
-  softDrop?: boolean;
 };
 
-export type EnumField = {
-  fieldName: string;
+export type EnumField = Field & {
   columnName: string;
   enumName: string;
   enumType: SymbolSpec;
   enumDetailType: SymbolSpec;
   notNull: boolean;
-  softDrop?: boolean;
 };
 
 /** I.e. a `Book.author` reference pointing to an `Author`. */
-export type ManyToOneField = {
-  fieldName: string;
+export type ManyToOneField = Field & {
   columnName: string;
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
-  softDrop?: boolean;
 };
 
 /** I.e. a `Author.books` collection. */
-export type OneToManyField = {
-  fieldName: string;
+export type OneToManyField = Field & {
   singularName: string;
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
   otherColumnNotNull: boolean;
-  softDrop?: boolean;
 };
 
 /** I.e. a `Author.image` reference when `image.author_id` is unique. */
-export type OneToOneField = {
-  fieldName: string;
+export type OneToOneField = Field & {
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
   otherColumnNotNull: boolean;
-  softDrop?: boolean;
 };
 
-export type ManyToManyField = {
+export type ManyToManyField = Field & {
   joinTableName: string;
-  fieldName: string;
   singularName: string;
   columnName: string;
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
-  softDrop?: boolean;
 };
 
 /** Adapts the generally-great pg-structure metadata into our specific ORM types. */
@@ -128,36 +120,31 @@ export class EntityDbMetadata {
     this.entity = makeEntity(tableToEntityName(config, table));
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
-      // .filter(c => !isSoftDrop(config, this.entity.name, primitiveFieldName(c.name)))
       .map((column) => newPrimitive(config, this.entity, column, table))
-      .filter((f) => !f.softDrop);
+      .filter((f) => !f.ignore);
     this.enums = table.m2oRelations
       .filter((r) => isEnumTable(r.targetTable))
-      // .filter(r => r.foreignKey.columns.every(c => !isSoftDrop(config, tableToEntityName(config, c.table || table), enumFieldName(c.name))))
       .map((r) => newEnumField(config, this.entity, r))
-      .filter((f) => !f.softDrop);
+      .filter((f) => !f.ignore);
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
-      // .filter(r => r.foreignKey.columns.every(c => !isSoftDrop(config, tableToEntityName(config, c.table || table), referenceName(config, this.entity, r))))
       .map((r) => newManyToOneField(config, this.entity, r))
-      .filter((f) => !f.softDrop);
+      .filter((f) => !f.ignore);
     this.oneToManys = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
-      // .filter(r => r.foreignKey.columns.every(c => !isSoftDrop(config, tableToEntityName(config, c.table || table), c.name)))
       .map((r) => newOneToMany(config, this.entity, r))
-      .filter((f) => !f.softDrop);
+      .filter((f) => !f.ignore);
     this.oneToOnes = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => isOneToOneRelation(r))
-      // .filter(r => r.foreignKey.columns.every(c => !isSoftDrop(config, tableToEntityName(config, c.table || table), c.name)))
       .map((r) => newOneToOne(config, this.entity, r))
-      .filter((f) => !f.softDrop);
+      .filter((f) => !f.ignore);
     this.manyToManys = table.m2mRelations
       // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
       // that has a foreign key to us, and a foreign key to something else, is automatically
@@ -166,7 +153,7 @@ export class EntityDbMetadata {
       .filter((r) => isJoinTable(r.joinTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .map((r) => newManyToManyField(config, this.entity, r))
-      .filter((f) => !f.softDrop);
+      .filter((f) => !f.ignore);
     this.tableName = table.name;
   }
 
@@ -201,7 +188,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     columnDefault: column.default,
     derived: fieldDerived(config, entity, fieldName),
     protected: isProtected(config, entity, fieldName),
-    softDrop: isSoftDrop(config, entity, fieldName),
+    ignore: isFieldIgnored(config, entity, fieldName, column.notNull),
   };
 }
 
@@ -225,8 +212,8 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation): EnumField
   const enumType = imp(`${enumName}@./entities`);
   const enumDetailType = imp(`${plural(enumName)}@./entities`);
   const notNull = column.notNull;
-  const softDrop = isSoftDrop(config, entity, fieldName);
-  return { fieldName, columnName, enumName, enumType, enumDetailType, notNull, softDrop };
+  const ignore = isFieldIgnored(config, entity, fieldName, notNull);
+  return { fieldName, columnName, enumName, enumType, enumDetailType, notNull, ignore };
 }
 
 function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {
@@ -239,8 +226,8 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     ? oneToOneName(config, otherEntity, entity)
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
-  const softDrop = isSoftDrop(config, entity, fieldName);
-  return { fieldName, columnName, otherEntity, otherFieldName, notNull, softDrop };
+  const ignore = isFieldIgnored(config, entity, fieldName, notNull);
+  return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {
@@ -252,8 +239,8 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
   const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
-  const softDrop = isSoftDrop(config, entity, fieldName) || isSoftDrop(config, otherEntity, otherFieldName);
-  return { fieldName, singularName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, softDrop };
+  const ignore = isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName);
+  return { fieldName, singularName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, ignore };
 }
 
 function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneField {
@@ -265,8 +252,8 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
   const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
-  const softDrop = isSoftDrop(config, entity, fieldName) || isSoftDrop(config, otherEntity, otherFieldName);
-  return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, softDrop };
+  const ignore = isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName);
+  return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, ignore };
 }
 
 function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): ManyToManyField {
@@ -286,8 +273,8 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   const columnName = foreignKey.columns[0].name;
   const otherColumnName = targetForeignKey.columns[0].name;
   const singularName = singular(fieldName);
-  const softDrop = isSoftDrop(config, entity, fieldName) || isSoftDrop(config, otherEntity, otherFieldName);
-  return { joinTableName, fieldName, singularName, columnName, otherEntity, otherFieldName, otherColumnName, softDrop };
+  const ignore = isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName);
+  return { joinTableName, fieldName, singularName, columnName, otherEntity, otherFieldName, otherColumnName, ignore };
 }
 
 export function oneToOneName(config: Config, entity: Entity, otherEntity: Entity): string {

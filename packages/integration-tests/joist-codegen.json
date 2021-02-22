@@ -4,10 +4,10 @@
   "entities": {
     "Author": {
       "fields": {
+        "ignoreEnumFk": { "ignore": true },
+        "ignoreUsedToBeUseful": { "ignore": true },
         "initials": { "derived": "sync" },
         "numberOfBooks": { "derived": "async" },
-        "softDropLegacyFk": { "ignore": true },
-        "softDropUsedToBeUseful": { "ignore": true },
         "wasEverPopular": { "protected": true }
       },
       "tag": "a"
@@ -16,7 +16,11 @@
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
     "Critic": {
-      "fields": { "favouriteBook": { "ignore": true }, "tags": { "ignore": true }, "worstBook": { "ignore": true } },
+      "fields": {
+        "ignoreFavouriteBook": { "ignore": true },
+        "ignoreWorstBook": { "ignore": true },
+        "tags": { "ignore": true }
+      },
       "tag": "c"
     },
     "Image": { "tag": "i" },

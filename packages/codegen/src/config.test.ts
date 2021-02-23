@@ -7,12 +7,12 @@ describe("config", () => {
     const falseAsTrue = (false as boolean) as true;
 
     it.each([
-      ["fields key is omitted all together", newAuthorConfig()],
-      ["fields does not specify the field in question", newAuthorConfig({})],
-      ["field is specified but doesn't have ignore key", newAuthorConfig({ shouldNotIgnore: {} })],
-      ["field is specified but has ignore: false", newAuthorConfig({ shouldNotIgnore: { ignore: falseAsTrue } })],
-    ])("indicates the field is not ignored when %s", (_message: string, config: Config) => {
-      expect(isFieldIgnored(config, makeEntity("Author"), "shouldNotIgnore", true)).toEqual(false);
+      ["does not ignore when no config is provided", newAuthorConfig()],
+      ["does not ignore when FieldConfig for fieldName is not specified", newAuthorConfig({})],
+      ["does not ignore when FieldConfig.fieldName has ignore unset", newAuthorConfig({ fieldName: {} })],
+      ["does not ignore when FieldConfig.fieldName has ignore: false", newAuthorConfig({ fieldName: { ignore: falseAsTrue } })],
+    ])("%s", (_message: string, config: Config) => {
+      expect(isFieldIgnored(config, makeEntity("Author"), "fieldName", true)).toEqual(false);
     });
 
     it("indicates the field is ignored when the field is not required and configured with ignore: true", () => {

@@ -12,6 +12,7 @@ export type BookReviewResolvers = {};
 export type ImageResolvers = {};
 export type PublisherResolvers = {};
 export type TagResolvers = {};
+export type CriticResolvers = {};
 
 export type SaveAuthorInput = {};
 export type SaveBookInput = {};
@@ -20,6 +21,7 @@ export type SaveBookReviewInput = {};
 export type SaveImageInput = {};
 export type SavePublisherInput = {};
 export type SaveTagInput = {};
+export type SaveCriticInput = {};
 
 export type MutationResolvers = {
   saveAuthor(root: any, args: any, ctx: Context, info: any): any;
@@ -29,6 +31,7 @@ export type MutationResolvers = {
   saveImage(root: any, args: any, ctx: Context, info: any): any;
   savePublisher(root: any, args: any, ctx: Context, info: any): any;
   saveTag(root: any, args: any, ctx: Context, info: any): any;
+  saveCritic(root: any, args: any, ctx: Context, info: any): any;
 };
 
 export type Resolvers = {

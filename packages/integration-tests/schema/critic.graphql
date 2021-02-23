@@ -1,0 +1,21 @@
+type Critic {
+  id: ID!
+  name: String!
+  createdAt: Date!
+  updatedAt: Date!
+}
+
+extend type Mutation {
+  saveCritic(input: SaveCriticInput!): SaveCriticResult!
+}
+
+input SaveCriticInput {
+  id: ID
+  name: String
+  createdAt: Date
+  updatedAt: Date
+}
+
+type SaveCriticResult {
+  critic: Critic!
+}

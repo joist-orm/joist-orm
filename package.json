@@ -12,6 +12,6 @@
     "packages/utils"
   ],
   "dependencies": {
-    "typescript": "^4.0.2"
+    "typescript": "^4.2.2"
   }
 }

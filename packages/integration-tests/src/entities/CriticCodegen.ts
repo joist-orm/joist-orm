@@ -1,26 +1,26 @@
 import {
+  BaseEntity,
+  Changes,
+  ConfigApi,
+  EntityManager,
   Flavor,
+  getEm,
+  Lens,
+  Loaded,
+  LoadHint,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  OptsOf,
+  OrderBy,
+  PartialOrNull,
+  setField,
+  setOpts,
   ValueFilter,
   ValueGraphQLFilter,
-  OrderBy,
-  ConfigApi,
-  BaseEntity,
-  EntityManager,
-  setOpts,
-  PartialOrNull,
-  OptsOf,
-  Changes,
-  newChangesProxy,
-  Lens,
-  loadLens,
-  LoadHint,
-  Loaded,
-  getEm,
-  newRequiredRule,
-  setField,
 } from "joist-orm";
-import { Critic, newCritic, criticMeta } from "./entities";
 import { Context } from "src/context";
+import { Critic, criticMeta, newCritic } from "./entities";
 
 export type CriticId = Flavor<string, "Critic">;
 

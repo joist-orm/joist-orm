@@ -627,7 +627,7 @@ export class EntityManager<C = {}> {
 
     try {
       while (pendingEntities.length > 0) {
-        await new Promise((resolve, reject) => {
+        await new Promise<void>((resolve, reject) => {
           currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
             try {
               const todos = createTodos(pendingEntities);

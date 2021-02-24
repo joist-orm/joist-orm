@@ -10,7 +10,10 @@ describe("config", () => {
       ["does not ignore when no config is provided", newAuthorConfig()],
       ["does not ignore when FieldConfig for fieldName is not specified", newAuthorConfig({})],
       ["does not ignore when FieldConfig.fieldName has ignore unset", newAuthorConfig({ fieldName: {} })],
-      ["does not ignore when FieldConfig.fieldName has ignore: false", newAuthorConfig({ fieldName: { ignore: falseAsTrue } })],
+      [
+        "does not ignore when FieldConfig.fieldName has ignore: false",
+        newAuthorConfig({ fieldName: { ignore: falseAsTrue } }),
+      ],
     ])("%s", (_message: string, config: Config) => {
       expect(isFieldIgnored(config, makeEntity("Author"), "fieldName", true)).toEqual(false);
     });

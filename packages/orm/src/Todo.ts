@@ -1,7 +1,7 @@
 /** The operations for a given entity type, so they can be executed in bulk. */
-import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
 import { ManyToManyCollection } from "./collections";
 import { JoinRow } from "./collections/ManyToManyCollection";
+import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
 
 /** Groups all of the insert/update/delete operations for a given entity. */
 export interface Todo {

@@ -44,6 +44,8 @@ export type Resolvers = {
     code: (root: ImageType) => string;
     name: (root: ImageType) => string;
     sortOrder: (root: ImageType) => number;
+    visible: (root: ImageType) => boolean;
+    nickname: (root: ImageType) => string;
   };
 
   AdvanceStatusDetail: {

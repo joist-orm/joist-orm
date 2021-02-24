@@ -11,7 +11,17 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
     "id: number;",
     `code: ${enumName};`,
     "name: string;",
-    ...extraPrimitives.map((primitive) => `${primitive.fieldName}: ${primitive.fieldType};`),
+    ...extraPrimitives.map((primitive) => {
+      // If the extra primitive values are all unique, then allow the type be only that set of values. Otherwise, use `fieldType`
+      const allValues = rows.map((r) => r[primitive.columnName]);
+      const uniqueValues = new Set(allValues);
+      if (uniqueValues.size === allValues.length) {
+        return `${primitive.fieldName}: ${
+          primitive.fieldType === "string" ? `"${allValues.join('" | "')}"` : allValues.join(" | ")
+        };`;
+      }
+      return `${primitive.fieldName}: ${primitive.fieldType};`;
+    }),
   ].join(" ");
   return code`
     export enum ${enumName} {

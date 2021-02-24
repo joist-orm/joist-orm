@@ -99,8 +99,10 @@ export function up(b: MigrationBuilder): void {
   ]);
 
   b.addColumn("image_type", { sort_order: { type: "integer", notNull: true, default: 1_000_000 } });
+  b.addColumn("image_type", { visible: { type: "boolean", notNull: true, default: true } });
+  b.addColumn("image_type", { nickname: { type: "string", notNull: true, default: "" } });
   Object.entries({ BOOK_IMAGE: 100, AUTHOR_IMAGE: 200, PUBLISHER_IMAGE: 300 }).forEach(([code, sortOrder]) =>
-    b.sql(`UPDATE image_type SET sort_order=${sortOrder} WHERE code='${code}'`),
+    b.sql(`UPDATE image_type SET sort_order=${sortOrder}, nickname='${code.toLowerCase()}' WHERE code='${code}'`),
   );
 
   createEntityTable(b, "images", {

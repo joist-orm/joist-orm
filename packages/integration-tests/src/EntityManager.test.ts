@@ -6,9 +6,9 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
-import { Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Publisher, PublisherSize } from "./entities";
-import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
+import {Loaded, setDefaultEntityLimit, setEntityLimit} from "joist-orm";
+import {Author, Book, Image, ImageType, newBook, Publisher, PublisherSize, Tag} from "./entities";
+import {knex, newEntityManager, numberOfQueries, queries, resetQueryCount} from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
@@ -1022,6 +1022,95 @@ describe("EntityManager", () => {
 
     // Then the deleted entity was returned from the flush
     expect(result).toEqual(a1);
+  });
+
+  it("can clone entities", async() => {
+    const em = newEntityManager();
+
+    // Given an entity
+    const a1 = new Author(em, {firstName: "a1"});
+    await em.flush();
+
+    // When we clone that entity
+    const a2 =  await em.cloneEntity(a1);
+
+    // Then we expect the cloned entity to have the same properties as the original
+    expect(a2.firstName).toEqual(a1.firstName);
+    expect(a2.id).not.toEqual(a1.id)
+  });
+
+  it("can clone entities and referenced entities", async () => {
+    const em = newEntityManager();
+
+    // Given an entity with a reference to another entity
+    const a1 = new Author(em, {firstName: "a1"});
+    const b1 = new Book(em, {title: "b1", author: a1});
+    await em.flush();
+
+    // When we clone that entity and its reference
+    const a2 =  await em.cloneEntity(a1, "books");
+    await em.flush();
+
+    // Then we expect the cloned entity to have a cloned copy of the original's reference
+    expect(a2.books.get[0].title).toEqual(b1.title);
+    expect(a2.books.get[0].id).not.toEqual(b1.id);
+  });
+
+  it("cannot clone many-to-many references", async () => {
+    const em = newEntityManager();
+
+    // Given an entity with a reference to another entity with a many-to-many reference
+    const a1 = new Author(em, {firstName: "a1"});
+    const b1 = new Book(em, {title: "b1", author: a1});
+    const t1 = new Tag(em, {name: "t1", books: [b1]})
+    await em.flush();
+
+    // When we clone that entity and its nested references
+    const toExecute = async function () { await em.cloneEntity(a1, {books: "tags"})};
+
+    // Then we expect the cloning to fail
+    await expect(toExecute).rejects.toThrow()
+  });
+
+  it("can clone nested references", async () => {
+    const em = newEntityManager();
+
+    // Given an entity with a reference to another entity which references a third entity
+    const a1 = new Author(em, {firstName: "a1"});
+    const b1 = new Book(em, {title: "b1", author: a1});
+    const i1 = new Image(em, {fileName: "11", type: ImageType.BookImage, book: b1});
+    await em.flush();
+
+    // When we clone that entity and its nested references
+    const toExecute = async function () { await em.cloneEntity(a1, {books: "tags"})};
+
+    // Then we expect the cloning to fail
+    await expect(toExecute).rejects.toThrow()
+    const a2 =  await em.cloneEntity(a1, {books: "image"});
+    await em.flush();
+
+    // Then we expect the cloned entity to have cloned copies of all its nested references
+    const b2 = (await a2.books.load())[0];
+    const i2 = await b2.image.load();
+    expect(i2).toBeTruthy();
+    expect(i2?.id).not.toEqual(i1.id);
+    expect(i2?.fileName).toEqual(i1.fileName);
+    expect(i2?.type).toEqual(i1.type);
+  });
+
+  it("should only clone referenced entities when specified", async () => {
+    const em = newEntityManager();
+
+    // Given an entity with a reference to another entity
+    const a1 = new Author(em, {firstName: "a1", books: [newBook(em)]});
+    await em.flush();
+
+    // When we clone that entity and don't pass a populate hint for the reference
+    const a2 =  await em.cloneEntity(a1);
+    await em.flush();
+
+    // Then we expect the cloned entity to have no references
+    expect((await a2.books.load())).toHaveLength(0);
   });
 });
 

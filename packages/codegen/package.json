@@ -18,7 +18,7 @@
     "change-case": "^4.1.1",
     "is-plain-object": "^3.0.1",
     "joist-utils": "1.0.0-bump",
-    "knex": "^0.21.4",
+    "knex": "^0.21.18",
     "pg": "^8.3.0",
     "pluralize": "^8.0.0",
     "ts-poet": "^3.2.2"

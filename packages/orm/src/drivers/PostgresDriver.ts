@@ -240,7 +240,7 @@ export class PostgresDriver implements Driver {
     const knex = this.getMaybeInTxnKnex(em);
     for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
-        const ids = await knex
+        const ids: number[] = await knex
           .batchInsert(
             joinTableName,
             newRows.map((row) => {

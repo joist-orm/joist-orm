@@ -1,7 +1,7 @@
-import { newCritic, CriticId } from "src/entities";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { CriticId, newCritic } from "src/entities";
 import { CriticResolvers } from "src/generated/graphql-types";
 import { criticResolvers } from "src/resolvers/objects/critic/criticResolvers";
+import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
 describe("criticResolvers", () => {
   it.withCtx("can return", async (ctx) => {

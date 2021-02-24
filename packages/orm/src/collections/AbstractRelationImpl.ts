@@ -12,13 +12,13 @@ export abstract class AbstractRelationImpl<U> {
   abstract set(value: U): void;
 
   /** Called on `EntityManager.refresh()` to reload the collection from the latest db values. */
-  abstract async refreshIfLoaded(): Promise<void>;
+  abstract refreshIfLoaded(): Promise<void>;
 
   /**
    * Called when our entity has been `EntityManager.delete`'d _and_ `EntityManager.flush` is being called,
    * so we can unset any foreign keys to the being-deleted entity and clear out any pointers to it.
    */
-  abstract async cleanupOnEntityDeleted(): Promise<void>;
+  abstract cleanupOnEntityDeleted(): Promise<void>;
 
   /**
    * Called to cascade deletes into the relation if it has cascade behavior enabled.  This function is called twice,

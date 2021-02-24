@@ -1,8 +1,8 @@
 import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
+import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
-import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 
 /**
  * Represents the "many" side of a one-to-one relationship.
@@ -21,7 +21,8 @@ import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
  * Currently we enforce this with a runtime check, which is not great, but the trade-off of implementing
  * `Reference` seemed worth the downside of a un-type-safe `.id` property.
  */
-export class OneToOneReference<T extends Entity, U extends Entity> extends AbstractRelationImpl<U>
+export class OneToOneReference<T extends Entity, U extends Entity>
+  extends AbstractRelationImpl<U>
   implements Reference<T, U, undefined> {
   private loaded: U | undefined;
   private isLoaded: boolean = false;

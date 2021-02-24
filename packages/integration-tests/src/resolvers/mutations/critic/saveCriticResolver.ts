@@ -1,6 +1,6 @@
+import { Critic } from "src/entities";
 import { MutationResolvers } from "src/generated/graphql-types";
 import { saveEntities } from "src/resolvers/mutations/utils";
-import { Critic } from "src/entities";
 
 export const saveCritic: Pick<MutationResolvers, "saveCritic"> = {
   async saveCritic(root, args, ctx) {

@@ -1,9 +1,7 @@
-import { Critic } from "src/entities";
 import { Context } from "src/context";
 import { SaveCriticInput } from "src/generated/graphql-types";
-import { run } from "src/resolvers/testUtils";
 import { saveCritic } from "src/resolvers/mutations/critic/saveCriticResolver";
-
+import { run } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveCritic", () => {

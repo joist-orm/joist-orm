@@ -1032,7 +1032,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity
-    const a2 = await em.cloneEntity(a1);
+    const a2 = await em.clone(a1);
 
     // Then we expect the cloned entity to have the same properties as the original
     expect(a2.firstName).toEqual(a1.firstName);
@@ -1048,7 +1048,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and its reference
-    const a2 = await em.cloneEntity(a1, "books");
+    const a2 = await em.clone(a1, "books");
     await em.flush();
 
     // Then we expect the cloned entity to have a cloned copy of the original's reference
@@ -1067,7 +1067,7 @@ describe("EntityManager", () => {
 
     // When we clone that entity and its nested references, which include a many-to-many reference
     const promise = async function () {
-      await em.cloneEntity(a1, { books: "tags" });
+      await em.clone(a1, { books: "tags" });
     };
 
     // Then we expect the cloning to fail
@@ -1084,7 +1084,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and its nested references
-    const a2 = await em.cloneEntity(a1, { books: "image" });
+    const a2 = await em.clone(a1, { books: "image" });
     await em.flush();
 
     // Then we expect the cloned entity to have cloned copies of all its nested references
@@ -1104,7 +1104,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and don't pass a populate hint for the reference
-    const a2 = await em.cloneEntity(a1);
+    const a2 = await em.clone(a1);
     await em.flush();
 
     // Then we expect the cloned entity to have no references

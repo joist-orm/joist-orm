@@ -17,8 +17,11 @@ import {
   getRelations,
   keyToString,
   LoadedCollection,
-  LoadedReference, ManyToOneReference,
-  maybeResolveReferenceToId, OneToManyCollection, OneToOneReference,
+  LoadedReference,
+  ManyToOneReference,
+  maybeResolveReferenceToId,
+  OneToManyCollection,
+  OneToOneReference,
   PartialOrNull,
   Reference,
   Relation,
@@ -398,8 +401,25 @@ export class EntityManager<C = {}> {
     return createOrUpdatePartial(this, type, opts);
   }
 
-  /** Utility to clone an entity and its nested relations, as determined by a populate hint */
-  public async cloneEntity<T extends Entity, H extends LoadHint<T>>(entity: T, hint?: H): Promise<Loaded<T, H>> {
+  /**
+   * Utility to clone an entity and its nested relations, as determined by a populate hint
+   *
+   * @param entity - Any entity
+   * @param hint - A populate hint
+   *
+   * @example
+   * // This will duplicate the author
+   * const duplicatedAuthor = await em.clone(author)
+   *
+   * @example
+   * // This will duplicate the author and all their related book entities
+   * const duplicatedAuthorAndBooks = await em.clone(author, "books")
+   *
+   * @exmaple
+   * // This will duplicate the author, all their books, and the images for those books
+   * const duplicatedAuthorAndBooksAndImages = await em.clone(author, {books: "image"})
+   */
+  public async clone<T extends Entity, H extends LoadHint<T>>(entity: T, hint?: H): Promise<Loaded<T, H>> {
     const meta = getMetadata(entity);
     const { id, ...data } = entity.__orm.data;
     const clone = this.create(meta.cstr, {} as OptsOf<T>);
@@ -421,7 +441,7 @@ export class EntityManager<C = {}> {
               const relatedEntities = await relation.load();
               await Promise.all(
                 relatedEntities.map(async (related) => {
-                  const clonedRelated = await this.cloneEntity(related, nested);
+                  const clonedRelated = await this.clone(related, nested);
                   // Many to One relationships try and fetch their data from the cache if they can,
                   // but the data is pointing to the uncloned entity, resulting in the original relation
                   // being unset.
@@ -434,7 +454,7 @@ export class EntityManager<C = {}> {
             } else if (relation instanceof OneToOneReference) {
               const related = await relation.load();
               if (related) {
-                const clonedRelated = await this.cloneEntity(related, nested);
+                const clonedRelated = await this.clone(related, nested);
                 // Many to One relationships try and fetch their data from the cache if they can,
                 // but the data is pointing to the uncloned entity, resulting in the original relation
                 // being unset.
@@ -446,7 +466,7 @@ export class EntityManager<C = {}> {
             } else if (relation instanceof ManyToOneReference) {
               const related = await relation.load();
               if (related) {
-                const clonedRelated = await this.cloneEntity(related, nested);
+                const clonedRelated = await this.clone(related, nested);
                 // Many to One relationships try and fetch their data from the cache if they can,
                 // but the data is pointing to the uncloned entity, resulting in the original relation
                 // being unset.

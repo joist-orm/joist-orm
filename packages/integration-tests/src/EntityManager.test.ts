@@ -6,7 +6,7 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
-import { Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { EntityConstructor, EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Image, ImageType, newBook, Publisher, PublisherSize, Tag } from "./entities";
 import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
@@ -1094,6 +1094,7 @@ describe("EntityManager", () => {
     expect(i2?.id).not.toEqual(i1.id);
     expect(i2?.fileName).toEqual(i1.fileName);
     expect(i2?.type).toEqual(i1.type);
+    expect(await numberOf(em, Author, Book, Image)).toEqual([2, 2, 2]);
   });
 
   it("should only clone referenced entities when specified", async () => {
@@ -1114,4 +1115,13 @@ describe("EntityManager", () => {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function numberOf(em: EntityManager, ...args: EntityConstructor<any>[]): Promise<number[]> {
+  return await Promise.all(
+    args.map(async (ec) => {
+      const entities = await em.find(ec, {});
+      return entities.length;
+    }),
+  );
 }

@@ -17,8 +17,8 @@ import {
   getRelations,
   keyToString,
   LoadedCollection,
-  LoadedReference,
-  maybeResolveReferenceToId,
+  LoadedReference, ManyToOneReference,
+  maybeResolveReferenceToId, OneToManyCollection, OneToOneReference,
   PartialOrNull,
   Reference,
   Relation,
@@ -172,7 +172,7 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
 export type LoadHint<T extends Entity> = keyof RelationsIn<T> | ReadonlyArray<keyof RelationsIn<T>> | NestedLoadHint<T>;
 
-type NestedLoadHint<T extends Entity> = {
+export type NestedLoadHint<T extends Entity> = {
   [K in keyof RelationsIn<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
 };
 
@@ -396,6 +396,73 @@ export class EntityManager<C = {}> {
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
   public createOrUpdatePartial<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
     return createOrUpdatePartial(this, type, opts);
+  }
+
+  /** Utility to clone an entity and its nested relations, as determined by a populate hint */
+  public async cloneEntity<T extends Entity, H extends LoadHint<T>>(entity: T, hint?: H): Promise<Loaded<T, H>> {
+    const meta = getMetadata(entity);
+    const { id, ...data } = entity.__orm.data;
+    const clone = this.create(meta.cstr, {} as OptsOf<T>);
+    clone.__orm.data = data;
+    if (hint) {
+      if ((typeof hint as any) === "string") {
+        hint = { [hint as keyof RelationsIn<T>]: {} } as any;
+      } else if (Array.isArray(hint)) {
+        hint = Object.fromEntries(hint.map((relation) => [relation, {}]));
+      }
+      await Promise.all(
+        (Object.entries(hint as NestedLoadHint<T>) as [keyof RelationsIn<T>, LoadHint<any>][]).map(
+          async ([relationName, nested]) => {
+            const relation = (entity[relationName] as any) as
+              | OneToManyCollection<T, any>
+              | OneToOneReference<T, any>
+              | ManyToOneReference<T, any, undefined | never>;
+            if (relation instanceof OneToManyCollection) {
+              const relatedEntities = await relation.load();
+              await Promise.all(
+                relatedEntities.map(async (related) => {
+                  const clonedRelated = await this.cloneEntity(related, nested);
+                  // Many to One relationships try and fetch their data from the cache if they can,
+                  // but the data is pointing to the uncloned entity, resulting in the original relation
+                  // being unset.
+                  // So we clear this data from the clone to ensure that the relation is set correctly
+                  clonedRelated.__orm.data[relation.otherFieldName] = undefined;
+                  const relationToClone = clonedRelated[relation.otherFieldName] as Reference<Entity, T, undefined>;
+                  relationToClone.set(clone);
+                }),
+              );
+            } else if (relation instanceof OneToOneReference) {
+              const related = await relation.load();
+              if (related) {
+                const clonedRelated = await this.cloneEntity(related, nested);
+                // Many to One relationships try and fetch their data from the cache if they can,
+                // but the data is pointing to the uncloned entity, resulting in the original relation
+                // being unset.
+                // So we clear this data from the clone to ensure that the relation is set correctly
+                clonedRelated.__orm.data[relation.otherFieldName] = undefined;
+                const relationToClone = clone[relation.fieldName] as any;
+                relationToClone.set(clonedRelated);
+              }
+            } else if (relation instanceof ManyToOneReference) {
+              const related = await relation.load();
+              if (related) {
+                const clonedRelated = await this.cloneEntity(related, nested);
+                // Many to One relationships try and fetch their data from the cache if they can,
+                // but the data is pointing to the uncloned entity, resulting in the original relation
+                // being unset.
+                // So we clear this data from the clone to ensure that the relation is set correctly
+                clone.__orm.data[relationName] = undefined;
+                const relationToClone = clone[relationName] as any;
+                relationToClone.set(clonedRelated);
+              }
+            } else {
+              fail(`irreversible relation ${relationName}`);
+            }
+          },
+        ),
+      );
+    }
+    return clone as Loaded<T, H>;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

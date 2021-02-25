@@ -1071,7 +1071,7 @@ describe("EntityManager", () => {
     };
 
     // Then we expect the cloning to fail
-    await expect(promise).rejects.toThrow("Irreversible relation tags");
+    await expect(promise).rejects.toThrow("Irreversible relation: tags");
   });
 
   it("can clone nested references", async () => {

@@ -476,7 +476,7 @@ export class EntityManager<C = {}> {
                 relationToClone.set(clonedRelated);
               }
             } else {
-              fail(`irreversible relation ${relationName}`);
+              fail(`Irreversible relation: ${relationName}`);
             }
           },
         ),

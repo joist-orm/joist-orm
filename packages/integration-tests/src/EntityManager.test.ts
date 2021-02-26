@@ -1028,15 +1028,19 @@ describe("EntityManager", () => {
     const em = newEntityManager();
 
     // Given an entity
-    const a1 = new Author(em, { firstName: "a1" });
+    const p1 = new Publisher(em, { name: "p1" });
+    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
     await em.flush();
 
     // When we clone that entity
     const a2 = await em.clone(a1);
+    await em.flush();
 
     // Then we expect the cloned entity to have the same properties as the original
     expect(a2.firstName).toEqual(a1.firstName);
+    expect(a2.publisher.idOrFail).toEqual(p1.id);
     expect(a2.id).not.toEqual(a1.id);
+    expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
   });
 
   it("can clone entities and referenced entities", async () => {
@@ -1066,12 +1070,10 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and its nested references, which include a many-to-many reference
-    const promise = async function () {
-      await em.clone(a1, { books: "tags" });
-    };
+    const promise = em.clone(a1, { books: "tags" });
 
     // Then we expect the cloning to fail
-    await expect(promise).rejects.toThrow("Irreversible relation: tags");
+    await expect(promise).rejects.toThrow("Uncloneable relation: tags");
   });
 
   it("can clone nested references", async () => {
@@ -1118,7 +1120,7 @@ function delay(ms: number): Promise<void> {
 }
 
 async function numberOf(em: EntityManager, ...args: EntityConstructor<any>[]): Promise<number[]> {
-  return await Promise.all(
+  return Promise.all(
     args.map(async (ec) => {
       const entities = await em.find(ec, {});
       return entities.length;

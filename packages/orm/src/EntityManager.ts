@@ -442,10 +442,7 @@ export class EntityManager<C = {}> {
               await Promise.all(
                 relatedEntities.map(async (related) => {
                   const clonedRelated = await this.clone(related, nested);
-                  // Many to One relationships try and fetch their data from the cache if they can,
-                  // but the data is pointing to the uncloned entity, resulting in the original relation
-                  // being unset.
-                  // So we clear this data from the clone to ensure that the relation is set correctly
+                  // Clear to avoid `set` mutating the original/source entity's relationship
                   clonedRelated.__orm.data[relation.otherFieldName] = undefined;
                   const relationToClone = clonedRelated[relation.otherFieldName] as Reference<Entity, T, undefined>;
                   relationToClone.set(clone);
@@ -455,10 +452,7 @@ export class EntityManager<C = {}> {
               const related = await relation.load();
               if (related) {
                 const clonedRelated = await this.clone(related, nested);
-                // Many to One relationships try and fetch their data from the cache if they can,
-                // but the data is pointing to the uncloned entity, resulting in the original relation
-                // being unset.
-                // So we clear this data from the clone to ensure that the relation is set correctly
+                // Clear to avoid `set` mutating the original/source entity's relationship
                 clonedRelated.__orm.data[relation.otherFieldName] = undefined;
                 const relationToClone = clone[relation.fieldName] as any;
                 relationToClone.set(clonedRelated);
@@ -467,16 +461,13 @@ export class EntityManager<C = {}> {
               const related = await relation.load();
               if (related) {
                 const clonedRelated = await this.clone(related, nested);
-                // Many to One relationships try and fetch their data from the cache if they can,
-                // but the data is pointing to the uncloned entity, resulting in the original relation
-                // being unset.
-                // So we clear this data from the clone to ensure that the relation is set correctly
+                // Clear to avoid `set` mutating the original/source entity's relationship
                 clone.__orm.data[relationName] = undefined;
                 const relationToClone = clone[relationName] as any;
                 relationToClone.set(clonedRelated);
               }
             } else {
-              fail(`Irreversible relation: ${relationName}`);
+              fail(`Uncloneable relation: ${relationName}`);
             }
           },
         ),

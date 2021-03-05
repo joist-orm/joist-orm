@@ -760,6 +760,7 @@ export class EntityManager<C = {}> {
           todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
           todo.inserts.forEach((e) => (e.__orm.originalData = {}));
           todo.updates.forEach((e) => (e.__orm.originalData = {}));
+          todo.deletes.forEach((e) => (e.__orm.originalData = {}));
         });
 
         // Reset the find caches b/c data will have changed in the db

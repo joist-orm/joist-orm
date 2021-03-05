@@ -969,6 +969,18 @@ describe("EntityManager", () => {
     expect(afterTransactionCount).toEqual(1);
   });
 
+  it("can delete an entity with a reverseHint in a transaction", async () => {
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = new Book(em, { title: "title", author: a1 })
+    await em.flush();
+    await em.transaction(async () => {
+      em.delete(b1);
+      await em.flush();
+    });
+    expect(b1.isDeletedEntity).toBeTruthy()
+  });
+
   it("can save entities", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });

@@ -1039,15 +1039,15 @@ async function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<v
 function coerceError(
   entity: Entity,
   maybeError: string | ValidationError | ValidationError[] | undefined,
-): ValidationError[] {
+): Required<ValidationError>[] {
   if (maybeError === undefined) {
     return [];
   } else if (typeof maybeError === "string") {
     return [{ entity, message: maybeError }];
   } else if (Array.isArray(maybeError)) {
-    return maybeError as ValidationError[];
+    return (maybeError as ValidationError[]).map(ve => ({ entity, ...ve}));
   } else {
-    return [maybeError];
+    return [{ entity, ...maybeError}];
   }
 }
 

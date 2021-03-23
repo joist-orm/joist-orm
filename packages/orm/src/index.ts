@@ -245,12 +245,12 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
 }
 
 /** Return type of a `ValidationRule` before being `MaybePromise`'d */
-export type ValidationRuleResult = string | ValidationError | ValidationError[] | undefined;
+export type ValidationRuleResult<E extends ValidationError> = string | E | E[] | undefined;
 
 /** Entity validation errors; if `entity` is invalid, throw a `ValidationError`. */
 export type ValidationRule<T extends Entity> = (
   entity: T,
-) => MaybePromise<ValidationRuleResult>;
+) => MaybePromise<ValidationRuleResult<any>>;
 
 type MaybePromise<T> = T | PromiseLike<T>;
 

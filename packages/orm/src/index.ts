@@ -244,14 +244,24 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
     .map((f) => f.fieldName);
 }
 
+/**
+ * Return type of a `ValidationRule`.
+ *
+ * Consumers can extend `GenericError` to add fields relevant for their application.
+ */
+export type ValidationRuleResult<E extends GenericError> = string | E | E[] | undefined;
+
 /** Entity validation errors; if `entity` is invalid, throw a `ValidationError`. */
 export type ValidationRule<T extends Entity> = (
   entity: T,
-) => MaybePromise<string | ValidationError | ValidationError[] | undefined>;
+) => MaybePromise<ValidationRuleResult<any>>;
 
 type MaybePromise<T> = T | PromiseLike<T>;
 
-export type ValidationError = { entity: Entity; message: string };
+/** A generic error which contains only a message field */
+export type GenericError = { message: string };
+/** An extension to GenericError which associates the error to a specific entity */
+export type ValidationError = { entity: Entity; } & GenericError;
 
 export class ValidationErrors extends Error {
   constructor(public errors: ValidationError[]) {

@@ -13,6 +13,7 @@ import {
   ConfigApi,
   DeepPartialOrNull,
   EntityHook,
+  GenericError,
   getEm,
   getRelations,
   keyToString,
@@ -30,6 +31,7 @@ import {
   tagIfNeeded,
   ValidationError,
   ValidationErrors,
+  ValidationRuleResult,
 } from "./index";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, NullOrDefinedOr } from "./utils";
@@ -1117,16 +1119,16 @@ async function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<v
 
 function coerceError(
   entity: Entity,
-  maybeError: string | ValidationError | ValidationError[] | undefined,
+  maybeError: ValidationRuleResult<any>,
 ): ValidationError[] {
   if (maybeError === undefined) {
     return [];
   } else if (typeof maybeError === "string") {
     return [{ entity, message: maybeError }];
   } else if (Array.isArray(maybeError)) {
-    return maybeError as ValidationError[];
+    return (maybeError as GenericError[]).map(ve => ({ entity, ...ve}));
   } else {
-    return [maybeError];
+    return [{ entity, ...maybeError}];
   }
 }
 

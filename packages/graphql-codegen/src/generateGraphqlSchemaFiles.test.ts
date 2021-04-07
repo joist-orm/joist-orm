@@ -223,7 +223,7 @@ describe("generateGraphqlSchemaFiles", () => {
     // When ran
     const fs = newFs({});
     await generateGraphqlSchemaFiles(fs, entities);
-    // We the input does not have the createdAt field
+    // Then the input does not have the createdAt field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
       "type Author {
         id: ID!

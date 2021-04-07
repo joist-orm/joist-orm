@@ -117,10 +117,12 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
 
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID" };
 
-    const primitives = e.primitives.map(({ fieldName, fieldType: tsType }) => {
-      const fieldType = `${mapTypescriptTypeToGraphQLType(tsType)}`;
-      return { ...common, fieldName, fieldType };
-    });
+    const primitives = e.primitives
+      .filter((f) => f.derived === false)
+      .map(({ fieldName, fieldType: tsType }) => {
+        const fieldType = `${mapTypescriptTypeToGraphQLType(tsType)}`;
+        return { ...common, fieldName, fieldType };
+      });
 
     const enums = e.enums.map(({ fieldName, enumType }) => {
       return { ...common, fieldName, fieldType: enumType.value };

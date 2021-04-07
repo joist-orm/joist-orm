@@ -207,6 +207,45 @@ describe("generateGraphqlSchemaFiles", () => {
       "
     `);
   });
+
+  it("does not add derived fields to inputs", async () => {
+    // Given an author
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Author", {
+        primitives: [
+          // With a regular field
+          newPrimitiveField("firstName"),
+          // And also a derived field
+          newPrimitiveField("createdAt", { derived: "orm" }),
+        ],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then the input does not have the createdAt field
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+      "type Author {
+        id: ID!
+        firstName: String!
+        createdAt: String!
+      }
+
+      extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+
+      input SaveAuthorInput {
+        id: ID
+        firstName: String
+      }
+
+      type SaveAuthorResult {
+        author: Author!
+      }
+      "
+    `);
+  });
 });
 
 function newFs(files: Record<string, string>): Fs {

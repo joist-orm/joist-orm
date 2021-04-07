@@ -300,18 +300,7 @@ function addForeignKeyClause(
   } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
     // I.e. { authorFk: { id: string } } || { authorFk: { id: string[] } }
     // If only querying on the id, we can skip the join
-    const value = (clause as any)["id"];
-    if (Array.isArray(value)) {
-      return [
-        false,
-        query.whereIn(
-          `${alias}.${column.columnName}`,
-          value.map((id) => column.serde.mapToDb(id)),
-        ),
-      ];
-    } else {
-      return [false, query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(value))];
-    }
+    return [false, addPrimitiveClause(query, alias, column, (clause as any)["id"])];
   } else if (clauseKeys.length === 1 && clauseKeys[0] === "ne") {
     // I.e. { authorFk: { ne: string | null | undefined } }
     const value = (clause as any)["ne"];

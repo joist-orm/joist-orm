@@ -31,7 +31,7 @@ export * from "./newTestInstance";
 export * from "./QueryBuilder";
 export * from "./reverseHint";
 export * from "./serde";
-export * from "./toMatchEntity";
+// export * from "./toMatchEntity";
 export { fail } from "./utils";
 
 const F = Symbol();

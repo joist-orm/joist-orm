@@ -13,7 +13,7 @@
     "outDir": "./build",
     "baseUrl": ".",
     "paths": {
-      "joist-utils": ["../../utils/src"]
+      "joist-utils": ["../utils"]
     }
   },
   "include": ["./src"],

@@ -2,6 +2,7 @@ import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
 import { config } from "dotenv";
 import { PostgresDriver } from "joist-orm";
+import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import Knex from "knex";
 
@@ -22,6 +23,8 @@ export function newEntityManager() {
 
 export let numberOfQueries = 0;
 export let queries: string[] = [];
+
+expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
   knex = Knex({

@@ -7,8 +7,8 @@
     "url": "https://github.com/stephenh/joist-ts.git",
     "directory": "packages/joist-orm"
   },
-  "main": "build/index.js",
-  "types": "build/index.d.ts",
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
   "scripts": {
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },

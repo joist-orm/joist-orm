@@ -177,7 +177,7 @@ export async function contentToString(content: Code | string, fileName: string):
   if (typeof content === "string") {
     return content;
   }
-  return await content.toStringWithImports(fileName);
+  return await content.toStringWithImports({ path: fileName });
 }
 
 if (require.main === module) {

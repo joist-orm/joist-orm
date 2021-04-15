@@ -1,6 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
-import { code, Code, imp } from "ts-poet";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
+import { code, Code, imp, Import } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
@@ -39,7 +38,7 @@ import {
 } from "./symbols";
 
 export interface ColumnMetaData {
-  typeConverter?: SymbolSpec;
+  typeConverter?: Import;
   fieldType: PrimitiveTypescriptType;
 }
 

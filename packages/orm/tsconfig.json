@@ -11,11 +11,11 @@
     "composite": true,
     "sourceMap": true,
     "outDir": "./build",
-    "rootDir": "./src",
-    "baseUrl": "./src",
+    "baseUrl": ".",
     "paths": {
-      "joist-utils": ["../../utils/src"]
+      "joist-utils": ["../utils"]
     }
   },
+  "include": ["./src"],
   "references": [{ "path": "../utils" }]
 }

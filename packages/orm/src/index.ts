@@ -31,6 +31,7 @@ export * from "./newTestInstance";
 export * from "./QueryBuilder";
 export * from "./reverseHint";
 export * from "./serde";
+export * from "./toMatchEntity";
 export { fail } from "./utils";
 
 const F = Symbol();
@@ -252,16 +253,14 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
 export type ValidationRuleResult<E extends GenericError> = string | E | E[] | undefined;
 
 /** Entity validation errors; if `entity` is invalid, throw a `ValidationError`. */
-export type ValidationRule<T extends Entity> = (
-  entity: T,
-) => MaybePromise<ValidationRuleResult<any>>;
+export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult<any>>;
 
 type MaybePromise<T> = T | PromiseLike<T>;
 
 /** A generic error which contains only a message field */
 export type GenericError = { message: string };
 /** An extension to GenericError which associates the error to a specific entity */
-export type ValidationError = { entity: Entity; } & GenericError;
+export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {
   constructor(public errors: ValidationError[]) {

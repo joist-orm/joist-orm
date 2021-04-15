@@ -58,6 +58,9 @@ After checkout:
 
 In general priority/itch order:
 
+- Integrate `PotentialOperation` ideas, i.e. a `Book.canBeDeleted` operation that can also be used as a validation rule
+  - Wrinkle is that, when ran as a validation rule, it needs the original / pre-flush view of "what was this allowed before the user changed it"
+  - Or instead of a validation rule, do we invoke the potential operation inline while the setter/mutation is running?
 - Open source `joist-graphql-utils` with the `entityResolver` logic in it
 - Fix reactive rules not catching "middle-references" changing (fixed?)
 - Optionally move `begin` to the start of Unit of Work

@@ -13,5 +13,8 @@
   ],
   "dependencies": {
     "typescript": "^4.2.2"
+  },
+  "resolutions": {
+    "prettier": "2.2.1"
   }
 }

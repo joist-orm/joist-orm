@@ -1,8 +1,7 @@
 import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "@homebound/pg-structure";
 import { camelCase } from "change-case";
 import { plural, singular } from "pluralize";
-import { imp } from "ts-poet";
-import { SymbolSpec } from "ts-poet/build/SymbolSpecs";
+import { imp, Import } from "ts-poet";
 import {
   Config,
   isAsyncDerived,
@@ -22,18 +21,18 @@ const columnCustomizations: Record<string, ColumnMetaData> = {};
 export type Entity = {
   name: string;
   /** The symbol pointing to the entity itself. */
-  type: SymbolSpec;
+  type: Import;
   /** The name of the entity's runtime metadata const. */
   metaName: string;
   /** The symbol pointing to the entity's runtime metadata const. */
-  metaType: SymbolSpec;
+  metaType: Import;
   /** The symbol pointing to the entity's EntityId type. */
-  idType: SymbolSpec;
+  idType: Import;
   /** The symbol pointing to the entity's Order type. */
-  orderType: SymbolSpec;
+  orderType: Import;
   /** The symbol pointing to the entity's config const. */
-  configConst: SymbolSpec;
-  optsType: SymbolSpec;
+  configConst: Import;
+  optsType: Import;
 };
 
 export type DatabaseColumnType =
@@ -66,8 +65,8 @@ export type PrimitiveField = Field & {
 export type EnumField = Field & {
   columnName: string;
   enumName: string;
-  enumType: SymbolSpec;
-  enumDetailType: SymbolSpec;
+  enumType: Import;
+  enumDetailType: Import;
   notNull: boolean;
 };
 
@@ -347,11 +346,11 @@ function metaName(entityName: string): string {
   return `${camelCase(entityName)}Meta`;
 }
 
-function metaType(entityName: string): SymbolSpec {
+function metaType(entityName: string): Import {
   return imp(`${metaName(entityName)}@./entities`);
 }
 
-function entityType(entityName: string): SymbolSpec {
+function entityType(entityName: string): Import {
   return imp(`${entityName}@./entities`);
 }
 

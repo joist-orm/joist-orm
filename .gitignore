@@ -2,3 +2,11 @@ build/
 node_modules/
 /.idea/
 *.tsbuildinfo
+
+.yarn/*
+!.yarn/patches
+!.yarn/releases
+!.yarn/plugins
+!.yarn/sdks
+!.yarn/versions
+.pnp.*

@@ -21,7 +21,7 @@
     "knex": "^0.21.18",
     "pg": "^8.3.0",
     "pluralize": "^8.0.0",
-    "ts-poet": "^3.2.2"
+    "ts-poet": "^4.5.0"
   },
   "devDependencies": {
     "@types/jest": "^25.2.1",

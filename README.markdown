@@ -77,6 +77,7 @@ In general priority/itch order:
 - An in-memory backend
 - `hasOneThrough` that can be used as `find`/SQL filters
   - Need to declare in codegen to a) add to FilterType + b) verify once traverses relations
+- See if [Logica](https://opensource.googleblog.com/2021/04/logica-organizing-your-data-queries.html) is useful for integration/inspiration
 
 ### History / Inspiration
 

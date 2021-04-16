@@ -13,11 +13,12 @@
     "rootDir": "./",
     "baseUrl": "./",
     "paths": {
-      "joist-codegen": ["../codegen/src"],
-      "joist-graphql-codegen": ["../graphql-codegen/src"],
-      "joist-migration-utils": ["../migration-utils/src"],
-      "joist-orm": ["../orm/src"],
-      "joist-utils": ["../utils/src"],
+      "joist-codegen": ["../codegen"],
+      "joist-graphql-codegen": ["../graphql-codegen"],
+      "joist-migration-utils": ["../migration-utils"],
+      "joist-test-utils": ["../test-utils"],
+      "joist-orm": ["../orm"],
+      "joist-utils": ["../utils"],
       "@src/*": ["src/*"]
     }
   },
@@ -26,6 +27,7 @@
     { "path": "../graphql-codegen" },
     { "path": "../migration-utils" },
     { "path": "../orm" },
-    { "path": "../utils" }
+    { "path": "../utils" },
+    { "path": "../test-utils" }
   ]
 }

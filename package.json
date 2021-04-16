@@ -9,7 +9,8 @@
     "packages/integration-tests",
     "packages/migration-utils",
     "packages/orm",
-    "packages/utils"
+    "packages/utils",
+    "packages/test-utils"
   ],
   "dependencies": {
     "typescript": "^4.2.2"

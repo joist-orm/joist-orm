@@ -24,6 +24,7 @@
     "joist-codegen": "1.0.0-bump",
     "joist-graphql-codegen": "1.0.0-bump",
     "joist-migration-utils": "1.0.0-bump",
+    "joist-test-utils": "1.0.0-bump",
     "prettier": "^2.2.1",
     "prettier-plugin-organize-imports": "^1.1.1",
     "ts-jest": "^26.3.0",

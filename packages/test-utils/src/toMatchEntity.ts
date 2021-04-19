@@ -1,7 +1,5 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
-import { Collection, Entity, Reference } from "joist-orm";
-import { isEntity } from "../../orm/src/EntityManager";
-import { isCollection, isReference } from "../../orm/src/index";
+import { Collection, Entity, isCollection, isEntity, isReference, Reference } from "joist-orm";
 
 export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Promise<CustomMatcherResult> {
   // Because the `actual` entity has lots of __orm, Reference, Collection, etc cruft in it,

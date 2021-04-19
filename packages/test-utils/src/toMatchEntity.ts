@@ -1,5 +1,7 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
 import { Collection, Entity, Reference } from "joist-orm";
+import { isEntity } from "../../orm/src/EntityManager";
+import { isCollection, isReference } from "../../orm/src/index";
 
 export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Promise<CustomMatcherResult> {
   // Because the `actual` entity has lots of __orm, Reference, Collection, etc cruft in it,
@@ -15,7 +17,7 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
     const keys = Object.keys(expected);
     for (const key of keys) {
       const value = actual[key];
-      if (value && typeof value === "object" && "load" in value) {
+      if (value && (isReference(value) || isCollection(value))) {
         // If something has a `.load` it could be a Reference.load or a Collection.load, either way lazy load it
         const loaded = await value.load();
         if (loaded instanceof Array) {
@@ -26,7 +28,8 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
           for (let i = 0; i < Math.max(actualList.length, expectedList.length); i++) {
             const actualI = actualList[i];
             const expectedI = expectedList[i];
-            if (actualI && expectedI && typeof actualI === "object" && "__orm" in actualI) {
+            // If actual is a list of entities (and expected is not), make a copy of each
+            if (isEntity(actualI) && !isEntity(expectedI)) {
               const child = {};
               queue.push([actualI, expectedI, child]);
               copyList.push(child);
@@ -37,9 +40,13 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
           copy[key] = copyList;
         } else {
           // If the `.load` result wasn't a list, assume it's an entity that we'll copy
-          const child = {};
-          queue.push([loaded, expected[key], child]);
-          copy[key] = child;
+          if (isEntity(loaded) && !isEntity(expected[key])) {
+            const child = {};
+            queue.push([loaded, expected[key], child]);
+            copy[key] = child;
+          } else {
+            copy[key] = loaded;
+          }
         }
       } else {
         // Otherwise assume it's regular data. Probably need to handle getters/promises?
@@ -62,8 +69,8 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
  */
 export type MatchedEntity<T> = {
   [K in keyof T]?: T[K] extends Reference<any, infer U, any>
-    ? MatchedEntity<U>
+    ? MatchedEntity<U> | U
     : T[K] extends Collection<any, infer U>
-    ? Array<MatchedEntity<U>>
+    ? Array<MatchedEntity<U> | U>
     : T[K];
 };

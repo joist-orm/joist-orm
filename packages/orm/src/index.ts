@@ -445,3 +445,18 @@ export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
 }
+
+/** Type guard utility for determining if an entity field is a Reference. */
+export function isReference(maybeReference: any): maybeReference is Reference<any, any, never> {
+  return (
+    maybeReference &&
+    maybeReference.load !== undefined &&
+    maybeReference.set !== undefined &&
+    maybeReference.add === undefined
+  );
+}
+
+/** Type guard utility for determining if an entity field is a Collection. */
+export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
+  return maybeCollection && maybeCollection.load !== undefined && maybeCollection.add !== undefined;
+}

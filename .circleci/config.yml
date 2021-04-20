@@ -16,6 +16,6 @@ jobs:
           docker-compose exec tests ./tests.sh
       - run: |
           cd packages/integration-tests
-          if [ "$CIRCLE_BRANCH" = "master" ]; then
+          if [ "$CIRCLE_BRANCH" = "main" ]; then
             docker-compose exec tests ./release.sh
           fi

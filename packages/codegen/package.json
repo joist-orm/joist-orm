@@ -12,6 +12,9 @@
   "scripts": {
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
+  "files": [
+    "build"
+  ],
   "dependencies": {
     "@homebound/pg-structure": "^7.2.5",
     "@types/pluralize": "0.0.29",

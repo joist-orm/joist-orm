@@ -12,6 +12,9 @@
   "scripts": {
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
+  "files": [
+    "build"
+  ],
   "dependencies": {
     "change-case": "^4.1.1",
     "graphql": "^15.3.0",

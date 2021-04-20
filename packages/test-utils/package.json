@@ -7,6 +7,9 @@
   "scripts": {
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
+  "files": [
+    "build"
+  ],
   "devDependencies": {
     "@types/jest": "^25.2.1",
     "jest": "^26.4.2",

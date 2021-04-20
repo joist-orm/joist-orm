@@ -48,6 +48,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   const { id, ...others } = opts as any;
   const meta = getMetadata(constructor);
   const isNew = id === null || id === undefined;
+  const collectionsToLoad: string[] = [];
 
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
@@ -105,6 +106,7 @@ export async function createOrUpdatePartial<T extends Entity>(
       // Also we trust the API layer, i.e. GraphQL, to not let these fields leak unless explicitly allowed.
       const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
       const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
+      collectionsToLoad.push(field.fieldName);
 
       const entities = !value
         ? []
@@ -138,6 +140,12 @@ export async function createOrUpdatePartial<T extends Entity>(
     return em.createPartial(constructor, _opts);
   } else {
     const entity = await em.load(constructor, id);
+    // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.
+    // Note that we also have the `delete: true` pattern for flagging not only "remove" but "delete",
+    // for a parent's mutation to control the lifecycle of a child entity (i.e. line items).
+    // Musing: Maybe this should happen implicitly, like if a LineItem.parent is set to null, that
+    // LineItem knows to just `em.delete` itself? Instead of relying on hints from GraphQL mutations.
+    await Promise.all(collectionsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
     entity.setPartial(_opts);
     return entity;
   }

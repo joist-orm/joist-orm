@@ -201,18 +201,23 @@ export function setOpts<T extends Entity>(
       if (calledFromConstructor) {
         current.setFromOpts(value);
       } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
-        // For setPartial collections, we individually add/remove instead of set.
+        // For setPartial collections, we used to individually add/remove instead of set, but this
+        // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
+        // you'd still have `[a]` around. Note that we still support `delete: true` command to go
+        // further than "remove from collection" to "actually delete the entity".
         const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
         const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
+        const toSet: any[] = [];
         (value as any[]).forEach((e) => {
           if (allowDelete && e.delete === true) {
             getEm(entity).delete(e);
           } else if (allowRemove && e.remove === true) {
-            (current as any).remove(e);
+            // Just leave out of `toSet`
           } else {
-            (current as any).add(e);
+            toSet.push(e);
           }
         });
+        current.set(toSet);
       } else {
         current.set(value);
       }

@@ -8,9 +8,11 @@ for p in utils codegen graphql-codegen migration-utils orm ; do
   ./bump.sh ./packages/$p/package.json
 done
 
+echo "npmAuthToken: ${NPM_TOKEN}" >> .yarnrc.yml
+
 for p in utils codegen graphql-codegen migration-utils orm ; do
   cd ./packages/$p
-  yarn npm publish --non-interactive
+  yarn npm publish
   cd ../..
 done
 

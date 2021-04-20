@@ -10,7 +10,7 @@ done
 
 for p in utils codegen graphql-codegen migration-utils orm ; do
   cd ./packages/$p
-  npm publish --non-interactive
+  yarn npm publish --non-interactive
   cd ../..
 done
 

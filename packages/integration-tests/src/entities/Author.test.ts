@@ -264,6 +264,7 @@ describe("Author", () => {
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
+      expect(a1.changes.fields).toEqual([]);
     });
 
     it("after initial load nothing is considered changed", async () => {
@@ -272,6 +273,7 @@ describe("Author", () => {
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
+      expect(a1.changes.fields).toEqual([]);
     });
 
     it("after initial load and mutate then hasChanged is true", async () => {
@@ -280,9 +282,11 @@ describe("Author", () => {
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
+      expect(a1.changes.fields).toEqual([]);
       a1.firstName = "a2";
       expect(a1.changes.firstName.hasChanged).toBeTruthy();
       expect(a1.changes.firstName.originalValue).toEqual("a1");
+      expect(a1.changes.fields).toEqual(["firstName"]);
     });
 
     it("does not have collections", async () => {
@@ -300,9 +304,11 @@ describe("Author", () => {
       const a1 = await em.load(Author, "1");
       expect(a1.changes.publisher.hasChanged).toBeFalsy();
       expect(a1.changes.publisher.originalValue).toBeUndefined();
+      expect(a1.changes.fields).toEqual([]);
       a1.publisher.set(await em.load(Publisher, "2"));
       expect(a1.changes.publisher.hasChanged).toBeTruthy();
       expect(a1.changes.publisher.originalValue).toEqual("p:1");
+      expect(a1.changes.fields).toEqual(["publisher"]);
     });
   });
 

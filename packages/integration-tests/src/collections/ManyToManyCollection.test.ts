@@ -286,4 +286,24 @@ describe("ManyToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 4 }));
     expect(rows[1]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 5 }));
   });
+
+  it("can setPartial when initially unloaded", async () => {
+    // Given the book already has t3 and t4 on it
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t3` });
+    await insertTag({ id: 4, name: `t4` });
+    await insertTag({ id: 5, name: `t5` });
+    await insertBookToTag({ book_id: 2, tag_id: 3 });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+
+    // When we setPartial t4 and t5
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:2");
+    const [t4, t5] = await em.loadAll(Tag, ["t:4", "t:5"]);
+    await em.createOrUpdatePartial(Book, { id: book.idOrFail, tags: [t4, t5] });
+    await em.flush();
+
+    // We could recognize when M2M.set is called w/o a load, and issue a DELETE + INSERTs.
+  });
 });

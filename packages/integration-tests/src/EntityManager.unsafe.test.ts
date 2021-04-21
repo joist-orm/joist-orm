@@ -159,16 +159,19 @@ describe("EntityManager", () => {
     expect(await a1.books.load()).toEqual([]);
   });
 
-  it("collections are upserted", async () => {
+  it("collections are not upserted", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ title: "b2" }] });
+    const a1 = await em.createOrUpdatePartial(Author, {
+      id: "a:1",
+      // b2 will be added as a new book, and b1 will be orphaned from the author
+      books: [{ id: "b:1", delete: true }, { title: "b2" }],
+    });
     await em.flush();
     const books = await a1.books.load();
-    expect(books.length).toEqual(2);
-    const [b1, b2] = books;
-    expect(b1.title).toEqual("b1");
+    expect(books.length).toEqual(1);
+    const [b2] = books;
     expect(b2.title).toEqual("b2");
   });
 
@@ -177,7 +180,7 @@ describe("EntityManager", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     const em = newEntityManager();
-    await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", delete: true }] });
+    await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", delete: true }, { id: "b:2" }] });
     await em.flush();
     const rows = await knex.select("*").from("books");
     expect(rows.length).toEqual(1);
@@ -188,7 +191,10 @@ describe("EntityManager", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     const em = newEntityManager();
-    await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", title: "b1changed", delete: false }] });
+    await em.createOrUpdatePartial(Author, {
+      id: "a:1",
+      books: [{ id: "b:1", title: "b1changed", delete: false }, { id: "b:2" }],
+    });
     await em.flush();
     expect(await countOfBooks()).toEqual(2);
     const b1 = await em.load(Book, "b:1");
@@ -206,7 +212,7 @@ describe("EntityManager", () => {
     await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", remove: true }] });
     await em.flush();
     expect(await countOfTags()).toEqual(2);
-    expect(await countOfBookToTags()).toEqual(1);
+    expect(await countOfBookToTags()).toEqual(0);
   });
 
   it("collections can refer to entities", async () => {

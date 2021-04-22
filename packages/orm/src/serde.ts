@@ -77,7 +77,7 @@ export class PrimaryKeySerde implements ColumnSerde {
   }
 
   mapToDb(value: any) {
-    return keyToNumber(this.meta(), value);
+    return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
   }
 }
 

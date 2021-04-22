@@ -79,6 +79,7 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  image?: EntityFilter<Image, ImageId, FilterOf<Image>, undefined>;
 }
 
 export interface BookGraphQLFilter {
@@ -88,6 +89,7 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
 }
 
 export interface BookOrder {

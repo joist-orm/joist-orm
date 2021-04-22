@@ -1,6 +1,6 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertImage, insertPublisher } from "@src/entities/inserts";
 import { NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
-import { Author, Book, Publisher, PublisherId, PublisherSize } from "./entities";
+import { Author, Book, Image, ImageType, Publisher, PublisherId, PublisherSize } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -200,6 +200,35 @@ describe("EntityManager.queries", () => {
     const books = await em.find(Book, { author: { publisher } });
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
+  });
+
+  it("can find through a o2o entity", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertImage({ book_id: 1, file_name: "1", type_id: 1 });
+    await insertImage({ book_id: 2, file_name: "2", type_id: 1 });
+
+    const em = newEntityManager();
+    const image = await em.load(Image, "2");
+    const books = await em.find(Book, { image });
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b2");
+  });
+
+  it("can find through a o2o filter", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertImage({ book_id: 1, file_name: "1", type_id: 1 });
+    await insertImage({ author_id: 2, file_name: "2", type_id: 2 });
+
+    const em = newEntityManager();
+    const books = await em.find(Book, { image: { type: ImageType.BookImage } });
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b1");
   });
 
   it("can find by foreign key using only an id", async () => {

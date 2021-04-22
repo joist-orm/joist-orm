@@ -366,7 +366,10 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
       otherEntity.type
     }>, ${nullOrNever(notNull)}>;`;
   });
-  return [...primitives, ...enums, ...m2o];
+  const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  });
+  return [...primitives, ...enums, ...m2o, ...o2o];
 }
 
 function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
@@ -383,7 +386,10 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
   });
-  return [...primitives, ...enums, ...m2o];
+  const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
+  });
+  return [...primitives, ...enums, ...m2o, ...o2o];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {

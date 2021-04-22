@@ -11,7 +11,7 @@ import {
   OrderOf,
 } from "./EntityManager";
 import { keyToNumber } from "./keys";
-import { ForeignKeySerde } from "./serde";
+import { ForeignKeySerde, PrimaryKeySerde } from "./serde";
 import { fail } from "./utils";
 
 export type OrderBy = "ASC" | "DESC";
@@ -217,7 +217,7 @@ export function buildQuery<T extends Entity>(
     const keys = [...(where ? Object.keys(where) : []), ...(orderBy ? Object.keys(orderBy) : [])];
 
     keys.forEach((key) => {
-      const column = meta.columns.find((c) => c.fieldName === key) || fail(`${key} not found`);
+      const field = meta.fields.find((f) => f.fieldName === key) ?? fail(`${key} not found`);
 
       // We may/may not have a where clause or orderBy for this key, but we should have at least one of them.
       const clause = where && (where as any)[key];
@@ -225,27 +225,58 @@ export function buildQuery<T extends Entity>(
       const order = orderBy && (orderBy as any)[key];
       const hasOrder = !!order;
 
-      if (column.serde instanceof ForeignKeySerde) {
+      if (field.kind === "o2o") {
         // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
-        let [whereNeedsJoin, _query] = hasClause ? addForeignKeyClause(query, alias, column, clause) : [false, query];
+        const otherMeta = field.otherMetadata();
+        const otherAlias = getAlias(otherMeta.tableName);
+        const otherColumn = otherMeta.columns.find((c) => c.fieldName === field.otherFieldName)!;
+
+        query = query.leftJoin(
+          `${otherMeta.tableName} AS ${otherAlias}`,
+          `${otherAlias}.${otherColumn.columnName}`,
+          `${alias}.id`,
+        );
+
+        const [shouldAddClauses, _query] = hasClause
+          ? addForeignKeyClause(
+              query,
+              otherAlias,
+              otherMeta.columns.find((c) => c.serde instanceof PrimaryKeySerde)!,
+              clause,
+            )
+          : [false, query];
         query = _query;
-        if (whereNeedsJoin || hasOrder) {
-          // Add a join for this column
-          const otherMeta = column.serde.otherMeta();
-          const otherAlias = getAlias(otherMeta.tableName);
-          query = query.innerJoin(
-            `${otherMeta.tableName} AS ${otherAlias}`,
-            `${alias}.${column.columnName}`,
-            `${otherAlias}.id`,
-          );
-          // Then recurse to add its conditions to the query
-          addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
+
+        if (shouldAddClauses || hasOrder) {
+          addClauses(otherMeta, otherAlias, shouldAddClauses ? clause : undefined, hasOrder ? order : undefined);
         }
       } else {
-        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
-        // This is not a foreign key column, so it'll have the primitive filters/order bys
-        if (order) {
-          query = query.orderBy(`${alias}.${column.columnName}`, order);
+        const column = meta.columns.find((c) => c.fieldName === key) ?? fail(`${key} not found`);
+
+        if (column.serde instanceof ForeignKeySerde) {
+          // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
+          const [whereNeedsJoin, _query] = hasClause
+            ? addForeignKeyClause(query, alias, column, clause)
+            : [false, query];
+          query = _query;
+          if (whereNeedsJoin || hasOrder) {
+            // Add a join for this column
+            const otherMeta = column.serde.otherMeta();
+            const otherAlias = getAlias(otherMeta.tableName);
+            query = query.innerJoin(
+              `${otherMeta.tableName} AS ${otherAlias}`,
+              `${alias}.${column.columnName}`,
+              `${otherAlias}.id`,
+            );
+            // Then recurse to add its conditions to the query
+            addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
+          }
+        } else {
+          query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+          // This is not a foreign key column, so it'll have the primitive filters/order bys
+          if (order) {
+            query = query.orderBy(`${alias}.${column.columnName}`, order);
+          }
         }
       }
     });

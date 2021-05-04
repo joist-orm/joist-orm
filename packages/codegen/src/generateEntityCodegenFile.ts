@@ -101,7 +101,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   // Add ManyToOne enums
   meta.enums.forEach((e) => {
-    const { fieldName, enumType, notNull } = e;
+    const { fieldName, enumType, notNull, enumRows } = e;
     const maybeOptional = notNull ? "" : " | undefined";
     const getter = code`
       get ${fieldName}(): ${enumType}${maybeOptional} {
@@ -113,9 +113,21 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         ${setField}(this, "${fieldName}", ${fieldName});
       }
     `;
+
+    const codes = new Set(enumRows.map((r) => r.code));
+    const shouldPrefixAccessors = meta.enums
+      .filter((other) => other !== e)
+      .some((other) => other.enumRows.some((r) => codes.has(r.code)));
+
+    const accessors = enumRows.map(
+      (row) => code`
+        get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+          return this.__orm.data["${fieldName}"] === ${enumType}.${pascalCase(row.code)};
+        }
+      `,
+    );
     // Group enums as primitives
-    primitives.push(getter);
-    primitives.push(setter);
+    primitives.push(getter, setter, ...accessors);
   });
 
   // Add ManyToOne entities

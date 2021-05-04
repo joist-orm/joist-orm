@@ -32,3 +32,13 @@ type PublisherSizeDetail {
   code: PublisherSize!
   name: String!
 }
+
+enum PublisherType {
+  SMALL
+  BIG
+}
+
+type PublisherTypeDetail {
+  code: PublisherType!
+  name: String!
+}

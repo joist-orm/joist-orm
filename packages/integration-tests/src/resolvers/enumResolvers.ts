@@ -1,7 +1,7 @@
-import { AdvanceStatuses, ImageTypes, PublisherSizes } from "src/entities";
+import { AdvanceStatuses, ImageTypes, PublisherSizes, PublisherTypes } from "src/entities";
 import { Resolvers } from "src/generated/graphql-types";
 
-type EnumDetails = "AdvanceStatusDetail" | "ImageTypeDetail" | "PublisherSizeDetail";
+type EnumDetails = "AdvanceStatusDetail" | "ImageTypeDetail" | "PublisherSizeDetail" | "PublisherTypeDetail";
 
 export const enumResolvers: Pick<Resolvers, EnumDetails> = {
   AdvanceStatusDetail: {
@@ -20,5 +20,10 @@ export const enumResolvers: Pick<Resolvers, EnumDetails> = {
   PublisherSizeDetail: {
     code: (root) => root,
     name: (root) => PublisherSizes.getByCode(root).name,
+  },
+
+  PublisherTypeDetail: {
+    code: (root) => root,
+    name: (root) => PublisherTypes.getByCode(root).name,
   },
 };

@@ -151,6 +151,18 @@ export abstract class ImageCodegen extends BaseEntity {
     setField(this, "type", type);
   }
 
+  get isBookImage(): boolean {
+    return this.__orm.data["type"] === ImageType.BookImage;
+  }
+
+  get isAuthorImage(): boolean {
+    return this.__orm.data["type"] === ImageType.AuthorImage;
+  }
+
+  get isPublisherImage(): boolean {
+    return this.__orm.data["type"] === ImageType.PublisherImage;
+  }
+
   set(opts: Partial<ImageOpts>): void {
     setOpts((this as any) as Image, opts);
   }

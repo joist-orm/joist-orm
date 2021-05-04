@@ -17,9 +17,16 @@ export function up(b: MigrationBuilder): void {
     ["LARGE", "Large"],
   ]);
 
+  // tests enum accessor codegen name collision
+  createEnumTable(b, "publisher_type", [
+    ["SMALL", "Small"],
+    ["BIG", "Big"],
+  ]);
+
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
     size_id: { type: "integer", references: "publisher_size", notNull: false },
+    type_id: { type: "integer", references: "publisher_type", notNull: false },
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },

@@ -37,6 +37,7 @@ import {
   Publisher,
   publisherMeta,
   PublisherSize,
+  PublisherType,
 } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
@@ -47,6 +48,7 @@ export interface PublisherOpts {
   longitude?: number | null;
   hugeNumber?: number | null;
   size?: PublisherSize | null;
+  type?: PublisherType | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
   images?: Image[];
@@ -67,6 +69,7 @@ export interface PublisherFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null | undefined>;
+  type?: ValueFilter<PublisherType, null | undefined>;
 }
 
 export interface PublisherGraphQLFilter {
@@ -78,6 +81,7 @@ export interface PublisherGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: EnumGraphQLFilter<PublisherSize>;
+  type?: EnumGraphQLFilter<PublisherType>;
 }
 
 export interface PublisherOrder {
@@ -89,6 +93,7 @@ export interface PublisherOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   size?: OrderBy;
+  type?: OrderBy;
 }
 
 export const publisherConfig = new ConfigApi<Publisher, Context>();
@@ -173,6 +178,30 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   set size(size: PublisherSize | undefined) {
     setField(this, "size", size);
+  }
+
+  get isSizeSmall(): boolean {
+    return this.__orm.data["size"] === PublisherSize.Small;
+  }
+
+  get isSizeLarge(): boolean {
+    return this.__orm.data["size"] === PublisherSize.Large;
+  }
+
+  get type(): PublisherType | undefined {
+    return this.__orm.data["type"];
+  }
+
+  set type(type: PublisherType | undefined) {
+    setField(this, "type", type);
+  }
+
+  get isTypeSmall(): boolean {
+    return this.__orm.data["type"] === PublisherType.Small;
+  }
+
+  get isTypeBig(): boolean {
+    return this.__orm.data["type"] === PublisherType.Big;
   }
 
   set(opts: Partial<PublisherOpts>): void {

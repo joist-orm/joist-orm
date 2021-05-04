@@ -85,7 +85,7 @@ export interface AuthorFilter {
   updatedAt?: ValueFilter<Date, never>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
-  image?: EntityFilter<Image, ImageId, FilterOf<Image>, undefined>;
+  image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {

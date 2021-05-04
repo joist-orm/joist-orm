@@ -36,6 +36,7 @@ import {
   Publisher,
   publisherConfig,
   PublisherSizes,
+  PublisherTypes,
   Tag,
   tagConfig,
 } from "./entities";
@@ -793,6 +794,13 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     },
 
     {
+      fieldName: "type",
+      columnName: "type_id",
+      dbType: "int",
+      serde: new EnumFieldSerde("type", "type_id", PublisherTypes),
+    },
+
+    {
       fieldName: "name",
       columnName: "name",
       dbType: "character varying",
@@ -838,6 +846,14 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       fieldIdName: undefined,
       required: false,
       enumDetailType: PublisherSizes,
+    },
+
+    {
+      kind: "enum",
+      fieldName: "type",
+      fieldIdName: undefined,
+      required: false,
+      enumDetailType: PublisherTypes,
     },
 
     {

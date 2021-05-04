@@ -129,6 +129,18 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
     setField(this, "status", status);
   }
 
+  get isPending(): boolean {
+    return this.__orm.data["status"] === AdvanceStatus.Pending;
+  }
+
+  get isSigned(): boolean {
+    return this.__orm.data["status"] === AdvanceStatus.Signed;
+  }
+
+  get isPaid(): boolean {
+    return this.__orm.data["status"] === AdvanceStatus.Paid;
+  }
+
   set(opts: Partial<BookAdvanceOpts>): void {
     setOpts((this as any) as BookAdvance, opts);
   }

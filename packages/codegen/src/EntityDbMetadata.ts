@@ -12,6 +12,7 @@ import {
   relationName,
 } from "./config";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
+import { EnumMetadata, EnumRow } from "./index";
 import { isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
 
 // TODO Populate from config
@@ -67,6 +68,7 @@ export type EnumField = Field & {
   enumName: string;
   enumType: Import;
   enumDetailType: Import;
+  enumRows: EnumRow[];
   notNull: boolean;
 };
 
@@ -115,7 +117,7 @@ export class EntityDbMetadata {
   manyToManys: ManyToManyField[];
   tableName: string;
 
-  constructor(config: Config, table: Table) {
+  constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
@@ -123,7 +125,7 @@ export class EntityDbMetadata {
       .filter((f) => !f.ignore);
     this.enums = table.m2oRelations
       .filter((r) => isEnumTable(r.targetTable))
-      .map((r) => newEnumField(config, this.entity, r))
+      .map((r) => newEnumField(config, this.entity, r, enums))
       .filter((f) => !f.ignore);
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
@@ -203,7 +205,7 @@ function fieldDerived(config: Config, entity: Entity, fieldName: string): Primit
   }
 }
 
-function newEnumField(config: Config, entity: Entity, r: M2ORelation): EnumField {
+function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: EnumMetadata): EnumField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const fieldName = enumFieldName(column.name);
@@ -212,7 +214,16 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation): EnumField
   const enumDetailType = imp(`${plural(enumName)}@./entities`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull);
-  return { fieldName, columnName, enumName, enumType, enumDetailType, notNull, ignore };
+  return {
+    fieldName,
+    columnName,
+    enumName,
+    enumType,
+    enumDetailType,
+    notNull,
+    ignore,
+    enumRows: enums[r.targetTable.name].rows,
+  };
 }
 
 function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {

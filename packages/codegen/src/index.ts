@@ -196,7 +196,7 @@ if (require.main === module) {
     await client.end();
 
     const entityTables = db.tables.filter(isEntityTable).sortBy("name");
-    const entities = entityTables.map((table) => new EntityDbMetadata(config, table));
+    const entities = entityTables.map((table) => new EntityDbMetadata(config, table, enums));
     const dbMetadata: DbMetadata = { entityTables, entities, enums };
 
     assignTags(config, dbMetadata);

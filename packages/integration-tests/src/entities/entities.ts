@@ -6,6 +6,7 @@
 export * from "./AdvanceStatus";
 export * from "./ImageType";
 export * from "./PublisherSize";
+export * from "./PublisherType";
 export * from "./AuthorCodegen";
 export * from "./BookCodegen";
 export * from "./BookAdvanceCodegen";

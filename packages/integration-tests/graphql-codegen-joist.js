@@ -9,6 +9,7 @@ const mappers = {
   ImageTypeDetail: "src/entities#ImageType",
   Publisher: "src/entities#PublisherId",
   PublisherSizeDetail: "src/entities#PublisherSize",
+  PublisherTypeDetail: "src/entities#PublisherType",
   Tag: "src/entities#TagId",
 };
 
@@ -16,6 +17,7 @@ const enumValues = {
   AdvanceStatus: "src/entities#AdvanceStatus",
   ImageType: "src/entities#ImageType",
   PublisherSize: "src/entities#PublisherSize",
+  PublisherType: "src/entities#PublisherType",
 };
 
 module.exports = { mappers, enumValues };

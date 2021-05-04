@@ -43,6 +43,7 @@
     "longitude",
     "name",
     "size",
+    "type",
     "updatedAt"
   ],
   "SaveAuthorInput": [
@@ -71,7 +72,7 @@
   "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
-  "SavePublisherInput": ["createdAt", "hugeNumber", "id", "latitude", "longitude", "name", "size", "updatedAt"],
+  "SavePublisherInput": ["createdAt", "hugeNumber", "id", "latitude", "longitude", "name", "size", "type", "updatedAt"],
   "SavePublisherResult": ["publisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],

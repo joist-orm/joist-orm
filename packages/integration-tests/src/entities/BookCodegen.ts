@@ -79,7 +79,7 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
-  image?: EntityFilter<Image, ImageId, FilterOf<Image>, undefined>;
+  image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
 export interface BookGraphQLFilter {

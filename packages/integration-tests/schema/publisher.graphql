@@ -10,6 +10,7 @@ type Publisher {
   latitude: Int
   longitude: Int
   hugeNumber: Int
+  type: PublisherType
 }
 
 input SavePublisherInput {
@@ -21,6 +22,7 @@ input SavePublisherInput {
   latitude: Int
   longitude: Int
   hugeNumber: Int
+  type: PublisherType
 }
 
 type SavePublisherResult {

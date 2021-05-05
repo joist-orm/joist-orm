@@ -214,7 +214,11 @@ export function buildQuery<T extends Entity>(
     orderBy: object | undefined,
   ): void {
     // Combine the where and orderBy keys so that we can add them to aliases as that same time
-    const keys = [...(where ? Object.keys(where) : []), ...(orderBy ? Object.keys(orderBy) : [])];
+    // Filter out undefined values as they should be ignored (for now?)
+    const keys = [
+      ...(where ? Object.keys(where).filter((key) => (where as any)[key] !== undefined) : []),
+      ...(orderBy ? Object.keys(orderBy).filter((key) => (orderBy as any)[key] !== undefined) : []),
+    ];
 
     keys.forEach((key) => {
       const field = meta.fields.find((f) => f.fieldName === key) ?? fail(`${key} not found`);
@@ -308,7 +312,10 @@ function addForeignKeyClause(
   clause: any,
 ): [boolean, QueryBuilder] {
   // I.e. this could be { authorFk: authorEntity | null | id | { ...recurse... } }
-  const clauseKeys = typeof clause === "object" && clause !== null ? Object.keys(clause as object) : [];
+  const clauseKeys =
+    typeof clause === "object" && clause !== null
+      ? Object.keys(clause as object).filter((key) => clause[key] !== undefined)
+      : [];
   if (isEntity(clause) || typeof clause == "string" || Array.isArray(clause)) {
     // I.e. { authorFk: authorEntity | id | id[] }
     if (isEntity(clause) && clause.id === undefined) {
@@ -325,7 +332,7 @@ function addForeignKeyClause(
     } else {
       return [false, query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause))];
     }
-  } else if (clause === null || clause === undefined) {
+  } else if (clause === null) {
     // I.e. { authorFk: null | undefined }
     return [false, query.whereNull(`${alias}.${column.columnName}`)];
   } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
@@ -370,12 +377,10 @@ function addPrimitiveClause(query: QueryBuilder, alias: string, column: ColumnMe
     // Currently we treat this like a partial filter, i.e. don't include it. Seems odd
     // unless this is opt-in, i.e. maybe only do this for `findGql`?
     return query;
-  } else if (clause !== undefined) {
+  } else {
     // I.e. `{ primitiveField: value }`
     // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
     return query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
-  } else {
-    return fail(`Unhandled primitive clause ${clause}`);
   }
 }
 

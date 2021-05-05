@@ -23,6 +23,23 @@ describe("EntityManager.queries.memory", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
+  it("can find by simple varchar is null", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "last_name" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { lastName: null });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("cannot find by simple varchar is undefined", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "last_name" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { lastName: undefined });
+    expect(authors.length).toEqual(2);
+  });
+
   it("can find by simple varchar not null", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2" });
@@ -91,6 +108,15 @@ describe("EntityManager.queries.memory", () => {
     const authors = await em.find(Author, { publisher: null });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("cannot find by foreign key is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { publisher: undefined });
+    expect(authors.length).toEqual(2);
   });
 
   it("can find by foreign key is new entity", async () => {

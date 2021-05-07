@@ -1015,7 +1015,7 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-const allMetadata = [
+export const allMetadata = [
   authorMeta,
   bookMeta,
   bookAdvanceMeta,

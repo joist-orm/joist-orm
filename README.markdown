@@ -63,6 +63,7 @@ In general priority/itch order:
   - Or instead of a validation rule, do we invoke the potential operation inline while the setter/mutation is running?
 - Open source `joist-graphql-utils` with the `entityResolver` logic in it
 - Fix reactive rules not catching "middle-references" changing (fixed?)
+  - Use case: books within an author can't have the same title, but no author fields are read, so author changing shouldn't re-validate their books
 - Optionally move `begin` to the start of Unit of Work
 - `readonly asyncValue` that integrations into `populate`
 - Add Collection.load(loadHint) (see branch, potential tsc 3.9 issue)

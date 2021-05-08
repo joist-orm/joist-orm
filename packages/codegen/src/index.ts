@@ -114,7 +114,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
       ${entities.map((meta) => generateMetadataFile(config, meta))}
 
-      const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];
+      export const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];
       ${configureMetadata}(allMetadata);
     `,
     overwrite: true,

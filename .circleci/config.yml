@@ -43,9 +43,15 @@ jobs:
             docker-compose build db
             docker-compose up db-wait
       - run:
+          name: Run migrations
+          command: |
+            cd packages/integration-tests
+            ./run.sh ../migration-utils/build/index.js
+      - run:
           name: Run Test Suite
           command: |
-            ./tests.sh
+            cd packages/integration-tests
+            yarn test
   release:
     machine:
       image: ubuntu-2004:202104-01

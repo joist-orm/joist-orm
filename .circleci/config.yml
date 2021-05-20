@@ -1,11 +1,23 @@
-version: 2
+version: 2.1
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - build
+      - release:
+          requires:
+            - build
+          filters:
+            branches:
+              only:
+                - main
+
 jobs:
   build:
-    docker:
-      - image: circleci/node:14.8.0
+    machine:
+      image: ubuntu-2004:202104-01
     steps:
       - checkout
-      - setup_remote_docker
       - run: |
           cd packages/integration-tests
           docker-compose build db tests
@@ -14,8 +26,13 @@ jobs:
       - run: |
           cd packages/integration-tests
           docker-compose exec tests ./tests.sh
-      - run: |
-          cd packages/integration-tests
-          if [ "$CIRCLE_BRANCH" = "main" ]; then
+  release:
+    machine:
+      image: ubuntu-2004:202104-01
+    steps:
+      - checkout
+      - run:
+          name: release
+          command: |
+            cd packages/integration-tests
             docker-compose exec tests ./release.sh
-          fi

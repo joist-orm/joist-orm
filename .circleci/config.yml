@@ -14,13 +14,6 @@ workflows:
               # This will be updated soon, along with a bug report to Node.js
               # node-version: ["lts/erbium", "lts/fermium", "16"]
               node-version: ["lts/erbium", "lts/fermium", "16.1"]
-      - release:
-          requires:
-            - build
-          filters:
-            branches:
-              only:
-                - main
 
 jobs:
   build:
@@ -59,15 +52,14 @@ jobs:
           path: /tmp/reports/junit/
       - store_artifacts:
           path: /tmp/reports/junit
-  release:
-    machine:
-      image: ubuntu-2004:202104-01
-    steps:
-      - checkout
-      - node/install:
-          lts: true
-      - run:
-          name: release
-          command: |
-            cd packages/integration-tests
-            ./release.sh
+      - when:
+          condition:
+            and:
+              - equal: [main, << pipeline.git.branch >>]
+              - equal: ["lts/fermium", << parameters.node-version >>]
+          steps:
+            - run:
+                name: Release
+                command: |
+                  cd packages/integration-tests
+                  ./release.sh

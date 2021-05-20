@@ -9,7 +9,7 @@
   },
   "scripts": {
     "migrate": "./run.sh ../../node_modules/joist-migration-utils",
-    "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
+    "test": "jest --runInBand --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "./run.sh ../codegen"
   },

@@ -21,6 +21,7 @@
     "@types/node": "^13.13.4",
     "dotenv": "^8.2.0",
     "jest": "^26.4.2",
+    "jest-junit": "^12.0.0",
     "joist-codegen": "1.0.0-bump",
     "joist-graphql-codegen": "1.0.0-bump",
     "joist-migration-utils": "1.0.0-bump",

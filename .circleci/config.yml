@@ -13,7 +13,7 @@ workflows:
               # We should test against "latest Node 16", but there's an issue with 16.2
               # This will be updated soon, along with a bug report to Node.js
               # node-version: ["lts/erbium", "lts/fermium", "16"]
-              node-version: ["lts/erbium", "lts/fermium", "16.1", "16.2"]
+              node-version: ["lts/erbium", "lts/fermium", "16.1"]
       - release:
           requires:
             - build
@@ -33,6 +33,7 @@ jobs:
     steps:
       - checkout
       - node/install:
+          install-npm: false
           node-version: << parameters.node-version >>
       - run: yarn install
       - run: yarn build
@@ -51,7 +52,13 @@ jobs:
           name: Run Test Suite
           command: |
             cd packages/integration-tests
-            yarn test
+            yarn test --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
+      - store_test_results:
+          path: /tmp/reports/junit/
+      - store_artifacts:
+          path: /tmp/reports/junit
   release:
     machine:
       image: ubuntu-2004:202104-01

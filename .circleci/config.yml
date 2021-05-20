@@ -1,21 +1,65 @@
-version: 2
+version: 2.1
+
+orbs:
+  node: circleci/node@4.4.0
+
+workflows:
+  version: 2
+  workflow:
+    jobs:
+      - build:
+          matrix:
+            parameters:
+              # We should test against "latest Node 16", but there's an issue with 16.2
+              # This will be updated soon, along with a bug report to Node.js
+              # node-version: ["lts/erbium", "lts/fermium", "16"]
+              node-version: ["lts/erbium", "lts/fermium", "16.1"]
+
 jobs:
   build:
-    docker:
-      - image: circleci/node:14.8.0
+    parameters:
+      node-version:
+        description: Node version to run tests under (set by matrix build config)
+        type: string
+    machine:
+      image: ubuntu-2004:202104-01
     steps:
       - checkout
-      - setup_remote_docker
-      - run: |
-          cd packages/integration-tests
-          docker-compose build db tests
-          docker-compose up db-wait
-          docker-compose up -d tests
-      - run: |
-          cd packages/integration-tests
-          docker-compose exec tests ./tests.sh
-      - run: |
-          cd packages/integration-tests
-          if [ "$CIRCLE_BRANCH" = "main" ]; then
-            docker-compose exec tests ./release.sh
-          fi
+      - node/install:
+          install-npm: false
+          node-version: << parameters.node-version >>
+      - run: yarn install
+      - run: yarn build
+      - run:
+          name: Start Postgres database
+          command: |
+            cd packages/integration-tests
+            docker-compose build db
+            docker-compose up db-wait
+      - run:
+          name: Run migrations
+          command: |
+            cd packages/integration-tests
+            ./run.sh ../migration-utils/build/index.js
+      - run:
+          name: Run Test Suite
+          command: |
+            cd packages/integration-tests
+            yarn test --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
+      - store_test_results:
+          path: /tmp/reports/junit/
+      - store_artifacts:
+          path: /tmp/reports/junit
+      - when:
+          condition:
+            and:
+              - equal: [main, << pipeline.git.branch >>]
+              - equal: ["lts/fermium", << parameters.node-version >>]
+          steps:
+            - run:
+                name: Release
+                command: |
+                  cd packages/integration-tests
+                  ./release.sh

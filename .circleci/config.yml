@@ -61,5 +61,4 @@ jobs:
             - run:
                 name: Release
                 command: |
-                  cd packages/integration-tests
                   ./release.sh

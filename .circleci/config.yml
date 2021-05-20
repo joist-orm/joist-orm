@@ -1,9 +1,19 @@
 version: 2.1
+
+orbs:
+  node: circleci/node@4.4.0
+
 workflows:
   version: 2
   workflow:
     jobs:
-      - build
+      - build:
+          matrix:
+            parameters:
+              # We should test against "latest Node 16", but there's an issue with 16.2
+              # This will be updated soon, along with a bug report to Node.js
+              # node-version: ["lts/erbium", "lts/fermium", "16"]
+              node-version: ["lts/erbium", "lts/fermium", "16.1"]
       - release:
           requires:
             - build
@@ -14,18 +24,30 @@ workflows:
 
 jobs:
   build:
+    parameters:
+      node-version:
+        description: Node version to run tests under (set by matrix build config)
+        type: string
     machine:
       image: ubuntu-2004:202104-01
     steps:
       - checkout
-      - run: |
-          cd packages/integration-tests
-          docker-compose build db tests
-          docker-compose up db-wait
-          docker-compose up -d tests
-      - run: |
-          cd packages/integration-tests
-          docker-compose exec tests ./tests.sh
+      - node/install:
+          install-yarn: true
+          node-version: << parameters.node-version >>
+      - run: yarn install
+      - run: yarn build
+      - run:
+          name: Start Postgres database
+          command: |
+            cd packages/integration-tests
+            docker-compose build db
+            docker-compose up db-wait
+      - run:
+          name: Run Test Suite
+          command: |
+            cd packages/integration-tests
+            yarn test
   release:
     machine:
       image: ubuntu-2004:202104-01

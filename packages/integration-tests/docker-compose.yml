@@ -17,16 +17,3 @@ services:
     command: dockerize -wait tcp://db:5432 -timeout 1m
     depends_on:
       - db
-
-  # Make a test service b/c accessing the docker-hosted db on CircleCI is easiest from another service.
-  tests:
-    build:
-      context: ../..
-      dockerfile: ./packages/integration-tests/tests.dockerfile
-    depends_on:
-      - db
-    env_file:
-      - local.env
-      - local.docker.env
-    environment:
-      NPM_TOKEN: ${NPM_TOKEN}

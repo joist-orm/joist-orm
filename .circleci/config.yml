@@ -45,15 +45,16 @@ jobs:
       - run:
           name: Run Test Suite
           command: |
-            cd packages/integration-tests
-            yarn test
+            ./tests.sh
   release:
     machine:
       image: ubuntu-2004:202104-01
     steps:
       - checkout
+      - node/install:
+          lts: true
       - run:
           name: release
           command: |
             cd packages/integration-tests
-            docker-compose exec tests ./release.sh
+            ./release.sh

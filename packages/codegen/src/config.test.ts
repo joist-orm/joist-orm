@@ -49,7 +49,7 @@ describe("config", () => {
           "shouldNotIgnore",
           true,
         ),
-      ).rejects.toThrowError("notNull fields cannot be ignored. Alter the column to be optional prior to ignoring it.");
+      ).rejects.toThrowError("notNull fields cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.");
     });
   });
 });

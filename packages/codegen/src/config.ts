@@ -54,7 +54,7 @@ export function isFieldIgnored(config: Config, entity: Entity, fieldName: string
   const ignore = config.entities[entity.name]?.fields?.[fieldName]?.ignore === true;
 
   if (ignore && notNull && !hasDefault) {
-    fail("notNull fields cannot be ignored. Alter the column to be optional prior to ignoring it.");
+    fail("notNull fields cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.");
   }
   return ignore;
 }

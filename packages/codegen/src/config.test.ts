@@ -29,6 +29,18 @@ describe("config", () => {
       ).toEqual(true);
     });
 
+    it("indicates the field is ignored when the field is required but has a default value and configured with ignore: true", () => {
+      expect(
+        isFieldIgnored(
+          newAuthorConfig({ shouldIgnore: { ignore: true } }),
+          makeEntity("Author"),
+          "shouldIgnore",
+          true,
+          true
+        ),
+      ).toEqual(true);
+    });
+
     it("fails if the ignored key is not nullable", async () => {
       await expect(async () =>
         isFieldIgnored(

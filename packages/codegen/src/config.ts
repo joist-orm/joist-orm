@@ -50,10 +50,10 @@ export function isProtected(config: Config, entity: Entity, fieldName: string): 
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
 }
 
-export function isFieldIgnored(config: Config, entity: Entity, fieldName: string, notNull: boolean = false): boolean {
+export function isFieldIgnored(config: Config, entity: Entity, fieldName: string, notNull: boolean = false, hasDefault: boolean = false): boolean {
   const ignore = config.entities[entity.name]?.fields?.[fieldName]?.ignore === true;
 
-  if (ignore && notNull) {
+  if (ignore && notNull && !hasDefault) {
     fail("notNull fields cannot be ignored. Alter the column to be optional prior to ignoring it.");
   }
   return ignore;

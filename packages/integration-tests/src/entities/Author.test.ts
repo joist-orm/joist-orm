@@ -1,7 +1,8 @@
 import pgStructure from "@homebound/pg-structure";
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { defaultValue } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
-import { Author, Book, BookId, BookReview, Publisher } from "../entities";
+import { Author, Book, BookId, BookReview, newAuthor, Publisher } from "../entities";
 import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
@@ -397,5 +398,15 @@ describe("Author", () => {
     const a1 = await em.load(Author, "1");
     const a2 = await a1.withLoadedBooks;
     expect(a2.books.get.length).toEqual(1);
+  });
+
+  it("can pass factory a key that requests the default value", async () => {
+    const em = newEntityManager();
+    // Note that `newAuthor` has it's own `firstName` default, which we're overriding here,
+    // but that's more coincident, i.e. even if `newAuthor` didn't provide a default, this
+    // is showing how expressions in FactoryOpts can set a key to "sometimes a value, sometimes
+    // the factory default".
+    const a1 = newAuthor(em, { firstName: defaultValue() });
+    expect(a1.firstName).toEqual("firstName");
   });
 });

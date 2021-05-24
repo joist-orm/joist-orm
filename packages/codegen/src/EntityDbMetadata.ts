@@ -189,7 +189,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     columnDefault: column.default,
     derived: fieldDerived(config, entity, fieldName),
     protected: isProtected(config, entity, fieldName),
-    ignore: isFieldIgnored(config, entity, fieldName, column.notNull),
+    ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
   };
 }
 
@@ -213,7 +213,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const enumType = imp(`${enumName}@./entities`);
   const enumDetailType = imp(`${plural(enumName)}@./entities`);
   const notNull = column.notNull;
-  const ignore = isFieldIgnored(config, entity, fieldName, notNull);
+  const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
     fieldName,
     columnName,
@@ -236,7 +236,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     ? oneToOneName(config, otherEntity, entity)
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
-  const ignore = isFieldIgnored(config, entity, fieldName, notNull);
+  const ignore = isFieldIgnored(config, entity, fieldName, notNull,column.default !== null);
   return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore };
 }
 

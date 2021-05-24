@@ -5,7 +5,9 @@
     "Author": {
       "fields": {
         "ignoreEnumFk": { "ignore": true },
+        "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },
+        "ignoreUsedToBeUsefulRequiredWithDefault": { "ignore": true },
         "initials": { "derived": "sync" },
         "numberOfBooks": { "derived": "async" },
         "wasEverPopular": { "protected": true }

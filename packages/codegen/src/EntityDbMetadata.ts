@@ -68,6 +68,7 @@ export type EnumField = Field & {
   enumName: string;
   enumType: Import;
   enumDetailType: Import;
+  enumDetailsType: Import;
   enumRows: EnumRow[];
   notNull: boolean;
 };
@@ -212,6 +213,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const enumName = tableToEntityName(config, r.targetTable);
   const enumType = imp(`${enumName}@./entities`);
   const enumDetailType = imp(`${plural(enumName)}@./entities`);
+  const enumDetailsType = imp(`${enumName}Details@./entities`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
@@ -220,6 +222,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     enumName,
     enumType,
     enumDetailType,
+    enumDetailsType,
     notNull,
     ignore,
     enumRows: enums[r.targetTable.name].rows,
@@ -236,7 +239,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     ? oneToOneName(config, otherEntity, entity)
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
-  const ignore = isFieldIgnored(config, entity, fieldName, notNull,column.default !== null);
+  const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore };
 }
 

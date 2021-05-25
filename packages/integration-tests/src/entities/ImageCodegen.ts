@@ -39,6 +39,8 @@ import {
   Image,
   imageMeta,
   ImageType,
+  ImageTypeDetails,
+  ImageTypes,
   newImage,
   Publisher,
   PublisherId,
@@ -145,6 +147,10 @@ export abstract class ImageCodegen extends BaseEntity {
 
   get type(): ImageType {
     return this.__orm.data["type"];
+  }
+
+  get typeDetails(): ImageTypeDetails {
+    return ImageTypes.getByCode(this.type);
   }
 
   set type(type: ImageType) {

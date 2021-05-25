@@ -37,7 +37,11 @@ import {
   Publisher,
   publisherMeta,
   PublisherSize,
+  PublisherSizeDetails,
+  PublisherSizes,
   PublisherType,
+  PublisherTypeDetails,
+  PublisherTypes,
 } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
@@ -176,6 +180,10 @@ export abstract class PublisherCodegen extends BaseEntity {
     return this.__orm.data["size"];
   }
 
+  get sizeDetails(): PublisherSizeDetails | undefined {
+    return this.size ? PublisherSizes.getByCode(this.size) : undefined;
+  }
+
   set size(size: PublisherSize | undefined) {
     setField(this, "size", size);
   }
@@ -190,6 +198,10 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   get type(): PublisherType | undefined {
     return this.__orm.data["type"];
+  }
+
+  get typeDetails(): PublisherTypeDetails | undefined {
+    return this.type ? PublisherTypes.getByCode(this.type) : undefined;
   }
 
   set type(type: PublisherType | undefined) {

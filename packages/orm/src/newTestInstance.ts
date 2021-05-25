@@ -47,7 +47,7 @@ export function newTestInstance<T extends Entity>(
         const { fieldName } = field;
 
         // Use the opts value if they passed one in
-        if (fieldName in opts) {
+        if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
           const optValue = (opts as any)[fieldName];
 
           // Watch for our "the parent is not yet created" null marker
@@ -108,7 +108,7 @@ export function newTestInstance<T extends Entity>(
         }
 
         if (field.kind === "primitive" && field.required && !field.derived && !field.protected) {
-          return [fieldName, defaultValue(field)];
+          return [fieldName, defaultValueForField(field)];
         } else if (field.kind === "m2o") {
           const otherMeta = field.otherMetadata();
 
@@ -148,6 +148,24 @@ export function newTestInstance<T extends Entity>(
  */
 export const testIndex = "TEST_INDEX";
 
+const defaultValueMarker: any = {};
+
+/**
+ * A marker value for the default `newTestInstance` behavior.
+ *
+ * Useful for passing arguments to `newTestInstance` where you sometimes want to
+ * provide a specific value, and other times ask for the "pick a default" behavior
+ * (i.e. you don't want to pass `undefined` b/c that means explicitly "leave this
+ * key unset").
+ *
+ * Note that this is a function so that we can infer the return type as basically
+ * `any` without really using `any` (which would disable type-checking in the rest
+ * of the expression).
+ */
+export function defaultValue<T>(): T {
+  return defaultValueMarker;
+}
+
 /**
  * Returns a unique-ish test index for putting in `name` fields.
  *
@@ -169,7 +187,7 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
   return tagIfNeeded(meta, String(sameType.indexOf(entity) + 1));
 }
 
-function defaultValue(field: PrimitiveField): unknown {
+function defaultValueForField(field: PrimitiveField): unknown {
   switch (field.type) {
     case "string":
       return field.fieldName;

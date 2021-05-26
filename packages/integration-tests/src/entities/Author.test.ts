@@ -122,6 +122,8 @@ describe("Author", () => {
     expect(a1.beforeCreateRan).toBeFalsy();
     expect(a1.beforeUpdateRan).toBeFalsy();
     expect(a1.afterCommitRan).toBeFalsy();
+    expect(a1.afterCommitIdIsSet).toBeFalsy();
+    expect(a1.afterCommitIsNewEntity).toBeFalsy();
     expect(a1.afterValidationRan).toBeFalsy();
     expect(a1.beforeDeleteRan).toBeFalsy();
     await em.flush();
@@ -131,6 +133,8 @@ describe("Author", () => {
     expect(a1.beforeDeleteRan).toBeFalsy();
     expect(a1.afterValidationRan).toBeTruthy();
     expect(a1.afterCommitRan).toBeTruthy();
+    expect(a1.afterCommitIdIsSet).toBeTruthy();
+    expect(a1.afterCommitIsNewEntity).toBeTruthy();
     a1.firstName = "new name";
     a1.beforeCreateRan = false;
     await em.flush();
@@ -383,12 +387,21 @@ describe("Author", () => {
     expect(i).toBeTruthy();
   });
 
-  it("has isNewEntity", async () => {
-    const em = newEntityManager();
-    const a1 = await em.create(Author, { firstName: "a1" });
-    expect(a1.isNewEntity).toBeTruthy();
-    await em.flush();
-    expect(a1.isNewEntity).toBeFalsy();
+  describe("isNewEntity", () => {
+    it("is false after fetch for existing entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.findOneOrFail(Author, { firstName: "a1" });
+      expect(a1.isNewEntity).toBeFalsy();
+    });
+
+    it("is true for new entities until they are flushed", async () => {
+      const em = newEntityManager();
+      const a1 = await em.create(Author, { firstName: "a1" });
+      expect(a1.isNewEntity).toBeTruthy();
+      await em.flush();
+      expect(a1.isNewEntity).toBeFalsy();
+    });
   });
 
   it("can populate itself easily", async () => {

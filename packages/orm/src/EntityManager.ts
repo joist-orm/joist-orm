@@ -8,6 +8,7 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
+  Changes,
   Collection,
   ColumnSerde,
   ConfigApi,
@@ -93,6 +94,7 @@ export interface Entity {
   readonly isDirtyEntity: boolean;
   readonly isPendingFlush: boolean;
   readonly isPendingDelete: boolean;
+  readonly changes: Changes<Entity>;
   set(opts: Partial<OptsOf<this>>): void;
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
 }

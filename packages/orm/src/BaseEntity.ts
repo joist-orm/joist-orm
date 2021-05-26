@@ -1,4 +1,5 @@
 import {
+  Changes,
   deTagIds,
   Entity,
   EntityManager,
@@ -8,6 +9,7 @@ import {
   IdOf,
   isEntity,
   keyToNumber,
+  newChangesProxy,
   OptsOf,
   PartialOrNull,
 } from "./index";
@@ -39,6 +41,10 @@ export abstract class BaseEntity implements Entity {
 
   get idUntaggedOrFail(): string {
     return this.idUntagged || fail("Entity has no id yet");
+  }
+
+  get changes(): Changes<BaseEntity> {
+    return newChangesProxy((this as any) as BaseEntity);
   }
 
   abstract set(values: Partial<OptsOf<this>>): void;

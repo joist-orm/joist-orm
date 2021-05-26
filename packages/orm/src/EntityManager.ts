@@ -8,6 +8,7 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
+  BaseEntity,
   Collection,
   ColumnSerde,
   ConfigApi,
@@ -759,8 +760,11 @@ export class EntityManager<C = {}> {
         await afterCommit(this.ctx, entityTodos);
 
         Object.values(entityTodos).forEach((todo) => {
-          todo.inserts.forEach((e) => this._entityIndex.set(e.id!, e));
-          todo.inserts.forEach((e) => (e.__orm.originalData = {}));
+          todo.inserts.forEach((e) => {
+            this._entityIndex.set(e.id!, e);
+            (e as BaseEntity)["__isNewEntity"] = false;
+            e.__orm.originalData = {};
+          });
           todo.updates.forEach((e) => (e.__orm.originalData = {}));
           todo.deletes.forEach((e) => (e.__orm.originalData = {}));
         });
@@ -1117,18 +1121,15 @@ async function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<v
   await runHook(ctx, "afterCommit", todos, ["inserts", "updates"]);
 }
 
-function coerceError(
-  entity: Entity,
-  maybeError: ValidationRuleResult<any>,
-): ValidationError[] {
+function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {
   if (maybeError === undefined) {
     return [];
   } else if (typeof maybeError === "string") {
     return [{ entity, message: maybeError }];
   } else if (Array.isArray(maybeError)) {
-    return (maybeError as GenericError[]).map(ve => ({ entity, ...ve}));
+    return (maybeError as GenericError[]).map((ve) => ({ entity, ...ve }));
   } else {
-    return [{ entity, ...maybeError}];
+    return [{ entity, ...maybeError }];
   }
 }
 

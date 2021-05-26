@@ -34,6 +34,8 @@ export class Author extends AuthorCodegen {
   public beforeDeleteRan = false;
   public afterValidationRan = false;
   public afterCommitRan = false;
+  public afterCommitIdIsSet = false;
+  public afterCommitIsNewEntity = false;
   public ageForBeforeFlush?: number;
 
   /** Example of using populate within an entity on itself. */
@@ -128,7 +130,10 @@ authorConfig.beforeDelete((author) => {
 });
 
 authorConfig.afterCommit((author) => {
+  // make sure we're still a new entity even though the id has been set
   author.afterCommitRan = true;
+  author.afterCommitIdIsSet = author.id !== undefined;
+  author.afterCommitIsNewEntity = author.isNewEntity;
 });
 
 authorConfig.setAsyncDerivedField("numberOfBooks", "books", (author) => {

@@ -19,6 +19,7 @@ import {
  */
 export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
+  private __isNewEntity: boolean = true;
   readonly __orm: EntityOrmField;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
@@ -26,6 +27,7 @@ export abstract class BaseEntity implements Entity {
     // Ensure we have at least id set so the `EntityManager.register` works
     if (typeof opts === "string") {
       this.__orm.data["id"] = opts;
+      this.__isNewEntity = false;
     }
     em.register(metadata, this);
   }
@@ -54,7 +56,7 @@ export abstract class BaseEntity implements Entity {
   }
 
   get isNewEntity(): boolean {
-    return this.id === undefined;
+    return this.__isNewEntity;
   }
 
   get isDeletedEntity(): boolean {

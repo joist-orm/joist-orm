@@ -101,11 +101,16 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   // Add ManyToOne enums
   meta.enums.forEach((e) => {
-    const { fieldName, enumType, notNull, enumRows } = e;
+    const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows } = e;
     const maybeOptional = notNull ? "" : " | undefined";
+    const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
     const getter = code`
       get ${fieldName}(): ${enumType}${maybeOptional} {
         return this.__orm.data["${fieldName}"];
+      }
+
+      get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
+        return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
       }
    `;
     const setter = code`

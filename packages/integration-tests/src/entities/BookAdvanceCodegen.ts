@@ -29,6 +29,8 @@ import {
 import { Context } from "src/context";
 import {
   AdvanceStatus,
+  AdvanceStatusDetails,
+  AdvanceStatuses,
   Book,
   BookAdvance,
   bookAdvanceMeta,
@@ -123,6 +125,10 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
 
   get status(): AdvanceStatus {
     return this.__orm.data["status"];
+  }
+
+  get statusDetails(): AdvanceStatusDetails {
+    return AdvanceStatuses.getByCode(this.status);
   }
 
   set status(status: AdvanceStatus) {

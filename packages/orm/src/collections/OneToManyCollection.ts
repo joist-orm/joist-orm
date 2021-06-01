@@ -54,6 +54,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return (await this.load()).find((u) => u.id === id);
   }
 
+  get isLoaded(): boolean {
+    return this.loaded !== undefined;
+  }
+
   get get(): U[] {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }

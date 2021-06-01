@@ -35,7 +35,7 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
-import { fail, NullOrDefinedOr } from "./utils";
+import { fail, NullOrDefinedOr, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -588,7 +588,7 @@ export class EntityManager<C = {}> {
     entityOrList: T | T[],
     hint: H,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>>> {
-    const list: T[] = Array.isArray(entityOrList) ? entityOrList : [entityOrList];
+    const list = toArray(entityOrList);
     const promises = list
       .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
       .flatMap((entity) => {

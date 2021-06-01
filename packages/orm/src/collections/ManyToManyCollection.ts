@@ -104,6 +104,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     }
   }
 
+  get isLoaded(): boolean {
+    return this.loaded !== undefined;
+  }
+
   private doGet(): U[] {
     ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {

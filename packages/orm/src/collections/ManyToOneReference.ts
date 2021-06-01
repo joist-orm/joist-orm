@@ -27,8 +27,8 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
   extends AbstractRelationImpl<U>
   implements Reference<T, U, N> {
   private loaded!: U | N;
-  // We need a separate boolean to b/c loaded == undefined can still mean "isLoaded" for nullable fks.
-  private isLoaded = false;
+  // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
+  private _isLoaded = false;
   private isCascadeDelete: boolean;
 
   constructor(
@@ -48,7 +48,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (!isEntity(current) && current !== undefined) {
       this.loaded = ((await getEm(this.entity).load(this.otherMeta.cstr, current)) as any) as U;
     }
-    this.isLoaded = true;
+    this._isLoaded = true;
     return this.filterDeleted(this.loaded, opts);
   }
 
@@ -60,17 +60,21 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.current() !== undefined;
   }
 
+  get isLoaded(): boolean {
+    return this._isLoaded;
+  }
+
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
-    if (!this.isLoaded) {
+    if (!this._isLoaded) {
       const existing = this.maybeFindExisting();
       if (existing === undefined) {
         throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
       }
       this.loaded = existing;
-      this.isLoaded = true;
+      this._isLoaded = true;
     }
 
     return this.filterDeleted(this.loaded, opts);
@@ -110,12 +114,12 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   initializeForNewEntity(): void {
     // Our codegen'd Opts type will ensure our field is inititalized if necessary/notNull
-    this.isLoaded = true;
+    this._isLoaded = true;
   }
 
   async refreshIfLoaded(): Promise<void> {
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
-    if (this.isLoaded) {
+    if (this._isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
         this.loaded = ((await getEm(this.entity).load(this.otherMeta.cstr, current)) as any) as U;
@@ -146,7 +150,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
     setField(this.entity, this.fieldName as string, undefined);
     this.loaded = undefined as any;
-    this.isLoaded = true;
+    this._isLoaded = true;
   }
 
   // Internal method used by OneToManyCollection
@@ -166,7 +170,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       return;
     }
     this.loaded = other;
-    this.isLoaded = true;
+    this._isLoaded = true;
 
     // If had an existing value, remove us from its collection
     if (previousLoaded) {

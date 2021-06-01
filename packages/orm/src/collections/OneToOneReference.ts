@@ -25,7 +25,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U>
   implements Reference<T, U, undefined> {
   private loaded: U | undefined;
-  private isLoaded: boolean = false;
+  private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
   public otherColumnName: string;
 
@@ -42,7 +42,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   }
 
   get id(): IdOf<U> | undefined {
-    if (this.isLoaded) {
+    if (this._isLoaded) {
       return this.loaded?.id as IdOf<U> | undefined;
     }
     throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
@@ -61,7 +61,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   }
 
   get isSet(): boolean {
-    if (this.isLoaded) {
+    if (this._isLoaded) {
       return this.loaded !== undefined;
     }
     throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
@@ -70,11 +70,11 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   // opts is an internal parameter
   async load(opts?: { withDeleted?: boolean }): Promise<U | undefined> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (!this.isLoaded) {
+    if (!this._isLoaded) {
       if (!this.entity.isNewEntity) {
         this.loaded = await oneToOneDataLoader(getEm(this.entity), this).load(this.entity.idOrFail);
       }
-      this.isLoaded = true;
+      this._isLoaded = true;
     }
     return this.filterDeleted(this.loaded, opts);
   }
@@ -84,17 +84,21 @@ export class OneToOneReference<T extends Entity, U extends Entity>
     if (other === this.loaded) {
       return;
     }
-    if (this.isLoaded) {
+    if (this._isLoaded) {
       if (this.loaded) {
         this.getOtherRelation(this.loaded).set(undefined);
       }
     }
     this.loaded = other;
-    this.isLoaded = true;
+    this._isLoaded = true;
     // This will no-op and mark other dirty if necessary
     if (other) {
       this.getOtherRelation(other).set(this.entity);
     }
+  }
+
+  get isLoaded(): boolean {
+    return this._isLoaded;
   }
 
   get getWithDeleted(): U | undefined {
@@ -107,7 +111,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
 
   private doGet(): U | undefined {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (!this.isLoaded) {
+    if (!this._isLoaded) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not preloaded");
     }
@@ -121,12 +125,12 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   }
 
   initializeForNewEntity(): void {
-    this.isLoaded = true;
+    this._isLoaded = true;
   }
 
   async refreshIfLoaded(): Promise<void> {
-    if (this.isLoaded) {
-      this.isLoaded = false;
+    if (this._isLoaded) {
+      this._isLoaded = false;
       await this.load();
     }
   }
@@ -144,7 +148,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
       setField(current, this.otherFieldName as string, undefined);
     }
     this.loaded = undefined as any;
-    this.isLoaded = true;
+    this._isLoaded = true;
   }
 
   public toString(): string {

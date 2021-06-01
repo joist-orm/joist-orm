@@ -1,3 +1,11 @@
+import {
+  CustomCollection,
+  CustomReference,
+  ManyToManyCollection,
+  ManyToOneReference,
+  OneToManyCollection,
+  OneToOneReference,
+} from "./collections";
 import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
 import {
   currentFlushSecret,
@@ -67,12 +75,14 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
 
   idUntaggedOrFail: string;
 
+  readonly isLoaded: boolean;
+
   load(opts?: { withDeleted: boolean }): Promise<U | N>;
 
   set(other: U | N): void;
 
   /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
-  isSet: boolean;
+  readonly isSet: boolean;
 
   [H]?: N;
 }
@@ -102,6 +112,8 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
   add(other: U): void;
 
   remove(other: U): void;
+
+  readonly isLoaded: boolean;
 }
 
 /** Adds a known-safe `get` accessor. */
@@ -451,17 +463,25 @@ function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
 }
 
+/** Type guard utility for determining if an entity field is a Relation. */
+export function isRelation(maybeRelation: any): maybeRelation is Relation<any, any> {
+  return isReference(maybeRelation) || isCollection(maybeRelation);
+}
+
 /** Type guard utility for determining if an entity field is a Reference. */
-export function isReference(maybeReference: any): maybeReference is Reference<any, any, never> {
+export function isReference(maybeReference: any): maybeReference is Reference<any, any, any> {
   return (
-    maybeReference &&
-    maybeReference.load !== undefined &&
-    maybeReference.set !== undefined &&
-    maybeReference.add === undefined
+    maybeReference instanceof OneToOneReference ||
+    maybeReference instanceof ManyToOneReference ||
+    maybeReference instanceof CustomReference
   );
 }
 
 /** Type guard utility for determining if an entity field is a Collection. */
 export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
-  return maybeCollection && maybeCollection.load !== undefined && maybeCollection.add !== undefined;
+  return (
+    maybeCollection instanceof OneToManyCollection ||
+    maybeCollection instanceof ManyToManyCollection ||
+    maybeCollection instanceof CustomCollection
+  );
 }

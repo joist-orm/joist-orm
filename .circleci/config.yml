@@ -10,10 +10,7 @@ workflows:
       - build:
           matrix:
             parameters:
-              # We should test against "latest Node 16", but there's an issue with 16.2
-              # This will be updated soon, along with a bug report to Node.js
-              # node-version: ["lts/erbium", "lts/fermium", "16"]
-              node-version: ["lts/erbium", "lts/fermium", "16.1"]
+              node-version: ["lts/erbium", "lts/fermium", "16"]
 
 jobs:
   build:

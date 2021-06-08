@@ -422,4 +422,10 @@ describe("Author", () => {
     const a1 = newAuthor(em, { firstName: defaultValue() });
     expect(a1.firstName).toEqual("firstName");
   });
+
+  it("can request default values for non-required fields", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { lastName: defaultValue() });
+    expect(a1.lastName).toEqual("lastName");
+  });
 });

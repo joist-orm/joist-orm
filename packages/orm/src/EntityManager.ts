@@ -8,7 +8,6 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
-  BaseEntity,
   Collection,
   ColumnSerde,
   ConfigApi,
@@ -80,6 +79,10 @@ export interface EntityOrmField {
   deleted?: "pending" | "deleted";
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   em: EntityManager;
+  /** Whether our entity is new or not. */
+  isNew: boolean;
+  /** Whether our entity should flush regardless of any other changes. */
+  isTouched: boolean;
 }
 
 export let currentlyInstantiatingEntity: Entity | undefined;
@@ -762,11 +765,12 @@ export class EntityManager<C = {}> {
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => {
             this._entityIndex.set(e.id!, e);
-            (e as BaseEntity)["__isNewEntity"] = false;
-            e.__orm.originalData = {};
+            e.__orm.isNew = false;
           });
-          todo.updates.forEach((e) => (e.__orm.originalData = {}));
-          todo.deletes.forEach((e) => (e.__orm.originalData = {}));
+          [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
+            e.__orm.originalData = {};
+            e.__orm.isTouched = false;
+          });
         });
 
         // Reset the find caches b/c data will have changed in the db
@@ -868,6 +872,13 @@ export class EntityManager<C = {}> {
       meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
     }
     return entity;
+  }
+
+  /**
+   * Mark an entity as needing to be flushed regardless of its state
+   */
+  public touch(entity: Entity) {
+    entity.__orm.isTouched = true;
   }
 
   public beforeTransaction(fn: HookFn) {

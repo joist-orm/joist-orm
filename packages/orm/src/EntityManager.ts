@@ -874,6 +874,9 @@ export class EntityManager<C = {}> {
     return entity;
   }
 
+  /**
+   * Mark an entity as needing to be flushed regardless of its state
+   */
   public touch(entity: Entity) {
     entity.__orm.isTouched = true;
   }

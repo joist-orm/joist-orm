@@ -1131,10 +1131,13 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     em.touch(a1);
-    expect(a1["__isTouched"]).toBeTruthy();
-    await em.flush();
-    expect(a1.beforeFlushRan).toBeTruthy();
-    expect(a1["__isTouched"]).toBeFalsy();
+    expect(a1.isDirtyEntity).toBeFalsy();
+    expect(a1.isNewEntity).toBeFalsy();
+    expect(a1.isDeletedEntity).toBeFalsy();
+    expect(a1.__orm.isTouched).toBeTruthy();
+    const result = await em.flush();
+    expect(result).toEqual([a1]);
+    expect(a1.__orm.isTouched).toBeFalsy();
   });
 });
 

@@ -8,7 +8,6 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
-  BaseEntity,
   Collection,
   ColumnSerde,
   ConfigApi,
@@ -80,6 +79,10 @@ export interface EntityOrmField {
   deleted?: "pending" | "deleted";
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   em: EntityManager;
+  /** Whether our entity is new or not. */
+  isNew: boolean;
+  /** Whether our entity should flush regardless of any other changes. */
+  isTouched: boolean;
 }
 
 export let currentlyInstantiatingEntity: Entity | undefined;
@@ -92,7 +95,6 @@ export interface Entity {
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;
-  readonly isTouchedEntity: boolean;
   readonly isPendingFlush: boolean;
   readonly isPendingDelete: boolean;
   set(opts: Partial<OptsOf<this>>): void;
@@ -763,11 +765,11 @@ export class EntityManager<C = {}> {
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => {
             this._entityIndex.set(e.id!, e);
-            (e as BaseEntity)["__isNewEntity"] = false;
+            e.__orm.isNew = false;
           });
           [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
             e.__orm.originalData = {};
-            (e as BaseEntity)["__isTouched"] = false;
+            e.__orm.isTouched = false;
           });
         });
 
@@ -873,7 +875,7 @@ export class EntityManager<C = {}> {
   }
 
   public touch(entity: Entity) {
-    (entity as BaseEntity)["__isTouched"] = true;
+    entity.__orm.isTouched = true;
   }
 
   public beforeTransaction(fn: HookFn) {

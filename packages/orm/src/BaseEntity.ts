@@ -19,16 +19,14 @@ import {
  */
 export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
-  private __isNewEntity: boolean = true;
-  private __isTouched: boolean = false;
   readonly __orm: EntityOrmField;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
-    this.__orm = { em, metadata, data: { ...defaultValues }, originalData: {} };
+    this.__orm = { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false };
     // Ensure we have at least id set so the `EntityManager.register` works
     if (typeof opts === "string") {
       this.__orm.data["id"] = opts;
-      this.__isNewEntity = false;
+      this.__orm.isNew = false;
     }
     em.register(metadata, this);
   }
@@ -57,7 +55,7 @@ export abstract class BaseEntity implements Entity {
   }
 
   get isNewEntity(): boolean {
-    return this.__isNewEntity;
+    return this.__orm.isNew;
   }
 
   get isDeletedEntity(): boolean {
@@ -68,12 +66,8 @@ export abstract class BaseEntity implements Entity {
     return Object.keys(this.__orm.originalData).length > 0;
   }
 
-  get isTouchedEntity(): boolean {
-    return this.__isTouched;
-  }
-
   get isPendingFlush(): boolean {
-    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.isTouchedEntity;
+    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.__orm.isTouched;
   }
 
   get isPendingDelete(): boolean {

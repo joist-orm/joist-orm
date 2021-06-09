@@ -972,13 +972,13 @@ describe("EntityManager", () => {
   it("can delete an entity with a reverseHint in a transaction", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "title", author: a1 })
+    const b1 = new Book(em, { title: "title", author: a1 });
     await em.flush();
     await em.transaction(async () => {
       em.delete(b1);
       await em.flush();
     });
-    expect(b1.isDeletedEntity).toBeTruthy()
+    expect(b1.isDeletedEntity).toBeTruthy();
   });
 
   it("can save entities", async () => {
@@ -1124,6 +1124,17 @@ describe("EntityManager", () => {
 
     // Then we expect the cloned entity to have no references
     expect(await a2.books.load()).toHaveLength(0);
+  });
+
+  it("can touch an entity to force it to be flushed", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "1");
+    em.touch(a1);
+    expect(a1["__isTouched"]).toBeTruthy();
+    await em.flush();
+    expect(a1.beforeFlushRan).toBeTruthy();
+    expect(a1["__isTouched"]).toBeFalsy();
   });
 });
 

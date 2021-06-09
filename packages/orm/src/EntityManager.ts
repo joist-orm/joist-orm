@@ -92,6 +92,7 @@ export interface Entity {
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;
+  readonly isTouchedEntity: boolean;
   readonly isPendingFlush: boolean;
   readonly isPendingDelete: boolean;
   set(opts: Partial<OptsOf<this>>): void;
@@ -763,10 +764,11 @@ export class EntityManager<C = {}> {
           todo.inserts.forEach((e) => {
             this._entityIndex.set(e.id!, e);
             (e as BaseEntity)["__isNewEntity"] = false;
-            e.__orm.originalData = {};
           });
-          todo.updates.forEach((e) => (e.__orm.originalData = {}));
-          todo.deletes.forEach((e) => (e.__orm.originalData = {}));
+          [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
+            e.__orm.originalData = {};
+            (e as BaseEntity)["__isTouched"] = false;
+          });
         });
 
         // Reset the find caches b/c data will have changed in the db
@@ -868,6 +870,10 @@ export class EntityManager<C = {}> {
       meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
     }
     return entity;
+  }
+
+  public touch(entity: Entity) {
+    (entity as BaseEntity)["__isTouched"] = true;
   }
 
   public beforeTransaction(fn: HookFn) {

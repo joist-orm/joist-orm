@@ -20,6 +20,7 @@ import {
 export abstract class BaseEntity implements Entity {
   abstract id: string | undefined;
   private __isNewEntity: boolean = true;
+  private __isTouched: boolean = false;
   readonly __orm: EntityOrmField;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
@@ -67,8 +68,12 @@ export abstract class BaseEntity implements Entity {
     return Object.keys(this.__orm.originalData).length > 0;
   }
 
+  get isTouchedEntity(): boolean {
+    return this.__isTouched;
+  }
+
   get isPendingFlush(): boolean {
-    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete;
+    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.isTouchedEntity;
   }
 
   get isPendingDelete(): boolean {

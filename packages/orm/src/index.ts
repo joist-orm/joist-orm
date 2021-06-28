@@ -36,6 +36,7 @@ export * from "./getProperties";
 export * from "./keys";
 export * from "./loadLens";
 export * from "./newTestInstance";
+export * from "./Promise";
 export * from "./QueryBuilder";
 export * from "./reverseHint";
 export * from "./serde";

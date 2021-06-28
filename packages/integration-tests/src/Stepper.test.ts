@@ -5,7 +5,7 @@ export class Stepper {
   private step = 1;
   private pendingSteps: Record<number, Deferred<void>> = {};
 
-  public on<T>(step: number, then: () => Promise<T>): Promise<T> {
+  public on<T>(step: number, then: () => PromiseLike<T>): PromiseLike<T> {
     let result: Promise<T>;
 
     if (step < this.step) {

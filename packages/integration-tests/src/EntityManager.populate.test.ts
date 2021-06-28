@@ -80,6 +80,15 @@ describe("EntityManager.populate", () => {
     expect(book.tags.get.length).toEqual(0);
   });
 
+  it("can populate via promise", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "1").populate(["author", "tags"]);
+    expect(book.author.get.firstName).toEqual("a1");
+    expect(book.tags.get.length).toEqual(0);
+  });
+
   it("can populate a list", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

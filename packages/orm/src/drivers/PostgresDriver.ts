@@ -44,7 +44,7 @@ export class PostgresDriver implements Driver {
     em: EntityManager,
     meta: EntityMetadata<T>,
     untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
+  ): PromiseLike<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);
     return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
   }
@@ -53,7 +53,7 @@ export class PostgresDriver implements Driver {
     em: EntityManager,
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
-  ): Promise<JoinRow[]> {
+  ): PromiseLike<JoinRow[]> {
     const knex = this.getMaybeInTxnKnex(em);
 
     // Break out `column_id=string` keys out
@@ -81,7 +81,7 @@ export class PostgresDriver implements Driver {
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
-  ): Promise<U[]> {
+  ): PromiseLike<U[]> {
     const knex = this.getMaybeInTxnKnex(em);
     return knex
       .select("*")
@@ -94,7 +94,7 @@ export class PostgresDriver implements Driver {
     em: EntityManager,
     reference: OneToOneReference<T, U>,
     untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
+  ): PromiseLike<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);
     return knex
       .select("*")

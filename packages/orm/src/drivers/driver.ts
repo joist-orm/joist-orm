@@ -12,37 +12,37 @@ export interface Driver {
     em: EntityManager,
     meta: EntityMetadata<T>,
     untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
+  ): PromiseLike<unknown[]>;
 
   loadManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
-  ): Promise<JoinRow[]>;
+  ): PromiseLike<JoinRow[]>;
 
   loadOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
+  ): PromiseLike<unknown[]>;
 
   loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
     reference: OneToOneReference<T, U>,
     untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
+  ): PromiseLike<unknown[]>;
 
   find<T extends Entity>(
     em: EntityManager,
     type: EntityConstructor<T>,
     queries: readonly FilterAndSettings<T>[],
-  ): Promise<unknown[][]>;
+  ): PromiseLike<unknown[][]>;
 
   transaction<T>(
     em: EntityManager,
     fn: (txn: Knex.Transaction) => Promise<T>,
     isolationLevel?: "serializable",
-  ): Promise<T>;
+  ): PromiseLike<T>;
 
   flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 

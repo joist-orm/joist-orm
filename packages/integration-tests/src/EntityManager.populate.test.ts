@@ -80,13 +80,79 @@ describe("EntityManager.populate", () => {
     expect(book.tags.get.length).toEqual(0);
   });
 
-  it("can populate via promise", async () => {
+  it("can populate via promise on direct load", async () => {
+    // Given a book with an author and no tags
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
+
+    // When we load and then populate author and tags
     const em = newEntityManager();
     const book = await em.load(Book, "1").populate(["author", "tags"]);
-    expect(book.author.get.firstName).toEqual("a1");
+
+    // we can access author and tags but no tags will be present
+    expect(book.author.get.idOrFail).toEqual("a:1");
     expect(book.tags.get.length).toEqual(0);
+  });
+
+  it("can propagate undefined through a populate promise", async () => {
+    // Given an author with no publisher
+    await insertAuthor({ first_name: "a1" });
+
+    // When we load the author then try to load and populate through publisher
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    const publisher = await author.publisher.load().populate("images");
+
+    // we can access author and tags but no tags will be present
+    expect(publisher).toBeUndefined();
+  });
+
+  it("can propagate an empty array through a populate promise", async () => {
+    // Given an author with no books
+    await insertAuthor({ first_name: "a1" });
+
+    // When we load the author then try to load and populate through publisher
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    const books = await author.books.load().populate("image");
+
+    // we can access author and tags but no tags will be present
+    expect(books).toEqual([]);
+  });
+
+  it("can populate via promise for an array of entities", async () => {
+    // Given a publisher with 2 authors, each with a book
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+    await insertBook({ id: 2, title: "b2", author_id: 2 });
+
+    // When we get the publisher
+    const em = newEntityManager();
+    const publisher = await em.load(Publisher, "p:1");
+    // then load its authors and populate their books
+    const [a1, a2] = await publisher.authors.load().populate("books");
+
+    // We can directly access each author's books
+    expect(a1.books.get.map((b) => b.idOrFail)).toEqual(["b:1"]);
+    expect(a2.books.get.map((b) => b.idOrFail)).toEqual(["b:2"]);
+  });
+
+  it("can populate via promise for a single entity", async () => {
+    // Given a book that belongs to an author which in turn belongs to a publisher
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertBook({ id: 1, title: "b1", author_id: 1 });
+
+    // When we get the book
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    // then load its author and populate its publisher
+    const author = await book.author.load().populate("publisher");
+
+    // We can directly access the author's publisher
+    expect(author.publisher.get?.idOrFail).toEqual("p:1");
   });
 
   it("can populate a list", async () => {

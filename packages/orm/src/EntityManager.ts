@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
-import Knex, { QueryBuilder } from "knex";
+import { Knex } from "knex";
 import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
@@ -562,15 +562,15 @@ export class EntityManager<C = {}> {
   }
 
   /** Loads entities from a knex QueryBuilder. */
-  public async loadFromQuery<T extends Entity>(type: EntityConstructor<T>, query: QueryBuilder): Promise<T[]>;
+  public async loadFromQuery<T extends Entity>(type: EntityConstructor<T>, query: Knex.QueryBuilder): Promise<T[]>;
   public async loadFromQuery<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    query: QueryBuilder,
+    query: Knex.QueryBuilder,
     populate: H,
   ): Promise<Loaded<T, H>[]>;
   public async loadFromQuery<T extends Entity>(
     type: EntityConstructor<T>,
-    query: QueryBuilder,
+    query: Knex.QueryBuilder,
     populate?: any,
   ): Promise<T[]> {
     const rows = await query;

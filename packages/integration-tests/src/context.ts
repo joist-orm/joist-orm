@@ -1,5 +1,5 @@
 import { EntityManager } from "joist-orm";
-import Knex from "knex";
+import { Knex } from "knex";
 
 export interface Context {
   knex: Knex;

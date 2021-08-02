@@ -11,13 +11,12 @@
     "build"
   ],
   "devDependencies": {
-    "@types/jest": "^25.2.1",
-    "jest": "^26.4.2",
-    "prettier": "^2.2.1",
-    "prettier-plugin-organize-imports": "^1.1.1",
-    "ts-jest": "^26.3.0",
-    "ts-node-dev": "^1.0.0-pre.44",
-    "tsconfig-paths": "^3.9.0",
-    "typescript": "^4.2.2"
+    "jest": "^27.0.6",
+    "prettier": "^2.3.2",
+    "prettier-plugin-organize-imports": "^2.3.3",
+    "ts-jest": "^27.0.4",
+    "ts-node-dev": "^1.1.8",
+    "tsconfig-paths": "^3.10.1",
+    "typescript": "^4.3.5"
   }
 }

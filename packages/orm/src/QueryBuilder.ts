@@ -1,4 +1,4 @@
-import Knex, { QueryBuilder } from "knex";
+import { Knex } from "knex";
 import {
   ColumnMeta,
   Entity,
@@ -191,7 +191,7 @@ export function buildQuery<T extends Entity>(
   knex: Knex,
   type: EntityConstructor<T>,
   filter: FilterAndSettings<T>,
-): QueryBuilder<{}, unknown[]> {
+): Knex.QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
   const { where, orderBy, limit, offset } = filter;
 
@@ -204,7 +204,7 @@ export function buildQuery<T extends Entity>(
   }
 
   const alias = getAlias(meta.tableName);
-  let query: QueryBuilder<any, any> = knex.select<unknown>(`${alias}.*`).from(`${meta.tableName} AS ${alias}`);
+  let query: Knex.QueryBuilder<any, any> = knex.select<unknown>(`${alias}.*`).from(`${meta.tableName} AS ${alias}`);
 
   // Define a function for recursively adding joins & filters
   function addClauses(
@@ -295,7 +295,7 @@ export function buildQuery<T extends Entity>(
     query = query.offset(offset);
   }
 
-  return query as QueryBuilder<{}, unknown[]>;
+  return query as Knex.QueryBuilder<{}, unknown[]>;
 }
 
 function abbreviation(tableName: string): string {
@@ -306,11 +306,11 @@ function abbreviation(tableName: string): string {
 }
 
 function addForeignKeyClause(
-  query: QueryBuilder,
+  query: Knex.QueryBuilder,
   alias: string,
   column: ColumnMeta,
   clause: any,
-): [boolean, QueryBuilder] {
+): [boolean, Knex.QueryBuilder] {
   // I.e. this could be { authorFk: authorEntity | null | id | { ...recurse... } }
   const clauseKeys =
     typeof clause === "object" && clause !== null
@@ -355,7 +355,12 @@ function addForeignKeyClause(
   }
 }
 
-function addPrimitiveClause(query: QueryBuilder, alias: string, column: ColumnMeta, clause: any): QueryBuilder {
+function addPrimitiveClause(
+  query: Knex.QueryBuilder,
+  alias: string,
+  column: ColumnMeta,
+  clause: any,
+): Knex.QueryBuilder {
   if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
     // I.e. `{ primitiveField: { gt: value } }`
     const op = Object.keys(clause)[0] as Operator;
@@ -385,12 +390,12 @@ function addPrimitiveClause(query: QueryBuilder, alias: string, column: ColumnMe
 }
 
 function addPrimitiveOperator(
-  query: QueryBuilder,
+  query: Knex.QueryBuilder,
   alias: string,
   column: ColumnMeta,
   op: Operator,
   value: any,
-): QueryBuilder {
+): Knex.QueryBuilder {
   if (value === null || value === undefined) {
     if (op === "ne") {
       return query.whereNotNull(`${alias}.${column.columnName}`);

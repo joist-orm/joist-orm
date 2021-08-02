@@ -4,7 +4,7 @@ import { makeEntity } from "./EntityDbMetadata";
 describe("config", () => {
   describe("isFieldIgnored", () => {
     // A little hack to test the case of `ignore: false`, since it is actually defined as `ignore?: true`
-    const falseAsTrue = (false as boolean) as true;
+    const falseAsTrue = false as boolean as true;
 
     it.each([
       ["does not ignore when no config is provided", newAuthorConfig()],
@@ -36,7 +36,7 @@ describe("config", () => {
           makeEntity("Author"),
           "shouldIgnore",
           true,
-          true
+          true,
         ),
       ).toEqual(true);
     });
@@ -49,7 +49,9 @@ describe("config", () => {
           "shouldNotIgnore",
           true,
         ),
-      ).rejects.toThrowError("notNull fields cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.");
+      ).rejects.toThrowError(
+        "notNull fields cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.",
+      );
     });
   });
 });

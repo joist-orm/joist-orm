@@ -32,7 +32,7 @@ export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
     if (!result.has(group)) {
       result.set(group, []);
     }
-    result.get(group)!.push(valueFn === undefined ? ((o as any) as Y) : valueFn(o));
+    result.get(group)!.push(valueFn === undefined ? (o as any as Y) : valueFn(o));
   });
   return result;
 }
@@ -41,7 +41,7 @@ export function indexBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
   const result = new Map<string, Y>();
   list.forEach((o) => {
     const group = fn(o);
-    result.set(group, valueFn === undefined ? ((o as any) as Y) : valueFn(o));
+    result.set(group, valueFn === undefined ? (o as any as Y) : valueFn(o));
   });
   return result;
 }

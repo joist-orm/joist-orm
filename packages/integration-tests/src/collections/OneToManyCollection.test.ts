@@ -57,7 +57,7 @@ describe("OneToManyCollection", () => {
 
   it("can add to collection", async () => {
     const em = newEntityManager();
-    const b1 = em.create(Book, ({ title: "b1" } as any) as BookOpts); // as any b/c we're testing .add
+    const b1 = em.create(Book, { title: "b1" } as any as BookOpts); // as any b/c we're testing .add
     const a1 = em.create(Author, { firstName: "a1" });
     a1.books.add(b1);
     expect(b1.author.get).toEqual(a1);
@@ -70,7 +70,7 @@ describe("OneToManyCollection", () => {
   it("can add to one collection and remove from other", async () => {
     // Given a book that has two potential authors as all new objects.
     const em = newEntityManager();
-    const b1 = em.create(Book, ({ title: "b1" } as any) as BookOpts); // as any b/c we're testing add
+    const b1 = em.create(Book, { title: "b1" } as any as BookOpts); // as any b/c we're testing add
     const a1 = em.create(Author, { firstName: "a1" });
     const a2 = em.create(Author, { firstName: "a2" });
 

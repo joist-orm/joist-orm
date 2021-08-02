@@ -151,7 +151,7 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, {}, opts);
-    setOpts((this as any) as Author, opts, { calledFromConstructor: true });
+    setOpts(this as any as Author, opts, { calledFromConstructor: true });
   }
 
   get id(): AuthorId | undefined {
@@ -224,22 +224,22 @@ export abstract class AuthorCodegen extends BaseEntity {
   }
 
   set(opts: Partial<AuthorOpts>): void {
-    setOpts((this as any) as Author, opts);
+    setOpts(this as any as Author, opts);
   }
 
   setPartial(opts: PartialOrNull<AuthorOpts>): void {
-    setOpts((this as any) as Author, opts as OptsOf<Author>, { partial: true });
+    setOpts(this as any as Author, opts as OptsOf<Author>, { partial: true });
   }
 
   get changes(): Changes<Author> {
-    return newChangesProxy((this as any) as Author);
+    return newChangesProxy(this as any as Author);
   }
 
   async load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
-    return loadLens((this as any) as Author, fn);
+    return loadLens(this as any as Author, fn);
   }
 
   async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {
-    return getEm(this).populate((this as any) as Author, hint);
+    return getEm(this).populate(this as any as Author, hint);
   }
 }

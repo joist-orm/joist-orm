@@ -14,7 +14,7 @@ export async function runMigrationsIfNeeded(dir: string = productionDirectory): 
       dbClient: client,
       migrationsTable: "migrations",
       dir,
-      count: (undefined as any) as number,
+      count: undefined as any as number,
       direction: "up",
       ignorePattern: "(.*.d.ts)|(.*utils.[jt]s)|(migrate.[jt]s)|(migrate.test.[jt]s)",
       decamelize: true,

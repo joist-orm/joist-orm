@@ -15,7 +15,8 @@ import { ManyToOneReference } from "./ManyToOneReference";
 
 export class OneToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U> {
+  implements Collection<T, U>
+{
   private loaded: U[] | undefined;
   // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
   // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`

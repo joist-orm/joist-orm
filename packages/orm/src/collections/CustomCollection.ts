@@ -26,7 +26,8 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
  */
 export class CustomCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U> {
+  implements Collection<T, U>
+{
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the values can become stale; we want to each `.get` call to repeatedly evaluate the latest values.
   private loadPromise: Promise<any> | undefined;

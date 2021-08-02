@@ -351,21 +351,21 @@ export class EntityManager<C = {}> {
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>
+    O extends Omit<OptsOf<T>, keyof F | keyof U>,
   >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U): Promise<T>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
-    H extends LoadHint<T>
+    H extends LoadHint<T>,
   >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<Loaded<T, H>>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
-    H extends LoadHint<T>
+    H extends LoadHint<T>,
   >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<T> {
     const entities = await this.find(type, where as FilterOf<T>);
     let entity: T;
@@ -439,7 +439,7 @@ export class EntityManager<C = {}> {
       await Promise.all(
         (Object.entries(hint as NestedLoadHint<T>) as [keyof RelationsIn<T>, LoadHint<any>][]).map(
           async ([relationName, nested]) => {
-            const relation = (entity[relationName] as any) as
+            const relation = entity[relationName] as any as
               | OneToManyCollection<T, any>
               | OneToOneReference<T, any>
               | ManyToOneReference<T, any, undefined | never>;
@@ -1009,9 +1009,9 @@ export function sameEntity(a: Entity, bMeta: EntityMetadata<any>, bCurrent: Enti
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructor<T>): EntityMetadata<T> {
-  return (typeof entityOrType === "function"
-    ? (entityOrType as any).metadata
-    : entityOrType.__orm.metadata) as EntityMetadata<T>;
+  return (
+    typeof entityOrType === "function" ? (entityOrType as any).metadata : entityOrType.__orm.metadata
+  ) as EntityMetadata<T>;
 }
 
 /** Thrown by `findOneOrFail` if an entity is not found. */

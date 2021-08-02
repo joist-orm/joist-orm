@@ -23,7 +23,8 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
  */
 export class CustomReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, N> {
+  implements Reference<T, U, N>
+{
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<void> | undefined;

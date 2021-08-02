@@ -35,9 +35,12 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
   `;
 }
 
-function generateColumns(
-  dbMetadata: EntityDbMetadata,
-): { primaryKey: Code; primitives: Code[]; enums: Code[]; m2o: Code[] } {
+function generateColumns(dbMetadata: EntityDbMetadata): {
+  primaryKey: Code;
+  primitives: Code[];
+  enums: Code[];
+  m2o: Code[];
+} {
   const primaryKey = code`
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id") },
   `;

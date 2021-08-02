@@ -23,7 +23,8 @@ import { ManyToOneReference } from "./ManyToOneReference";
  */
 export class OneToOneReference<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, undefined> {
+  implements Reference<T, U, undefined>
+{
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;

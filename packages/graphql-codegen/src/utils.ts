@@ -44,11 +44,11 @@ export function sortKeys<T extends object>(o: T): T {
       const value = o[key as keyof T];
       const newValue =
         typeof value === "object" && isPlainObject(value)
-          ? sortKeys((value as any) as object)
+          ? sortKeys(value as any as object)
           : Array.isArray(value)
           ? value.sort()
           : value;
       acc[key as keyof T] = newValue as any;
       return acc;
-    }, ({} as any) as T);
+    }, {} as any as T);
 }

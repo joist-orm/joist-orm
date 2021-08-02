@@ -23,19 +23,18 @@
     "dataloader": "^2.0.0",
     "is-plain-object": "^3.0.1",
     "joist-utils": "1.0.0-bump",
-    "knex": "^0.21.18",
+    "knex": "^0.95.9",
     "object-hash": "^2.0.3",
-    "pg": "^8.3.0"
+    "pg": "^8.7.1"
   },
   "devDependencies": {
-    "@types/jest": "^25.2.1",
-    "@types/node": "^13.13.4",
-    "jest": "^26.4.2",
-    "prettier": "^2.2.1",
-    "prettier-plugin-organize-imports": "^1.1.1",
-    "ts-jest": "^26.3.0",
-    "ts-node-dev": "^1.0.0-pre.44",
-    "tsconfig-paths": "^3.9.0",
-    "typescript": "^4.2.2"
+    "@types/node": "^16.4.10",
+    "jest": "^27.0.6",
+    "prettier": "^2.3.2",
+    "prettier-plugin-organize-imports": "^2.3.3",
+    "ts-jest": "^27.0.4",
+    "ts-node-dev": "^1.1.8",
+    "tsconfig-paths": "^3.10.1",
+    "typescript": "^4.3.5"
   }
 }

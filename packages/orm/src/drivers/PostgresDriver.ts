@@ -1,4 +1,4 @@
-import Knex, { QueryBuilder } from "knex";
+import { Knex } from "knex";
 import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
 import { whereFilterHash } from "../dataloaders/findDataLoader";
 import {
@@ -152,7 +152,7 @@ export class PostgresDriver implements Driver {
     // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
     // not guarantee order).
     const tagged = uniqueQueries.map((queryAndSettings, i) => {
-      const query = buildQuery(knex, type, queryAndSettings) as QueryBuilder;
+      const query = buildQuery(knex, type, queryAndSettings) as Knex.QueryBuilder;
       return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
     });
 

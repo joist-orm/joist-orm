@@ -1,4 +1,4 @@
-import Knex from "knex";
+import { Knex } from "knex";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "../collections";
 import { JoinRow } from "../collections/ManyToManyCollection";
 import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";

@@ -679,7 +679,7 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(1);
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
-      'select "p0".* from "publishers" as "p0" where "p0"."id" = ? order by "p0"."id" asc limit ?',
+      'select "p0".* from "publishers" as "p0" where "p0"."id" = $1 order by "p0"."id" asc limit $2',
     ]);
     // And both results are the same
     expect(p1.length).toEqual(1);
@@ -700,7 +700,7 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(1);
     // And it is still auto-batched
     expect(queries).toEqual([
-      'select *, -1 as __tag, -1 as __row from "publishers" where "id" = ? union all (select "p0".*, 0 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" ASC, "p0"."id" ASC, "p0"."id" asc limit ?) union all (select "p0".*, 1 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = ? and "p0"."id" = ? order by "p0"."id" DESC, "p0"."id" DESC, "p0"."id" asc limit ?) order by "__tag" asc',
+      'select *, -1 as __tag, -1 as __row from "publishers" where "id" = $1 union all (select "p0".*, 0 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = $2 and "p0"."id" = $3 order by "p0"."id" ASC, "p0"."id" ASC, "p0"."id" asc limit $4) union all (select "p0".*, 1 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = $5 and "p0"."id" = $6 order by "p0"."id" DESC, "p0"."id" DESC, "p0"."id" asc limit $7) order by "__tag" asc',
     ]);
     // And the results are the expected reverse of each other
     expect(p1.reverse()).toEqual(p2);
@@ -972,13 +972,13 @@ describe("EntityManager", () => {
   it("can delete an entity with a reverseHint in a transaction", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "title", author: a1 })
+    const b1 = new Book(em, { title: "title", author: a1 });
     await em.flush();
     await em.transaction(async () => {
       em.delete(b1);
       await em.flush();
     });
-    expect(b1.isDeletedEntity).toBeTruthy()
+    expect(b1.isDeletedEntity).toBeTruthy();
   });
 
   it("can save entities", async () => {

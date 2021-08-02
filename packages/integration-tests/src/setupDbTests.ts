@@ -4,7 +4,7 @@ import { config } from "dotenv";
 import { PostgresDriver } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
-import Knex from "knex";
+import { knex as createKnex, Knex } from "knex";
 
 if (process.env.DATABASE_CONNECTION_INFO === undefined) {
   config({ path: "./local.env" });
@@ -27,7 +27,7 @@ export let queries: string[] = [];
 expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
-  knex = Knex({
+  knex = createKnex({
     client: "pg",
     connection: newPgConnectionConfig(),
     debug: false,

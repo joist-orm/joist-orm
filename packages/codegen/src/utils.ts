@@ -88,8 +88,8 @@ export function sortKeys<T extends object>(o: T): T {
     .sort()
     .reduce((acc, key) => {
       const value = o[key as keyof T];
-      const newValue = typeof value === "object" && isPlainObject(value) ? sortKeys((value as any) as object) : value;
+      const newValue = typeof value === "object" && isPlainObject(value) ? sortKeys(value as any as object) : value;
       acc[key as keyof T] = newValue as any;
       return acc;
-    }, ({} as any) as T);
+    }, {} as any as T);
 }

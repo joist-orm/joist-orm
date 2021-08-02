@@ -34,5 +34,5 @@ function sortObject<T extends object>(obj: T): T {
     .reduce((acc, key) => {
       acc[key as keyof T] = obj[key as keyof T];
       return acc;
-    }, ({} as any) as T) as T;
+    }, {} as any as T) as T;
 }

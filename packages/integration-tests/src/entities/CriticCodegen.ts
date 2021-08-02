@@ -69,7 +69,7 @@ export abstract class CriticCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, {}, opts);
-    setOpts((this as any) as Critic, opts, { calledFromConstructor: true });
+    setOpts(this as any as Critic, opts, { calledFromConstructor: true });
   }
 
   get id(): CriticId | undefined {
@@ -93,22 +93,22 @@ export abstract class CriticCodegen extends BaseEntity {
   }
 
   set(opts: Partial<CriticOpts>): void {
-    setOpts((this as any) as Critic, opts);
+    setOpts(this as any as Critic, opts);
   }
 
   setPartial(opts: PartialOrNull<CriticOpts>): void {
-    setOpts((this as any) as Critic, opts as OptsOf<Critic>, { partial: true });
+    setOpts(this as any as Critic, opts as OptsOf<Critic>, { partial: true });
   }
 
   get changes(): Changes<Critic> {
-    return newChangesProxy((this as any) as Critic);
+    return newChangesProxy(this as any as Critic);
   }
 
   async load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>): Promise<V> {
-    return loadLens((this as any) as Critic, fn);
+    return loadLens(this as any as Critic, fn);
   }
 
   async populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>> {
-    return getEm(this).populate((this as any) as Critic, hint);
+    return getEm(this).populate(this as any as Critic, hint);
   }
 }

@@ -5,7 +5,8 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U> {
+  implements Collection<T, U>
+{
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
   private removedBeforeLoaded: U[] = [];
@@ -70,7 +71,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         [this.otherColumnName]: other,
       };
       getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
-      ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).add(this.entity, true);
+      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.entity, true);
     }
   }
 
@@ -93,7 +94,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         };
         getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
       }
-      ((other[this.otherFieldName] as any) as ManyToManyCollection<U, T>).remove(this.entity, true);
+      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
     }
 
     if (this.loaded !== undefined) {
@@ -191,7 +192,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   async cleanupOnEntityDeleted(): Promise<void> {
     const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
-      const m2m = (other[this.otherFieldName] as any) as ManyToManyCollection<U, T>;
+      const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;
       m2m.remove(this.entity);
     });
     this.loaded = [];

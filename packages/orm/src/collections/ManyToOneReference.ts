@@ -25,7 +25,8 @@ import { OneToManyCollection } from "./OneToManyCollection";
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, N> {
+  implements Reference<T, U, N>
+{
   private loaded!: U | N;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
@@ -46,7 +47,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = ((await getEm(this.entity).load(this.otherMeta.cstr, current)) as any) as U;
+      this.loaded = (await getEm(this.entity).load(this.otherMeta.cstr, current)) as any as U;
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded, opts);
@@ -122,7 +123,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (this._isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
-        this.loaded = ((await getEm(this.entity).load(this.otherMeta.cstr, current)) as any) as U;
+        this.loaded = (await getEm(this.entity).load(this.otherMeta.cstr, current)) as any as U;
       } else {
         this.loaded = current;
       }

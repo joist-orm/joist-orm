@@ -108,7 +108,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, {}, opts);
-    setOpts((this as any) as BookAdvance, opts, { calledFromConstructor: true });
+    setOpts(this as any as BookAdvance, opts, { calledFromConstructor: true });
   }
 
   get id(): BookAdvanceId | undefined {
@@ -148,22 +148,22 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
   }
 
   set(opts: Partial<BookAdvanceOpts>): void {
-    setOpts((this as any) as BookAdvance, opts);
+    setOpts(this as any as BookAdvance, opts);
   }
 
   setPartial(opts: PartialOrNull<BookAdvanceOpts>): void {
-    setOpts((this as any) as BookAdvance, opts as OptsOf<BookAdvance>, { partial: true });
+    setOpts(this as any as BookAdvance, opts as OptsOf<BookAdvance>, { partial: true });
   }
 
   get changes(): Changes<BookAdvance> {
-    return newChangesProxy((this as any) as BookAdvance);
+    return newChangesProxy(this as any as BookAdvance);
   }
 
   async load<U, V>(fn: (lens: Lens<BookAdvance>) => Lens<U, V>): Promise<V> {
-    return loadLens((this as any) as BookAdvance, fn);
+    return loadLens(this as any as BookAdvance, fn);
   }
 
   async populate<H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>> {
-    return getEm(this).populate((this as any) as BookAdvance, hint);
+    return getEm(this).populate(this as any as BookAdvance, hint);
   }
 }

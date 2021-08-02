@@ -11,7 +11,7 @@ export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
     if (result[group] === undefined) {
       result[group] = [];
     }
-    result[group].push(valueFn === undefined ? ((o as any) as Y) : valueFn(o));
+    result[group].push(valueFn === undefined ? (o as any as Y) : valueFn(o));
   });
   return result;
 }

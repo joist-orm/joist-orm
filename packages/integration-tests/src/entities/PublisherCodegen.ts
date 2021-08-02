@@ -129,7 +129,7 @@ export abstract class PublisherCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta, {}, opts);
-    setOpts((this as any) as Publisher, opts, { calledFromConstructor: true });
+    setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
   }
 
   get id(): PublisherId | undefined {
@@ -217,22 +217,22 @@ export abstract class PublisherCodegen extends BaseEntity {
   }
 
   set(opts: Partial<PublisherOpts>): void {
-    setOpts((this as any) as Publisher, opts);
+    setOpts(this as any as Publisher, opts);
   }
 
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
-    setOpts((this as any) as Publisher, opts as OptsOf<Publisher>, { partial: true });
+    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
   }
 
   get changes(): Changes<Publisher> {
-    return newChangesProxy((this as any) as Publisher);
+    return newChangesProxy(this as any as Publisher);
   }
 
   async load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>): Promise<V> {
-    return loadLens((this as any) as Publisher, fn);
+    return loadLens(this as any as Publisher, fn);
   }
 
   async populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>> {
-    return getEm(this).populate((this as any) as Publisher, hint);
+    return getEm(this).populate(this as any as Publisher, hint);
   }
 }

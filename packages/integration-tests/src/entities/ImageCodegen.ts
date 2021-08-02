@@ -122,7 +122,7 @@ export abstract class ImageCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, {}, opts);
-    setOpts((this as any) as Image, opts, { calledFromConstructor: true });
+    setOpts(this as any as Image, opts, { calledFromConstructor: true });
   }
 
   get id(): ImageId | undefined {
@@ -170,22 +170,22 @@ export abstract class ImageCodegen extends BaseEntity {
   }
 
   set(opts: Partial<ImageOpts>): void {
-    setOpts((this as any) as Image, opts);
+    setOpts(this as any as Image, opts);
   }
 
   setPartial(opts: PartialOrNull<ImageOpts>): void {
-    setOpts((this as any) as Image, opts as OptsOf<Image>, { partial: true });
+    setOpts(this as any as Image, opts as OptsOf<Image>, { partial: true });
   }
 
   get changes(): Changes<Image> {
-    return newChangesProxy((this as any) as Image);
+    return newChangesProxy(this as any as Image);
   }
 
   async load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>): Promise<V> {
-    return loadLens((this as any) as Image, fn);
+    return loadLens(this as any as Image, fn);
   }
 
   async populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>> {
-    return getEm(this).populate((this as any) as Image, hint);
+    return getEm(this).populate(this as any as Image, hint);
   }
 }

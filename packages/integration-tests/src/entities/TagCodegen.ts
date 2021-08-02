@@ -83,7 +83,7 @@ export abstract class TagCodegen extends BaseEntity {
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta, {}, opts);
-    setOpts((this as any) as Tag, opts, { calledFromConstructor: true });
+    setOpts(this as any as Tag, opts, { calledFromConstructor: true });
   }
 
   get id(): TagId | undefined {
@@ -107,22 +107,22 @@ export abstract class TagCodegen extends BaseEntity {
   }
 
   set(opts: Partial<TagOpts>): void {
-    setOpts((this as any) as Tag, opts);
+    setOpts(this as any as Tag, opts);
   }
 
   setPartial(opts: PartialOrNull<TagOpts>): void {
-    setOpts((this as any) as Tag, opts as OptsOf<Tag>, { partial: true });
+    setOpts(this as any as Tag, opts as OptsOf<Tag>, { partial: true });
   }
 
   get changes(): Changes<Tag> {
-    return newChangesProxy((this as any) as Tag);
+    return newChangesProxy(this as any as Tag);
   }
 
   async load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>): Promise<V> {
-    return loadLens((this as any) as Tag, fn);
+    return loadLens(this as any as Tag, fn);
   }
 
   async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {
-    return getEm(this).populate((this as any) as Tag, hint);
+    return getEm(this).populate(this as any as Tag, hint);
   }
 }

@@ -17,6 +17,7 @@
     "joist-orm": "1.0.0-bump"
   },
   "devDependencies": {
+    "@types/jest": "^26.0.24",
     "@types/node": "^16.4.10",
     "dotenv": "^8.2.0",
     "jest": "^27.0.6",

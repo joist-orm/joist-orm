@@ -28,6 +28,7 @@
     "pg": "^8.7.1"
   },
   "devDependencies": {
+    "@types/jest": "^26.0.24",
     "@types/node": "^16.4.10",
     "jest": "^27.0.6",
     "prettier": "^2.3.2",

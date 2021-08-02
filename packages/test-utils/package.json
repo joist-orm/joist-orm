@@ -11,6 +11,7 @@
     "build"
   ],
   "devDependencies": {
+    "@types/jest": "^26.0.24",
     "jest": "^27.0.6",
     "prettier": "^2.3.2",
     "prettier-plugin-organize-imports": "^2.3.3",

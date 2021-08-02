@@ -1,4 +1,3 @@
-import "@jest/types";
 export { newPgConnectionConfig } from "./connection";
 
 export function fail(message?: string): never {

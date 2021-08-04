@@ -29,7 +29,15 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
   [P in keyof T]: T[P] extends NullOrDefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<V | (DeepPartialOrNull<V> & { delete?: boolean | null; remove?: boolean | null }) | IdOf<V>> | null
+        ? Array<
+            | V
+            | (DeepPartialOrNull<V> & {
+                delete?: boolean | null;
+                remove?: boolean | null;
+                op?: "remove" | "delete" | "include";
+              })
+            | IdOf<V>
+          > | null
         : T[P]
       : U extends Entity
       ? U | DeepPartialOrNull<U> | IdOf<U> | null
@@ -58,7 +66,7 @@ export async function createOrUpdatePartial<T extends Entity>(
     if (!field) {
       // Allow delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically
       // allowed, i.e. this isn't the Rails form bug where users can POST in any random field they want.
-      const flagField = key === "delete" || key === "remove";
+      const flagField = key === "delete" || key === "remove" || key === "op";
       if (flagField) {
         // Pass these along for setOpts to look for
         return [key, value];
@@ -106,6 +114,7 @@ export async function createOrUpdatePartial<T extends Entity>(
       // Also we trust the API layer, i.e. GraphQL, to not let these fields leak unless explicitly allowed.
       const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
       const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
+      const allowOp = !field.otherMetadata().fields.some((f) => f.fieldName === "op");
       collectionsToLoad.push(field.fieldName);
 
       const entities = !value
@@ -119,13 +128,16 @@ export async function createOrUpdatePartial<T extends Entity>(
               // Look for `delete: true/false` and `remove: true/false` markers
               const deleteMarker = allowDelete && value["delete"];
               const removeMarker = allowRemove && value["remove"];
+              const opMarker = allowOp && value["op"];
               // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
               if (deleteMarker !== undefined) delete value.delete;
               if (removeMarker !== undefined) delete value.remove;
+              if (opMarker !== undefined) delete value.op;
               const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
               // Put the markers back for setOpts to find
               if (deleteMarker === true) entity.delete = true;
               if (removeMarker === true) entity.remove = true;
+              if (opMarker) entity.op = opMarker;
               return entity;
             }
           });

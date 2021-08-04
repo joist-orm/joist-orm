@@ -215,6 +215,57 @@ describe("EntityManager", () => {
     expect(await countOfBookToTags()).toEqual(0);
   });
 
+  it("collections can incrementally remove children", async () => {
+    // Given an book with two tags
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertBookToTag({ tag_id: 1, book_id: 1 });
+    await insertBookToTag({ tag_id: 2, book_id: 1 });
+    const em = newEntityManager();
+    // When we incrementally remove a single tag
+    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "remove" }] });
+    await em.flush();
+    // Then we removed only that one m2m row
+    expect(await countOfBookToTags()).toEqual(1);
+    // And we still have both tags
+    expect(await countOfTags()).toEqual(2);
+  });
+
+  it("collections can incrementally delete children", async () => {
+    // Given an book with two tag
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertBookToTag({ tag_id: 1, book_id: 1 });
+    await insertBookToTag({ tag_id: 2, book_id: 1 });
+    const em = newEntityManager();
+    // When we incrementally delete a single tag
+    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "delete" }] });
+    await em.flush();
+    // Then we removed only that one m2m row
+    expect(await countOfBookToTags()).toEqual(1);
+    // And we also deleted its entity
+    expect(await countOfBookToTags()).toEqual(1);
+  });
+
+  it("collections can incrementally add children", async () => {
+    // Given an book with one tag
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertBookToTag({ tag_id: 1, book_id: 1 });
+    const em = newEntityManager();
+    // When we incrementally add a single tag
+    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "include" }] });
+    await em.flush();
+    // Then we have both m2m rows
+    expect(await countOfBookToTags()).toEqual(2);
+  });
+
   it("collections can refer to entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

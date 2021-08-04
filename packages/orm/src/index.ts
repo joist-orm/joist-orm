@@ -213,14 +213,41 @@ export function setOpts<T extends Entity>(
       if (calledFromConstructor) {
         current.setFromOpts(value);
       } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
+        const values = value as any[];
+
         // For setPartial collections, we used to individually add/remove instead of set, but this
         // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
         // you'd still have `[a]` around. Note that we still support `delete: true` command to go
         // further than "remove from collection" to "actually delete the entity".
         const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
         const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
+
+        // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
+        // When passed in, all values must have it, and we kick into incremental mode, i.e. we
+        // individually add/remove/delete entities.
+        //
+        // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
+        const allowOp = !field.otherMetadata().fields.some((f) => f.fieldName === "op");
+        const anyValueHasOp = allowOp && values.some((v) => !!v.op);
+        if (anyValueHasOp) {
+          const anyValueMissingOp = values.some((v) => !v.op);
+          if (anyValueMissingOp) {
+            throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+          }
+          values.forEach((v) => {
+            if (v.op === "delete") {
+              getEm(entity).delete(v);
+            } else if (v.op === "remove") {
+              (current as any).remove(v);
+            } else if (v.op === "include") {
+              (current as any).add(v);
+            }
+          });
+          return; // return from the op-based incremental behavior
+        }
+
         const toSet: any[] = [];
-        (value as any[]).forEach((e) => {
+        values.forEach((e) => {
           if (allowDelete && e.delete === true) {
             getEm(entity).delete(e);
           } else if (allowRemove && e.remove === true) {

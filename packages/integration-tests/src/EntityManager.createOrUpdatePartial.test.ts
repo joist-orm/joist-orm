@@ -225,10 +225,10 @@ describe("EntityManager", () => {
     await insertBookToTag({ tag_id: 2, book_id: 1 });
     const em = newEntityManager();
     // When we incrementally remove a single tag
-    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "remove" }] });
+    const b = await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "remove" }] });
     await em.flush();
     // Then we removed only that one m2m row
-    expect(await countOfBookToTags()).toEqual(1);
+    expect((await b.tags.load()).map((t) => t.id)).toEqual(["t:1"]);
     // And we still have both tags
     expect(await countOfTags()).toEqual(2);
   });
@@ -243,10 +243,10 @@ describe("EntityManager", () => {
     await insertBookToTag({ tag_id: 2, book_id: 1 });
     const em = newEntityManager();
     // When we incrementally delete a single tag
-    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "delete" }] });
+    const b = await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ id: "t:2", op: "delete" }] });
     await em.flush();
     // Then we removed only that one m2m row
-    expect(await countOfBookToTags()).toEqual(1);
+    expect((await b.tags.load()).map((t) => t.id)).toEqual(["t:1"]);
     // And we also deleted its entity
     expect(await countOfBookToTags()).toEqual(1);
   });

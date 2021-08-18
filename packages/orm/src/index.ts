@@ -241,6 +241,8 @@ export function setOpts<T extends Entity>(
               (current as any).remove(v);
             } else if (v.op === "include") {
               (current as any).add(v);
+            } else if (v.op === "incremental") {
+              // This is a marker entry to opt-in to incremental behavior, just drop it
             }
           });
           return; // return from the op-based incremental behavior

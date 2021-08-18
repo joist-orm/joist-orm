@@ -34,7 +34,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
             | (DeepPartialOrNull<V> & {
                 delete?: boolean | null;
                 remove?: boolean | null;
-                op?: "remove" | "delete" | "include";
+                op?: "remove" | "delete" | "include" | "incremental";
               })
             | IdOf<V>
           > | null
@@ -129,6 +129,10 @@ export async function createOrUpdatePartial<T extends Entity>(
               const deleteMarker = allowDelete && value["delete"];
               const removeMarker = allowRemove && value["remove"];
               const opMarker = allowOp && value["op"];
+              // If this is the incremental marker, just leave it in as-is so that setOpts can see it
+              if (opMarker === "incremental") {
+                return value;
+              }
               // Remove the markers, regardless of true/false, before recursing into createOrUpdatePartial to avoid unknown fields
               if (deleteMarker !== undefined) delete value.delete;
               if (removeMarker !== undefined) delete value.remove;

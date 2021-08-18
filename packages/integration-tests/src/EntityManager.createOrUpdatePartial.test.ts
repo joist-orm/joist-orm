@@ -266,6 +266,20 @@ describe("EntityManager", () => {
     expect(await countOfBookToTags()).toEqual(2);
   });
 
+  it("collections can incrementally not clear collections by seeing a marker", async () => {
+    // Given an book with one tag
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertBookToTag({ tag_id: 1, book_id: 1 });
+    const em = newEntityManager();
+    // When we incrementally "set" tags to empty
+    await em.createOrUpdatePartial(Book, { id: "b:1", tags: [{ op: "incremental" }] });
+    await em.flush();
+    // Then we have the m2m row
+    expect(await countOfBookToTags()).toEqual(1);
+  });
+
   it("collections can refer to entities", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

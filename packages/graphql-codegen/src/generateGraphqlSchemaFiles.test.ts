@@ -246,6 +246,50 @@ describe("generateGraphqlSchemaFiles", () => {
       "
     `);
   });
+
+  it("can output both Date and DateTime types", async () => {
+    // Given an author
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Author", {
+        primitives: [
+          // With a regular field
+          newPrimitiveField("firstName"),
+          // And a timestamp field  with the `_at` convention
+          newPrimitiveField("createdAt", { fieldType: "Date" }),
+          // And also a date field with the `_date` convention
+          newPrimitiveField("startDate", { fieldType: "Date" }),
+        ],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then the input has both both types of fields as appropriate
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+"type Author {
+  id: ID!
+  firstName: String!
+  createdAt: DateTime!
+  startDate: Date!
+}
+
+extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}
+
+input SaveAuthorInput {
+  id: ID
+  firstName: String
+  createdAt: DateTime
+  startDate: Date
+}
+
+type SaveAuthorResult {
+  author: Author!
+}
+"
+`);
+  });
 });
 
 function newFs(files: Record<string, string>): Fs {

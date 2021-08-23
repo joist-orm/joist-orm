@@ -8,7 +8,7 @@ export async function generateEnumsGraphql(enums: EnumMetadata): Promise<CodeGen
     .map(({ name, rows, extraPrimitives }) => {
       const enumDecl = `enum ${name} { ${rows.map((r) => r.code).join(" ")} }`;
       const detailDecl = `type ${name}Detail { code: ${name}! name: String! ${extraPrimitives
-        .map((p) => `${camelCase(p.columnName)}: ${mapTypescriptTypeToGraphQLType(p.fieldType)}!`)
+        .map((p) => `${camelCase(p.columnName)}: ${mapTypescriptTypeToGraphQLType(p.fieldName, p.fieldType)}!`)
         .join(" ")} }`;
       return [enumDecl, "", detailDecl, ""];
     })

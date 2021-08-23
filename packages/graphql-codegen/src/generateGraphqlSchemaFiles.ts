@@ -57,7 +57,7 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID!" };
 
     const primitives = e.primitives.map(({ fieldName, fieldType: tsType, notNull }) => {
-      const fieldType = `${mapTypescriptTypeToGraphQLType(tsType)}${maybeRequired(notNull)}`;
+      const fieldType = `${mapTypescriptTypeToGraphQLType(fieldName, tsType)}${maybeRequired(notNull)}`;
       return { ...common, fieldName, fieldType };
     });
 
@@ -120,7 +120,7 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
     const primitives = e.primitives
       .filter((f) => f.derived === false)
       .map(({ fieldName, fieldType: tsType }) => {
-        const fieldType = `${mapTypescriptTypeToGraphQLType(tsType)}`;
+        const fieldType = `${mapTypescriptTypeToGraphQLType(fieldName, tsType)}`;
         return { ...common, fieldName, fieldType };
       });
 

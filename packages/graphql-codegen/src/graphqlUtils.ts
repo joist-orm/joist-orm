@@ -139,9 +139,9 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
   });
 }
 
-export type GraphQLType = "Boolean" | "String" | "Int" | "Date";
+export type GraphQLType = "Boolean" | "String" | "Int" | "Date" | "DateTime";
 
-export function mapTypescriptTypeToGraphQLType(type: PrimitiveTypescriptType): GraphQLType {
+export function mapTypescriptTypeToGraphQLType(fieldName: string, type: PrimitiveTypescriptType): GraphQLType {
   switch (type) {
     case "string":
       return "String";
@@ -149,6 +149,14 @@ export function mapTypescriptTypeToGraphQLType(type: PrimitiveTypescriptType): G
       return "Boolean";
     case "number":
       return "Int";
+    case "Date":
+      // Joist doesn't yet have different `date` vs. `datetime` types (which is surprising...),
+      // but we do in GraphQL, so for now lean on the `..._at` suffix convention to know "DateTime".
+      if (fieldName.endsWith("At")) {
+        return "DateTime";
+      } else {
+        return "Date";
+      }
     default:
       return type;
   }

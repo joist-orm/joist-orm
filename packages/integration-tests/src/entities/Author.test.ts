@@ -115,6 +115,50 @@ describe("Author", () => {
     await em.flush();
   });
 
+  it("can skip validations", async () => {
+    // Given an author with the same first and last name
+    // Given that a validation exists preventing the firstName and lastName from being the same values
+    const em = newEntityManager();
+    new Author(em, { firstName: "a1", lastName: "a1" });
+
+    // When a flush occurs with the skipValidation option set to true
+    // Then it does not throw an exception
+    await expect(em.flush({ skipValidation: true })).resolves.toEqual([
+      expect.objectContaining({
+        firstName: "a1",
+        lastName: "a1",
+      }),
+    ]);
+  });
+
+  it("can skip reactive validation rules", async () => {
+    const em = newEntityManager();
+    // Given the book and author start out with acceptable names
+    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+
+    // When the book name is later changed to collide with the author
+    b1.title = "a1";
+
+    // Then the author validation rule can be skipped
+    await expect(em.flush({ skipValidation: true })).resolves.toEqual([expect.objectContaining({ title: "a1" })]);
+  });
+
+  it("skips the afterValidation hook when skipValidation is true", async () => {
+    // Given an author with the same first and last name
+    // Given that a validation exists preventing the firstName and lastName from being the same values
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1", lastName: "a1" });
+    expect(a1.afterValidationRan).toBeFalsy();
+
+    // When a flush occurs with the skipValidation option set to true
+    await em.flush({ skipValidation: true });
+
+    // Then it does not run afterValidation hooks
+    expect(a1.afterValidationRan).toBeFalsy();
+  });
+
   it("can have lifecycle hooks", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });

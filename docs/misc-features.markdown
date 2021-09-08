@@ -404,6 +404,8 @@ authorConfig.addRule(async (author) => {
 
 If any validation rule returns a non-`undefined` string, `flush()` will throw a `ValidationErrors` error.
 
+If you would like to skip validation rules, you can pass `skipValidation: true` to `flush()`. Use this technique with caution, as it can create invalid entities.
+
 ### Tracking Changed Properties
 
 Entities track which of their properties have changed:

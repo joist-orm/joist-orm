@@ -207,6 +207,11 @@ export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
+export interface FlushOptions {
+  /** Skip all validations, including reactive validations, when flushing */
+  skipValidation?: boolean;
+}
+
 export class EntityManager<C = {}> {
   public readonly ctx: C;
   public driver: Driver;
@@ -699,7 +704,9 @@ export class EntityManager<C = {}> {
    *
    * It returns entities that have changed (an entity is considered changed if it has been deleted, inserted, or updated)
    */
-  async flush(): Promise<Entity[]> {
+  async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
+    const { skipValidation = false } = flushOptions;
+
     if (this.isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
@@ -729,8 +736,11 @@ export class EntityManager<C = {}> {
               await beforeUpdate(this.ctx, todos);
               recalcDerivedFields(todos);
               await recalcAsyncDerivedFields(this, todos);
-              await validate(todos);
-              await afterValidation(this.ctx, todos);
+
+              if (!skipValidation) {
+                await validate(todos);
+                await afterValidation(this.ctx, todos);
+              }
 
               entitiesToFlush.push(...pendingEntities);
               pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));

@@ -210,29 +210,33 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
           } else if (field.kind === "primaryKey") {
             fn = (v) => keyToNumber(meta, v as any);
           }
-          const filter = parseValueFilter(value as ValueFilter<any, any>);
-          switch (filter.kind) {
-            case "eq":
-              return currentValue === fn(filter.value);
-            case "ne":
-              return notEqual(currentValue, fn(filter.value));
-            case "in":
-              return filter.value.map(fn).includes(currentValue);
-            case "gt":
-            case "gte":
-            case "lt":
-            case "lte":
-            case "like":
-            case "ilike":
-              const a = currentValue;
-              const b = fn(filter.value);
-              const op = ops[filter.kind];
-              return op(a, b);
-            case "pass":
-              return true;
-            default:
-              throw new Error("Unsupported");
-          }
+          const filters = parseValueFilter(value as ValueFilter<any, any>);
+          return filters
+            .map((filter) => {
+              switch (filter.kind) {
+                case "eq":
+                  return currentValue === fn(filter.value);
+                case "ne":
+                  return notEqual(currentValue, fn(filter.value));
+                case "in":
+                  return filter.value.map(fn).includes(currentValue);
+                case "gt":
+                case "gte":
+                case "lt":
+                case "lte":
+                case "like":
+                case "ilike":
+                  const a = currentValue;
+                  const b = fn(filter.value);
+                  const op = ops[filter.kind];
+                  return op(a, b);
+                case "pass":
+                  return true;
+                default:
+                  throw new Error("Unsupported");
+              }
+            })
+            .every((r) => r);
         case "m2o":
           const otherMeta = field.otherMetadata();
           const ef = parseEntityFilter(otherMeta, value);

@@ -50,47 +50,42 @@ export type ParsedValueFilter<V> =
   | { kind: "ilike"; value: V }
   | { kind: "pass" };
 
-export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
+export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
   if (filter === null) {
-    return { kind: "eq", value: filter };
+    return [{ kind: "eq", value: filter }];
   } else if (filter === undefined) {
-    return { kind: "pass" };
+    return [{ kind: "pass" }];
   } else if (Array.isArray(filter)) {
-    return { kind: "in", value: filter };
+    return [{ kind: "in", value: filter }];
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
-    if (keys.length === 2) {
+    if (keys.length === 2 && "op" in filter) {
       // Probe for `findGql` op & value
       const op = filter["op"];
       const value = filter["value"];
-      if (op === undefined && value === undefined) {
-        throw new Error(`ValueFilter only supports a single field being set ${filter}`);
+      return [{ kind: op, value: value ?? null }];
+    }
+    return keys.map((key) => {
+      switch (key) {
+        case "eq":
+          return { kind: "eq", value: filter[key] ?? null };
+        case "ne":
+          return { kind: "ne", value: filter[key] ?? null };
+        case "in":
+          return { kind: "in", value: filter[key] };
+        case "gt":
+        case "gte":
+        case "lt":
+        case "lte":
+        case "like":
+        case "ilike":
+          return { kind: key, value: filter[key] };
       }
-      return { kind: op, value: value ?? null };
-    }
-    if (keys.length !== 1) {
-      throw new Error(`ValueFilter only supports a single field being set ${filter}`);
-    }
-    const key = keys[0];
-    switch (key) {
-      case "eq":
-        return { kind: "eq", value: filter[key] ?? null };
-      case "ne":
-        return { kind: "ne", value: filter[key] ?? null };
-      case "in":
-        return { kind: "in", value: filter[key] };
-      case "gt":
-      case "gte":
-      case "lt":
-      case "lte":
-      case "like":
-      case "ilike":
-        return { kind: key, value: filter[key] };
-    }
-    throw new Error("unsupported");
+      throw new Error("unsupported");
+    });
   } else {
     // This is a primitive like a string, number
-    return { kind: "eq", value: filter ?? null };
+    return [{ kind: "eq", value: filter ?? null }];
   }
 }
 
@@ -363,8 +358,10 @@ function addPrimitiveClause(
 ): Knex.QueryBuilder {
   if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
     // I.e. `{ primitiveField: { gt: value } }`
-    const op = Object.keys(clause)[0] as Operator;
-    return addPrimitiveOperator(query, alias, column, op, (clause as any)[op]);
+    Object.entries(clause).forEach(([op, value]) => {
+      query = addPrimitiveOperator(query, alias, column, op as Operator, value);
+    });
+    return query;
   } else if (clause && typeof clause === "object" && "op" in clause) {
     // I.e. { primitiveField: { op: "gt", value: 1 } }`
     return addPrimitiveOperator(query, alias, column, clause.op, clause.value);

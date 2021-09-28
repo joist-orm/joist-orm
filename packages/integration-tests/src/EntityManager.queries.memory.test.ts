@@ -347,6 +347,15 @@ describe("EntityManager.queries.memory", () => {
     expect(authors.length).toEqual(2);
   });
 
+  it("can find by gte and lte at the same time", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a1", age: 3 });
+    await insertAuthor({ first_name: "a2", age: 5 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { age: { gte: 2, lte: 4 } });
+    expect(authors.length).toEqual(1);
+  });
+
   it("can find by not equal", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

@@ -107,6 +107,15 @@ export type ManyToManyField = Field & {
   otherColumnName: string;
 };
 
+export type ManyToManyEnumField = Field & {
+  joinTableName: string;
+  singularName: string;
+  columnName: string;
+  otherEnumType: Import;
+  otherFieldName: string;
+  otherColumnName: string;
+};
+
 /** Adapts the generally-great pg-structure metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;

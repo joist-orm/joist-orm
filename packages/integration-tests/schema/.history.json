@@ -3,6 +3,7 @@
     "age",
     "authors",
     "books",
+    "colors",
     "createdAt",
     "firstName",
     "graduated",

@@ -13,6 +13,7 @@ import {
   getEm,
   GraphQLFilterOf,
   hasMany,
+  hasManyToMany,
   hasOne,
   hasOneToOne,
   Lens,
@@ -37,6 +38,9 @@ import {
   Book,
   BookId,
   bookMeta,
+  Color,
+  ColorId,
+  colorMeta,
   Image,
   ImageId,
   imageMeta,
@@ -61,6 +65,7 @@ export interface AuthorOpts {
   image?: Image | null;
   authors?: Author[];
   books?: Book[];
+  colors?: Color[];
 }
 
 export interface AuthorIdsOpts {
@@ -69,6 +74,7 @@ export interface AuthorIdsOpts {
   imageId?: ImageId | null;
   authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
+  colorIds?: ColorId[] | null;
 }
 
 export interface AuthorFilter {
@@ -148,6 +154,15 @@ export abstract class AuthorCodegen extends BaseEntity {
   readonly publisher: Reference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
   readonly image: Reference<Author, Image, undefined> = hasOneToOne(imageMeta, "image", "author");
+
+  readonly colors: Collection<Author, Color> = hasManyToMany(
+    "authors_to_color",
+    "colors",
+    "author_id",
+    colorMeta,
+    "authors",
+    "color_id",
+  );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, {}, opts);

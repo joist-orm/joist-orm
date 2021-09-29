@@ -32,6 +32,12 @@ export function up(b: MigrationBuilder): void {
     huge_number: { type: "numeric(17, 0)", notNull: false },
   });
 
+  createEnumTable(b, "color", [
+    ["RED", "Red"],
+    ["GREEN", "Green"],
+    ["BLUE", "Blue"],
+  ]);
+
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
     last_name: { type: "varchar(255)", notNull: false },
@@ -56,6 +62,9 @@ export function up(b: MigrationBuilder): void {
     publisher_id: foreignKey("publishers", { notNull: false }),
     mentor_id: foreignKey("authors", { notNull: false }),
   });
+
+  // for testing m2m between entities and enums
+  createManyToManyTable(b, "authors", "color");
 
   // for testing required enums
   createEnumTable(b, "advance_status", [

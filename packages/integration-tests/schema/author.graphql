@@ -15,6 +15,7 @@ type Author {
   books: [Book!]!
   image: Image
   graduated: Date
+  colors: [Color!]!
 }
 
 input SaveAuthorInput {

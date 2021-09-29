@@ -259,6 +259,15 @@ export const authorMeta: EntityMetadata<Author> = {
     },
 
     {
+      kind: "m2m",
+      fieldName: "colors",
+      fieldIdName: "colorIds",
+      required: false,
+      otherMetadata: () => colorMeta,
+      otherFieldName: "authors",
+    },
+
+    {
       kind: "o2o",
       fieldName: "image",
       fieldIdName: "imageId",

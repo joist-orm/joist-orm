@@ -95,7 +95,10 @@ export function foreignKey(
   return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
 }
 
-export function createManyToManyTable(b: MigrationBuilder, tableName: string, table1: string, table2: string) {
+export function createManyToManyTable(b: MigrationBuilder, table1: string, table2: string): void;
+export function createManyToManyTable(b: MigrationBuilder, tableName: string, table1: string, table2: string): void;
+export function createManyToManyTable(b: MigrationBuilder, p1: string, p2: string, p3?: string): void {
+  const [table1, table2, tableName] = p3 ? [p2, p3, p1] : [p1, p2, `${p1}_to_${p2}`];
   const column1 = `${singular(table1)}_id`;
   const column2 = `${singular(table2)}_id`;
   b.createTable(tableName, {

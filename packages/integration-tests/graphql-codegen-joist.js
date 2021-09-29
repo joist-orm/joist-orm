@@ -4,6 +4,7 @@ const mappers = {
   Book: "src/entities#BookId",
   BookAdvance: "src/entities#BookAdvanceId",
   BookReview: "src/entities#BookReviewId",
+  ColorDetail: "src/entities#Color",
   Critic: "src/entities#CriticId",
   Image: "src/entities#ImageId",
   ImageTypeDetail: "src/entities#ImageType",
@@ -15,6 +16,7 @@ const mappers = {
 
 const enumValues = {
   AdvanceStatus: "src/entities#AdvanceStatus",
+  Color: "src/entities#Color",
   ImageType: "src/entities#ImageType",
   PublisherSize: "src/entities#PublisherSize",
   PublisherType: "src/entities#PublisherType",

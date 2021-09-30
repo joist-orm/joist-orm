@@ -11,6 +11,7 @@ export async function insertAuthor(row: {
   initials?: string;
   number_of_books?: number;
   favorite_colors?: number[];
+  address?: object;
 }) {
   await knex.insert({ initials: row.first_name[0], number_of_books: 0, ...row }).into("authors");
 }

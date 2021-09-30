@@ -1,7 +1,13 @@
 import { camelCase } from "change-case";
 import { EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
-import { GqlField, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
+import {
+  GqlField,
+  isJsonbColumn,
+  mapTypescriptTypeToGraphQLType,
+  SupportedTypescriptTypes,
+  upsertIntoFile,
+} from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
 import { Fs } from "./utils";
 
@@ -56,10 +62,16 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
 
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID!" };
 
-    const primitives = e.primitives.map(({ fieldName, fieldType: tsType, notNull }) => {
-      const fieldType = `${mapTypescriptTypeToGraphQLType(fieldName, tsType)}${maybeRequired(notNull)}`;
-      return { ...common, fieldName, fieldType };
-    });
+    const primitives = e.primitives
+      // jsonb columns have to be hand-mapped for now
+      .filter((p) => !isJsonbColumn(p))
+      .map(({ fieldName, fieldType: tsType, notNull }) => {
+        const fieldType = `${mapTypescriptTypeToGraphQLType(
+          fieldName,
+          tsType as SupportedTypescriptTypes,
+        )}${maybeRequired(notNull)}`;
+        return { ...common, fieldName, fieldType };
+      });
 
     const enums = e.enums.map(({ fieldName, enumType, notNull, isArray }) => {
       const fieldType = isArray ? `[${enumType.symbol}!]!` : `${enumType.symbol}${maybeRequired(notNull)}`;
@@ -119,8 +131,9 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
 
     const primitives = e.primitives
       .filter((f) => f.derived === false)
+      .filter((p) => !isJsonbColumn(p))
       .map(({ fieldName, fieldType: tsType }) => {
-        const fieldType = `${mapTypescriptTypeToGraphQLType(fieldName, tsType)}`;
+        const fieldType = `${mapTypescriptTypeToGraphQLType(fieldName, tsType as SupportedTypescriptTypes)}`;
         return { ...common, fieldName, fieldType };
       });
 

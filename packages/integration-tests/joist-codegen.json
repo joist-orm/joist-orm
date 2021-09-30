@@ -4,6 +4,7 @@
   "entities": {
     "Author": {
       "fields": {
+        "address": { "superstruct": "address@src/entities/types" },
         "ignoreEnumFk": { "ignore": true },
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },
         "ignoreUsedToBeUseful": { "ignore": true },

@@ -7,7 +7,7 @@ import {
   insertTag,
 } from "@src/entities/inserts";
 import { EntityConstructor, EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Color, Image, ImageType, newBook, Publisher, PublisherSize, Tag } from "./entities";
+import { Author, Book, Image, ImageType, newBook, Publisher, PublisherSize, Tag } from "./entities";
 import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1175,6 +1175,40 @@ describe("EntityManager", () => {
     const rows = await knex.select("*").from("authors");
     expect(rows.length).toEqual(1);
     expect(rows[0].favorite_colors).toEqual([]);
+  });
+
+  it("supports jsonb columns", async () => {
+    // save a valid value
+    const em = newEntityManager();
+    new Author(em, { firstName: "a1", address: { street: "123 Main" } });
+    await em.flush();
+
+    // read it from SQL
+    const rows = await knex.select("*").from("authors");
+    expect(rows.length).toEqual(1);
+    expect(rows[0].address).toEqual({ street: "123 Main" });
+
+    it("can read values", async () => {
+      await insertAuthor({ first_name: "f", address: { street: "123 Main" } });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      expect(a.address).toEqual({ street: "123 Main" });
+    });
+
+    it("rejects saving invalid values", async () => {
+      const em = newEntityManager();
+      expect(() => {
+        new Author(em, { firstName: "a1", address: { street2: "123 Main" } as any });
+      }).toThrow("At path: street -- Expected a string, but received: undefined");
+    });
+
+    it("rejects reading invalid values", async () => {
+      await insertAuthor({ first_name: "f", address: { street2: "123 Main" } });
+      const em = newEntityManager();
+      await expect(async () => {
+        await em.load(Author, "a:1");
+      }).rejects.toThrow("At path: street -- Expected a string, but received: undefined");
+    });
   });
 });
 

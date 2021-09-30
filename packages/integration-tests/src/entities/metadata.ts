@@ -9,8 +9,10 @@ import {
   ForeignKeySerde,
   PrimaryKeySerde,
   SimpleSerde,
+  SuperstructSerde,
 } from "joist-orm";
 import { Context } from "src/context";
+import { address } from "src/entities/types";
 import {
   AdvanceStatuses,
   Author,
@@ -70,60 +72,77 @@ export const authorMeta: EntityMetadata<Author> = {
       dbType: "character varying",
       serde: new SimpleSerde("firstName", "first_name"),
     },
+
     {
       fieldName: "lastName",
       columnName: "last_name",
       dbType: "character varying",
       serde: new SimpleSerde("lastName", "last_name"),
     },
+
     {
       fieldName: "initials",
       columnName: "initials",
       dbType: "character varying",
       serde: new SimpleSerde("initials", "initials"),
     },
+
     {
       fieldName: "numberOfBooks",
       columnName: "number_of_books",
       dbType: "int",
       serde: new SimpleSerde("numberOfBooks", "number_of_books"),
     },
+
     {
       fieldName: "isPopular",
       columnName: "is_popular",
       dbType: "boolean",
       serde: new SimpleSerde("isPopular", "is_popular"),
     },
+
     {
       fieldName: "age",
       columnName: "age",
       dbType: "int",
       serde: new SimpleSerde("age", "age"),
     },
+
     {
       fieldName: "graduated",
       columnName: "graduated",
       dbType: "date",
       serde: new SimpleSerde("graduated", "graduated"),
     },
+
     {
       fieldName: "wasEverPopular",
       columnName: "was_ever_popular",
       dbType: "boolean",
       serde: new SimpleSerde("wasEverPopular", "was_ever_popular"),
     },
+
+    {
+      fieldName: "address",
+      columnName: "address",
+      dbType: "jsonb",
+      serde: new SuperstructSerde("address", "address", address),
+    },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
+
     {
       fieldName: "mentor",
       columnName: "mentor_id",
@@ -223,6 +242,15 @@ export const authorMeta: EntityMetadata<Author> = {
     },
     {
       kind: "primitive",
+      fieldName: "address",
+      fieldIdName: undefined,
+      derived: false,
+      required: false,
+      protected: false,
+      type: "Object",
+    },
+    {
+      kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
       derived: "orm",
@@ -304,24 +332,28 @@ export const bookMeta: EntityMetadata<Book> = {
       dbType: "character varying",
       serde: new SimpleSerde("title", "title"),
     },
+
     {
       fieldName: "order",
       columnName: "order",
       dbType: "int",
       serde: new SimpleSerde("order", "order"),
     },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
+
     {
       fieldName: "author",
       columnName: "author_id",
@@ -440,12 +472,14 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
+
     {
       fieldName: "book",
       columnName: "book_id",
@@ -527,24 +561,28 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       dbType: "int",
       serde: new SimpleSerde("rating", "rating"),
     },
+
     {
       fieldName: "isPublic",
       columnName: "is_public",
       dbType: "boolean",
       serde: new SimpleSerde("isPublic", "is_public"),
     },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
+
     {
       fieldName: "book",
       columnName: "book_id",
@@ -620,12 +658,14 @@ export const criticMeta: EntityMetadata<Critic> = {
       dbType: "character varying",
       serde: new SimpleSerde("name", "name"),
     },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
@@ -691,18 +731,21 @@ export const imageMeta: EntityMetadata<Image> = {
       dbType: "character varying",
       serde: new SimpleSerde("fileName", "file_name"),
     },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
+
     {
       fieldName: "author",
       columnName: "author_id",
@@ -823,30 +866,35 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       dbType: "character varying",
       serde: new SimpleSerde("name", "name"),
     },
+
     {
       fieldName: "latitude",
       columnName: "latitude",
       dbType: "numeric",
       serde: new DecimalToNumberSerde("latitude", "latitude"),
     },
+
     {
       fieldName: "longitude",
       columnName: "longitude",
       dbType: "numeric",
       serde: new DecimalToNumberSerde("longitude", "longitude"),
     },
+
     {
       fieldName: "hugeNumber",
       columnName: "huge_number",
       dbType: "numeric",
       serde: new DecimalToNumberSerde("hugeNumber", "huge_number"),
     },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",
@@ -974,12 +1022,14 @@ export const tagMeta: EntityMetadata<Tag> = {
       dbType: "character varying",
       serde: new SimpleSerde("name", "name"),
     },
+
     {
       fieldName: "createdAt",
       columnName: "created_at",
       dbType: "timestamp with time zone",
       serde: new SimpleSerde("createdAt", "created_at"),
     },
+
     {
       fieldName: "updatedAt",
       columnName: "updated_at",

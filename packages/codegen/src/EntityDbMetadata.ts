@@ -1,4 +1,4 @@
-import { camelCase } from "change-case";
+import { camelCase, pascalCase } from "change-case";
 import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
@@ -10,13 +10,10 @@ import {
   isProtected,
   ormMaintainedFields,
   relationName,
+  superstructConfig,
 } from "./config";
-import { ColumnMetaData } from "./generateEntityCodegenFile";
 import { EnumMetadata, EnumRow } from "./index";
 import { fail, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
-
-// TODO Populate from config
-const columnCustomizations: Record<string, ColumnMetaData> = {};
 
 /** Codegen-time metadata about a given domain entity. */
 export type Entity = {
@@ -45,22 +42,26 @@ export type DatabaseColumnType =
   | "character varying"
   | "varchar"
   | "timestamp with time zone"
-  | "date";
+  | "date"
+  | "jsonb";
 
 interface Field {
   fieldName: string;
   ignore?: boolean;
 }
-export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date";
+export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object";
 
 export type PrimitiveField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
-  fieldType: PrimitiveTypescriptType;
+  // The fieldType might be code for jsonb columns
+  fieldType: PrimitiveTypescriptType | Import;
+  rawFieldType: PrimitiveTypescriptType;
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
+  superstruct: Import | undefined;
 };
 
 export type EnumField = Field & {
@@ -189,16 +190,21 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
+  const fieldType = mapType(table.name, columnName, columnType);
+  const superstruct = superstructConfig(config, entity, fieldName);
+  const maybeUserType = fieldType === "Object" && superstruct ? superstructType(superstruct) : fieldType;
   return {
     fieldName,
     columnName,
     columnType,
-    fieldType: mapType(table.name, columnName, columnType).fieldType,
+    fieldType: maybeUserType,
+    rawFieldType: fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
     derived: fieldDerived(config, entity, fieldName),
     protected: isProtected(config, entity, fieldName),
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
+    superstruct: fieldType === "Object" && superstruct ? Import.from(superstruct) : undefined,
   };
 }
 
@@ -402,13 +408,16 @@ function entityType(entityName: string): Import {
   return imp(`${entityName}@./entities`);
 }
 
-function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): ColumnMetaData {
-  return (
-    columnCustomizations[`${tableName}.${columnName}`] || {
-      fieldType: mapSimpleDbTypeToTypescriptType(dbColumnType),
-    }
-  );
+function mapType(tableName: string, columnName: string, dbColumnType: DatabaseColumnType): PrimitiveTypescriptType {
+  return mapSimpleDbTypeToTypescriptType(dbColumnType);
 }
+
 function isEnumArray(c: Column): boolean {
   return c.arrayDimension === 1 && !!c.comment && c.comment.startsWith("enum=");
+}
+
+function superstructType(s: string): Import {
+  // Assume it's `foo@...`, turn it into `Foo@...`
+  const [symbol, path] = s.split("@");
+  return Import.from(`${pascalCase(symbol)}@${path}`);
 }

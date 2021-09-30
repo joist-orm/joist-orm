@@ -8,6 +8,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EnumGraphQLFilter,
   FilterOf,
   Flavor,
   getEm,
@@ -37,6 +38,9 @@ import {
   Book,
   BookId,
   bookMeta,
+  Color,
+  ColorDetails,
+  Colors,
   Image,
   ImageId,
   imageMeta,
@@ -56,6 +60,7 @@ export interface AuthorOpts {
   age?: number | null;
   graduated?: Date | null;
   wasEverPopular?: boolean | null;
+  favoriteColors?: Color[];
   mentor?: Author | null;
   publisher?: Publisher | null;
   image?: Image | null;
@@ -83,6 +88,7 @@ export interface AuthorFilter {
   wasEverPopular?: BooleanFilter<null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  favoriteColors?: ValueFilter<Color[], null | undefined>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
@@ -100,6 +106,7 @@ export interface AuthorGraphQLFilter {
   wasEverPopular?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  favoriteColors?: EnumGraphQLFilter<Color>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
@@ -117,6 +124,7 @@ export interface AuthorOrder {
   wasEverPopular?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  favoriteColors?: OrderBy;
   mentor?: AuthorOrder;
   publisher?: PublisherOrder;
 }
@@ -221,6 +229,30 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   get updatedAt(): Date {
     return this.__orm.data["updatedAt"];
+  }
+
+  get favoriteColors(): Color[] {
+    return this.__orm.data["favoriteColors"] || [];
+  }
+
+  get favoriteColorsDetails(): ColorDetails[] {
+    return this.favoriteColors.map((code) => Colors.getByCode(code));
+  }
+
+  set favoriteColors(favoriteColors: Color[]) {
+    setField(this, "favoriteColors", favoriteColors);
+  }
+
+  get isRed(): boolean {
+    return this.favoriteColors.includes(Color.Red);
+  }
+
+  get isGreen(): boolean {
+    return this.favoriteColors.includes(Color.Green);
+  }
+
+  get isBlue(): boolean {
+    return this.favoriteColors.includes(Color.Blue);
   }
 
   set(opts: Partial<AuthorOpts>): void {

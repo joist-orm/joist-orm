@@ -1,6 +1,7 @@
 import { snakeCase } from "change-case";
-import { EntityDbMetadata, makeEntity, PrimitiveField } from "joist-codegen";
+import { EntityDbMetadata, EnumField, makeEntity, PrimitiveField } from "joist-codegen";
 import { plural } from "pluralize";
+import { imp } from "ts-poet";
 import { generateGraphqlSchemaFiles } from "./generateGraphqlSchemaFiles";
 import { Fs } from "./utils";
 
@@ -290,6 +291,40 @@ type SaveAuthorResult {
 "
 `);
   });
+
+  it("can enum array types", async () => {
+    // Given an author
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Author", {
+        // With an enum array field
+        enums: [newEnumField("color", { isArray: true })],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then the input has both both types of fields as appropriate
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+"type Author {
+  id: ID!
+  color: [Color!]!
+}
+
+extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}
+
+input SaveAuthorInput {
+  id: ID
+  color: [Color!]
+}
+
+type SaveAuthorResult {
+  author: Author!
+}
+"
+`);
+  });
 });
 
 function newFs(files: Record<string, string>): Fs {
@@ -327,6 +362,25 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
     manyToManys: [],
     oneToOnes: [],
     tableName: snakeCase(plural(name)),
+    ...opts,
+  };
+}
+
+function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): EnumField {
+  const enumName = opts.enumName || "Color";
+  const enumType = imp(`${enumName}@./entities`);
+  const enumDetailType = imp(`${plural(enumName)}@./entities`);
+  const enumDetailsType = imp(`${enumName}Details@./entities`);
+  return {
+    fieldName,
+    columnName: snakeCase(fieldName),
+    enumName,
+    enumType,
+    enumDetailType,
+    enumDetailsType,
+    notNull: true,
+    enumRows: [],
+    isArray: false,
     ...opts,
   };
 }

@@ -1,5 +1,5 @@
 /** Creates an entity table with our conventions. */
-import { ColumnDefinitions, MigrationBuilder } from "node-pg-migrate";
+import { ColumnDefinitions, MigrationBuilder, PgLiteral } from "node-pg-migrate";
 import { ColumnDefinition } from "node-pg-migrate/dist/operations/tablesTypes";
 import { singular } from "pluralize";
 
@@ -93,6 +93,19 @@ export function foreignKey(
   opts: Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">>,
 ): ColumnDefinition {
   return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
+}
+
+export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition, "notNull">): ColumnDefinition {
+  // We use `notNull: false` to facilitate adding to tables with existing rows,
+  // but note that we coalesce null to `[]` anyway in the serde logic, so it
+  // doesn't really matter to application logic whether it's notNull or not.
+  return {
+    type: "integer[]",
+    comment: `enum=${enumTable}`,
+    notNull: false,
+    default: PgLiteral.create("array[]::integer[]"),
+    ...opts,
+  };
 }
 
 export function createManyToManyTable(b: MigrationBuilder, tableName: string, table1: string, table2: string) {

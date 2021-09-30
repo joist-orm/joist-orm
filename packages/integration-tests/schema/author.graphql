@@ -15,6 +15,7 @@ type Author {
   books: [Book!]!
   image: Image
   graduated: Date
+  favoriteColors: [Color!]!
 }
 
 input SaveAuthorInput {
@@ -31,6 +32,7 @@ input SaveAuthorInput {
   mentorId: ID
   publisherId: ID
   graduated: Date
+  favoriteColors: [Color!]
 }
 
 type SaveAuthorResult {

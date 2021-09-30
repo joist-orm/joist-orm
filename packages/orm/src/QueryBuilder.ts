@@ -11,7 +11,7 @@ import {
   OrderOf,
 } from "./EntityManager";
 import { keyToNumber } from "./keys";
-import { ForeignKeySerde, PrimaryKeySerde } from "./serde";
+import { EnumArrayFieldSerde, ForeignKeySerde, PrimaryKeySerde } from "./serde";
 import { fail } from "./utils";
 
 export type OrderBy = "ASC" | "DESC";
@@ -50,42 +50,47 @@ export type ParsedValueFilter<V> =
   | { kind: "ilike"; value: V }
   | { kind: "pass" };
 
-export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
+export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
   if (filter === null) {
-    return [{ kind: "eq", value: filter }];
+    return { kind: "eq", value: filter };
   } else if (filter === undefined) {
-    return [{ kind: "pass" }];
+    return { kind: "pass" };
   } else if (Array.isArray(filter)) {
-    return [{ kind: "in", value: filter }];
+    return { kind: "in", value: filter };
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
-    if (keys.length === 2 && "op" in filter) {
+    if (keys.length === 2) {
       // Probe for `findGql` op & value
       const op = filter["op"];
       const value = filter["value"];
-      return [{ kind: op, value: value ?? null }];
-    }
-    return keys.map((key) => {
-      switch (key) {
-        case "eq":
-          return { kind: "eq", value: filter[key] ?? null };
-        case "ne":
-          return { kind: "ne", value: filter[key] ?? null };
-        case "in":
-          return { kind: "in", value: filter[key] };
-        case "gt":
-        case "gte":
-        case "lt":
-        case "lte":
-        case "like":
-        case "ilike":
-          return { kind: key, value: filter[key] };
+      if (op === undefined && value === undefined) {
+        throw new Error(`ValueFilter only supports a single field being set ${filter}`);
       }
-      throw new Error("unsupported");
-    });
+      return { kind: op, value: value ?? null };
+    }
+    if (keys.length !== 1) {
+      throw new Error(`ValueFilter only supports a single field being set ${filter}`);
+    }
+    const key = keys[0];
+    switch (key) {
+      case "eq":
+        return { kind: "eq", value: filter[key] ?? null };
+      case "ne":
+        return { kind: "ne", value: filter[key] ?? null };
+      case "in":
+        return { kind: "in", value: filter[key] };
+      case "gt":
+      case "gte":
+      case "lt":
+      case "lte":
+      case "like":
+      case "ilike":
+        return { kind: key, value: filter[key] };
+    }
+    throw new Error("unsupported");
   } else {
     // This is a primitive like a string, number
-    return [{ kind: "eq", value: filter ?? null }];
+    return { kind: "eq", value: filter ?? null };
   }
 }
 
@@ -358,19 +363,25 @@ function addPrimitiveClause(
 ): Knex.QueryBuilder {
   if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
     // I.e. `{ primitiveField: { gt: value } }`
-    Object.entries(clause).forEach(([op, value]) => {
-      query = addPrimitiveOperator(query, alias, column, op as Operator, value);
-    });
-    return query;
+    const op = Object.keys(clause)[0] as Operator;
+    return addPrimitiveOperator(query, alias, column, op, (clause as any)[op]);
   } else if (clause && typeof clause === "object" && "op" in clause) {
     // I.e. { primitiveField: { op: "gt", value: 1 } }`
     return addPrimitiveOperator(query, alias, column, clause.op, clause.value);
   } else if (Array.isArray(clause)) {
     // I.e. `{ primitiveField: value[] }`
-    return query.whereIn(
-      `${alias}.${column.columnName}`,
-      clause.map((v) => column.serde.mapToDb(v)),
-    );
+    if (column.serde instanceof EnumArrayFieldSerde) {
+      return query.where(
+        `${alias}.${column.columnName}`,
+        "@>",
+        clause.map((v) => column.serde.mapToDb(v)),
+      );
+    } else {
+      return query.whereIn(
+        `${alias}.${column.columnName}`,
+        clause.map((v) => column.serde.mapToDb(v)),
+      );
+    }
   } else if (clause === null) {
     // I.e. `{ primitiveField: null }`
     return query.whereNull(`${alias}.${column.columnName}`);
@@ -405,6 +416,13 @@ function addPrimitiveOperator(
     return query.whereIn(
       `${alias}.${column.columnName}`,
       (value as Array<any>).map((v) => column.serde.mapToDb(v)),
+    );
+  } else if (Array.isArray(value)) {
+    const fn = opToFn[op] || fail(`Invalid operator ${op}`);
+    return query.where(
+      `${alias}.${column.columnName}`,
+      fn,
+      value.map((code) => column.serde.mapToDb(code)),
     );
   } else {
     const fn = opToFn[op] || fail(`Invalid operator ${op}`);

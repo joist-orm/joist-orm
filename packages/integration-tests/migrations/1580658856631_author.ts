@@ -4,6 +4,7 @@ import {
   createEnumTable,
   createManyToManyTable,
   createUpdatedAtFunction,
+  enumArrayColumn,
   foreignKey,
 } from "joist-migration-utils";
 import { MigrationBuilder } from "node-pg-migrate";
@@ -32,6 +33,12 @@ export function up(b: MigrationBuilder): void {
     huge_number: { type: "numeric(17, 0)", notNull: false },
   });
 
+  createEnumTable(b, "color", [
+    ["RED", "Red"],
+    ["GREEN", "Green"],
+    ["BLUE", "Blue"],
+  ]);
+
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
     last_name: { type: "varchar(255)", notNull: false },
@@ -45,6 +52,8 @@ export function up(b: MigrationBuilder): void {
     age: { type: "integer", notNull: false },
     // for testing dates
     graduated: { type: "date", notNull: false },
+    // for testing enum[] fields
+    favorite_colors: enumArrayColumn("color"),
     // for testing protected fields
     was_ever_popular: { type: "boolean", notNull: false },
     // for testing FieldConfig.ignore

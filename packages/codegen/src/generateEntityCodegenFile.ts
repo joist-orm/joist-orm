@@ -100,11 +100,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   });
 
   // Add ManyToOne enums
-  meta.enums.forEach((e) => {
-    const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows } = e;
-    const maybeOptional = notNull ? "" : " | undefined";
-    const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
-    const getter = code`
+  meta.enums
+    .filter((e) => !e.isArray)
+    .forEach((e) => {
+      const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows } = e;
+      const maybeOptional = notNull ? "" : " | undefined";
+      const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
+      const getter = code`
       get ${fieldName}(): ${enumType}${maybeOptional} {
         return this.__orm.data["${fieldName}"];
       }
@@ -113,27 +115,63 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
       }
    `;
-    const setter = code`
+      const setter = code`
       set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
         ${setField}(this, "${fieldName}", ${fieldName});
       }
     `;
 
-    const codes = new Set(enumRows.map((r) => r.code));
-    const shouldPrefixAccessors = meta.enums
-      .filter((other) => other !== e)
-      .some((other) => other.enumRows.some((r) => codes.has(r.code)));
+      const codes = new Set(enumRows.map((r) => r.code));
+      const shouldPrefixAccessors = meta.enums
+        .filter((other) => other !== e)
+        .some((other) => other.enumRows.some((r) => codes.has(r.code)));
 
-    const accessors = enumRows.map(
-      (row) => code`
+      const accessors = enumRows.map(
+        (row) => code`
         get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
           return this.__orm.data["${fieldName}"] === ${enumType}.${pascalCase(row.code)};
         }
       `,
-    );
-    // Group enums as primitives
-    primitives.push(getter, setter, ...accessors);
-  });
+      );
+      // Group enums as primitives
+      primitives.push(getter, setter, ...accessors);
+    });
+
+  // Add integer[] enums
+  meta.enums
+    .filter((e) => e.isArray)
+    .forEach((e) => {
+      const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
+      const getter = code`
+      get ${fieldName}(): ${enumType}[] {
+        return this.__orm.data["${fieldName}"] || [];
+      }
+
+      get ${fieldName}Details(): ${enumDetailsType}[] {
+        return this.${fieldName}.map(code => ${enumDetailType}.getByCode(code));
+      }
+   `;
+      const setter = code`
+      set ${fieldName}(${fieldName}: ${enumType}[]) {
+        ${setField}(this, "${fieldName}", ${fieldName});
+      }
+    `;
+
+      const codes = new Set(enumRows.map((r) => r.code));
+      const shouldPrefixAccessors = meta.enums
+        .filter((other) => other !== e)
+        .some((other) => other.enumRows.some((r) => codes.has(r.code)));
+
+      const accessors = enumRows.map(
+        (row) => code`
+        get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+          return this.${fieldName}.includes(${enumType}.${pascalCase(row.code)});
+        }
+      `,
+      );
+      // Group enums as primitives
+      primitives.push(getter, setter, ...accessors);
+    });
 
   // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
@@ -330,8 +368,13 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
       notNull && !fieldHasDefaultValue(config, meta, field),
     )}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
-  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
+  const enums = meta.enums.map(({ fieldName, enumType, notNull, isArray }) => {
+    if (isArray) {
+      // Arrays are always optional and we'll default to `[]`
+      return code`${fieldName}?: ${enumType}[];`;
+    } else {
+      return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
+    }
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
@@ -375,8 +418,9 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
       return code`${fieldName}?: ${ValueFilter}<${fieldType}, ${nullOrNever(notNull)}>;`;
     }
   });
-  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
-    return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
+  const enums = meta.enums.map(({ fieldName, enumType, notNull, isArray }) => {
+    const maybeArray = isArray ? "[]" : "";
+    return code`${fieldName}?: ${ValueFilter}<${enumType}${maybeArray}, ${nullOrNever(notNull)}>;`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${

@@ -13,7 +13,7 @@ import {
 } from "./config";
 import { ColumnMetaData } from "./generateEntityCodegenFile";
 import { EnumMetadata, EnumRow } from "./index";
-import { isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
+import { fail, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
 
 // TODO Populate from config
 const columnCustomizations: Record<string, ColumnMetaData> = {};
@@ -71,6 +71,7 @@ export type EnumField = Field & {
   enumDetailsType: Import;
   enumRows: EnumRow[];
   notNull: boolean;
+  isArray: boolean;
 };
 
 /** I.e. a `Book.author` reference pointing to an `Author`. */
@@ -122,12 +123,19 @@ export class EntityDbMetadata {
     this.entity = makeEntity(tableToEntityName(config, table));
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
+      .filter((c) => !isEnumArray(c))
       .map((column) => newPrimitive(config, this.entity, column, table))
       .filter((f) => !f.ignore);
-    this.enums = table.m2oRelations
-      .filter((r) => isEnumTable(r.targetTable))
-      .map((r) => newEnumField(config, this.entity, r, enums))
-      .filter((f) => !f.ignore);
+    this.enums = [
+      ...table.m2oRelations
+        .filter((r) => isEnumTable(r.targetTable))
+        .map((r) => newEnumField(config, this.entity, r, enums))
+        .filter((f) => !f.ignore),
+      ...table.columns
+        .filter((c) => isEnumArray(c))
+        .map((column) => newEnumArrayField(config, this.entity, column, enums))
+        .filter((f) => !f.ignore),
+    ];
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
@@ -226,6 +234,32 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     notNull,
     ignore,
     enumRows: enums[r.targetTable.name].rows,
+    isArray: false,
+  };
+}
+
+function newEnumArrayField(config: Config, entity: Entity, column: Column, enums: EnumMetadata): EnumField {
+  const columnName = column.name;
+  const fieldName = enumFieldName(column.name);
+  // Find the enum table name via the comment hint (instead of a FK constraint), and strip the enum= prefix
+  const enumTable = column.comment!.replace("enum=", "");
+  const enumName = (enums[enumTable] || fail(`Could not find enum ${enumTable}`)).name;
+  const enumType = imp(`${enumName}@./entities`);
+  const enumDetailType = imp(`${plural(enumName)}@./entities`);
+  const enumDetailsType = imp(`${enumName}Details@./entities`);
+  const notNull = column.notNull;
+  const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
+  return {
+    fieldName,
+    columnName,
+    enumName,
+    enumType,
+    enumDetailType,
+    enumDetailsType,
+    notNull,
+    ignore,
+    enumRows: enums[enumTable].rows,
+    isArray: true,
   };
 }
 
@@ -374,4 +408,7 @@ function mapType(tableName: string, columnName: string, dbColumnType: DatabaseCo
       fieldType: mapSimpleDbTypeToTypescriptType(dbColumnType),
     }
   );
+}
+function isEnumArray(c: Column): boolean {
+  return c.arrayDimension === 1 && !!c.comment && c.comment.startsWith("enum=");
 }

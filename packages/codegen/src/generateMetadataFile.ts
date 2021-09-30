@@ -4,6 +4,7 @@ import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
   DecimalToNumberSerde,
   EntityMetadata,
+  EnumArrayFieldSerde,
   EnumFieldSerde,
   ForeignKeySerde,
   PrimaryKeySerde,
@@ -58,13 +59,15 @@ function generateColumns(dbMetadata: EntityDbMetadata): {
   });
 
   const enums = dbMetadata.enums.map((e) => {
-    const { fieldName, columnName, enumDetailType } = e;
+    const { fieldName, columnName, enumDetailType, isArray } = e;
     return code`
       {
         fieldName: "${fieldName}",
         columnName: "${columnName}",
         dbType: "int",
-        serde: new ${EnumFieldSerde}("${fieldName}", "${columnName}", ${enumDetailType}),
+        serde: new ${
+          isArray ? EnumArrayFieldSerde : EnumFieldSerde
+        }("${fieldName}", "${columnName}", ${enumDetailType}),
       },
     `;
   });

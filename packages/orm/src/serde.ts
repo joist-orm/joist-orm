@@ -137,9 +137,8 @@ export class EnumArrayFieldSerde implements ColumnSerde {
     return data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
   }
 
-  // this will be a single value
   mapToDb(value: any) {
-    return this.enumObject.findByCode(value)?.id;
+    return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
   }
 }
 

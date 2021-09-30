@@ -371,11 +371,7 @@ function addPrimitiveClause(
   } else if (Array.isArray(clause)) {
     // I.e. `{ primitiveField: value[] }`
     if (column.serde instanceof EnumArrayFieldSerde) {
-      return query.where(
-        `${alias}.${column.columnName}`,
-        "@>",
-        clause.map((v) => column.serde.mapToDb(v)),
-      );
+      return query.where(`${alias}.${column.columnName}`, "@>", column.serde.mapToDb(clause));
     } else {
       return query.whereIn(
         `${alias}.${column.columnName}`,
@@ -416,13 +412,6 @@ function addPrimitiveOperator(
     return query.whereIn(
       `${alias}.${column.columnName}`,
       (value as Array<any>).map((v) => column.serde.mapToDb(v)),
-    );
-  } else if (Array.isArray(value)) {
-    const fn = opToFn[op] || fail(`Invalid operator ${op}`);
-    return query.where(
-      `${alias}.${column.columnName}`,
-      fn,
-      value.map((code) => column.serde.mapToDb(code)),
     );
   } else {
     const fn = opToFn[op] || fail(`Invalid operator ${op}`);

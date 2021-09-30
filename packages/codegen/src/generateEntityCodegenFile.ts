@@ -107,19 +107,19 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       const maybeOptional = notNull ? "" : " | undefined";
       const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
       const getter = code`
-      get ${fieldName}(): ${enumType}${maybeOptional} {
-        return this.__orm.data["${fieldName}"];
-      }
+        get ${fieldName}(): ${enumType}${maybeOptional} {
+          return this.__orm.data["${fieldName}"];
+        }
 
-      get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
-        return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
-      }
-   `;
+        get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
+          return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
+        }
+     `;
       const setter = code`
-      set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-        ${setField}(this, "${fieldName}", ${fieldName});
-      }
-    `;
+        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
 
       const codes = new Set(enumRows.map((r) => r.code));
       const shouldPrefixAccessors = meta.enums
@@ -128,10 +128,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       const accessors = enumRows.map(
         (row) => code`
-        get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
-          return this.__orm.data["${fieldName}"] === ${enumType}.${pascalCase(row.code)};
-        }
-      `,
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+            return this.__orm.data["${fieldName}"] === ${enumType}.${pascalCase(row.code)};
+          }
+        `,
       );
       // Group enums as primitives
       primitives.push(getter, setter, ...accessors);
@@ -143,19 +143,19 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     .forEach((e) => {
       const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
       const getter = code`
-      get ${fieldName}(): ${enumType}[] {
-        return this.__orm.data["${fieldName}"] || [];
-      }
+        get ${fieldName}(): ${enumType}[] {
+          return this.__orm.data["${fieldName}"] || [];
+        }
 
-      get ${fieldName}Details(): ${enumDetailsType}[] {
-        return this.${fieldName}.map(code => ${enumDetailType}.getByCode(code));
-      }
-   `;
+        get ${fieldName}Details(): ${enumDetailsType}[] {
+          return this.${fieldName}.map(code => ${enumDetailType}.getByCode(code));
+        }
+     `;
       const setter = code`
-      set ${fieldName}(${fieldName}: ${enumType}[]) {
-        ${setField}(this, "${fieldName}", ${fieldName});
-      }
-    `;
+        set ${fieldName}(${fieldName}: ${enumType}[]) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
 
       const codes = new Set(enumRows.map((r) => r.code));
       const shouldPrefixAccessors = meta.enums
@@ -164,10 +164,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       const accessors = enumRows.map(
         (row) => code`
-        get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
-          return this.${fieldName}.includes(${enumType}.${pascalCase(row.code)});
-        }
-      `,
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
+            return this.${fieldName}.includes(${enumType}.${pascalCase(row.code)});
+          }
+        `,
       );
       // Group enums as primitives
       primitives.push(getter, setter, ...accessors);

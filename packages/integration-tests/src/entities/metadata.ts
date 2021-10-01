@@ -4,6 +4,7 @@ import {
   DecimalToNumberSerde,
   EntityManager as EntityManager1,
   EntityMetadata,
+  EnumArrayFieldSerde,
   EnumFieldSerde,
   ForeignKeySerde,
   PrimaryKeySerde,
@@ -20,6 +21,7 @@ import {
   bookConfig,
   BookReview,
   bookReviewConfig,
+  Colors,
   Critic,
   criticConfig,
   Image,
@@ -54,6 +56,13 @@ export const authorMeta: EntityMetadata<Author> = {
   tableName: "authors",
   columns: [
     { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => authorMeta, "id", "id") },
+
+    {
+      fieldName: "favoriteColors",
+      columnName: "favorite_colors",
+      dbType: "int",
+      serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", Colors),
+    },
 
     {
       fieldName: "firstName",
@@ -131,6 +140,14 @@ export const authorMeta: EntityMetadata<Author> = {
   ],
   fields: [
     { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+
+    {
+      kind: "enum",
+      fieldName: "favoriteColors",
+      fieldIdName: undefined,
+      required: false,
+      enumDetailType: Colors,
+    },
 
     {
       kind: "primitive",

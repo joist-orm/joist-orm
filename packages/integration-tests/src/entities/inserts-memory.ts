@@ -14,6 +14,7 @@ export async function insertAuthor(row: {
   mentor_id?: number | null;
   initials?: string;
   number_of_books?: number;
+  favorite_colors?: number[];
 }) {
   driver.insert("authors", { ...triggers(), initials: row.first_name[0], number_of_books: 0, ...row });
 }

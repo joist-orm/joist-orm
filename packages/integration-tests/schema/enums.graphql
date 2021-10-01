@@ -9,6 +9,17 @@ type AdvanceStatusDetail {
   name: String!
 }
 
+enum Color {
+  RED
+  GREEN
+  BLUE
+}
+
+type ColorDetail {
+  code: Color!
+  name: String!
+}
+
 enum ImageType {
   BOOK_IMAGE
   AUTHOR_IMAGE

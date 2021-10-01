@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertImage, insertPublisher } from "@src/entities/inserts";
 import { NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
-import { Author, Book, Image, ImageType, Publisher, PublisherId, PublisherSize } from "./entities";
+import { Author, Book, Color, Image, ImageType, Publisher, PublisherId, PublisherSize } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -395,15 +395,6 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(2);
   });
 
-  it("can find by gte and lte at the same time", async () => {
-    await insertAuthor({ first_name: "a1", age: 1 });
-    await insertAuthor({ first_name: "a1", age: 3 });
-    await insertAuthor({ first_name: "a2", age: 5 });
-    const em = newEntityManager();
-    const authors = await em.find(Author, { age: { gte: 2, lte: 4 } });
-    expect(authors.length).toEqual(1);
-  });
-
   it("can find by not equal", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
@@ -613,6 +604,22 @@ describe("EntityManager.queries", () => {
     } finally {
       setDefaultEntityLimit();
     }
+  });
+
+  it("can find in an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: [Color.Red] });
+    expect(authors.length).toEqual(1);
+  });
+
+  it("can find equal an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [1] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { eq: [Color.Red] } });
+    expect(authors.length).toEqual(1);
   });
 });
 

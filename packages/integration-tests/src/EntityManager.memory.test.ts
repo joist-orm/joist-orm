@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts-memory";
 import { Loaded } from "joist-orm";
-import { Author, Book, Publisher, PublisherSize } from "./entities";
+import { Author, Book, Color, Publisher, PublisherSize } from "./entities";
 import { driver, newEntityManager } from "./setupMemoryTests";
 
 describe("EntityManager", () => {
@@ -972,6 +972,41 @@ describe("EntityManager", () => {
     await em.flush();
     expect(a1.isNewEntity).toBeFalsy();
     expect(a1.isDirtyEntity).toBeFalsy();
+  });
+
+  it("can load a null enum array", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    expect(author.favoriteColors).toEqual([]);
+    expect(author.favoriteColorsDetails).toEqual([]);
+  });
+
+  it("can load a populated enum array", async () => {
+    await insertAuthor({ first_name: "f", favorite_colors: [1, 2] });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    expect(author.favoriteColors).toEqual([Color.Red, Color.Green]);
+  });
+
+  it("can save a populated enum array", async () => {
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1", favoriteColors: [Color.Red, Color.Green] });
+    await em.flush();
+
+    const rows = driver.select("authors");
+    expect(rows.length).toEqual(1);
+    expect(rows[0].favorite_colors).toEqual([1, 2]);
+  });
+
+  it("can save an empty enum array", async () => {
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+
+    const rows = await driver.select("authors");
+    expect(rows.length).toEqual(1);
+    expect(rows[0].favorite_colors).toEqual([]);
   });
 });
 

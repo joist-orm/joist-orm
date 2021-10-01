@@ -7,7 +7,7 @@ import {
   insertTag,
 } from "@src/entities/inserts";
 import { EntityConstructor, EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Image, ImageType, newBook, Publisher, PublisherSize, Tag } from "./entities";
+import { Author, Book, Color, Image, ImageType, newBook, Publisher, PublisherSize, Tag } from "./entities";
 import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1138,6 +1138,43 @@ describe("EntityManager", () => {
     const result = await em.flush();
     expect(result).toEqual([a1]);
     expect(a1.__orm.isTouched).toBeFalsy();
+  });
+
+  it("can load a null enum array", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    expect(author.favoriteColors).toEqual([]);
+    expect(author.favoriteColorsDetails).toEqual([]);
+  });
+
+  it("can load a populated enum array", async () => {
+    await insertAuthor({ first_name: "f", favorite_colors: [1, 2] });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    expect(author.favoriteColors).toEqual([Color.Red, Color.Green]);
+    expect(author.isRed).toBeTruthy();
+    expect(author.isGreen).toBeTruthy();
+  });
+
+  it("can save a populated enum array", async () => {
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1", favoriteColors: [Color.Red, Color.Green] });
+    await em.flush();
+
+    const rows = await knex.select("*").from("authors");
+    expect(rows.length).toEqual(1);
+    expect(rows[0].favorite_colors).toEqual([1, 2]);
+  });
+
+  it("can save an empty enum array", async () => {
+    const em = newEntityManager();
+    em.create(Author, { firstName: "a1" });
+    await em.flush();
+
+    const rows = await knex.select("*").from("authors");
+    expect(rows.length).toEqual(1);
+    expect(rows[0].favorite_colors).toEqual([]);
   });
 });
 

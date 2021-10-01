@@ -4,6 +4,7 @@
     "authors",
     "books",
     "createdAt",
+    "favoriteColors",
     "firstName",
     "graduated",
     "id",
@@ -49,6 +50,7 @@
   "SaveAuthorInput": [
     "age",
     "createdAt",
+    "favoriteColors",
     "firstName",
     "graduated",
     "id",

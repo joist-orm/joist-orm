@@ -122,6 +122,26 @@ export class EnumFieldSerde implements ColumnSerde {
   }
 }
 
+export class EnumArrayFieldSerde implements ColumnSerde {
+  constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
+  }
+
+  setOnRow(data: any, row: any): void {
+    row[this.columnName] = data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
+  }
+
+  getFromEntity(data: any) {
+    return data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
+  }
+
+  mapToDb(value: any) {
+    return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
+  }
+}
+
 function maybeNullToUndefined(value: any): any {
   return value === null ? undefined : value;
 }

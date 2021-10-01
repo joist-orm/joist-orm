@@ -61,8 +61,8 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName, fieldType };
     });
 
-    const enums = e.enums.map(({ fieldName, enumType, notNull }) => {
-      const fieldType = `${enumType.symbol}${maybeRequired(notNull)}`;
+    const enums = e.enums.map(({ fieldName, enumType, notNull, isArray }) => {
+      const fieldType = isArray ? `[${enumType.symbol}!]!` : `${enumType.symbol}${maybeRequired(notNull)}`;
       return { ...common, fieldName, fieldType };
     });
 
@@ -124,8 +124,8 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
         return { ...common, fieldName, fieldType };
       });
 
-    const enums = e.enums.map(({ fieldName, enumType }) => {
-      return { ...common, fieldName, fieldType: enumType.symbol };
+    const enums = e.enums.map(({ fieldName, enumType, isArray }) => {
+      return { ...common, fieldName, fieldType: isArray ? `[${enumType.symbol}!]` : enumType.symbol };
     });
 
     const m2os = e.manyToOnes.map(({ fieldName }) => {

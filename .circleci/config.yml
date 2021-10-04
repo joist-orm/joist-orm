@@ -10,7 +10,7 @@ workflows:
       - build:
           matrix:
             parameters:
-              node-version: ["lts/erbium", "lts/fermium", "16.4.0"]
+              node-version: ["lts/fermium", "16.4.0"]
 
 jobs:
   build:

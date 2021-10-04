@@ -1,9 +1,9 @@
-import pgStructure, { Db, Table } from "@homebound/pg-structure";
 import { pascalCase } from "change-case";
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { dirname } from "path";
 import { Client } from "pg";
+import pgStructure, { Db, Table } from "pg-structure";
 import { code, Code, def, imp } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";

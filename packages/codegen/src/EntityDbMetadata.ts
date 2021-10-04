@@ -1,5 +1,5 @@
-import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "@homebound/pg-structure";
 import { camelCase } from "change-case";
+import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
 import {
@@ -172,7 +172,7 @@ export class EntityDbMetadata {
   }
 }
 
-function isMultiColumnForeignKey(r: M2ORelation) {
+function isMultiColumnForeignKey(r: M2ORelation | O2MRelation | M2MRelation) {
   return r.foreignKey.columns.length > 1;
 }
 

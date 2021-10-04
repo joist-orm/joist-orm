@@ -16,11 +16,11 @@
     "build"
   ],
   "dependencies": {
-    "@homebound/pg-structure": "^7.2.5",
     "@types/pluralize": "0.0.29",
     "joist-utils": "1.0.0-bump",
     "node-pg-migrate": "^5.0.0",
     "pg": "^8.7.1",
+    "pg-structure": "^7.12.1",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {

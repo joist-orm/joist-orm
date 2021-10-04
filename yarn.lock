@@ -606,23 +606,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@homebound/pg-structure@npm:^7.2.5":
-  version: 7.2.5
-  resolution: "@homebound/pg-structure@npm:7.2.5"
-  dependencies:
-    "@types/pg": ^7.14.3
-    "@typescript-plus/fast-memoize-decorator": ^0.1.0
-    fast-memoize: ^2.5.2
-    indexable-array: ^0.6.4
-    inflection: ^1.12.0
-    json5: ^2.1.3
-    lodash.get: ^4.4.2
-    pg: ^8.0.3
-    pg-connection-string: ^2.2.1
-  checksum: c1b877a6e3b9f45303d756ec1347ac6d4dd7a6d57fe9b5f1a572dc4695abf954649f5465dc1d45f27ee8e2e266cc086f104e6872a9bc3184365210f430c90db6
-  languageName: node
-  linkType: hard
-
 "@istanbuljs/load-nyc-config@npm:^1.0.0":
   version: 1.0.0
   resolution: "@istanbuljs/load-nyc-config@npm:1.0.0"
@@ -1058,16 +1041,6 @@ __metadata:
   version: 1.11.5
   resolution: "@types/pg-types@npm:1.11.5"
   checksum: bf266cc15a676b06d31d55867463c5b80cc9cb29c74dcb2e29c4ed113b60c4c021e81614773dcf367e606aae3eb6fc74dacf4a2188494918d00384bbd824d0c3
-  languageName: node
-  linkType: hard
-
-"@types/pg@npm:^7.14.3":
-  version: 7.14.3
-  resolution: "@types/pg@npm:7.14.3"
-  dependencies:
-    "@types/node": "*"
-    "@types/pg-types": "*"
-  checksum: b389b5a16bb96782d9c48a480599bf94129cf8282def2d54ac82f89e8e181a2d7b88a4138c893bd12dfa9e3313229b8a617359d943508a04c176cac1c8daa750
   languageName: node
   linkType: hard
 
@@ -2558,13 +2531,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"indexable-array@npm:^0.6.4":
-  version: 0.6.4
-  resolution: "indexable-array@npm:0.6.4"
+"indexable-array@npm:^0.7.0":
+  version: 0.7.0
+  resolution: "indexable-array@npm:0.7.0"
   dependencies:
     lodash.set: ^4.3.2
     sorted-array-functions: ^1.2.0
-  checksum: 91ed449d792178fd7144565f15d1d1a90cb8176682dca44ecf9c8a6dfd3e314fa0f41762a60b2d2ea56a2f7183e8a5a415db138d6a305238602d94af1ed113e5
+    tslib: ^2.1.0
+  checksum: 301f114ca093d605350af9dc12ec8059f9f51a9b7fdb96f52411d5ae7bf2b20092650445c0129e89d715ad58315986e2e37593f8b0982a6fa848fa80f8f63e3d
   languageName: node
   linkType: hard
 
@@ -3338,7 +3312,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-codegen@workspace:packages/codegen"
   dependencies:
-    "@homebound/pg-structure": ^7.2.5
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     "@types/pluralize": 0.0.29
@@ -3348,6 +3321,7 @@ __metadata:
     joist-utils: 1.0.0-bump
     knex: ^0.95.9
     pg: ^8.7.1
+    pg-structure: ^7.12.1
     pluralize: ^8.0.0
     prettier: ^2.3.2
     prettier-plugin-organize-imports: ^2.3.3
@@ -3408,7 +3382,6 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-migration-utils@workspace:packages/migration-utils"
   dependencies:
-    "@homebound/pg-structure": ^7.2.5
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     "@types/pluralize": 0.0.29
@@ -3416,6 +3389,7 @@ __metadata:
     joist-utils: 1.0.0-bump
     node-pg-migrate: ^5.0.0
     pg: ^8.7.1
+    pg-structure: ^7.12.1
     pluralize: ^8.0.0
     prettier: ^2.3.2
     prettier-plugin-organize-imports: ^2.3.3
@@ -4251,6 +4225,23 @@ __metadata:
   version: 1.5.0
   resolution: "pg-protocol@npm:1.5.0"
   checksum: b839d12cafe942ef9cbc5b13c174eb2356804fb4fe8ead8279f46a36be90722d19a91409955beb8a3d5301639c44854e49749de4aef02dc361fee3e2a61fb1e4
+  languageName: node
+  linkType: hard
+
+"pg-structure@npm:^7.12.1":
+  version: 7.12.1
+  resolution: "pg-structure@npm:7.12.1"
+  dependencies:
+    "@typescript-plus/fast-memoize-decorator": ^0.1.0
+    dotenv: ^8.2.0
+    fast-memoize: ^2.5.2
+    indexable-array: ^0.7.0
+    inflection: ^1.12.0
+    json5: ^2.1.3
+    lodash.get: ^4.4.2
+    pg: ^8.0.3
+    pg-connection-string: ^2.2.1
+  checksum: 0ae77b7dad89a36e8d5b1f812ac70254d6cc8194a02d45f1e5fdf8f96664d359fa8f132f8957458fc5288ecd0049cf0f7d939f94edd81f527233e2dddeda215e
   languageName: node
   linkType: hard
 
@@ -5319,6 +5310,13 @@ __metadata:
   version: 1.10.0
   resolution: "tslib@npm:1.10.0"
   checksum: 1d0450dc6f64b918b14acaf3b956ebe1c72d7401c632adce932a60e3cd8d2a70f6040ceef6a7c3561146c3f29bcf584c41c2e09a5d20a27d6c3057f0d5f2a836
+  languageName: node
+  linkType: hard
+
+"tslib@npm:^2.1.0":
+  version: 2.3.1
+  resolution: "tslib@npm:2.3.1"
+  checksum: de17a98d4614481f7fcb5cd53ffc1aaf8654313be0291e1bfaee4b4bb31a20494b7d218ff2e15017883e8ea9626599b3b0e0229c18383ba9dce89da2adf15cb9
   languageName: node
   linkType: hard
 

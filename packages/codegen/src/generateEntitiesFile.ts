@@ -1,4 +1,4 @@
-import { Table } from "@homebound/pg-structure";
+import { Table } from "pg-structure";
 import { code, Code } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";

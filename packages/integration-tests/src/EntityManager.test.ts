@@ -222,6 +222,23 @@ describe("EntityManager", () => {
     expect(a3.updatedAt).toEqual(a1.updatedAt);
   });
 
+  it("updatedAt changes if em.touched", async () => {
+    const em = newEntityManager();
+    const a1 = em.create(Author, { firstName: "a1" });
+    await em.flush();
+
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, "1");
+    em2.touch(a2);
+    await em2.flush();
+
+    const em3 = newEntityManager();
+    const a3 = await em3.load(Author, "1");
+    expect(a3.updatedAt).not.toEqual(a1.updatedAt);
+  });
+
   it("can insert falsey values", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1", isPopular: false });

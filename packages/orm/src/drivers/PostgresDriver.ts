@@ -337,13 +337,15 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   const changedFields = new Set<string>();
   // Id doesn't change, but we need it for our WHERE clause
   changedFields.add("id");
+  changedFields.add("updatedAt");
   entities.forEach((entity) => {
     Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
   });
 
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't changed,
   // it'll be a noop, so just short-circuit if it looks like that happened, i.e. we have no changed fields.
-  if (changedFields.size === 1) {
+  // (unless one of the entities was `EntityManager.touch`-d, which seems force the save / updatedAt tick.)
+  if (changedFields.size === 2 && !entities.some((e) => e.__orm.isTouched)) {
     return;
   }
 

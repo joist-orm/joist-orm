@@ -186,7 +186,8 @@ if (require.main === module) {
   }
   (async function () {
     const pgConfig = newPgConnectionConfig();
-    const db = await pgStructure(pgConfig);
+    // Assume other schemas are things like cyan audit / graphile-worker, that we don't want entity for
+    const db = await pgStructure(pgConfig, { includeSchemas: "public" });
 
     const config = await loadConfig();
 

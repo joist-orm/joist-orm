@@ -22,7 +22,7 @@ describe("Book", () => {
     newBookReview(em, { book: {} });
     expect(lastBookFactoryOpts).toEqual({
       use: undefined,
-      reviews: null,
+      reviews: [],
     });
   });
 });

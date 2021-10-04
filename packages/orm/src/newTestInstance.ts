@@ -72,10 +72,10 @@ export function newTestInstance<T extends Entity>(
               fieldName,
               field.otherMetadata().factory(em, {
                 ...optValue,
-                // We include null as a marker for "don't create the children", i.e. if you're doing
+                // We include `[]` as a marker for "don't create the children", i.e. if you're doing
                 // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
                 // factory, i.e. `lineItems: [{}]`, should be skipped.
-                [field.otherFieldName]: null,
+                [field.otherFieldName]: [],
                 use: opts.use,
               }),
             ];

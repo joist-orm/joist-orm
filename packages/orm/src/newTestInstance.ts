@@ -68,7 +68,17 @@ export function newTestInstance<T extends Entity>(
             } else if (optValue && !isPlainObject(optValue)) {
               return field.otherMetadata().factory(em, opts);
             }
-            return [fieldName, field.otherMetadata().factory(em, { ...optValue, use: opts.use })];
+            return [
+              fieldName,
+              field.otherMetadata().factory(em, {
+                ...optValue,
+                // We include null as a marker for "don't create the children", i.e. if you're doing
+                // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
+                // factory, i.e. `lineItems: [{}]`, should be skipped.
+                [field.otherFieldName]: null,
+                use: opts.use,
+              }),
+            ];
           }
 
           // If this is a list of children, watch for partials that should be newTestInstance'd

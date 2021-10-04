@@ -1,4 +1,4 @@
-import { Author, Book } from "../entities";
+import { Author, Book, lastBookFactoryOpts, newBookReview } from "../entities";
 import { newEntityManager } from "../setupDbTests";
 
 describe("Book", () => {
@@ -15,5 +15,14 @@ describe("Book", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     const b1 = em.create(Book, { title: "b1", author: a1 });
     expect(b1.order).toEqual(0);
+  });
+
+  it("factory should be passed reviews as null if created bottom-up", async () => {
+    const em = newEntityManager();
+    newBookReview(em, { book: {} });
+    expect(lastBookFactoryOpts).toEqual({
+      use: undefined,
+      reviews: null,
+    });
   });
 });

@@ -68,6 +68,8 @@ export function newTestInstance<T extends Entity>(
             } else if (optValue && !isPlainObject(optValue)) {
               return field.otherMetadata().factory(em, opts);
             }
+            // Find the opposite side, to see if it's a o2o or o2m pointing back at us
+            const otherField = field.otherMetadata().fields.find((f) => f.fieldName === field.otherFieldName)!;
             return [
               fieldName,
               field.otherMetadata().factory(em, {
@@ -75,7 +77,7 @@ export function newTestInstance<T extends Entity>(
                 // We include `[]` as a marker for "don't create the children", i.e. if you're doing
                 // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
                 // factory, i.e. `lineItems: [{}]`, should be skipped.
-                [field.otherFieldName]: [],
+                [field.otherFieldName]: otherField.kind === "o2o" ? null : [],
                 use: opts.use,
               }),
             ];

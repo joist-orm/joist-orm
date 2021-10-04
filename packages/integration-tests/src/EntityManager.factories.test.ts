@@ -2,9 +2,13 @@ import {
   AdvanceStatus,
   Author,
   Book,
+  lastAuthorFactoryOpts,
+  lastBookFactoryOpts,
   newAuthor,
   newBook,
   newBookAdvance,
+  newBookReview,
+  newImage,
   newPublisher,
   Publisher,
   Tag,
@@ -178,5 +182,23 @@ describe("EntityManager.factories", () => {
     const a1 = newAuthor(em);
     expect(a1.firstName).toEqual("a1");
     expect(a1.lastName).toBeUndefined();
+  });
+
+  it("should default children to empty array if created bottom-up", async () => {
+    const em = newEntityManager();
+    newBookReview(em, { book: {} });
+    expect(lastBookFactoryOpts).toEqual({
+      use: undefined,
+      reviews: [],
+    });
+  });
+
+  it("should default o2o as null if created bottom-up", async () => {
+    const em = newEntityManager();
+    newImage(em, { author: {} });
+    expect(lastAuthorFactoryOpts).toEqual({
+      use: undefined,
+      image: null,
+    });
   });
 });

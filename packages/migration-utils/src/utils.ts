@@ -88,6 +88,22 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
+// unnest over-flattens nested arrays, so we use this instead of `unnest` https://stackoverflow.com/a/8142998/355031
+export function createUnnest2dFunction(b: MigrationBuilder): void {
+  b.createFunction(
+    "unnest_2d_1d",
+    ["ANYARRAY", "OUT a ANYARRAY"],
+    { replace: true, behavior: "IMMUTABLE", language: "plpgsql", returns: "SETOF ANYARRAY" },
+    `
+      BEGIN
+         FOREACH a SLICE 1 IN ARRAY $1 LOOP
+            RETURN NEXT;
+         END LOOP;
+      END
+    `,
+  );
+}
+
 export function foreignKey(
   otherTable: string,
   opts: Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">>,

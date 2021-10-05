@@ -11,6 +11,7 @@ import {
   entityLimit,
   EntityManager,
   EntityMetadata,
+  EnumArrayFieldSerde,
   FilterAndSettings,
   getMetadata,
   keyToNumber,
@@ -364,7 +365,14 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
         .filter((c) => c.columnName !== "id")
         .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
-      FROM (select ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")}) as data
+      FROM (select ${columns
+        .map((c) => {
+          const isArray = c.serde instanceof EnumArrayFieldSerde;
+          // unnest over-flattens, so use a custom function to keep the `int[][]` -> `int[]`
+          const param = isArray ? `unnest_2d_1d((?::${c.dbType}[][]))` : `unnest(?::${c.dbType}[])`;
+          return `${param} as "${c.columnName}"`;
+        })
+        .join(", ")}) as data
       WHERE ${meta.tableName}.id = data.id
    `),
     bindings,

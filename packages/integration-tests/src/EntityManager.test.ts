@@ -1176,6 +1176,39 @@ describe("EntityManager", () => {
     expect(rows.length).toEqual(1);
     expect(rows[0].favorite_colors).toEqual([]);
   });
+
+  describe("jsonb columns", () => {
+    it("can save values", async () => {
+      const em = newEntityManager();
+      new Author(em, { firstName: "a1", address: { street: "123 Main" } });
+      await em.flush();
+      const rows = await knex.select("*").from("authors");
+      expect(rows.length).toEqual(1);
+      expect(rows[0].address).toEqual({ street: "123 Main" });
+    });
+
+    it("can read values", async () => {
+      await insertAuthor({ first_name: "f", address: { street: "123 Main" } });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      expect(a.address).toEqual({ street: "123 Main" });
+    });
+
+    it("rejects saving invalid values", async () => {
+      const em = newEntityManager();
+      expect(() => {
+        new Author(em, { firstName: "a1", address: { street2: "123 Main" } as any });
+      }).toThrow("At path: street -- Expected a string, but received: undefined");
+    });
+
+    it("rejects reading invalid values", async () => {
+      await insertAuthor({ first_name: "f", address: { street2: "123 Main" } });
+      const em = newEntityManager();
+      await expect(async () => {
+        await em.load(Author, "a:1");
+      }).rejects.toThrow("At path: street -- Expected a string, but received: undefined");
+    });
+  });
 });
 
 function delay(ms: number): Promise<void> {

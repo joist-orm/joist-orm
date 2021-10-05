@@ -62,6 +62,8 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
     case "timestamp with time zone":
     case "date":
       return "Date";
+    case "jsonb":
+      return "Object";
     default:
       assertNever(dbType);
   }

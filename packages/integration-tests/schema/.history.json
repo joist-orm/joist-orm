@@ -1,5 +1,6 @@
 {
   "Author": [
+    "address",
     "age",
     "authors",
     "books",
@@ -48,6 +49,7 @@
     "updatedAt"
   ],
   "SaveAuthorInput": [
+    "address",
     "age",
     "createdAt",
     "favoriteColors",

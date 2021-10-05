@@ -1,5 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
-import { code, Code, imp, Import } from "ts-poet";
+import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
@@ -33,12 +33,12 @@ import {
   Reference,
   setField,
   setOpts,
+  SSAssert,
   ValueFilter,
   ValueGraphQLFilter,
 } from "./symbols";
 
 export interface ColumnMetaData {
-  typeConverter?: Import;
   fieldType: PrimitiveTypescriptType;
 }
 
@@ -88,6 +88,15 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       `;
     } else if (p.derived) {
       setter = "";
+    } else if (p.superstruct) {
+      setter = code`
+        set ${fieldName}(_${fieldName}: ${fieldType}${maybeOptional}) {
+          if (_${fieldName}) {
+            ${SSAssert}(_${fieldName}, ${p.superstruct});
+          }
+          ${setField}(this, "${fieldName}", _${fieldName});
+        }
+      `;
     } else {
       setter = code`
         set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {

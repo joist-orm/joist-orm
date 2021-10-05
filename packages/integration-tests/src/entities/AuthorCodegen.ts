@@ -32,6 +32,8 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Address, address } from "src/entities/types";
+import { assert } from "superstruct";
 import {
   Author,
   authorMeta,
@@ -60,6 +62,7 @@ export interface AuthorOpts {
   age?: number | null;
   graduated?: Date | null;
   wasEverPopular?: boolean | null;
+  address?: Address | null;
   favoriteColors?: Color[];
   mentor?: Author | null;
   publisher?: Publisher | null;
@@ -86,6 +89,7 @@ export interface AuthorFilter {
   age?: ValueFilter<number, null | undefined>;
   graduated?: ValueFilter<Date, null | undefined>;
   wasEverPopular?: BooleanFilter<null | undefined>;
+  address?: ValueFilter<Address, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   favoriteColors?: ValueFilter<Color[], null | undefined>;
@@ -104,6 +108,7 @@ export interface AuthorGraphQLFilter {
   age?: ValueGraphQLFilter<number>;
   graduated?: ValueGraphQLFilter<Date>;
   wasEverPopular?: BooleanGraphQLFilter;
+  address?: ValueGraphQLFilter<Address>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: EnumGraphQLFilter<Color>;
@@ -122,6 +127,7 @@ export interface AuthorOrder {
   age?: OrderBy;
   graduated?: OrderBy;
   wasEverPopular?: OrderBy;
+  address?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   favoriteColors?: OrderBy;
@@ -221,6 +227,17 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
     setField(this, "wasEverPopular", wasEverPopular);
+  }
+
+  get address(): Address | undefined {
+    return this.__orm.data["address"];
+  }
+
+  set address(_address: Address | undefined) {
+    if (_address) {
+      assert(_address, address);
+    }
+    setField(this, "address", _address);
   }
 
   get createdAt(): Date {

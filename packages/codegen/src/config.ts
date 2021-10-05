@@ -7,6 +7,7 @@ export interface FieldConfig {
   derived?: "sync" | "async";
   protected?: boolean;
   ignore?: true;
+  superstruct?: string;
 }
 
 export interface RelationConfig {
@@ -48,6 +49,10 @@ export function isAsyncDerived(config: Config, entity: Entity, fieldName: string
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
+}
+
+export function superstructConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
+  return config.entities[entity.name]?.fields?.[fieldName]?.superstruct;
 }
 
 export function isFieldIgnored(

@@ -145,3 +145,34 @@ export class EnumArrayFieldSerde implements ColumnSerde {
 function maybeNullToUndefined(value: any): any {
   return value === null ? undefined : value;
 }
+
+/** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
+export class SuperstructSerde implements ColumnSerde {
+  // Use a dynamic require so that downstream projects don't have to depend on superstruct
+  // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
+  private assert = require("superstruct").assert;
+
+  constructor(private fieldName: string, private columnName: string, private superstruct: any) {}
+
+  setOnEntity(data: any, row: any): void {
+    const value = maybeNullToUndefined(row[this.columnName]);
+    if (value) {
+      this.assert(value, this.superstruct);
+    }
+    data[this.fieldName] = value;
+  }
+
+  setOnRow(data: any, row: any): void {
+    // assume the data is already valid b/c it came from the eneity
+    row[this.columnName] = data[this.fieldName];
+  }
+
+  getFromEntity(data: any) {
+    // assume the data is already valid b/c it came from the eneity
+    return data[this.fieldName];
+  }
+
+  mapToDb(value: any) {
+    return value;
+  }
+}

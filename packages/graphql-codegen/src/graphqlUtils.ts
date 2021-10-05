@@ -1,7 +1,9 @@
 import { DocumentNode, InputObjectTypeDefinitionNode, ObjectTypeDefinitionNode, parse, print, visit } from "graphql";
+import { PrimitiveField } from "joist-codegen";
 import { PrimitiveTypescriptType } from "joist-codegen/build/EntityDbMetadata";
 import { groupBy } from "joist-utils";
 import prettier, { resolveConfig } from "prettier";
+import { Import } from "ts-poet";
 import { Fs } from "./utils";
 
 /** A type for the fields we want to add to `*.graphql` files. */
@@ -141,7 +143,9 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
 
 export type GraphQLType = "Boolean" | "String" | "Int" | "Date" | "DateTime";
 
-export function mapTypescriptTypeToGraphQLType(fieldName: string, type: PrimitiveTypescriptType): GraphQLType {
+export type SupportedTypescriptTypes = Exclude<PrimitiveTypescriptType, "Object" | Import>;
+
+export function mapTypescriptTypeToGraphQLType(fieldName: string, type: SupportedTypescriptTypes): GraphQLType {
   switch (type) {
     case "string":
       return "String";
@@ -160,4 +164,8 @@ export function mapTypescriptTypeToGraphQLType(fieldName: string, type: Primitiv
     default:
       return type;
   }
+}
+
+export function isJsonbColumn(p: PrimitiveField) {
+  return p.fieldType === "Object" || p.fieldType instanceof Import;
 }

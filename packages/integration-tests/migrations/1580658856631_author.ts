@@ -64,6 +64,8 @@ export function up(b: MigrationBuilder): void {
     // for foreign key tests
     publisher_id: foreignKey("publishers", { notNull: false }),
     mentor_id: foreignKey("authors", { notNull: false }),
+    // for testing jsbon columns
+    address: { type: "jsonb", notNull: false },
   });
 
   // for testing required enums

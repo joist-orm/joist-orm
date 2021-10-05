@@ -9,6 +9,7 @@ import {
   ForeignKeySerde,
   PrimaryKeySerde,
   SimpleSerde,
+  SuperstructSerde,
 } from "./symbols";
 
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
@@ -47,15 +48,27 @@ function generateColumns(dbMetadata: EntityDbMetadata): {
   `;
 
   const primitives = dbMetadata.primitives.map((p) => {
-    const { fieldName, columnName, columnType } = p;
+    const { fieldName, columnName, columnType, superstruct } = p;
     const serdeType = columnType === "numeric" ? DecimalToNumberSerde : SimpleSerde;
-    return code`
-      {
-        fieldName: "${fieldName}",
-        columnName: "${columnName}",
-        dbType: "${columnType}",
-        serde: new ${serdeType}("${fieldName}", "${columnName}"),
-      },`;
+    if (superstruct) {
+      return code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${columnName}",
+          dbType: "${columnType}",
+          serde: new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct}),
+        },
+      `;
+    } else {
+      return code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${columnName}",
+          dbType: "${columnType}",
+          serde: new ${serdeType}("${fieldName}", "${columnName}"),
+        },
+      `;
+    }
   });
 
   const enums = dbMetadata.enums.map((e) => {
@@ -113,7 +126,7 @@ function generateFields(
         derived: ${!derived ? false : `"${derived}"`},
         required: ${!derived && p.notNull},
         protected: ${p.protected},
-        type: ${typeof p.fieldType === "string" ? `"${p.fieldType}"` : p.fieldType},
+        type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
       },`;
   });
 

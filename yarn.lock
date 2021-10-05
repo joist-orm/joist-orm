@@ -3371,6 +3371,7 @@ __metadata:
     joist-test-utils: 1.0.0-bump
     prettier: ^2.3.2
     prettier-plugin-organize-imports: ^2.3.3
+    superstruct: ^0.15.2
     ts-jest: ^27.0.4
     ts-node: ^10.1.0
     tsconfig-paths: ^3.10.1
@@ -4986,6 +4987,13 @@ __metadata:
   version: 2.0.1
   resolution: "strip-json-comments@npm:2.0.1"
   checksum: 1074ccb63270d32ca28edfb0a281c96b94dc679077828135141f27d52a5a398ef5e78bcf22809d23cadc2b81dfbe345eb5fd8699b385c8b1128907dec4a7d1e1
+  languageName: node
+  linkType: hard
+
+"superstruct@npm:^0.15.2":
+  version: 0.15.2
+  resolution: "superstruct@npm:0.15.2"
+  checksum: 237b25ed14eda63d9549ef4475508a864304a398c99001cc2436e716b746cddab2be233dc90f93c1b10b4c5d0a08ee7efd7ecdb73b91064276440f2d30f94560
   languageName: node
   linkType: hard
 

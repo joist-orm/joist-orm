@@ -343,10 +343,12 @@ function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveField> = {}
     columnName: snakeCase(fieldName),
     columnType: "varchar",
     fieldType: "string",
+    rawFieldType: "string",
     derived: false,
     notNull: true,
     protected: false,
     columnDefault: null,
+    superstruct: undefined,
     ...opts,
   };
 }

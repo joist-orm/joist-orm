@@ -1161,19 +1161,25 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1", favoriteColors: [Color.Red, Color.Green] });
     await em.flush();
-
     const rows = await knex.select("*").from("authors");
-    expect(rows.length).toEqual(1);
     expect(rows[0].favorite_colors).toEqual([1, 2]);
+  });
+
+  it("can save a changed enum array", async () => {
+    await insertAuthor({ first_name: "f", favorite_colors: [1, 2] });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    author.favoriteColors = [Color.Green];
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].favorite_colors).toEqual([2]);
   });
 
   it("can save an empty enum array", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1" });
     await em.flush();
-
     const rows = await knex.select("*").from("authors");
-    expect(rows.length).toEqual(1);
     expect(rows[0].favorite_colors).toEqual([]);
   });
 

@@ -88,6 +88,7 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
+// unnest over-flattens nested arrays, so we use this instead of `unnest` https://stackoverflow.com/a/8142998/355031
 export function createUnnest2dFunction(b: MigrationBuilder): void {
   b.createFunction(
     "unnest_2d_1d",

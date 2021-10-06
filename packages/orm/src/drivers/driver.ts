@@ -1,9 +1,9 @@
 import { Knex } from "knex";
-import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
-import { OneToManyCollection } from "../collections/OneToManyCollection";
-import { OneToOneReference } from "../collections/OneToOneReference";
 import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../EntityManager";
 import { FilterAndSettings } from "../QueryBuilder";
+import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
+import { OneToManyCollection } from "../relations/OneToManyCollection";
+import { OneToOneReference } from "../relations/OneToOneReference";
 import { JoinRowTodo, Todo } from "../Todo";
 
 /** Isolates all SQL calls that joist needs to make to fetch/save data. */

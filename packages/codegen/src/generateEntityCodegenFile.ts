@@ -20,7 +20,9 @@ import {
   hasMany,
   hasManyToMany,
   hasOne,
+  hasOnePolymorphic,
   hasOneToOne,
+  IdOf,
   Lens,
   Loaded,
   LoadHint,
@@ -237,6 +239,17 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     `;
   });
 
+  // Add Polymorphic
+  const polymorphic = meta.polymorphics.map((p) => {
+    const { fieldName, notNull, fieldType } = p;
+    const maybeOptional = notNull ? "never" : "undefined";
+    return code`
+      readonly ${fieldName}: ${Reference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
+        "${fieldName}",
+      );
+    `;
+  });
+
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
@@ -250,6 +263,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
+    ${generatePolymorphicTypes(meta)}
+    
     export interface ${entityName}Opts {
       ${generateOptsFields(config, meta)}
     }
@@ -288,7 +303,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       } = null!;
-      ${[o2m, m2o, o2o, m2m]}
+      ${[o2m, m2o, o2o, m2m, polymorphic]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         super(em, ${metadata}, ${hasDefaultValues ? `${defaultValuesName}` : "{}"}, opts);
@@ -349,6 +364,15 @@ function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: Pri
   );
 }
 
+function generatePolymorphicTypes(meta: EntityDbMetadata) {
+  return meta.polymorphics.map((p) => {
+    const others = p.others.map((o) => o.otherEntity.type);
+    return code`
+      export type ${p.fieldType} = ${others.map((t) => code`| ${t}`)}
+    `;
+  });
+}
+
 function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
   return meta.primitives
     .filter((field) => fieldHasDefaultValue(config, meta, field))
@@ -358,7 +382,7 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
-  const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes];
+  const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes, ...meta.polymorphics];
   return fields
     .filter((p) => p.notNull)
     .map(({ fieldName }) => {
@@ -397,7 +421,10 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
-  return [...primitives, ...enums, ...m2o, ...o2o, ...o2m, ...m2m];
+  const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
+    return code`${fieldName}${maybeOptional(notNull)}:  ${fieldType}`;
+  });
+  return [...primitives, ...enums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.
@@ -416,7 +443,10 @@ function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const m2m = meta.manyToManys.map(({ singularName, otherEntity }) => {
     return code`${singularName}Ids?: ${otherEntity.idType}[] | null;`;
   });
-  return [...m2o, ...o2o, ...o2m, ...m2m];
+  const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
+    return code`${fieldName}Id?:  ${IdOf}<${fieldType}> | null;`;
+  });
+  return [...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {
@@ -439,27 +469,33 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
-  return [...primitives, ...enums, ...m2o, ...o2o];
+  const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
+    return code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
+  });
+  return [...primitives, ...enums, ...m2o, ...o2o, ...polys];
 }
 
 function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
-  const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
+  const primitives = meta.primitives.map(({ fieldName, fieldType }) => {
     if (fieldType === "boolean") {
       return code`${fieldName}?: ${BooleanGraphQLFilter};`;
     } else {
       return code`${fieldName}?: ${ValueGraphQLFilter}<${fieldType}>;`;
     }
   });
-  const enums = meta.enums.map(({ fieldName, enumType, notNull }) => {
+  const enums = meta.enums.map(({ fieldName, enumType }) => {
     return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
   });
-  return [...primitives, ...enums, ...m2o, ...o2o];
+  const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never>;`;
+  });
+  return [...primitives, ...enums, ...m2o, ...o2o, ...polys];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {

@@ -1,6 +1,13 @@
-import { insertAuthor, insertBook, insertImage, insertPublisher } from "@src/entities/inserts";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertComment,
+  insertImage,
+  insertPublisher,
+} from "@src/entities/inserts";
 import { NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
-import { Author, Book, Color, Image, ImageType, Publisher, PublisherId, PublisherSize } from "./entities";
+import { Author, Book, Color, Comment, Image, ImageType, Publisher, PublisherId, PublisherSize } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -620,6 +627,90 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const authors = await em.find(Author, { favoriteColors: { eq: [Color.Red] } });
     expect(authors.length).toEqual(1);
+  });
+
+  it("can find through a polymorphic reference by id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const comments = await em.find(Comment, { parent: "b:1" });
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t1");
+  });
+
+  it("can find through a polymorphic reference by entity", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    const comments = await em.find(Comment, { parent: book });
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t1");
+  });
+
+  it("can find through a null polymorphic reference", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const comments = await em.find(Comment, { parent: null });
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t2");
+  });
+
+  it("can find through polymorphic reference by array of ids/entities", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2", parent_book_review_id: 1 });
+    await insertComment({ text: "t3" });
+
+    const em = newEntityManager();
+    const comments = await em.find(Comment, { parent: ["b:1", "br:1"] });
+    const [c1, c2] = comments;
+    expect(comments.length).toEqual(2);
+    expect(c1.text).toEqual("t1");
+    expect(c2.text).toEqual("t2");
+  });
+
+  it("can find through polymorphic reference by not id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const comments = await em.find(Comment, { parent: { ne: "b:1" } });
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t2");
+  });
+
+  it("can find through polymorphic reference by not id", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertComment({ text: "t2" });
+
+    const em = newEntityManager();
+    const comments = await em.find(Comment, { parent: { ne: "b:1" } });
+    const [comment] = comments;
+    expect(comments.length).toEqual(1);
+    expect(comment.text).toEqual("t2");
   });
 });
 

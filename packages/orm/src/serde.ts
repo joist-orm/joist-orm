@@ -1,4 +1,10 @@
-import { EntityMetadata, keyToNumber, keyToString, maybeResolveReferenceToId } from "./index";
+import {
+  EntityMetadata,
+  getConstructorFromTaggedId,
+  keyToNumber,
+  keyToString,
+  maybeResolveReferenceToId,
+} from "./index";
 
 export interface ColumnSerde {
   setOnEntity(data: any, row: any): void;
@@ -99,6 +105,36 @@ export class ForeignKeySerde implements ColumnSerde {
 
   mapToDb(value: any): any {
     return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(value));
+  }
+}
+
+export class PolymorphicKeySerde implements ColumnSerde {
+  // TODO EntityMetadata being in here is weird.  Don't think it is avoidable though.
+  constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] ??= keyToString(this.otherMeta(), row[this.columnName]);
+  }
+
+  setOnRow(data: any, row: any): void {
+    const id = maybeResolveReferenceToId(data[this.fieldName]);
+    const cstr = id ? getConstructorFromTaggedId(id) : undefined;
+    // console.log(id, this.otherMeta().cstr, cstr, cstr === this.otherMeta().cstr);
+    row[this.columnName] = cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+
+    console.log(row);
+  }
+
+  getFromEntity(data: any) {
+    const id = maybeResolveReferenceToId(data[this.fieldName]);
+    const cstr = id ? getConstructorFromTaggedId(id) : undefined;
+    return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+  }
+
+  mapToDb(value: any): any {
+    const id = maybeResolveReferenceToId(value);
+    const cstr = id ? getConstructorFromTaggedId(id) : undefined;
+    return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
   }
 }
 

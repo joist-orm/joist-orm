@@ -9,7 +9,7 @@ import {
   OptIdsOf,
   OptsOf,
 } from "./EntityManager";
-import { PartialOrNull } from "./index";
+import { getConstructorFromTaggedId, PartialOrNull } from "./index";
 import { NullOrDefinedOr } from "./utils";
 
 /**
@@ -77,7 +77,17 @@ export async function createOrUpdatePartial<T extends Entity>(
     // Don't use key b/c it might be the bookId alias
     const name = field.fieldName;
 
-    if (field.kind === "m2o" && !isEntity(value)) {
+    if (field.kind === "poly" && !isEntity(value)) {
+      if (!value) {
+        return [name, value];
+      } else if (isKey(value)) {
+        // This is a polymorphic reference
+        const entity = await em.load(getConstructorFromTaggedId(value), value);
+        return [name, entity];
+      } else {
+        throw new Error(`Cannot use partial value for polymorphic field `);
+      }
+    } else if (field.kind === "m2o" && !isEntity(value)) {
       if (!value || isEntity(value)) {
         return [name, value];
       } else if (isKey(value)) {

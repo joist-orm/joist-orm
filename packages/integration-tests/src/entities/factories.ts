@@ -2,6 +2,7 @@ export * from "./Author.factories";
 export * from "./Book.factories";
 export * from "./BookAdvance.factories";
 export * from "./BookReview.factories";
+export * from "./Comment.factories";
 export * from "./Critic.factories";
 export * from "./Image.factories";
 export * from "./Publisher.factories";

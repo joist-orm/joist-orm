@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
-import { JoinRow } from "../collections/ManyToManyCollection";
 import { Entity, EntityManager } from "../EntityManager";
 import { getEm, keyToString, ManyToManyCollection } from "../index";
+import { JoinRow } from "../relations/ManyToManyCollection";
 import { getOrSet } from "../utils";
 
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(

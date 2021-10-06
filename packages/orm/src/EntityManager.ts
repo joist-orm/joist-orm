@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import { Knex } from "knex";
-import { JoinRow } from "./collections/ManyToManyCollection";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
@@ -33,6 +32,7 @@ import {
   ValidationErrors,
   ValidationRuleResult,
 } from "./index";
+import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, NullOrDefinedOr, toArray } from "./utils";
 
@@ -876,7 +876,7 @@ export class EntityManager<C = {}> {
       entity = new type(this, id);
       meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
-      // Usually if the entity alrady exists, we don't write over it, but in this case
+      // Usually if the entity already exists, we don't write over it, but in this case
       // we assume that `EntityManager.refresh` is telling us to explicitly load the
       // latest data.
       meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
@@ -935,7 +935,8 @@ export type Field =
   | OneToManyField
   | ManyToOneField
   | ManyToManyField
-  | OneToOneField;
+  | OneToOneField
+  | PolymorphicField;
 
 export type PrimaryKeyField = {
   kind: "primaryKey";
@@ -996,6 +997,20 @@ export type OneToOneField = {
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
+};
+
+export type PolymorphicField = {
+  kind: "poly";
+  fieldName: string;
+  fieldIdName: string;
+  required: boolean;
+  others: PolymorphicFieldOther[];
+};
+
+export type PolymorphicFieldOther = {
+  otherMetadata: () => EntityMetadata<any>;
+  otherFieldName: string;
+  columnName: string;
 };
 
 export function isEntity(maybeEntity: any): maybeEntity is Entity {

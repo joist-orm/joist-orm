@@ -20,6 +20,15 @@ export async function insertBook(row: { id?: number; title: string; author_id: n
   await knex.insert(row).into("books");
 }
 
+export async function insertComment(row: {
+  id?: number;
+  text: string;
+  parent_book_id?: number;
+  parent_book_review_id?: number;
+}) {
+  await knex.insert(row).into("comments");
+}
+
 export async function insertPublisher(row: {
   id?: number;
   name: string;

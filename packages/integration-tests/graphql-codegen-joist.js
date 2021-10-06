@@ -5,6 +5,7 @@ const mappers = {
   BookAdvance: "src/entities#BookAdvanceId",
   BookReview: "src/entities#BookReviewId",
   ColorDetail: "src/entities#Color",
+  Comment: "src/entities#CommentId",
   Critic: "src/entities#CriticId",
   Image: "src/entities#ImageId",
   ImageTypeDetail: "src/entities#ImageType",

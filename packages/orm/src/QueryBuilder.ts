@@ -1,3 +1,4 @@
+import { groupBy } from "joist-utils";
 import { Knex } from "knex";
 import {
   ColumnMeta,
@@ -9,7 +10,9 @@ import {
   getMetadata,
   isEntity,
   OrderOf,
+  PolymorphicField,
 } from "./EntityManager";
+import { deTagIds, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { keyToNumber } from "./keys";
 import { EnumArrayFieldSerde, ForeignKeySerde, PrimaryKeySerde } from "./serde";
 import { fail } from "./utils";
@@ -229,7 +232,49 @@ export function buildQuery<T extends Entity>(
       const order = orderBy && (orderBy as any)[key];
       const hasOrder = !!order;
 
-      if (field.kind === "o2o") {
+      if (field.kind === "poly") {
+        if (Array.isArray(clause)) {
+          const ids = clause.map((e) => maybeResolveReferenceToId(e)!);
+          const idsByConstructor = groupBy(ids, (id) => getConstructorFromTaggedId(id).name);
+          query = query.where((query) =>
+            field.others.reduce((query, { columnName, otherMetadata }) => {
+              const ids = idsByConstructor[otherMetadata().cstr.name];
+              const column = meta.columns.find((c) => c.columnName === columnName)!;
+              return ids && ids.length > 0
+                ? query.orWhereIn(
+                    `${alias}.${columnName}`,
+                    deTagIds(
+                      otherMetadata(),
+                      ids.map((id) => column.serde.mapToDb(id)),
+                    ),
+                  )
+                : query;
+            }, query),
+          );
+        } else if (isEntity(clause) || typeof clause === "string") {
+          query = addPolyClause(query, alias, field, meta, clause);
+        } else if (clause === null) {
+          query = field.others.reduce(
+            (query, other) => addPolyClause(query, alias, field, meta, other.otherMetadata().cstr, clause),
+            query,
+          );
+        } else if (typeof clause === "object" && Object.keys(clause).length === 1 && "ne" in clause) {
+          const { ne: value } = clause as { ne: string | Entity | undefined | null };
+          if (isEntity(value) || typeof value === "string") {
+            const column = polyColumnFor(meta, field, value);
+            query = query.where((query) =>
+              query
+                .whereNot(`${alias}.${column.columnName}`, column.serde.mapToDb(value))
+                // for some reason whereNot excludes null values, so explicitly include them here
+                .orWhereNull(`${alias}.${column.columnName}`),
+            );
+          } else if (value === null) {
+            query = query.where((b) =>
+              field.others.reduce((b, { columnName }) => b.orWhereNotNull(`${alias}.${columnName}`), b),
+            );
+          }
+        }
+      } else if (field.kind === "o2o") {
         // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
         const otherMeta = field.otherMetadata();
         const otherAlias = getAlias(otherMeta.tableName);
@@ -305,6 +350,36 @@ function abbreviation(tableName: string): string {
     .join("");
 }
 
+function constructorFor(value: string | Entity) {
+  return typeof value === "string" ? getConstructorFromTaggedId(value) : (value.constructor as EntityConstructor<any>);
+}
+
+function polyColumnFor(
+  meta: EntityMetadata<any>,
+  field: PolymorphicField,
+  value: string | Entity | EntityConstructor<any>,
+) {
+  const cstr = typeof value === "function" ? value : constructorFor(value);
+  const { columnName } =
+    field.others.find((o) => o.otherMetadata().cstr === cstr) ??
+    fail(`${cstr.name} cannot be used as a filter on ${field.fieldName}`);
+  return meta.columns.find((c) => c.columnName === columnName)!;
+}
+
+function addPolyClause(
+  query: Knex.QueryBuilder,
+  alias: string,
+  field: PolymorphicField,
+  meta: EntityMetadata<any>,
+  value: string | Entity | EntityConstructor<any>,
+  clause?: any,
+) {
+  clause = clause === undefined ? value : clause;
+  const column = polyColumnFor(meta, field, value);
+  const [, result] = addForeignKeyClause(query, alias, column, clause);
+  return result;
+}
+
 function addForeignKeyClause(
   query: Knex.QueryBuilder,
   alias: string,
@@ -316,7 +391,7 @@ function addForeignKeyClause(
     typeof clause === "object" && clause !== null
       ? Object.keys(clause as object).filter((key) => clause[key] !== undefined)
       : [];
-  if (isEntity(clause) || typeof clause == "string" || Array.isArray(clause)) {
+  if (isEntity(clause) || typeof clause === "string" || Array.isArray(clause)) {
     // I.e. { authorFk: authorEntity | id | id[] }
     if (isEntity(clause) && clause.id === undefined) {
       // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1

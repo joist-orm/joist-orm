@@ -1,5 +1,4 @@
 import { Knex } from "knex";
-import { JoinRow, ManyToManyCollection } from "../collections/ManyToManyCollection";
 import { whereFilterHash } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
@@ -20,6 +19,7 @@ import {
   OneToManyCollection,
   OneToOneReference,
 } from "../index";
+import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition } from "../utils";
 import { Driver } from "./driver";

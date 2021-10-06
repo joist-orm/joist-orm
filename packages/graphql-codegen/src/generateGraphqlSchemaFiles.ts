@@ -3,6 +3,7 @@ import { EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import {
   GqlField,
+  GqlUnion,
   isJsonbColumn,
   mapTypescriptTypeToGraphQLType,
   SupportedTypescriptTypes,
@@ -28,28 +29,52 @@ export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetad
     ...createSaveEntityResultFields(entities),
   ];
 
+  const unions = createPolymorphicUnions(entities);
+
   // Load the history and filter out only "new" / not-yet-added-to-.graphql fields
   const history = await loadHistory(fs);
-  const newFields = fields.filter(({ objectName, fieldName }) => !history[objectName]?.includes(fieldName));
-  if (newFields.length === 0) {
+  const newEntries = [
+    ...fields.filter(({ objectName, fieldName }) => !history[objectName]?.includes(fieldName)),
+    ...unions.filter(({ objectName, types }) => {
+      const set = new Set(history[objectName] ?? []);
+      return !(set.size === types.length && types.every((type) => set.has(type)));
+    }),
+  ];
+  if (newEntries.length === 0) {
     return;
   }
 
   // Update the `.graphql` files with our new types/fields
   await Promise.all(
-    Object.entries(groupBy(newFields, (f) => f.file)).map(([file, fields]) => {
+    Object.entries(groupBy(newEntries, (f) => f.file)).map(([file, fields]) => {
       return upsertIntoFile(fs, file, fields);
     }),
   );
 
   // Record the current batch of fields back to the history file
-  newFields.forEach(({ objectName, fieldName }) => {
-    const fields = (history[objectName] = history[objectName] || []);
-    if (!fields.includes(fieldName)) {
-      fields.push(fieldName);
+  newEntries.forEach((entry) => {
+    if (entry.objectType === "union") {
+      const { objectName, types } = entry;
+      history[objectName] = types;
+    } else {
+      const { objectName, fieldName } = entry;
+      const fields = (history[objectName] = history[objectName] || []);
+      if (!fields.includes(fieldName)) {
+        fields.push(fieldName);
+      }
     }
   });
   await writeHistory(fs, history);
+}
+
+/** Make all of the fields for `type Author`, `type Book`, etc. */
+function createPolymorphicUnions(entities: EntityDbMetadata[]): GqlUnion[] {
+  return entities.flatMap((e) => {
+    const file = fileName(e);
+    return e.polymorphics.map(({ fieldType, others }) => {
+      return { file, objectType: "union", objectName: fieldType, types: others.map((o) => o.otherEntity.name) };
+    });
+  });
 }
 
 /** Make all of the fields for `type Author`, `type Book`, etc. */
@@ -97,7 +122,11 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName, fieldType: otherEntity.name };
     });
 
-    return [id, ...primitives, ...enums, ...m2os, ...o2ms, ...m2ms, ...o2os];
+    const polys = e.polymorphics.map(({ fieldName, fieldType }) => {
+      return { ...common, fieldName, fieldType };
+    });
+
+    return [id, ...primitives, ...enums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
   });
 }
 
@@ -145,7 +174,11 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
     });
 
-    return [id, ...primitives, ...enums, ...m2os];
+    const polys = e.polymorphics.map(({ fieldName }) => {
+      return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
+    });
+
+    return [id, ...primitives, ...enums, ...m2os, ...polys];
   });
 }
 

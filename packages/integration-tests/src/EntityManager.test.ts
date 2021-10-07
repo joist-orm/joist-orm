@@ -1187,6 +1187,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.favoriteColors = [Color.Green];
+    expect(author.changes.favoriteColors.hasChanged).toBeTruthy();
     await em.flush();
     const rows = await knex.select("*").from("authors");
     expect(rows[0].favorite_colors).toEqual([2]);

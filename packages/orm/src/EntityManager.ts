@@ -1001,16 +1001,16 @@ export type OneToOneField = {
 
 export type PolymorphicField = {
   kind: "poly";
-  fieldName: string;
-  fieldIdName: string;
+  fieldName: string; // eg `parent`
+  fieldIdName: string; // `parentId`
   required: boolean;
-  others: PolymorphicFieldOther[];
+  components: PolymorphicFieldComponent[];
 };
 
-export type PolymorphicFieldOther = {
+export type PolymorphicFieldComponent = {
   otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string;
-  columnName: string;
+  otherFieldName: string; // eg `comment` or `comments`
+  columnName: string; // eg `parent_book_id` or `parent_book_review_id`
 };
 
 export function isEntity(maybeEntity: any): maybeEntity is Entity {

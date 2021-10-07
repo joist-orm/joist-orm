@@ -3,6 +3,7 @@ import {
   getConstructorFromTaggedId,
   keyToNumber,
   keyToString,
+  maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
 } from "./index";
 
@@ -118,11 +119,8 @@ export class PolymorphicKeySerde implements ColumnSerde {
 
   setOnRow(data: any, row: any): void {
     const id = maybeResolveReferenceToId(data[this.fieldName]);
-    const cstr = id ? getConstructorFromTaggedId(id) : undefined;
-    // console.log(id, this.otherMeta().cstr, cstr, cstr === this.otherMeta().cstr);
+    const cstr = maybeGetConstructorFromReference(id);
     row[this.columnName] = cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
-
-    console.log(row);
   }
 
   getFromEntity(data: any) {
@@ -133,7 +131,7 @@ export class PolymorphicKeySerde implements ColumnSerde {
 
   mapToDb(value: any): any {
     const id = maybeResolveReferenceToId(value);
-    const cstr = id ? getConstructorFromTaggedId(id) : undefined;
+    const cstr = maybeGetConstructorFromReference(value);
     return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
   }
 }

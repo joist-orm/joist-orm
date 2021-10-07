@@ -112,14 +112,14 @@ export type ManyToManyField = Field & {
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
 export type PolymorphicField = Field & {
-  others: PolymorphicFieldOther[];
-  fieldType: string;
+  fieldType: string; // The name of the type union, eg `CommentParent`
   notNull: boolean;
+  components: PolymorphicFieldComponent[];
 };
 
-export type PolymorphicFieldOther = {
-  columnName: string;
-  otherFieldName: string;
+export type PolymorphicFieldComponent = {
+  columnName: string; // eg `parent_book_id` or `parent_book_review_id`
+  otherFieldName: string; // eg `comment` or `comments`
   otherEntity: Entity;
 };
 
@@ -155,7 +155,7 @@ export class EntityDbMetadata {
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
-      .filter((r) => !isPolymorphicRelation(config, r))
+      .filter((r) => !isComponentOfPolymorphicRelation(config, r))
       .map((r) => newManyToOneField(config, this.entity, r))
       .filter((f) => !f.ignore);
     this.oneToManys = table.o2mRelations
@@ -220,7 +220,7 @@ function polymorphicFieldName(config: Config, r: M2ORelation | O2MRelation) {
   return polymorphicRelations(config, table).find((pr) => name.startsWith(`${snakeCase(pr.name)}_`))?.name;
 }
 
-function isPolymorphicRelation(config: Config, r: M2ORelation) {
+function isComponentOfPolymorphicRelation(config: Config, r: M2ORelation) {
   return polymorphicFieldName(config, r) !== undefined;
 }
 
@@ -371,16 +371,21 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
 function newPolymorphicField(config: Config, table: Table, entity: Entity, rc: RelationConfig) {
   const { polymorphic, name } = rc;
   const fieldName = name!;
-  const others = table.m2oRelations
+  const components = table.m2oRelations
     .filter((r) => !isEnumTable(r.targetTable))
     .filter((r) => !isMultiColumnForeignKey(r))
     .filter((r) => polymorphicFieldName(config, r) === fieldName)
-    .map((r) => newPolymorphicFieldOther(config, entity, r));
+    .map((r) => newPolymorphicFieldComponent(config, entity, r));
 
-  return { fieldName, fieldType: `${entity.name}${pascalCase(fieldName)}`, notNull: polymorphic === "notNull", others };
+  return {
+    fieldName,
+    fieldType: `${entity.name}${pascalCase(fieldName)}`,
+    notNull: polymorphic === "notNull",
+    components,
+  };
 }
 
-function newPolymorphicFieldOther(config: Config, entity: Entity, r: M2ORelation): PolymorphicFieldOther {
+function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORelation): PolymorphicFieldComponent {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
@@ -397,8 +402,7 @@ export function oneToOneName(config: Config, entity: Entity, otherEntity: Entity
 
 export function referenceName(config: Config, entity: Entity, r: M2ORelation | O2MRelation): string {
   const column = r.foreignKey.columns[0];
-  let fieldName = polymorphicFieldName(config, r);
-  fieldName ??= camelCase(column.name.replace("_id", ""));
+  const fieldName = polymorphicFieldName(config, r) ?? camelCase(column.name.replace("_id", ""));
   return relationName(config, entity, fieldName);
 }
 

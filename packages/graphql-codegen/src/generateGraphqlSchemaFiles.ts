@@ -71,8 +71,8 @@ export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetad
 function createPolymorphicUnions(entities: EntityDbMetadata[]): GqlUnion[] {
   return entities.flatMap((e) => {
     const file = fileName(e);
-    return e.polymorphics.map(({ fieldType, others }) => {
-      return { file, objectType: "union", objectName: fieldType, types: others.map((o) => o.otherEntity.name) };
+    return e.polymorphics.map(({ fieldType, components }) => {
+      return { file, objectType: "union", objectName: fieldType, types: components.map((c) => c.otherEntity.name) };
     });
   });
 }

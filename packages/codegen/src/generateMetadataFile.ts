@@ -106,8 +106,8 @@ function generateColumns(dbMetadata: EntityDbMetadata): {
   });
 
   const polymorphics = dbMetadata.polymorphics.flatMap((m2o) => {
-    const { fieldName, others } = m2o;
-    return others.map(
+    const { fieldName, components } = m2o;
+    return components.map(
       ({ columnName, otherEntity }) => code`
         {
           fieldName: "${fieldName}",
@@ -222,14 +222,14 @@ function generateFields(
   });
 
   const polymorphicFields = dbMetadata.polymorphics.map((p) => {
-    const { fieldName, notNull, others } = p;
+    const { fieldName, notNull, components } = p;
     return code`
       {
         kind: "poly",
         fieldName: "${fieldName}",
         fieldIdName: "${fieldName}Id",
         required: ${notNull},
-        others: [ ${others.map(
+        components: [ ${components.map(
           ({ otherFieldName, otherEntity, columnName }) => code`
           {
             otherMetadata: () => ${otherEntity.metaName},

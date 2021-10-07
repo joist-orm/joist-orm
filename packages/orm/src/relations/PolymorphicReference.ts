@@ -1,10 +1,11 @@
-import { Entity, getMetadata, IdOf, isEntity, PolymorphicFieldOther } from "../EntityManager";
+import { Entity, getMetadata, IdOf, isEntity, PolymorphicFieldComponent } from "../EntityManager";
 import {
   deTagId,
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
   getEm,
+  maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
   OneToOneReference,
   PolymorphicField,
@@ -15,15 +16,15 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 
 /**
- * Manages a set of foreign keys from one entity to another, i.e. `Book.parent --> Author`.
+ * Manages a set of foreign keys from one entity to another, i.e. `Comment.parent --> Book | BookReview`.
  *
- * We keep the current `author` / `author_id` value in the `__orm.data` hash, where the
- * current value could be either the (string) author id from the database, or an entity
- * `Author` that the user has set.
+ * We keep the current `parent` / `parent.id` value in the `__orm.data` hash, where the
+ * current value could be either the `comments.parent_book_id` / `comments.parent_book_review_id` id (as a tagged string)
+ * from the database, or an entity `Book` / `BookReview` that the user has set.
  *
- * Note that if our `images.author_id` column is unique, this `ManyToOneReference` will essentially
- * be half of a one-to-one relationship, but we'll keep using this reference on the "owning"
- * side; the other side, i.e. `Author.image` will use a `OneToOneReference` to point back to us.
+ * Note that if any of our columns (eg `comments.parent_book_review_id`) is unique, this `PolymorphicReference` will
+ * essentially be half of a one-to-one relationship, but we'll keep using this reference on the "owning" side; the other
+ * side, i.e. `BookReview.comment` will use a `OneToOneReference` to point back to us.
  */
 export class PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
@@ -39,15 +40,15 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     this.field = getMetadata(entity).fields.find((f) => f.fieldName === this.fieldName) as PolymorphicField;
   }
 
-  private get otherField(): PolymorphicFieldOther | N {
-    const current = this.current();
-    const cstr = typeof current === "string" ? getConstructorFromTaggedId(current) : current?.constructor;
-    return this.field.others.find((other) => other.otherMetadata().cstr === cstr) as any;
+  private get currentComponent(): PolymorphicFieldComponent | N {
+    const cstr = maybeGetConstructorFromReference(this.current());
+    return this.field.components.find((c) => c.otherMetadata().cstr === cstr) as any;
   }
 
   private get isCascadeDelete(): boolean {
-    // this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
-    return false;
+    return (
+      this.currentComponent?.otherMetadata().config.__data.cascadeDeleteFields.includes(this.fieldName as any) ?? false
+    );
   }
 
   async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
@@ -168,10 +169,6 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
       return;
     }
 
-    if (other && !this.field.others.some((o) => o.otherMetadata().cstr === other.constructor)) {
-      throw new Error(``);
-    }
-
     // we may not be loaded yet, but our previous entity might already be in the UoW
     const previousLoaded = this.loaded ?? this.maybeFindExisting();
 
@@ -215,18 +212,18 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
 
   public toString(): string {
     return `PolymorphicReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.otherField?.otherMetadata().type
-    }, otherFieldName: ${this.otherField?.otherFieldName}, id: ${this.id})`;
+      this.currentComponent?.otherMetadata().type
+    }, otherFieldName: ${this.currentComponent?.otherFieldName}, id: ${this.id})`;
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
     return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
   }
 
-  /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
+  /** Returns the other relation that points back at us, i.e. we're `comment.parent_book_id` and this is `Book.comments`. */
   private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<U, T> {
-    const otherField = this.field.others.find((o) => o.otherMetadata().cstr === other.constructor) as any;
-    return (other as U)[otherField?.otherFieldName as keyof U] as any;
+    const component = this.field.components.find((c) => c.otherMetadata().cstr === other.constructor) as any;
+    return (other as U)[component?.otherFieldName as keyof U] as any;
   }
 
   private maybeFindExisting(): U | undefined {

@@ -744,7 +744,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       fieldName: "parent",
       fieldIdName: "parentId",
       required: true,
-      others: [
+      components: [
         {
           otherMetadata: () => bookMeta,
           otherFieldName: "comments",

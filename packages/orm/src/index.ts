@@ -12,7 +12,7 @@ import {
   OptsOf,
   RelationsIn,
 } from "./EntityManager";
-import { tagFromId } from "./keys";
+import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import {
   CustomCollection,
   CustomReference,
@@ -487,6 +487,13 @@ export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
 export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
   const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
+}
+
+export function maybeGetConstructorFromReference(
+  value: string | Entity | Reference<any, any, any> | undefined,
+): EntityConstructor<any> | undefined {
+  const id = maybeResolveReferenceToId(value);
+  return id ? getConstructorFromTaggedId(id) : undefined;
 }
 
 function equal(a: any, b: any): boolean {

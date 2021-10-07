@@ -365,12 +365,9 @@ function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: Pri
 }
 
 function generatePolymorphicTypes(meta: EntityDbMetadata) {
-  return meta.polymorphics.map((p) => {
-    const others = p.others.map((o) => o.otherEntity.type);
-    return code`
-      export type ${p.fieldType} = ${others.map((t) => code`| ${t}`)}
-    `;
-  });
+  return meta.polymorphics.map(
+    (pf) => code`export type ${pf.fieldType} = ${pf.components.map((c) => code`| ${c.otherEntity.type}`)}`,
+  );
 }
 
 function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {

@@ -134,4 +134,13 @@ export function up(b: MigrationBuilder): void {
     author_id: foreignKey("authors", { notNull: false, unique: true }),
     publisher_id: foreignKey("publishers", { notNull: false }),
   });
+
+  // for testing polymorphic references
+  createEntityTable(b, "comments", {
+    // inverse is o2m
+    parent_book_id: foreignKey("books", { notNull: false }),
+    // inverse is o2o
+    parent_book_review_id: foreignKey("book_reviews", { notNull: false, unique: true }),
+    text: "text",
+  });
 }

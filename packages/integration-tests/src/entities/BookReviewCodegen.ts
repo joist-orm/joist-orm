@@ -12,6 +12,7 @@ import {
   getEm,
   GraphQLFilterOf,
   hasOne,
+  hasOneToOne,
   Lens,
   Loaded,
   LoadHint,
@@ -28,17 +29,30 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Book, BookId, bookMeta, BookOrder, BookReview, bookReviewMeta, newBookReview } from "./entities";
+import {
+  Book,
+  BookId,
+  bookMeta,
+  BookOrder,
+  BookReview,
+  bookReviewMeta,
+  Comment,
+  CommentId,
+  commentMeta,
+  newBookReview,
+} from "./entities";
 
 export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewOpts {
   rating: number;
   book: Book;
+  comment?: Comment | null;
 }
 
 export interface BookReviewIdsOpts {
   bookId?: BookId | null;
+  commentId?: CommentId | null;
 }
 
 export interface BookReviewFilter {
@@ -48,6 +62,7 @@ export interface BookReviewFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
+  comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface BookReviewGraphQLFilter {
@@ -57,6 +72,7 @@ export interface BookReviewGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
+  comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>>;
 }
 
 export interface BookReviewOrder {
@@ -87,6 +103,8 @@ export abstract class BookReviewCodegen extends BaseEntity {
   } = null!;
 
   readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
+
+  readonly comment: Reference<BookReview, Comment, undefined> = hasOneToOne(commentMeta, "comment", "parent");
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, {}, opts);

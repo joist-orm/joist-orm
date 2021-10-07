@@ -9,6 +9,7 @@ import {
   OneToOneReference,
   Reference,
 } from "../";
+import { PolymorphicReference } from "./PolymorphicReference";
 
 export { CustomCollection } from "./CustomCollection";
 export { CustomReference } from "./CustomReference";
@@ -40,6 +41,13 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
 ): Reference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
   return new ManyToOneReference<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
+}
+
+export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
+  fieldName: keyof T,
+): Reference<T, U, N> {
+  const entity = currentlyInstantiatingEntity as T;
+  return new PolymorphicReference<T, U, N>(entity, fieldName);
 }
 
 /** An alias for creating `OneToOneReference`s. */

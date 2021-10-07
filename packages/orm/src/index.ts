@@ -1,13 +1,4 @@
 import {
-  CustomCollection,
-  CustomReference,
-  ManyToManyCollection,
-  ManyToOneReference,
-  OneToManyCollection,
-  OneToOneReference,
-} from "./collections";
-import { AbstractRelationImpl } from "./collections/AbstractRelationImpl";
-import {
   currentFlushSecret,
   Entity,
   EntityConstructor,
@@ -21,14 +12,23 @@ import {
   OptsOf,
   RelationsIn,
 } from "./EntityManager";
-import { tagFromId } from "./keys";
+import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import {
+  CustomCollection,
+  CustomReference,
+  ManyToManyCollection,
+  ManyToOneReference,
+  OneToManyCollection,
+  OneToOneReference,
+} from "./relations";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { PolymorphicReference } from "./relations/PolymorphicReference";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
 
 export { newPgConnectionConfig } from "joist-utils";
 export { BaseEntity } from "./BaseEntity";
 export * from "./changes";
-export * from "./collections";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export * from "./EntityManager";
@@ -37,6 +37,7 @@ export * from "./keys";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
+export * from "./relations";
 export * from "./reverseHint";
 export * from "./serde";
 export { fail } from "./utils";
@@ -488,6 +489,13 @@ export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
 }
 
+export function maybeGetConstructorFromReference(
+  value: string | Entity | Reference<any, any, any> | undefined,
+): EntityConstructor<any> | undefined {
+  const id = maybeResolveReferenceToId(value);
+  return id ? getConstructorFromTaggedId(id) : undefined;
+}
+
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
 }
@@ -502,7 +510,8 @@ export function isReference(maybeReference: any): maybeReference is Reference<an
   return (
     maybeReference instanceof OneToOneReference ||
     maybeReference instanceof ManyToOneReference ||
-    maybeReference instanceof CustomReference
+    maybeReference instanceof CustomReference ||
+    maybeReference instanceof PolymorphicReference
   );
 }
 

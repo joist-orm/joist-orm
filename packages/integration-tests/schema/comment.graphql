@@ -1,0 +1,23 @@
+type Comment {
+  id: ID!
+  text: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  parent: CommentParent
+}
+
+extend type Mutation {
+  saveComment(input: SaveCommentInput!): SaveCommentResult!
+}
+
+input SaveCommentInput {
+  id: ID
+  text: String
+  parentId: ID
+}
+
+type SaveCommentResult {
+  comment: Comment!
+}
+
+union CommentParent = Book | BookReview

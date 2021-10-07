@@ -5,6 +5,7 @@ type BookReview {
   createdAt: Date!
   updatedAt: Date!
   book: Book!
+  comment: Comment
 }
 
 input SaveBookReviewInput {

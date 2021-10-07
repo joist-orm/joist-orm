@@ -7,6 +7,7 @@ import {
   EnumArrayFieldSerde,
   EnumFieldSerde,
   ForeignKeySerde,
+  PolymorphicKeySerde,
   PrimaryKeySerde,
   SimpleSerde,
   SuperstructSerde,
@@ -15,11 +16,17 @@ import {
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
   const { entity } = dbMetadata;
 
-  const { primaryKey, primitives, enums, m2o } = generateColumns(dbMetadata);
-  const { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields, o2oFields } = generateFields(
-    config,
-    dbMetadata,
-  );
+  const { primaryKey, primitives, enums, m2o, polymorphics } = generateColumns(dbMetadata);
+  const {
+    primaryKeyField,
+    primitiveFields,
+    enumFields,
+    m2oFields,
+    o2mFields,
+    m2mFields,
+    o2oFields,
+    polymorphicFields,
+  } = generateFields(config, dbMetadata);
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
@@ -27,8 +34,8 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
       type: "${entity.name}",
       tagName: "${config.entities[entity.name].tag}",
       tableName: "${dbMetadata.tableName}",
-      columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ],
-      fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ${o2oFields} ],
+      columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ${polymorphics}],
+      fields: [ ${primaryKeyField} ${enumFields} ${primitiveFields} ${m2oFields} ${o2mFields} ${m2mFields} ${o2oFields} ${polymorphicFields}],
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
     };
@@ -42,6 +49,7 @@ function generateColumns(dbMetadata: EntityDbMetadata): {
   primitives: Code[];
   enums: Code[];
   m2o: Code[];
+  polymorphics: Code[];
 } {
   const primaryKey = code`
     { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id") },
@@ -97,7 +105,21 @@ function generateColumns(dbMetadata: EntityDbMetadata): {
     `;
   });
 
-  return { primaryKey, primitives, enums, m2o };
+  const polymorphics = dbMetadata.polymorphics.flatMap((m2o) => {
+    const { fieldName, components } = m2o;
+    return components.map(
+      ({ columnName, otherEntity }) => code`
+        {
+          fieldName: "${fieldName}",
+          columnName: "${columnName}",
+          dbType: "int",
+          serde: new ${PolymorphicKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}),
+        },
+      `,
+    );
+  });
+
+  return { primaryKey, primitives, enums, m2o, polymorphics };
 }
 
 function generateFields(
@@ -111,6 +133,7 @@ function generateFields(
   o2mFields: Code[];
   m2mFields: Code[];
   o2oFields: Code[];
+  polymorphicFields: Code[];
 } {
   const primaryKeyField = code`
     { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
@@ -198,5 +221,34 @@ function generateFields(
     `;
   });
 
-  return { primaryKeyField, primitiveFields, enumFields, m2oFields, o2mFields, m2mFields, o2oFields };
+  const polymorphicFields = dbMetadata.polymorphics.map((p) => {
+    const { fieldName, notNull, components } = p;
+    return code`
+      {
+        kind: "poly",
+        fieldName: "${fieldName}",
+        fieldIdName: "${fieldName}Id",
+        required: ${notNull},
+        components: [ ${components.map(
+          ({ otherFieldName, otherEntity, columnName }) => code`
+          {
+            otherMetadata: () => ${otherEntity.metaName},
+            otherFieldName: "${otherFieldName}",
+            columnName: "${columnName}",
+          },`,
+        )} ],
+      },
+    `;
+  });
+
+  return {
+    primaryKeyField,
+    primitiveFields,
+    enumFields,
+    m2oFields,
+    o2mFields,
+    m2mFields,
+    o2oFields,
+    polymorphicFields,
+  };
 }

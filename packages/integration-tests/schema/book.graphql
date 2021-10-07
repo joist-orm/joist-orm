@@ -9,6 +9,7 @@ type Book {
   reviews: [BookReview!]!
   tags: [Tag!]!
   image: Image
+  comments: [Comment!]!
 }
 
 input SaveBookInput {

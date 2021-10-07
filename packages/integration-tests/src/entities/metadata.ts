@@ -7,6 +7,7 @@ import {
   EnumArrayFieldSerde,
   EnumFieldSerde,
   ForeignKeySerde,
+  PolymorphicKeySerde,
   PrimaryKeySerde,
   SimpleSerde,
   SuperstructSerde,
@@ -24,6 +25,8 @@ import {
   BookReview,
   bookReviewConfig,
   Colors,
+  Comment,
+  commentConfig,
   Critic,
   criticConfig,
   Image,
@@ -33,6 +36,7 @@ import {
   newBook,
   newBookAdvance,
   newBookReview,
+  newComment,
   newCritic,
   newImage,
   newPublisher,
@@ -428,6 +432,15 @@ export const bookMeta: EntityMetadata<Book> = {
     },
 
     {
+      kind: "o2m",
+      fieldName: "comments",
+      fieldIdName: "commentIds",
+      required: false,
+      otherMetadata: () => commentMeta,
+      otherFieldName: "parent",
+    },
+
+    {
       kind: "m2m",
       fieldName: "tags",
       fieldIdName: "tagIds",
@@ -637,12 +650,119 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "reviews",
     },
+
+    {
+      kind: "o2o",
+      fieldName: "comment",
+      fieldIdName: "commentId",
+      required: false,
+      otherMetadata: () => commentMeta,
+      otherFieldName: "parent",
+    },
   ],
   config: bookReviewConfig,
   factory: newBookReview,
 };
 
 (BookReview as any).metadata = bookReviewMeta;
+
+export const commentMeta: EntityMetadata<Comment> = {
+  cstr: Comment,
+  type: "Comment",
+  tagName: "comment",
+  tableName: "comments",
+  columns: [
+    { fieldName: "id", columnName: "id", dbType: "int", serde: new PrimaryKeySerde(() => commentMeta, "id", "id") },
+
+    {
+      fieldName: "text",
+      columnName: "text",
+      dbType: "text",
+      serde: new SimpleSerde("text", "text"),
+    },
+
+    {
+      fieldName: "createdAt",
+      columnName: "created_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("createdAt", "created_at"),
+    },
+
+    {
+      fieldName: "updatedAt",
+      columnName: "updated_at",
+      dbType: "timestamp with time zone",
+      serde: new SimpleSerde("updatedAt", "updated_at"),
+    },
+
+    {
+      fieldName: "parent",
+      columnName: "parent_book_id",
+      dbType: "int",
+      serde: new PolymorphicKeySerde("parent", "parent_book_id", () => bookMeta),
+    },
+
+    {
+      fieldName: "parent",
+      columnName: "parent_book_review_id",
+      dbType: "int",
+      serde: new PolymorphicKeySerde("parent", "parent_book_review_id", () => bookReviewMeta),
+    },
+  ],
+  fields: [
+    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+
+    {
+      kind: "primitive",
+      fieldName: "text",
+      fieldIdName: undefined,
+      derived: false,
+      required: false,
+      protected: false,
+      type: "string",
+    },
+    {
+      kind: "primitive",
+      fieldName: "createdAt",
+      fieldIdName: undefined,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
+    },
+    {
+      kind: "primitive",
+      fieldName: "updatedAt",
+      fieldIdName: undefined,
+      derived: "orm",
+      required: false,
+      protected: false,
+      type: "Date",
+    },
+    {
+      kind: "poly",
+      fieldName: "parent",
+      fieldIdName: "parentId",
+      required: true,
+      components: [
+        {
+          otherMetadata: () => bookMeta,
+          otherFieldName: "comments",
+          columnName: "parent_book_id",
+        },
+        {
+          otherMetadata: () => bookReviewMeta,
+          otherFieldName: "comment",
+          columnName: "parent_book_review_id",
+        },
+      ],
+    },
+  ],
+  config: commentConfig,
+  factory: newComment,
+};
+
+(Comment as any).metadata = commentMeta;
 
 export const criticMeta: EntityMetadata<Critic> = {
   cstr: Critic,
@@ -1087,6 +1207,7 @@ export const allMetadata = [
   bookMeta,
   bookAdvanceMeta,
   bookReviewMeta,
+  commentMeta,
   criticMeta,
   imageMeta,
   publisherMeta,

@@ -1,4 +1,12 @@
-import { DocumentNode, InputObjectTypeDefinitionNode, ObjectTypeDefinitionNode, parse, print, visit } from "graphql";
+import {
+  DocumentNode,
+  InputObjectTypeDefinitionNode,
+  ObjectTypeDefinitionNode,
+  parse,
+  print,
+  UnionTypeDefinitionNode,
+  visit,
+} from "graphql";
 import { PrimitiveField } from "joist-codegen";
 import { PrimitiveTypescriptType } from "joist-codegen/build/EntityDbMetadata";
 import { groupBy } from "joist-utils";
@@ -18,15 +26,25 @@ export type GqlField = {
   extends?: boolean;
 };
 
+export type GqlUnion = { file: string; objectName: string; objectType: "union"; types: string[] };
+
+export type GqlEntry = GqlField | GqlUnion;
+
 /** Given a `file` and `fields` to go in it (for potentially different objects), upserts into the existing types. */
-export async function upsertIntoFile(fs: Fs, file: string, fields: GqlField[]): Promise<void> {
+export async function upsertIntoFile(fs: Fs, file: string, fields: GqlEntry[]): Promise<void> {
   // Group the fields by each individual object (either input types or output types)
   const byObjectName = groupBy(fields, (f) => f.objectName);
   const existingDoc = parseOrNewEmptyDoc(await fs.load(file));
 
   // For each type, create a "new" / ideal definition that exactly matches the domain model
   const newDocs = Object.entries(byObjectName).map(([objectName, fields]) => {
-    return [objectName, createNewDoc(objectName, fields)] as [string, DocumentNode];
+    const [entry] = fields;
+    return [
+      objectName,
+      entry.objectType === "union"
+        ? createUnionDoc(entry as GqlUnion)
+        : createFieldDoc(objectName, fields as GqlField[]),
+    ] as [string, DocumentNode];
   });
 
   // Merge each `newDoc` object definition into the file's existing types
@@ -48,13 +66,19 @@ export async function formatGraphQL(content: string): Promise<string> {
  * string of GraphQL SDL and turning it into a "pita to create by hand" AST
  * of object / field / type / etc. nodes.
  */
-function createNewDoc(objectName: string, fields: GqlField[]): DocumentNode {
-  const type = fields[0].objectType === "input" ? "input" : "type";
+function createFieldDoc(objectName: string, fields: GqlField[]): DocumentNode {
+  const [{ objectType }] = fields;
+  const type = objectType === "output" ? "type" : objectType;
   const maybeArgs = (f: GqlField) => (f.argsString ? `(${f.argsString})` : "");
   const maybeExtends = fields.some((f: GqlField) => f.extends) ? "extend " : "";
   return parse(`${maybeExtends}${type} ${objectName} {
     ${fields.map((f) => `${f.fieldName}${maybeArgs(f)}: ${f.fieldType}`)}
   }`);
+}
+
+function createUnionDoc(union: GqlUnion): DocumentNode {
+  const { objectName, types } = union;
+  return parse(`union ${objectName} = ${types.join(" | ")}`);
 }
 
 function parseOrNewEmptyDoc(content: string | undefined): DocumentNode {
@@ -94,7 +118,9 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
             .filter(([objectType]) => {
               return !node.definitions.some(
                 (d) =>
-                  (d.kind === "ObjectTypeDefinition" || d.kind === "InputObjectTypeDefinition") &&
+                  (d.kind === "ObjectTypeDefinition" ||
+                    d.kind === "InputObjectTypeDefinition" ||
+                    d.kind === "UnionTypeDefinition") &&
                   d.name.value === objectType,
               );
             })
@@ -134,6 +160,19 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
             ...(node.fields || []),
             ...(newObjectType.fields || []).filter((f) => !existingFieldNames.includes(f.name.value)),
           ],
+        };
+      }
+      return node;
+    },
+
+    UnionTypeDefinition(node) {
+      const found = newDocs.find(([objectType]) => node.name.value === objectType);
+      if (found) {
+        const [, newDoc] = found;
+        const [definition] = newDoc.definitions as UnionTypeDefinitionNode[];
+        return {
+          ...node,
+          types: definition.types,
         };
       }
       return node;

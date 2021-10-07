@@ -18,6 +18,7 @@
     "Book": { "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
+    "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "comment" },
     "Critic": {
       "fields": {
         "ignoreFavouriteBook": { "ignore": true },

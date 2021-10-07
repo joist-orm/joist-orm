@@ -43,6 +43,9 @@ import {
   BookReview,
   BookReviewId,
   bookReviewMeta,
+  Comment,
+  CommentId,
+  commentMeta,
   Image,
   ImageId,
   imageMeta,
@@ -61,6 +64,7 @@ export interface BookOpts {
   image?: Image | null;
   advances?: BookAdvance[];
   reviews?: BookReview[];
+  comments?: Comment[];
   tags?: Tag[];
 }
 
@@ -69,6 +73,7 @@ export interface BookIdsOpts {
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
+  commentIds?: CommentId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -123,6 +128,8 @@ export abstract class BookCodegen extends BaseEntity {
   readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
 
   readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
+
+  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
   readonly author: Reference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 

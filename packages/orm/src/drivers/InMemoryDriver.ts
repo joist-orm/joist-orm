@@ -1,9 +1,9 @@
 import { Knex } from "knex";
-import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "../collections";
-import { JoinRow } from "../collections/ManyToManyCollection";
 import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
+import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "../relations";
+import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
 import { Driver } from "./driver";

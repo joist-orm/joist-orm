@@ -1,5 +1,5 @@
 import { Collection, CustomCollection, getEm, Loaded } from "joist-orm";
-import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig } from "./entities";
+import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig as config } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
@@ -39,7 +39,7 @@ export class Publisher extends PublisherCodegen {
   });
 }
 
-publisherConfig.addRule("authors", (p) => {
+config.addRule("authors", (p) => {
   if (p.authors.get.length === 13) {
     return "Cannot have 13 authors";
   }

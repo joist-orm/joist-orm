@@ -718,39 +718,36 @@ export class EntityManager<C = {}> {
 
     try {
       while (pendingEntities.length > 0) {
-        await new Promise<void>((resolve, reject) => {
-          currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
-            try {
-              const todos = createTodos(pendingEntities);
+        await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
+          const todos = createTodos(pendingEntities);
 
-              // add objects to todos that have reactive hooks
-              await addReactiveAsyncDerivedValues(todos);
-              await addReactiveValidations(todos);
+          // Add objects to todos that have reactive hooks.
+          // Note that, if we're on the 2nd loop, we might actually re-add entities that were already-validated
+          // and already-flushed on the 1st loop, if those entities happen to be marked as derived from the
+          // current loop's entities. In theory this is a good thing, b/c the current loop's entities have
+          // been changed since/during the 1st loop, so we want the derived validation rules + derived values
+          // to run again to see the latest & greatest data.
+          await addReactiveAsyncDerivedValues(todos);
+          await addReactiveValidations(todos);
 
-              // run our hooks
-              await beforeDelete(this.ctx, todos);
-              // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-              await cleanupDeletedRelations(todos);
-              await beforeFlush(this.ctx, todos);
-              await beforeCreate(this.ctx, todos);
-              await beforeUpdate(this.ctx, todos);
-              recalcDerivedFields(todos);
-              await recalcAsyncDerivedFields(this, todos);
+          // run our hooks
+          await beforeDelete(this.ctx, todos);
+          // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
+          await cleanupDeletedRelations(todos);
+          await beforeFlush(this.ctx, todos);
+          await beforeCreate(this.ctx, todos);
+          await beforeUpdate(this.ctx, todos);
+          recalcDerivedFields(todos);
+          await recalcAsyncDerivedFields(this, todos);
 
-              if (!skipValidation) {
-                await validate(todos);
-                await afterValidation(this.ctx, todos);
-              }
+          if (!skipValidation) {
+            await validate(todos);
+            await afterValidation(this.ctx, todos);
+          }
 
-              entitiesToFlush.push(...pendingEntities);
-              pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
-              this.flushSecret += 1;
-
-              resolve();
-            } catch (e) {
-              reject(e);
-            }
-          });
+          entitiesToFlush.push(...pendingEntities);
+          pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
+          this.flushSecret += 1;
         });
       }
 
@@ -1049,6 +1046,10 @@ export class TooManyError extends Error {}
  * For the entities currently in `todos`, find any reactive validation rules that point
  * from the currently-changed entities back to each rule's originally-defined-in entity,
  * and ensure those entities are added to `todos`.
+ *
+ * Note that we don't check whether `entitiesToFlush` already the entities we're adding,
+ * because rules should be side effect free, so invoking them twice, if that does happen
+ * to occur, should be fine (and desirable given something about the entity has changed).
  */
 async function addReactiveValidations(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {

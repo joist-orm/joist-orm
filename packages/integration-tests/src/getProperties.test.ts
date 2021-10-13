@@ -3,7 +3,15 @@ import { getProperties } from "joist-orm";
 
 describe("getProperties", () => {
   it("should work", () => {
-    expect(getProperties(bookMeta)).toEqual(["advances", "reviews", "comments", "author", "image", "tags"]);
+    expect(getProperties(bookMeta)).toEqual([
+      "advances",
+      "reviews",
+      "comments",
+      "author",
+      "image",
+      "tags",
+      "rulesInvoked",
+    ]);
   });
 
   it("works for custom references", () => {

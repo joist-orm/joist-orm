@@ -1,5 +1,14 @@
-import { BookCodegen, bookConfig } from "./entities";
+import { BookCodegen, bookConfig as config } from "./entities";
 
-export class Book extends BookCodegen {}
+export class Book extends BookCodegen {
+  rulesInvoked = 0;
+}
 
-bookConfig.cascadeDelete("reviews");
+config.addRule((book) => {
+  book.rulesInvoked++;
+});
+
+// A noop rule to make book reactive on author
+config.addRule("author", () => {});
+
+config.cascadeDelete("reviews");

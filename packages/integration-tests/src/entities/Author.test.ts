@@ -83,6 +83,26 @@ describe("Author", () => {
     await em.flush();
   });
 
+  it("can have reactive rules that fire twice", async () => {
+    // Given we have an existing author
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    // And we later make a book
+    const b = em.create(Book, { title: "b", author: a });
+    // When we flush, it will cause:
+    // - An initial loop with pendingEntities=[Book]
+    // - Author.numberOfBooks will change
+    // - A second loop with pendingEntities=[Author]
+    // - During the second loop, b/c Book is reactive on Author,
+    //   it could need to run again b/c something about Author could be different
+    //   (and rules don't have side-effects so invoking them twice shouldn't cause
+    //   any additional loops).
+    await em.flush();
+    // Then book was validated twice
+    expect(b.rulesInvoked).toEqual(2);
+  });
+
   it("delete does not blow up due to reactive validation rules", async () => {
     // Given an author and book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });

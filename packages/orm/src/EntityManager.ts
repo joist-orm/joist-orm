@@ -721,8 +721,13 @@ export class EntityManager<C = {}> {
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
           const todos = createTodos(pendingEntities);
 
-          // add objects to todos that have reactive hooks
-          await addReactiveAsyncDerivedValues(todos, entitiesToFlush);
+          // Add objects to todos that have reactive hooks.
+          // Note that, if we're on the 2nd loop, we might actually re-add entities that were already-validated
+          // and already-flushed on the 1st loop, if those entities happen to be marked as derived from the
+          // current loop's entities. In theory this is a good thing, b/c the current loop's entities have
+          // been changed since/during the 1st loop, so we want the derived validation rules + derived values
+          // to run again to see the latest & greatest data.
+          await addReactiveAsyncDerivedValues(todos);
           await addReactiveValidations(todos);
 
           // run our hooks
@@ -1067,18 +1072,13 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
  * Given the current changed entities in `todos`, use the static metadata of `reactiveDerivedValues`
  * to find any potentially-unloaded entities we should now re-calc, and add them to `todos`.
  */
-async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>, entitiesToFlush: Entity[]): Promise<void> {
+async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates];
     return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
       (await followReverseHint(entities, reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
-        if (
-          !entitiesToFlush.includes(entity) &&
-          !todo.inserts.includes(entity) &&
-          !todo.updates.includes(entity) &&
-          !entity.isDeletedEntity
-        ) {
+        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
           todo.updates.push(entity);
         }
       });

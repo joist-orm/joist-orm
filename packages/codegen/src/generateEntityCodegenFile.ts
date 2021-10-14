@@ -419,7 +419,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${otherEntity.type}[];`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}${maybeOptional(notNull)}:  ${fieldType}`;
+    return code`${fieldName}${maybeOptional(notNull)}: ${fieldType};`;
   });
   return [...primitives, ...enums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }

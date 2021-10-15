@@ -492,4 +492,11 @@ describe("Author", () => {
     const a1 = newAuthor(em, { lastName: defaultValue() });
     expect(a1.lastName).toEqual("lastName");
   });
+
+  // Covers the New<Author> type supporting arrays
+  it("can have favorite colors", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    expect(a1.favoriteColors.length).toEqual(0);
+  });
 });

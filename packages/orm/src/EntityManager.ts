@@ -131,7 +131,7 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
       ? T[K] extends Collection<T, infer U>
         ? LoadedCollection<T, OU>
         : never
-      : never
+      : T[K]
     : T[K]
   : never;
 

@@ -28,7 +28,6 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
-  public otherColumnName: string;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -36,9 +35,9 @@ export class OneToOneReference<T extends Entity, U extends Entity>
     public otherMeta: EntityMetadata<U>,
     public fieldName: keyof T,
     public otherFieldName: keyof U,
+    public otherColumnName: string,
   ) {
     super();
-    this.otherColumnName = otherMeta.columns.find((field) => field.fieldName === otherFieldName)!.columnName;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 

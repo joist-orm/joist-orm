@@ -161,7 +161,7 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   readonly publisher: Reference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
-  readonly image: Reference<Author, Image, undefined> = hasOneToOne(imageMeta, "image", "author");
+  readonly image: Reference<Author, Image, undefined> = hasOneToOne(imageMeta, "image", "author", "author_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, {}, opts);

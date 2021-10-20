@@ -7,7 +7,18 @@ import {
   insertPublisher,
 } from "@src/entities/inserts";
 import { NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
-import { Author, Book, Color, Comment, Image, ImageType, Publisher, PublisherId, PublisherSize } from "./entities";
+import {
+  Author,
+  Book,
+  BookReview,
+  Color,
+  Comment,
+  Image,
+  ImageType,
+  Publisher,
+  PublisherId,
+  PublisherSize,
+} from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.queries", () => {
@@ -699,18 +710,31 @@ describe("EntityManager.queries", () => {
     expect(comment.text).toEqual("t2");
   });
 
-  it("can find through polymorphic reference by not id", async () => {
+  it("can find through o2m to a polymorphic reference", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });
-    await insertBook({ title: "t", author_id: 1 });
     await insertComment({ text: "t1", parent_book_id: 1 });
-    await insertComment({ text: "t2" });
+    await insertComment({ text: "t2", parent_book_id: 1 });
+    await insertComment({ text: "t3" });
 
     const em = newEntityManager();
-    const comments = await em.find(Comment, { parent: { ne: "b:1" } });
-    const [comment] = comments;
-    expect(comments.length).toEqual(1);
-    expect(comment.text).toEqual("t2");
+    const book = await em.load(Book, "1");
+    const comments = await book.comments.load();
+    expect(comments.length).toEqual(2);
+    expect(comments.map((c) => c.text)).toEqual(["t1", "t2"]);
+  });
+
+  it("can find through o2o to a polymorphic reference", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertBookReview({ rating: 1, book_id: 1 });
+    await insertComment({ text: "t1", parent_book_review_id: 1 });
+
+    const em = newEntityManager();
+    const review = await em.load(BookReview, "1");
+    const comment = await review.comment.load();
+    expect(comment).toBeTruthy();
+    expect(comment!.text).toEqual("t1");
   });
 });
 

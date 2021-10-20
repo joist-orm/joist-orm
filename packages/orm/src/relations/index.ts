@@ -55,9 +55,10 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T,
   otherFieldName: keyof U,
+  otherColumnName: string,
 ): Reference<T, U, undefined> {
   const entity = currentlyInstantiatingEntity as T;
-  return new OneToOneReference<T, U>(entity, otherMeta, fieldName, otherFieldName);
+  return new OneToOneReference<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
 /** An alias for creating `ManyToManyCollections`s. */

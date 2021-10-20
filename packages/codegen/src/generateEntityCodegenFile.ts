@@ -213,13 +213,14 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   // Add OneToOne
   const o2o = meta.oneToOnes.map((o2o) => {
-    const { fieldName, otherEntity, otherFieldName } = o2o;
+    const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     return code`
       readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, undefined> =
         ${hasOneToOne}(
           ${otherEntity.metaType},
           "${fieldName}",
           "${otherFieldName}",
+          "${otherColumnName}",
         );
     `;
   });

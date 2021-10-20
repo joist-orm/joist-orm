@@ -104,7 +104,12 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 
-  readonly comment: Reference<BookReview, Comment, undefined> = hasOneToOne(commentMeta, "comment", "parent");
+  readonly comment: Reference<BookReview, Comment, undefined> = hasOneToOne(
+    commentMeta,
+    "comment",
+    "parent",
+    "parent_book_review_id",
+  );
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, {}, opts);

@@ -133,7 +133,7 @@ export abstract class BookCodegen extends BaseEntity {
 
   readonly author: Reference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
-  readonly image: Reference<Book, Image, undefined> = hasOneToOne(imageMeta, "image", "book");
+  readonly image: Reference<Book, Image, undefined> = hasOneToOne(imageMeta, "image", "book", "book_id");
 
   readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 

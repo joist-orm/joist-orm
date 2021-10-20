@@ -1,12 +1,14 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import { Knex } from "knex";
+import { LoadedProperty } from "src/relations/hasAsyncProperty";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
+  AsyncProperty,
   Collection,
   ColumnSerde,
   ConfigApi,
@@ -106,6 +108,8 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
+  : P extends AsyncProperty<T, infer V>
+  ? LoadedProperty<T, V>
   : unknown;
 
 /**
@@ -173,7 +177,7 @@ type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends ke
 type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : unknown;
 
 /** From any non-`Relations` field in `T`, i.e. for loader hints. */
-export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
+export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any> | AsyncProperty<any, any>>;
 
 // https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
 type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;

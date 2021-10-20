@@ -1,4 +1,4 @@
-import { Collection, getEm, hasManyDerived, hasManyThrough, Loaded } from "joist-orm";
+import { AsyncProperty, Collection, getEm, hasAsyncProperty, hasManyDerived, hasManyThrough, Loaded } from "joist-orm";
 import { AuthorCodegen, authorConfig, Book, BookReview } from "./entities";
 
 export class Author extends AuthorCodegen {
@@ -66,6 +66,11 @@ export class Author extends AuthorCodegen {
   async hasBooks(): Promise<boolean> {
     return (await this.books.load()).length > 0;
   }
+
+  /** Example of an async property that can be loaded via a populate hint. */
+  public readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty(this as Author, "books", (a) => {
+    return a.books.get.length;
+  });
 }
 
 authorConfig.cascadeDelete("books");

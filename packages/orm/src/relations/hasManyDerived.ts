@@ -9,6 +9,7 @@ type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T
   add?: (entity: Loaded<T, H>, value: U) => void;
   remove?: (entity: Loaded<T, H>, value: U) => void;
 };
+
 /**
  * Creates a CustomCollection that can conditionally walk across references in the object graph.
  *

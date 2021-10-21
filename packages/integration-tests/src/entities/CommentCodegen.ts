@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Changes,
   ConfigApi,
+  Entity,
   EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
@@ -34,8 +35,12 @@ export type CommentParent = Book | BookReview;
 export function getCommentParentConstructors(): EntityConstructor<CommentParent>[] {
   return [Book, BookReview];
 }
-export function isCommentParent(value: any): value is CommentParent {
-  return getCommentParentConstructors().some((type) => value instanceof type);
+export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEntity is CommentParent {
+  return (
+    maybeEntity !== undefined &&
+    maybeEntity !== null &&
+    getCommentParentConstructors().some((type) => maybeEntity instanceof type)
+  );
 }
 
 export interface CommentOpts {

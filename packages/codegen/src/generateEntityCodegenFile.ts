@@ -9,6 +9,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  Entity,
   EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
@@ -372,8 +373,8 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
     code`export function get${pf.fieldType}Constructors(): ${EntityConstructor}<${pf.fieldType}>[] {
       return [${pf.components.map((c) => code`${c.otherEntity.type},`)}];
     }`,
-    code`export function is${pf.fieldType}(value: any): value is ${pf.fieldType} {
-      return get${pf.fieldType}Constructors().some((type) => value instanceof type);
+    code`export function is${pf.fieldType}(maybeEntity: ${Entity} | undefined | null): maybeEntity is ${pf.fieldType} {
+      return maybeEntity !== undefined && maybeEntity !== null && get${pf.fieldType}Constructors().some((type) => maybeEntity instanceof type);
     }`,
   ]);
 }

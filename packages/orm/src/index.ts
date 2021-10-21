@@ -274,7 +274,7 @@ export function setOpts<T extends Entity>(
 
 export function ensureNotDeleted(entity: Entity, opts: { ignore?: EntityOrmField["deleted"] } = {}): void {
   if (entity.isDeletedEntity && (opts.ignore === undefined || entity.__orm.deleted !== opts.ignore)) {
-    throw new Error(`${entity} is marked as deleted`);
+    fail(`${entity} is marked as deleted`);
   }
 }
 

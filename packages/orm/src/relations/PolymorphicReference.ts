@@ -123,7 +123,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
   }
 
   initializeForNewEntity(): void {
-    // Our codegen'd Opts type will ensure our field is inititalized if necessary/notNull
+    // Our codegened Opts type will ensure our field is initialized if necessary/notNull
     this._isLoaded = true;
   }
 
@@ -163,10 +163,14 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     this._isLoaded = true;
   }
 
-  // Internal method used by OneToManyCollection
+  // Internal method used by PolymorphicReference
   setImpl(other: U | N): void {
     if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
       return;
+    }
+
+    if (other !== undefined && !this.field.components.some((c) => other instanceof c.otherMetadata().cstr)) {
+      fail(`${other} cannot be set as '${this.field.fieldName}' on ${this.entity}`);
     }
 
     // we may not be loaded yet, but our previous entity might already be in the UoW

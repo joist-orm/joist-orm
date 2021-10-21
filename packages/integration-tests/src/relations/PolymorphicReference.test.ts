@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment } from "@src/entities/inserts";
-import { Book, BookReview, Comment, newBook } from "../entities";
+import { Author, Book, BookReview, Comment, newBook } from "../entities";
 import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("PolymorphicReference", () => {
@@ -82,6 +82,14 @@ describe("PolymorphicReference", () => {
     const [row] = await knex.select("*").from("comments");
     expect(row.parent_book_id).toBeNull();
     expect(row.parent_book_review_id).toEqual(1);
+  });
+
+  it("throws when trying to set an entity of the wrong type", async () => {
+    const em = newEntityManager();
+    const comment = em.createPartial(Comment, {});
+    const author = em.createPartial(Author, {});
+
+    expect(() => comment.parent.set(author as any)).toThrow("Author:new cannot be set as 'parent' on Comment:new");
   });
 
   it("removes deleted entities", async () => {

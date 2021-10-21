@@ -2,6 +2,8 @@ import {
   BaseEntity,
   Changes,
   ConfigApi,
+  Entity,
+  EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
@@ -30,6 +32,16 @@ import { Book, BookReview, Comment, commentMeta, newComment } from "./entities";
 export type CommentId = Flavor<string, "Comment">;
 
 export type CommentParent = Book | BookReview;
+export function getCommentParentConstructors(): EntityConstructor<CommentParent>[] {
+  return [Book, BookReview];
+}
+export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEntity is CommentParent {
+  return (
+    maybeEntity !== undefined &&
+    maybeEntity !== null &&
+    getCommentParentConstructors().some((type) => maybeEntity instanceof type)
+  );
+}
 
 export interface CommentOpts {
   text?: string | null;

@@ -9,6 +9,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
@@ -366,9 +367,15 @@ function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: Pri
 }
 
 function generatePolymorphicTypes(meta: EntityDbMetadata) {
-  return meta.polymorphics.map(
-    (pf) => code`export type ${pf.fieldType} = ${pf.components.map((c) => code`| ${c.otherEntity.type}`)}`,
-  );
+  return meta.polymorphics.flatMap((pf) => [
+    code`export type ${pf.fieldType} = ${pf.components.map((c) => code`| ${c.otherEntity.type}`)};`,
+    code`export function get${pf.fieldType}Constructors(): ${EntityConstructor}<${pf.fieldType}>[] {
+      return [${pf.components.map((c) => code`${c.otherEntity.type},`)}];
+    }`,
+    code`export function is${pf.fieldType}(value: any): value is ${pf.fieldType} {
+      return get${pf.fieldType}Constructors().some((type) => value instanceof type);
+    }`,
+  ]);
 }
 
 function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {

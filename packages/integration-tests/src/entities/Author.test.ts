@@ -499,4 +499,12 @@ describe("Author", () => {
     const a1 = newAuthor(em);
     expect(a1.favoriteColors.length).toEqual(0);
   });
+
+  it("can have async properties", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    expect(await a1.numberOfBooks2.load()).toEqual(0);
+    const a2 = await em.populate(a1, "numberOfBooks2");
+    expect(a2.numberOfBooks2.get).toEqual(0);
+  });
 });

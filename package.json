@@ -14,5 +14,6 @@
   ],
   "dependencies": {
     "typescript": "^4.4.2"
-  }
+  },
+  "packageManager": "yarn@3.1.0"
 }

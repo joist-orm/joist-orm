@@ -201,4 +201,9 @@ describe("EntityManager.factories", () => {
       image: null,
     });
   });
+
+  it("can create o2o from a parent", async () => {
+    const em = newEntityManager();
+    newAuthor(em, { image: {} });
+  });
 });

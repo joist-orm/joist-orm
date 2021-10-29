@@ -56,7 +56,7 @@ export function newTestInstance<T extends Entity>(
           }
 
           // If this is a partial with defaults for the entity, call newTestInstance to get it created
-          if (field.kind === "m2o") {
+          if (field.kind === "m2o" || field.kind === "o2o") {
             if (isEntity(optValue)) {
               return [fieldName, optValue];
             } else if (optValue && typeof optValue === "string") {

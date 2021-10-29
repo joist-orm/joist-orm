@@ -50,8 +50,11 @@ export function newTestInstance<T extends Entity>(
         if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
           const optValue = (opts as any)[fieldName];
 
-          // Watch for our "the parent is not yet created" null marker
-          if (optValue === null) {
+          // Watch for our "the parent is not yet created" null marker.
+          // Or just a factory having a `const { field } = opts`; that makes it undefined (...as long
+          // as the field is not required, as we have a potentially odd test case for creating a required
+          // parent if an opt key is undefined).
+          if (optValue === null || (optValue === undefined && !field.required)) {
             return [];
           }
 

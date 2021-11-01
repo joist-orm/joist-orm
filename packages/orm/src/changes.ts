@@ -35,11 +35,15 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
   return new Proxy(entity, {
     get(target, p: PropertyKey): FieldStatus<any> | (keyof OptsOf<T>)[] {
       if (p === "fields") {
-        return entity.isNewEntity ? [] : (Object.keys(entity.__orm.originalData) as (keyof OptsOf<T>)[]);
+        return (
+          entity.isNewEntity ? Object.keys(entity.__orm.data) : Object.keys(entity.__orm.originalData)
+        ) as (keyof OptsOf<T>)[];
+      } else if (typeof p === "symbol") {
+        throw new Error(`Unsupported call to ${String(p)}`);
       }
 
-      const originalValue = typeof p === "string" && entity.__orm.originalData[p];
-      const hasChanged = typeof p === "string" && p in entity.__orm.originalData && !entity.isNewEntity;
+      const originalValue = entity.__orm.originalData[p];
+      const hasChanged = (entity.isNewEntity && p in entity.__orm.data) || p in entity.__orm.originalData;
       return { hasChanged, originalValue };
     },
   }) as any;

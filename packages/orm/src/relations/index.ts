@@ -13,7 +13,7 @@ import { PolymorphicReference } from "./PolymorphicReference";
 
 export { CustomCollection } from "./CustomCollection";
 export { CustomReference } from "./CustomReference";
-export { AsyncProperty, hasAsyncProperty } from "./hasAsyncProperty";
+export { AsyncProperty, hasAsyncProperty, LoadedProperty } from "./hasAsyncProperty";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";

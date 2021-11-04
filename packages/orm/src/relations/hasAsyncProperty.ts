@@ -4,6 +4,7 @@ import { getEm } from "../index";
 const I = Symbol();
 
 export interface AsyncProperty<T extends Entity, V> {
+  isLoaded: boolean;
   load(): Promise<V>;
   [I]?: T;
 }
@@ -28,7 +29,7 @@ export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
   return new AsyncPropertyImpl(entity, loadHint, fn);
 }
 
-class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
+export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
   private loaded = false;
   constructor(private entity: T, private loadHint: H, private fn: (entity: Loaded<T, H>) => V) {}
 
@@ -48,5 +49,9 @@ class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements A
   get get(): V {
     const { entity, fn } = this;
     return fn(entity as Loaded<T, H>);
+  }
+
+  get isLoaded() {
+    return this.loaded;
   }
 }

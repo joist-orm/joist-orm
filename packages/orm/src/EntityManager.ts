@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import { Knex } from "knex";
-import { LoadedProperty } from "src/relations/hasAsyncProperty";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
@@ -19,6 +18,7 @@ import {
   getRelations,
   keyToString,
   LoadedCollection,
+  LoadedProperty,
   LoadedReference,
   ManyToOneReference,
   maybeResolveReferenceToId,

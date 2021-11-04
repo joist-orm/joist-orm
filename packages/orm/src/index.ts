@@ -14,6 +14,7 @@ import {
 } from "./EntityManager";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import {
+  AsyncProperty,
   CustomCollection,
   CustomReference,
   ManyToManyCollection,
@@ -22,6 +23,7 @@ import {
   OneToOneReference,
 } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { AsyncPropertyImpl, LoadedProperty } from "./relations/hasAsyncProperty";
 import { PolymorphicReference } from "./relations/PolymorphicReference";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
@@ -515,6 +517,13 @@ export function isReference(maybeReference: any): maybeReference is Reference<an
   );
 }
 
+/** Type guard utility for determining if an entity field is a loaded Reference. */
+export function isLoadedReference(
+  maybeReference: any,
+): maybeReference is Reference<any, any, any> & LoadedReference<any, any, any> {
+  return isReference(maybeReference) && maybeReference.isLoaded;
+}
+
 /** Type guard utility for determining if an entity field is a Collection. */
 export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
   return (
@@ -522,4 +531,23 @@ export function isCollection(maybeCollection: any): maybeCollection is Collectio
     maybeCollection instanceof ManyToManyCollection ||
     maybeCollection instanceof CustomCollection
   );
+}
+
+/** Type guard utility for determining if an entity field is a loaded Collection. */
+export function isLoadedCollection(
+  maybeCollection: any,
+): maybeCollection is Collection<any, any> & LoadedCollection<any, any> {
+  return isCollection(maybeCollection) && maybeCollection.isLoaded;
+}
+
+/** Type guard utility for determining if an entity field is an AsyncProperty. */
+export function isAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is AsyncProperty<any, any> {
+  return maybeAsyncProperty instanceof AsyncPropertyImpl;
+}
+
+/** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
+export function isLoadedAsyncProperty(
+  maybeAsyncProperty: any,
+): maybeAsyncProperty is AsyncProperty<any, any> & LoadedProperty<any, any> {
+  return isAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
 }

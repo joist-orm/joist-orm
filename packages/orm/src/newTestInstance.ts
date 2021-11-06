@@ -143,12 +143,9 @@ export function newTestInstance<T extends Entity>(
           if (existing.length === 1) {
             return [fieldName, existing[0]];
           }
-          // Or if there is an entity in `use`, use that. Note that for recursive factory calls,
-          // applyUse will have already set this for us (so that the user-factory code can see
-          // them), but for the initial/top-level call, we don't have `applyUse` in the codepath yet,
-          // so we do this extra check here.
-          // (Maybe `typeof opts.use === entity || array` would be a better signal for this case.)
-          if (use.has(otherMeta.cstr) && use.get(otherMeta.cstr)![1]) {
+          // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
+          // then look in use for either a) explicit use entities, or b) required fields, so that we "fan in"
+          if (use.has(otherMeta.cstr) && (use.get(otherMeta.cstr)![1] || field.required)) {
             return [fieldName, use.get(otherMeta.cstr)![0]];
           }
           // Otherwise only make a new entity only if the field is required
@@ -176,6 +173,16 @@ export function newTestInstance<T extends Entity>(
   return entity;
 }
 
+// When a factory is called, opts will only have:
+// - values explicitly passed by the user/other factories
+// - values from the user's explicit `use` parameter
+//
+// This allows the factory to "fan out" by i.e. InternalUser creating its own User,
+// and Market creating its own ProductAttribute.
+//
+// However, if the factory doesn't explicitly "fan out", we will "fan in" by using factory
+// created instances.
+
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
 function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): object {
   // Find any unset fields
@@ -185,10 +192,9 @@ function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): obj
       // And set them to the current `use` entity for their type, if it exists
       if ((isManyToOneField(f) || isOneToOneField(f)) && use.has(f.otherMetadata().cstr)) {
         const def = use.get(f.otherMetadata().cstr)!;
-        // Always pass explicit/user-defined `use` entities, otherwise only use implicit/factory-created `use`
-        // for required fields (otherwise things like "make a new user, which has one of internal user or H/O
-        // or ..." will too easily pick up implicitly created entities that they don't want.)
-        if (def[1] || f.required) {
+        // Only pass explicit/user-defined `use` entities, so that factories can "fan out" if they want,
+        // and not see other factory-created entities look like user-specific values.
+        if (def[1]) {
           (opts as any)[f.fieldName] = def[0];
         }
       }

@@ -56,10 +56,21 @@ describe("EntityManager.factories", () => {
 
   it("can create a child and use an existing parent from opt", async () => {
     const em = newEntityManager();
-    // Given there is an existing author
-    const a1 = newAuthor(em);
+    // Given there are multiple existing authors
+    const [a1] = [newAuthor(em), newAuthor(em)];
     // When we explicitly pass it as an opt
     const b1 = newBook(em, { author: a1 });
+    await em.flush();
+    // Then it is used
+    expect(b1.author.get).toEqual(a1);
+  });
+
+  it("can create a child and use an existing parent from use", async () => {
+    const em = newEntityManager();
+    // Given there are multiple existing authors
+    const [a1] = [newAuthor(em), newAuthor(em)];
+    // When we explicitly pass it as use
+    const b1 = newBook(em, { use: a1 });
     await em.flush();
     // Then it is used
     expect(b1.author.get).toEqual(a1);

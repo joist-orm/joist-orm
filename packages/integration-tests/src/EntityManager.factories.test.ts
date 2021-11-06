@@ -103,7 +103,7 @@ describe("EntityManager.factories", () => {
     expect(a1.firstName).toEqual("a1");
     // And it has the publisher set
     expect(a1.publisher.get).toEqual(p1);
-    expect(lastAuthorFactoryOpts).toEqual({ publisher: p1, use: p1 });
+    expect(lastAuthorFactoryOpts).toMatchObject({ publisher: p1 });
   });
 
   it("can create a grandchild and specify the grandparents opts", async () => {
@@ -188,8 +188,7 @@ describe("EntityManager.factories", () => {
   it("should default children to empty array if created bottom-up", async () => {
     const em = newEntityManager();
     newBookReview(em, { book: {} });
-    expect(lastBookFactoryOpts).toEqual({
-      use: undefined,
+    expect(lastBookFactoryOpts).toMatchObject({
       reviews: [],
     });
   });
@@ -197,8 +196,7 @@ describe("EntityManager.factories", () => {
   it("should default o2o as null if created bottom-up", async () => {
     const em = newEntityManager();
     newImage(em, { author: {} });
-    expect(lastAuthorFactoryOpts).toEqual({
-      use: undefined,
+    expect(lastAuthorFactoryOpts).toMatchObject({
       image: null,
     });
   });

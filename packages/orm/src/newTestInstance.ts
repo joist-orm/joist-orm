@@ -88,7 +88,6 @@ export function newTestInstance<T extends Entity>(
                 // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
                 // factory, i.e. `lineItems: [{}]`, should be skipped.
                 [field.otherFieldName]: otherField.kind === "o2o" ? null : [],
-                use,
               }),
             ];
           }
@@ -115,7 +114,6 @@ export function newTestInstance<T extends Entity>(
                 // parent set. It might be better to do o2ms as a 2nd-pass, after we've done the em.create
                 // call and could directly pass this entity instead of null.
                 [field.otherFieldName]: null,
-                use,
               });
             });
             return [fieldName, values];
@@ -148,7 +146,7 @@ export function newTestInstance<T extends Entity>(
           }
           // Otherwise only make a new entity only if the field is required
           if (field.required) {
-            return [fieldName, otherMeta.factory(em, { ...applyUse({}, use, otherMeta), use })];
+            return [fieldName, otherMeta.factory(em, applyUse({}, use, otherMeta))];
           }
         } else if (field.kind === "enum" && field.required) {
           return [fieldName, field.enumDetailType.getValues()[0]];
@@ -177,6 +175,7 @@ function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): obj
         (opts as any)[f.fieldName] = use.get(f.otherMetadata().cstr);
       }
     });
+  (opts as any).use = use;
   return opts;
 }
 

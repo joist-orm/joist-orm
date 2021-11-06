@@ -174,8 +174,8 @@ function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): obj
   metadata.fields
     .filter((f) => !(f.fieldName in opts))
     .forEach((f) => {
-      if (isManyToOneField(f) || isOneToOneField(f)) {
-        // And set them to the current `use` entity for their type, if it exists
+      // And set them to the current `use` entity for their type, if it exists
+      if ((isManyToOneField(f) || isOneToOneField(f)) && use.has(f.otherMetadata().cstr)) {
         (opts as any)[f.fieldName] = use.get(f.otherMetadata().cstr);
       }
     });

@@ -40,8 +40,7 @@ export function newTestInstance<T extends Entity>(
   opts: FactoryOpts<T> = {},
 ): New<T> {
   const meta = getMetadata(cstr);
-  // We share a single `use` array for a given `newEntity` factory call; if the user
-  // doesn't pass one in, just create a new one.
+  // We share a single `use` map for a given `newEntity` factory call
   const use = useMap(opts.use);
 
   // fullOpts will end up being a full/type-safe opts with every required field
@@ -171,11 +170,12 @@ export function newTestInstance<T extends Entity>(
 
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
 function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): object {
-  // Look for any fields that have this entity's type
+  // Find any unset fields
   metadata.fields
     .filter((f) => !(f.fieldName in opts))
     .forEach((f) => {
       if (isManyToOneField(f) || isOneToOneField(f)) {
+        // And set them to the current `use` entity for their type, if it exists
         (opts as any)[f.fieldName] = use.get(f.otherMetadata().cstr);
       }
     });

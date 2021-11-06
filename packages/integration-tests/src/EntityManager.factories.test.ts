@@ -103,6 +103,7 @@ describe("EntityManager.factories", () => {
     expect(a1.firstName).toEqual("a1");
     // And it has the publisher set
     expect(a1.publisher.get).toEqual(p1);
+    expect(lastAuthorFactoryOpts).toEqual({ publisher: p1, use: p1 });
   });
 
   it("can create a grandchild and specify the grandparents opts", async () => {

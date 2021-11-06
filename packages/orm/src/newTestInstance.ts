@@ -4,6 +4,7 @@ import {
   Entity,
   EntityConstructor,
   EntityManager,
+  EntityMetadata,
   getMetadata,
   IdOf,
   isEntity,
@@ -69,14 +70,15 @@ export function newTestInstance<T extends Entity>(
                   fail(`Did not find tagged id ${optValue}`),
               ];
             } else if (optValue && !isPlainObject(optValue)) {
-              return field.otherMetadata().factory(em, opts);
+              // If optValue isn't a POJO, assume this is a completely-custom factory
+              return [fieldName, field.otherMetadata().factory(em, optValue)];
             }
             // Find the opposite side, to see if it's a o2o or o2m pointing back at us
             const otherField = field.otherMetadata().fields.find((f) => f.fieldName === field.otherFieldName)!;
             return [
               fieldName,
               field.otherMetadata().factory(em, {
-                ...optValue,
+                ...applyUse(optValue, opts.use, field.otherMetadata()),
                 // We include `[]` as a marker for "don't create the children", i.e. if you're doing
                 // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
                 // factory, i.e. `lineItems: [{}]`, should be skipped.
@@ -97,10 +99,11 @@ export function newTestInstance<T extends Entity>(
                   fail(`Did not find tagged id ${optValue}`)
                 );
               } else if (optValue && !isPlainObject(optValue)) {
+                // If optValue isn't a POJO, assume this is a completely-custom factory
                 return field.otherMetadata().factory(em, optValue);
               }
               return field.otherMetadata().factory(em, {
-                ...optValue,
+                ...applyUse(optValue, opts.use, field.otherMetadata()),
                 // We include null as a marker for "don't create the parent"; even if it's required,
                 // once the child has been created, the act of adding it to our collection will get the
                 // parent set. It might be better to do o2ms as a 2nd-pass, after we've done the em.create
@@ -131,23 +134,21 @@ export function newTestInstance<T extends Entity>(
           return [fieldName, defaultValueForField(field)];
         } else if (field.kind === "m2o") {
           const otherMeta = field.otherMetadata();
-
           // If there is a single existing instance of this type, assume the caller is fine with that,
           // even if the field is not required.
           const existing = em.entities.filter((e) => e instanceof otherMeta.cstr);
           if (existing.length === 1) {
             return [fieldName, existing[0]];
           }
-
-          // If there is a use type, assume the caller is fine with that, even if the field is not required
-          const useEntity = maybeArray(opts.use)?.find((e) => e instanceof otherMeta.cstr);
-          if (useEntity) {
-            return [fieldName, useEntity];
-          }
-
           // Otherwise only make a new entity only if the field is required
           if (field.required) {
-            return [fieldName, otherMeta.factory(em, { use: opts.use })];
+            return [
+              fieldName,
+              otherMeta.factory(em, {
+                ...applyUse({}, opts.use, otherMeta),
+                use: opts.use,
+              }),
+            ];
           }
         } else if (field.kind === "enum" && field.required) {
           return [fieldName, field.enumDetailType.getValues()[0]];
@@ -158,6 +159,18 @@ export function newTestInstance<T extends Entity>(
   );
 
   return em.create(meta.cstr, fullOpts as any) as New<T>;
+}
+
+/** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
+function applyUse(opts: object, use: Entity | Entity[] | undefined, metadata: EntityMetadata<any>): object {
+  maybeArray(use).forEach((e) => {
+    // Look for any fields that have this entity's type
+    metadata.fields
+      .filter((f) => !(f.fieldName in opts))
+      .filter((f) => (f.kind === "m2o" || f.kind === "o2o") && e instanceof f.otherMetadata().cstr)
+      .forEach((f) => ((opts as any)[f.fieldName] = e));
+  });
+  return opts;
 }
 
 /**
@@ -238,6 +251,6 @@ type AllowRelationsOrPartials<T> = {
     : T[P];
 };
 
-function maybeArray<T>(array: T | T[] | undefined): T[] | undefined {
-  return array ? (Array.isArray(array) ? array : [array]) : undefined;
+function maybeArray<T>(array: T | T[] | undefined): T[] {
+  return array ? (Array.isArray(array) ? array : [array]) : [];
 }

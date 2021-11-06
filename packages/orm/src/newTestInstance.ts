@@ -156,13 +156,17 @@ export function newTestInstance<T extends Entity>(
       .filter((t) => t.length > 0),
   );
 
-  // If we made any new entities, push them into `use` so that we "fan in"/converge as we go through the graph
-  Object.values(fullOpts)
-    .filter(isEntity)
-    .filter((e) => !use.has(e.constructor))
-    .forEach((e) => use.set(e.constructor, e));
+  const entity = em.create(meta.cstr, fullOpts as any) as New<T>;
 
-  return em.create(meta.cstr, fullOpts as any) as New<T>;
+  // If the type we just made doesn't exist in `use` yet, remember it. This works better than
+  // looking at the values in `fullOpts`, because instead of waiting until the end of the
+  // `build fullOpts` loop, we're also invoking `newTestInstance` as we go through the loop itself,
+  // creating each test instance within nested/recursive `newTestInstance` calls.
+  if (!use.has(entity.constructor)) {
+    use.set(entity.constructor, entity);
+  }
+
+  return entity;
 }
 
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */

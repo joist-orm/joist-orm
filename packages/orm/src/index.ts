@@ -5,11 +5,17 @@ import {
   EntityManager,
   EntityMetadata,
   EntityOrmField,
+  Field,
   getMetadata,
   IdOf,
   Loaded,
   LoadHint,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
   OptsOf,
+  PolymorphicField,
   RelationsIn,
 } from "./EntityManager";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
@@ -550,4 +556,32 @@ export function isLoadedAsyncProperty(
   maybeAsyncProperty: any,
 ): maybeAsyncProperty is AsyncProperty<any, any> & LoadedProperty<any, any> {
   return isAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
+}
+
+export function isOneToManyField(ormField: Field): ormField is OneToManyField {
+  return ormField.kind === "o2m";
+}
+
+export function isManyToOneField(ormField: Field): ormField is ManyToOneField {
+  return ormField.kind === "m2o";
+}
+
+export function isManyToManyField(ormField: Field): ormField is ManyToManyField {
+  return ormField.kind === "m2m";
+}
+
+export function isOneToOneField(ormField: Field): ormField is OneToOneField {
+  return ormField.kind === "o2o";
+}
+
+export function isPolymorphicField(ormField: Field): ormField is PolymorphicField {
+  return ormField.kind === "poly";
+}
+
+export function isReferenceField(ormField: Field): ormField is ManyToOneField | OneToOneField | PolymorphicField {
+  return ormField.kind === "m2o" || ormField.kind === "o2o" || ormField.kind === "poly";
+}
+
+export function isCollectionField(ormField: Field): ormField is OneToManyField | ManyToManyField {
+  return ormField.kind === "o2m" || ormField.kind === "m2m";
 }

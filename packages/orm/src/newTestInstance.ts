@@ -12,6 +12,7 @@ import {
   OptsOf,
   PrimitiveField,
 } from "./EntityManager";
+import { isManyToOneField, isOneToOneField } from "./index";
 import { tagIfNeeded } from "./keys";
 import { fail } from "./utils";
 
@@ -39,6 +40,9 @@ export function newTestInstance<T extends Entity>(
   opts: FactoryOpts<T> = {},
 ): New<T> {
   const meta = getMetadata(cstr);
+  // We share a single `use` array for a given `newEntity` factory call; if the user
+  // doesn't pass one in, just create a new one.
+  const use = useMap(opts.use);
 
   // fullOpts will end up being a full/type-safe opts with every required field
   // filled in, either driven by the passed-in opts or by making new entities as-needed
@@ -78,12 +82,13 @@ export function newTestInstance<T extends Entity>(
             return [
               fieldName,
               field.otherMetadata().factory(em, {
-                ...applyUse(optValue, opts.use, field.otherMetadata()),
+                // Because of the `!isPlainObject` above, optValue will either be undefined or an object here
+                ...applyUse(optValue || {}, use, field.otherMetadata()),
                 // We include `[]` as a marker for "don't create the children", i.e. if you're doing
                 // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
                 // factory, i.e. `lineItems: [{}]`, should be skipped.
                 [field.otherFieldName]: otherField.kind === "o2o" ? null : [],
-                use: opts.use,
+                use,
               }),
             ];
           }
@@ -103,13 +108,14 @@ export function newTestInstance<T extends Entity>(
                 return field.otherMetadata().factory(em, optValue);
               }
               return field.otherMetadata().factory(em, {
-                ...applyUse(optValue, opts.use, field.otherMetadata()),
+                // Because of the `!isPlainObject` above, optValue will either be undefined or an object here
+                ...applyUse(optValue || {}, use, field.otherMetadata()),
                 // We include null as a marker for "don't create the parent"; even if it's required,
                 // once the child has been created, the act of adding it to our collection will get the
                 // parent set. It might be better to do o2ms as a 2nd-pass, after we've done the em.create
                 // call and could directly pass this entity instead of null.
                 [field.otherFieldName]: null,
-                use: opts.use,
+                use,
               });
             });
             return [fieldName, values];
@@ -142,13 +148,7 @@ export function newTestInstance<T extends Entity>(
           }
           // Otherwise only make a new entity only if the field is required
           if (field.required) {
-            return [
-              fieldName,
-              otherMeta.factory(em, {
-                ...applyUse({}, opts.use, otherMeta),
-                use: opts.use,
-              }),
-            ];
+            return [fieldName, otherMeta.factory(em, { ...applyUse({}, use, otherMeta), use })];
           }
         } else if (field.kind === "enum" && field.required) {
           return [fieldName, field.enumDetailType.getValues()[0]];
@@ -158,18 +158,25 @@ export function newTestInstance<T extends Entity>(
       .filter((t) => t.length > 0),
   );
 
+  // If we made any new entities, push them into `use` so that we "fan in"/converge as we go through the graph
+  Object.values(fullOpts)
+    .filter(isEntity)
+    .filter((e) => !use.has(e.constructor))
+    .forEach((e) => use.set(e.constructor, e));
+
   return em.create(meta.cstr, fullOpts as any) as New<T>;
 }
 
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
-function applyUse(opts: object, use: Entity | Entity[] | undefined, metadata: EntityMetadata<any>): object {
-  maybeArray(use).forEach((e) => {
-    // Look for any fields that have this entity's type
-    metadata.fields
-      .filter((f) => !(f.fieldName in opts))
-      .filter((f) => (f.kind === "m2o" || f.kind === "o2o") && e instanceof f.otherMetadata().cstr)
-      .forEach((f) => ((opts as any)[f.fieldName] = e));
-  });
+function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): object {
+  // Look for any fields that have this entity's type
+  metadata.fields
+    .filter((f) => !(f.fieldName in opts))
+    .forEach((f) => {
+      if (isManyToOneField(f) || isOneToOneField(f)) {
+        (opts as any)[f.fieldName] = use.get(f.otherMetadata().cstr);
+      }
+    });
   return opts;
 }
 
@@ -251,6 +258,22 @@ type AllowRelationsOrPartials<T> = {
     : T[P];
 };
 
-function maybeArray<T>(array: T | T[] | undefined): T[] {
-  return array ? (Array.isArray(array) ? array : [array]) : [];
+// Map of constructor --> default entity
+type UseMap = Map<Function, Entity>;
+
+// Do a one-time conversion of the user's `use` array into a map for internal use
+function useMap(use: Entity | Entity[] | UseMap | undefined): UseMap {
+  if (!use) {
+    return new Map();
+  } else if (use instanceof Map) {
+    return use;
+  } else if (use instanceof Array) {
+    const map: UseMap = new Map();
+    use.forEach((e) => map.set(e.constructor, e));
+    return map;
+  } else {
+    const map: UseMap = new Map();
+    map.set(use.constructor, use);
+    return map;
+  }
 }

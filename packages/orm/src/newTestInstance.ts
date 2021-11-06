@@ -143,6 +143,14 @@ export function newTestInstance<T extends Entity>(
           if (existing.length === 1) {
             return [fieldName, existing[0]];
           }
+          // Or if there is an entity in `use`, use that. Note that for recursive factory calls,
+          // applyUse will have already set this for us (so that the user-factory code can see
+          // them), but for the initial/top-level call, we don't have `applyUse` in the codepath yet,
+          // so we do this extra check here.
+          // (Maybe `typeof opts.use === entity || array` would be a better signal for this case.)
+          if (use.has(otherMeta.cstr) && use.get(otherMeta.cstr)![1]) {
+            return [fieldName, use.get(otherMeta.cstr)![0]];
+          }
           // Otherwise only make a new entity only if the field is required
           if (field.required) {
             return [fieldName, otherMeta.factory(em, applyUse({}, use, otherMeta))];
@@ -162,7 +170,7 @@ export function newTestInstance<T extends Entity>(
   // `build fullOpts` loop, we're also invoking `newTestInstance` as we go through the loop itself,
   // creating each test instance within nested/recursive `newTestInstance` calls.
   if (!use.has(entity.constructor)) {
-    use.set(entity.constructor, entity);
+    use.set(entity.constructor, [entity, false]);
   }
 
   return entity;
@@ -174,9 +182,15 @@ function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): obj
   metadata.fields
     .filter((f) => !(f.fieldName in opts))
     .forEach((f) => {
-      if (isManyToOneField(f) || isOneToOneField(f)) {
-        // And set them to the current `use` entity for their type, if it exists
-        (opts as any)[f.fieldName] = use.get(f.otherMetadata().cstr);
+      // And set them to the current `use` entity for their type, if it exists
+      if ((isManyToOneField(f) || isOneToOneField(f)) && use.has(f.otherMetadata().cstr)) {
+        const def = use.get(f.otherMetadata().cstr)!;
+        // Always pass explicit/user-defined `use` entities, otherwise only use implicit/factory-created `use`
+        // for required fields (otherwise things like "make a new user, which has one of internal user or H/O
+        // or ..." will too easily pick up implicitly created entities that they don't want.)
+        if (def[1] || f.required) {
+          (opts as any)[f.fieldName] = def[0];
+        }
       }
     });
   (opts as any).use = use;
@@ -261,8 +275,8 @@ type AllowRelationsOrPartials<T> = {
     : T[P];
 };
 
-// Map of constructor --> default entity
-type UseMap = Map<Function, Entity>;
+// Map of constructor --> [default entity, explicitly passed/created internally]
+type UseMap = Map<Function, [Entity, boolean]>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use
 function useMap(use: Entity | Entity[] | UseMap | undefined): UseMap {
@@ -272,11 +286,11 @@ function useMap(use: Entity | Entity[] | UseMap | undefined): UseMap {
     return use;
   } else if (use instanceof Array) {
     const map: UseMap = new Map();
-    use.forEach((e) => map.set(e.constructor, e));
+    use.forEach((e) => map.set(e.constructor, [e, true]));
     return map;
   } else {
     const map: UseMap = new Map();
-    map.set(use.constructor, use);
+    map.set(use.constructor, [use, true]);
     return map;
   }
 }

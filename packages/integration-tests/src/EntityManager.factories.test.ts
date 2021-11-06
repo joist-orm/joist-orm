@@ -56,10 +56,21 @@ describe("EntityManager.factories", () => {
 
   it("can create a child and use an existing parent from opt", async () => {
     const em = newEntityManager();
-    // Given there is an existing author
-    const a1 = newAuthor(em);
+    // Given there are multiple existing authors
+    const [a1] = [newAuthor(em), newAuthor(em)];
     // When we explicitly pass it as an opt
     const b1 = newBook(em, { author: a1 });
+    await em.flush();
+    // Then it is used
+    expect(b1.author.get).toEqual(a1);
+  });
+
+  it("can create a child and use an existing parent from use", async () => {
+    const em = newEntityManager();
+    // Given there are multiple existing authors
+    const [a1] = [newAuthor(em), newAuthor(em)];
+    // When we explicitly pass it as use
+    const b1 = newBook(em, { use: a1 });
     await em.flush();
     // Then it is used
     expect(b1.author.get).toEqual(a1);
@@ -103,7 +114,10 @@ describe("EntityManager.factories", () => {
     expect(a1.firstName).toEqual("a1");
     // And it has the publisher set
     expect(a1.publisher.get).toEqual(p1);
-    expect(lastAuthorFactoryOpts).toMatchObject({ publisher: p1 });
+    expect(lastAuthorFactoryOpts).toStrictEqual({
+      publisher: p1,
+      use: expect.any(Map),
+    });
   });
 
   it("can create a grandchild and specify the grandparents opts", async () => {
@@ -188,16 +202,18 @@ describe("EntityManager.factories", () => {
   it("should default children to empty array if created bottom-up", async () => {
     const em = newEntityManager();
     newBookReview(em, { book: {} });
-    expect(lastBookFactoryOpts).toMatchObject({
+    expect(lastBookFactoryOpts).toStrictEqual({
       reviews: [],
+      use: expect.any(Map),
     });
   });
 
   it("should default o2o as null if created bottom-up", async () => {
     const em = newEntityManager();
     newImage(em, { author: {} });
-    expect(lastAuthorFactoryOpts).toMatchObject({
+    expect(lastAuthorFactoryOpts).toStrictEqual({
       image: null,
+      use: expect.any(Map),
     });
   });
 

@@ -51,7 +51,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
 export async function createOrUpdatePartial<T extends Entity, O extends DeepPartialOrNull<T>>(
   em: EntityManager,
   constructor: EntityConstructor<T>,
-  opts: DeepPartialOrNull<T>,
+  opts: O,
 ): Promise<T> {
   const { id, ...others } = opts as any;
   const meta = getMetadata(constructor);

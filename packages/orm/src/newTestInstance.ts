@@ -199,8 +199,8 @@ function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): obj
         }
       }
     });
-  (opts as any).use = use;
-  return opts;
+  // Make a copy so we don't leak `use` onto opts that tests might later use in assertions.
+  return { ...opts, use };
 }
 
 /**

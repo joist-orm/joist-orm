@@ -1193,12 +1193,35 @@ describe("EntityManager", () => {
     expect(rows[0].favorite_colors).toEqual([2]);
   });
 
-  it("can save an empty enum array", async () => {
+  it("can create an empty enum array", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1" });
     await em.flush();
     const rows = await knex.select("*").from("authors");
     expect(rows[0].favorite_colors).toEqual([]);
+  });
+
+  it("can update an empty enum array", async () => {
+    await insertAuthor({ first_name: "f", favorite_colors: [1, 2] });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    author.favoriteColors = [];
+    await em.flush();
+    const rows = await knex.select("*").from("authors");
+    expect(rows[0].favorite_colors).toEqual([]);
+  });
+
+  it("can update multiple enum array", async () => {
+    await insertAuthor({ first_name: "f", favorite_colors: [1] });
+    await insertAuthor({ first_name: "f", favorite_colors: [2] });
+    const em = newEntityManager();
+    const [a1, a2] = await em.find(Author, {});
+    a1.favoriteColors = [Color.Red, Color.Green];
+    a2.favoriteColors = [Color.Red, Color.Blue, Color.Green];
+    await em.flush();
+    const rows = await knex.select("*").from("authors").orderBy("id");
+    expect(rows[0].favorite_colors).toEqual([1, 2]);
+    expect(rows[1].favorite_colors).toEqual([1, 3, 2]);
   });
 
   describe("jsonb columns", () => {

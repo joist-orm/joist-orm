@@ -352,31 +352,55 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 
   // This currently assumes a 1-to-1 field-to-column mapping.
   const columns = meta.columns.filter((c) => changedFields.has(c.fieldName));
-  const bindings: any[][] = columns.map(() => []);
-  for (const entity of entities) {
-    columns.forEach((c, i) => {
-      bindings[i].push(c.serde.getFromEntity(entity.__orm.data) ?? null);
-    });
-  }
-  await knex.raw(
-    cleanSql(`
+
+  // We need to handle array columns different because the "unnest" approach fundamentally
+  // won't work b/c we can't use it to send "a list of lists".
+  let sql: string;
+  let bindings: any[];
+  if (columns.some((c) => c.serde instanceof EnumArrayFieldSerde)) {
+    // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
+    // and bindings is each individual value.
+    bindings = entities.flatMap((entity) => columns.map((c) => c.serde.getFromEntity(entity.__orm.data) ?? null));
+    sql = `
       UPDATE ${meta.tableName}
       SET ${columns
         .filter((c) => c.columnName !== "id")
         .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
-      FROM (select ${columns
-        .map((c) => {
-          const isArray = c.serde instanceof EnumArrayFieldSerde;
-          // unnest over-flattens, so use a custom function to keep the `int[][]` -> `int[]`
-          const param = isArray ? `unnest_2d_1d((?::${c.dbType}[][]))` : `unnest(?::${c.dbType}[])`;
-          return `${param} as "${c.columnName}"`;
-        })
-        .join(", ")}) as data
+      FROM (
+        VALUES ${entities
+          .map(
+            () =>
+              `(${columns
+                .map((c) => {
+                  const maybeArray = c.serde instanceof EnumArrayFieldSerde ? "[]" : "";
+                  return `?::${c.dbType}${maybeArray}`;
+                })
+                .join(",")})`,
+          )
+          .join(",")}
+      ) AS data(${columns.map((c) => c.columnName).join(",")})
       WHERE ${meta.tableName}.id = data.id
-   `),
-    bindings,
-  );
+   `;
+  } else {
+    // Issue 1 UPDATE statement with bindings having an array for each column's new values
+    bindings = columns.map(() => []);
+    for (const entity of entities) {
+      columns.forEach((c, i) => {
+        bindings[i].push(c.serde.getFromEntity(entity.__orm.data) ?? null);
+      });
+    }
+    sql = `
+      UPDATE ${meta.tableName}
+      SET ${columns
+        .filter((c) => c.columnName !== "id")
+        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
+        .join(", ")}
+      FROM (select ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")}) as data
+      WHERE ${meta.tableName}.id = data.id
+     `;
+  }
+  await knex.raw(cleanSql(sql), bindings);
 }
 
 async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {

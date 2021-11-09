@@ -11,7 +11,7 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodeGenFil
     const contents = code`
       export function new${name}(
         em: ${EntityManager},
-        opts?: ${FactoryOpts}<${entity.type}>
+        opts: ${FactoryOpts}<${entity.type}> = {},
       ): ${New}<${entity.type}> {
         return ${newTestInstance}(em, ${entity.type}, opts);
       }`;

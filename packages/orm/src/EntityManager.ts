@@ -14,6 +14,7 @@ import {
   DeepPartialOrNull,
   EntityHook,
   GenericError,
+  getConstructorFromTaggedId,
   getEm,
   getRelations,
   keyToString,
@@ -494,6 +495,7 @@ export class EntityManager<C = {}> {
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
+  public async load(id: string): Promise<Entity>;
   public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T>;
   public async load<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
@@ -505,7 +507,16 @@ export class EntityManager<C = {}> {
     id: string,
     populate: Const<H>,
   ): Promise<Loaded<T, H>>;
-  async load<T extends Entity>(type: EntityConstructor<T>, id: string, hint?: any): Promise<T> {
+  async load<T extends Entity>(typeOrId: EntityConstructor<T> | string, id?: string, hint?: any): Promise<T> {
+    // Handle the `typeOrId` overload
+    let type: EntityConstructor<T>;
+    if (typeof typeOrId === "string") {
+      type = getConstructorFromTaggedId(typeOrId);
+      id = typeOrId;
+    } else {
+      type = typeOrId;
+      id = id || fail();
+    }
     if (typeof (id as any) !== "string") {
       throw new Error(`Expected ${id} to be a string`);
     }

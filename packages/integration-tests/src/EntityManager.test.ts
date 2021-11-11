@@ -18,6 +18,13 @@ describe("EntityManager", () => {
     expect(author.firstName).toEqual("f");
   });
 
+  it("can load just by its tagged id", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = newEntityManager();
+    const author = await em.load("a:1");
+    expect(author).toBeInstanceOf(Author);
+  });
+
   it("can load an entity by tagged id", async () => {
     await insertAuthor({ first_name: "f" });
     const em = newEntityManager();

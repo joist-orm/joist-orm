@@ -328,12 +328,13 @@ describe("Author", () => {
   });
 
   describe("changes", () => {
-    it("on create nothing is considered changed", async () => {
+    it("on create set fields are considered changed", async () => {
       const em = newEntityManager();
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
-      expect(a1.changes.firstName.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBeTruthy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
-      expect(a1.changes.fields).toEqual([]);
+      expect(a1.changes.isPopular.hasChanged).toBeFalsy();
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName"]);
     });
 
     it("after initial load nothing is considered changed", async () => {

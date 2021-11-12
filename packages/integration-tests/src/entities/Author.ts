@@ -89,7 +89,7 @@ authorConfig.addRule((a) => {
 });
 
 authorConfig.addRule((a) => {
-  if (a.changes.lastName.hasChanged) {
+  if (!a.isNewEntity && a.changes.lastName.hasChanged) {
     return "lastName cannot be changed";
   }
 });

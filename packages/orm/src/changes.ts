@@ -2,7 +2,11 @@ import { Entity, IdOf, OptsOf } from "./EntityManager";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
+  /** True if the field has been changed on either create or update. */
   hasChanged: boolean;
+  /** True only if the field has been updated i.e. not on the initial create. */
+  hasUpdated: boolean;
+  /** The original value, will be `undefined` if the entity new. */
   originalValue?: T;
 }
 
@@ -44,7 +48,8 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
 
       const originalValue = entity.__orm.originalData[p];
       const hasChanged = (entity.isNewEntity && p in entity.__orm.data) || p in entity.__orm.originalData;
-      return { hasChanged, originalValue };
+      const hasUpdated = !entity.isNewEntity && p in entity.__orm.originalData;
+      return { hasChanged, hasUpdated, originalValue };
     },
   }) as any;
 }

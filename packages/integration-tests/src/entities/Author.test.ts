@@ -328,10 +328,11 @@ describe("Author", () => {
   });
 
   describe("changes", () => {
-    it("on create set fields are considered changed", async () => {
+    it("on create set fields are considered changed but not updated", async () => {
       const em = newEntityManager();
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
       expect(a1.changes.firstName.hasChanged).toBeTruthy();
+      expect(a1.changes.firstName.hasUpdated).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
       expect(a1.changes.isPopular.hasChanged).toBeFalsy();
       expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName"]);
@@ -342,6 +343,7 @@ describe("Author", () => {
       const em = newEntityManager();
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.hasUpdated).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
       expect(a1.changes.fields).toEqual([]);
     });
@@ -351,10 +353,12 @@ describe("Author", () => {
       const em = newEntityManager();
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.hasUpdated).toBeFalsy();
       expect(a1.changes.firstName.originalValue).toBeUndefined();
       expect(a1.changes.fields).toEqual([]);
       a1.firstName = "a2";
       expect(a1.changes.firstName.hasChanged).toBeTruthy();
+      expect(a1.changes.firstName.hasUpdated).toBeTruthy();
       expect(a1.changes.firstName.originalValue).toEqual("a1");
       expect(a1.changes.fields).toEqual(["firstName"]);
     });

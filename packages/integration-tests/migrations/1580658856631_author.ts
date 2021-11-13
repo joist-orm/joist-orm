@@ -29,7 +29,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
     size_id: { type: "integer", references: "publisher_size", notNull: false },
-    type_id: { type: "integer", references: "publisher_type", notNull: false },
+    type_id: { type: "integer", references: "publisher_type", notNull: false, default: 1 },
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },

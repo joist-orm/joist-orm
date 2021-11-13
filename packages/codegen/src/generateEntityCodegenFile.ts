@@ -380,11 +380,18 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
 }
 
 function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
-  return meta.primitives
+  const primitives = meta.primitives
     .filter((field) => fieldHasDefaultValue(config, meta, field))
     .map(({ fieldName, columnDefault }) => {
       return code`${fieldName}: ${columnDefault},`;
     });
+  const enums = meta.enums
+    .filter((field) => !!field.columnDefault && !field.isArray)
+    .map(({ fieldName, columnDefault, enumRows, enumType }) => {
+      const defaultRow = enumRows.find((r) => r.id === Number(columnDefault))!;
+      return code`${fieldName}: ${enumType}.${pascalCase(defaultRow.code)},`;
+    });
+  return [...primitives, ...enums];
 }
 
 function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
@@ -437,7 +444,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 // This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
 // in the partial type and of course the caller will only be setting one.
 function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
@@ -512,7 +519,7 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
   const enums = meta.enums.map(({ fieldName }) => {
     return code`${fieldName}?: ${OrderBy};`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.orderType};`;
   });
   return [...primitives, ...enums, ...m2o];

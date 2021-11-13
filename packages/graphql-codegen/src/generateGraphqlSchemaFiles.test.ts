@@ -377,6 +377,7 @@ function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): EnumFie
   return {
     fieldName,
     columnName: snakeCase(fieldName),
+    columnDefault: null,
     enumName,
     enumType,
     enumDetailType,

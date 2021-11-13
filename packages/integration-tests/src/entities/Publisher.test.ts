@@ -3,7 +3,7 @@ import { PublisherType } from "@src/entities/PublisherType";
 import { newEntityManager } from "@src/setupDbTests";
 
 describe("Publisher", () => {
-  it("can have business logic methods", async () => {
+  it("has a default type", async () => {
     const em = newEntityManager();
     const p = em.create(Publisher, { name: "p1" });
     expect(p.type).toEqual(PublisherType.Small);

@@ -41,6 +41,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "./symbols";
+import { fail } from "./utils";
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
@@ -387,8 +388,10 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
     });
   const enums = meta.enums
     .filter((field) => !!field.columnDefault && !field.isArray)
-    .map(({ fieldName, columnDefault, enumRows, enumType }) => {
-      const defaultRow = enumRows.find((r) => r.id === Number(columnDefault))!;
+    .map(({ fieldName, columnDefault, enumRows, enumType, columnName }) => {
+      const defaultRow =
+        enumRows.find((r) => r.id === Number(columnDefault)) ||
+        fail(`Invalid default value ${columnDefault} for ${meta.tableName}.${columnName}`);
       return code`${fieldName}: ${enumType}.${pascalCase(defaultRow.code)},`;
     });
   return [...primitives, ...enums];

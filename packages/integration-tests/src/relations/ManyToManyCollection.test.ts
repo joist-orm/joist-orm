@@ -98,6 +98,40 @@ describe("ManyToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
   });
 
+  it("can an an existing tag-to-book", async () => {
+    await insertAuthor({ first_name: "a1" });
+    // Given two books/two tags, and 1 book->tag each
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertBook({ id: 3, title: "b2", author_id: 1 });
+    await insertTag({ id: 4, name: `t1` });
+    await insertTag({ id: 5, name: `t2` });
+    await insertBookToTag({ book_id: 2, tag_id: 4 });
+    await insertBookToTag({ book_id: 3, tag_id: 5 });
+
+    const em = newEntityManager();
+    const b2 = await em.load(Book, "b:2");
+    const b3 = await em.load(Book, "b:3");
+    const t4 = await em.load(Tag, "t:4");
+    const t5 = await em.load(Tag, "t:5");
+
+    // When we add the existing relations again
+    b2.tags.add(t4);
+    t4.books.add(b2);
+    // And also add new m2ms
+    b2.tags.add(t5);
+    t4.books.add(b3);
+    await em.flush();
+
+    // Then both the old and new m2ms exist
+    const rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    expect(rows).toMatchObject([
+      { id: 1, book_id: 2, tag_id: 4 },
+      { id: 2, book_id: 3, tag_id: 5 },
+      { id: 4, book_id: 2, tag_id: 5 },
+      { id: 5, book_id: 3, tag_id: 4 },
+    ]);
+  });
+
   it("can add a new book to a tag", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });

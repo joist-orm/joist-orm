@@ -21,7 +21,7 @@ import {
 } from "../index";
 import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
-import { getOrSet, partition } from "../utils";
+import { getOrSet, partition, zeroTo } from "../utils";
 import { Driver } from "./driver";
 
 /**
@@ -241,22 +241,25 @@ export class PostgresDriver implements Driver {
     const knex = this.getMaybeInTxnKnex(em);
     for await (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
       if (newRows.length > 0) {
-        const ids: number[] = await knex
-          .batchInsert(
-            joinTableName,
-            newRows.map((row) => {
-              // The rows in EntityManager.joinRows point to entities, change those to integers
-              const { id, created_at, m2m, ...fkColumns } = row;
-              Object.keys(fkColumns).forEach((key) => {
-                const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
-                fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
-              });
-              return fkColumns;
-            }),
-          )
-          .returning("id");
-        for (let i = 0; i < ids.length; i++) {
-          newRows[i].id = ids[i];
+        const sql = cleanSql(`
+          INSERT INTO ${joinTableName} (${m2m.columnName}, ${m2m.otherColumnName})
+          VALUES ${zeroTo(newRows.length)
+            .map(() => "(?, ?) ")
+            .join(", ")}
+          ON CONFLICT (${m2m.columnName}, ${m2m.otherColumnName}) DO NOTHING
+          RETURNING id;
+        `);
+        const meta1 = getMetadata(m2m.entity);
+        const meta2 = m2m.otherMeta;
+        const bindings = newRows.flatMap((row) => {
+          return [
+            keyToNumber(meta1, maybeResolveReferenceToId(row[m2m.columnName]))!,
+            keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName]))!,
+          ];
+        });
+        const { rows } = await knex.raw(sql, bindings);
+        for (let i = 0; i < rows.length; i++) {
+          newRows[i].id = rows[i][0];
         }
       }
       if (deletedRows.length > 0) {

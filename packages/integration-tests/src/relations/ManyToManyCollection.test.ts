@@ -98,7 +98,7 @@ describe("ManyToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
   });
 
-  it("can an an existing tag-to-book", async () => {
+  it("can add existing tag-to-book m2m rows without failing", async () => {
     await insertAuthor({ first_name: "a1" });
     // Given two books/two tags, and 1 book->tag each
     await insertBook({ id: 2, title: "b1", author_id: 1 });
@@ -116,20 +116,31 @@ describe("ManyToManyCollection", () => {
 
     // When we add the existing relations again
     b2.tags.add(t4);
-    t4.books.add(b2);
+    t5.books.add(b3);
     // And also add new m2ms
     b2.tags.add(t5);
     t4.books.add(b3);
     await em.flush();
 
     // Then both the old and new m2ms exist
-    const rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    let rows = await knex.select("*").from("books_to_tags").orderBy("id");
     expect(rows).toMatchObject([
       { id: 1, book_id: 2, tag_id: 4 },
       { id: 2, book_id: 3, tag_id: 5 },
-      { id: 4, book_id: 2, tag_id: 5 },
-      { id: 5, book_id: 3, tag_id: 4 },
+      { id: 5, book_id: 2, tag_id: 5 },
+      { id: 6, book_id: 3, tag_id: 4 },
     ]);
+
+    // And if we then remove all of those rows
+    b2.tags.remove(t4);
+    t5.books.remove(b3);
+    b2.tags.remove(t5);
+    t4.books.remove(b3);
+    await em.flush();
+
+    // Then there are none left
+    rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    expect(rows).toMatchObject([]);
   });
 
   it("can add a new book to a tag", async () => {

@@ -246,7 +246,7 @@ export class PostgresDriver implements Driver {
           VALUES ${zeroTo(newRows.length)
             .map(() => "(?, ?) ")
             .join(", ")}
-          ON CONFLICT (${m2m.columnName}, ${m2m.otherColumnName}) DO NOTHING
+          ON CONFLICT (${m2m.columnName}, ${m2m.otherColumnName}) DO UPDATE SET id = ${joinTableName}.id
           RETURNING id;
         `);
         const meta1 = getMetadata(m2m.entity);
@@ -259,7 +259,7 @@ export class PostgresDriver implements Driver {
         });
         const { rows } = await knex.raw(sql, bindings);
         for (let i = 0; i < rows.length; i++) {
-          newRows[i].id = rows[i][0];
+          newRows[i].id = rows[i].id;
         }
       }
       if (deletedRows.length > 0) {

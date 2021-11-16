@@ -100,6 +100,8 @@ export interface PublisherOrder {
   type?: OrderBy;
 }
 
+export const publisherDefaultValues = { type: PublisherType.Small };
+
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
@@ -128,7 +130,7 @@ export abstract class PublisherCodegen extends BaseEntity {
   readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    super(em, publisherMeta, {}, opts);
+    super(em, publisherMeta, publisherDefaultValues, opts);
     setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
   }
 

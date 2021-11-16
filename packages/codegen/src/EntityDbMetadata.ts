@@ -67,6 +67,7 @@ export type PrimitiveField = Field & {
 
 export type EnumField = Field & {
   columnName: string;
+  columnDefault: number | boolean | string | null;
   enumName: string;
   enumType: Import;
   enumDetailType: Import;
@@ -271,6 +272,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   return {
     fieldName,
     columnName,
+    columnDefault: column.default,
     enumName,
     enumType,
     enumDetailType,
@@ -296,6 +298,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   return {
     fieldName,
     columnName,
+    columnDefault: column.default,
     enumName,
     enumType,
     enumDetailType,

@@ -18,6 +18,7 @@ import {
   maybeResolveReferenceToId,
   OneToManyCollection,
   OneToOneReference,
+  tagIds,
 } from "../index";
 import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -227,7 +228,11 @@ export class PostgresDriver implements Driver {
           await batchInsert(knex, meta, todo.inserts);
         }
         if (todo.updates.length > 0) {
-          todo.updates.forEach((e) => (e.__orm.data["updatedAt"] = updatedAt));
+          todo.updates.forEach((e) => {
+            // Should we just go through a setter?
+            e.__orm.originalData["updatedAt"] = e.__orm.data["updatedAt"];
+            e.__orm.data["updatedAt"] = updatedAt;
+          });
           await batchUpdate(knex, meta, todo.updates);
         }
         if (todo.deletes.length > 0) {
@@ -363,7 +368,10 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   if (columns.some((c) => c.serde instanceof EnumArrayFieldSerde)) {
     // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
     // and bindings is each individual value.
-    bindings = entities.flatMap((entity) => columns.map((c) => c.serde.getFromEntity(entity.__orm.data) ?? null));
+    bindings = entities.flatMap((entity) => [
+      ...columns.map((c) => c.serde.getFromEntity(entity.__orm.data) ?? null),
+      entity.__orm.originalData.updatedAt,
+    ]);
     sql = `
       UPDATE ${meta.tableName}
       SET ${columns
@@ -379,19 +387,26 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
                   const maybeArray = c.serde instanceof EnumArrayFieldSerde ? "[]" : "";
                   return `?::${c.dbType}${maybeArray}`;
                 })
-                .join(",")})`,
+                .join(", ")}, ?::timestamp)`,
           )
           .join(",")}
-      ) AS data(${columns.map((c) => c.columnName).join(",")})
-      WHERE ${meta.tableName}.id = data.id
+      ) AS data(${columns.map((c) => c.columnName).join(",")},original_updated_at)
+      WHERE
+        ${meta.tableName}.id = data.id
+        AND date_trunc('milliseconds', ${meta.tableName}.updated_at) = data.original_updated_at
+      RETURNING ${meta.tableName}.id
    `;
   } else {
     // Issue 1 UPDATE statement with bindings having an array for each column's new values
     bindings = columns.map(() => []);
+    // Add 1 more column for original_updated_at
+    const originalUpdatedAt: Date[] = [];
+    bindings.push(originalUpdatedAt);
     for (const entity of entities) {
       columns.forEach((c, i) => {
         bindings[i].push(c.serde.getFromEntity(entity.__orm.data) ?? null);
       });
+      originalUpdatedAt.push(entity.__orm.originalData.updatedAt);
     }
     sql = `
       UPDATE ${meta.tableName}
@@ -399,11 +414,23 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
         .filter((c) => c.columnName !== "id")
         .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
-      FROM (select ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")}) as data
-      WHERE ${meta.tableName}.id = data.id
+      FROM (
+        SELECT
+          ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")},
+          unnest(?::timestamp[]) as original_updated_at
+      ) as data
+      WHERE
+        ${meta.tableName}.id = data.id
+        AND date_trunc('milliseconds', ${meta.tableName}.updated_at) = data.original_updated_at
+      RETURNING ${meta.tableName}.id
      `;
   }
-  await knex.raw(cleanSql(sql), bindings);
+  const result = await knex.raw(cleanSql(sql), bindings);
+  if (result.rows.length !== entities.length) {
+    const updated = new Set(result.rows.map((r: any) => r.id));
+    const missing = entities.map((e) => e.idOrFail).filter((id) => !updated.has(id));
+    throw new Error(`Oplock failure for ${tagIds(meta, missing).join(", ")}`);
+  }
 }
 
 async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {

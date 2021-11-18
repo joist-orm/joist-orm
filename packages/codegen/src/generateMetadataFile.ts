@@ -166,7 +166,11 @@ function generateFields(
   });
 
   const m2oFields = dbMetadata.manyToOnes.map((m2o) => {
-    const { fieldName, notNull, otherEntity, otherFieldName } = m2o;
+    const { fieldName, notNull, otherEntity, otherFieldName, aggregateRootTo, aggregateRootFrom } = m2o;
+    const maybeRootTo =
+      aggregateRootTo.length > 0 ? code`aggregateRootTo: ${JSON.stringify(aggregateRootTo || [])},` : "";
+    const maybeRootFrom =
+      aggregateRootFrom.length > 0 ? code`aggregateRootFrom: ${JSON.stringify(aggregateRootFrom || [])},` : "";
     return code`
       {
         kind: "m2o",
@@ -175,6 +179,8 @@ function generateFields(
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
+        ${maybeRootTo}
+        ${maybeRootFrom}
       },
     `;
   });

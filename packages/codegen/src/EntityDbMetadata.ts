@@ -83,6 +83,10 @@ export type ManyToOneField = Field & {
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
+  aggregateRoot: boolean;
+  aggregateRootFrom: string[]; // Filled in later
+  aggregateRootTo: string[]; // Filled in later
+  aggregateRootDerivable: boolean;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -136,6 +140,11 @@ export class EntityDbMetadata {
   polymorphics: PolymorphicField[];
   tableName: string;
 
+  /** A list of aggregate roots that we're part of. */
+  aggregateRoots = new Set<string>();
+  /** A list of aggregate children that are part of us. */
+  aggregateChildren = new Set<string>();
+
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
     this.primitives = table.columns
@@ -188,6 +197,10 @@ export class EntityDbMetadata {
     );
 
     this.tableName = table.name;
+  }
+
+  get isAggregateRoot(): boolean {
+    return this.aggregateChildren.size > 0;
   }
 
   get name(): string {
@@ -321,7 +334,24 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
-  return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore };
+  const pointsToRoot =
+    config.entities[entity.name]?.fields?.[fieldName]?.aggregateRoot ?? columnName.startsWith("root_");
+  return {
+    fieldName,
+    columnName,
+    otherEntity,
+    otherFieldName,
+    notNull,
+    ignore,
+    // Note that we may later set `aggregateRoot: true` if we find out this
+    // is a required FK pointing at an aggregate root, i.e. `books.author_id`, which
+    // is effectively an aggregate root m2o, but doesn't follow the `root_author_id`
+    // convention because it is a 1st-level child.
+    aggregateRoot: pointsToRoot,
+    aggregateRootFrom: [],
+    aggregateRootTo: [],
+    aggregateRootDerivable: false,
+  };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

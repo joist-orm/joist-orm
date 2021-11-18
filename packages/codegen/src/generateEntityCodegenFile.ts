@@ -425,9 +425,11 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
       return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
     }
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
-  });
+  const m2o = meta.manyToOnes
+    .filter((m2o) => !m2o.aggregateRootDerivable)
+    .map(({ fieldName, otherEntity, notNull }) => {
+      return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
+    });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type} | null;`;
   });
@@ -447,9 +449,11 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 // This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
 // in the partial type and of course the caller will only be setting one.
 function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
-  });
+  const m2o = meta.manyToOnes
+    .filter((m2o) => !m2o.aggregateRootDerivable)
+    .map(({ fieldName, otherEntity }) => {
+      return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
+    });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
   });

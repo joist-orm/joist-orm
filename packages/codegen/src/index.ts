@@ -1,4 +1,5 @@
 import { pascalCase } from "change-case";
+import { configureAggregateRoots } from "configureAggregateRoots";
 import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { dirname } from "path";
@@ -198,8 +199,10 @@ if (require.main === module) {
 
     const entityTables = db.tables.filter(isEntityTable).sortBy("name");
     const entities = entityTables.map((table) => new EntityDbMetadata(config, table, enums));
+
     const dbMetadata: DbMetadata = { entityTables, entities, enums };
 
+    configureAggregateRoots(entities);
     assignTags(config, dbMetadata);
     await writeConfig(config);
 

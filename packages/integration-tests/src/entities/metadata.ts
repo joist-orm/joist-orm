@@ -308,6 +308,15 @@ export const authorMeta: EntityMetadata<Author> = {
     },
 
     {
+      kind: "o2m",
+      fieldName: "bookReviews",
+      fieldIdName: "bookReviewIds",
+      required: false,
+      otherMetadata: () => bookReviewMeta,
+      otherFieldName: "rootAuthor",
+    },
+
+    {
       kind: "o2o",
       fieldName: "image",
       fieldIdName: "imageId",
@@ -597,6 +606,13 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     },
 
     {
+      fieldName: "rootAuthor",
+      columnName: "root_author_id",
+      dbType: "int",
+      serde: new ForeignKeySerde("rootAuthor", "root_author_id", () => authorMeta),
+    },
+
+    {
       fieldName: "book",
       columnName: "book_id",
       dbType: "int",
@@ -644,11 +660,23 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     },
     {
       kind: "m2o",
+      fieldName: "rootAuthor",
+      fieldIdName: "rootAuthorId",
+      required: true,
+      otherMetadata: () => authorMeta,
+      otherFieldName: "bookReviews",
+
+      aggregateRootFrom: ["book"],
+    },
+
+    {
+      kind: "m2o",
       fieldName: "book",
       fieldIdName: "bookId",
       required: true,
       otherMetadata: () => bookMeta,
       otherFieldName: "reviews",
+      aggregateRootTo: ["rootAuthor"],
     },
 
     {

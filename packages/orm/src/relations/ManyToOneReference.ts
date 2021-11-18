@@ -1,9 +1,11 @@
-import { Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
+import { Entity, EntityMetadata, getMetadata, IdOf, isEntity, ManyToOneField } from "../EntityManager";
 import {
   deTagIds,
   ensureNotDeleted,
   fail,
   getEm,
+  isLoadedReference,
+  isManyToOneField,
   maybeResolveReferenceToId,
   OneToOneReference,
   Reference,
@@ -180,6 +182,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
       return;
     }
+
     ensureNotDeleted(this.entity, { ignore: "pending" });
     const previous = this.maybeFindEntity();
 
@@ -190,6 +193,33 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     this._isLoaded = true;
     this.maybeRemove(previous);
     this.maybeAdd(other);
+
+    // Is our entity in an aggregate root? If so, is our current field
+    const meta = getMetadata(this.entity);
+    const field = meta.fields.find((f) => f.fieldName === this.fieldName)! as ManyToOneField;
+    // If this is BookReview.book.set, try and set BookReview.rootAuthor.set(book.author.get)
+    // 1. Find the `BookReview.author` m2o
+    if (field.aggregateRootTo) {
+      for (const to of field.aggregateRootTo) {
+        // I.e. for `BookReview.book`, `toField` will be `BookReview.rootAuthor`
+        const toField = meta.fields.find((f) => f.fieldName === to)! as ManyToOneField;
+        // Find the root (i.e. author) from the currently-being-set value (i.e. book)
+        const root = this.otherMeta.fields
+          .filter(isManyToOneField)
+          // Find the book's `author` field(s)
+          .filter((m2o) => m2o.otherMetadata() === toField.otherMetadata())
+          .map((m2o) => (other as any)[m2o.fieldName])
+          .map((ref) => (isLoadedReference(ref) ? ref.get : ref.id))
+          .filter((v) => v !== undefined)[0];
+        if (root) {
+          if (typeof root === "string") {
+            (this.entity as any)[to].id = root;
+          } else {
+            (this.entity as any)[to].set(root);
+          }
+        }
+      }
+    }
   }
 
   maybeRemove(other: U | undefined) {

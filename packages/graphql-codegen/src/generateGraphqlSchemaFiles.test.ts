@@ -365,6 +365,9 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
     oneToOnes: [],
     polymorphics: [],
     tableName: snakeCase(plural(name)),
+    aggregateRoots: new Set(),
+    aggregateChildren: new Set(),
+    isAggregateRoot: false,
     ...opts,
   };
 }

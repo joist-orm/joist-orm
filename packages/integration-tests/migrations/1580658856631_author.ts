@@ -101,6 +101,7 @@ export function up(b: MigrationBuilder): void {
     rating: { type: "integer", notNull: true },
     book_id: foreignKey("books", { notNull: true }),
     is_public: { type: "boolean", notNull: true },
+    root_author_id: foreignKey("authors", { notNull: true }),
   });
 
   createEntityTable(b, "tags", {

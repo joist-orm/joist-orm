@@ -8,6 +8,7 @@ export interface FieldConfig {
   protected?: boolean;
   ignore?: true;
   superstruct?: string;
+  aggregateRoot?: boolean;
 }
 
 export interface RelationConfig {

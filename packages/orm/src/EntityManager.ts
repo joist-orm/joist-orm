@@ -1125,54 +1125,53 @@ async function validate(todos: Record<string, Todo>): Promise<void> {
   }
 }
 
-export async function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
-  await Promise.all(em["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
+export function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
+  return Promise.all(em["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
 }
 
-export async function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<void> {
-  await Promise.all(em["hooks"].afterTransaction.map((fn) => fn(em, knex)));
+export function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
+  return Promise.all(em["hooks"].afterTransaction.map((fn) => fn(em, knex)));
 }
 
-async function runHook(
+function runHook(
   ctx: unknown,
   hook: EntityHook,
   todos: Record<string, Todo>,
   keys: ("inserts" | "deletes" | "updates" | "validates")[],
-): Promise<void> {
+): Promise<unknown> {
   const p = Object.values(todos).flatMap((todo) => {
     const hookFns = todo.metadata.config.__data.hooks[hook];
-
     return keys
       .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
       .flatMap((entity) => {
-        return hookFns.map(async (fn) => fn(entity, ctx as any));
+        return hookFns.map((fn) => fn(entity, ctx as any));
       });
   });
-  await Promise.all(p);
+  return Promise.all(p);
 }
 
-async function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
-  await runHook(ctx, "beforeDelete", todos, ["deletes"]);
+function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "beforeDelete", todos, ["deletes"]);
 }
 
-async function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
-  await runHook(ctx, "beforeFlush", todos, ["inserts", "updates"]);
+function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "beforeFlush", todos, ["inserts", "updates"]);
 }
 
-async function beforeCreate(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
-  await runHook(ctx, "beforeCreate", todos, ["inserts"]);
+function beforeCreate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "beforeCreate", todos, ["inserts"]);
 }
 
-async function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
-  await runHook(ctx, "beforeUpdate", todos, ["updates"]);
+function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "beforeUpdate", todos, ["updates"]);
 }
 
-async function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
-  await runHook(ctx, "afterValidation", todos, ["inserts", "updates"]);
+function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "afterValidation", todos, ["inserts", "updates"]);
 }
 
-async function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<void> {
-  await runHook(ctx, "afterCommit", todos, ["inserts", "updates"]);
+function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "afterCommit", todos, ["inserts", "updates"]);
 }
 
 function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {

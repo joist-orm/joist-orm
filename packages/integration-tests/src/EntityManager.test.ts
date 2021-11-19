@@ -1263,6 +1263,19 @@ describe("EntityManager", () => {
       }).rejects.toThrow("At path: street -- Expected a string, but received: undefined");
     });
   });
+
+  it("fails on optimistic lock collisions", async () => {
+    // Given an existing author
+    await insertAuthor({ first_name: "f" });
+    // And we start to update it
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    a1.firstName = "g";
+    // And before we flush, another write changes the entity
+    await knex("authors").update({ updated_at: "2050-01-01" });
+    // When we try to save our changes
+    await expect(em.flush()).rejects.toThrow("Oplock failure for a:1");
+  });
 });
 
 function delay(ms: number): Promise<void> {

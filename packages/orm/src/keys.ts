@@ -61,6 +61,11 @@ export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly st
   return keys.map((k) => deTagId(meta, k));
 }
 
+/** Adds the tag prefixes. */
+export function tagIds(meta: HasTagName, keys: readonly (string | number)[]): readonly string[] {
+  return keys.map((k) => tagIfNeeded(meta, String(k)));
+}
+
 export function deTagId(meta: HasTagName, id: string | number): string;
 export function deTagId(entity: Entity): string;
 export function deTagId(entityOrMeta: Entity | HasTagName, id?: string | number): string {

@@ -1,4 +1,3 @@
-
 # Getting Started
 
 This page covers setting up Joist for your project.
@@ -17,7 +16,7 @@ Define your local postgres creds in a `DATABASE_CONNECTION_INFO` environment var
 
 ```dotenv
 DATABASE_CONNECTION_INFO=postgres://joist:local@localhost:5435/joist
-// the AWS RDS/SecretsManager JSON format is also supported natively 
+// the AWS RDS/SecretsManager JSON format is also supported natively
 DATABASE_CONNECTION_INFO={"host":"localhost","port":5435,"username":"joist","password":"local","dbname":"joist"}
 ```
 
@@ -35,7 +34,7 @@ If you do use `node-pg-migrate`, the `joist-migration-utils` package has some he
 ./run.sh joist-migration-utils
 ```
 
-This will apply any `node-pg-migrate` migrations located in your `./migrations/` directory, and then, if `ADD_FLUSH_DATABASE` is set, add the `flush_database()` function for your tests to use. 
+This will apply any `node-pg-migrate` migrations located in your `./migrations/` directory, and then, if `ADD_FLUSH_DATABASE` is set, add the `flush_database()` function for your tests to use.
 
 Note that usually `joist-migration-utils` / your migration library of choice is run first, i.e. a flow would be:
 
@@ -52,7 +51,3 @@ docker-compose exec db ./reset.sh
 ./run.sh joist-migration-utils
 ./run.sh joist-codegen
 ```
-
-
-
-

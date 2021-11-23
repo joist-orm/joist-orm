@@ -4,6 +4,7 @@
     "build": "tsc --build"
   },
   "workspaces": [
+    "docs",
     "packages/codegen",
     "packages/graphql-codegen",
     "packages/integration-tests",

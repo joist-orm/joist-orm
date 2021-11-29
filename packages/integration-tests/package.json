@@ -8,7 +8,7 @@
     "directory": "packages/integration-tests"
   },
   "scripts": {
-    "migrate": "./run.sh ../../node_modules/joist-migration-utils",
+    "migrate": "./run.sh ../migration-utils",
     "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "./run.sh ../codegen"

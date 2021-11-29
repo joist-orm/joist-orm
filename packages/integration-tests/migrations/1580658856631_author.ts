@@ -3,7 +3,6 @@ import {
   createEntityTable,
   createEnumTable,
   createManyToManyTable,
-  createUnnest2dFunction,
   createUpdatedAtFunction,
   enumArrayColumn,
   foreignKey,
@@ -13,7 +12,6 @@ import { MigrationBuilder } from "node-pg-migrate";
 export function up(b: MigrationBuilder): void {
   createUpdatedAtFunction(b);
   createCreatedAtFunction(b);
-  createUnnest2dFunction(b);
 
   createEnumTable(b, "publisher_size", [
     ["SMALL", "Small"],

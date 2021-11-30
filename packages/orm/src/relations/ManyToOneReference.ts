@@ -100,11 +100,17 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   set id(id: IdOf<U> | N) {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    this.maybeRemove();
-    setField(this.entity, this.fieldName, id);
+
+    const previous = this.maybeFindEntity();
+    const changed = setField(this.entity, this.fieldName, id);
+    if (!changed) {
+      return;
+    }
+
     this.loaded = id ? getEm(this.entity)["findExistingInstance"](id) : undefined;
     this._isLoaded = !!this.loaded;
-    this.maybeAdd();
+    this.maybeRemove(previous);
+    this.maybeAdd(this.maybeFindEntity());
   }
 
   get idOrFail(): IdOf<U> {
@@ -175,16 +181,21 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       return;
     }
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    this.maybeRemove();
+    const previous = this.maybeFindEntity();
+
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName, other?.id ?? other);
+    const changed = setField(this.entity, this.fieldName, other?.id ?? other);
+    if (!changed) {
+      return;
+    }
+
     this.loaded = other;
     this._isLoaded = true;
-    this.maybeAdd();
+    this.maybeRemove(previous);
+    this.maybeAdd(other);
   }
 
-  maybeRemove() {
-    const other = this.maybeFindEntity();
+  maybeRemove(other: U | undefined) {
     if (other) {
       const prevRelation = this.getOtherRelation(other);
       if (prevRelation instanceof OneToManyCollection) {
@@ -195,8 +206,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     }
   }
 
-  maybeAdd() {
-    const other = this.maybeFindEntity();
+  maybeAdd(other: U | undefined) {
     if (other) {
       const newRelation = this.getOtherRelation(other);
       if (newRelation instanceof OneToManyCollection) {

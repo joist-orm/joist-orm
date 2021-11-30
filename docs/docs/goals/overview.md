@@ -1,6 +1,6 @@
 ---
-title: Goals
-slug: /
+title: Goals Overview
+slug: /goals
 sidebar_label: Overview
 sidebar_position: 1
 ---

@@ -74,7 +74,6 @@ In general priority/itch order:
   - I.e. `joist-config.json` entry to mark (say) `publisher.authors` as "too big to never read at once" and use a different/restricted API, i.e. forced paging
 - JSON support, i.e. `toJSON`
 - First-class support for soft deletion?
-- Op locks/`version` column?
 - An in-memory backend
 - `hasOneThrough` that can be used as `find`/SQL filters
   - Need to declare in codegen to a) add to FilterType + b) verify once traverses relations

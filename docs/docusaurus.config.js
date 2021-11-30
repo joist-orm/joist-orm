@@ -49,6 +49,7 @@ const config = {
           {
             title: "Docs",
             items: [
+              { label: "Getting Started", to: "/docs/getting-started" },
               { label: "Goals", to: "/docs/goals" },
               { label: "Features", to: "/docs/features" },
             ],

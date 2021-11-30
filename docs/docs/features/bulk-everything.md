@@ -1,9 +1,9 @@
 ---
-title: Best-in-Class Performance
+title: Bulk Everything
 position: 4
 ---
 
-Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, `DELETE`, and even `SELECT` operations in bulk.
+Joist aims for best-in-class performance by performing all `INSERT`, `UPDATE`, `DELETE`, and even `SELECT` operations in bulk/batch.
 
 If you save 100 new authors, that is 1 SQL `INSERT` statement. If you update 500 books, that is 1 SQL `UPDATE` statement.
 

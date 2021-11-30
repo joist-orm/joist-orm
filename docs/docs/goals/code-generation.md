@@ -15,23 +15,19 @@ export class Author extends AuthorCodegen {}
 
 Similar to ActiveRecord, Joist automatically adds all the columns to the `Author` class for free, without you having to re-type them in your domain object.
 
-It does this for both:
+It does this for:
 
-- Primitive columns
+- Primitive columns, i.e. `first_name` can be set via `author.firstName = "bob"`
+- Foreign key columns, i.e. `book.author_id` can be set via `book.author.set(...)`, and
+- Foreign key collections, i.e. `Author.books` can be loaded via `await author.books.load()`.
 
-  I.e. `first_name` can be set via `author.firstName = "bob"`
+Joist does this via build-time code generation (i.e. by running a `npm run joist-codegen` command).
 
-- Foreign key columns
-
-  I.e. `book.author_id` can be set via `book.author.set(...)`
-
-Unlike ActiveRecord, which does this via metaprogramming at program initialization time, Joist does this via build-time code generation (i.e. by running a `npm run joist-codegen` command).
-
-This approach allows the generated types to be seen by the TypeScript compiler and IDEs, and so provide a type-safe view of your database.
+This approach allows the generated types to be seen by the TypeScript compiler and IDEs, and so provides a type-safe view of your database.
 
 ### Evergreen Code Generation
 
-Joist's code generation runs continually, after every migration/schema change, so your domain objects will always 1-to-1 match your schema, without having to worry about them mismatching or tediously keeping them in sync.
+Joist's code generation runs continually (although currently invoked by hand, i.e. individual `npm run joist-codegen` commands), after every migration/schema change, so your domain objects will always 1-to-1 match your schema, without having to worry about them mismatching or tediously keeping the two in sync.
 
 ### Custom Business Logic
 
@@ -59,6 +55,6 @@ If you do need to customize how a column is mapped, Joist _should_ (these are no
 
 ### Pros/Cons
 
-This approach (continual, verbatim mapping of the database schema to your object model) generally assumes you have a modern/pleasant schema to work with, i.e. you don't have to map esoteric 1980s-style database column names to modern getter/setters, and you don't need your object model to look dramatically different from your database tables.
+This approach (continual, verbatim mapping of the database schema to your object model) generally assumes you have a modern/pleasant schema to work with, and you don't need your object model to look dramatically different from your database tables.
 
-Which, in our opinion, is a simplification that largely helps avoid the [horror stories](https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/) of ORMs, where the ORM is asked to do non-trivial translation between a database schema and object model that are fundamentally at odds.
+And specifically that this 1-1 restriction is a feature, because it should largely help avoid the [horror stories of ORMs](https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/), where the ORM is asked to do non-trivial translation between a database schema and object model that are fundamentally at odds.

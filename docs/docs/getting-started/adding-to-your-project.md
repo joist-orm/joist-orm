@@ -1,12 +1,22 @@
-# Getting Started
+---
+title: Adding Joist to Your Project
+sidebar_label: Adding to Your Project
+sidebar_position: 2
+---
+
+(TODO: Rewrite/finish this.)
 
 This page covers setting up Joist for your project.
 
 It assumes that:
 
-1. You have a local postgres database, i.e. running in Docker or locally (see the [db.dockerfile](https://github.com/stephenh/joist-ts/blob/master/packages/integration-tests/db.dockerfile) that Joist uses for integration tests for an example).
+1. You have a local postgres database.
 
-2. You have a schema management/migration library in place, i.e. [node-pg-migrate](https://github.com/salsita/node-pg-migrate). Joist has several helper methods to use in `node-pg-migrate` migrations (`createEntityTable`, `createEnumTable`, etc.), but it's not required to use that specific library.
+   I.e. running locally in Docker or just on your machine (see the [db.dockerfile](https://github.com/stephenh/joist-ts/blob/master/packages/integration-tests/db.dockerfile) that Joist uses for code generation and integration tests).
+
+2. You have a schema management/migration library in place.
+
+   If you use [node-pg-migrate](https://github.com/salsita/node-pg-migrate), Joist has several helper methods (i.e. `createEntityTable`, `createEnumTable`, etc.), but it's not required to use that specific library.
 
 ## Setting up Codegen
 
@@ -14,9 +24,9 @@ Run `npm install --save-dev joist-codegen`.
 
 Define your local postgres creds in a `DATABASE_CONNECTION_INFO` environment variable, i.e. in an `local.env` file similar to:
 
-```dotenv
+```shell
 DATABASE_CONNECTION_INFO=postgres://joist:local@localhost:5435/joist
-// the AWS RDS/SecretsManager JSON format is also supported natively
+# the AWS RDS/SecretsManager JSON format is also supported natively
 DATABASE_CONNECTION_INFO={"host":"localhost","port":5435,"username":"joist","password":"local","dbname":"joist"}
 ```
 

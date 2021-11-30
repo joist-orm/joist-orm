@@ -1,4 +1,6 @@
-### Validation Rules
+---
+title: Validation Rules
+---
 
 Entities can have validation rules added that will be run during `EntityManager.flush()`:
 

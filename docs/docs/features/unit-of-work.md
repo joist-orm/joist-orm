@@ -1,5 +1,6 @@
-
-### Unit of Work-Level Query Cache
+---
+title: Unit of Work
+---
 
 If you issue the same `EntityManager.find(Entity, { ...where... })` call multiple times within a single unit of work, the database query will only be issued once, and then the cached value used for subsequent calls.
 

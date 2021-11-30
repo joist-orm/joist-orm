@@ -20,14 +20,15 @@ import { OneToManyCollection } from "./OneToManyCollection";
  * `Author` that the user has set.
  *
  * Note that if our `images.author_id` column is unique, this `ManyToOneReference` will essentially
- * be half of a one-to-one relationship, but we'll keep using this reference on the "owning"
- * side; the other side, i.e. `Author.image` will use a `OneToOneReference` to point back to us.
+ * be half of a one-to-one relationship, but we'll keep using this `ManyToOneReference` on the "many"
+ * side, and the other side, i.e. `Author.image` will use a `OneToOneReference` to point back to us.
  */
 export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
   implements Reference<T, U, N>
 {
-  private loaded!: U | N;
+  // Either the loaded entity, or N/undefined if we're allowed to be null
+  private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   private isCascadeDelete: boolean;
@@ -44,13 +45,16 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
+    if (this._isLoaded) {
+      return this.loaded!;
+    }
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
       this.loaded = (await getEm(this.entity).load(this.otherMeta.cstr, current)) as any as U;
     }
     this._isLoaded = true;
-    return this.filterDeleted(this.loaded, opts);
+    return this.filterDeleted(this.loaded!, opts);
   }
 
   set(other: U | N): void {
@@ -70,7 +74,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
     if (!this._isLoaded) {
-      const existing = this.maybeFindExisting();
+      const existing = this.maybeFindEntity();
       if (existing === undefined) {
         throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
       }
@@ -78,7 +82,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
       this._isLoaded = true;
     }
 
-    return this.filterDeleted(this.loaded, opts);
+    return this.filterDeleted(this.loaded!, opts);
   }
 
   get getWithDeleted(): U | N {
@@ -89,14 +93,23 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return this.doGet({ withDeleted: false });
   }
 
-  get id(): IdOf<U> | undefined {
+  get id(): IdOf<U> | N {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
+    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+  }
+
+  set id(id: IdOf<U> | N) {
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    this.maybeRemove();
+    setField(this.entity, this.fieldName, id);
+    this.loaded = id ? getEm(this.entity)["findExistingInstance"](id) : undefined;
+    this._isLoaded = !!this.loaded;
+    this.maybeAdd();
   }
 
   get idOrFail(): IdOf<U> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    return this.id || fail("Reference is unset or assigned to a new entity");
+    return (this.id as IdOf<U> | undefined) || fail("Reference is unset or assigned to a new entity");
   }
 
   get idUntagged(): string | undefined {
@@ -149,40 +162,42 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
         o2m.set(undefined as any);
       }
     }
-    setField(this.entity, this.fieldName as string, undefined);
+    setField(this.entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = true;
   }
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N): void {
+    // If other is new (i.e. has no id), we only noop/early exit if it matches our loaded reference.
+    // Otherwise, noop/early exit based on id comparison (b/c we may not be loaded yet).
     if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
       return;
     }
-
-    // we may not be loaded yet, but our previous entity might already be in the UoW
-    const previousLoaded = this.loaded ?? this.maybeFindExisting();
-
     ensureNotDeleted(this.entity, { ignore: "pending" });
-
+    this.maybeRemove();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName as string, other?.id ?? other);
-    if (!changed) {
-      return;
-    }
+    setField(this.entity, this.fieldName, other?.id ?? other);
     this.loaded = other;
     this._isLoaded = true;
+    this.maybeAdd();
+  }
 
-    // If had an existing value, remove us from its collection
-    if (previousLoaded) {
-      const prevRelation = this.getOtherRelation(previousLoaded);
+  maybeRemove() {
+    const other = this.maybeFindEntity();
+    if (other) {
+      const prevRelation = this.getOtherRelation(other);
       if (prevRelation instanceof OneToManyCollection) {
         prevRelation.removeIfLoaded(this.entity);
       } else {
         prevRelation.set(undefined as any);
       }
     }
-    if (other !== undefined) {
+  }
+
+  maybeAdd() {
+    const other = this.maybeFindEntity();
+    if (other) {
       const newRelation = this.getOtherRelation(other);
       if (newRelation instanceof OneToManyCollection) {
         newRelation.add(this.entity);
@@ -214,7 +229,12 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     return (other as U)[this.otherFieldName] as any;
   }
 
-  private maybeFindExisting(): U | undefined {
-    return this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined;
+  /**
+   * Looks for an entity in `EntityManager`, b/c we may have it in memory even if
+   * our reference is not specifically loaded.
+   */
+  maybeFindEntity(): U | undefined {
+    // Check this.loaded first b/c a new entity won't have an id yet
+    return this.loaded ?? (this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined);
   }
 }

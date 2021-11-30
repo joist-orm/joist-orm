@@ -141,17 +141,15 @@ interface Flavoring<FlavorT> {
 }
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
-export function setField(entity: Entity, fieldName: string, newValue: any): boolean {
+export function setField<T extends Entity>(entity: T, fieldName: keyof T, newValue: any): boolean {
   ensureNotDeleted(entity, { ignore: "pending" });
   const em = getEm(entity);
 
   if (em.isFlushing) {
     const { flushSecret } = currentFlushSecret.getStore() || {};
-
     if (flushSecret === undefined) {
       throw new Error(`Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook`);
     }
-
     if (flushSecret !== em["flushSecret"]) {
       throw new Error(`Attempting to reuse a hook context outside its flush loop`);
     }

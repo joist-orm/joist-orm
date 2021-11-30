@@ -145,7 +145,7 @@ export class OneToOneReference<T extends Entity, U extends Entity>
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
       this.getOtherRelation(current).set(undefined as any);
-      setField(current, this.otherFieldName as string, undefined);
+      setField(current, this.otherFieldName, undefined);
     }
     this.loaded = undefined as any;
     this._isLoaded = true;

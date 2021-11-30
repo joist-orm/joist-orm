@@ -158,7 +158,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
         o2m.set(undefined as any);
       }
     }
-    setField(this.entity, this.fieldName as string, undefined);
+    setField(this.entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = true;
   }
@@ -179,7 +179,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     ensureNotDeleted(this.entity, { ignore: "pending" });
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName as string, other?.id ?? other);
+    const changed = setField(this.entity, this.fieldName, other?.id ?? other);
     if (!changed) {
       return;
     }

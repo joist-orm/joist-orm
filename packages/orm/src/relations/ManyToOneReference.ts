@@ -184,10 +184,7 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     const previous = this.maybeFindEntity();
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName, other?.id ?? other);
-    if (!changed) {
-      return;
-    }
+    setField(this.entity, this.fieldName, other?.id ?? other);
 
     this.loaded = other;
     this._isLoaded = true;

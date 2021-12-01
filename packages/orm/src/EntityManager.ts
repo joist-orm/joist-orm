@@ -1215,7 +1215,7 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
     const derivedFields = derivedFieldsByMeta.get(entity.__orm.metadata);
     derivedFields?.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.
-      setField(entity, fieldName, (entity as any)[fieldName]);
+      setField(entity, fieldName as any, (entity as any)[fieldName]);
     });
   }
 }
@@ -1234,7 +1234,7 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
       if (entry) {
         const [hint, fn] = entry;
         await em.populate(changed, hint);
-        await Promise.all(changed.map((entity) => setField(entity, key, fn(entity))));
+        await Promise.all(changed.map((entity) => setField(entity, key as any, fn(entity))));
       }
     });
     await Promise.all(p);

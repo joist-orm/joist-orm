@@ -153,7 +153,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 }
 
 export async function loadEnumMetadata(db: Db, client: Client, config: Config): Promise<EnumMetadata> {
-  const promises = db.tables.filter(isEnumTable).map(async (table) => {
+  const promises = db.tables.filter(isEnumTable).mapToArray(async (table) => {
     const result = await client.query(`SELECT * FROM ${table.name} ORDER BY id`);
     const rows = result.rows.map((row) => row as EnumRow);
     // We're not really an entity, but appropriate EntityDbMetadata's `primitives` filtering

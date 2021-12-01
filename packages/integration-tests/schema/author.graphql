@@ -16,6 +16,7 @@ type Author {
   image: Image
   graduated: Date
   favoriteColors: [Color!]!
+  bookReviews: [BookReview!]!
 }
 
 input SaveAuthorInput {

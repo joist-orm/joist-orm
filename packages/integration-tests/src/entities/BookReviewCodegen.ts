@@ -30,6 +30,10 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import {
+  Author,
+  AuthorId,
+  authorMeta,
+  AuthorOrder,
   Book,
   BookId,
   bookMeta,
@@ -61,6 +65,7 @@ export interface BookReviewFilter {
   isPublic?: BooleanFilter<never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  rootAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
   comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
@@ -71,6 +76,7 @@ export interface BookReviewGraphQLFilter {
   isPublic?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  rootAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>>;
 }
@@ -81,6 +87,7 @@ export interface BookReviewOrder {
   isPublic?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  rootAuthor?: AuthorOrder;
   book?: BookOrder;
 }
 
@@ -90,6 +97,7 @@ bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("isPublic"));
 bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
+bookReviewConfig.addRule(newRequiredRule("rootAuthor"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity {
@@ -101,6 +109,8 @@ export abstract class BookReviewCodegen extends BaseEntity {
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   } = null!;
+
+  readonly rootAuthor: Reference<BookReview, Author, never> = hasOne(authorMeta, "rootAuthor", "bookReviews");
 
   readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 

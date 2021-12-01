@@ -40,6 +40,9 @@ import {
   Book,
   BookId,
   bookMeta,
+  BookReview,
+  BookReviewId,
+  bookReviewMeta,
   Color,
   ColorDetails,
   Colors,
@@ -69,6 +72,7 @@ export interface AuthorOpts {
   image?: Image | null;
   authors?: Author[];
   books?: Book[];
+  bookReviews?: BookReview[];
 }
 
 export interface AuthorIdsOpts {
@@ -77,6 +81,7 @@ export interface AuthorIdsOpts {
   imageId?: ImageId | null;
   authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
+  bookReviewIds?: BookReviewId[] | null;
 }
 
 export interface AuthorFilter {
@@ -156,6 +161,13 @@ export abstract class AuthorCodegen extends BaseEntity {
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
+
+  readonly bookReviews: Collection<Author, BookReview> = hasMany(
+    bookReviewMeta,
+    "bookReviews",
+    "rootAuthor",
+    "root_author_id",
+  );
 
   readonly mentor: Reference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 

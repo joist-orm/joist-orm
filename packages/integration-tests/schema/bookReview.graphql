@@ -6,6 +6,7 @@ type BookReview {
   updatedAt: Date!
   book: Book!
   comment: Comment
+  rootAuthor: Author!
 }
 
 input SaveBookReviewInput {
@@ -15,6 +16,7 @@ input SaveBookReviewInput {
   createdAt: Date
   updatedAt: Date
   bookId: ID
+  rootAuthorId: ID
 }
 
 type SaveBookReviewResult {

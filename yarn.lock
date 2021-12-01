@@ -9031,7 +9031,7 @@ __metadata:
     ts-node-dev: ^1.1.8
     ts-poet: ^4.5.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -9053,7 +9053,7 @@ __metadata:
     ts-jest: ^27.0.4
     ts-poet: ^4.5.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -9077,7 +9077,7 @@ __metadata:
     ts-jest: ^27.0.4
     ts-node: ^10.1.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -9099,7 +9099,7 @@ __metadata:
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -9122,7 +9122,7 @@ __metadata:
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -9137,7 +9137,7 @@ __metadata:
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -9155,7 +9155,7 @@ __metadata:
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -12561,7 +12561,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "root-workspace-0b6124@workspace:."
   dependencies:
-    typescript: ^4.4.2
+    typescript: ^4.5.2
   languageName: unknown
   linkType: soft
 
@@ -14053,17 +14053,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-typescript@^4.4.2:
-  version: 4.4.2
-  resolution: "typescript@npm:4.4.2"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 194e08e9d1971d667d6fd1a0554616b7022312a2319d70e81a64e502a265992061ee7817ed9a69b52bbabe7a9b85e7938cb8c11c433e40a516b277f8c4dacd51
-  languageName: node
-  linkType: hard
-
-"typescript@npm:^4.3.5":
+"typescript@npm:^4.3.5, typescript@npm:^4.5.2":
   version: 4.5.2
   resolution: "typescript@npm:4.5.2"
   bin:
@@ -14073,23 +14063,13 @@ typescript@^4.4.2:
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@^4.3.5#~builtin<compat/typescript>":
+"typescript@patch:typescript@^4.3.5#~builtin<compat/typescript>, typescript@patch:typescript@^4.5.2#~builtin<compat/typescript>":
   version: 4.5.2
   resolution: "typescript@patch:typescript@npm%3A4.5.2#~builtin<compat/typescript>::version=4.5.2&hash=ddd1e8"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 24a439e062a05e3285a4f0e8a40644116ecdca89f3e908bed01e5a01b9aee747e3bcf0e85fe9e017e5ebf0c0863437c39479f2616f55a244c2d82d37022cdc4f
-  languageName: node
-  linkType: hard
-
-"typescript@patch:typescript@^4.4.2#~builtin<compat/typescript>":
-  version: 4.4.2
-  resolution: "typescript@patch:typescript@npm%3A4.4.2#~builtin<compat/typescript>::version=4.4.2&hash=ddd1e8"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 1f30617046271a94d6821fe9da9c4705111e0a2f5479269c82f65aa76b2421ff90def8838dd35b1aa464d015248b06c89ff867bd282f4822b5ee18b7f92f95ee
   languageName: node
   linkType: hard
 

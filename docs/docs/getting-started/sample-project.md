@@ -7,7 +7,9 @@ The [Joist Sample App](https://github.com/stephenh/joist-ts-sample) is a minimal
 
 It does not include exposing the domain objects via a REST/GraphQL/etc. API, but just shows a minimal setup for working solely with the domain objects.
 
-## Setup
+## Running Locally
+
+To run the sample project locally, run these commands:
 
 - `git clone git@github.com:stephenh/joist-ts-sample.git`
 - `cd joist-ts-sample`

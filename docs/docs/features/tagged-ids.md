@@ -2,38 +2,97 @@
 title: Tagged Ids
 ---
 
-Joist automagically "tags" entity ids, which means prefixing them with a per-entity identifier.
+Joist automatically "tags" entity ids, which means prefixing them with a per-entity identifier.
 
-For example, the value of `author1.id` is `"a:1"` instead of the number `1`.
+For example, this code prints `"a:1"` instead of `1`:
 
-There are a few reasons for this:
+```typescript
+const a = await em.findOneOrFail(Author, { firstName: "first" });
+// Outputs `a:1`
+console.log(a.id);
+```
 
-- It eliminates a class of bugs where ids are passed incorrectly across entity types.
+Even though in the database the `authors.id` column is still an auto-increment integer and, for this Author, the database value really is `1`.
 
-  For example, a bug like:
+There are a few reasons for this feature:
 
-  ```typescript
-  const authorId = someAuthor.id;
-  // Ops this is the wrong id
-  const book = em.load(Book, authorId);
-  ```
+- Bug elimination
+- Easier debugging
+- Convenient for GraphQL integration
 
-  Often these "wrong id" bugs will work during local unit tests because every table only has a few rows of `id 1`, `id 2`, so it's easy to have `id 1` taken from the `authors` table and accidentally work when looking it up in the `books` table.
+### Bug Elimination
 
-  Note that Joist also has strongly-typed ids (i.e. `AuthorId`) to help prevent this, but those can only fix "wrong id" bugs that are internal to the application layer's codebase, i.e. the above example of reading an id from an entity and then immediately using it to look up the "wrong" entity (specifically the above code, even without tagged ids, is a compile error in Joist).
+Knowing the entity type for each id eliminates a class of bugs where ids are passed incorrectly across entity types.
 
-  However, tagged ids extends this same "strongly-typed ids" protection to API calls, i.e. if a client calls the API and gets back "author id 1" and then makes a follow up API call but accidentally uses that author id as a book id. Because we've crossed an API boundary (which generally have more generic id types, i.e. GraphQL's `ID` type is used for all objects), we need to use a runtime value to catch that "this id is not for the right entity".
+For example, a bug like:
 
-  Granted, this will be a runtime error, but it will be a runtime error everytime time (i.e. even in local development when the "wrong id" often works by accident) instead of only showing up in production.
+```typescript
+const id = someAuthor.id;
+// ...lots of lines of code go by...
+// Oops, I used an "author id" to find a book...
+const book = em.load(Book, id);
+```
 
-- It makes debugging easier because seeing ids like `a:1` in the logs, you immediately know which entity that is for, without having to also prefix your logging statements with `authorId=${...}`.
+Frustratingly, often these "wrong id" bugs will actually work during local testing, because every table only has a few rows of `id 1`, `id 2`, so it's easy to have `id 1` taken from the `authors` table and accidentally work when looking it up in the `books` table.
 
-- GraphQL already uses essentially-strings/opaque `ID` types, and while Joist is technically GraphQL-agnostic, pragmatically implementing a GraphQL system is what drove most of Joist's development, so it was generally easy to support this in our APIs, so seemed like a low-hanging-fruit/easy-win.
+Note that, within backend code, Joist's entities also use strongly-typed ids (i.e. `Author.id` returns an `AuthorId`) to help prevent this with static type checking, but typed ids only prevent "wrong id" bugs that happen internally in the backend code (so, technically within our above example, we could get a compile error that `id` needs to be a `BookId`, which is great).
 
-Note that, in the database, the entity primary keys are still numeric / `serial` integers. Joist just auto-tags/detags them for you/for free.
+So tagged ids extends "typed ids"-style protection to API calls, i.e. if a client calls the API for "author `a:1`" and then makes a subsequent API call that accidentally uses `a:1` as a book id, Joist will throw a runtime error that it expected a `b:...` prefixed id.
 
-For the tags, Joist will guess a tag name to use by abbreviating the entity name, i.e. `BookReview` --> `br`. If there is a collision, i.e. `br` is already taken, it will use the full entity name, i.e. `bookReview`. Tags are stored `joist-codegen.json` so you can easily change them if Joist initially guesses wrong.
+### Easier Debugging
 
-Once you have a given tagged id deployed in production, you should probably never change it, i.e. in case id values like `a:1` ends up in a 3rd party system, changing your tagged id to `author:1` may break things.
+It makes debugging easier because seeing ids like `a:1` in the logs, you immediately know which entity that was for, without having to also prefix your logging statements with `authorId=${...}`, or when the `id` is in JSON payloads.
 
-Note that Joist will still look up "untagged ids" i.e. if you do `em.load(Author, "1")` it will not complain about the lack of a tag. However, if the tag value is wrong, i.e. `em.load(Author, "b:1")`, then it will be a runtime failure.
+### Convenient for GraphQL Integration
+
+In GraphQL, there is a dedicated `ID` type for id fields. It is not required to use, i.e. you can have `id: Integer!` in a GraphQL schema, but the `ID` type is encouraged/more idiomatic because it is opaque, meaning it hides the `id`'s implementation details from the client.
+
+I.e., to an external client, it shouldn't really matter if your internal id is "a number" or "a uuid" or "a string", and so having this `ID` type is how GraphQL represents that opaqueness (pragmatically, the GraphQL `ID` type ends up being mapped to string in client languages like TypeScript or Go, since a string value can effectively encode/represent other types like a number, or a uuid, albeit with some overhead).
+
+So while Joist is technically GraphQL-agnostic, if you are implementing a GraphQL system (which is what drove Joist's original development), the GraphQL layer already wants "the id is a string", so it is convenient if the `Author` entity's `id` is already a string, as then your resolver layer doesn't have to constantly map back/forth from integers to strings for output, and strings to `parseInt`-d integers for input.
+
+Joist does all of that internally, i.e. "string/number mapping" between the API/entity domain layer and the database columns.
+
+### But I'm Not Using GraphQL
+
+Even if you're not using GraphQL, both benefits/rationale of:
+
+- Id implementations should be opaque to external clients, and
+- Tagged ids prevent "wrong id" bugs
+
+Are applicable to any system, so ideally you could apply the "id is a string" approach to your REST or GRPC or other APIs.
+
+That said, if you have an existing `number`-based API that you can't change, Joist provides `deTagId`, `deTagIds`, and `tagIfNeeded` methods to convert to/from tagged ids to the actual number value.
+
+### Running SQL Queries
+
+When writing raw SQL queries, you can get the numeric value using `deTagId`
+
+```typescript
+  const query = someKnexQuery();
+  query.whereIn("books.id", deTagId(getMetadata(Book), bookId));
+```
+
+Note that `deTagId` accepts the `Book` entity as its 1st parameter because it still applies the tagged id runtime check, i.e. ensure that `bookId` starts with `b:...`.
+
+If you need to detag a value without knowing the entity type, you can use `unsafeDeTagIds`.
+
+### Tag Assignment
+
+For the tag names, when you add a new table, Joist guesses a tag name to use by abbreviating the table name, i.e. `book_reviews` is `br` or `foo_bar_zazzes` is `fbz`.
+
+If there is a collision, i.e. the `br` abbreviation is already taken by an existing table in `joist-codegen.json`, then Joist will use the full entity name, i.e. `bookReview`.
+
+The guessed tag name is then stored `joist-codegen.json`, where you can easily change it if Joist initially guesses wrong.
+
+However, once you have a given tagged id deployed in production, you should probably never change it (i.e. change the `bookReview` tag to `bkr`), because even though Joist internally would immediately start using the new tag value (after the change is deployed), if any other external systems have copies of your ids (like you've stored `bookReview:1` in an external/3rd party system), those externally-stored ids will now be incorrect, and Joist will be unload to load them.
+
+### Untagged Id Fallback
+
+If you do happen to given Joist untagged ids, it will still work, for example:
+
+```typescript
+const id = "1";
+// This will work, the `a:` prefix is not strictly required
+const a = await em.load(Author, id);
+```

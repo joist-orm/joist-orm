@@ -6,7 +6,11 @@ sidebar_position: 2
 
 (TODO: Rewrite/finish this.)
 
-This page covers setting up Joist for your project.
+There are three main steps to integrating Joist into your project:
+
+1. Setup migrations
+2. Setup code generation
+3. Setup unit tests
 
 It assumes that:
 

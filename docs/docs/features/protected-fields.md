@@ -11,9 +11,10 @@ The getter will still be public.
   "entities": {
     "Author": {
       "fields": {
-        "protected": true
+        "wasEverPopular": { "protected": true }
       }
     }
   }
+}
 ```
 

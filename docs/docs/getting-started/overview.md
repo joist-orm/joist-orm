@@ -10,3 +10,4 @@ There are currently two ways to get started with Joist:
 
 2. Go through our [adding to your project](./adding-to-your-project.md) steps.
 
+You can also verify your database schema matches Joist's [schema assumptions](./schema-assumptions.md).

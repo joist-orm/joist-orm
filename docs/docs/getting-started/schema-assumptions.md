@@ -1,15 +1,31 @@
+---
+title: Schema Assumptions
+sidebar_position: 3
+---
 
 Joist makes several assumptions about your database schema, as described below.
+
+:::caution
 
 Ideally you are developing your database schema greenfield with Joist from day one, so you can just adopt these assumptions/conventions from the beginning.
 
 However, if this is not the case, hopefully it would not be too bad to nudge your schema towards what Joist expects.
 
-### Entity tables
+Eventually Joist may have configuration options to work with different schema conventions, but today is does not. 
+
+:::
+
+### Entity Tables
 
 Joist expects entity tables (i.e. `authors`, `books`) to:
  
-1. Be named using plurals, i.e. `authors` vs. `author`,
+1. Be named using plurals, i.e. `authors` instead of `author`,
+
+   :::note
+
+   Technically Joist rarely "guesses" table names, mostly just for the initial "what is the entity name for this table name?", so this constraint may actually be pretty soft in practice.
+
+   :::
 
 2. Always have at least these three columns:
 
@@ -17,13 +33,25 @@ Joist expects entity tables (i.e. `authors`, `books`) to:
     * `created_at` `timestamptz`
     * `updated_at` `timestamptz`
 
-   Joist will maintain the `created_at`/`updated_at` columns for you, although you can also use ...these triggers... (TODO add link) that will ensure non-Joist clients also have those columns set for them.
+   Joist automatically maintains the `created_at`/`updated_at` columns for each row/entity during `EntityManager.flush`.
 
-   (Eventually Joist should/will have configurable support for enabling/disabling the use of `created_at`/`updated_at` columsn, but for now it is assumed/required to have them.)
+   :::tip
 
-3. Have a single primary key column, `id`, that is `SERIAL`/auto-increment
+    If you have non-Joist clients that update entities tables, or use bulk/raw SQL updates, you can create triggers that mimic this functionality (but will not overwrite `INSERT`s / `UPDATE`s that do set the columns), see [joist-migration-utils](https://github.com/stephenh/joist-ts/blob/main/packages/migration-utils/src/utils.ts#L73).
 
-### Enums are modeled as tables
+   (This methods use `node-pg-migrate`, but you can use whatever migration library you prefer to apply the DDL.)
+
+   :::
+
+   :::note
+
+    Eventually Joist should configurable enablement of `created_at`/`updated_at` columns, but for now it is assumed/required to have them.
+
+   :::
+
+5. Have a single primary key column, `id`, that is `SERIAL`/auto-increment
+
+### Enums as Tables
 
 Joist models enums (i.e. `EmployeeStatus`) as their own database tables with a row-per-value. 
 
@@ -45,9 +73,9 @@ enum EmployeeStatus {
 }
 ```
 
-This "enums-as-tables" approach allows the entities reference to the enum, i.e. `Employee.status` pointing to the `EmployeeStatus` enum, to use foreign keys to the enum table, i.e. `employees.status_id` is a foreign key to the `employee_status` table. This enabled:
+This "enums-as-tables" approach allows the entities reference to the enum, i.e. `Employee.status` pointing to the `EmployeeStatus` enum, to use foreign keys to the enum table, i.e. `employees.status_id` is a foreign key to the `employee_status` table. This enables:
  
-1. Data integrity, ensuring htat all `status_id` values are valid statuses, and
+1. Data integrity, ensuring that all `status_id` values are valid statuses, and
 2. Allows Joist's code generator to tell both that `employees.status_id` is a) of the type `EmployeeStatus` and b) how many enum values `EmployeeStatus` has.
 
 Joist expects enum tables to have three columns:
@@ -91,6 +119,21 @@ CREATE TABLE "authors" (
 ``` 
 
 See the `joist-migration-utils` utility methods, i.e. `createEntityTable` and `foreignKey` to always apply these defaults for you.
+
+:::tip
+
+If you need to convert you're existing foreign keys to deferrable, you can use `pg-structure` to loop over them like:
+
+```typescript
+const db = await newPgStructure({ includeSchemas: "public" });
+for (const table of db.tables) {
+   for (const constraint of table.constraints) {
+      if (constraint instanceof ForeignKey) {
+         await b.db.query(`ALTER TABLE ${table.name} ALTER CONSTRAINT ${constraint.name} DEFERRABLE INITIALLY DEFERRED`);
+      }
+   }
+}
+```
 
 ### Composite Primary Keys
 

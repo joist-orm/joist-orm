@@ -14,13 +14,15 @@ console.log(a.id);
 
 Even though in the database the `authors.id` column is still an auto-increment integer and, for this Author, the database value really is `1`.
 
+### Rationale
+
 There are a few reasons for this feature:
 
-- Bug elimination
+- Avoiding "Wrong Id" Bugs
 - Easier debugging
 - Convenient for GraphQL integration
 
-### Bug Elimination
+#### Avoiding "Wrong Id" Bugs
 
 Knowing the entity type for each id eliminates a class of bugs where ids are passed incorrectly across entity types.
 
@@ -39,11 +41,11 @@ Note that, within backend code, Joist's entities also use strongly-typed ids (i.
 
 So tagged ids extends "typed ids"-style protection to API calls, i.e. if a client calls the API for "author `a:1`" and then makes a subsequent API call that accidentally uses `a:1` as a book id, Joist will throw a runtime error that it expected a `b:...` prefixed id.
 
-### Easier Debugging
+#### Easier Debugging
 
 It makes debugging easier because seeing ids like `a:1` in the logs, you immediately know which entity that was for, without having to also prefix your logging statements with `authorId=${...}`, or when the `id` is in JSON payloads.
 
-### Convenient for GraphQL Integration
+#### Convenient for GraphQL Integration
 
 In GraphQL, there is a dedicated `ID` type for id fields. It is not required to use, i.e. you can have `id: Integer!` in a GraphQL schema, but the `ID` type is encouraged/more idiomatic because it is opaque, meaning it hides the `id`'s implementation details from the client.
 

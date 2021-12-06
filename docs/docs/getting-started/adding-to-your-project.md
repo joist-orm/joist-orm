@@ -11,6 +11,7 @@ There are three main steps to integrating Joist into your project:
 1. Setup migrations
 2. Setup code generation
 3. Setup unit tests
+4. Setup your production code
 
 It assumes that:
 

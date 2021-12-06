@@ -3,7 +3,7 @@ title: Type-Safe Relations
 sidebar_position: 3
 ---
 
-## All Relations are Async/Await (w/Type-safe Escape Hatch)
+## Relations are Async By Default
 
 Joist takes the strong opinion that any operation that _might_ be lazy loaded (like accessing an `author.books` collection that may or may not already be loaded in memory) _must_ be marked as `async/await`.
 
@@ -14,6 +14,8 @@ This seems great in the short-term, but Joist asserts its dangerous in the long-
 This sort of implementation detail is easy to enforce when the synchronous-assuming (i.e. `for (book in author.books)`) is 5 lines below the "load author with a `books` preload hint" in the same file. However it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is _not_ loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning a falsely empty collection or unset reference).
 
 Essentially this approach of having non-async collections creates a contract ("`author.books` must somehow be loaded") that is not present in the type system, so now the programmer/maintainer must remember and self-enforce it.
+
+## The Magic But Safe Escape Hatch
 
 So Joist does not do that, all references/collections are "always `async`".
 

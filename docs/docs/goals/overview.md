@@ -2,7 +2,7 @@
 title: Goals
 slug: /goals
 sidebar_label: Overview
-sidebar_position: 1
+sidebar_position: 0
 ---
 
 The high-level goal of Joist is to bring [ActiveRecord](https://guides.rubyonrails.org/active_record_basics.html)-level productivity to TypeScript/Node projects.
@@ -11,8 +11,9 @@ This is a lofty goal, and Joist has just started down that road, but that is the
 
 The major goals are:
 
-- Use [code generation](./code-generation.md) to move fast and reduce boilerplate
-- Avoid [N+1s](./dataloader-integration.md) through first-class dataloader integration
-- Make [loaded vs. unloaded collections](./type-safe-relations.md) represented in the type system
+- Use [code generation](./code-generation.md) to move fast and remove boilerplate
+- [Avoid N+1s](./avoiding-n-plus-1s.md) through first-class [dataloader](https://github.com/graphql/dataloader) integration
+- Differentiate [loaded vs. unloaded collections](./type-safe-relations.md) in the type system
 - Enable [great testing](./great-tests.md) with built-in factories and other support
-- Internally have a [small & simple codebase](./small-codebase.md) to ease long-term maintenance concerns
+
+Joist also has a few [non-goals](./non-goals.md).

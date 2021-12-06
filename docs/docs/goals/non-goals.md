@@ -1,5 +1,5 @@
 ---
-title: Small & simple codebase
+title: Non-Goals
 sidebar_position: 6
 ---
 

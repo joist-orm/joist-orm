@@ -122,18 +122,24 @@ See the `joist-migration-utils` utility methods, i.e. `createEntityTable` and `f
 
 :::tip
 
-If you need to convert you're existing foreign keys to deferrable, you can use `pg-structure` to loop over them like:
+If you need to convert your existing foreign keys to deferrable, you can use `pg-structure` in a migration to loop over them like:
 
 ```typescript
 const db = await newPgStructure({ includeSchemas: "public" });
 for (const table of db.tables) {
-   for (const constraint of table.constraints) {
-      if (constraint instanceof ForeignKey) {
-         await b.db.query(`ALTER TABLE ${table.name} ALTER CONSTRAINT ${constraint.name} DEFERRABLE INITIALLY DEFERRED`);
-      }
-   }
+  for (const constraint of table.constraints) {
+    if (constraint instanceof ForeignKey) {
+      await b.db.query(`
+        ALTER TABLE ${table.name}
+        ALTER CONSTRAINT ${constraint.name}
+        DEFERRABLE INITIALLY DEFERRED
+      `);
+    }
+  }
 }
 ```
+
+:::
 
 ### Composite Primary Keys
 

@@ -3,47 +3,123 @@ title: Type-Safe Relations
 sidebar_position: 3
 ---
 
-## Relations are Async By Default
+Joist models all relations as async-by-default (i.e. you must access them via an `await`), but then to provide better ergonomics than constant `await Promise.all` calls, also provides TypeScript-magical morphing/marking of relations as loaded, which then enables synchronous, non-`await`-d access.
 
-Joist takes the strong opinion that any operation that _might_ be lazy loaded (like accessing an `author.books` collection that may or may not already be loaded in memory) _must_ be marked as `async/await`.
+## Background
 
-Other ORMs in the JS/TS space often fudge this, i.e. they might model an `Author` with a `books: Book[]` property where you can get the pleasantness of accessing `author.books` without `await`s/`Promise.all`/etc. code--as long as whoever loaded this `Author` instance ensured that `books` was already fetched/initialized.
+One of the main affordances of ORMs is that relationships (relations) between tables in the database (i.e. foreign keys) are modelled as references & collections on the classes/entities in the domain model.
 
-This seems great in the short-term, but Joist asserts its dangerous in the long-term, because code written to rely on the "`author.books` is a `Book[]`" assumption is now coupled to `author.books` being pre-fetched and _always_ being present, regardless of the caller.
+For example, in most ORMs a `books.author_id` foreign key column means the `Author` entity will have an `author.books` collection (which loads all books for that author), and the `Book` entity will have a `book.author` reference (which loads the book's author).
 
-This sort of implementation detail is easy to enforce when the synchronous-assuming (i.e. `for (book in author.books)`) is 5 lines below the "load author with a `books` preload hint" in the same file. However it's very hard to enforce in a large codebase, when business logic and validation rules can be triggered from multiple operation endpoints. And, so when `author.books` is _not_ loaded, it will at best cause a runtime error ("hey you tried to access this unloaded collection") and at worst cause a very obscure bug (by returning a falsely empty collection or unset reference).
+In all ORMs, these references & collections are inherently lazy: because you don't have your entire relational database in memory, objects start out with just a single/few rows loaded (i.e. a single `authors` row loaded as an `Author` instance) and then lazily loaded the data you need from there (i.e. you "walk the object graph" from that `Author` to the related data you need).
 
-Essentially this approach of having non-async collections creates a contract ("`author.books` must somehow be loaded") that is not present in the type system, so now the programmer/maintainer must remember and self-enforce it.
+## Joist Relations are Async By Default
+
+Because of the inherently lazy nature of references & collections, Joist takes the strong opinion, type-safe opinion that if they _might_ be unloaded, then they _must_ be marked as `async/await`.
+
+For example, you have to access `author.books` via an `await`-d promise:
+
+```typescript
+const author = await em.load(Author, "a:1");
+const books = await author.books.load();
+```
+
+And you must do this each time, even if technically in the code path that you're in, you "know" that `books` has already been loaded, i.e.:
+
+```typescript
+const author = await em.load(Author, "a:1");
+// Call another method that happens to loads books
+someComplicatedLogicThatLoadsBooks(author);
+// You still can't do `books.get`
+const books = await author.books.load();
+```
+
+## But Async Access is Kinda Annoying
+
+While Joist's "async by default" approach is the safest, it is admittedly tedious when you get to double/triple levels of `await`s, i.e.:
+
+```typescript
+const author = await em.load(Author, "a:1");
+await Promise.all((await author.books.load()).map(async (book) => {
+  // For each book load the reviews
+  return Promise.all((await book.reviews.load()).map(async (review) => {
+    console.log(review.name);
+  })); 
+}));
+```
+
+Yuck.
+
+Given this complication, some ORMs in the JavaScript/TypeScript space sometimes fudge this, and allow you to model collections as _synchronous_, i.e. you're allowed to do:
+
+```typescript
+const author = await em.load(Author, "a:1");
+// I promise I loaded books
+await author.books.load();
+// Now access it w/o promises
+author.books.get.length;
+```
+
+Which is nice! But the wrinkle is that we're now trusting ourselves to only access `books` after an explicit `load`, and if we forget, i.e. when our code paths end up being complex enough that it's hard to tell, then we'll get a runtime error that `books.get` is not allowed to be called
+
+Because of this lack of safety, Joist avoids this approach, and instead has something fancier.
 
 ## The Magic But Safe Escape Hatch
 
-So Joist does not do that, all references/collections are "always `async`".
+Ideally what we want is to have relations lazy-by-default, except when we've explicitly told TypeScript that we've loaded them. This is what Joist does.
 
-..._that said_, writing business logic across a few collections that you "know" are in memory but have to use promises anyway is extremely tedious.
-
-So, Joist has a way to explicitly mark subsets of fields, on subsets of object instances, as preloaded and so safe to synchronously access.
+In Joist, populate hints (which tell the ORM to pre-fetch data before it's actually accessed) _also_ change the type of the entity, and mark references that were explicitly listed in the hint as loaded.
 
 This looks like:
 
 ```typescript
-// Note the `{ author: "publisher" } preload hint
-const book = await em.populate(originalBook, { author: "publisher" });
-// The `populate` return type is a "special" `Book` that has `author` and `publisher` marked as "get-safe"
+const book = await em.populate(
+  originalBook,
+  // Tell Joist we want `{ author: "publisher" } preloaded
+  { author: "publisher" });
+// The `populate` return type is now "special"/MarkLoaded `Book`
+// that has `author` and `publisher` marked as "get"-able
 expect(book.author.get.firstName).toEqual("a1");
 expect(book.author.get.publisher.get.name).toEqual("p1");
 ```
 
-Where `originalBook`'s references (`book.author`) could _not_ call `.get` (only `.load` which returns a `Promise`), however, the return value of `em.populate` uses mapped types to transform only the fields listed in the hint (`author` and the nested `author.publisher`) to be safe for synchronous access, so the calling code can now call `.get` and avoid the fuss of promises (only for this section of `populate`-blessed code).
+Note that `originalBook`'s `originalBook.author` reference does _not_ have `.get` available (just the safe `.load` which returns a `Promise`); only the modified `Book` type returned from `em.populate` has the `.get` method added `author.book`.
 
-Most of Joist's `EntityManager` take a `populate` parameter to help you return data both a) already loaded from the database, and b) _marked in the type system as loaded_ to achieve the pleasantness of synchronous access without the risks of mis-modeling references as always/naively loaded.
+:::tip
 
-As one more helpful feature, you can also navigate across multiple levels of the object graph with a single async call using `Entity.load`, i.e.:
+You can avoid having two `book` variables by passing populate hints directly to `EntityManager.load`, which will then return the appropriate `.get`-able references:
 
 ```typescript
-// await way
-const allAuthorReviews = (await Promise.all(await author.books.load()).map((b) => b.comments.load())).flat();
-// lens navigation way
-const allAuthorReviews = await author.load((a) => a.books.comments);
+const book = await em.load(
+  Book,
+  "a:1",
+  { author: "publisher" });
+expect(book.author.get.firstName).toEqual("a1");
+expect(book.author.get.publisher.get.name).toEqual("p1");
 ```
 
-Here `a.books.comments` acts similar to a [lens](https://medium.com/@dtipson/functional-lenses-d1aba9e52254), and defines a (type safe) path that `load` then recursively/asynchronously navigates for you, with the convenience of only having a single `await` call in your code.
+:::
+
+
+Joist's `populate` approach also works for multiple levels, i.e. our triple-nested `Promise.all`-hell example can be written with a single `await`
+
+```typescript
+const author = await em.load(
+  Author,
+  "a:1",
+  { books: "reviews" },
+);
+author.books.get.forEach((book) => {
+  book.reviews.get.forEach((review) => {
+    console.log(review.name);
+  });
+})
+```
+
+## Best of Both Worlds
+
+This combination of "async-by-default" along with "hint-driven type mapping" brings the best of both worlds:
+
+- Data that we are unsure of its loaded-ness, must be `await`-d, while
+- Data that we (and, more importantly, the TypeScript compiler) are sure of its loaded-ness, can be accessed synchronously
+

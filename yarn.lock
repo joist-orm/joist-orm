@@ -9023,7 +9023,7 @@ __metadata:
     joist-utils: 1.0.0-bump
     knex: ^0.95.9
     pg: ^8.7.1
-    pg-structure: ^7.12.1
+    pg-structure: ^7.13.0
     pluralize: ^8.0.0
     prettier: ^2.3.2
     prettier-plugin-organize-imports: ^2.3.3
@@ -9092,7 +9092,7 @@ __metadata:
     joist-utils: 1.0.0-bump
     node-pg-migrate: ^5.0.0
     pg: ^8.7.1
-    pg-structure: ^7.12.1
+    pg-structure: ^7.13.0
     pluralize: ^8.0.0
     prettier: ^2.3.2
     prettier-plugin-organize-imports: ^2.3.3
@@ -10945,9 +10945,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-structure@npm:^7.12.1":
-  version: 7.12.1
-  resolution: "pg-structure@npm:7.12.1"
+"pg-structure@npm:^7.13.0":
+  version: 7.13.0
+  resolution: "pg-structure@npm:7.13.0"
   dependencies:
     "@typescript-plus/fast-memoize-decorator": ^0.1.0
     dotenv: ^8.2.0
@@ -10958,7 +10958,7 @@ __metadata:
     lodash.get: ^4.4.2
     pg: ^8.0.3
     pg-connection-string: ^2.2.1
-  checksum: 0ae77b7dad89a36e8d5b1f812ac70254d6cc8194a02d45f1e5fdf8f96664d359fa8f132f8957458fc5288ecd0049cf0f7d939f94edd81f527233e2dddeda215e
+  checksum: 0eaed28682ba78e03bfc75efe410658d0fea46b1a4fa3981539f5f6e95f070e0b2b6145865df41fa2005eda88d3e9b1cd00db0a9aed5f06191f6c211c28f80a8
   languageName: node
   linkType: hard
 

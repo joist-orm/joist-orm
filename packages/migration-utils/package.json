@@ -20,7 +20,7 @@
     "joist-utils": "1.0.0-bump",
     "node-pg-migrate": "^5.0.0",
     "pg": "^8.7.1",
-    "pg-structure": "^7.12.1",
+    "pg-structure": "^7.13.0",
     "pluralize": "^8.0.0"
   },
   "devDependencies": {

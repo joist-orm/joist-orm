@@ -22,7 +22,7 @@
     "joist-utils": "1.0.0-bump",
     "knex": "^0.95.9",
     "pg": "^8.7.1",
-    "pg-structure": "^7.12.1",
+    "pg-structure": "^7.13.0",
     "pluralize": "^8.0.0",
     "ts-poet": "^4.5.0"
   },

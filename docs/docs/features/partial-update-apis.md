@@ -1,3 +1,7 @@
+---
+title: Partial Update APIs
+---
+
 ### Support for Partial Update Style APIs
 
 A common pattern for APIs is to treat `null` and `undefined` differently, i.e. `{ lastName: null }` specifically means "unset the `lastName` property" while `firstName` being not present (i.e. `undefined`) means "do not change `firstName`".

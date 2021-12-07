@@ -61,7 +61,9 @@ The `load` method is fundamentally not allowed to immediately make a SQL call, b
 
 Instead, the `load` method is forced to return a `Promise`, handle the I/O off the thread, and then later return the `reviews` that have been loaded.
 
-Ironically, this "forced pause" of single-threaded execution, that for years was the bane of JavaScript's programming model due to the pre-`Promise` callback hell it caused, gives Joist an opportunity to wait just a _little bit_, until all of the `book.reviews.load()` have been evaluated, and then see that "ah, we've been asked to do 10 `book.reviews.load`, let's do those as a single SQL statement", and execute a single SQL statement like:
+And so the _immediate_ next thing the code does is the next iteration of `books.map`, i.e. get `book 2` and immediately asks for its `reviews.load()` as well.
+
+Ironically, this "forced no pausing" of single-threaded execution, that for years was the bane of JavaScript's programming model due to the pre-`Promise` callback hell it caused, gives Joist an opportunity to wait just a _little bit_, until all of the `book.reviews.load()` have been "asked for", and the `books.map` iteration is finished, to only then see that "ah, we've been asked to do 10 `book.reviews.load`, let's do those as a single SQL statement", and execute a single SQL statement like:
 
 ```sql
 SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ..., 10);

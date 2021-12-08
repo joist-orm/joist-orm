@@ -45,8 +45,8 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
 
   async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (this._isLoaded) {
-      return this.loaded!;
+    if (this._isLoaded && this.loaded) {
+      return this.loaded;
     }
     const current = this.current();
     // Resolve the id to an entity

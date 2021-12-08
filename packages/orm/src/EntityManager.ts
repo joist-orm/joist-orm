@@ -189,7 +189,11 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 export type LoadHint<T extends Entity> = keyof Loadable<T> | ReadonlyArray<keyof Loadable<T>> | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
-  [K in keyof Loadable<T>]?: T[K] extends Relation<T, infer U> ? LoadHint<U> : never;
+  [K in keyof Loadable<T>]?: T[K] extends Relation<T, infer U>
+    ? LoadHint<U>
+    : T[K] extends AsyncProperty<any, any>
+    ? {}
+    : never;
 };
 
 type MaybePromise<T> = T | PromiseLike<T>;

@@ -2,7 +2,7 @@ import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts
 import { defaultValue } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
-import { Author, Book, BookId, BookReview, newAuthor, Publisher } from "../entities";
+import { Author, Book, BookId, BookReview, newAuthor, newPublisher, Publisher } from "../entities";
 import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
@@ -511,5 +511,13 @@ describe("Author", () => {
     expect(await a1.numberOfBooks2.load()).toEqual(0);
     const a2 = await em.populate(a1, "numberOfBooks2");
     expect(a2.numberOfBooks2.get).toEqual(0);
+  });
+
+  it("can preload async properties", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em);
+    const a1 = newAuthor(em, { publisher: p1 });
+    const pl = await p1.populate({ authors: { books: {}, numberOfBooks2: {} } });
+    expect(pl.authors.get[0].numberOfBooks2.get).toEqual(0);
   });
 });

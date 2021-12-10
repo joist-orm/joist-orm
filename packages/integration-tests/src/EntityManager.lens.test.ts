@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher } from "@src/entities/inserts";
 import { Lens } from "joist-orm";
 import { Author, Book, Publisher } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
@@ -70,6 +70,36 @@ describe("EntityManager.lens", () => {
     // This ends in a singular author (which is cyclic, but just b/c our test schema is small, it doesn't matter)
     const authors = await p1.load((p) => p.authors.books.author);
     expect(authors.length).toEqual(2);
+  });
+
+  it("can navigate nullable references", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "1");
+    const publisher = await b1.load((b) => b.author.publisher);
+    expect(publisher).toBeUndefined();
+  });
+
+  it("can navigate collections then nullable references", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    // Kinda weird, but we include book reviews so that we can go through a plural collection
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await insertBookReview({ book_id: 2, rating: 1 });
+    const em = newEntityManager();
+    let publishers: Publisher[];
+    // b1 --> author --> publisher finds 1 publisher
+    const b1 = await em.load(Book, "1");
+    publishers = await b1.load((b) => b.reviews.book.author.publisher);
+    expect(publishers.length).toEqual(1);
+    // b2 --> author --> publisher finds 0 publishers
+    const b2 = await em.load(Book, "2");
+    publishers = await b2.load((b) => b.reviews.book.author.publisher);
+    expect(publishers).toEqual([]);
   });
 
   it("can navigate into async helper methods", async () => {

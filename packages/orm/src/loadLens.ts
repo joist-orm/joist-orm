@@ -4,8 +4,16 @@ type LoadLike<U> = { load(): Promise<U> };
 /** Generically matches a property or zero-arg method that returns a promise. */
 type PromiseFnLike<U> = () => PromiseLike<U>;
 
-/** Given a parent type U, and a new type V, returns V[] if U is already an array, i.e. we're in flatMap mode. */
-type MaybeArray<U, V> = U extends ReadonlyArray<any> ? (V extends ReadonlyArray<any> ? V : V[]) : V;
+/** Given a parent type P, and a new type V, returns V[] if P is already an array, i.e. we're in flatMap mode. */
+// The extra `[]` around `V` and `ReadonlyArray<any>` are to keep the type as `Array<Foo | undefined>`
+// instead of `Foo[] | undefined[]`.
+//
+// When `P extends ReadonlyArray, i.e. we're in flatMap mode, we're also in filter undefined mode.
+type MaybeArray<P, V> = P extends ReadonlyArray<any>
+  ? [V] extends [ReadonlyArray<infer U>]
+    ? DropUndefined<U>[]
+    : DropUndefined<V>[]
+  : V;
 
 /** Given a type T that we come across in the path, de-array it to continue our flatMap-ish semantics. */
 type MaybeDropArray<T> = T extends ReadonlyArray<infer U> ? U : T;
@@ -48,7 +56,7 @@ export async function loadLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U,
   for await (const path of paths) {
     if (Array.isArray(current)) {
       current = (await Promise.all(current.map((c) => maybeLoad(c, path)))).flat();
-      current = [...new Set(current)];
+      current = [...new Set(current.filter((c: any) => c !== undefined))];
     } else {
       current = await maybeLoad(current, path);
     }

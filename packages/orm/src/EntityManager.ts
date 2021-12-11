@@ -1137,21 +1137,28 @@ export function afterTransaction(em: EntityManager, knex: Knex.Transaction): Pro
   return Promise.all(em["hooks"].afterTransaction.map((fn) => fn(em, knex)));
 }
 
-function runHook(
+async function runHook(
   ctx: unknown,
   hook: EntityHook,
   todos: Record<string, Todo>,
   keys: ("inserts" | "deletes" | "updates" | "validates")[],
-): Promise<unknown> {
+): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     const hookFns = todo.metadata.config.__data.hooks[hook];
     return keys
       .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
       .flatMap((entity) => {
-        return hookFns.map((fn) => fn(entity, ctx as any));
+        // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
+        // hook blowing up doesn't orphan the others .
+        return hookFns.map(async (fn) => fn(entity, ctx as any));
       });
   });
-  return Promise.all(p);
+  // Use `allSettled` so that even if 1 hook blows up, we don't orphan other hooks mid-flush
+  const rejects = (await Promise.allSettled(p)).filter((r) => r.status === "rejected");
+  // For now just throw the 1st rejection; this should be pretty rare
+  if (rejects.length > 0 && rejects[0].status === "rejected") {
+    throw rejects[0].reason;
+  }
 }
 
 function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {

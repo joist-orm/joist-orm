@@ -34,7 +34,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
         // dummy value.
         return ownerId ?? "dummyNoLongerOwned";
       });
-      return _keys.map((k) => rowsById.get(k)?.[0]);
+      return _keys.map((k) => rowsById.get(k)?.[0] as U | undefined);
     });
   });
 }

@@ -1,4 +1,11 @@
-import { Entity, getMetadata, IdOf, isEntity, PolymorphicFieldComponent } from "../EntityManager";
+import {
+  currentlyInstantiatingEntity,
+  Entity,
+  getMetadata,
+  IdOf,
+  isEntity,
+  PolymorphicFieldComponent,
+} from "../EntityManager";
 import {
   deTagId,
   ensureNotDeleted,
@@ -14,6 +21,13 @@ import {
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
+
+export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
+  fieldName: keyof T,
+): Reference<T, U, N> {
+  const entity = currentlyInstantiatingEntity as T;
+  return new PolymorphicReference<T, U, N>(entity, fieldName);
+}
 
 /**
  * Manages a set of foreign keys from one entity to another, i.e. `Comment.parent --> Book | BookReview`.

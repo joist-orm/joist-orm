@@ -7,10 +7,11 @@ import {
   ManyToOneReference,
   OneToManyCollection,
   OneToOneReference,
-  Reference,
 } from "../";
 import { PolymorphicReference } from "./PolymorphicReference";
+import { Reference } from "./Reference";
 
+export { Collection, LoadedCollection } from "./Collection";
 export { CustomCollection } from "./CustomCollection";
 export { CustomReference } from "./CustomReference";
 export { AsyncProperty, hasAsyncProperty, LoadedProperty } from "./hasAsyncProperty";
@@ -22,6 +23,8 @@ export { ManyToManyCollection } from "./ManyToManyCollection";
 export { ManyToOneReference } from "./ManyToOneReference";
 export { OneToManyCollection } from "./OneToManyCollection";
 export { OneToOneReference } from "./OneToOneReference";
+export { LoadedReference, Reference } from "./Reference";
+export { Relation } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(

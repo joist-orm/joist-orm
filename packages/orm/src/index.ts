@@ -18,9 +18,8 @@ import {
   RelationsIn,
 } from "./EntityManager";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import { AsyncProperty, Reference } from "./relations";
+import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncPropertyImpl, LoadedProperty } from "./relations/hasAsyncProperty";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
 
@@ -409,18 +408,6 @@ export function maybeGetConstructorFromReference(
 
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
-}
-
-/** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is AsyncProperty<any, any> {
-  return maybeAsyncProperty instanceof AsyncPropertyImpl;
-}
-
-/** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(
-  maybeAsyncProperty: any,
-): maybeAsyncProperty is AsyncProperty<any, any> & LoadedProperty<any, any> {
-  return isAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
 }
 
 export function isOneToManyField(ormField: Field): ormField is OneToManyField {

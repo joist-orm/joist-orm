@@ -14,7 +14,13 @@ import { Reference } from "./Reference";
 export { Collection, isCollection, isLoadedCollection, LoadedCollection } from "./Collection";
 export { CustomCollection } from "./CustomCollection";
 export { CustomReference } from "./CustomReference";
-export { AsyncProperty, hasAsyncProperty, LoadedProperty } from "./hasAsyncProperty";
+export {
+  AsyncProperty,
+  hasAsyncProperty,
+  isAsyncProperty,
+  isLoadedAsyncProperty,
+  LoadedProperty,
+} from "./hasAsyncProperty";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";

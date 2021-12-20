@@ -1,4 +1,8 @@
 import { Entity, IdOf } from "../EntityManager";
+import { CustomReference } from "./CustomReference";
+import { ManyToOneReference } from "./ManyToOneReference";
+import { OneToOneReference } from "./OneToOneReference";
+import { PolymorphicReference } from "./PolymorphicReference";
 import { Relation } from "./Relation";
 
 const H = Symbol();
@@ -50,4 +54,21 @@ export interface LoadedReference<T extends Entity, U extends Entity, N extends n
   get: U | N;
 
   getWithDeleted: U | N;
+}
+
+/** Type guard utility for determining if an entity field is a Reference. */
+export function isReference(maybeReference: any): maybeReference is Reference<any, any, any> {
+  return (
+    maybeReference instanceof OneToOneReference ||
+    maybeReference instanceof ManyToOneReference ||
+    maybeReference instanceof CustomReference ||
+    maybeReference instanceof PolymorphicReference
+  );
+}
+
+/** Type guard utility for determining if an entity field is a loaded Reference. */
+export function isLoadedReference(
+  maybeReference: any,
+): maybeReference is Reference<any, any, any> & LoadedReference<any, any, any> {
+  return isReference(maybeReference) && maybeReference.isLoaded;
 }

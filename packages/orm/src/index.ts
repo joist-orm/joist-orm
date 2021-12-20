@@ -18,23 +18,9 @@ import {
   RelationsIn,
 } from "./EntityManager";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import {
-  AsyncProperty,
-  Collection,
-  CustomCollection,
-  CustomReference,
-  LoadedCollection,
-  LoadedReference,
-  ManyToManyCollection,
-  ManyToOneReference,
-  OneToManyCollection,
-  OneToOneReference,
-  Reference,
-  Relation,
-} from "./relations";
+import { AsyncProperty, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { AsyncPropertyImpl, LoadedProperty } from "./relations/hasAsyncProperty";
-import { PolymorphicReference } from "./relations/PolymorphicReference";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
 
@@ -423,44 +409,6 @@ export function maybeGetConstructorFromReference(
 
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
-}
-
-/** Type guard utility for determining if an entity field is a Relation. */
-export function isRelation(maybeRelation: any): maybeRelation is Relation<any, any> {
-  return isReference(maybeRelation) || isCollection(maybeRelation);
-}
-
-/** Type guard utility for determining if an entity field is a Reference. */
-export function isReference(maybeReference: any): maybeReference is Reference<any, any, any> {
-  return (
-    maybeReference instanceof OneToOneReference ||
-    maybeReference instanceof ManyToOneReference ||
-    maybeReference instanceof CustomReference ||
-    maybeReference instanceof PolymorphicReference
-  );
-}
-
-/** Type guard utility for determining if an entity field is a loaded Reference. */
-export function isLoadedReference(
-  maybeReference: any,
-): maybeReference is Reference<any, any, any> & LoadedReference<any, any, any> {
-  return isReference(maybeReference) && maybeReference.isLoaded;
-}
-
-/** Type guard utility for determining if an entity field is a Collection. */
-export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
-  return (
-    maybeCollection instanceof OneToManyCollection ||
-    maybeCollection instanceof ManyToManyCollection ||
-    maybeCollection instanceof CustomCollection
-  );
-}
-
-/** Type guard utility for determining if an entity field is a loaded Collection. */
-export function isLoadedCollection(
-  maybeCollection: any,
-): maybeCollection is Collection<any, any> & LoadedCollection<any, any> {
-  return isCollection(maybeCollection) && maybeCollection.isLoaded;
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */

@@ -1,4 +1,7 @@
 import { Entity, IdOf } from "../EntityManager";
+import { CustomCollection } from "./CustomCollection";
+import { ManyToManyCollection } from "./ManyToManyCollection";
+import { OneToManyCollection } from "./OneToManyCollection";
 import { Relation } from "./Relation";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
@@ -23,4 +26,20 @@ export interface LoadedCollection<T extends Entity, U extends Entity> extends Co
   set(values: U[]): void;
 
   removeAll(): void;
+}
+
+/** Type guard utility for determining if an entity field is a Collection. */
+export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
+  return (
+    maybeCollection instanceof OneToManyCollection ||
+    maybeCollection instanceof ManyToManyCollection ||
+    maybeCollection instanceof CustomCollection
+  );
+}
+
+/** Type guard utility for determining if an entity field is a loaded Collection. */
+export function isLoadedCollection(
+  maybeCollection: any,
+): maybeCollection is Collection<any, any> & LoadedCollection<any, any> {
+  return isCollection(maybeCollection) && maybeCollection.isLoaded;
 }

@@ -1,4 +1,6 @@
 import { Entity } from "../EntityManager";
+import { isCollection } from "./Collection";
+import { isReference } from "./Reference";
 
 const F = Symbol();
 const G = Symbol();
@@ -12,4 +14,9 @@ export interface Relation<T extends Entity, U extends Entity> {
   // See https://stackoverflow.com/questions/53448100/generic-type-of-extended-interface-not-inferred
   [F]?: T;
   [G]?: U;
+}
+
+/** Type guard utility for determining if an entity field is a Relation. */
+export function isRelation(maybeRelation: any): maybeRelation is Relation<any, any> {
+  return isReference(maybeRelation) || isCollection(maybeRelation);
 }

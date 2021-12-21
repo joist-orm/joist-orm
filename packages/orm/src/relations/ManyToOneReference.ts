@@ -1,4 +1,4 @@
-import { Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
+import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
 import {
   deTagIds,
   ensureNotDeleted,
@@ -11,6 +11,16 @@ import {
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
+
+/** An alias for creating `ManyToOneReference`s. */
+export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
+  otherMeta: EntityMetadata<U>,
+  fieldName: keyof T,
+  otherFieldName: keyof U,
+): Reference<T, U, N> {
+  const entity = currentlyInstantiatingEntity as T;
+  return new ManyToOneReference<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
+}
 
 /**
  * Manages a foreign key from one entity to another, i.e. `Book.author --> Author`.

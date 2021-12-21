@@ -1,8 +1,19 @@
-import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
+import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
+
+/** An alias for creating `OneToOneReference`s. */
+export function hasOneToOne<T extends Entity, U extends Entity>(
+  otherMeta: EntityMetadata<U>,
+  fieldName: keyof T,
+  otherFieldName: keyof U,
+  otherColumnName: string,
+): Reference<T, U, undefined> {
+  const entity = currentlyInstantiatingEntity as T;
+  return new OneToOneReference<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+}
 
 /**
  * Represents the "many" side of a one-to-one relationship.

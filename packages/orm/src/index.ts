@@ -7,7 +7,6 @@ import {
   EntityOrmField,
   Field,
   getMetadata,
-  IdOf,
   Loaded,
   LoadHint,
   ManyToManyField,
@@ -19,18 +18,8 @@ import {
   RelationsIn,
 } from "./EntityManager";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import {
-  AsyncProperty,
-  CustomCollection,
-  CustomReference,
-  ManyToManyCollection,
-  ManyToOneReference,
-  OneToManyCollection,
-  OneToOneReference,
-} from "./relations";
+import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncPropertyImpl, LoadedProperty } from "./relations/hasAsyncProperty";
-import { PolymorphicReference } from "./relations/PolymorphicReference";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
 
@@ -49,91 +38,6 @@ export * from "./relations";
 export * from "./reverseHint";
 export * from "./serde";
 export { fail } from "./utils";
-
-const F = Symbol();
-const G = Symbol();
-const H = Symbol();
-
-/** A relationship from `T` to `U`, could be any of many-to-one, one-to-many, or many-to-many. */
-export interface Relation<T extends Entity, U extends Entity> {
-  // Make our Relation somewhat non-structural, otherwise since it's a marker interface,
-  // types like `number` or `string` will match it. This also seems to nudge the type
-  // inference inside of `LoadHint` to go beyond "this generic T of Entity has id and __orm"
-  // to "no really this generic T has fields firstName, title, etc.".
-  // See https://stackoverflow.com/questions/53448100/generic-type-of-extended-interface-not-inferred
-  [F]?: T;
-  [G]?: U;
-}
-
-/**
- * A many-to-one / foreign key from `T` to `U`, i.e. book to author.
- *
- * The `N` generic is for whether the field is optional (i.e. the foreign key column is
- * nullable). If it is optional, `N` will be `undefined`, which makes the return types
- * `U | undefined`. If it is not optional, `N` will be `never`, making the return types
- * `U | never` which becomes just `U`.
- */
-export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
-  /** Returns the id of the current assigned entity, or `undefined` if the assigned entity has no id yet, or `undefined` if this column is nullable and currently unset. */
-  id: IdOf<U> | undefined;
-
-  /** Returns the id of the current assigned entity or a runtime error if it's either a) unset or b) set to a new entity that doesn't have an `id` yet. */
-  idOrFail: IdOf<U>;
-
-  idUntagged: string | undefined;
-
-  idUntaggedOrFail: string;
-
-  readonly isLoaded: boolean;
-
-  load(opts?: { withDeleted: boolean }): Promise<U | N>;
-
-  set(other: U | N): void;
-
-  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
-  readonly isSet: boolean;
-
-  [H]?: N;
-}
-
-/** Adds a known-safe `get` accessor. */
-export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Omit<Reference<T, U, N>, "id"> {
-  // Since we've fetched the entity from the db, we're going to omit out the "| undefined" from Reference.id
-  // which handles "this reference is set to a new entity" and just assume the id is there (or else N which
-  // is for nullable references, which will just always be potentially `undefined`).
-  //
-  // Note that, similar to `.get`, this is _usually_ right, but if the user mutates the object graph after the
-  // populate, i.e. they change some fields to have actually-new / not-included-in-the-`populate` call entities,
-  // then these might turn into runtime errors. But the ergonomics are sufficiently better that it is worth it.
-  id: IdOf<T> | N;
-
-  getWithDeleted: U | N;
-  get: U | N;
-}
-
-/** A collection of `U` within `T`, either one-to-many or many-to-many. */
-export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
-  load(opts?: { withDeleted: boolean }): Promise<ReadonlyArray<U>>;
-
-  find(id: IdOf<U>): Promise<U | undefined>;
-
-  add(other: U): void;
-
-  remove(other: U): void;
-
-  readonly isLoaded: boolean;
-}
-
-/** Adds a known-safe `get` accessor. */
-export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
-  getWithDeleted: ReadonlyArray<U>;
-  get: ReadonlyArray<U>;
-
-  set(values: U[]): void;
-
-  removeAll(): void;
-}
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -504,56 +408,6 @@ export function maybeGetConstructorFromReference(
 
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
-}
-
-/** Type guard utility for determining if an entity field is a Relation. */
-export function isRelation(maybeRelation: any): maybeRelation is Relation<any, any> {
-  return isReference(maybeRelation) || isCollection(maybeRelation);
-}
-
-/** Type guard utility for determining if an entity field is a Reference. */
-export function isReference(maybeReference: any): maybeReference is Reference<any, any, any> {
-  return (
-    maybeReference instanceof OneToOneReference ||
-    maybeReference instanceof ManyToOneReference ||
-    maybeReference instanceof CustomReference ||
-    maybeReference instanceof PolymorphicReference
-  );
-}
-
-/** Type guard utility for determining if an entity field is a loaded Reference. */
-export function isLoadedReference(
-  maybeReference: any,
-): maybeReference is Reference<any, any, any> & LoadedReference<any, any, any> {
-  return isReference(maybeReference) && maybeReference.isLoaded;
-}
-
-/** Type guard utility for determining if an entity field is a Collection. */
-export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
-  return (
-    maybeCollection instanceof OneToManyCollection ||
-    maybeCollection instanceof ManyToManyCollection ||
-    maybeCollection instanceof CustomCollection
-  );
-}
-
-/** Type guard utility for determining if an entity field is a loaded Collection. */
-export function isLoadedCollection(
-  maybeCollection: any,
-): maybeCollection is Collection<any, any> & LoadedCollection<any, any> {
-  return isCollection(maybeCollection) && maybeCollection.isLoaded;
-}
-
-/** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is AsyncProperty<any, any> {
-  return maybeAsyncProperty instanceof AsyncPropertyImpl;
-}
-
-/** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(
-  maybeAsyncProperty: any,
-): maybeAsyncProperty is AsyncProperty<any, any> & LoadedProperty<any, any> {
-  return isAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
 }
 
 export function isOneToManyField(ormField: Field): ormField is OneToManyField {

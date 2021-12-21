@@ -37,12 +37,12 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   load(): Promise<V> {
     const { entity, loadHint, fn } = this;
     if (!this.loaded) {
-      return this.loadPromise ??= getEm(entity)
+      return (this.loadPromise ??= getEm(entity)
         .populate(entity, loadHint)
         .then((loaded) => {
           this.loaded = true;
           return fn(loaded);
-        });
+        }));
     }
     return Promise.resolve(this.get);
   }
@@ -55,4 +55,16 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   get isLoaded() {
     return this.loaded;
   }
+}
+
+/** Type guard utility for determining if an entity field is an AsyncProperty. */
+export function isAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is AsyncProperty<any, any> {
+  return maybeAsyncProperty instanceof AsyncPropertyImpl;
+}
+
+/** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
+export function isLoadedAsyncProperty(
+  maybeAsyncProperty: any,
+): maybeAsyncProperty is AsyncProperty<any, any> & LoadedProperty<any, any> {
+  return isAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
 }

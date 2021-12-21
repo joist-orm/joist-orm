@@ -1,12 +1,13 @@
 import { Entity, IdOf } from "../EntityManager";
 import { ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { MaybeUndefined, NullOrNotNull } from "./Reference";
 
-export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
+export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends NullOrNotNull> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
   // each time it's invoked so that it reflects any changed values.
   load: (entity: T) => Promise<void>;
-  get: (entity: T) => U | N;
+  get: (entity: T) => MaybeUndefined<U, N>;
   set?: (entity: T, other: U) => void;
 };
 
@@ -21,7 +22,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
  * This `CustomReference` API is fairly low-level; users should more likely prefer higher-level
  * abstractions like `hasOneThrough`, which are built on `CustomReference.
  */
-export class CustomReference<T extends Entity, U extends Entity, N extends never | undefined>
+export class CustomReference<T extends Entity, U extends Entity, N extends NullOrNotNull>
   extends AbstractRelationImpl<U>
   implements Reference<T, U, N>
 {
@@ -34,11 +35,11 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     super();
   }
 
-  get get(): U | N {
+  get get(): MaybeUndefined<U, N> {
     return this.doGet({ withDeleted: false });
   }
 
-  get getWithDeleted(): U | N {
+  get getWithDeleted(): MaybeUndefined<U, N> {
     return this.doGet({ withDeleted: true });
   }
 
@@ -46,7 +47,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return this._isLoaded;
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts?: { withDeleted?: boolean }): Promise<MaybeUndefined<U, N>> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this.isLoaded) {
       if (this.loadPromise === undefined) {
@@ -120,14 +121,16 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return `CustomReference(entity: ${this.entity}, fieldName: ${this.fieldName})`;
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
+  private doGet(opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     ensureNewOrLoaded(this);
     return this.filterDeleted(this.opts.get(this.entity), opts);
   }
 
-  private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
+  private filterDeleted(entity: MaybeUndefined<U, N>, opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> {
+    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity
+      ? entity
+      : (undefined as MaybeUndefined<U, N>);
   }
 }
 

@@ -191,7 +191,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
-    const maybeOptional = notNull ? "never" : "undefined";
+    const maybeOptional = notNull ? `"not-null"` : `"null"`;
     return code`
       readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(
@@ -219,7 +219,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const o2o = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, undefined> =
+      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, "null"> =
         ${hasOneToOne}(
           ${otherEntity.metaType},
           "${fieldName}",
@@ -247,7 +247,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   // Add Polymorphic
   const polymorphic = meta.polymorphics.map((p) => {
     const { fieldName, notNull, fieldType } = p;
-    const maybeOptional = notNull ? "never" : "undefined";
+    const maybeOptional = notNull ? `"not-null"` : `"null"`;
     return code`
       readonly ${fieldName}: ${Reference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
         "${fieldName}",

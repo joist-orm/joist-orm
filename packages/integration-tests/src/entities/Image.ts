@@ -6,7 +6,7 @@ type ImageOwner = Book | Publisher | Author;
 export class Image extends ImageCodegen {
   // We don't use hasOneThrough or hasOneDerived b/c we use the ImageType to do a
   // selective .load instead of a load hint that probes every possible table.
-  readonly owner: Reference<Image, ImageOwner, undefined> = new CustomReference<Image, ImageOwner, undefined>(this, {
+  readonly owner: Reference<Image, ImageOwner, "null"> = new CustomReference<Image, ImageOwner, "null">(this, {
     load: async (image) => {
       await image.ownerRef.load();
     },

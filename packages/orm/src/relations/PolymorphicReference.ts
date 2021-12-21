@@ -21,8 +21,9 @@ import {
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
+import { MaybeUndefined, NullOrNotNull } from "./Reference";
 
-export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
+export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends NullOrNotNull>(
   fieldName: keyof T,
 ): Reference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
@@ -40,11 +41,11 @@ export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends 
  * essentially be half of a one-to-one relationship, but we'll keep using this reference on the "owning" side; the other
  * side, i.e. `BookReview.comment` will use a `OneToOneReference` to point back to us.
  */
-export class PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
+export class PolymorphicReference<T extends Entity, U extends Entity, N extends NullOrNotNull>
   extends AbstractRelationImpl<U>
   implements Reference<T, U, N>
 {
-  private loaded!: U | N;
+  private loaded!: MaybeUndefined<U, N>;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   private field: PolymorphicField;
@@ -54,7 +55,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     this.field = getMetadata(entity).fields.find((f) => f.fieldName === this.fieldName) as PolymorphicField;
   }
 
-  private get currentComponent(): PolymorphicFieldComponent | N {
+  private get currentComponent(): MaybeUndefined<PolymorphicFieldComponent, N> {
     const cstr = maybeGetConstructorFromReference(this.current());
     return this.field.components.find((c) => c.otherMetadata().cstr === cstr) as any;
   }
@@ -65,7 +66,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     );
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts?: { withDeleted?: boolean }): Promise<MaybeUndefined<U, N>> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     const current = this.current();
     // Resolve the id to an entity
@@ -76,7 +77,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     return this.filterDeleted(this.loaded, opts);
   }
 
-  set(other: U | N): void {
+  set(other: MaybeUndefined<U, N>): void {
     this.setImpl(other);
   }
 
@@ -88,7 +89,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     return this._isLoaded;
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
+  private doGet(opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
@@ -104,11 +105,11 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     return this.filterDeleted(this.loaded, opts);
   }
 
-  get getWithDeleted(): U | N {
+  get getWithDeleted(): MaybeUndefined<U, N> {
     return this.doGet({ withDeleted: true });
   }
 
-  get get(): U | N {
+  get get(): MaybeUndefined<U, N> {
     return this.doGet({ withDeleted: false });
   }
 
@@ -165,7 +166,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
   async cleanupOnEntityDeleted(): Promise<void> {
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
-      const o2m = this.getOtherRelation(current);
+      const o2m = this.getOtherRelation(current as U);
       if (o2m instanceof OneToManyCollection) {
         o2m.remove(this.entity, { requireLoaded: false });
       } else {
@@ -178,7 +179,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
   }
 
   // Internal method used by PolymorphicReference
-  setImpl(other: U | N): void {
+  setImpl(other: MaybeUndefined<U, N>): void {
     if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
       return;
     }
@@ -210,7 +211,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
       }
     }
     if (other !== undefined) {
-      const newRelation = this.getOtherRelation(other);
+      const newRelation = this.getOtherRelation(other as U);
       if (newRelation instanceof OneToManyCollection) {
         newRelation.add(this.entity);
       } else {
@@ -220,7 +221,7 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
-  current(opts?: { withDeleted?: boolean }): U | string | N {
+  current(opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> | string {
     const current = this.entity.__orm.data[this.fieldName ?? ""];
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
@@ -234,8 +235,10 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
     }, otherFieldName: ${this.currentComponent?.otherFieldName}, id: ${this.id})`;
   }
 
-  private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
+  private filterDeleted(entity: MaybeUndefined<U, N>, opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> {
+    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity
+      ? entity
+      : (undefined as MaybeUndefined<U, N>);
   }
 
   /** Returns the other relation that points back at us, i.e. we're `comment.parent_book_id` and this is `Book.comments`. */

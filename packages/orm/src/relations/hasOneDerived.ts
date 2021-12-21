@@ -1,6 +1,7 @@
 import { currentlyInstantiatingEntity, getEm, Reference } from "../";
 import { Entity, Loaded, LoadHint } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
+import { MaybeUndefined, NullOrNotNull } from "./Reference";
 
 /**
  * Creates a CustomReference that can conditionally walk across references in the object graph.
@@ -12,8 +13,8 @@ import { CustomReference } from "./CustomReference";
 export function hasOneDerived<
   T extends Entity,
   U extends Entity,
-  N extends never | undefined,
-  V extends U | N,
+  N extends NullOrNotNull,
+  V extends MaybeUndefined<U, N>,
   H extends LoadHint<T>,
 >(loadHint: H, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;

@@ -1,4 +1,5 @@
 import { currentlyInstantiatingEntity, CustomReference, Entity, getLens, Lens, loadLens, Reference } from "../index";
+import { MaybeUndefined, NullOrNotNull } from "./Reference";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.
@@ -7,9 +8,12 @@ import { currentlyInstantiatingEntity, CustomReference, Entity, getLens, Lens, l
  *
  * Because this is based on `CustomReference`, it will work in populates, i.e. `em.populate(review, "author")`.
  */
-export function hasOneThrough<T extends Entity, U extends Entity, N extends never | undefined, V extends U | N>(
-  lens: (lens: Lens<T>) => Lens<V>,
-): Reference<T, U, N> {
+export function hasOneThrough<
+  T extends Entity,
+  U extends Entity,
+  N extends NullOrNotNull,
+  V extends MaybeUndefined<U, N>,
+>(lens: (lens: Lens<T>) => Lens<V>): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
     load: async (entity) => {

@@ -114,11 +114,11 @@ export abstract class ImageCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newImage>[1];
   } = null!;
 
-  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
+  readonly author: ManyToOneReference<Image, Author, "null"> = hasOne(authorMeta, "author", "image");
 
-  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
+  readonly book: ManyToOneReference<Image, Book, "null"> = hasOne(bookMeta, "book", "image");
 
-  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
+  readonly publisher: ManyToOneReference<Image, Publisher, "null"> = hasOne(publisherMeta, "publisher", "images");
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, {}, opts);

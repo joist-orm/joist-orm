@@ -11,11 +11,11 @@ import {
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
-import { ReferenceN } from "./Reference";
+import { MaybeUndefined, NullOrNotNull, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
-export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
+export function hasOne<T extends Entity, U extends Entity, N extends NullOrNotNull>(
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T,
   otherFieldName: keyof U,
@@ -24,7 +24,7 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
   return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
 }
 
-export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
+export interface ManyToOneReference<T extends Entity, U extends Entity, N extends NullOrNotNull>
   extends Reference<T, U, N> {
   /** Returns the id of the current assigned entity, or `undefined` if the assigned entity has no id yet, or `undefined` if this column is nullable and currently unset. */
   id: IdOf<U> | undefined;
@@ -55,12 +55,12 @@ export interface ManyToOneReference<T extends Entity, U extends Entity, N extend
  * be half of a one-to-one relationship, but we'll keep using this `ManyToOneReference` on the "many"
  * side, and the other side, i.e. `Author.image` will use a `OneToOneReference` to point back to us.
  */
-export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extends never | undefined>
+export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extends NullOrNotNull>
   extends AbstractRelationImpl<U>
   implements ManyToOneReference<T, U, N>
 {
   // Either the loaded entity, or N/undefined if we're allowed to be null
-  private loaded!: U | N | undefined;
+  private loaded!: MaybeUndefined<U, N> | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   private readonly isCascadeDelete: boolean;
@@ -75,7 +75,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts?: { withDeleted?: boolean }): Promise<MaybeUndefined<U, N>> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this._isLoaded && this.loaded) {
       return this.loaded;
@@ -89,7 +89,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this.filterDeleted(this.loaded!, opts);
   }
 
-  set(other: U | N): void {
+  set(other: MaybeUndefined<U, N>): void {
     this.setImpl(other);
   }
 
@@ -101,7 +101,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this._isLoaded;
   }
 
-  private doGet(opts?: { withDeleted?: boolean }): U | N {
+  private doGet(opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
@@ -117,20 +117,20 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this.filterDeleted(this.loaded!, opts);
   }
 
-  get getWithDeleted(): U | N {
+  get getWithDeleted(): MaybeUndefined<U, N> {
     return this.doGet({ withDeleted: true });
   }
 
-  get get(): U | N {
+  get get(): MaybeUndefined<U, N> {
     return this.doGet({ withDeleted: false });
   }
 
-  get id(): IdOf<U> | N {
+  get id(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+    return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
 
-  set id(id: IdOf<U> | N) {
+  set id(id: IdOf<U> | undefined) {
     ensureNotDeleted(this.entity, { ignore: "pending" });
 
     const previous = this.maybeFindEntity();
@@ -193,7 +193,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   async cleanupOnEntityDeleted(): Promise<void> {
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
-      const o2m = this.getOtherRelation(current);
+      const o2m = this.getOtherRelation(current as U);
       if (o2m instanceof OneToManyCollection) {
         o2m.remove(this.entity, { requireLoaded: false });
       } else {
@@ -206,7 +206,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   // Internal method used by OneToManyCollection
-  setImpl(other: U | N): void {
+  setImpl(other: MaybeUndefined<U, N>): void {
     // If other is new (i.e. has no id), we only noop/early exit if it matches our loaded reference.
     // Otherwise, noop/early exit based on id comparison (b/c we may not be loaded yet).
     if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
@@ -247,7 +247,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
-  current(opts?: { withDeleted?: boolean }): U | string | N {
+  current(opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> | string {
     const current = this.entity.__orm.data[this.fieldName];
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
@@ -259,8 +259,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 
-  private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
+  private filterDeleted(entity: MaybeUndefined<U, N>, opts?: { withDeleted?: boolean }): MaybeUndefined<U, N> {
+    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity
+      ? entity
+      : (undefined as MaybeUndefined<U, N>);
   }
 
   /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
@@ -272,12 +274,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
    * Looks for an entity in `EntityManager`, b/c we may have it in memory even if
    * our reference is not specifically loaded.
    */
-  maybeFindEntity(): U | undefined {
+  maybeFindEntity(): MaybeUndefined<U, N> | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
     return this.loaded ?? (this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined);
   }
-
-  [RelationT]?: T;
-  [RelationU]?: U;
-  [ReferenceN]?: N;
 }

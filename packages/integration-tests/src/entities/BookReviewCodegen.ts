@@ -103,9 +103,9 @@ export abstract class BookReviewCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newBookReview>[1];
   } = null!;
 
-  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
+  readonly book: ManyToOneReference<BookReview, Book, "not-null"> = hasOne(bookMeta, "book", "reviews");
 
-  readonly comment: Reference<BookReview, Comment, undefined> = hasOneToOne(
+  readonly comment: Reference<BookReview, Comment, "null"> = hasOneToOne(
     commentMeta,
     "comment",
     "parent",

@@ -4,7 +4,7 @@ import { Knex } from "knex";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
-import { Driver } from "./drivers/driver";
+import { Driver } from "./drivers";
 import {
   assertIdsAreTagged,
   AsyncProperty,
@@ -105,9 +105,7 @@ export interface Entity {
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends ManyToOneReference<T, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, H>, N>
-  : P extends Reference<T, infer U, infer N>
+type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
@@ -462,7 +460,7 @@ export class EntityManager<C = {}> {
             const relation = entity[relationName] as any as
               | OneToManyCollection<T, any>
               | OneToOneReferenceImpl<T, any>
-              | ManyToOneReferenceImpl<T, any, undefined | never>;
+              | ManyToOneReferenceImpl<T, any, any>;
             if (relation instanceof OneToManyCollection) {
               const relatedEntities = await relation.load();
               await Promise.all(
@@ -470,7 +468,7 @@ export class EntityManager<C = {}> {
                   const clonedRelated = await this.clone(related, nested);
                   // Clear to avoid `set` mutating the original/source entity's relationship
                   clonedRelated.__orm.data[relation.otherFieldName] = undefined;
-                  const relationToClone = clonedRelated[relation.otherFieldName] as Reference<Entity, T, undefined>;
+                  const relationToClone = clonedRelated[relation.otherFieldName] as Reference<Entity, T, any>;
                   relationToClone.set(clone);
                 }),
               );

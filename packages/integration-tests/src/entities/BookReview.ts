@@ -3,11 +3,11 @@ import { Author, BookReviewCodegen, bookReviewConfig, Publisher } from "./entiti
 
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
-  readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
+  readonly author: Reference<BookReview, Author, "not-null"> = hasOneThrough((review) => review.book.author);
 
   // This is kind of silly domain wise, but used as an example of hasOneDerived with a load hint. We don't
   // technically have any conditional logic in `get` so could use a lens, but we want to test hasOneDerived.
-  readonly publisher: Reference<BookReview, Publisher, undefined> = hasOneDerived(
+  readonly publisher: Reference<BookReview, Publisher, "null"> = hasOneDerived(
     { book: { author: "publisher" } },
     (review) => review.book.get.author.get.publisher.get,
   );

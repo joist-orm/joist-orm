@@ -1,36 +1,16 @@
-import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, getEm, IdOf, setField } from "../";
+import { currentlyInstantiatingEntity, ensureNotDeleted, getEm, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { Reference } from "./Reference";
-
-const H = Symbol();
+import { RelationT, RelationU } from "./Relation";
 
 /** The lazy-loaded/lookup side of a one-to-one, i.e. the side w/o the unique foreign key column. */
-export interface OneToOneReference<T extends Entity, U extends Entity> extends Reference<T, U, undefined> {
-  [H]?: T;
+export interface OneToOneReference<T extends Entity, U extends Entity> extends Reference<T, U, "null"> {
+  [RelationT]?: T;
+  [RelationU]?: U;
 }
-
-// /** Adds a known-safe `get` accessor. */
-// export interface LoadedOneToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
-//   extends Omit<Reference<T, U, N>, "id"> {
-//   get: U | N;
-//
-//   getWithDeleted: U | N;
-// }
-
-// /** Type guard utility for determining if an entity field is a Reference. */
-// export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any, any> {
-//   return maybeReference instanceof OneToOneReference;
-// }
-//
-// /** Type guard utility for determining if an entity field is a loaded Reference. */
-// export function isLoadedOneToOneReference(
-//   maybeReference: any,
-// ): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any, any> {
-//   return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
-// }
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
@@ -38,7 +18,7 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
   fieldName: keyof T,
   otherFieldName: keyof U,
   otherColumnName: string,
-): Reference<T, U, undefined> {
+): Reference<T, U, "null"> {
   const entity = currentlyInstantiatingEntity as T;
   return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
@@ -78,32 +58,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   ) {
     super();
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
-  }
-
-  get id(): IdOf<U> | undefined {
-    if (this._isLoaded) {
-      return this.loaded?.id as IdOf<U> | undefined;
-    }
-    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
-  }
-
-  get idOrFail(): IdOf<U> {
-    return this.id || fail(`${this.entity}.${this.fieldName} has no id yet`);
-  }
-
-  get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.otherMeta, [this.id])[0];
-  }
-
-  get idUntaggedOrFail(): string {
-    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
-  }
-
-  get isSet(): boolean {
-    if (this._isLoaded) {
-      return this.loaded !== undefined;
-    }
-    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   // opts is an internal parameter

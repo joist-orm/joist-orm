@@ -490,7 +490,6 @@ describe("EntityManager", () => {
     // Then we can assign this book to a type hint var that is expecting a loaded author/publisher
     const b2: Loaded<Book, typeof bookHint> = b1;
     // And we can access the author and publisher synchronously w/o compile errors
-    const a = b1.author;
     expect(b1.author.get.publisher.get).toBeUndefined();
     expect(b2.author.get.publisher.get).toBeUndefined();
     expect(() => {

@@ -8,8 +8,7 @@ describe("EntityManager.populate", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const booka = await em.load(Book, "1");
-    const bookb = await em.populate(booka, { author: {} });
-    const a = bookb.author;
+    const bookb = await em.populate(booka, "author");
     expect(bookb.author.get.firstName).toEqual("a1");
   });
 

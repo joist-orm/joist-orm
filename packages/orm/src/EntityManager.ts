@@ -34,7 +34,7 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { JoinRow } from "./relations/ManyToManyCollection";
-import { ManyToOneReference, ManyToOneReferenceImpl } from "./relations/ManyToOneReference";
+import { ManyToOneReferenceImpl } from "./relations/ManyToOneReference";
 import { OneToOneReferenceImpl } from "./relations/OneToOneReference";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, NullOrDefinedOr, toArray } from "./utils";
@@ -128,9 +128,7 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
  */
 type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
   ? OK extends Entity
-    ? T[K] extends ManyToOneReference<T, infer U, infer N>
-      ? LoadedReference<T, OK, N>
-      : T[K] extends Reference<T, infer U, infer N>
+    ? T[K] extends Reference<T, infer U, infer N>
       ? LoadedReference<T, OK, N>
       : never
     : OK extends Array<infer OU>

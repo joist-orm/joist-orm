@@ -21,10 +21,8 @@ import {
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
-  ManyToOneReference,
   maybeResolveReferenceToId,
   OneToManyCollection,
-  OneToOneReference,
   PartialOrNull,
   Reference,
   Relation,
@@ -36,6 +34,8 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { JoinRow } from "./relations/ManyToManyCollection";
+import { ManyToOneReference, ManyToOneReferenceImpl } from "./relations/ManyToOneReference";
+import { OneToOneReferenceImpl } from "./relations/OneToOneReference";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, NullOrDefinedOr, toArray } from "./utils";
 
@@ -105,7 +105,9 @@ export interface Entity {
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>
+type MarkLoaded<T extends Entity, P, H = {}> = P extends ManyToOneReference<T, infer U, infer N>
+  ? LoadedReference<T, Loaded<U, H>, N>
+  : P extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
@@ -128,7 +130,9 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
  */
 type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
   ? OK extends Entity
-    ? T[K] extends Reference<T, infer U, infer N>
+    ? T[K] extends ManyToOneReference<T, infer U, infer N>
+      ? LoadedReference<T, OK, N>
+      : T[K] extends Reference<T, infer U, infer N>
       ? LoadedReference<T, OK, N>
       : never
     : OK extends Array<infer OU>
@@ -457,8 +461,8 @@ export class EntityManager<C = {}> {
           async ([relationName, nested]) => {
             const relation = entity[relationName] as any as
               | OneToManyCollection<T, any>
-              | OneToOneReference<T, any>
-              | ManyToOneReference<T, any, undefined | never>;
+              | OneToOneReferenceImpl<T, any>
+              | ManyToOneReferenceImpl<T, any, undefined | never>;
             if (relation instanceof OneToManyCollection) {
               const relatedEntities = await relation.load();
               await Promise.all(
@@ -470,7 +474,7 @@ export class EntityManager<C = {}> {
                   relationToClone.set(clone);
                 }),
               );
-            } else if (relation instanceof OneToOneReference) {
+            } else if (relation instanceof OneToOneReferenceImpl) {
               const related = await relation.load();
               if (related) {
                 const clonedRelated = await this.clone(related, nested);
@@ -479,7 +483,7 @@ export class EntityManager<C = {}> {
                 const relationToClone = clone[relation.fieldName] as any;
                 relationToClone.set(clonedRelated);
               }
-            } else if (relation instanceof ManyToOneReference) {
+            } else if (relation instanceof ManyToOneReferenceImpl) {
               const related = await relation.load();
               if (related) {
                 const clonedRelated = await this.clone(related, nested);

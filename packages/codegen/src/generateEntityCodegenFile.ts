@@ -29,6 +29,7 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
@@ -192,7 +193,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
+      readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(
           ${otherEntity.metaType},
           "${fieldName}",

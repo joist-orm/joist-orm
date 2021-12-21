@@ -319,7 +319,7 @@ export class ConfigApi<T extends Entity, C> {
     }
   }
 
-  beforeDelete<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
+  beforeDelete<H extends LoadHint<T>>(popuate: H, fn: HookFn<Loaded<T, H>, C>): void;
   beforeDelete(fn: HookFn<T, C>): void;
   beforeDelete(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
     this.addHook("beforeDelete", ruleOrHint, maybeFn);

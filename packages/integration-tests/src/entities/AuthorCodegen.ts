@@ -20,6 +20,7 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
@@ -157,9 +158,9 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
 
-  readonly mentor: Reference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
+  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 
-  readonly publisher: Reference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
+  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
   readonly image: Reference<Author, Image, undefined> = hasOneToOne(imageMeta, "image", "author", "author_id");
 

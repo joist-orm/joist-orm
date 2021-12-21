@@ -34,6 +34,7 @@ describe("hasOneThrough", () => {
     const a2 = await em.load(Author, "2");
     const review = await em.load(BookReview, "1", ["author", "book"]);
     expect(review.author.get.firstName).toEqual("a1");
+    const b = review.book;
     review.book.get.author.set(a2);
     expect(review.author.get.firstName).toEqual("a2");
   });

@@ -18,6 +18,7 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
@@ -131,7 +132,7 @@ export abstract class BookCodegen extends BaseEntity {
 
   readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
-  readonly author: Reference<Book, Author, never> = hasOne(authorMeta, "author", "books");
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
   readonly image: Reference<Book, Image, undefined> = hasOneToOne(imageMeta, "image", "book", "book_id");
 

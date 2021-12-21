@@ -15,12 +15,12 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
   setField,
   setOpts,
   ValueFilter,
@@ -102,9 +102,13 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   } = null!;
 
-  readonly book: Reference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
+  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
 
-  readonly publisher: Reference<BookAdvance, Publisher, never> = hasOne(publisherMeta, "publisher", "bookAdvances");
+  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(
+    publisherMeta,
+    "publisher",
+    "bookAdvances",
+  );
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, {}, opts);

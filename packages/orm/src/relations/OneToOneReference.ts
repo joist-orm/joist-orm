@@ -1,8 +1,36 @@
-import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
+import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, getEm, IdOf, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
+import { Reference } from "./Reference";
+
+const H = Symbol();
+
+/** The lazy-loaded/lookup side of a one-to-one, i.e. the side w/o the unique foreign key column. */
+export interface OneToOneReference<T extends Entity, U extends Entity> extends Reference<T, U, undefined> {
+  [H]?: T;
+}
+
+// /** Adds a known-safe `get` accessor. */
+// export interface LoadedOneToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
+//   extends Omit<Reference<T, U, N>, "id"> {
+//   get: U | N;
+//
+//   getWithDeleted: U | N;
+// }
+
+// /** Type guard utility for determining if an entity field is a Reference. */
+// export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any, any> {
+//   return maybeReference instanceof OneToOneReference;
+// }
+//
+// /** Type guard utility for determining if an entity field is a loaded Reference. */
+// export function isLoadedOneToOneReference(
+//   maybeReference: any,
+// ): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any, any> {
+//   return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
+// }
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
@@ -12,7 +40,7 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
   otherColumnName: string,
 ): Reference<T, U, undefined> {
   const entity = currentlyInstantiatingEntity as T;
-  return new OneToOneReference<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+  return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
 /**
@@ -32,9 +60,9 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
  * Currently we enforce this with a runtime check, which is not great, but the trade-off of implementing
  * `Reference` seemed worth the downside of a un-type-safe `.id` property.
  */
-export class OneToOneReference<T extends Entity, U extends Entity>
+export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, undefined>
+  implements OneToOneReference<T, U>
 {
   private loaded: U | undefined;
   private _isLoaded: boolean = false;

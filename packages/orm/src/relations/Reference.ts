@@ -2,7 +2,7 @@ import { Entity, IdOf } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
-import { PolymorphicReference } from "./PolymorphicReference";
+import { PolymorphicReferenceImpl } from "./PolymorphicReference";
 import { Relation } from "./Relation";
 
 // Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031
@@ -49,7 +49,7 @@ export function isReference(maybeReference: any): maybeReference is Reference<an
     maybeReference instanceof OneToOneReferenceImpl ||
     maybeReference instanceof ManyToOneReferenceImpl ||
     maybeReference instanceof CustomReference ||
-    maybeReference instanceof PolymorphicReference
+    maybeReference instanceof PolymorphicReferenceImpl
   );
 }
 

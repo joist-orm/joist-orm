@@ -36,6 +36,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PolymorphicReference,
   Reference,
   setField,
   setOpts,
@@ -250,7 +251,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
+      readonly ${fieldName}: ${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
         "${fieldName}",
       );
     `;

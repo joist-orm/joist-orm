@@ -26,9 +26,25 @@ import { RelationT, RelationU } from "./Relation";
 
 export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
   fieldName: keyof T,
-): Reference<T, U, N> {
+): PolymorphicReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
-  return new PolymorphicReference<T, U, N>(entity, fieldName);
+  return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
+}
+
+export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
+  extends Reference<T, U, N> {
+  /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
+  id: IdOf<U> | undefined;
+
+  /** Returns the id of the current assigned entity or a runtime error if it's either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
+  idOrFail: IdOf<U>;
+
+  idUntagged: string | undefined;
+
+  idUntaggedOrFail: string;
+
+  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
+  readonly isSet: boolean;
 }
 
 /**
@@ -42,9 +58,9 @@ export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends 
  * essentially be half of a one-to-one relationship, but we'll keep using this reference on the "owning" side; the other
  * side, i.e. `BookReview.comment` will use a `OneToOneReference` to point back to us.
  */
-export class PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
+export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, N>
+  implements PolymorphicReference<T, U, N>
 {
   private loaded!: U | N;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.

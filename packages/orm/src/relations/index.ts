@@ -16,6 +16,6 @@ export { hasManyToMany, ManyToManyCollection } from "./ManyToManyCollection";
 export { hasOne, ManyToOneReference } from "./ManyToOneReference";
 export { hasMany, OneToManyCollection } from "./OneToManyCollection";
 export { hasOneToOne, OneToOneReference } from "./OneToOneReference";
-export { hasOnePolymorphic } from "./PolymorphicReference";
+export { hasOnePolymorphic, PolymorphicReference } from "./PolymorphicReference";
 export { isLoadedReference, isReference, LoadedReference, Reference } from "./Reference";
 export { isRelation, Relation } from "./Relation";

@@ -3,7 +3,7 @@ import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
 import { PolymorphicReference } from "./PolymorphicReference";
-import { Relation, RelationT, RelationU } from "./Relation";
+import { Relation } from "./Relation";
 
 // Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031
 export const ReferenceN = Symbol();
@@ -23,9 +23,7 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
 
   set(other: U | N): void;
 
-  [RelationT]?: T;
-  [RelationU]?: U;
-  [ReferenceN]?: N;
+  [ReferenceN]: N;
 }
 
 /** Adds a known-safe `get` accessor. */

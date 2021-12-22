@@ -3,7 +3,8 @@ import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
-import { Reference } from "./Reference";
+import { Reference, ReferenceN } from "./Reference";
+import { RelationT, RelationU } from "./Relation";
 
 const H = Symbol();
 
@@ -202,4 +203,8 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
+  [ReferenceN]: undefined = null!;
 }

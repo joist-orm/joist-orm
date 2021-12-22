@@ -288,7 +288,7 @@ export class ConfigApi<T extends Entity, C> {
 
   cascadeDelete(relationship: keyof RelationsIn<T>): void {
     this.__data.cascadeDeleteFields.push(relationship);
-    this.beforeDelete(relationship, (entity) => {
+    this.beforeDelete(relationship as any, (entity) => {
       const relation = entity[relationship] as any as AbstractRelationImpl<any>;
       relation.maybeCascadeDelete();
     });

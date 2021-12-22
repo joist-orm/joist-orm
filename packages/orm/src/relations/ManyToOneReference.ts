@@ -38,10 +38,6 @@ export interface ManyToOneReference<T extends Entity, U extends Entity, N extend
 
   /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
   readonly isSet: boolean;
-
-  [RelationT]?: T;
-  [RelationU]?: U;
-  [ReferenceN]?: N;
 }
 
 /**
@@ -277,7 +273,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this.loaded ?? (this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined);
   }
 
-  [RelationT]?: T;
-  [RelationU]?: U;
-  [ReferenceN]?: N;
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
+  [ReferenceN]: N = null!;
 }

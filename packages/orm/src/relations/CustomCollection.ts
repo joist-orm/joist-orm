@@ -1,6 +1,7 @@
 import { Entity, IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { RelationT, RelationU } from "./Relation";
 
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
@@ -144,6 +145,9 @@ export class CustomCollection<T extends Entity, U extends Entity>
   private filterDeleted(entities: readonly U[], opts?: { withDeleted?: boolean }): readonly U[] {
     return entities.filter((entity) => opts?.withDeleted === true || !entity.isDeletedEntity);
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
 }
 
 function ensureNewOrLoaded(reference: CustomCollection<any, any>) {

@@ -21,6 +21,8 @@ import {
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
+import { ReferenceN } from "./Reference";
+import { RelationT, RelationU } from "./Relation";
 
 export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
   fieldName: keyof T,
@@ -247,4 +249,8 @@ export class PolymorphicReference<T extends Entity, U extends Entity, N extends 
   private maybeFindExisting(): U | undefined {
     return this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined;
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
+  [ReferenceN]: N = null!;
 }

@@ -189,7 +189,7 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 export type LoadHint<T extends Entity> = keyof Loadable<T> | ReadonlyArray<keyof Loadable<T>> | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
-  [K in keyof Loadable<T>]?: T[K] extends Relation<T, infer U>
+  [K in keyof Loadable<T>]?: T[K] extends Relation<any, infer U>
     ? LoadHint<U>
     : T[K] extends AsyncProperty<any, any>
     ? {}
@@ -448,7 +448,7 @@ export class EntityManager<C = {}> {
     clone.__orm.data = data;
     if (hint) {
       if ((typeof hint as any) === "string") {
-        hint = { [hint as keyof RelationsIn<T>]: {} } as any;
+        hint = { [hint as any]: {} } as any;
       } else if (Array.isArray(hint)) {
         hint = Object.fromEntries(hint.map((relation) => [relation, {}]));
       }

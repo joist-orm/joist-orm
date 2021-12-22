@@ -13,6 +13,7 @@ import {
 import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
+import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
@@ -225,4 +226,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   private getOtherRelation(other: U): ManyToOneReferenceImpl<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
 }

@@ -12,8 +12,9 @@ export interface Relation<T extends Entity, U extends Entity> {
   // inference inside of `LoadHint` to go beyond "this generic T of Entity has id and __orm"
   // to "no really this generic T has fields firstName, title, etc.".
   // See https://stackoverflow.com/questions/53448100/generic-type-of-extended-interface-not-inferred
-  [RelationT]?: T;
-  [RelationU]?: U;
+  // And https://github.com/microsoft/TypeScript/issues/47213
+  [RelationT]: T;
+  [RelationU]: U;
 }
 
 /** Type guard utility for determining if an entity field is a Relation. */

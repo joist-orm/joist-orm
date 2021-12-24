@@ -125,7 +125,7 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1", "image");
-    // expect(a1.image.isSet).toBeFalsy();
+    expect(a1.image.isSet).toBeFalsy();
     em.delete(a1);
     await em.flush();
     expect((await knex.select("*").from("authors")).length).toEqual(0);

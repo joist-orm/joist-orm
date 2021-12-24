@@ -1,5 +1,5 @@
 import { insertAuthor, insertImage } from "@src/entities/inserts";
-import { Author, Image, ImageType } from "../entities";
+import { Author, Image, ImageType, newAuthor } from "../entities";
 import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToOneReference", () => {
@@ -21,9 +21,11 @@ describe("OneToOneReference", () => {
 
   it("can save when set", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = newAuthor(em, { firstName: "a1" });
+    expect(author.image.isSet).toEqual(false);
     const image = new Image(em, { fileName: "f1", type: ImageType.AuthorImage });
     author.image.set(image);
+    expect(author.image.isSet).toEqual(true);
     await em.flush();
 
     const rows = await knex.select("*").from("images");

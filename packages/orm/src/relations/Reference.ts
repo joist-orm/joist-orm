@@ -36,7 +36,7 @@ export interface LoadedReference<T extends Entity, U extends Entity, N extends n
   // Note that, similar to `.get`, this is _usually_ right, but if the user mutates the object graph after the
   // populate, i.e. they change some fields to have actually-new / not-included-in-the-`populate` call entities,
   // then these might turn into runtime errors. But the ergonomics are sufficiently better that it is worth it.
-  id: IdOf<T> | N;
+  id: IdOf<U> | N;
 
   get: U | N;
 

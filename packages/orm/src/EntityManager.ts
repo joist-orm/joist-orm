@@ -131,7 +131,9 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, in
  */
 type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
   ? OK extends Entity
-    ? T[K] extends Reference<T, infer U, infer N>
+    ? T[K] extends OneToOneReference<T, infer U>
+      ? LoadedOneToOneReference<T, U>
+      : T[K] extends Reference<T, infer U, infer N>
       ? LoadedReference<T, OK, N>
       : never
     : OK extends Array<infer OU>
@@ -162,6 +164,11 @@ export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
     // on a new author, so keeping the `MarkLoaded` behavior for now.
     [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
   };
+
+/** Detects whether an entity is newly created, and so we can treat all of the relations as loaded. */
+export function isNew<T extends Entity>(e: T): e is New<T> {
+  return e.id === undefined;
+}
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &

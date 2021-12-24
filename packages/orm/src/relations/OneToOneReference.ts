@@ -43,17 +43,17 @@ export interface LoadedOneToOneReference<T extends Entity, U extends Entity> ext
   readonly isSet: boolean;
 }
 
-// /** Type guard utility for determining if an entity field is a Reference. */
-// export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any, any> {
-//   return maybeReference instanceof OneToOneReference;
-// }
-//
-// /** Type guard utility for determining if an entity field is a loaded Reference. */
-// export function isLoadedOneToOneReference(
-//   maybeReference: any,
-// ): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any, any> {
-//   return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
-// }
+/** Type guard utility for determining if an entity field is a Reference. */
+export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any, any> {
+  return maybeReference instanceof OneToOneReferenceImpl;
+}
+
+/** Type guard utility for determining if an entity field is a loaded Reference. */
+export function isLoadedOneToOneReference(
+  maybeReference: any,
+): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any> {
+  return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
+}
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(

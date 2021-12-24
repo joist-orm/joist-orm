@@ -31,6 +31,11 @@ export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends 
   return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
 }
 
+/** Type guard utility for determining if an entity field is a PolymorphicReference. */
+export function isPolymorphicReference(maybeReference: any): maybeReference is PolymorphicReference<any, any, any> {
+  return maybeReference instanceof PolymorphicReferenceImpl;
+}
+
 export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
   /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */

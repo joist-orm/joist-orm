@@ -24,6 +24,11 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
   return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
 }
 
+/** Type guard utility for determining if an entity field is a ManyToOneReference. */
+export function isManyToOneReference(maybeReference: any): maybeReference is ManyToOneReference<any, any, any> {
+  return maybeReference instanceof ManyToOneReferenceImpl;
+}
+
 export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
   /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */

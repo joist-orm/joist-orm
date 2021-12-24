@@ -100,14 +100,14 @@ describe("OneToOneReference", () => {
     expect(a1.image.get?.fileName).toEqual("f1");
   });
 
-  // it("id fails if not loaded", async () => {
-  //   await insertAuthor({ first_name: "a1" });
-  //   const em = newEntityManager();
-  //   const a1 = await em.load(Author, "1");
-  //   expect(() => a1.image.id).toThrow("Author:1.image was not loaded");
-  //   await a1.image.load();
-  //   expect(a1.image.id).toBeUndefined();
-  // });
+  it("id fails if not loaded", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "1");
+    expect(() => (a1.image as any).id).toThrow("Author:1.image was not loaded");
+    await a1.image.load();
+    expect((a1.image as any).id).toBeUndefined();
+  });
 
   it("can cascade delete", async () => {
     await insertAuthor({ first_name: "a1" });
@@ -115,7 +115,7 @@ describe("OneToOneReference", () => {
     const a1 = await em.load(Author, "1", "image");
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
     await em.refresh();
-    // expect(a1.image.isSet).toBeTruthy();
+    expect(a1.image.isSet).toBeTruthy();
     em.delete(a1);
     await em.flush();
     expect((await knex.select("*").from("images")).length).toEqual(0);
@@ -136,6 +136,6 @@ describe("OneToOneReference", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await em.refresh();
-    // expect(() => a1.image.isSet).toThrow("Author:1.image was not loaded");
+    expect(() => (a1.image as any).isSet).toThrow("Author:1.image was not loaded");
   });
 });

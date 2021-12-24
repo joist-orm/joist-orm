@@ -32,6 +32,7 @@ import {
   ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -219,7 +220,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const o2o = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, undefined> =
+      readonly ${fieldName}: ${OneToOneReference}<${entity.type}, ${otherEntity.type}> =
         ${hasOneToOne}(
           ${otherEntity.metaType},
           "${fieldName}",

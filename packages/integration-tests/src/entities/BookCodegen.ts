@@ -21,10 +21,10 @@ import {
   ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
   setField,
   setOpts,
   ValueFilter,
@@ -134,7 +134,7 @@ export abstract class BookCodegen extends BaseEntity {
 
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
-  readonly image: Reference<Book, Image, undefined> = hasOneToOne(imageMeta, "image", "book", "book_id");
+  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
 
   readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 

@@ -20,10 +20,10 @@ import {
   ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
   setField,
   setOpts,
   ValueFilter,
@@ -105,7 +105,7 @@ export abstract class BookReviewCodegen extends BaseEntity {
 
   readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 
-  readonly comment: Reference<BookReview, Comment, undefined> = hasOneToOne(
+  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(
     commentMeta,
     "comment",
     "parent",

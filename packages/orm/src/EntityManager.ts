@@ -23,6 +23,7 @@ import {
   LoadedReference,
   maybeResolveReferenceToId,
   OneToManyCollection,
+  OneToOneReference,
   PartialOrNull,
   Reference,
   Relation,
@@ -35,7 +36,7 @@ import {
 } from "./index";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { ManyToOneReferenceImpl } from "./relations/ManyToOneReference";
-import { OneToOneReferenceImpl } from "./relations/OneToOneReference";
+import { LoadedOneToOneReference, OneToOneReferenceImpl } from "./relations/OneToOneReference";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, NullOrDefinedOr, toArray } from "./utils";
 
@@ -105,7 +106,9 @@ export interface Entity {
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>
+type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
+  ? LoadedOneToOneReference<T, Loaded<U, H>>
+  : P extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>

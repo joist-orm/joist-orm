@@ -23,10 +23,10 @@ import {
   ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
   setField,
   setOpts,
   ValueFilter,
@@ -162,7 +162,7 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
-  readonly image: Reference<Author, Image, undefined> = hasOneToOne(imageMeta, "image", "author", "author_id");
+  readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, {}, opts);

@@ -20,7 +20,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
+  PolymorphicReference,
   setField,
   setOpts,
   ValueFilter,
@@ -91,7 +91,7 @@ export abstract class CommentCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newComment>[1];
   } = null!;
 
-  readonly parent: Reference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
+  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, commentMeta, {}, opts);

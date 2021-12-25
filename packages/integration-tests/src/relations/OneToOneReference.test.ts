@@ -1,5 +1,5 @@
 import { insertAuthor, insertImage } from "@src/entities/inserts";
-import { Author, Image, ImageType } from "../entities";
+import { Author, Image, ImageType, newAuthor } from "../entities";
 import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToOneReference", () => {
@@ -21,9 +21,11 @@ describe("OneToOneReference", () => {
 
   it("can save when set", async () => {
     const em = newEntityManager();
-    const author = new Author(em, { firstName: "a1" });
+    const author = newAuthor(em, { firstName: "a1" });
+    expect(author.image.isSet).toEqual(false);
     const image = new Image(em, { fileName: "f1", type: ImageType.AuthorImage });
     author.image.set(image);
+    expect(author.image.isSet).toEqual(true);
     await em.flush();
 
     const rows = await knex.select("*").from("images");
@@ -104,9 +106,9 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    expect(() => a1.image.id).toThrow("Author:1.image was not loaded");
+    expect(() => (a1.image as any).id).toThrow("Author:1.image was not loaded");
     await a1.image.load();
-    expect(a1.image.id).toBeUndefined();
+    expect((a1.image as any).id).toBeUndefined();
   });
 
   it("can cascade delete", async () => {
@@ -136,6 +138,6 @@ describe("OneToOneReference", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await em.refresh();
-    expect(() => a1.image.isSet).toThrow("Author:1.image was not loaded");
+    expect(() => (a1.image as any).isSet).toThrow("Author:1.image was not loaded");
   });
 });

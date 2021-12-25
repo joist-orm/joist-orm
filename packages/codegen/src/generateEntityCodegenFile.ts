@@ -29,11 +29,14 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PolymorphicReference,
   Reference,
   setField,
   setOpts,
@@ -192,7 +195,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
+      readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(
           ${otherEntity.metaType},
           "${fieldName}",
@@ -218,7 +221,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const o2o = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${otherEntity.type}, undefined> =
+      readonly ${fieldName}: ${OneToOneReference}<${entity.type}, ${otherEntity.type}> =
         ${hasOneToOne}(
           ${otherEntity.metaType},
           "${fieldName}",
@@ -248,7 +251,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-      readonly ${fieldName}: ${Reference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
+      readonly ${fieldName}: ${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
         "${fieldName}",
       );
     `;

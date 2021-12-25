@@ -1,6 +1,8 @@
 import { Entity, IdOf } from "../EntityManager";
 import { ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { ReferenceN } from "./Reference";
+import { RelationT, RelationU } from "./Relation";
 
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
@@ -129,6 +131,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
     return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
+  [ReferenceN]: N = null!;
 }
 
 function ensureNewOrLoaded(reference: CustomReference<any, any, any>) {

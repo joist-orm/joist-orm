@@ -1,8 +1,59 @@
-import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, getEm, IdOf, Reference, setField } from "../";
+import {
+  currentlyInstantiatingEntity,
+  deTagIds,
+  ensureNotDeleted,
+  fail,
+  getEm,
+  IdOf,
+  LoadedReference,
+  setField,
+} from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
+import { Reference, ReferenceN } from "./Reference";
+import { RelationT, RelationU } from "./Relation";
+
+const OneToOne = Symbol();
+
+/** The lazy-loaded/lookup side of a one-to-one, i.e. the side w/o the unique foreign key column. */
+export interface OneToOneReference<T extends Entity, U extends Entity> extends Reference<T, U, undefined> {
+  // Need to differentiate OneToOneReference from Reference
+  [OneToOne]: T;
+}
+
+/** Adds a known-safe `get` accessor. */
+export interface LoadedOneToOneReference<T extends Entity, U extends Entity> extends LoadedReference<T, U, undefined> {
+  get: U | undefined;
+
+  getWithDeleted: U | undefined;
+
+  // Once OneToOneReference is loaded, it can get a lot of the ManyToOneReference methods that
+  // are available even in an unloaded state; below is mostly a copy/paste of those.
+
+  /** Returns the id of the current assigned entity or a runtime error if it's either a) unset or b) set to a new entity that doesn't have an `id` yet. */
+  idOrFail: IdOf<U>;
+
+  idUntagged: string | undefined;
+
+  idUntaggedOrFail: string;
+
+  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
+  readonly isSet: boolean;
+}
+
+/** Type guard utility for determining if an entity field is a Reference. */
+export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any, any> {
+  return maybeReference instanceof OneToOneReferenceImpl;
+}
+
+/** Type guard utility for determining if an entity field is a loaded Reference. */
+export function isLoadedOneToOneReference(
+  maybeReference: any,
+): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any> {
+  return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
+}
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
@@ -10,9 +61,9 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
   fieldName: keyof T,
   otherFieldName: keyof U,
   otherColumnName: string,
-): Reference<T, U, undefined> {
+): OneToOneReference<T, U> {
   const entity = currentlyInstantiatingEntity as T;
-  return new OneToOneReference<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+  return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
 /**
@@ -32,9 +83,9 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
  * Currently we enforce this with a runtime check, which is not great, but the trade-off of implementing
  * `Reference` seemed worth the downside of a un-type-safe `.id` property.
  */
-export class OneToOneReference<T extends Entity, U extends Entity>
+export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, undefined>
+  implements OneToOneReference<T, U>
 {
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
@@ -174,4 +225,9 @@ export class OneToOneReference<T extends Entity, U extends Entity>
   private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
+
+  [RelationT] = null!;
+  [RelationU] = null!;
+  [ReferenceN] = null!;
+  [OneToOne] = null!;
 }

@@ -17,12 +17,13 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
   setField,
   setOpts,
   ValueFilter,
@@ -102,9 +103,9 @@ export abstract class BookReviewCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newBookReview>[1];
   } = null!;
 
-  readonly book: Reference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
+  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 
-  readonly comment: Reference<BookReview, Comment, undefined> = hasOneToOne(
+  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(
     commentMeta,
     "comment",
     "parent",

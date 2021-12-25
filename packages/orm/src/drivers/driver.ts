@@ -3,7 +3,7 @@ import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../Ent
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
 import { OneToManyCollection } from "../relations/OneToManyCollection";
-import { OneToOneReference } from "../relations/OneToOneReference";
+import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { JoinRowTodo, Todo } from "../Todo";
 
 /** Isolates all SQL calls that joist needs to make to fetch/save data. */
@@ -28,7 +28,7 @@ export interface Driver {
 
   loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
-    reference: OneToOneReference<T, U>,
+    reference: OneToOneReferenceImpl<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 

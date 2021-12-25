@@ -12,7 +12,8 @@ import {
 } from "../index";
 import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { ManyToOneReference } from "./ManyToOneReference";
+import { ManyToOneReferenceImpl } from "./ManyToOneReference";
+import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
@@ -222,7 +223,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */
-  private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
+  private getOtherRelation(other: U): ManyToOneReferenceImpl<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
 }

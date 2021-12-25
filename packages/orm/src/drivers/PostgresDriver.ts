@@ -17,10 +17,10 @@ import {
   keyToString,
   maybeResolveReferenceToId,
   OneToManyCollection,
-  OneToOneReference,
   tagIds,
 } from "../index";
 import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
+import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
 import { Driver } from "./driver";
@@ -94,7 +94,7 @@ export class PostgresDriver implements Driver {
 
   loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
-    reference: OneToOneReference<T, U>,
+    reference: OneToOneReferenceImpl<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);

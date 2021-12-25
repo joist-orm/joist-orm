@@ -11,15 +11,38 @@ import {
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
+import { ReferenceN } from "./Reference";
+import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T,
   otherFieldName: keyof U,
-): Reference<T, U, N> {
+): ManyToOneReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
-  return new ManyToOneReference<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
+  return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
+}
+
+/** Type guard utility for determining if an entity field is a ManyToOneReference. */
+export function isManyToOneReference(maybeReference: any): maybeReference is ManyToOneReference<any, any, any> {
+  return maybeReference instanceof ManyToOneReferenceImpl;
+}
+
+export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
+  extends Reference<T, U, N> {
+  /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
+  id: IdOf<U> | undefined;
+
+  /** Returns the id of the current assigned entity or a runtime error if it's either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
+  idOrFail: IdOf<U>;
+
+  idUntagged: string | undefined;
+
+  idUntaggedOrFail: string;
+
+  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
+  readonly isSet: boolean;
 }
 
 /**
@@ -33,15 +56,15 @@ export function hasOne<T extends Entity, U extends Entity, N extends never | und
  * be half of a one-to-one relationship, but we'll keep using this `ManyToOneReference` on the "many"
  * side, and the other side, i.e. `Author.image` will use a `OneToOneReference` to point back to us.
  */
-export class ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
+export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, N>
+  implements ManyToOneReference<T, U, N>
 {
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
-  private isCascadeDelete: boolean;
+  private readonly isCascadeDelete: boolean;
 
   constructor(
     private entity: T,
@@ -254,4 +277,8 @@ export class ManyToOneReference<T extends Entity, U extends Entity, N extends ne
     // Check this.loaded first b/c a new entity won't have an id yet
     return this.loaded ?? (this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined);
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
+  [ReferenceN]: N = null!;
 }

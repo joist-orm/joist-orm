@@ -15,12 +15,12 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
-  Reference,
   setField,
   setOpts,
   ValueFilter,
@@ -114,11 +114,11 @@ export abstract class ImageCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newImage>[1];
   } = null!;
 
-  readonly author: Reference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
+  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
 
-  readonly book: Reference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
+  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
 
-  readonly publisher: Reference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
+  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, {}, opts);

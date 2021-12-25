@@ -21,7 +21,6 @@ import {
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
-  ManyToOneReference,
   maybeResolveReferenceToId,
   OneToManyCollection,
   OneToOneReference,
@@ -36,6 +35,8 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { JoinRow } from "./relations/ManyToManyCollection";
+import { ManyToOneReferenceImpl } from "./relations/ManyToOneReference";
+import { LoadedOneToOneReference, OneToOneReferenceImpl } from "./relations/OneToOneReference";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, NullOrDefinedOr, toArray } from "./utils";
 
@@ -105,7 +106,9 @@ export interface Entity {
 }
 
 /** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, infer N>
+type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
+  ? LoadedOneToOneReference<T, Loaded<U, H>>
+  : P extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
@@ -128,7 +131,9 @@ type MarkLoaded<T extends Entity, P, H = {}> = P extends Reference<T, infer U, i
  */
 type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
   ? OK extends Entity
-    ? T[K] extends Reference<T, infer U, infer N>
+    ? T[K] extends OneToOneReference<T, infer U>
+      ? LoadedOneToOneReference<T, U>
+      : T[K] extends Reference<T, infer U, infer N>
       ? LoadedReference<T, OK, N>
       : never
     : OK extends Array<infer OU>
@@ -160,6 +165,11 @@ export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
     [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
   };
 
+/** Detects whether an entity is newly created, and so we can treat all of the relations as loaded. */
+export function isNew<T extends Entity>(e: T): e is New<T> {
+  return e.id === undefined;
+}
+
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
   {
@@ -189,7 +199,7 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 export type LoadHint<T extends Entity> = keyof Loadable<T> | ReadonlyArray<keyof Loadable<T>> | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
-  [K in keyof Loadable<T>]?: T[K] extends Relation<T, infer U>
+  [K in keyof Loadable<T>]?: T[K] extends Relation<any, infer U>
     ? LoadHint<U>
     : T[K] extends AsyncProperty<any, any>
     ? {}
@@ -448,7 +458,7 @@ export class EntityManager<C = {}> {
     clone.__orm.data = data;
     if (hint) {
       if ((typeof hint as any) === "string") {
-        hint = { [hint as keyof RelationsIn<T>]: {} } as any;
+        hint = { [hint as any]: {} } as any;
       } else if (Array.isArray(hint)) {
         hint = Object.fromEntries(hint.map((relation) => [relation, {}]));
       }
@@ -457,8 +467,8 @@ export class EntityManager<C = {}> {
           async ([relationName, nested]) => {
             const relation = entity[relationName] as any as
               | OneToManyCollection<T, any>
-              | OneToOneReference<T, any>
-              | ManyToOneReference<T, any, undefined | never>;
+              | OneToOneReferenceImpl<T, any>
+              | ManyToOneReferenceImpl<T, any, undefined | never>;
             if (relation instanceof OneToManyCollection) {
               const relatedEntities = await relation.load();
               await Promise.all(
@@ -470,7 +480,7 @@ export class EntityManager<C = {}> {
                   relationToClone.set(clone);
                 }),
               );
-            } else if (relation instanceof OneToOneReference) {
+            } else if (relation instanceof OneToOneReferenceImpl) {
               const related = await relation.load();
               if (related) {
                 const clonedRelated = await this.clone(related, nested);
@@ -479,7 +489,7 @@ export class EntityManager<C = {}> {
                 const relationToClone = clone[relation.fieldName] as any;
                 relationToClone.set(clonedRelated);
               }
-            } else if (relation instanceof ManyToOneReference) {
+            } else if (relation instanceof ManyToOneReferenceImpl) {
               const related = await relation.load();
               if (related) {
                 const clonedRelated = await this.clone(related, nested);

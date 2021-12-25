@@ -1,11 +1,12 @@
 import DataLoader from "dataloader";
 import { Entity, EntityManager, getMetadata } from "../EntityManager";
-import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToOneReference } from "../index";
+import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId } from "../index";
+import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { getOrSet, groupBy } from "../utils";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
-  reference: OneToOneReference<T, U>,
+  reference: OneToOneReferenceImpl<T, U>,
 ): DataLoader<string, U | undefined> {
   // The metadata for the entity that contains the reference
   const meta = getMetadata(reference.entity);

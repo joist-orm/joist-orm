@@ -11,6 +11,7 @@ import {
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { getOrSet, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
@@ -257,6 +258,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   public toString(): string {
     return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
+
+  [RelationT]: T = null!;
+  [RelationU]: U = null!;
 }
 
 export type JoinRow = {

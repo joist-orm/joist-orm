@@ -2,8 +2,9 @@ import { Knex } from "knex";
 import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
-import { ManyToManyCollection, OneToManyCollection, OneToOneReference } from "../relations";
+import { ManyToManyCollection, OneToManyCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
+import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
 import { Driver } from "./driver";
@@ -150,7 +151,7 @@ export class InMemoryDriver implements Driver {
 
   async loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
-    reference: OneToOneReference<T, U>,
+    reference: OneToOneReferenceImpl<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     const rows = Object.values(this.rowsOfTable(reference.otherMeta.tableName));

@@ -13,9 +13,20 @@ export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";
 export { hasOneThrough } from "./hasOneThrough";
 export { hasManyToMany, ManyToManyCollection } from "./ManyToManyCollection";
-export { hasOne, isManyToOneReference, ManyToOneReference } from "./ManyToOneReference";
+export { hasOne, isManyToOneReference, ManyToOneReference, ManyToOneReferenceImpl } from "./ManyToOneReference";
 export { hasMany, OneToManyCollection } from "./OneToManyCollection";
-export { hasOneToOne, isLoadedOneToOneReference, isOneToOneReference, OneToOneReference } from "./OneToOneReference";
-export { hasOnePolymorphic, isPolymorphicReference, PolymorphicReference } from "./PolymorphicReference";
+export {
+  hasOneToOne,
+  isLoadedOneToOneReference,
+  isOneToOneReference,
+  OneToOneReference,
+  OneToOneReferenceImpl,
+} from "./OneToOneReference";
+export {
+  hasOnePolymorphic,
+  isPolymorphicReference,
+  PolymorphicReference,
+  PolymorphicReferenceImpl,
+} from "./PolymorphicReference";
 export { isLoadedReference, isReference, LoadedReference, Reference } from "./Reference";
 export { isRelation, Relation } from "./Relation";

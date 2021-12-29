@@ -1,4 +1,4 @@
-import { Field, SerdeField } from "./EntityManager";
+import { Field, PolymorphicField, SerdeField } from "./EntityManager";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
@@ -17,12 +17,16 @@ export interface ColumnSerde {
 
   dbType: string;
 
+  // Used in EntityManager.hydrate to set row value on the entity
   setOnEntity(data: any, row: any): void;
 
+  // Used in PostgresDriver.batchInsert
   setOnRow(data: any, row: any): void;
 
+  // Used in PostgresDriver.batchUpdate
   getFromEntity(data: any): any;
 
+  // Used in QueryBuilder
   mapToDb(value: any): any;
 }
 
@@ -126,20 +130,30 @@ export class ForeignKeySerde implements ColumnSerde {
 
 export class PolymorphicKeySerde implements ColumnSerde {
   dbType = "int";
+  columnName = "";
 
   // TODO EntityMetadata being in here is weird.  Don't think it is avoidable though.
   constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
 
-  columnName = "";
-
   setOnEntity(data: any, row: any): void {
-    // data[this.fieldName] ??= keyToString(this.otherMeta(), row[this.columnName]);
+    this.field.components.forEach((comp) => {
+      if (!!row[comp.columnName]) {
+        data[this.fieldName] ??= keyToString(comp.otherMetadata(), row[comp.columnName]);
+        return;
+      }
+    });
   }
 
   setOnRow(data: any, row: any): void {
     const id = maybeResolveReferenceToId(data[this.fieldName]);
     const cstr = maybeGetConstructorFromReference(id);
-    // row[this.columnName] = cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+    this.field.components.forEach((comp) => {
+      if (comp.otherMetadata().cstr === cstr) {
+        row[comp.columnName] = keyToNumber(comp.otherMetadata(), id);
+      } else {
+        row[comp.columnName] = undefined;
+      }
+    });
   }
 
   getFromEntity(data: any) {
@@ -152,6 +166,11 @@ export class PolymorphicKeySerde implements ColumnSerde {
     const id = maybeResolveReferenceToId(value);
     const cstr = maybeGetConstructorFromReference(value);
     // return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+  }
+
+  // Lazy look this up b/c meta() won't work immediately during the constructor
+  private get field(): PolymorphicField {
+    return this.meta().fields[this.fieldName] as PolymorphicField;
   }
 }
 

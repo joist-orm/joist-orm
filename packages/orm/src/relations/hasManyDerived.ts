@@ -1,5 +1,6 @@
 import { Collection, currentlyInstantiatingEntity, getEm } from "../";
-import { Entity, Loaded, LoadHint } from "../EntityManager";
+import { Entity } from "../EntityManager";
+import { Loaded, LoadHint } from "../loaded";
 import { CustomCollection } from "./CustomCollection";
 
 type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T>> = {

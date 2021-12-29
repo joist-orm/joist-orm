@@ -1,6 +1,8 @@
-import { currentlyInstantiatingEntity, getEm, Reference } from "../";
-import { Entity, Loaded, LoadHint } from "../EntityManager";
+import { currentlyInstantiatingEntity, getEm } from "../";
+import { Entity } from "../EntityManager";
+import { Loaded, LoadHint } from "../loaded";
 import { CustomReference } from "./CustomReference";
+import { Reference } from "./Reference";
 
 /**
  * Creates a CustomReference that can conditionally walk across references in the object graph.

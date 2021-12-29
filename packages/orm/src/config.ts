@@ -1,5 +1,5 @@
-import { Entity, Loaded, LoadHint, RelationsIn } from "./EntityManager";
-import { getEm } from "./index";
+import { Entity } from "./EntityManager";
+import { getEm, Loaded, LoadHint, RelationsIn } from "./index";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { MaybePromise, ValidationRule } from "./rules";
 

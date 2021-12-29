@@ -8,11 +8,10 @@ import {
   getMetadata,
   IdOf,
   isEntity,
-  New,
   OptsOf,
   PrimitiveField,
 } from "./EntityManager";
-import { isManyToOneField, isOneToOneField } from "./index";
+import { isManyToOneField, isOneToOneField, New } from "./index";
 import { tagIfNeeded } from "./keys";
 import { fail } from "./utils";
 

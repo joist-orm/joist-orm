@@ -1,5 +1,6 @@
-import { currentlyInstantiatingEntity, Entity, Loaded, LoadHint } from "../EntityManager";
+import { currentlyInstantiatingEntity, Entity } from "../EntityManager";
 import { getEm } from "../index";
+import { Loaded, LoadHint } from "../loaded";
 
 const I = Symbol();
 

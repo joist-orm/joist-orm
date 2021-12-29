@@ -29,6 +29,7 @@ export * from "./drivers";
 export * from "./EntityManager";
 export * from "./getProperties";
 export * from "./keys";
+export { isNew, Loadable, Loaded, LoadHint, New, RelationsIn } from "./loaded";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";

@@ -7,8 +7,6 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
-  AsyncProperty,
-  Collection,
   ColumnSerde,
   ConfigApi,
   DeepPartialOrNull,
@@ -18,15 +16,10 @@ import {
   getEm,
   getRelations,
   keyToString,
-  LoadedCollection,
-  LoadedProperty,
-  LoadedReference,
   maybeResolveReferenceToId,
   OneToManyCollection,
-  OneToOneReference,
   PartialOrNull,
   Reference,
-  Relation,
   setField,
   setOpts,
   tagIfNeeded,
@@ -34,11 +27,11 @@ import {
   ValidationErrors,
   ValidationRuleResult,
 } from "./index";
+import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loaded";
+import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
-import { ManyToOneReferenceImpl } from "./relations/ManyToOneReference";
-import { LoadedOneToOneReference, OneToOneReferenceImpl } from "./relations/OneToOneReference";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
-import { fail, NullOrDefinedOr, toArray } from "./utils";
+import { fail, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager, opts: any): T;
@@ -104,108 +97,6 @@ export interface Entity {
   set(opts: Partial<OptsOf<this>>): void;
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
 }
-
-/** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, H>>
-  : P extends Reference<T, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, H>, N>
-  : P extends Collection<T, infer U>
-  ? LoadedCollection<T, Loaded<U, H>>
-  : P extends AsyncProperty<T, infer V>
-  ? LoadedProperty<T, V>
-  : unknown;
-
-/**
- * A helper type for `New` that marks every `Reference` and `LoadedCollection` in `T` as loaded.
- *
- * We also look in opts `O` for the "`U`" type, i.e. the next level up/down in the graph,
- * because the call site's opts may be using an also-marked loaded parent/child as an opt,
- * so this will infer the type of that parent/child and use that for the `U` type.
- *
- * This means things like `entity.parent.get.grandParent.get` will work on the resulting
- * type.
- *
- * Note that this is also purposefully broken out of `New` because of some weirdness
- * around type narrowing that wasn't working when inlined into `New`.
- */
-type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
-  ? OK extends Entity
-    ? T[K] extends OneToOneReference<T, infer U>
-      ? LoadedOneToOneReference<T, U>
-      : T[K] extends Reference<T, infer U, infer N>
-      ? LoadedReference<T, OK, N>
-      : never
-    : OK extends Array<infer OU>
-    ? OU extends Entity
-      ? T[K] extends Collection<T, infer U>
-        ? LoadedCollection<T, OU>
-        : never
-      : T[K]
-    : T[K]
-  : never;
-
-/**
- * Marks all references/collections of `T` as loaded, i.e. for newly instantiated entities where
- * we know there are no already-existing rows with fk's to this new entity in the database.
- *
- * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
- * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
- */
-export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
-  {
-    // K will be `keyof T` and `keyof O` for codegen'd relations, but custom relations
-    // line `hasOneThrough` and `hasOneDerived` will not pass `keyof O` and so use the
-    // `: MarkLoaded`.
-    //
-    // Note that the safest thing is to probably make this `: unknown` instead so that
-    // custom relations are not marked loaded, b/c they will very likely require a `.load`
-    // to work. However, we have some tests that currently expect `author.image.get` to work
-    // on a new author, so keeping the `MarkLoaded` behavior for now.
-    [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
-  };
-
-/** Detects whether an entity is newly created, and so we can treat all of the relations as loaded. */
-export function isNew<T extends Entity>(e: T): e is New<T> {
-  return e.id === undefined;
-}
-
-/** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
-export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
-  {
-    [K in keyof T]: H extends NestedLoadHint<T>
-      ? LoadedIfInNestedHint<T, K, H>
-      : H extends ReadonlyArray<infer U>
-      ? LoadedIfInKeyHint<T, K, U>
-      : LoadedIfInKeyHint<T, K, H>;
-  };
-
-// We can use unknown here because everything non-loaded is pulled in from `T &`
-type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
-  ? MarkLoaded<T, T[K], H[K]>
-  : unknown;
-
-type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : unknown;
-
-/** From any `Relations` field in `T`, i.e. for loader hints. */
-export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
-
-export type Loadable<T extends Entity> = SubType<T, AsyncProperty<any, any> | Relation<any, any>>;
-
-// https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
-type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
-
-// We accept load hints as a string, or a string[], or a hash of { key: nested };
-export type LoadHint<T extends Entity> = keyof Loadable<T> | ReadonlyArray<keyof Loadable<T>> | NestedLoadHint<T>;
-
-export type NestedLoadHint<T extends Entity> = {
-  [K in keyof Loadable<T>]?: T[K] extends Relation<any, infer U>
-    ? LoadHint<U>
-    : T[K] extends AsyncProperty<any, any>
-    ? {}
-    : never;
-};
-
 type MaybePromise<T> = T | PromiseLike<T>;
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;

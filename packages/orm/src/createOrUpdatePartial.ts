@@ -61,7 +61,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
     // Watch for the `bookId` / `bookIds` aliases
-    const field = meta.fields.find((f) => f.fieldName === key) || meta.fields.find((f) => f.fieldIdName === key);
+    const field = meta.fields[key] || Object.values(meta.fields).find((f) => f.fieldIdName === key);
 
     if (!field) {
       // Allow delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically
@@ -122,9 +122,9 @@ export async function createOrUpdatePartial<T extends Entity>(
 
       // We allow `delete` and `remove` commands but only if they don't collide with existing fields
       // Also we trust the API layer, i.e. GraphQL, to not let these fields leak unless explicitly allowed.
-      const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
-      const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
-      const allowOp = !field.otherMetadata().fields.some((f) => f.fieldName === "op");
+      const allowDelete = !field.otherMetadata().fields["delete"];
+      const allowRemove = !field.otherMetadata().fields["remove"];
+      const allowOp = !field.otherMetadata().fields["op"];
       collectionsToLoad.push(field.fieldName);
 
       const entities = !value
@@ -136,9 +136,9 @@ export async function createOrUpdatePartial<T extends Entity>(
               return await em.load(field.otherMetadata().cstr, value);
             } else {
               // Look for `delete: true/false` and `remove: true/false` markers
-              const deleteMarker = allowDelete && value["delete"];
-              const removeMarker = allowRemove && value["remove"];
-              const opMarker = allowOp && value["op"];
+              const deleteMarker: any = allowDelete && value["delete"];
+              const removeMarker: any = allowRemove && value["remove"];
+              const opMarker: any = allowOp && value["op"];
               // If this is the incremental marker, just leave it in as-is so that setOpts can see it
               if (opMarker === "incremental") {
                 return value;

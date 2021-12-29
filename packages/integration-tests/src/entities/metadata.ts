@@ -1,53 +1,53 @@
 import {
+  EntityManager as EntityManager1,
   BaseEntity,
   configureMetadata,
-  DecimalToNumberSerde,
-  EntityManager as EntityManager1,
   EntityMetadata,
-  EnumArrayFieldSerde,
-  EnumFieldSerde,
-  ForeignKeySerde,
-  PolymorphicKeySerde,
   PrimaryKeySerde,
+  EnumArrayFieldSerde,
   SimpleSerde,
   SuperstructSerde,
+  ForeignKeySerde,
+  EnumFieldSerde,
+  PolymorphicKeySerde,
+  DecimalToNumberSerde,
 } from "joist-orm";
 import { Context } from "src/context";
-import { address } from "src/entities/types";
 import {
-  AdvanceStatuses,
   Author,
   authorConfig,
+  newAuthor,
   Book,
+  bookConfig,
+  newBook,
   BookAdvance,
   bookAdvanceConfig,
-  bookConfig,
+  newBookAdvance,
   BookReview,
   bookReviewConfig,
-  Colors,
+  newBookReview,
   Comment,
   commentConfig,
+  newComment,
   Critic,
   criticConfig,
+  newCritic,
   Image,
   imageConfig,
-  ImageTypes,
-  newAuthor,
-  newBook,
-  newBookAdvance,
-  newBookReview,
-  newComment,
-  newCritic,
   newImage,
-  newPublisher,
-  newTag,
   Publisher,
   publisherConfig,
-  PublisherSizes,
-  PublisherTypes,
+  newPublisher,
   Tag,
   tagConfig,
+  newTag,
+  Colors,
+  AdvanceStatuses,
+  ImageTypes,
+  PublisherSizes,
+  PublisherTypes,
 } from "./entities";
+import { address } from "src/entities/types";
 
 export class EntityManager extends EntityManager1<Context> {}
 
@@ -161,18 +161,9 @@ export const authorMeta: EntityMetadata<Author> = {
       serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
-      kind: "enum",
-      fieldName: "favoriteColors",
-      fieldIdName: undefined,
-      required: false,
-      enumDetailType: Colors,
-    },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    firstName: {
       kind: "primitive",
       fieldName: "firstName",
       fieldIdName: undefined,
@@ -181,7 +172,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "string",
     },
-    {
+    lastName: {
       kind: "primitive",
       fieldName: "lastName",
       fieldIdName: undefined,
@@ -190,7 +181,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "string",
     },
-    {
+    initials: {
       kind: "primitive",
       fieldName: "initials",
       fieldIdName: undefined,
@@ -199,7 +190,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "string",
     },
-    {
+    numberOfBooks: {
       kind: "primitive",
       fieldName: "numberOfBooks",
       fieldIdName: undefined,
@@ -208,7 +199,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "number",
     },
-    {
+    isPopular: {
       kind: "primitive",
       fieldName: "isPopular",
       fieldIdName: undefined,
@@ -217,7 +208,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "boolean",
     },
-    {
+    age: {
       kind: "primitive",
       fieldName: "age",
       fieldIdName: undefined,
@@ -226,7 +217,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "number",
     },
-    {
+    graduated: {
       kind: "primitive",
       fieldName: "graduated",
       fieldIdName: undefined,
@@ -235,7 +226,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "Date",
     },
-    {
+    wasEverPopular: {
       kind: "primitive",
       fieldName: "wasEverPopular",
       fieldIdName: undefined,
@@ -244,7 +235,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: true,
       type: "boolean",
     },
-    {
+    address: {
       kind: "primitive",
       fieldName: "address",
       fieldIdName: undefined,
@@ -253,7 +244,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "Object",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -262,7 +253,7 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -271,7 +262,14 @@ export const authorMeta: EntityMetadata<Author> = {
       protected: false,
       type: "Date",
     },
-    {
+    favoriteColors: {
+      kind: "enum",
+      fieldName: "favoriteColors",
+      fieldIdName: undefined,
+      required: false,
+      enumDetailType: Colors,
+    },
+    mentor: {
       kind: "m2o",
       fieldName: "mentor",
       fieldIdName: "mentorId",
@@ -279,8 +277,7 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => authorMeta,
       otherFieldName: "authors",
     },
-
-    {
+    publisher: {
       kind: "m2o",
       fieldName: "publisher",
       fieldIdName: "publisherId",
@@ -288,8 +285,7 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => publisherMeta,
       otherFieldName: "authors",
     },
-
-    {
+    authors: {
       kind: "o2m",
       fieldName: "authors",
       fieldIdName: "authorIds",
@@ -297,8 +293,7 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => authorMeta,
       otherFieldName: "mentor",
     },
-
-    {
+    books: {
       kind: "o2m",
       fieldName: "books",
       fieldIdName: "bookIds",
@@ -306,8 +301,7 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "author",
     },
-
-    {
+    image: {
       kind: "o2o",
       fieldName: "image",
       fieldIdName: "imageId",
@@ -315,7 +309,7 @@ export const authorMeta: EntityMetadata<Author> = {
       otherMetadata: () => imageMeta,
       otherFieldName: "author",
     },
-  ],
+  },
   config: authorConfig,
   factory: newAuthor,
 };
@@ -365,10 +359,9 @@ export const bookMeta: EntityMetadata<Book> = {
       serde: new ForeignKeySerde("author", "author_id", () => authorMeta),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    title: {
       kind: "primitive",
       fieldName: "title",
       fieldIdName: undefined,
@@ -377,7 +370,7 @@ export const bookMeta: EntityMetadata<Book> = {
       protected: false,
       type: "string",
     },
-    {
+    order: {
       kind: "primitive",
       fieldName: "order",
       fieldIdName: undefined,
@@ -386,7 +379,7 @@ export const bookMeta: EntityMetadata<Book> = {
       protected: false,
       type: "number",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -395,7 +388,7 @@ export const bookMeta: EntityMetadata<Book> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -404,7 +397,7 @@ export const bookMeta: EntityMetadata<Book> = {
       protected: false,
       type: "Date",
     },
-    {
+    author: {
       kind: "m2o",
       fieldName: "author",
       fieldIdName: "authorId",
@@ -412,8 +405,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => authorMeta,
       otherFieldName: "books",
     },
-
-    {
+    advances: {
       kind: "o2m",
       fieldName: "advances",
       fieldIdName: "advanceIds",
@@ -421,8 +413,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => bookAdvanceMeta,
       otherFieldName: "book",
     },
-
-    {
+    reviews: {
       kind: "o2m",
       fieldName: "reviews",
       fieldIdName: "reviewIds",
@@ -430,8 +421,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => bookReviewMeta,
       otherFieldName: "book",
     },
-
-    {
+    comments: {
       kind: "o2m",
       fieldName: "comments",
       fieldIdName: "commentIds",
@@ -439,8 +429,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => commentMeta,
       otherFieldName: "parent",
     },
-
-    {
+    tags: {
       kind: "m2m",
       fieldName: "tags",
       fieldIdName: "tagIds",
@@ -448,8 +437,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => tagMeta,
       otherFieldName: "books",
     },
-
-    {
+    image: {
       kind: "o2o",
       fieldName: "image",
       fieldIdName: "imageId",
@@ -457,7 +445,7 @@ export const bookMeta: EntityMetadata<Book> = {
       otherMetadata: () => imageMeta,
       otherFieldName: "book",
     },
-  ],
+  },
   config: bookConfig,
   factory: newBook,
 };
@@ -507,18 +495,9 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
-      kind: "enum",
-      fieldName: "status",
-      fieldIdName: undefined,
-      required: true,
-      enumDetailType: AdvanceStatuses,
-    },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -527,7 +506,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -536,7 +515,14 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       protected: false,
       type: "Date",
     },
-    {
+    status: {
+      kind: "enum",
+      fieldName: "status",
+      fieldIdName: undefined,
+      required: true,
+      enumDetailType: AdvanceStatuses,
+    },
+    book: {
       kind: "m2o",
       fieldName: "book",
       fieldIdName: "bookId",
@@ -544,8 +530,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "advances",
     },
-
-    {
+    publisher: {
       kind: "m2o",
       fieldName: "publisher",
       fieldIdName: "publisherId",
@@ -553,7 +538,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       otherMetadata: () => publisherMeta,
       otherFieldName: "bookAdvances",
     },
-  ],
+  },
   config: bookAdvanceConfig,
   factory: newBookAdvance,
 };
@@ -603,10 +588,9 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       serde: new ForeignKeySerde("book", "book_id", () => bookMeta),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    rating: {
       kind: "primitive",
       fieldName: "rating",
       fieldIdName: undefined,
@@ -615,7 +599,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       protected: false,
       type: "number",
     },
-    {
+    isPublic: {
       kind: "primitive",
       fieldName: "isPublic",
       fieldIdName: undefined,
@@ -624,7 +608,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       protected: false,
       type: "boolean",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -633,7 +617,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -642,7 +626,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       protected: false,
       type: "Date",
     },
-    {
+    book: {
       kind: "m2o",
       fieldName: "book",
       fieldIdName: "bookId",
@@ -650,8 +634,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "reviews",
     },
-
-    {
+    comment: {
       kind: "o2o",
       fieldName: "comment",
       fieldIdName: "commentId",
@@ -659,7 +642,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       otherMetadata: () => commentMeta,
       otherFieldName: "parent",
     },
-  ],
+  },
   config: bookReviewConfig,
   factory: newBookReview,
 };
@@ -709,10 +692,9 @@ export const commentMeta: EntityMetadata<Comment> = {
       serde: new PolymorphicKeySerde("parent", "parent_book_review_id", () => bookReviewMeta),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    text: {
       kind: "primitive",
       fieldName: "text",
       fieldIdName: undefined,
@@ -721,7 +703,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       protected: false,
       type: "string",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -730,7 +712,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -739,7 +721,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       protected: false,
       type: "Date",
     },
-    {
+    parent: {
       kind: "poly",
       fieldName: "parent",
       fieldIdName: "parentId",
@@ -757,7 +739,7 @@ export const commentMeta: EntityMetadata<Comment> = {
         },
       ],
     },
-  ],
+  },
   config: commentConfig,
   factory: newComment,
 };
@@ -793,10 +775,9 @@ export const criticMeta: EntityMetadata<Critic> = {
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    name: {
       kind: "primitive",
       fieldName: "name",
       fieldIdName: undefined,
@@ -805,7 +786,7 @@ export const criticMeta: EntityMetadata<Critic> = {
       protected: false,
       type: "string",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -814,7 +795,7 @@ export const criticMeta: EntityMetadata<Critic> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -823,7 +804,7 @@ export const criticMeta: EntityMetadata<Critic> = {
       protected: false,
       type: "Date",
     },
-  ],
+  },
   config: criticConfig,
   factory: newCritic,
 };
@@ -887,18 +868,9 @@ export const imageMeta: EntityMetadata<Image> = {
       serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
-      kind: "enum",
-      fieldName: "type",
-      fieldIdName: undefined,
-      required: true,
-      enumDetailType: ImageTypes,
-    },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    fileName: {
       kind: "primitive",
       fieldName: "fileName",
       fieldIdName: undefined,
@@ -907,7 +879,7 @@ export const imageMeta: EntityMetadata<Image> = {
       protected: false,
       type: "string",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -916,7 +888,7 @@ export const imageMeta: EntityMetadata<Image> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -925,7 +897,14 @@ export const imageMeta: EntityMetadata<Image> = {
       protected: false,
       type: "Date",
     },
-    {
+    type: {
+      kind: "enum",
+      fieldName: "type",
+      fieldIdName: undefined,
+      required: true,
+      enumDetailType: ImageTypes,
+    },
+    author: {
       kind: "m2o",
       fieldName: "author",
       fieldIdName: "authorId",
@@ -933,8 +912,7 @@ export const imageMeta: EntityMetadata<Image> = {
       otherMetadata: () => authorMeta,
       otherFieldName: "image",
     },
-
-    {
+    book: {
       kind: "m2o",
       fieldName: "book",
       fieldIdName: "bookId",
@@ -942,8 +920,7 @@ export const imageMeta: EntityMetadata<Image> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "image",
     },
-
-    {
+    publisher: {
       kind: "m2o",
       fieldName: "publisher",
       fieldIdName: "publisherId",
@@ -951,7 +928,7 @@ export const imageMeta: EntityMetadata<Image> = {
       otherMetadata: () => publisherMeta,
       otherFieldName: "images",
     },
-  ],
+  },
   config: imageConfig,
   factory: newImage,
 };
@@ -1022,26 +999,9 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
-      kind: "enum",
-      fieldName: "size",
-      fieldIdName: undefined,
-      required: false,
-      enumDetailType: PublisherSizes,
-    },
-
-    {
-      kind: "enum",
-      fieldName: "type",
-      fieldIdName: undefined,
-      required: false,
-      enumDetailType: PublisherTypes,
-    },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    name: {
       kind: "primitive",
       fieldName: "name",
       fieldIdName: undefined,
@@ -1050,7 +1010,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       protected: false,
       type: "string",
     },
-    {
+    latitude: {
       kind: "primitive",
       fieldName: "latitude",
       fieldIdName: undefined,
@@ -1059,7 +1019,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       protected: false,
       type: "number",
     },
-    {
+    longitude: {
       kind: "primitive",
       fieldName: "longitude",
       fieldIdName: undefined,
@@ -1068,7 +1028,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       protected: false,
       type: "number",
     },
-    {
+    hugeNumber: {
       kind: "primitive",
       fieldName: "hugeNumber",
       fieldIdName: undefined,
@@ -1077,7 +1037,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       protected: false,
       type: "number",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -1086,7 +1046,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -1095,7 +1055,21 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       protected: false,
       type: "Date",
     },
-    {
+    size: {
+      kind: "enum",
+      fieldName: "size",
+      fieldIdName: undefined,
+      required: false,
+      enumDetailType: PublisherSizes,
+    },
+    type: {
+      kind: "enum",
+      fieldName: "type",
+      fieldIdName: undefined,
+      required: false,
+      enumDetailType: PublisherTypes,
+    },
+    authors: {
       kind: "o2m",
       fieldName: "authors",
       fieldIdName: "authorIds",
@@ -1103,8 +1077,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       otherMetadata: () => authorMeta,
       otherFieldName: "publisher",
     },
-
-    {
+    bookAdvances: {
       kind: "o2m",
       fieldName: "bookAdvances",
       fieldIdName: "bookAdvanceIds",
@@ -1112,8 +1085,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       otherMetadata: () => bookAdvanceMeta,
       otherFieldName: "publisher",
     },
-
-    {
+    images: {
       kind: "o2m",
       fieldName: "images",
       fieldIdName: "imageIds",
@@ -1121,7 +1093,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       otherMetadata: () => imageMeta,
       otherFieldName: "publisher",
     },
-  ],
+  },
   config: publisherConfig,
   factory: newPublisher,
 };
@@ -1157,10 +1129,9 @@ export const tagMeta: EntityMetadata<Tag> = {
       serde: new SimpleSerde("updatedAt", "updated_at"),
     },
   ],
-  fields: [
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
-
-    {
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true },
+    name: {
       kind: "primitive",
       fieldName: "name",
       fieldIdName: undefined,
@@ -1169,7 +1140,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       protected: false,
       type: "string",
     },
-    {
+    createdAt: {
       kind: "primitive",
       fieldName: "createdAt",
       fieldIdName: undefined,
@@ -1178,7 +1149,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       protected: false,
       type: "Date",
     },
-    {
+    updatedAt: {
       kind: "primitive",
       fieldName: "updatedAt",
       fieldIdName: undefined,
@@ -1187,7 +1158,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       protected: false,
       type: "Date",
     },
-    {
+    books: {
       kind: "m2m",
       fieldName: "books",
       fieldIdName: "bookIds",
@@ -1195,7 +1166,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       otherMetadata: () => bookMeta,
       otherFieldName: "tags",
     },
-  ],
+  },
   config: tagConfig,
   factory: newTag,
 };

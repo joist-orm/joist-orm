@@ -3433,13 +3433,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/prettier@npm:^1.19.0":
-  version: 1.19.0
-  resolution: "@types/prettier@npm:1.19.0"
-  checksum: eea38e633f58af215351bea720cfa44dcdff0dbb6ebaba6383025ef666b12819d26db521f7252381d5da6b0fa281bb24091dc774d37c34e10768e0459effb108
-  languageName: node
-  linkType: hard
-
 "@types/prettier@npm:^2.1.5":
   version: 2.3.2
   resolution: "@types/prettier@npm:2.3.2"
@@ -9025,11 +9018,11 @@ __metadata:
     pg: ^8.7.1
     pg-structure: ^7.13.0
     pluralize: ^8.0.0
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
-    ts-poet: ^4.5.0
+    ts-poet: ^4.7.0
     tsconfig-paths: ^3.10.1
     typescript: ^4.5.2
   languageName: unknown
@@ -9048,10 +9041,10 @@ __metadata:
     joist-codegen: 1.0.0-bump
     joist-utils: 1.0.0-bump
     pluralize: ^8.0.0
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     ts-jest: ^27.0.4
-    ts-poet: ^4.5.0
+    ts-poet: ^4.7.0
     tsconfig-paths: ^3.10.1
     typescript: ^4.5.2
   languageName: unknown
@@ -11606,12 +11599,31 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier@npm:^2.0.2, prettier@npm:^2.3.2":
+"prettier-plugin-organize-imports@npm:^2.3.4":
+  version: 2.3.4
+  resolution: "prettier-plugin-organize-imports@npm:2.3.4"
+  peerDependencies:
+    prettier: ">=2.0"
+    typescript: ">=2.9"
+  checksum: 2298fcae0f16fd1a095cc3a33ba5d51b679b291518d404ad5eaca56fdcfbd55d35e26c5adffcb8664bfb45c2339b551b385cf03f48888c46d0348843d96024e1
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^2.3.2":
   version: 2.3.2
   resolution: "prettier@npm:2.3.2"
   bin:
     prettier: bin-prettier.js
   checksum: 17ce5784ac67621c292df58e2da60b2ee150c2d6aebea22a6ad9e52fcd6a5e66c349d0a8436ea3bd8ff9d778920a5f68000d7625b74f43558718a49755aa5259
+  languageName: node
+  linkType: hard
+
+"prettier@npm:^2.5.1":
+  version: 2.5.1
+  resolution: "prettier@npm:2.5.1"
+  bin:
+    prettier: bin-prettier.js
+  checksum: 21b9408476ea1c544b0e45d51ceb94a84789ff92095abb710942d780c862d0daebdb29972d47f6b4d0f7ebbfb0ffbf56cc2cfa3e3e9d1cca54864af185b15b66
   languageName: node
   linkType: hard
 
@@ -13949,14 +13961,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^4.5.0":
-  version: 4.5.0
-  resolution: "ts-poet@npm:4.5.0"
+"ts-poet@npm:^4.7.0":
+  version: 4.7.0
+  resolution: "ts-poet@npm:4.7.0"
   dependencies:
-    "@types/prettier": ^1.19.0
     lodash: ^4.17.15
-    prettier: ^2.0.2
-  checksum: 3d3d620449bf002ff684887d45078fdd35889d2e6d90b93872eab5c3cc4565a0bc2520ad83a14d08b2ed474d093d071b20c813a0ff6c4a100719f73485ce53d9
+    prettier: ^2.5.1
+  checksum: 6b9c5bfb00e0eae33f85461abfc967997d0fc7f38d784ff3b202d4a5be0ce52d870adb178f348de92fdc0df8af465fd323f35a5f7bdddba6fcc29ceacc5d7690
   languageName: node
   linkType: hard
 

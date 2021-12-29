@@ -45,7 +45,7 @@ export function newTestInstance<T extends Entity>(
   // fullOpts will end up being a full/type-safe opts with every required field
   // filled in, either driven by the passed-in opts or by making new entities as-needed
   const fullOpts = Object.fromEntries(
-    meta.fields
+    Object.values(meta.fields)
       .map((field) => {
         const { fieldName } = field;
 
@@ -76,7 +76,7 @@ export function newTestInstance<T extends Entity>(
               return [fieldName, field.otherMetadata().factory(em, optValue)];
             }
             // Find the opposite side, to see if it's a o2o or o2m pointing back at us
-            const otherField = field.otherMetadata().fields.find((f) => f.fieldName === field.otherFieldName)!;
+            const otherField = field.otherMetadata().fields[field.otherFieldName]!;
             return [
               fieldName,
               field.otherMetadata().factory(em, {
@@ -185,7 +185,7 @@ export function newTestInstance<T extends Entity>(
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
 function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): object {
   // Find any unset fields
-  metadata.fields
+  Object.values(metadata.fields)
     .filter((f) => !(f.fieldName in opts))
     .forEach((f) => {
       // And set them to the current `use` entity for their type, if it exists

@@ -115,7 +115,7 @@ export function setOpts<T extends Entity>(
   const meta = getMetadata(entity);
 
   Object.entries(values as {}).forEach(([key, _value]) => {
-    const field = meta.fields.find((f) => f.fieldName === key);
+    const field = meta.fields[key];
     if (!field) {
       throw new Error(`Unknown field ${key}`);
     }
@@ -137,15 +137,15 @@ export function setOpts<T extends Entity>(
         // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
         // you'd still have `[a]` around. Note that we still support `delete: true` command to go
         // further than "remove from collection" to "actually delete the entity".
-        const allowDelete = !field.otherMetadata().fields.some((f) => f.fieldName === "delete");
-        const allowRemove = !field.otherMetadata().fields.some((f) => f.fieldName === "remove");
+        const allowDelete = !field.otherMetadata().fields["delete"];
+        const allowRemove = !field.otherMetadata().fields["remove"];
 
         // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
         // When passed in, all values must have it, and we kick into incremental mode, i.e. we
         // individually add/remove/delete entities.
         //
         // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
-        const allowOp = !field.otherMetadata().fields.some((f) => f.fieldName === "op");
+        const allowOp = !field.otherMetadata().fields["op"];
         const anyValueHasOp = allowOp && values.some((v) => !!v.op);
         if (anyValueHasOp) {
           const anyValueMissingOp = values.some((v) => !v.op);
@@ -203,8 +203,8 @@ export type PartialOrNull<T> = {
 export function getRequiredKeys<T extends Entity>(entity: T): string[];
 export function getRequiredKeys<T extends Entity>(type: EntityConstructor<T>): string[];
 export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstructor<T>): string[] {
-  return getMetadata(entityOrType as any)
-    .fields.filter((f) => f.required)
+  return Object.values(getMetadata(entityOrType as any).fields)
+    .filter((f) => f.required)
     .map((f) => f.fieldName);
 }
 

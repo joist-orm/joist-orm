@@ -68,7 +68,7 @@ export class Author extends AuthorCodegen {
   }
 
   /** Example of an async property that can be loaded via a populate hint. */
-  public readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty(this as Author, "books", (a) => {
+  readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
     return a.books.get.length;
   });
 }

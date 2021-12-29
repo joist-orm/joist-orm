@@ -9064,8 +9064,8 @@ __metadata:
     joist-migration-utils: 1.0.0-bump
     joist-orm: 1.0.0-bump
     joist-test-utils: 1.0.0-bump
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     superstruct: ^0.15.2
     ts-jest: ^27.0.4
     ts-node: ^10.1.0
@@ -9087,8 +9087,8 @@ __metadata:
     pg: ^8.7.1
     pg-structure: ^7.13.0
     pluralize: ^8.0.0
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
@@ -9110,8 +9110,8 @@ __metadata:
     knex: ^0.95.9
     object-hash: ^2.0.3
     pg: ^8.7.1
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
@@ -9125,8 +9125,8 @@ __metadata:
   dependencies:
     "@types/jest": ^26.0.24
     jest: ^27.0.6
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
@@ -9143,8 +9143,8 @@ __metadata:
     jest: ^27.0.6
     pg: ^8.7.1
     pg-connection-string: ^2.2.3
-    prettier: ^2.3.2
-    prettier-plugin-organize-imports: ^2.3.3
+    prettier: ^2.5.1
+    prettier-plugin-organize-imports: ^2.3.4
     ts-jest: ^27.0.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
@@ -11589,16 +11589,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prettier-plugin-organize-imports@npm:^2.3.3":
-  version: 2.3.3
-  resolution: "prettier-plugin-organize-imports@npm:2.3.3"
-  peerDependencies:
-    prettier: ">=2.0"
-    typescript: ">=2.9"
-  checksum: 81a49744f3897e4724646b7dfdf3bd4f434f2ed2ddbe34c5b171179e255bda5fa23270f2d78fd1d52ede8fe084d3278c35fb8088a64d8818dd9e08e6ab6890b7
-  languageName: node
-  linkType: hard
-
 "prettier-plugin-organize-imports@npm:^2.3.4":
   version: 2.3.4
   resolution: "prettier-plugin-organize-imports@npm:2.3.4"
@@ -11606,15 +11596,6 @@ __metadata:
     prettier: ">=2.0"
     typescript: ">=2.9"
   checksum: 2298fcae0f16fd1a095cc3a33ba5d51b679b291518d404ad5eaca56fdcfbd55d35e26c5adffcb8664bfb45c2339b551b385cf03f48888c46d0348843d96024e1
-  languageName: node
-  linkType: hard
-
-"prettier@npm:^2.3.2":
-  version: 2.3.2
-  resolution: "prettier@npm:2.3.2"
-  bin:
-    prettier: bin-prettier.js
-  checksum: 17ce5784ac67621c292df58e2da60b2ee150c2d6aebea22a6ad9e52fcd6a5e66c349d0a8436ea3bd8ff9d778920a5f68000d7625b74f43558718a49755aa5259
   languageName: node
   linkType: hard
 

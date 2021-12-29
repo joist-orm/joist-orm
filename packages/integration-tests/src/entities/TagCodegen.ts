@@ -1,28 +1,28 @@
 import {
+  BaseEntity,
+  Changes,
+  Collection,
+  ConfigApi,
+  EntityManager,
   Flavor,
+  getEm,
+  hasManyToMany,
+  Lens,
+  Loaded,
+  LoadHint,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  OptsOf,
+  OrderBy,
+  PartialOrNull,
+  setField,
+  setOpts,
   ValueFilter,
   ValueGraphQLFilter,
-  OrderBy,
-  ConfigApi,
-  BaseEntity,
-  EntityManager,
-  setOpts,
-  PartialOrNull,
-  OptsOf,
-  Changes,
-  newChangesProxy,
-  Lens,
-  loadLens,
-  LoadHint,
-  Loaded,
-  getEm,
-  newRequiredRule,
-  Collection,
-  hasManyToMany,
-  setField,
 } from "joist-orm";
-import { Tag, newTag, tagMeta, Book, BookId, bookMeta } from "./entities";
 import { Context } from "src/context";
+import { Book, BookId, bookMeta, newTag, Tag, tagMeta } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 

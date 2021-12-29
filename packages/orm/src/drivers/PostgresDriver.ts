@@ -19,8 +19,8 @@ import {
   OneToManyCollection,
   tagIds,
 } from "../index";
-import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
-import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
+import { ManyToManyCollection, OneToOneReferenceImpl } from "../relations";
+import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
 import { Driver } from "./driver";

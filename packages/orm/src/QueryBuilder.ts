@@ -229,7 +229,7 @@ export function buildQuery<T extends Entity>(
     ];
 
     keys.forEach((key) => {
-      const field = meta.fields.find((f) => f.fieldName === key) ?? fail(`${key} not found`);
+      const field = meta.fields[key] ?? fail(`${key} not found`);
 
       // We may/may not have a where clause or orderBy for this key, but we should have at least one of them.
       const clause = where && (where as any)[key];

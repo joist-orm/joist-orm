@@ -74,7 +74,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   constructor(private entity: T, private fieldName: keyof T) {
     super();
-    this.field = getMetadata(entity).fields.find((f) => f.fieldName === this.fieldName) as PolymorphicField;
+    this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
   }
 
   private get currentComponent(): PolymorphicFieldComponent | N {

@@ -840,7 +840,7 @@ export interface EntityMetadata<T extends Entity> {
   tagName: string;
   // Eventually our dbType should go away to support N-column fields
   columns: Array<ColumnMeta>;
-  fields: Array<Field>;
+  fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   factory: (em: EntityManager, opts?: any) => New<T>;
 }
@@ -1119,7 +1119,12 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
     .filter((e) => !e.isDeletedEntity);
   const derivedFieldsByMeta = new Map(
     [...new Set(entities.map(getMetadata))].map((m) => {
-      return [m, m.fields.filter((f) => f.kind === "primitive" && f.derived === "sync").map((f) => f.fieldName)];
+      return [
+        m,
+        Object.values(m.fields)
+          .filter((f) => f.kind === "primitive" && f.derived === "sync")
+          .map((f) => f.fieldName),
+      ];
     }),
   );
 
@@ -1173,7 +1178,7 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
         // If we're going from Book.author back to Author to re-validate the Author.books collection,
         // see if Book.author has changed so we can re-validate both the old author's books and the
         // new author's books.
-        const isReference = getMetadata(c).fields.find((f) => f.fieldName === fieldName)?.kind === "m2o";
+        const isReference = getMetadata(c).fields[fieldName]?.kind === "m2o";
         const hasChanged = isReference && (c as any).changes[fieldName].hasChanged;
         const originalValue = (c as any).changes[fieldName].originalValue;
         if (hasChanged && originalValue) {

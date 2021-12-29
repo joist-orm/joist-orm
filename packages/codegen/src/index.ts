@@ -107,7 +107,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     name: "./metadata.ts",
     contents: code`
       export class ${def("EntityManager")} extends ${EntityManager}<${contextType}> {}
-
+      
       export function getEm(e: ${BaseEntity}): EntityManager {
         return e.__orm.em as EntityManager;
       }

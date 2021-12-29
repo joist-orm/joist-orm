@@ -2,9 +2,8 @@ import { Knex } from "knex";
 import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
-import { ManyToManyCollection, OneToManyCollection } from "../relations";
+import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
-import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
 import { Driver } from "./driver";
@@ -197,7 +196,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
   return Object.entries(where as any)
     .filter(([_, value]) => value !== undefined)
     .every(([fieldName, value]) => {
-      const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
+      const field = meta.fields[fieldName] || fail();
       // TODO Add column data to the fields
       const column = meta.columns.find((c) => c.fieldName === field.fieldName) || fail();
       const currentValue = row[column.columnName] ?? null;
@@ -264,7 +263,7 @@ function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object
   const value = (orderBy as any)[fieldName];
   if (value !== "ASC" && value !== "DESC") {
     // I.e. value is something like `{ book: { author: { ... } }`
-    const field = meta.fields.find((f) => f.fieldName === fieldName) || fail();
+    const field = meta.fields[fieldName] || fail();
     if (field.kind === "m2o") {
       const newMeta = field.otherMetadata();
       const newA = driver.rowsOfTable(newMeta.tableName)[a.id];

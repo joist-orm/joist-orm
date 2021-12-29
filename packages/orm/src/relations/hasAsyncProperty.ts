@@ -1,4 +1,4 @@
-import { Entity, Loaded, LoadHint } from "../EntityManager";
+import { currentlyInstantiatingEntity, Entity, Loaded, LoadHint } from "../EntityManager";
 import { getEm } from "../index";
 
 const I = Symbol();
@@ -22,10 +22,10 @@ export interface LoadedProperty<T extends Entity, V> {
  * with `someProperty.get`.
  */
 export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
-  entity: T,
   loadHint: H,
   fn: (entity: Loaded<T, H>) => V,
 ): AsyncProperty<T, V> {
+  const entity = currentlyInstantiatingEntity as T;
   return new AsyncPropertyImpl(entity, loadHint, fn);
 }
 

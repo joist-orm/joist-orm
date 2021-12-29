@@ -1,3 +1,4 @@
+import { Field, SerdeField } from "./EntityManager";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
@@ -7,7 +8,15 @@ import {
   maybeResolveReferenceToId,
 } from "./index";
 
+export function hasSerde(field: Field): field is SerdeField {
+  return !!field.serde;
+}
+
 export interface ColumnSerde {
+  columnName: string;
+
+  dbType: string;
+
   setOnEntity(data: any, row: any): void;
 
   setOnRow(data: any, row: any): void;
@@ -18,7 +27,7 @@ export interface ColumnSerde {
 }
 
 export class SimpleSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
+  constructor(private fieldName: string, public columnName: string, public dbType: string) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
@@ -47,7 +56,9 @@ export class SimpleSerde implements ColumnSerde {
  * to handle from-database -> to JS translation.
  */
 export class DecimalToNumberSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
+  dbType = "decimal";
+
+  constructor(private fieldName: string, public columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
@@ -69,7 +80,9 @@ export class DecimalToNumberSerde implements ColumnSerde {
 
 /** Maps integer primary keys ot strings "because GraphQL". */
 export class PrimaryKeySerde implements ColumnSerde {
-  constructor(private meta: () => EntityMetadata<any>, private fieldName: string, private columnName: string) {}
+  dbType = "int";
+
+  constructor(private meta: () => EntityMetadata<any>, private fieldName: string, public columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.meta(), row[this.columnName]);
@@ -89,8 +102,10 @@ export class PrimaryKeySerde implements ColumnSerde {
 }
 
 export class ForeignKeySerde implements ColumnSerde {
+  dbType = "int";
+
   // TODO EntityMetadata being in here is weird.
-  constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
+  constructor(private fieldName: string, public columnName: string, public otherMeta: () => EntityMetadata<any>) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.otherMeta(), row[this.columnName]);
@@ -110,34 +125,40 @@ export class ForeignKeySerde implements ColumnSerde {
 }
 
 export class PolymorphicKeySerde implements ColumnSerde {
+  dbType = "int";
+
   // TODO EntityMetadata being in here is weird.  Don't think it is avoidable though.
-  constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
+  constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
+
+  columnName = "";
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] ??= keyToString(this.otherMeta(), row[this.columnName]);
+    // data[this.fieldName] ??= keyToString(this.otherMeta(), row[this.columnName]);
   }
 
   setOnRow(data: any, row: any): void {
     const id = maybeResolveReferenceToId(data[this.fieldName]);
     const cstr = maybeGetConstructorFromReference(id);
-    row[this.columnName] = cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+    // row[this.columnName] = cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
   }
 
   getFromEntity(data: any) {
     const id = maybeResolveReferenceToId(data[this.fieldName]);
     const cstr = id ? getConstructorFromTaggedId(id) : undefined;
-    return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+    // return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
   }
 
   mapToDb(value: any): any {
     const id = maybeResolveReferenceToId(value);
     const cstr = maybeGetConstructorFromReference(value);
-    return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+    // return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
   }
 }
 
 export class EnumFieldSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
+  dbType = "int";
+
+  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
@@ -157,7 +178,9 @@ export class EnumFieldSerde implements ColumnSerde {
 }
 
 export class EnumArrayFieldSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
+  dbType = "int[]";
+
+  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
@@ -182,11 +205,13 @@ function maybeNullToUndefined(value: any): any {
 
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
 export class SuperstructSerde implements ColumnSerde {
+  dbType = "jsonb";
+
   // Use a dynamic require so that downstream projects don't have to depend on superstruct
   // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
   private assert = require("superstruct").assert;
 
-  constructor(private fieldName: string, private columnName: string, private superstruct: any) {}
+  constructor(private fieldName: string, public columnName: string, private superstruct: any) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);

@@ -793,12 +793,12 @@ export class EntityManager<C = {}> {
     if (!entity) {
       // Pass id as a hint that we're in hydrate mode
       entity = new type(this, id);
-      meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
+      Object.values(meta.fields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       // Usually if the entity already exists, we don't write over it, but in this case
       // we assume that `EntityManager.refresh` is telling us to explicitly load the
       // latest data.
-      meta.columns.forEach((c) => c.serde.setOnEntity(entity!.__orm.data, row));
+      Object.values(meta.fields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     }
     return entity;
   }
@@ -838,8 +838,6 @@ export interface EntityMetadata<T extends Entity> {
   type: string;
   tableName: string;
   tagName: string;
-  // Eventually our dbType should go away to support N-column fields
-  columns: Array<ColumnMeta>;
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   factory: (em: EntityManager, opts?: any) => New<T>;
@@ -857,11 +855,15 @@ export type Field =
   | OneToOneField
   | PolymorphicField;
 
+// Should be a mapped type of Field that, of those that have serde
+export type SerdeField = PrimaryKeyField | PrimitiveField | EnumField | ManyToOneField | PolymorphicField;
+
 export type PrimaryKeyField = {
   kind: "primaryKey";
   fieldName: string;
   fieldIdName: undefined;
   required: true;
+  serde: ColumnSerde;
 };
 
 export type PrimitiveField = {
@@ -872,6 +874,7 @@ export type PrimitiveField = {
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
   type: string | Function;
+  serde: ColumnSerde;
 };
 
 export type EnumField = {
@@ -880,6 +883,7 @@ export type EnumField = {
   fieldIdName: undefined;
   required: boolean;
   enumDetailType: { getValues(): ReadonlyArray<unknown> };
+  serde: ColumnSerde;
 };
 
 export type OneToManyField = {
@@ -889,6 +893,7 @@ export type OneToManyField = {
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
+  serde: undefined;
 };
 
 export type ManyToOneField = {
@@ -898,6 +903,7 @@ export type ManyToOneField = {
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
+  serde: ColumnSerde;
 };
 
 export type ManyToManyField = {
@@ -907,6 +913,7 @@ export type ManyToManyField = {
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
+  serde: undefined;
 };
 
 export type OneToOneField = {
@@ -916,6 +923,7 @@ export type OneToOneField = {
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
+  serde: undefined;
 };
 
 export type PolymorphicField = {
@@ -924,6 +932,7 @@ export type PolymorphicField = {
   fieldIdName: string; // `parentId`
   required: boolean;
   components: PolymorphicFieldComponent[];
+  serde: ColumnSerde;
 };
 
 export type PolymorphicFieldComponent = {

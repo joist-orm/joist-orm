@@ -13,6 +13,7 @@ import {
   EnumArrayFieldSerde,
   FilterAndSettings,
   getMetadata,
+  hasSerde,
   keyToNumber,
   keyToString,
   maybeResolveReferenceToId,
@@ -331,7 +332,7 @@ async function assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<vo
 async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const rows = entities.map((entity) => {
     const row = {};
-    meta.columns.forEach((c) => c.serde.setOnRow(entity.__orm.data, row));
+    Object.values(meta.fields).forEach((f) => f.serde?.setOnRow(entity.__orm.data, row));
     return row;
   });
   // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
@@ -359,7 +360,9 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   }
 
   // This currently assumes a 1-to-1 field-to-column mapping.
-  const columns = meta.columns.filter((c) => changedFields.has(c.fieldName));
+  const columns = Object.values(meta.fields)
+    .filter((f) => changedFields.has(f.fieldName))
+    .filter(hasSerde);
 
   // We need to handle array columns different because the "unnest" approach fundamentally
   // won't work b/c we can't use it to send "a list of lists".
@@ -369,14 +372,14 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
     // and bindings is each individual value.
     bindings = entities.flatMap((entity) => [
-      ...columns.map((c) => c.serde.getFromEntity(entity.__orm.data) ?? null),
+      ...columns.map((c) => c.serde?.getFromEntity(entity.__orm.data) ?? null),
       entity.__orm.originalData.updatedAt,
     ]);
     sql = `
       UPDATE ${meta.tableName}
       SET ${columns
-        .filter((c) => c.columnName !== "id")
-        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
+        .filter((c) => c.fieldName !== "id")
+        .map((c) => `"${c.serde.columnName}" = data."${c.serde.columnName}"`)
         .join(", ")}
       FROM (
         VALUES ${entities
@@ -385,12 +388,12 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
               `(${columns
                 .map((c) => {
                   const maybeArray = c.serde instanceof EnumArrayFieldSerde ? "[]" : "";
-                  return `?::${c.dbType}${maybeArray}`;
+                  return `?::${c.serde.dbType}${maybeArray}`;
                 })
                 .join(", ")}, ?::timestamp)`,
           )
           .join(",")}
-      ) AS data(${columns.map((c) => c.columnName).join(",")},original_updated_at)
+      ) AS data(${columns.map((c) => c.serde.columnName).join(",")},original_updated_at)
       WHERE
         ${meta.tableName}.id = data.id
         AND date_trunc('milliseconds', ${meta.tableName}.updated_at) = data.original_updated_at
@@ -411,12 +414,12 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     sql = `
       UPDATE ${meta.tableName}
       SET ${columns
-        .filter((c) => c.columnName !== "id")
-        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
+        .filter((c) => c.serde.columnName !== "id")
+        .map((c) => `"${c.serde.columnName}" = data."${c.serde.columnName}"`)
         .join(", ")}
       FROM (
         SELECT
-          ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")},
+          ${columns.map((c) => `unnest(?::${c.serde.dbType}[]) as "${c.serde.columnName}"`).join(", ")},
           unnest(?::timestamp[]) as original_updated_at
       ) as data
       WHERE

@@ -1,16 +1,17 @@
 import { groupBy } from "joist-utils";
 import { Knex } from "knex";
 import {
-  ColumnMeta,
   Entity,
   EntityConstructor,
   entityLimit,
   EntityMetadata,
+  Field,
   FilterOf,
   getMetadata,
   isEntity,
   OrderOf,
   PolymorphicField,
+  SerdeField,
 } from "./EntityManager";
 import {
   deTagIds,
@@ -244,13 +245,13 @@ export function buildQuery<T extends Entity>(
           query = query.where((query) =>
             field.components.reduce((query, { columnName, otherMetadata }) => {
               const ids = idsByConstructor[otherMetadata().cstr.name];
-              const column = meta.columns.find((c) => c.columnName === columnName)!;
+              const column = Object.values(meta.fields).find((f) => f.serde?.columnName === columnName)!;
               return ids && ids.length > 0
                 ? query.orWhereIn(
                     `${alias}.${columnName}`,
                     deTagIds(
                       otherMetadata(),
-                      ids.map((id) => column.serde.mapToDb(id)),
+                      ids.map((id) => column.serde!.mapToDb(id)),
                     ),
                   )
                 : query;
@@ -269,9 +270,9 @@ export function buildQuery<T extends Entity>(
             const column = polyColumnFor(meta, field, value);
             query = query.where((query) =>
               query
-                .whereNot(`${alias}.${column.columnName}`, column.serde.mapToDb(value))
+                .whereNot(`${alias}.${column.serde!.columnName}`, column.serde!.mapToDb(value))
                 // for some reason whereNot excludes null values, so explicitly include them here
-                .orWhereNull(`${alias}.${column.columnName}`),
+                .orWhereNull(`${alias}.${column.serde!.columnName}`),
             );
           } else if (value === null) {
             query = query.where((b) =>
@@ -283,11 +284,11 @@ export function buildQuery<T extends Entity>(
         // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
         const otherMeta = field.otherMetadata();
         const otherAlias = getAlias(otherMeta.tableName);
-        const otherColumn = otherMeta.columns.find((c) => c.fieldName === field.otherFieldName)!;
+        const otherColumn = otherMeta.fields[field.otherFieldName]!;
 
         query = query.leftJoin(
           `${otherMeta.tableName} AS ${otherAlias}`,
-          `${otherAlias}.${otherColumn.columnName}`,
+          `${otherAlias}.${otherColumn.serde!.columnName}`,
           `${alias}.id`,
         );
 
@@ -295,7 +296,7 @@ export function buildQuery<T extends Entity>(
           ? addForeignKeyClause(
               query,
               otherAlias,
-              otherMeta.columns.find((c) => c.serde instanceof PrimaryKeySerde)!,
+              Object.values(otherMeta.fields).find((c) => c.serde instanceof PrimaryKeySerde)!,
               clause,
             )
           : [false, query];
@@ -305,7 +306,7 @@ export function buildQuery<T extends Entity>(
           addClauses(otherMeta, otherAlias, shouldAddClauses ? clause : undefined, hasOrder ? order : undefined);
         }
       } else {
-        const column = meta.columns.find((c) => c.fieldName === key) ?? fail(`${key} not found`);
+        const column = meta.fields[key] ?? fail(`${key} not found`);
 
         if (column.serde instanceof ForeignKeySerde) {
           // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
@@ -319,17 +320,17 @@ export function buildQuery<T extends Entity>(
             const otherAlias = getAlias(otherMeta.tableName);
             query = query.innerJoin(
               `${otherMeta.tableName} AS ${otherAlias}`,
-              `${alias}.${column.columnName}`,
+              `${alias}.${column.serde.columnName}`,
               `${otherAlias}.id`,
             );
             // Then recurse to add its conditions to the query
             addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
           }
         } else {
-          query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+          query = hasClause ? addPrimitiveClause(query, alias, column as SerdeField, clause) : query;
           // This is not a foreign key column, so it'll have the primitive filters/order bys
           if (order) {
-            query = query.orderBy(`${alias}.${column.columnName}`, order);
+            query = query.orderBy(`${alias}.${column.serde!.columnName}`, order);
           }
         }
       }
@@ -364,7 +365,7 @@ function polyColumnFor(
   const { columnName } =
     field.components.find((c) => c.otherMetadata().cstr === cstr) ??
     fail(`${cstr.name} cannot be used as a filter on ${field.fieldName}`);
-  return meta.columns.find((c) => c.columnName === columnName)!;
+  return Object.values(meta.fields).find((c) => c.serde?.columnName === columnName)!;
 }
 
 function addPolyClause(
@@ -384,7 +385,7 @@ function addPolyClause(
 function addForeignKeyClause(
   query: Knex.QueryBuilder,
   alias: string,
-  column: ColumnMeta,
+  column: Field,
   clause: any,
 ): [boolean, Knex.QueryBuilder] {
   // I.e. this could be { authorFk: authorEntity | null | id | { ...recurse... } }
@@ -396,32 +397,32 @@ function addForeignKeyClause(
     // I.e. { authorFk: authorEntity | id | id[] }
     if (isEntity(clause) && clause.id === undefined) {
       // The user is filtering on an unsaved entity, which will just never have any rows, so throw in -1
-      return [false, query.where(`${alias}.${column.columnName}`, -1)];
+      return [false, query.where(`${alias}.${column.serde!.columnName}`, -1)];
     } else if (Array.isArray(clause)) {
       return [
         false,
         query.whereIn(
-          `${alias}.${column.columnName}`,
-          clause.map((id) => column.serde.mapToDb(id)),
+          `${alias}.${column.serde!.columnName}`,
+          clause.map((id) => column.serde!.mapToDb(id)),
         ),
       ];
     } else {
-      return [false, query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause))];
+      return [false, query.where(`${alias}.${column.serde!.columnName}`, column.serde!.mapToDb(clause))];
     }
   } else if (clause === null) {
     // I.e. { authorFk: null | undefined }
-    return [false, query.whereNull(`${alias}.${column.columnName}`)];
+    return [false, query.whereNull(`${alias}.${column.serde!.columnName}`)];
   } else if (clauseKeys.length === 1 && clauseKeys[0] === "id") {
     // I.e. { authorFk: { id: string } } || { authorFk: { id: string[] } }
     // If only querying on the id, we can skip the join
-    return [false, addPrimitiveClause(query, alias, column, (clause as any)["id"])];
+    return [false, addPrimitiveClause(query, alias, column as SerdeField, (clause as any)["id"])];
   } else if (clauseKeys.length === 1 && clauseKeys[0] === "ne") {
     // I.e. { authorFk: { ne: string | null | undefined } }
     const value = (clause as any)["ne"];
     if (value === null || value === undefined) {
-      return [false, query.whereNotNull(`${alias}.${column.columnName}`)];
+      return [false, query.whereNotNull(`${alias}.${column.serde!.columnName}`)];
     } else if (typeof value === "string") {
-      return [false, query.whereNot(`${alias}.${column.columnName}`, column.serde.mapToDb(value))];
+      return [false, query.whereNot(`${alias}.${column.serde!.columnName}`, column.serde!.mapToDb(value))];
     } else {
       throw new Error("Not implemented");
     }
@@ -434,7 +435,7 @@ function addForeignKeyClause(
 function addPrimitiveClause(
   query: Knex.QueryBuilder,
   alias: string,
-  column: ColumnMeta,
+  column: SerdeField,
   clause: any,
 ): Knex.QueryBuilder {
   if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
@@ -447,16 +448,16 @@ function addPrimitiveClause(
   } else if (Array.isArray(clause)) {
     // I.e. `{ primitiveField: value[] }`
     if (column.serde instanceof EnumArrayFieldSerde) {
-      return query.where(`${alias}.${column.columnName}`, "@>", column.serde.mapToDb(clause));
+      return query.where(`${alias}.${column.serde.columnName}`, "@>", column.serde.mapToDb(clause));
     } else {
       return query.whereIn(
-        `${alias}.${column.columnName}`,
+        `${alias}.${column.serde.columnName}`,
         clause.map((v) => column.serde.mapToDb(v)),
       );
     }
   } else if (clause === null) {
     // I.e. `{ primitiveField: null }`
-    return query.whereNull(`${alias}.${column.columnName}`);
+    return query.whereNull(`${alias}.${column.serde.columnName}`);
   } else if (clause === undefined) {
     // I.e. `{ primitiveField: undefined }`
     // Currently we treat this like a partial filter, i.e. don't include it. Seems odd
@@ -465,32 +466,32 @@ function addPrimitiveClause(
   } else {
     // I.e. `{ primitiveField: value }`
     // TODO In theory could add a addToQuery method to Serde to generalize this to multi-columns fields.
-    return query.where(`${alias}.${column.columnName}`, column.serde.mapToDb(clause));
+    return query.where(`${alias}.${column.serde.columnName}`, column.serde.mapToDb(clause));
   }
 }
 
 function addPrimitiveOperator(
   query: Knex.QueryBuilder,
   alias: string,
-  column: ColumnMeta,
+  column: SerdeField,
   op: Operator,
   value: any,
 ): Knex.QueryBuilder {
   if (value === null || value === undefined) {
     if (op === "ne") {
-      return query.whereNotNull(`${alias}.${column.columnName}`);
+      return query.whereNotNull(`${alias}.${column.serde.columnName}`);
     } else if (op === "eq") {
-      return query.whereNull(`${alias}.${column.columnName}`);
+      return query.whereNull(`${alias}.${column.serde.columnName}`);
     } else {
       throw new Error("Only ne is supported when the value is undefined or null");
     }
   } else if (op === "in") {
     return query.whereIn(
-      `${alias}.${column.columnName}`,
+      `${alias}.${column.serde.columnName}`,
       (value as Array<any>).map((v) => column.serde.mapToDb(v)),
     );
   } else {
     const fn = opToFn[op] || fail(`Invalid operator ${op}`);
-    return query.where(`${alias}.${column.columnName}`, fn, column.serde.mapToDb(value));
+    return query.where(`${alias}.${column.serde.columnName}`, fn, column.serde.mapToDb(value));
   }
 }

@@ -4,6 +4,7 @@ import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeT
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
+import { hasSerde } from "../serde";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
 import { Driver } from "./driver";
@@ -55,9 +56,11 @@ export class InMemoryDriver implements Driver {
     Object.entries(todos).forEach(([_, todo]) => {
       todo.inserts.forEach((i) => {
         const row: Record<string, any> = {};
-        todo.metadata.columns.forEach((c) => {
-          row[c.columnName] = c.serde.mapToDb(i.__orm.data[c.fieldName]) ?? null;
-        });
+        Object.values(todo.metadata.fields)
+          .filter(hasSerde)
+          .forEach((c) => {
+            row[c.serde.columnName] = c.serde.mapToDb(i.__orm.data[c.fieldName]) ?? null;
+          });
         row.id = this.nextId(todo.metadata.tableName);
         this.rowsOfTable(todo.metadata.tableName)[row.id] = row;
         i.__orm.data["id"] = keyToString(todo.metadata, row.id);
@@ -67,9 +70,11 @@ export class InMemoryDriver implements Driver {
         u.__orm.data["updatedAt"] = updatedAt;
         const id = deTagId(todo.metadata, u.idOrFail);
         const row: Record<string, any> = {};
-        todo.metadata.columns.forEach((c) => {
-          row[c.columnName] = c.serde.mapToDb(u.__orm.data[c.fieldName]) ?? null;
-        });
+        Object.values(todo.metadata.fields)
+          .filter(hasSerde)
+          .forEach((c) => {
+            row[c.serde.columnName] = c.serde.mapToDb(u.__orm.data[c.fieldName]) ?? null;
+          });
         this.rowsOfTable(todo.metadata.tableName)[id] = row;
       });
       todo.deletes.forEach((d) => {
@@ -198,8 +203,8 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
     .every(([fieldName, value]) => {
       const field = meta.fields[fieldName] || fail();
       // TODO Add column data to the fields
-      const column = meta.columns.find((c) => c.fieldName === field.fieldName) || fail();
-      const currentValue = row[column.columnName] ?? null;
+      const column = meta.fields[field.fieldName] || fail();
+      const currentValue = (column.serde && row[column.serde.columnName]) ?? null;
       switch (field.kind) {
         case "primaryKey":
         case "primitive":
@@ -274,8 +279,8 @@ function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object
     }
   }
   const flip = value === "DESC" ? -1 : 1;
-  const column = meta.columns.find((c) => c.fieldName === fieldName) || fail();
-  const key = column.columnName;
+  const column = meta.fields[fieldName] || fail();
+  const key = column.serde!.columnName;
   // TODO Handle sorting by more than just strings
   return a[key].localeCompare(b[key]) * flip;
 }

@@ -67,7 +67,7 @@ export function isFieldIgnored(
 
   if (ignore && notNull && !hasDefault) {
     fail(
-      "notNull fields cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.",
+      `notNull field ${entity.name}.${fieldName} cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.`,
     );
   }
   return ignore;

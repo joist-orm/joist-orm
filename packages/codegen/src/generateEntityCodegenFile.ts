@@ -7,7 +7,6 @@ import {
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
-  Collection,
   ConfigApi,
   Entity,
   EntityConstructor,
@@ -19,25 +18,17 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasMany,
-  hasManyToMany,
-  hasOne,
-  hasOnePolymorphic,
-  hasOneToOne,
   IdOf,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  OneToOneReference,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
-  PolymorphicReference,
-  Reference,
   setField,
   setOpts,
   SSAssert,
@@ -193,14 +184,14 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
-    const maybeOptional = notNull ? "never" : "undefined";
+    const maybeOptional = notNull ? "true" : "false";
     return code`
-      readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
-        ${hasOne}(
-          ${otherEntity.metaType},
-          "${fieldName}",
-          "${otherFieldName}",
-        );
+      readonly ${fieldName} = this.orm.hasOne(
+        ${otherEntity.metaType},
+        "${fieldName}",
+        "${otherFieldName}",
+        ${maybeOptional},
+      );
     `;
   });
 
@@ -208,7 +199,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const o2m = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasMany}(
+      readonly ${fieldName} = this.orm.hasMany(
         ${otherEntity.metaType},
         "${fieldName}",
         "${otherFieldName}",
@@ -221,13 +212,12 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const o2o = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     return code`
-      readonly ${fieldName}: ${OneToOneReference}<${entity.type}, ${otherEntity.type}> =
-        ${hasOneToOne}(
-          ${otherEntity.metaType},
-          "${fieldName}",
-          "${otherFieldName}",
-          "${otherColumnName}",
-        );
+      readonly ${fieldName} = this.orm.hasOneToOne(
+        ${otherEntity.metaType},
+        "${fieldName}",
+        "${otherFieldName}",
+        "${otherColumnName}",
+      );
     `;
   });
 
@@ -235,7 +225,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const m2m = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasManyToMany}(
+      readonly ${fieldName} = this.orm.hasManyToMany(
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -249,11 +239,9 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   // Add Polymorphic
   const polymorphic = meta.polymorphics.map((p) => {
     const { fieldName, notNull, fieldType } = p;
-    const maybeOptional = notNull ? "never" : "undefined";
+    const maybeOptional = notNull ? "true" : "false";
     return code`
-      readonly ${fieldName}: ${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
-        "${fieldName}",
-      );
+      readonly ${fieldName} = this.orm.hasOnePolymorphic("${fieldName}", ${maybeOptional});
     `;
   });
 
@@ -310,6 +298,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       } = null!;
+      protected readonly orm = new ${OrmApi}(this as any as ${entityName});
+
       ${[o2m, m2o, o2o, m2m, polymorphic]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {

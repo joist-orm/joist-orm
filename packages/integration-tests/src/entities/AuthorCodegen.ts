@@ -3,7 +3,6 @@ import {
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
-  Collection,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -13,19 +12,15 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasMany,
-  hasOne,
-  hasOneToOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  OneToOneReference,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -153,16 +148,17 @@ export abstract class AuthorCodegen extends BaseEntity {
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Author);
 
-  readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
+  readonly authors = this.orm.hasMany(authorMeta, "authors", "mentor", "mentor_id");
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
+  readonly books = this.orm.hasMany(bookMeta, "books", "author", "author_id");
 
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
+  readonly mentor = this.orm.hasOne(authorMeta, "mentor", "authors", false);
 
-  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
+  readonly publisher = this.orm.hasOne(publisherMeta, "publisher", "authors", false);
 
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
+  readonly image = this.orm.hasOneToOne(imageMeta, "image", "author", "author_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, {}, opts);

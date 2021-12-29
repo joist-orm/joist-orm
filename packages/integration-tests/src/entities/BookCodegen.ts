@@ -1,7 +1,6 @@
 import {
   BaseEntity,
   Changes,
-  Collection,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -10,20 +9,15 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasMany,
-  hasManyToMany,
-  hasOne,
-  hasOneToOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  OneToOneReference,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -125,18 +119,19 @@ export abstract class BookCodegen extends BaseEntity {
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Book);
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
+  readonly advances = this.orm.hasMany(bookAdvanceMeta, "advances", "book", "book_id");
 
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
+  readonly reviews = this.orm.hasMany(bookReviewMeta, "reviews", "book", "book_id");
 
-  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
+  readonly comments = this.orm.hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
+  readonly author = this.orm.hasOne(authorMeta, "author", "books", true);
 
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
+  readonly image = this.orm.hasOneToOne(imageMeta, "image", "book", "book_id");
 
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
+  readonly tags = this.orm.hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, bookDefaultValues, opts);

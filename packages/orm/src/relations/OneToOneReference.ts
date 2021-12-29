@@ -1,13 +1,4 @@
-import {
-  currentlyInstantiatingEntity,
-  deTagIds,
-  ensureNotDeleted,
-  fail,
-  getEm,
-  IdOf,
-  LoadedReference,
-  setField,
-} from "../";
+import { deTagIds, ensureNotDeleted, fail, getEm, IdOf, LoadedReference, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -53,17 +44,6 @@ export function isLoadedOneToOneReference(
   maybeReference: any,
 ): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any> {
   return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
-}
-
-/** An alias for creating `OneToOneReference`s. */
-export function hasOneToOne<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T,
-  otherFieldName: keyof U,
-  otherColumnName: string,
-): OneToOneReference<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
 /**

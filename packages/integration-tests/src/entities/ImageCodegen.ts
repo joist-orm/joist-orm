@@ -10,16 +10,15 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -113,12 +112,13 @@ export abstract class ImageCodegen extends BaseEntity {
     optIdsType: ImageIdsOpts;
     factoryOptsType: Parameters<typeof newImage>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Image);
 
-  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
+  readonly author = this.orm.hasOne(authorMeta, "author", "image", false);
 
-  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
+  readonly book = this.orm.hasOne(bookMeta, "book", "image", false);
 
-  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
+  readonly publisher = this.orm.hasOne(publisherMeta, "publisher", "images", false);
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, {}, opts);

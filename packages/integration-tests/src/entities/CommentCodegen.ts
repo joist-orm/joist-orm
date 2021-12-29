@@ -9,7 +9,6 @@ import {
   EntityManager,
   Flavor,
   getEm,
-  hasOnePolymorphic,
   IdOf,
   Lens,
   Loaded,
@@ -19,8 +18,8 @@ import {
   newRequiredRule,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
-  PolymorphicReference,
   setField,
   setOpts,
   ValueFilter,
@@ -90,8 +89,9 @@ export abstract class CommentCodegen extends BaseEntity {
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Comment);
 
-  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
+  readonly parent = this.orm.hasOnePolymorphic("parent", true);
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, commentMeta, {}, opts);

@@ -1,4 +1,4 @@
-import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
+import { Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
 import {
   deTagIds,
   ensureNotDeleted,
@@ -13,16 +13,6 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
-
-/** An alias for creating `ManyToOneReference`s. */
-export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T,
-  otherFieldName: keyof U,
-): ManyToOneReference<T, U, N> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
-}
 
 /** Type guard utility for determining if an entity field is a ManyToOneReference. */
 export function isManyToOneReference(maybeReference: any): maybeReference is ManyToOneReference<any, any, any> {

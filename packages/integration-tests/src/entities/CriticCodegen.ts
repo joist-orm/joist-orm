@@ -13,6 +13,7 @@ import {
   newRequiredRule,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -66,6 +67,7 @@ export abstract class CriticCodegen extends BaseEntity {
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Critic);
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, {}, opts);

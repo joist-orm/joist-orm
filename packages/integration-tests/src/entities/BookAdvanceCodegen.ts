@@ -10,16 +10,15 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -101,14 +100,11 @@ export abstract class BookAdvanceCodegen extends BaseEntity {
     optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as BookAdvance);
 
-  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
+  readonly book = this.orm.hasOne(bookMeta, "book", "advances", true);
 
-  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(
-    publisherMeta,
-    "publisher",
-    "bookAdvances",
-  );
+  readonly publisher = this.orm.hasOne(publisherMeta, "publisher", "bookAdvances", true);
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, {}, opts);

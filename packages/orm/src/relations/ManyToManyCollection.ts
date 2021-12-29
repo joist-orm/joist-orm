@@ -1,38 +1,8 @@
-import {
-  Collection,
-  currentlyInstantiatingEntity,
-  ensureNotDeleted,
-  Entity,
-  EntityMetadata,
-  getEm,
-  getMetadata,
-  IdOf,
-} from "../";
+import { Collection, ensureNotDeleted, Entity, EntityMetadata, getEm, getMetadata, IdOf } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { getOrSet, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
-
-/** An alias for creating `ManyToManyCollections`s. */
-export function hasManyToMany<T extends Entity, U extends Entity>(
-  joinTableName: string,
-  fieldName: keyof T,
-  columnName: string,
-  otherMeta: EntityMetadata<U>,
-  otherFieldName: keyof U,
-  otherColumnName: string,
-): Collection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new ManyToManyCollection<T, U>(
-    joinTableName,
-    entity,
-    fieldName,
-    columnName,
-    otherMeta,
-    otherFieldName,
-    otherColumnName,
-  );
-}
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>

@@ -1,11 +1,4 @@
-import {
-  currentlyInstantiatingEntity,
-  Entity,
-  getMetadata,
-  IdOf,
-  isEntity,
-  PolymorphicFieldComponent,
-} from "../EntityManager";
+import { Entity, getMetadata, IdOf, isEntity, PolymorphicFieldComponent } from "../EntityManager";
 import {
   deTagId,
   ensureNotDeleted,
@@ -23,13 +16,6 @@ import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
-
-export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
-  fieldName: keyof T,
-): PolymorphicReference<T, U, N> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
-}
 
 /** Type guard utility for determining if an entity field is a PolymorphicReference. */
 export function isPolymorphicReference(maybeReference: any): maybeReference is PolymorphicReference<any, any, any> {

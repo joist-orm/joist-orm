@@ -12,6 +12,7 @@ export const EntityOrmField = imp("EntityOrmField@joist-orm");
 export const EntityManager = imp("EntityManager@joist-orm");
 export const EntityMetadata = imp("EntityMetadata@joist-orm");
 export const Lens = imp("Lens@joist-orm");
+export const OrmApi = imp("OrmApi@joist-orm");
 export const PrimaryKeySerde = imp("PrimaryKeySerde@joist-orm");
 export const ManyToOneReference = imp("ManyToOneReference@joist-orm");
 export const PolymorphicReference = imp("PolymorphicReference@joist-orm");

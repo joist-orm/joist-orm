@@ -1,7 +1,6 @@
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import {
   Collection,
-  currentlyInstantiatingEntity,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
@@ -14,17 +13,6 @@ import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
-
-/** An alias for creating `OneToManyCollection`s. */
-export function hasMany<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata<U>,
-  fieldName: keyof T,
-  otherFieldName: keyof U,
-  otherColumnName: string,
-): Collection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
-  return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
-}
 
 export class OneToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>

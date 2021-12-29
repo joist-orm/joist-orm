@@ -11,18 +11,15 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
-  hasOne,
-  hasOneToOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
-  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  OneToOneReference,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -102,15 +99,11 @@ export abstract class BookReviewCodegen extends BaseEntity {
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as BookReview);
 
-  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
+  readonly book = this.orm.hasOne(bookMeta, "book", "reviews", true);
 
-  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(
-    commentMeta,
-    "comment",
-    "parent",
-    "parent_book_review_id",
-  );
+  readonly comment = this.orm.hasOneToOne(commentMeta, "comment", "parent", "parent_book_review_id");
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, {}, opts);

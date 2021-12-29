@@ -1,13 +1,11 @@
 import {
   BaseEntity,
   Changes,
-  Collection,
   ConfigApi,
   EntityManager,
   EnumGraphQLFilter,
   Flavor,
   getEm,
-  hasMany,
   Lens,
   Loaded,
   LoadHint,
@@ -16,6 +14,7 @@ import {
   newRequiredRule,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -117,17 +116,13 @@ export abstract class PublisherCodegen extends BaseEntity {
     optIdsType: PublisherIdsOpts;
     factoryOptsType: Parameters<typeof newPublisher>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Publisher);
 
-  readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
+  readonly authors = this.orm.hasMany(authorMeta, "authors", "publisher", "publisher_id");
 
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
-    bookAdvanceMeta,
-    "bookAdvances",
-    "publisher",
-    "publisher_id",
-  );
+  readonly bookAdvances = this.orm.hasMany(bookAdvanceMeta, "bookAdvances", "publisher", "publisher_id");
 
-  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
+  readonly images = this.orm.hasMany(imageMeta, "images", "publisher", "publisher_id");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta, publisherDefaultValues, opts);

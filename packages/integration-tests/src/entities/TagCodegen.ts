@@ -1,12 +1,10 @@
 import {
   BaseEntity,
   Changes,
-  Collection,
   ConfigApi,
   EntityManager,
   Flavor,
   getEm,
-  hasManyToMany,
   Lens,
   Loaded,
   LoadHint,
@@ -15,6 +13,7 @@ import {
   newRequiredRule,
   OptsOf,
   OrderBy,
+  OrmApi,
   PartialOrNull,
   setField,
   setOpts,
@@ -71,15 +70,9 @@ export abstract class TagCodegen extends BaseEntity {
     optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
   } = null!;
+  protected readonly orm = new OrmApi(this as any as Tag);
 
-  readonly books: Collection<Tag, Book> = hasManyToMany(
-    "books_to_tags",
-    "books",
-    "tag_id",
-    bookMeta,
-    "tags",
-    "book_id",
-  );
+  readonly books = this.orm.hasManyToMany("books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id");
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta, {}, opts);

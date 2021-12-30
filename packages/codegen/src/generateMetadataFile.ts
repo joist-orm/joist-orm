@@ -143,7 +143,6 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
   dbMetadata.polymorphics.forEach((p) => {
     const { fieldName, notNull, components } = p;
-    const columnName = "foo";
     fields[fieldName] = code`
       {
         kind: "poly",

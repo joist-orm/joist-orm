@@ -58,8 +58,9 @@ export class InMemoryDriver implements Driver {
         const row: Record<string, any> = {};
         Object.values(todo.metadata.fields)
           .filter(hasSerde)
-          .forEach((c) => {
-            row[c.serde.columnName] = c.serde.mapToDb(i.__orm.data[c.fieldName]) ?? null;
+          .flatMap((f) => f.serde.columns.map((c) => [f, c] as const))
+          .forEach(([f, c]) => {
+            row[c.columnName] = c.mapToDb(i.__orm.data[f.fieldName]) ?? null;
           });
         row.id = this.nextId(todo.metadata.tableName);
         this.rowsOfTable(todo.metadata.tableName)[row.id] = row;
@@ -72,8 +73,9 @@ export class InMemoryDriver implements Driver {
         const row: Record<string, any> = {};
         Object.values(todo.metadata.fields)
           .filter(hasSerde)
-          .forEach((c) => {
-            row[c.serde.columnName] = c.serde.mapToDb(u.__orm.data[c.fieldName]) ?? null;
+          .flatMap((f) => f.serde.columns.map((c) => [f, c] as const))
+          .forEach(([f, c]) => {
+            row[c.columnName] = c.mapToDb(u.__orm.data[f.fieldName]) ?? null;
           });
         this.rowsOfTable(todo.metadata.tableName)[id] = row;
       });
@@ -204,7 +206,8 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
       const field = meta.fields[fieldName] || fail();
       // TODO Add column data to the fields
       const column = meta.fields[field.fieldName] || fail();
-      const currentValue = (column.serde && row[column.serde.columnName]) ?? null;
+      // TODO Support multiple columns i.e. polymorphic references
+      const currentValue = (column.serde && row[column.serde.columns[0].columnName]) ?? null;
       switch (field.kind) {
         case "primaryKey":
         case "primitive":
@@ -280,7 +283,7 @@ function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object
   }
   const flip = value === "DESC" ? -1 : 1;
   const column = meta.fields[fieldName] || fail();
-  const key = column.serde!.columnName;
+  const key = column.serde!.columns[0].columnName;
   // TODO Handle sorting by more than just strings
   return a[key].localeCompare(b[key]) * flip;
 }

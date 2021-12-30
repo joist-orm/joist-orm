@@ -13,25 +13,23 @@ export function hasSerde(field: Field): field is SerdeField {
 
 // TODO Rename to FieldSerde
 export interface ColumnSerde {
-  columnName: string;
-
   /** A single field might persist to multiple columns, i.e. polymorphic references. */
   columns: Column[];
 
   // Used in EntityManager.hydrate to set row value on the entity
   setOnEntity(data: any, row: any): void;
-
-  // Used in QueryBuilder
-  mapToDb(value: any): any;
 }
 
 export interface Column {
   columnName: string;
   dbType: string;
   dbValue(data: any): any;
+  mapToDb(value: any): any;
+  isArray: boolean;
 }
 
 export class SimpleSerde implements ColumnSerde {
+  isArray = false;
   columns = [this];
 
   constructor(private fieldName: string, public columnName: string, public dbType: string) {}
@@ -60,6 +58,7 @@ export class SimpleSerde implements ColumnSerde {
  */
 export class DecimalToNumberSerde implements ColumnSerde {
   dbType = "decimal";
+  isArray = false;
   columns = [this];
 
   constructor(private fieldName: string, public columnName: string) {}
@@ -81,6 +80,7 @@ export class DecimalToNumberSerde implements ColumnSerde {
 /** Maps integer primary keys ot strings "because GraphQL". */
 export class PrimaryKeySerde implements ColumnSerde {
   dbType = "int";
+  isArray = false;
   columns = [this];
 
   constructor(private meta: () => EntityMetadata<any>, private fieldName: string, public columnName: string) {}
@@ -96,14 +96,11 @@ export class PrimaryKeySerde implements ColumnSerde {
   mapToDb(value: any) {
     return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
   }
-
-  toColumns(data: any) {
-    return [this];
-  }
 }
 
 export class ForeignKeySerde implements ColumnSerde {
   dbType = "int";
+  isArray = false;
   columns = [this];
 
   // TODO EntityMetadata being in here is weird.
@@ -135,21 +132,21 @@ export class PolymorphicKeySerde implements ColumnSerde {
     });
   }
 
-  // We're assuming QueryBuilder is already calling `value` for a specific component
-  mapToDb(value: any): any {
-    return maybeResolveReferenceToId(value);
-  }
-
   // Lazy
-  get columns() {
+  get columns(): Array<Column & { otherMetadata: () => EntityMetadata<any> }> {
     const { fieldName } = this;
     return this.field.components.map((comp) => ({
       columnName: comp.columnName,
       dbType: "int",
+      isArray: false,
+      otherMetadata: comp.otherMetadata,
       dbValue(data: any): any {
         const id = maybeResolveReferenceToId(data[fieldName]);
         const cstr = id ? getConstructorFromTaggedId(id) : undefined;
         return cstr === comp.otherMetadata().cstr ? keyToNumber(comp.otherMetadata(), id) : undefined;
+      },
+      mapToDb(value: any): any {
+        return keyToNumber(comp.otherMetadata(), maybeResolveReferenceToId(value));
       },
     }));
   }
@@ -166,6 +163,7 @@ export class PolymorphicKeySerde implements ColumnSerde {
 
 export class EnumFieldSerde implements ColumnSerde {
   dbType = "int";
+  isArray = false;
   columns = [this];
 
   constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
@@ -185,6 +183,7 @@ export class EnumFieldSerde implements ColumnSerde {
 
 export class EnumArrayFieldSerde implements ColumnSerde {
   dbType = "int[]";
+  isArray = true;
   columns = [this];
 
   constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
@@ -209,6 +208,7 @@ function maybeNullToUndefined(value: any): any {
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
 export class SuperstructSerde implements ColumnSerde {
   dbType = "jsonb";
+  isArray = false;
   columns = [this];
 
   // Use a dynamic require so that downstream projects don't have to depend on superstruct

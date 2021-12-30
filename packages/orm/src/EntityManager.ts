@@ -843,8 +843,6 @@ export interface EntityMetadata<T extends Entity> {
   factory: (em: EntityManager, opts?: any) => New<T>;
 }
 
-export type ColumnMeta = { fieldName: string; columnName: string; dbType: string; serde: ColumnSerde };
-
 export type Field =
   | PrimaryKeyField
   | PrimitiveField

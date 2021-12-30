@@ -1,34 +1,55 @@
+import { Field, PolymorphicField, SerdeField } from "./EntityManager";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,
   keyToNumber,
   keyToString,
-  maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
 } from "./index";
 
-export interface ColumnSerde {
-  setOnEntity(data: any, row: any): void;
-
-  setOnRow(data: any, row: any): void;
-
-  getFromEntity(data: any): any;
-
-  mapToDb(value: any): any;
+export function hasSerde(field: Field): field is SerdeField {
+  return !!field.serde;
 }
 
-export class SimpleSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
+/**
+ * The database/column serialization / deserialization details of a given field.
+ *
+ * Most implementations will have just a single column in `columns`, but some logical
+ * domain fields can be mapped to multiple physical database columns, i.e. polymorphic
+ * references.
+ */
+export interface FieldSerde {
+  /** A single field might persist to multiple columns, i.e. polymorphic references. */
+  columns: Column[];
+
+  /**
+   * Accepts a database `row` and sets the field's value(s) into the `__orm.data`.
+   *
+   * Used in EntityManager.hydrate to set row value on the entity
+   */
+  setOnEntity(data: any, row: any): void;
+}
+
+/** A specific physical column of a logical field. */
+export interface Column {
+  columnName: string;
+  dbType: string;
+  dbValue(data: any): any;
+  mapToDb(value: any): any;
+  isArray: boolean;
+}
+
+export class PrimitiveSerde implements FieldSerde {
+  isArray = false;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string, public dbType: string) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName];
-  }
-
-  getFromEntity(data: any) {
+  dbValue(data: any) {
     return data[this.fieldName];
   }
 
@@ -46,19 +67,19 @@ export class SimpleSerde implements ColumnSerde {
  * Also note that knex/pg accept `number`s as input, so we only need
  * to handle from-database -> to JS translation.
  */
-export class DecimalToNumberSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string) {}
+export class DecimalToNumberSerde implements FieldSerde {
+  dbType = "decimal";
+  isArray = false;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
     data[this.fieldName] = value !== undefined ? Number(value) : value;
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName];
-  }
-
-  getFromEntity(data: any) {
+  dbValue(data: any) {
     return data[this.fieldName];
   }
 
@@ -68,18 +89,18 @@ export class DecimalToNumberSerde implements ColumnSerde {
 }
 
 /** Maps integer primary keys ot strings "because GraphQL". */
-export class PrimaryKeySerde implements ColumnSerde {
-  constructor(private meta: () => EntityMetadata<any>, private fieldName: string, private columnName: string) {}
+export class PrimaryKeySerde implements FieldSerde {
+  dbType = "int";
+  isArray = false;
+  columns = [this];
+
+  constructor(private meta: () => EntityMetadata<any>, private fieldName: string, public columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.meta(), row[this.columnName]);
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(this.meta(), data[this.fieldName]);
-  }
-
-  getFromEntity(data: any) {
+  dbValue(data: any) {
     return keyToNumber(this.meta(), data[this.fieldName]);
   }
 
@@ -88,19 +109,19 @@ export class PrimaryKeySerde implements ColumnSerde {
   }
 }
 
-export class ForeignKeySerde implements ColumnSerde {
+export class ForeignKeySerde implements FieldSerde {
+  dbType = "int";
+  isArray = false;
+  columns = [this];
+
   // TODO EntityMetadata being in here is weird.
-  constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
+  constructor(private fieldName: string, public columnName: string, public otherMeta: () => EntityMetadata<any>) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.otherMeta(), row[this.columnName]);
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
-  }
-
-  getFromEntity(data: any) {
+  dbValue(data: any) {
     return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
   }
 
@@ -109,45 +130,58 @@ export class ForeignKeySerde implements ColumnSerde {
   }
 }
 
-export class PolymorphicKeySerde implements ColumnSerde {
-  // TODO EntityMetadata being in here is weird.  Don't think it is avoidable though.
-  constructor(private fieldName: string, private columnName: string, public otherMeta: () => EntityMetadata<any>) {}
+export class PolymorphicKeySerde implements FieldSerde {
+  constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] ??= keyToString(this.otherMeta(), row[this.columnName]);
+    this.columns
+      .filter((column) => !!row[column.columnName])
+      .forEach((column) => {
+        data[this.fieldName] ??= keyToString(column.otherMetadata(), row[column.columnName]);
+      });
   }
 
-  setOnRow(data: any, row: any): void {
-    const id = maybeResolveReferenceToId(data[this.fieldName]);
-    const cstr = maybeGetConstructorFromReference(id);
-    row[this.columnName] = cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+  // Lazy b/c we use PolymorphicField which we can't access in our cstr
+  get columns(): Array<Column & { otherMetadata: () => EntityMetadata<any> }> {
+    const { fieldName } = this;
+    return this.field.components.map((comp) => ({
+      columnName: comp.columnName,
+      dbType: "int",
+      isArray: false,
+      otherMetadata: comp.otherMetadata,
+      dbValue(data: any): any {
+        const id = maybeResolveReferenceToId(data[fieldName]);
+        const cstr = id ? getConstructorFromTaggedId(id) : undefined;
+        return cstr === comp.otherMetadata().cstr ? keyToNumber(comp.otherMetadata(), id) : undefined;
+      },
+      mapToDb(value: any): any {
+        return keyToNumber(comp.otherMetadata(), maybeResolveReferenceToId(value));
+      },
+    }));
   }
 
-  getFromEntity(data: any) {
-    const id = maybeResolveReferenceToId(data[this.fieldName]);
-    const cstr = id ? getConstructorFromTaggedId(id) : undefined;
-    return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+  get columnName(): string {
+    throw new Error("Unsupported");
   }
 
-  mapToDb(value: any): any {
-    const id = maybeResolveReferenceToId(value);
-    const cstr = maybeGetConstructorFromReference(value);
-    return cstr === this.otherMeta().cstr ? keyToNumber(this.otherMeta(), id) : undefined;
+  // Lazy b/c we use PolymorphicField which we can't access in our cstr
+  private get field(): PolymorphicField {
+    return this.meta().fields[this.fieldName] as PolymorphicField;
   }
 }
 
-export class EnumFieldSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
+export class EnumFieldSerde implements FieldSerde {
+  dbType = "int";
+  isArray = false;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = this.enumObject.findByCode(data[this.fieldName])?.id;
-  }
-
-  getFromEntity(data: any) {
+  dbValue(data: any) {
     return this.enumObject.findByCode(data[this.fieldName])?.id;
   }
 
@@ -156,18 +190,18 @@ export class EnumFieldSerde implements ColumnSerde {
   }
 }
 
-export class EnumArrayFieldSerde implements ColumnSerde {
-  constructor(private fieldName: string, private columnName: string, private enumObject: any) {}
+export class EnumArrayFieldSerde implements FieldSerde {
+  dbType = "int[]";
+  isArray = true;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
-  }
-
-  getFromEntity(data: any) {
+  dbValue(data: any) {
     return data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
   }
 
@@ -181,12 +215,16 @@ function maybeNullToUndefined(value: any): any {
 }
 
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
-export class SuperstructSerde implements ColumnSerde {
+export class SuperstructSerde implements FieldSerde {
+  dbType = "jsonb";
+  isArray = false;
+  columns = [this];
+
   // Use a dynamic require so that downstream projects don't have to depend on superstruct
   // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
   private assert = require("superstruct").assert;
 
-  constructor(private fieldName: string, private columnName: string, private superstruct: any) {}
+  constructor(private fieldName: string, public columnName: string, private superstruct: any) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
@@ -196,13 +234,8 @@ export class SuperstructSerde implements ColumnSerde {
     data[this.fieldName] = value;
   }
 
-  setOnRow(data: any, row: any): void {
-    // assume the data is already valid b/c it came from the eneity
-    row[this.columnName] = data[this.fieldName];
-  }
-
-  getFromEntity(data: any) {
-    // assume the data is already valid b/c it came from the eneity
+  dbValue(data: any) {
+    // assume the data is already valid b/c it came from the entity
     return data[this.fieldName];
   }
 

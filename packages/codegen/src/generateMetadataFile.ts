@@ -9,14 +9,13 @@ import {
   ForeignKeySerde,
   PolymorphicKeySerde,
   PrimaryKeySerde,
-  SimpleSerde,
+  PrimitiveSerde,
   SuperstructSerde,
 } from "./symbols";
 
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
   const { entity } = dbMetadata;
 
-  const { primaryKey, primitives, enums, m2o, polymorphics } = generateColumns(dbMetadata);
   const fields = generateFields(config, dbMetadata);
 
   return code`
@@ -25,7 +24,6 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
       type: "${entity.name}",
       tagName: "${config.entities[entity.name].tag}",
       tableName: "${dbMetadata.tableName}",
-      columns: [ ${primaryKey} ${enums} ${primitives} ${m2o} ${polymorphics}],
       fields: ${fields},
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
@@ -35,93 +33,26 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
   `;
 }
 
-function generateColumns(dbMetadata: EntityDbMetadata): {
-  primaryKey: Code;
-  primitives: Code[];
-  enums: Code[];
-  m2o: Code[];
-  polymorphics: Code[];
-} {
-  const primaryKey = code`
-    { fieldName: "id", columnName: "id", dbType: "int", serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id") },
-  `;
-
-  const primitives = dbMetadata.primitives.map((p) => {
-    const { fieldName, columnName, columnType, superstruct } = p;
-    const serdeType = columnType === "numeric" ? DecimalToNumberSerde : SimpleSerde;
-    if (superstruct) {
-      return code`
-        {
-          fieldName: "${fieldName}",
-          columnName: "${columnName}",
-          dbType: "${columnType}",
-          serde: new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct}),
-        },
-      `;
-    } else {
-      return code`
-        {
-          fieldName: "${fieldName}",
-          columnName: "${columnName}",
-          dbType: "${columnType}",
-          serde: new ${serdeType}("${fieldName}", "${columnName}"),
-        },
-      `;
-    }
-  });
-
-  const enums = dbMetadata.enums.map((e) => {
-    const { fieldName, columnName, enumDetailType, isArray } = e;
-    return code`
-      {
-        fieldName: "${fieldName}",
-        columnName: "${columnName}",
-        dbType: "int",
-        serde: new ${
-          isArray ? EnumArrayFieldSerde : EnumFieldSerde
-        }("${fieldName}", "${columnName}", ${enumDetailType}),
-      },
-    `;
-  });
-
-  const m2o = dbMetadata.manyToOnes.map((m2o) => {
-    const { fieldName, columnName, otherEntity } = m2o;
-    return code`
-      {
-        fieldName: "${fieldName}",
-        columnName: "${columnName}",
-        dbType: "int",
-        serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}),
-      },
-    `;
-  });
-
-  const polymorphics = dbMetadata.polymorphics.flatMap((m2o) => {
-    const { fieldName, components } = m2o;
-    return components.map(
-      ({ columnName, otherEntity }) => code`
-        {
-          fieldName: "${fieldName}",
-          columnName: "${columnName}",
-          dbType: "int",
-          serde: new ${PolymorphicKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}),
-        },
-      `,
-    );
-  });
-
-  return { primaryKey, primitives, enums, m2o, polymorphics };
-}
-
 function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<string, Code> {
   const fields: Record<string, Code> = {};
 
   fields["id"] = code`
-    { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true }
+    {
+      kind: "primaryKey",
+      fieldName: "id",
+      fieldIdName: undefined,
+      required: true,
+      serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id"),
+    }
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived } = p;
+    const { fieldName, derived, columnName, columnType, superstruct } = p;
+    const serdeType = superstruct
+      ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
+      : columnType === "numeric"
+      ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
+      : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {
         kind: "primitive",
@@ -131,10 +62,11 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${!derived && p.notNull},
         protected: ${p.protected},
         type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
+        serde: ${serdeType},
       }`;
   });
 
-  dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull }) => {
+  dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull, isArray, columnName }) => {
     fields[fieldName] = code`
       {
         kind: "enum",
@@ -142,12 +74,15 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         fieldIdName: undefined,
         required: ${notNull},
         enumDetailType: ${enumDetailType},
+        serde: new ${
+          isArray ? EnumArrayFieldSerde : EnumFieldSerde
+        }("${fieldName}", "${columnName}", ${enumDetailType}),
       }
     `;
   });
 
   dbMetadata.manyToOnes.forEach((m2o) => {
-    const { fieldName, notNull, otherEntity, otherFieldName } = m2o;
+    const { fieldName, columnName, notNull, otherEntity, otherFieldName } = m2o;
     fields[fieldName] = code`
       {
         kind: "m2o",
@@ -156,6 +91,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
+        serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}),
       }
     `;
   });
@@ -170,6 +106,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
+        serde: undefined,
       }
     `;
   });
@@ -184,6 +121,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
+        serde: undefined,
       }
     `;
   });
@@ -198,6 +136,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: false,
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
+        serde: undefined,
       }
     `;
   });
@@ -210,14 +149,15 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         fieldName: "${fieldName}",
         fieldIdName: "${fieldName}Id",
         required: ${notNull},
-        components: [ ${components.map(
+        components: [${components.map(
           ({ otherFieldName, otherEntity, columnName }) => code`
           {
             otherMetadata: () => ${otherEntity.metaName},
             otherFieldName: "${otherFieldName}",
             columnName: "${columnName}",
           },`,
-        )} ],
+        )}],
+        serde: new ${PolymorphicKeySerde}(() => ${dbMetadata.entity.metaName}, "${fieldName}"),
       }
     `;
   });

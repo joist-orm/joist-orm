@@ -245,13 +245,12 @@ export function buildQuery<T extends Entity>(
           query = query.where((query) =>
             field.components.reduce((query, { columnName, otherMetadata }) => {
               const ids = idsByConstructor[otherMetadata().cstr.name];
-              const column = Object.values(meta.fields).find((f) => f.serde?.columnName === columnName)!;
               return ids && ids.length > 0
                 ? query.orWhereIn(
                     `${alias}.${columnName}`,
                     deTagIds(
                       otherMetadata(),
-                      ids.map((id) => column.serde!.mapToDb(id)),
+                      ids.map((id) => field.serde.mapToDb(id)),
                     ),
                   )
                 : query;

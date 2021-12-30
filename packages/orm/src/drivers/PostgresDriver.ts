@@ -359,41 +359,31 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     return;
   }
 
-  // This currently assumes a 1-to-1 field-to-column mapping.
-  const columns = Object.values(meta.fields)
+  const fields = Object.values(meta.fields)
     .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde);
+  const columns = fields.flatMap((f) => f.serde.columns);
 
   // We need to handle array columns different because the "unnest" approach fundamentally
   // won't work b/c we can't use it to send "a list of lists".
   let sql: string;
   let bindings: any[];
-  if (columns.some((c) => c.serde instanceof EnumArrayFieldSerde)) {
+  if (fields.some((f) => f.serde instanceof EnumArrayFieldSerde)) {
     // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
     // and bindings is each individual value.
     bindings = entities.flatMap((entity) => [
-      ...columns.map((c) => c.serde?.getFromEntity(entity.__orm.data) ?? null),
+      ...columns.map((c) => c.dbValue(entity.__orm.data) ?? null),
       entity.__orm.originalData.updatedAt,
     ]);
     sql = `
       UPDATE ${meta.tableName}
       SET ${columns
-        .filter((c) => c.fieldName !== "id")
-        .map((c) => `"${c.serde.columnName}" = data."${c.serde.columnName}"`)
+        .filter((c) => c.columnName !== "id")
+        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
       FROM (
-        VALUES ${entities
-          .map(
-            () =>
-              `(${columns
-                .map((c) => {
-                  const maybeArray = c.serde instanceof EnumArrayFieldSerde ? "[]" : "";
-                  return `?::${c.serde.dbType}${maybeArray}`;
-                })
-                .join(", ")}, ?::timestamp)`,
-          )
-          .join(",")}
-      ) AS data(${columns.map((c) => c.serde.columnName).join(",")},original_updated_at)
+        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamp)`).join(",")}
+      ) AS data(${columns.map((c) => c.columnName).join(",")},original_updated_at)
       WHERE
         ${meta.tableName}.id = data.id
         AND date_trunc('milliseconds', ${meta.tableName}.updated_at) = data.original_updated_at
@@ -407,19 +397,19 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     bindings.push(originalUpdatedAt);
     for (const entity of entities) {
       columns.forEach((c, i) => {
-        bindings[i].push(c.serde.getFromEntity(entity.__orm.data) ?? null);
+        bindings[i].push(c.dbValue(entity.__orm.data) ?? null);
       });
       originalUpdatedAt.push(entity.__orm.originalData.updatedAt);
     }
     sql = `
       UPDATE ${meta.tableName}
       SET ${columns
-        .filter((c) => c.serde.columnName !== "id")
-        .map((c) => `"${c.serde.columnName}" = data."${c.serde.columnName}"`)
+        .filter((c) => c.columnName !== "id")
+        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
       FROM (
         SELECT
-          ${columns.map((c) => `unnest(?::${c.serde.dbType}[]) as "${c.serde.columnName}"`).join(", ")},
+          ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")},
           unnest(?::timestamp[]) as original_updated_at
       ) as data
       WHERE

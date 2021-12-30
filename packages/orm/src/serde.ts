@@ -131,19 +131,17 @@ export class ForeignKeySerde implements FieldSerde {
 }
 
 export class PolymorphicKeySerde implements FieldSerde {
-  // TODO EntityMetadata being in here is weird.  Don't think it is avoidable though.
   constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    this.field.components.forEach((comp) => {
-      if (!!row[comp.columnName]) {
-        data[this.fieldName] ??= keyToString(comp.otherMetadata(), row[comp.columnName]);
-        return;
-      }
-    });
+    this.columns
+      .filter((column) => !!row[column.columnName])
+      .forEach((column) => {
+        data[this.fieldName] ??= keyToString(column.otherMetadata(), row[column.columnName]);
+      });
   }
 
-  // Lazy
+  // Lazy b/c we use PolymorphicField which we can't access in our cstr
   get columns(): Array<Column & { otherMetadata: () => EntityMetadata<any> }> {
     const { fieldName } = this;
     return this.field.components.map((comp) => ({
@@ -166,7 +164,7 @@ export class PolymorphicKeySerde implements FieldSerde {
     throw new Error("Unsupported");
   }
 
-  // Lazy look this up b/c meta() won't work immediately during the constructor
+  // Lazy b/c we use PolymorphicField which we can't access in our cstr
   private get field(): PolymorphicField {
     return this.meta().fields[this.fieldName] as PolymorphicField;
   }

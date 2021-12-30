@@ -853,7 +853,7 @@ export type Field =
   | OneToOneField
   | PolymorphicField;
 
-// Should be a mapped type of Field that, of those that have serde
+// Only the fields that have defined `serde` keys; should be a mapped type of Field
 export type SerdeField = PrimaryKeyField | PrimitiveField | EnumField | ManyToOneField | PolymorphicField;
 
 export type PrimaryKeyField = {

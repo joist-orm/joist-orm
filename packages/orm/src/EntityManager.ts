@@ -19,6 +19,7 @@ import {
   maybeResolveReferenceToId,
   OneToManyCollection,
   PartialOrNull,
+  PolymorphicKeySerde,
   Reference,
   setField,
   setOpts,
@@ -930,7 +931,7 @@ export type PolymorphicField = {
   fieldIdName: string; // `parentId`
   required: boolean;
   components: PolymorphicFieldComponent[];
-  serde: FieldSerde;
+  serde: PolymorphicKeySerde;
 };
 
 export type PolymorphicFieldComponent = {

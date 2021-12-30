@@ -16,7 +16,6 @@ import {
   getConstructorFromTaggedId,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
-  PolymorphicKeySerde,
 } from "./index";
 import { keyToNumber } from "./keys";
 import { ForeignKeySerde, PrimaryKeySerde } from "./serde";
@@ -242,7 +241,7 @@ export function buildQuery<T extends Entity>(
           const ids = clause.map((e) => maybeResolveReferenceToId(e)!);
           const idsByConstructor = groupBy(ids, (id) => getConstructorFromTaggedId(id).name);
           query = query.where((query) =>
-            (field.serde as PolymorphicKeySerde).columns.reduce((query, { columnName, otherMetadata, mapToDb }) => {
+            field.serde.columns.reduce((query, { columnName, otherMetadata, mapToDb }) => {
               const ids = idsByConstructor[otherMetadata().cstr.name];
               return ids && ids.length > 0 ? query.orWhereIn(`${alias}.${columnName}`, ids.map(mapToDb)) : query;
             }, query),
@@ -355,7 +354,7 @@ function polyColumnFor(
 ): Column {
   const cstr = typeof value === "function" ? value : maybeGetConstructorFromReference(value)!;
   return (
-    (field.serde as PolymorphicKeySerde).columns.find((c) => c.otherMetadata().cstr === cstr) ??
+    field.serde.columns.find((c) => c.otherMetadata().cstr === cstr) ??
     fail(`${cstr.name} cannot be used as a filter on ${field.fieldName}`)
   );
 }

@@ -4,6 +4,7 @@ import { newPgConnectionConfig } from "joist-utils";
 import { dirname } from "path";
 import { Client } from "pg";
 import pgStructure, { Db, Table } from "pg-structure";
+import { Options } from "prettier";
 import { code, Code, def, imp } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
@@ -39,6 +40,7 @@ export interface CodeGenFile {
   name: string;
   contents: Code | string;
   overwrite: boolean;
+  prettierOverrides?: Options;
 }
 
 /** A map from Enum table name to the rows currently in the table. */
@@ -60,11 +62,11 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
     // We might be writing to a non-entities directory i.e. for the graphql plugin, so check this for each file
     await fs.mkdir(dirname(path), { recursive: true });
     if (file.overwrite) {
-      await fs.writeFile(path, await contentToString(file.contents, file.name));
+      await fs.writeFile(path, await contentToString(file.contents, file.name, file.prettierOverrides));
     } else {
       const exists = await trueIfResolved(fs.access(path));
       if (!exists) {
-        await fs.writeFile(path, await contentToString(file.contents, file.name));
+        await fs.writeFile(path, await contentToString(file.contents, file.name, file.prettierOverrides));
       }
     }
   }
@@ -118,6 +120,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       ${configureMetadata}(allMetadata);
     `,
     overwrite: true,
+    prettierOverrides: { printWidth: 500 },
   };
 
   const enumsTables = Object.values(enums)
@@ -173,11 +176,15 @@ export async function loadEnumMetadata(db: Db, client: Client, config: Config): 
   return Object.fromEntries(await Promise.all(promises));
 }
 
-export async function contentToString(content: Code | string, fileName: string): Promise<string> {
+export async function contentToString(
+  content: Code | string,
+  fileName: string,
+  prettierOverrides: Options = {},
+): Promise<string> {
   if (typeof content === "string") {
     return content;
   }
-  return await content.toStringWithImports({ path: fileName });
+  return await content.toStringWithImports({ path: fileName, prettierOverrides });
 }
 
 if (require.main === module) {

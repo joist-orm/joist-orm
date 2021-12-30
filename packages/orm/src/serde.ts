@@ -39,7 +39,7 @@ export interface Column {
   isArray: boolean;
 }
 
-export class SimpleSerde implements FieldSerde {
+export class PrimitiveSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 

@@ -9,7 +9,7 @@ import {
   ForeignKeySerde,
   PolymorphicKeySerde,
   PrimaryKeySerde,
-  SimpleSerde,
+  PrimitiveSerde,
   SuperstructSerde,
 } from "joist-orm";
 import { Context } from "src/context";
@@ -76,7 +76,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: true,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("firstName", "first_name", "character varying"),
+      serde: new PrimitiveSerde("firstName", "first_name", "character varying"),
     },
     lastName: {
       kind: "primitive",
@@ -86,7 +86,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("lastName", "last_name", "character varying"),
+      serde: new PrimitiveSerde("lastName", "last_name", "character varying"),
     },
     initials: {
       kind: "primitive",
@@ -96,7 +96,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("initials", "initials", "character varying"),
+      serde: new PrimitiveSerde("initials", "initials", "character varying"),
     },
     numberOfBooks: {
       kind: "primitive",
@@ -106,7 +106,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "number",
-      serde: new SimpleSerde("numberOfBooks", "number_of_books", "int"),
+      serde: new PrimitiveSerde("numberOfBooks", "number_of_books", "int"),
     },
     isPopular: {
       kind: "primitive",
@@ -116,7 +116,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "boolean",
-      serde: new SimpleSerde("isPopular", "is_popular", "boolean"),
+      serde: new PrimitiveSerde("isPopular", "is_popular", "boolean"),
     },
     age: {
       kind: "primitive",
@@ -126,7 +126,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "number",
-      serde: new SimpleSerde("age", "age", "int"),
+      serde: new PrimitiveSerde("age", "age", "int"),
     },
     graduated: {
       kind: "primitive",
@@ -136,7 +136,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("graduated", "graduated", "date"),
+      serde: new PrimitiveSerde("graduated", "graduated", "date"),
     },
     wasEverPopular: {
       kind: "primitive",
@@ -146,7 +146,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: true,
       type: "boolean",
-      serde: new SimpleSerde("wasEverPopular", "was_ever_popular", "boolean"),
+      serde: new PrimitiveSerde("wasEverPopular", "was_ever_popular", "boolean"),
     },
     address: {
       kind: "primitive",
@@ -166,7 +166,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -176,7 +176,7 @@ export const authorMeta: EntityMetadata<Author> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     favoriteColors: {
       kind: "enum",
@@ -259,7 +259,7 @@ export const bookMeta: EntityMetadata<Book> = {
       required: true,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("title", "title", "character varying"),
+      serde: new PrimitiveSerde("title", "title", "character varying"),
     },
     order: {
       kind: "primitive",
@@ -269,7 +269,7 @@ export const bookMeta: EntityMetadata<Book> = {
       required: false,
       protected: false,
       type: "number",
-      serde: new SimpleSerde("order", "order", "int"),
+      serde: new PrimitiveSerde("order", "order", "int"),
     },
     createdAt: {
       kind: "primitive",
@@ -279,7 +279,7 @@ export const bookMeta: EntityMetadata<Book> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -289,7 +289,7 @@ export const bookMeta: EntityMetadata<Book> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     author: {
       kind: "m2o",
@@ -373,7 +373,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -383,7 +383,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     status: {
       kind: "enum",
@@ -439,7 +439,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       required: true,
       protected: false,
       type: "number",
-      serde: new SimpleSerde("rating", "rating", "int"),
+      serde: new PrimitiveSerde("rating", "rating", "int"),
     },
     isPublic: {
       kind: "primitive",
@@ -449,7 +449,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       required: false,
       protected: false,
       type: "boolean",
-      serde: new SimpleSerde("isPublic", "is_public", "boolean"),
+      serde: new PrimitiveSerde("isPublic", "is_public", "boolean"),
     },
     createdAt: {
       kind: "primitive",
@@ -459,7 +459,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -469,7 +469,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     book: {
       kind: "m2o",
@@ -517,7 +517,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       required: false,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("text", "text", "text"),
+      serde: new PrimitiveSerde("text", "text", "text"),
     },
     createdAt: {
       kind: "primitive",
@@ -527,7 +527,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -537,7 +537,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     parent: {
       kind: "poly",
@@ -586,7 +586,7 @@ export const criticMeta: EntityMetadata<Critic> = {
       required: true,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("name", "name", "character varying"),
+      serde: new PrimitiveSerde("name", "name", "character varying"),
     },
     createdAt: {
       kind: "primitive",
@@ -596,7 +596,7 @@ export const criticMeta: EntityMetadata<Critic> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -606,7 +606,7 @@ export const criticMeta: EntityMetadata<Critic> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
   },
   config: criticConfig,
@@ -636,7 +636,7 @@ export const imageMeta: EntityMetadata<Image> = {
       required: true,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("fileName", "file_name", "character varying"),
+      serde: new PrimitiveSerde("fileName", "file_name", "character varying"),
     },
     createdAt: {
       kind: "primitive",
@@ -646,7 +646,7 @@ export const imageMeta: EntityMetadata<Image> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -656,7 +656,7 @@ export const imageMeta: EntityMetadata<Image> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     type: {
       kind: "enum",
@@ -721,7 +721,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       required: true,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("name", "name", "character varying"),
+      serde: new PrimitiveSerde("name", "name", "character varying"),
     },
     latitude: {
       kind: "primitive",
@@ -761,7 +761,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -771,7 +771,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     size: {
       kind: "enum",
@@ -844,7 +844,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       required: true,
       protected: false,
       type: "string",
-      serde: new SimpleSerde("name", "name", "character varying"),
+      serde: new PrimitiveSerde("name", "name", "character varying"),
     },
     createdAt: {
       kind: "primitive",
@@ -854,7 +854,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("createdAt", "created_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"),
     },
     updatedAt: {
       kind: "primitive",
@@ -864,7 +864,7 @@ export const tagMeta: EntityMetadata<Tag> = {
       required: false,
       protected: false,
       type: "Date",
-      serde: new SimpleSerde("updatedAt", "updated_at", "timestamp with time zone"),
+      serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"),
     },
     books: {
       kind: "m2m",

@@ -9,7 +9,7 @@ import {
   ForeignKeySerde,
   PolymorphicKeySerde,
   PrimaryKeySerde,
-  SimpleSerde,
+  PrimitiveSerde,
   SuperstructSerde,
 } from "./symbols";
 
@@ -52,7 +52,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
       : columnType === "numeric"
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
-      : code`new ${SimpleSerde}("${fieldName}", "${columnName}", "${columnType}")`;
+      : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {
         kind: "primitive",

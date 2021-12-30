@@ -7,10 +7,10 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
-  ColumnSerde,
   ConfigApi,
   DeepPartialOrNull,
   EntityHook,
+  FieldSerde,
   GenericError,
   getConstructorFromTaggedId,
   getEm,
@@ -861,7 +861,7 @@ export type PrimaryKeyField = {
   fieldName: string;
   fieldIdName: undefined;
   required: true;
-  serde: ColumnSerde;
+  serde: FieldSerde;
 };
 
 export type PrimitiveField = {
@@ -872,7 +872,7 @@ export type PrimitiveField = {
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
   type: string | Function;
-  serde: ColumnSerde;
+  serde: FieldSerde;
 };
 
 export type EnumField = {
@@ -881,7 +881,7 @@ export type EnumField = {
   fieldIdName: undefined;
   required: boolean;
   enumDetailType: { getValues(): ReadonlyArray<unknown> };
-  serde: ColumnSerde;
+  serde: FieldSerde;
 };
 
 export type OneToManyField = {
@@ -901,7 +901,7 @@ export type ManyToOneField = {
   required: boolean;
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
-  serde: ColumnSerde;
+  serde: FieldSerde;
 };
 
 export type ManyToManyField = {
@@ -930,7 +930,7 @@ export type PolymorphicField = {
   fieldIdName: string; // `parentId`
   required: boolean;
   components: PolymorphicFieldComponent[];
-  serde: ColumnSerde;
+  serde: FieldSerde;
 };
 
 export type PolymorphicFieldComponent = {

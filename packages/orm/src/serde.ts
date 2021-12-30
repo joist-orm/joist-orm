@@ -11,15 +11,26 @@ export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
 }
 
-// TODO Rename to FieldSerde
-export interface ColumnSerde {
+/**
+ * The database/column serialization / deserialization details of a given field.
+ *
+ * Most implementations will have just a single column in `columns`, but some logical
+ * domain fields can be mapped to multiple physical database columns, i.e. polymorphic
+ * references.
+ */
+export interface FieldSerde {
   /** A single field might persist to multiple columns, i.e. polymorphic references. */
   columns: Column[];
 
-  // Used in EntityManager.hydrate to set row value on the entity
+  /**
+   * Accepts a database `row` and sets the field's value(s) into the `__orm.data`.
+   *
+   * Used in EntityManager.hydrate to set row value on the entity
+   */
   setOnEntity(data: any, row: any): void;
 }
 
+/** A specific physical column of a logical field. */
 export interface Column {
   columnName: string;
   dbType: string;
@@ -28,7 +39,7 @@ export interface Column {
   isArray: boolean;
 }
 
-export class SimpleSerde implements ColumnSerde {
+export class SimpleSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 
@@ -56,7 +67,7 @@ export class SimpleSerde implements ColumnSerde {
  * Also note that knex/pg accept `number`s as input, so we only need
  * to handle from-database -> to JS translation.
  */
-export class DecimalToNumberSerde implements ColumnSerde {
+export class DecimalToNumberSerde implements FieldSerde {
   dbType = "decimal";
   isArray = false;
   columns = [this];
@@ -78,7 +89,7 @@ export class DecimalToNumberSerde implements ColumnSerde {
 }
 
 /** Maps integer primary keys ot strings "because GraphQL". */
-export class PrimaryKeySerde implements ColumnSerde {
+export class PrimaryKeySerde implements FieldSerde {
   dbType = "int";
   isArray = false;
   columns = [this];
@@ -98,7 +109,7 @@ export class PrimaryKeySerde implements ColumnSerde {
   }
 }
 
-export class ForeignKeySerde implements ColumnSerde {
+export class ForeignKeySerde implements FieldSerde {
   dbType = "int";
   isArray = false;
   columns = [this];
@@ -119,7 +130,7 @@ export class ForeignKeySerde implements ColumnSerde {
   }
 }
 
-export class PolymorphicKeySerde implements ColumnSerde {
+export class PolymorphicKeySerde implements FieldSerde {
   // TODO EntityMetadata being in here is weird.  Don't think it is avoidable though.
   constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
 
@@ -161,7 +172,7 @@ export class PolymorphicKeySerde implements ColumnSerde {
   }
 }
 
-export class EnumFieldSerde implements ColumnSerde {
+export class EnumFieldSerde implements FieldSerde {
   dbType = "int";
   isArray = false;
   columns = [this];
@@ -181,7 +192,7 @@ export class EnumFieldSerde implements ColumnSerde {
   }
 }
 
-export class EnumArrayFieldSerde implements ColumnSerde {
+export class EnumArrayFieldSerde implements FieldSerde {
   dbType = "int[]";
   isArray = true;
   columns = [this];
@@ -206,7 +217,7 @@ function maybeNullToUndefined(value: any): any {
 }
 
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
-export class SuperstructSerde implements ColumnSerde {
+export class SuperstructSerde implements FieldSerde {
   dbType = "jsonb";
   isArray = false;
   columns = [this];

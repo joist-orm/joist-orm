@@ -330,15 +330,21 @@ async function assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<vo
 }
 
 async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  const rows = entities.map((entity) => {
-    const row = {};
-    Object.values(meta.fields).forEach((f) => f.serde?.setOnRow(entity.__orm.data, row));
-    return row;
-  });
   // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
   // We also use `.transacting` b/c even when `knex` is already a Transaction object,
   // `batchInsert` w/o the `transacting` adds savepoints that we don't want/need.
-  await knex.batchInsert(meta.tableName, rows).transacting(knex as any);
+  const fields = Object.values(meta.fields).filter(hasSerde);
+  const columns = fields.flatMap((f) => f.serde.columns);
+
+  // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
+  // and bindings is each individual value.
+  const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data) ?? null));
+  const sql = `
+    INSERT INTO ${meta.tableName} (${columns.map((c) => `"${c.columnName}"`).join(", ")})
+    VALUES ${entities.map(() => `(${columns.map((c) => `?`).join(", ")})`).join(",")}
+  `;
+
+  await knex.raw(cleanSql(sql), bindings);
 }
 
 // Uses a pg-specific syntax to issue a bulk update

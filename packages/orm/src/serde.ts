@@ -4,7 +4,6 @@ import {
   getConstructorFromTaggedId,
   keyToNumber,
   keyToString,
-  maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
 } from "./index";
 
@@ -16,13 +15,11 @@ export function hasSerde(field: Field): field is SerdeField {
 export interface ColumnSerde {
   columnName: string;
 
+  /** A single field might persist to multiple columns, i.e. polymorphic references. */
   columns: Column[];
 
   // Used in EntityManager.hydrate to set row value on the entity
   setOnEntity(data: any, row: any): void;
-
-  // Used in PostgresDriver.batchInsert
-  setOnRow(data: any, row: any): void;
 
   // Used in QueryBuilder
   mapToDb(value: any): any;
@@ -41,10 +38,6 @@ export class SimpleSerde implements ColumnSerde {
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
-  }
-
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName];
   }
 
   dbValue(data: any) {
@@ -76,10 +69,6 @@ export class DecimalToNumberSerde implements ColumnSerde {
     data[this.fieldName] = value !== undefined ? Number(value) : value;
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName];
-  }
-
   dbValue(data: any) {
     return data[this.fieldName];
   }
@@ -98,10 +87,6 @@ export class PrimaryKeySerde implements ColumnSerde {
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.meta(), row[this.columnName]);
-  }
-
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(this.meta(), data[this.fieldName]);
   }
 
   dbValue(data: any) {
@@ -128,10 +113,6 @@ export class ForeignKeySerde implements ColumnSerde {
     data[this.fieldName] = keyToString(this.otherMeta(), row[this.columnName]);
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
-  }
-
   dbValue(data: any) {
     return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
   }
@@ -150,18 +131,6 @@ export class PolymorphicKeySerde implements ColumnSerde {
       if (!!row[comp.columnName]) {
         data[this.fieldName] ??= keyToString(comp.otherMetadata(), row[comp.columnName]);
         return;
-      }
-    });
-  }
-
-  setOnRow(data: any, row: any): void {
-    const id = maybeResolveReferenceToId(data[this.fieldName]);
-    const cstr = maybeGetConstructorFromReference(id);
-    this.field.components.forEach((comp) => {
-      if (comp.otherMetadata().cstr === cstr) {
-        row[comp.columnName] = keyToNumber(comp.otherMetadata(), id);
-      } else {
-        row[comp.columnName] = undefined;
       }
     });
   }
@@ -205,10 +174,6 @@ export class EnumFieldSerde implements ColumnSerde {
     data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
   }
 
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = this.enumObject.findByCode(data[this.fieldName])?.id;
-  }
-
   dbValue(data: any) {
     return this.enumObject.findByCode(data[this.fieldName])?.id;
   }
@@ -226,10 +191,6 @@ export class EnumArrayFieldSerde implements ColumnSerde {
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
-  }
-
-  setOnRow(data: any, row: any): void {
-    row[this.columnName] = data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
   }
 
   dbValue(data: any) {
@@ -262,11 +223,6 @@ export class SuperstructSerde implements ColumnSerde {
       this.assert(value, this.superstruct);
     }
     data[this.fieldName] = value;
-  }
-
-  setOnRow(data: any, row: any): void {
-    // assume the data is already valid b/c it came from the entity
-    row[this.columnName] = data[this.fieldName];
   }
 
   dbValue(data: any) {

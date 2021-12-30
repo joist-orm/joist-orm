@@ -22,7 +22,7 @@
     "joist-codegen": "1.0.0-bump",
     "joist-utils": "1.0.0-bump",
     "pluralize": "^8.0.0",
-    "ts-poet": "^4.7.0"
+    "ts-poet": "^4.8.0"
   },
   "devDependencies": {
     "@types/jest": "^26.0.24",

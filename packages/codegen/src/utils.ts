@@ -58,6 +58,7 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
     case "citext":
     case "character varying":
     case "varchar":
+    case "uuid":
       return "string";
     case "timestamp with time zone":
     case "date":

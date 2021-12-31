@@ -37,6 +37,7 @@ export type Entity = {
 export type DatabaseColumnType =
   | "boolean"
   | "int"
+  | "uuid"
   | "numeric"
   | "text"
   | "citext"

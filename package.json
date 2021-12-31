@@ -11,7 +11,8 @@
     "packages/migration-utils",
     "packages/orm",
     "packages/utils",
-    "packages/test-utils"
+    "packages/test-utils",
+    "packages/tests/uuid-ids"
   ],
   "dependencies": {
     "typescript": "^4.5.2"

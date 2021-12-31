@@ -1,5 +1,6 @@
 import { Author } from "@src/entities/Author";
 import { knex, newEntityManager } from "@src/setupDbTests";
+import { randomUUID } from "crypto";
 
 describe("Author", () => {
   it("can have business logic methods", async () => {
@@ -10,5 +11,5 @@ describe("Author", () => {
 });
 
 export async function insertAuthor(row: { first_name: string; last_name?: string | null }) {
-  await knex.insert({ initials: row.first_name[0], number_of_books: 0, ...row }).into("authors");
+  await knex.insert({ id: randomUUID(), ...row }).into("authors");
 }

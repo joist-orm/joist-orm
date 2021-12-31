@@ -25,7 +25,6 @@ import { Author, authorMeta, newAuthor } from "./entities";
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorOpts {
-  id?: string | null;
   firstName: string;
   lastName?: string | null;
 }
@@ -34,7 +33,6 @@ export interface AuthorIdsOpts {}
 
 export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never>;
-  id?: ValueFilter<string, null | undefined>;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
@@ -43,7 +41,6 @@ export interface AuthorFilter {
 
 export interface AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<AuthorId>;
-  id?: ValueGraphQLFilter<string>;
   firstName?: ValueGraphQLFilter<string>;
   lastName?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
@@ -51,7 +48,6 @@ export interface AuthorGraphQLFilter {
 }
 
 export interface AuthorOrder {
-  id?: OrderBy;
   id?: OrderBy;
   firstName?: OrderBy;
   lastName?: OrderBy;
@@ -82,14 +78,6 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   get id(): AuthorId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get id(): string | undefined {
-    return this.__orm.data["id"];
-  }
-
-  set id(id: string | undefined) {
-    setField(this, "id", id);
   }
 
   get firstName(): string {

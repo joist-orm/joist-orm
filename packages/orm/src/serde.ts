@@ -1,6 +1,5 @@
 import { Field, PolymorphicField, SerdeField } from "./EntityManager";
 import {
-  deTagId,
   EntityMetadata,
   getConstructorFromTaggedId,
   keyToNumber,
@@ -106,19 +105,11 @@ export class PrimaryKeySerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    if (this.dbType === "uuid") {
-      return deTagId(this.meta(), data[this.fieldName]);
-    } else {
-      return keyToNumber(this.meta(), data[this.fieldName]);
-    }
+    return keyToNumber(this.meta(), data[this.fieldName]);
   }
 
   mapToDb(value: any) {
-    if (this.dbType === "uuid") {
-      return deTagId(this.meta(), maybeResolveReferenceToId(value)!);
-    } else {
-      return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
-    }
+    return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
   }
 }
 

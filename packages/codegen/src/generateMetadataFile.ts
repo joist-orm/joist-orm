@@ -44,7 +44,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id"),
+      serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id", "${dbMetadata.idDbType}"),
     }
   `;
 
@@ -84,7 +84,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   });
 
   dbMetadata.manyToOnes.forEach((m2o) => {
-    const { fieldName, columnName, notNull, otherEntity, otherFieldName } = m2o;
+    const { fieldName, columnName, notNull, otherEntity, otherFieldName, dbType } = m2o;
     fields[fieldName] = code`
       {
         kind: "m2o",
@@ -93,7 +93,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
-        serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}),
+        serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}, "${dbType}"),
       }
     `;
   });

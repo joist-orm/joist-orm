@@ -37,6 +37,7 @@ export type Entity = {
 export type DatabaseColumnType =
   | "boolean"
   | "int"
+  | "uuid"
   | "numeric"
   | "text"
   | "citext"
@@ -46,6 +47,11 @@ export type DatabaseColumnType =
   | "date"
   | "jsonb";
 
+/**
+ * A logical entity field.
+ *
+ * I.e. it may be a physical db column, or multiple physical db columns, or a "virtual" field like
+ * the one-to-many collection side of a many-to-one foreign key. */
 interface Field {
   fieldName: string;
   ignore?: boolean;
@@ -80,6 +86,7 @@ export type EnumField = Field & {
 /** I.e. a `Book.author` reference pointing to an `Author`. */
 export type ManyToOneField = Field & {
   columnName: string;
+  dbType: string;
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
@@ -127,6 +134,8 @@ export type PolymorphicFieldComponent = {
 /** Adapts the generally-great pg-structure metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;
+  // I.e. id for sequences or uuid
+  idDbType: string;
   primitives: PrimitiveField[];
   enums: EnumField[];
   manyToOnes: ManyToOneField[];
@@ -138,6 +147,7 @@ export class EntityDbMetadata {
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
+    this.idDbType = table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ?? fail();
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
       .filter((c) => !isEnumArray(c))
@@ -313,6 +323,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
 function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
+  const dbType = r.foreignKey.columns[0].type.shortName!;
   const fieldName = referenceName(config, entity, r);
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
@@ -321,7 +332,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
-  return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore };
+  return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

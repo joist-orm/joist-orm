@@ -15,7 +15,6 @@ import {
   getMetadata,
   hasSerde,
   keyToNumber,
-  keyToString,
   maybeResolveReferenceToId,
   OneToManyCollection,
   tagIds,
@@ -25,6 +24,11 @@ import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
 import { Driver } from "./driver";
+import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
+
+export interface PostgresDriverOpts {
+  idAssigner?: IdAssigner;
+}
 
 /**
  * Implements the `Driver` interface for Postgres.
@@ -41,7 +45,11 @@ import { Driver } from "./driver";
  * - We use a pg-specific bulk update syntax.
  */
 export class PostgresDriver implements Driver {
-  constructor(private readonly knex: Knex) {}
+  private readonly idAssigner: IdAssigner;
+
+  constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
+    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
+  }
 
   load<T extends Entity>(
     em: EntityManager,
@@ -221,7 +229,7 @@ export class PostgresDriver implements Driver {
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
     const updatedAt = new Date();
-    await assignNewIds(knex, todos);
+    await this.idAssigner.assignNewIds(knex, todos);
     for await (const todo of Object.values(todos)) {
       if (todo) {
         const meta = todo.metadata;
@@ -300,35 +308,6 @@ export class PostgresDriver implements Driver {
   }
 }
 
-/**
- * Assigns all new entities an id directly from their corresponding sequence generator, instead of via INSERTs.
- *
- * This lets us avoid cyclic issues with some INSERTs having foreign keys to other rows that themselves
- * need to first be INSERTed.
- */
-async function assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
-  const seqStatements: string[] = [];
-  Object.values(todos).forEach((todo) => {
-    if (todo.inserts.length > 0) {
-      const meta = todo.inserts[0].__orm.metadata;
-      const sequenceName = `${meta.tableName}_id_seq`;
-      const sql = `select nextval('${sequenceName}') from generate_series(1, ${todo.inserts.length})`;
-      seqStatements.push(sql);
-    }
-  });
-  if (seqStatements.length > 0) {
-    // There will be 1 per table; 1 single insert should be fine but we might need to batch for super-large schemas?
-    const sql = seqStatements.join(" UNION ALL ");
-    const result = await knex.raw(sql);
-    let i = 0;
-    Object.values(todos).forEach((todo) => {
-      for (const insert of todo.inserts) {
-        insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
-      }
-    });
-  }
-}
-
 async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
   // We also use `.transacting` b/c even when `knex` is already a Transaction object,
@@ -341,7 +320,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data) ?? null));
   const sql = `
     INSERT INTO ${meta.tableName} (${columns.map((c) => `"${c.columnName}"`).join(", ")})
-    VALUES ${entities.map(() => `(${columns.map((c) => `?`).join(", ")})`).join(",")}
+    VALUES ${entities.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
   `;
 
   await knex.raw(cleanSql(sql), bindings);
@@ -416,7 +395,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       FROM (
         SELECT
           ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")},
-          unnest(?::timestamp[]) as original_updated_at
+          unnest(?::timestamptz[]) as original_updated_at
       ) as data
       WHERE
         ${meta.tableName}.id = data.id

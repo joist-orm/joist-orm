@@ -357,6 +357,7 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
   return {
     name,
     entity: makeEntity(name),
+    idDbType: "int",
     primitives: [],
     enums: [],
     manyToOnes: [],

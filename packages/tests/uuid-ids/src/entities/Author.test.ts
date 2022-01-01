@@ -1,5 +1,4 @@
-import { Author } from "@src/entities/Author";
-import { newAuthor } from "@src/entities/Author.factories";
+import { Author, newAuthor } from "@src/entities";
 import { insertAuthor } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 import { RandomUuidAssigner } from "joist-orm";

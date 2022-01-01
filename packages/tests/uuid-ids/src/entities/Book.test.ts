@@ -1,6 +1,4 @@
-import { newAuthor } from "@src/entities/Author.factories";
-import { Book } from "@src/entities/Book";
-import { newBook } from "@src/entities/Book.factories";
+import { Book, newAuthor, newBook } from "@src/entities";
 import { newEntityManager } from "@src/setupDbTests";
 
 describe("Book", () => {

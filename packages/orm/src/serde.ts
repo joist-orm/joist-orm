@@ -1,5 +1,6 @@
 import { Field, PolymorphicField, SerdeField } from "./EntityManager";
 import {
+  deTagId,
   EntityMetadata,
   getConstructorFromTaggedId,
   keyToNumber,
@@ -90,22 +91,34 @@ export class DecimalToNumberSerde implements FieldSerde {
 
 /** Maps integer primary keys ot strings "because GraphQL". */
 export class PrimaryKeySerde implements FieldSerde {
-  dbType = "int";
   isArray = false;
   columns = [this];
 
-  constructor(private meta: () => EntityMetadata<any>, private fieldName: string, public columnName: string) {}
+  constructor(
+    private meta: () => EntityMetadata<any>,
+    private fieldName: string,
+    public columnName: string,
+    public dbType: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.meta(), row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return keyToNumber(this.meta(), data[this.fieldName]);
+    if (this.dbType === "uuid") {
+      return deTagId(this.meta(), data[this.fieldName]);
+    } else {
+      return keyToNumber(this.meta(), data[this.fieldName]);
+    }
   }
 
   mapToDb(value: any) {
-    return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
+    if (this.dbType === "uuid") {
+      return deTagId(this.meta(), maybeResolveReferenceToId(value)!);
+    } else {
+      return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
+    }
   }
 }
 

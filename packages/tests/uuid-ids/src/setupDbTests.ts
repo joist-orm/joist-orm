@@ -1,7 +1,7 @@
 import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
 import { config } from "dotenv";
-import { PostgresDriver } from "joist-orm";
+import { PostgresDriver, PostgresDriverOpts, TestUuidAssigner } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import { knex as createKnex, Knex } from "knex";
@@ -12,12 +12,21 @@ if (process.env.DATABASE_CONNECTION_INFO === undefined) {
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
-export const makeApiCall = jest.fn();
 
-export function newEntityManager() {
+const testUuidAssigner = new TestUuidAssigner();
+
+beforeEach(() => testUuidAssigner.reset());
+
+export function newEntityManager(opts?: PostgresDriverOpts) {
   const ctx = { knex };
-  const em = new EntityManager(ctx as any, new PostgresDriver(knex));
-  Object.assign(ctx, { em, makeApiCall });
+  const em = new EntityManager(
+    ctx as any,
+    new PostgresDriver(knex, {
+      idAssigner: testUuidAssigner,
+      ...opts,
+    }),
+  );
+  Object.assign(ctx, { em });
   return em;
 }
 

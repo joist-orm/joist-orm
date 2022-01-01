@@ -128,6 +128,8 @@ export type PolymorphicFieldComponent = {
 /** Adapts the generally-great pg-structure metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;
+  // I.e. id for sequences or uuid
+  idDbType: string;
   primitives: PrimitiveField[];
   enums: EnumField[];
   manyToOnes: ManyToOneField[];
@@ -139,6 +141,7 @@ export class EntityDbMetadata {
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
+    this.idDbType = table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ?? fail();
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
       .filter((c) => !isEnumArray(c))

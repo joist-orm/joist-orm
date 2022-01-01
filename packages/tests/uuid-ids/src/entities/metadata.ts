@@ -14,7 +14,7 @@ export const authorMeta: EntityMetadata<Author> = {
   tagName: "a",
   tableName: "authors",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => authorMeta, "id", "id") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => authorMeta, "id", "id", "uuid") },
     firstName: { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying") },
     lastName: { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "last_name", "character varying") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },

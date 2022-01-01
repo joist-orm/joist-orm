@@ -3,7 +3,7 @@ import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
 import { ManyToManyCollection } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 
-/** Groups all of the insert/update/delete operations for a given entity. */
+/** A group of insert/update/delete operations for a given entity. */
 export interface Todo {
   metadata: EntityMetadata<any>;
   inserts: Entity[];

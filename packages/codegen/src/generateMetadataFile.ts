@@ -44,7 +44,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id"),
+      serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id", "${dbMetadata.idDbType}"),
     }
   `;
 

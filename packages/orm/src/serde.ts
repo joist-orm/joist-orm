@@ -88,53 +88,51 @@ export class DecimalToNumberSerde implements FieldSerde {
   }
 }
 
-/** Maps integer primary keys ot strings "because GraphQL". */
-export class PrimaryKeySerde implements FieldSerde {
+/** Maps physical integer keys to logical string IDs "because GraphQL". */
+export class IntegerKeySerde implements FieldSerde {
+  dbType = "int";
   isArray = false;
   columns = [this];
+  private tagName: { tagName: string };
 
-  constructor(
-    private meta: () => EntityMetadata<any>,
-    private fieldName: string,
-    public columnName: string,
-    public dbType: string,
-  ) {}
+  constructor(tagName: string, private fieldName: string, public columnName: string) {
+    this.tagName = { tagName };
+  }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(this.meta(), row[this.columnName]);
+    data[this.fieldName] = keyToString(this.tagName, row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return keyToNumber(this.meta(), data[this.fieldName]);
+    return keyToNumber(this.tagName, maybeResolveReferenceToId(data[this.fieldName]));
   }
 
   mapToDb(value: any) {
-    return keyToNumber(this.meta(), maybeResolveReferenceToId(value));
+    return keyToNumber(this.tagName, maybeResolveReferenceToId(value));
   }
 }
 
-export class ForeignKeySerde implements FieldSerde {
+export class UuidKeySerde implements FieldSerde {
+  dbType = "uuid";
   isArray = false;
   columns = [this];
+  private tagName: { tagName: string };
 
   // TODO EntityMetadata being in here is weird.
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    public otherMeta: () => EntityMetadata<any>,
-    public dbType: string,
-  ) {}
+  constructor(tagName: string, private fieldName: string, public columnName: string) {
+    this.tagName = { tagName };
+  }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(this.otherMeta(), row[this.columnName]);
+    data[this.fieldName] = keyToString(this.tagName, row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(data[this.fieldName]));
+    return keyToNumber(this.tagName, maybeResolveReferenceToId(data[this.fieldName]));
   }
 
   mapToDb(value: any): any {
-    return keyToNumber(this.otherMeta(), maybeResolveReferenceToId(value));
+    return keyToNumber(this.tagName, maybeResolveReferenceToId(value));
   }
 }
 

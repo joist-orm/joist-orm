@@ -366,6 +366,7 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
     oneToOnes: [],
     polymorphics: [],
     tableName: snakeCase(plural(name)),
+    tagName: name,
     ...opts,
   };
 }

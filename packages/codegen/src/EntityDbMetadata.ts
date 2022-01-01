@@ -144,6 +144,7 @@ export class EntityDbMetadata {
   manyToManys: ManyToManyField[];
   polymorphics: PolymorphicField[];
   tableName: string;
+  tagName: string;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -198,6 +199,7 @@ export class EntityDbMetadata {
     );
 
     this.tableName = table.name;
+    this.tagName = config.entities[this.entity.name]?.tag;
   }
 
   get name(): string {

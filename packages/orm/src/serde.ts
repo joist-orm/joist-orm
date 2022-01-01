@@ -92,22 +92,22 @@ export class DecimalToNumberSerde implements FieldSerde {
 export class KeySerde implements FieldSerde {
   isArray = false;
   columns = [this];
-  private tagName: { tagName: string; idType: "int" | "uuid" };
+  private meta: { tagName: string; idType: "int" | "uuid" };
 
   constructor(tagName: string, private fieldName: string, public columnName: string, public dbType: "int" | "uuid") {
-    this.tagName = { tagName, idType: dbType };
+    this.meta = { tagName, idType: dbType };
   }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(this.tagName, row[this.columnName]);
+    data[this.fieldName] = keyToString(this.meta, row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return keyToNumber(this.tagName, maybeResolveReferenceToId(data[this.fieldName]));
+    return keyToNumber(this.meta, maybeResolveReferenceToId(data[this.fieldName]));
   }
 
   mapToDb(value: any) {
-    return keyToNumber(this.tagName, maybeResolveReferenceToId(value));
+    return keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 }
 

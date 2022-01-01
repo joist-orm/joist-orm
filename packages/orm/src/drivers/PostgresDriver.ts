@@ -395,7 +395,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       FROM (
         SELECT
           ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")},
-          unnest(?::timestamp[]) as original_updated_at
+          unnest(?::timestamptz[]) as original_updated_at
       ) as data
       WHERE
         ${meta.tableName}.id = data.id

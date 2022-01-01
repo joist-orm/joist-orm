@@ -1,6 +1,7 @@
 import { Author } from "@src/entities/Author";
 import { newAuthor } from "@src/entities/Author.factories";
-import { knex, newEntityManager } from "@src/setupDbTests";
+import { insertAuthor } from "@src/entities/inserts";
+import { newEntityManager } from "@src/setupDbTests";
 import { RandomUuidAssigner } from "joist-orm";
 
 describe("Author", () => {
@@ -27,22 +28,3 @@ describe("Author", () => {
     expect(a1.idOrFail.startsWith("a:")).toBeTruthy();
   });
 });
-
-let _nextId = 0;
-
-function nextId(): string {
-  return `20000000-0000-0000-0000-${String(_nextId++).padStart(12, "0")}`;
-}
-
-beforeEach(() => (_nextId = 0));
-
-export async function insertAuthor(row: { first_name: string; last_name?: string | null }) {
-  await knex
-    .insert({
-      id: nextId(),
-      created_at: new Date(),
-      updated_at: new Date(),
-      ...row,
-    })
-    .into("authors");
-}

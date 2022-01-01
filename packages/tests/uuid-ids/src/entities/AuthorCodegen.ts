@@ -1,10 +1,12 @@
 import {
   BaseEntity,
   Changes,
+  Collection,
   ConfigApi,
   EntityManager,
   Flavor,
   getEm,
+  hasMany,
   Lens,
   Loaded,
   LoadHint,
@@ -20,16 +22,19 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Author, authorMeta, newAuthor } from "./entities";
+import { Author, authorMeta, Book, BookId, bookMeta, newAuthor } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
+  books?: Book[];
 }
 
-export interface AuthorIdsOpts {}
+export interface AuthorIdsOpts {
+  bookIds?: BookId[] | null;
+}
 
 export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never>;
@@ -70,6 +75,8 @@ export abstract class AuthorCodegen extends BaseEntity {
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   } = null!;
+
+  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, {}, opts);

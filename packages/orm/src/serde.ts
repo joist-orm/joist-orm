@@ -114,12 +114,16 @@ export class PrimaryKeySerde implements FieldSerde {
 }
 
 export class ForeignKeySerde implements FieldSerde {
-  dbType = "int";
   isArray = false;
   columns = [this];
 
   // TODO EntityMetadata being in here is weird.
-  constructor(private fieldName: string, public columnName: string, public otherMeta: () => EntityMetadata<any>) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    public otherMeta: () => EntityMetadata<any>,
+    public dbType: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = keyToString(this.otherMeta(), row[this.columnName]);

@@ -38,6 +38,11 @@ export class SequenceIdAssigner implements IdAssigner {
   }
 }
 
+/**
+ * Creates random UUIDs for uuid-based keys in production environments.
+ *
+ * See {@link TestUuidAssigner} for creating stable-ish ids for tests
+ */
 export class RandomUuidAssigner implements IdAssigner {
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
     Object.values(todos).forEach((todo) => {
@@ -48,7 +53,12 @@ export class RandomUuidAssigner implements IdAssigner {
   }
 }
 
-/** Creates deterministic UUIDs for test suites. */
+/**
+ * Creates deterministic / stable-ish UUIDs for test suites.
+ *
+ * These ids can technically change as test cases insert different types/numbers
+ * of entities, in different orders, but otherwise will be stable.
+ */
 export class TestUuidAssigner implements IdAssigner {
   // We can be cute and create per-entity UUID spaces to be more stable
   private nextId: Record<string, number> = {};

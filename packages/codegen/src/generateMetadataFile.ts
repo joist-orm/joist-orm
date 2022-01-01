@@ -6,9 +6,8 @@ import {
   EntityMetadata,
   EnumArrayFieldSerde,
   EnumFieldSerde,
-  ForeignKeySerde,
+  KeySerde,
   PolymorphicKeySerde,
-  PrimaryKeySerde,
   PrimitiveSerde,
   SuperstructSerde,
 } from "./symbols";
@@ -24,7 +23,8 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
-      tagName: "${config.entities[entity.name].tag}",
+      idType: "${dbMetadata.idDbType}",
+      tagName: "${dbMetadata.tagName}",
       tableName: "${dbMetadata.tableName}",
       fields: ${fields},
       config: ${entity.configConst},
@@ -44,7 +44,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${PrimaryKeySerde}(() => ${dbMetadata.entity.metaName}, "id", "id", "${dbMetadata.idDbType}"),
+      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.idDbType}"),
     }
   `;
 
@@ -85,6 +85,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
   dbMetadata.manyToOnes.forEach((m2o) => {
     const { fieldName, columnName, notNull, otherEntity, otherFieldName, dbType } = m2o;
+    const otherTagName = config.entities[otherEntity.name].tag;
     fields[fieldName] = code`
       {
         kind: "m2o",
@@ -93,7 +94,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
-        serde: new ${ForeignKeySerde}("${fieldName}", "${columnName}", () => ${otherEntity.metaName}, "${dbType}"),
+        serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
       }
     `;
   });

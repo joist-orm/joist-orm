@@ -5,7 +5,7 @@ const tagDelimiter = ":";
 
 // I'm not entirely sure this is still necessary, but use a small subset of EntityMetadata so
 // that this file doesn't have to import the type and potentially create import cycles.
-type HasTagName = { tagName: string };
+type HasTagName = { tagName: string; idType: "int" | "uuid" };
 
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
@@ -24,27 +24,23 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
   } else if (typeof value === "string") {
     const [tag, id] = value.split(tagDelimiter);
     if (id === undefined) {
-      return maybeNumberUnlessUuid(value);
+      return maybeNumberUnlessUuid(meta, value);
     }
     if (tag !== meta.tagName) {
       throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${value}`);
     }
-    return maybeNumberUnlessUuid(id);
+    return maybeNumberUnlessUuid(meta, id);
   } else {
     throw new Error(`Invalid key ${value}`);
   }
 }
 
-// Super hacky detection of UUIDs that we should leave as strings
-function maybeNumberUnlessUuid(key: string): number {
-  if (isUuidKey(key)) {
+// If we're using UUIDs, just lie to the type system and pretend they're numbers.
+function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
+  if (meta.idType === "uuid") {
     return key as any;
   }
   return Number(key);
-}
-
-function isUuidKey(key: string): boolean {
-  return key.length === 36;
 }
 
 /** Converts `value` to a tagged string, i.e. for string ids, unless its undefined. */

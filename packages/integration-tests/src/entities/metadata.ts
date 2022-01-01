@@ -1,4 +1,4 @@
-import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, ForeignKeySerde, PolymorphicKeySerde, PrimaryKeySerde, PrimitiveSerde, SuperstructSerde } from "joist-orm";
+import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address } from "src/entities/types";
 import { AdvanceStatuses, Author, authorConfig, Book, BookAdvance, bookAdvanceConfig, bookConfig, BookReview, bookReviewConfig, Colors, Comment, commentConfig, Critic, criticConfig, Image, imageConfig, ImageTypes, newAuthor, newBook, newBookAdvance, newBookReview, newComment, newCritic, newImage, newPublisher, newTag, Publisher, publisherConfig, PublisherSizes, PublisherTypes, Tag, tagConfig } from "./entities";
@@ -12,10 +12,11 @@ export function getEm(e: BaseEntity): EntityManager {
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
+  idType: "int",
   tagName: "a",
   tableName: "authors",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => authorMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("a", "id", "id", "int") },
     firstName: { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying") },
     lastName: { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "last_name", "character varying") },
     initials: { kind: "primitive", fieldName: "initials", fieldIdName: undefined, derived: "sync", required: false, protected: false, type: "string", serde: new PrimitiveSerde("initials", "initials", "character varying") },
@@ -28,8 +29,8 @@ export const authorMeta: EntityMetadata<Author> = {
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     favoriteColors: { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, enumDetailType: Colors, serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", Colors) },
-    mentor: { kind: "m2o", fieldName: "mentor", fieldIdName: "mentorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "authors", serde: new ForeignKeySerde("mentor", "mentor_id", () => authorMeta, "int") },
-    publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: false, otherMetadata: () => publisherMeta, otherFieldName: "authors", serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta, "int") },
+    mentor: { kind: "m2o", fieldName: "mentor", fieldIdName: "mentorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "authors", serde: new KeySerde("a", "mentor", "mentor_id", "int") },
+    publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: false, otherMetadata: () => publisherMeta, otherFieldName: "authors", serde: new KeySerde("p", "publisher", "publisher_id", "int") },
     authors: { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "mentor", serde: undefined },
     books: { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined },
     image: { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", serde: undefined },
@@ -43,15 +44,16 @@ export const authorMeta: EntityMetadata<Author> = {
 export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
+  idType: "int",
   tagName: "b",
   tableName: "books",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => bookMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int") },
     title: { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying") },
     order: { kind: "primitive", fieldName: "order", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("order", "order", "int") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
-    author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new ForeignKeySerde("author", "author_id", () => authorMeta, "int") },
+    author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int") },
     advances: { kind: "o2m", fieldName: "advances", fieldIdName: "advanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "book", serde: undefined },
     reviews: { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined },
     comments: { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined },
@@ -67,15 +69,16 @@ export const bookMeta: EntityMetadata<Book> = {
 export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   cstr: BookAdvance,
   type: "BookAdvance",
+  idType: "int",
   tagName: "ba",
   tableName: "book_advances",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => bookAdvanceMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("ba", "id", "id", "int") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     status: { kind: "enum", fieldName: "status", fieldIdName: undefined, required: true, enumDetailType: AdvanceStatuses, serde: new EnumFieldSerde("status", "status_id", AdvanceStatuses) },
-    book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: true, otherMetadata: () => bookMeta, otherFieldName: "advances", serde: new ForeignKeySerde("book", "book_id", () => bookMeta, "int") },
-    publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: true, otherMetadata: () => publisherMeta, otherFieldName: "bookAdvances", serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta, "int") },
+    book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: true, otherMetadata: () => bookMeta, otherFieldName: "advances", serde: new KeySerde("b", "book", "book_id", "int") },
+    publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: true, otherMetadata: () => publisherMeta, otherFieldName: "bookAdvances", serde: new KeySerde("p", "publisher", "publisher_id", "int") },
   },
   config: bookAdvanceConfig,
   factory: newBookAdvance,
@@ -86,15 +89,16 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
 export const bookReviewMeta: EntityMetadata<BookReview> = {
   cstr: BookReview,
   type: "BookReview",
+  idType: "int",
   tagName: "br",
   tableName: "book_reviews",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => bookReviewMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("br", "id", "id", "int") },
     rating: { kind: "primitive", fieldName: "rating", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("rating", "rating", "int") },
     isPublic: { kind: "primitive", fieldName: "isPublic", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("isPublic", "is_public", "boolean") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
-    book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: true, otherMetadata: () => bookMeta, otherFieldName: "reviews", serde: new ForeignKeySerde("book", "book_id", () => bookMeta, "int") },
+    book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: true, otherMetadata: () => bookMeta, otherFieldName: "reviews", serde: new KeySerde("b", "book", "book_id", "int") },
     comment: { kind: "o2o", fieldName: "comment", fieldIdName: "commentId", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined },
   },
   config: bookReviewConfig,
@@ -106,10 +110,11 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 export const commentMeta: EntityMetadata<Comment> = {
   cstr: Comment,
   type: "Comment",
+  idType: "int",
   tagName: "comment",
   tableName: "comments",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => commentMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("comment", "id", "id", "int") },
     text: { kind: "primitive", fieldName: "text", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("text", "text", "text") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
@@ -134,10 +139,11 @@ export const commentMeta: EntityMetadata<Comment> = {
 export const criticMeta: EntityMetadata<Critic> = {
   cstr: Critic,
   type: "Critic",
+  idType: "int",
   tagName: "c",
   tableName: "critics",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => criticMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("c", "id", "id", "int") },
     name: { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
@@ -151,17 +157,18 @@ export const criticMeta: EntityMetadata<Critic> = {
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
+  idType: "int",
   tagName: "i",
   tableName: "images",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => imageMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("i", "id", "id", "int") },
     fileName: { kind: "primitive", fieldName: "fileName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("fileName", "file_name", "character varying") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     type: { kind: "enum", fieldName: "type", fieldIdName: undefined, required: true, enumDetailType: ImageTypes, serde: new EnumFieldSerde("type", "type_id", ImageTypes) },
-    author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "image", serde: new ForeignKeySerde("author", "author_id", () => authorMeta, "int") },
-    book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: false, otherMetadata: () => bookMeta, otherFieldName: "image", serde: new ForeignKeySerde("book", "book_id", () => bookMeta, "int") },
-    publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: false, otherMetadata: () => publisherMeta, otherFieldName: "images", serde: new ForeignKeySerde("publisher", "publisher_id", () => publisherMeta, "int") },
+    author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "image", serde: new KeySerde("a", "author", "author_id", "int") },
+    book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: false, otherMetadata: () => bookMeta, otherFieldName: "image", serde: new KeySerde("b", "book", "book_id", "int") },
+    publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: false, otherMetadata: () => publisherMeta, otherFieldName: "images", serde: new KeySerde("p", "publisher", "publisher_id", "int") },
   },
   config: imageConfig,
   factory: newImage,
@@ -172,10 +179,11 @@ export const imageMeta: EntityMetadata<Image> = {
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
+  idType: "int",
   tagName: "p",
   tableName: "publishers",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => publisherMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int") },
     name: { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying") },
     latitude: { kind: "primitive", fieldName: "latitude", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new DecimalToNumberSerde("latitude", "latitude") },
     longitude: { kind: "primitive", fieldName: "longitude", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new DecimalToNumberSerde("longitude", "longitude") },
@@ -197,10 +205,11 @@ export const publisherMeta: EntityMetadata<Publisher> = {
 export const tagMeta: EntityMetadata<Tag> = {
   cstr: Tag,
   type: "Tag",
+  idType: "int",
   tagName: "t",
   tableName: "tags",
   fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new PrimaryKeySerde(() => tagMeta, "id", "id", "int") },
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("t", "id", "id", "int") },
     name: { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },

@@ -18,7 +18,6 @@ import {
   maybeResolveReferenceToId,
 } from "./index";
 import { keyToNumber } from "./keys";
-import { ForeignKeySerde, PrimaryKeySerde } from "./serde";
 import { fail } from "./utils";
 
 export type OrderBy = "ASC" | "DESC";
@@ -282,47 +281,41 @@ export function buildQuery<T extends Entity>(
         );
 
         const [shouldAddClauses, _query] = hasClause
-          ? addForeignKeyClause(
-              query,
-              otherAlias,
-              Object.values(otherMeta.fields).find((c) => c.serde instanceof PrimaryKeySerde)!.serde!.columns[0],
-              clause,
-            )
+          ? addForeignKeyClause(query, otherAlias, otherMeta.fields["id"]!.serde!.columns[0], clause)
           : [false, query];
         query = _query;
 
         if (shouldAddClauses || hasOrder) {
           addClauses(otherMeta, otherAlias, shouldAddClauses ? clause : undefined, hasOrder ? order : undefined);
         }
-      } else {
+      } else if (field.kind === "m2o") {
         const serde = (meta.fields[key] ?? fail(`${key} not found`)).serde!;
         // TODO Currently hardcoded to single-column support; poly is handled above this
         const column = serde.columns[0];
 
-        if (serde instanceof ForeignKeySerde) {
-          // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
-          const [whereNeedsJoin, _query] = hasClause
-            ? addForeignKeyClause(query, alias, column, clause)
-            : [false, query];
-          query = _query;
-          if (whereNeedsJoin || hasOrder) {
-            // Add a join for this column
-            const otherMeta = serde.otherMeta();
-            const otherAlias = getAlias(otherMeta.tableName);
-            query = query.innerJoin(
-              `${otherMeta.tableName} AS ${otherAlias}`,
-              `${alias}.${column.columnName}`,
-              `${otherAlias}.id`,
-            );
-            // Then recurse to add its conditions to the query
-            addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
-          }
-        } else {
-          query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
-          // This is not a foreign key column, so it'll have the primitive filters/order bys
-          if (order) {
-            query = query.orderBy(`${alias}.${column.columnName}`, order);
-          }
+        // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
+        const [whereNeedsJoin, _query] = hasClause ? addForeignKeyClause(query, alias, column, clause) : [false, query];
+        query = _query;
+        if (whereNeedsJoin || hasOrder) {
+          // Add a join for this column
+          const otherMeta = field.otherMetadata();
+          const otherAlias = getAlias(otherMeta.tableName);
+          query = query.innerJoin(
+            `${otherMeta.tableName} AS ${otherAlias}`,
+            `${alias}.${column.columnName}`,
+            `${otherAlias}.id`,
+          );
+          // Then recurse to add its conditions to the query
+          addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
+        }
+      } else {
+        const serde = (meta.fields[key] ?? fail(`${key} not found`)).serde!;
+        // TODO Currently hardcoded to single-column support; poly is handled above this
+        const column = serde.columns[0];
+        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+        // This is not a foreign key column, so it'll have the primitive filters/order bys
+        if (order) {
+          query = query.orderBy(`${alias}.${column.columnName}`, order);
         }
       }
     });

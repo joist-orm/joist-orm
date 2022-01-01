@@ -65,7 +65,7 @@ export class TestUuidAssigner implements IdAssigner {
           entitySpace = Object.keys(this.nextId).indexOf(type);
         }
         for (const insert of todo.inserts) {
-          const id = this.nextId[entitySpace]++;
+          const id = this.nextId[type]++;
           const uuid = `10000000-${String(entitySpace).padStart(4, "0")}-0000-0000-${String(id).padStart(12, "0")}`;
           insert.__orm.data["id"] = keyToString(todo.metadata, uuid);
         }

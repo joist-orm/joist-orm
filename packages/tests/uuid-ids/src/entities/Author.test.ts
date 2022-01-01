@@ -14,15 +14,17 @@ describe("Author", () => {
   it("can create entities with deterministic uuids", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
+    const a2 = newAuthor(em);
     await em.flush();
-    expect(a1.id).toEqual("a:20000000-0000-0000-0000-000000000000");
+    expect(a1.id).toEqual("a:10000000-0000-0000-0000-000000000000");
+    expect(a2.id).toEqual("a:10000000-0000-0000-0000-000000000001");
   });
 
   it("can generate random uuids", async () => {
     const em = newEntityManager({ idAssigner: new RandomUuidAssigner() });
     const a1 = newAuthor(em);
     await em.flush();
-    expect(a1.id).toEqual("a:20000000-0000-0000-0000-000000000000");
+    expect(a1.idOrFail.startsWith("a:")).toBeTruthy();
   });
 });
 

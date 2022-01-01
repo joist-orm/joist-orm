@@ -24,10 +24,18 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
   } else if (typeof value === "string") {
     const [tag, id] = value.split(tagDelimiter);
     if (id === undefined) {
+      // Super hacky detection of UUIDs that we should leave as strings
+      if (value.includes("-")) {
+        return value as any;
+      }
       return Number(value);
     }
     if (tag !== meta.tagName) {
       throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${value}`);
+    }
+    // Super hacky detection of UUIDs that we should leave as strings
+    if (id.includes("-")) {
+      return id as any;
     }
     return Number(id);
   } else {

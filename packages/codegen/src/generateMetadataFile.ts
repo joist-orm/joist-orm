@@ -6,11 +6,10 @@ import {
   EntityMetadata,
   EnumArrayFieldSerde,
   EnumFieldSerde,
-  IntegerKeySerde,
+  KeySerde,
   PolymorphicKeySerde,
   PrimitiveSerde,
   SuperstructSerde,
-  UuidKeySerde,
 } from "./symbols";
 
 export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
@@ -24,6 +23,7 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
+      idType: "${dbMetadata.idDbType}",
       tagName: "${dbMetadata.tagName}",
       tableName: "${dbMetadata.tableName}",
       fields: ${fields},
@@ -38,14 +38,13 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
 function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<string, Code> {
   const fields: Record<string, Code> = {};
 
-  const idSerde = dbMetadata.idDbType === "uuid" ? UuidKeySerde : IntegerKeySerde;
   fields["id"] = code`
     {
       kind: "primaryKey",
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${idSerde}("${dbMetadata.tagName}", "id", "id"),
+      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.idDbType}"),
     }
   `;
 
@@ -86,7 +85,6 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
 
   dbMetadata.manyToOnes.forEach((m2o) => {
     const { fieldName, columnName, notNull, otherEntity, otherFieldName, dbType } = m2o;
-    const serde = dbType === "uuid" ? UuidKeySerde : IntegerKeySerde;
     const otherTagName = config.entities[otherEntity.name].tag;
     fields[fieldName] = code`
       {
@@ -96,7 +94,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
-        serde: new ${serde}("${otherTagName}", "${fieldName}", "${columnName}"),
+        serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
       }
     `;
   });

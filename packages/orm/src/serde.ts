@@ -89,14 +89,13 @@ export class DecimalToNumberSerde implements FieldSerde {
 }
 
 /** Maps physical integer keys to logical string IDs "because GraphQL". */
-export class IntegerKeySerde implements FieldSerde {
-  dbType = "int";
+export class KeySerde implements FieldSerde {
   isArray = false;
   columns = [this];
-  private tagName: { tagName: string };
+  private tagName: { tagName: string; idType: "int" | "uuid" };
 
-  constructor(tagName: string, private fieldName: string, public columnName: string) {
-    this.tagName = { tagName };
+  constructor(tagName: string, private fieldName: string, public columnName: string, public dbType: "int" | "uuid") {
+    this.tagName = { tagName, idType: dbType };
   }
 
   setOnEntity(data: any, row: any): void {
@@ -108,30 +107,6 @@ export class IntegerKeySerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    return keyToNumber(this.tagName, maybeResolveReferenceToId(value));
-  }
-}
-
-export class UuidKeySerde implements FieldSerde {
-  dbType = "uuid";
-  isArray = false;
-  columns = [this];
-  private tagName: { tagName: string };
-
-  // TODO EntityMetadata being in here is weird.
-  constructor(tagName: string, private fieldName: string, public columnName: string) {
-    this.tagName = { tagName };
-  }
-
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(this.tagName, row[this.columnName]);
-  }
-
-  dbValue(data: any) {
-    return keyToNumber(this.tagName, maybeResolveReferenceToId(data[this.fieldName]));
-  }
-
-  mapToDb(value: any): any {
     return keyToNumber(this.tagName, maybeResolveReferenceToId(value));
   }
 }

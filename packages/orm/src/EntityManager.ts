@@ -837,6 +837,7 @@ export function setDefaultEntityLimit() {
 export interface EntityMetadata<T extends Entity> {
   cstr: EntityConstructor<T>;
   type: string;
+  idType: "int" | "uuid";
   tableName: string;
   tagName: string;
   fields: Record<string, Field>;

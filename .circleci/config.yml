@@ -1,7 +1,7 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@4.4.0
+  node: circleci/node@5.0.0
 
 workflows:
   version: 2
@@ -23,9 +23,9 @@ jobs:
     steps:
       - checkout
       - node/install:
-          install-npm: false
           node-version: << parameters.node-version >>
-      - run: yarn install
+      - node/install-packages:
+          pkg-manager: yarn
       - run: yarn build
       - run:
           name: Start Postgres database
@@ -38,17 +38,27 @@ jobs:
           command: |
             cd packages/integration-tests
             ./run.sh ../migration-utils/build/index.js
+            cd ../tests/uuid-ids
+            ./run.sh ../../migration-utils/build/index.js
       - run:
-          name: Run Test Suite
+          name: Run integration-tests
           command: |
             cd packages/integration-tests
             yarn test --reporters=default --reporters=jest-junit
           environment:
             JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
+      - run:
+          name: Run uuid-ids tests
+          command: |
+            cd packages/tests/uuid-ids
+            yarn test --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
+            JEST_JUNIT_OUTPUT_NAME: junit-uuid-ids.xml
       - store_test_results:
           path: /tmp/reports/junit/
       - store_artifacts:
-          path: /tmp/reports/junit
+          path: /tmp/reports/junit/
       - when:
           condition:
             and:

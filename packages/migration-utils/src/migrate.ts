@@ -46,8 +46,7 @@ function generateFlushFunction(db: Db): string {
   // mean our flush_database function could reset a single sequence. Plus it would reduce bugs where
   // something "works" but only b/c in the test database, all entities have id = 1.
   const statements = tables
-    .map((t) => `DELETE FROM "${t}";`)
-    // .map((t) => `DELETE FROM "${t}"; ALTER SEQUENCE "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`)
+    .map((t) => `DELETE FROM "${t}"; ALTER SEQUENCE IF EXISTS "${t}_id_seq" RESTART WITH 1 INCREMENT BY 1;`)
     .join("\n");
   return `CREATE OR REPLACE FUNCTION flush_database() RETURNS void AS $$
     BEGIN

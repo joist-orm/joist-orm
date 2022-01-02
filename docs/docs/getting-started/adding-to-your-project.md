@@ -27,12 +27,10 @@ It assumes that:
 
 Run `npm install --save-dev joist-codegen`.
 
-Define your local postgres creds in a `DATABASE_CONNECTION_INFO` environment variable, i.e. in an `local.env` file similar to:
+Define your local postgres creds in a `DATABASE_URL` environment variable, i.e. in an `local.env` file similar to:
 
 ```shell
-DATABASE_CONNECTION_INFO=postgres://joist:local@localhost:5435/joist
-# the AWS RDS/SecretsManager JSON format is also supported natively
-DATABASE_CONNECTION_INFO={"host":"localhost","port":5435,"username":"joist","password":"local","dbname":"joist"}
+DATABASE_URL=postgres://joist:local@localhost:5435/joist
 ```
 
 With this env variable set, run the `joist-codegen` module, i.e. with `env` or [`run.sh`](https://github.com/stephenh/joist-ts/blob/master/packages/integration-tests/run.sh):
@@ -43,7 +41,7 @@ With this env variable set, run the `joist-codegen` module, i.e. with `env` or [
 
 ### If using node-pg-migrate
 
-If you do use `node-pg-migrate`, the `joist-migration-utils` package has some helper methods + glue code to invoke `node-pg-migrate` with the same `DATABASE_CONNECTION_INFO` environment variable.
+If you do use `node-pg-migrate`, the `joist-migration-utils` package has some helper methods + glue code to invoke `node-pg-migrate` with the same `DATABASE_URL` environment variable.
 
 ```shell
 ./run.sh joist-migration-utils

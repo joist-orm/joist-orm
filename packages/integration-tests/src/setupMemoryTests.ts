@@ -3,7 +3,7 @@ import { EntityManager } from "@src/entities";
 import { config } from "dotenv";
 import { InMemoryDriver } from "joist-orm";
 
-if (process.env.DATABASE_CONNECTION_INFO === undefined) {
+if (process.env.DATABASE_URL === undefined) {
   config({ path: "./local.env" });
 }
 

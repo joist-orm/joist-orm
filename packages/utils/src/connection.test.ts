@@ -1,10 +1,8 @@
-import { parsePgConnectionConfig } from "./connection";
+import { newPgConnectionConfig } from "./connection";
 
 describe("connection", () => {
-  it("should parse RDS-style json", () => {
-    const info = parsePgConnectionConfig(
-      `{"host":"db","port":5432,"username":"joist","password":"local","dbname":"joist"}`,
-    );
+  it("should parse single DATABASE_URL", () => {
+    const info = newPgConnectionConfig({ DATABASE_URL: "postgres://joist:local@db:5432/joist" });
     expect(info).toEqual({
       database: "joist",
       host: "db",
@@ -14,8 +12,14 @@ describe("connection", () => {
     });
   });
 
-  it("should parse connection-string-style", () => {
-    const info = parsePgConnectionConfig("postgres://joist:local@db:5432/joist");
+  it("should parse multiple DB variables", () => {
+    const info = newPgConnectionConfig({
+      DB_USER: "joist",
+      DB_PASSWORD: "local",
+      DB_DATABASE: "joist",
+      DB_HOST: "db",
+      DB_PORT: "5432",
+    });
     expect(info).toEqual({
       database: "joist",
       host: "db",

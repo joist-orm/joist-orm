@@ -3,7 +3,7 @@ title: Code Generation
 sidebar_position: 1
 ---
 
-One of the primary ways Joist achieves ActiveRecord-level productivity and DRY-ness is by leveraging **schema-driven code generation**.
+One of the primary ways Joist achieves ActiveRecord-level productivity and DRY-ness is by leveraging **continual, schema-driven code generation**.
 
 I.e. for an `authors` table, the initial `Author.ts` file is as clean & simple as:
 
@@ -18,6 +18,7 @@ Similar to ActiveRecord, Joist automatically adds all the columns to the `Author
 - Primitive columns, i.e. `first_name` can be set via `author.firstName = "bob"`
 - Foreign key columns, i.e. `book.author_id` can be set via `book.author.set(...)`, and
 - Foreign key collections, i.e. `Author.books` can be loaded via `await author.books.load()`.
+- One-to-one relations, many-to-many collections, etc.
 
 These columns/fields are added to the `AuthorCodegen.ts` file, which looks (heavily redacted for clarity) something like:
 

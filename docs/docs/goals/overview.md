@@ -15,5 +15,3 @@ The major goals are:
 - [Avoid N+1s](./avoiding-n-plus-1s.md) through first-class [dataloader](https://github.com/graphql/dataloader) integration
 - Differentiate [loaded vs. unloaded collections](./type-safe-relations.md) in the type system
 - Enable [great testing](./great-tests.md) with built-in factories and other support
-
-Joist also has a few [non-goals](./non-goals.md).

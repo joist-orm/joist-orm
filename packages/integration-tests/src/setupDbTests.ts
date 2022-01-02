@@ -6,7 +6,7 @@ import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import { knex as createKnex, Knex } from "knex";
 
-if (process.env.DATABASE_CONNECTION_INFO === undefined) {
+if (process.env.DATABASE_URL === undefined) {
   config({ path: "./local.env" });
 }
 

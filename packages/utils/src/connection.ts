@@ -1,61 +1,46 @@
 import { ConnectionConfig } from "pg";
 import { parse } from "pg-connection-string";
-import { fail } from "./index";
 
-// Matches the AWS RDS/ECS JSON config that is stored/auto-created in ECS. */
-export interface ConnectionInfo {
-  dbname: string;
-  username: string;
-  password: string;
-  host: string;
-  port: number;
-}
+type DatabaseUrl = { DATABASE_URL: string };
+type DbSettings = { DB_USER: string; DB_PASSWORD: string; DB_HOST: string; DB_DATABASE: string; DB_PORT: string };
 
-function readEnvVariable(): string {
-  return process.env.DATABASE_CONNECTION_INFO || fail("DATABASE_CONNECTION_INFO environment variable is not set");
-}
-
-/** Reads the RDS-style connection information from `process.env`. */
-function parseAsRdsConnectionInfo(envVariable: string): ConnectionConfig | undefined {
-  if (envVariable.startsWith("{")) {
-    const { dbname: database, username: user, password, host, port } = JSON.parse(envVariable) as ConnectionInfo;
-    return { database, user, password, host, port };
-  }
-  return undefined;
-}
+export type ConnectionEnv = DatabaseUrl | DbSettings;
 
 /**
  * Returns the `ConnectionConfig` that joist will use to connect to pg.
  *
- * This is currently hard-coded to read the `DATABASE_CONNECTION_INFO` env variable.
+ * This reads environment variables, and can be either:
  *
+ * - A single `DATABASE_URL` variable
+ * - Multiple `DB_USER`, `DB_PASSWORD`, `DB_DATABASE`, `DB_HOST`, `DB_PORT` variables
  * The value can be either:
  *
- * - RDS-style JSON like `{"dbname":"...","host":"...",...}`
- * - connection-string-style like `postgres://host?...` as read by the `pg-connection-string` `parse` method
+ * Note that users using a library for typed / validated environment variables, i.e.
+ * ts-app-env, you can pass in a specific `env` variable.
  */
-export function newPgConnectionConfig(): ConnectionConfig {
-  return parsePgConnectionConfig(readEnvVariable());
-}
-
-// exported for testing
-export function parsePgConnectionConfig(envVariable: string): ConnectionConfig {
-  const rdsConfig = parseAsRdsConnectionInfo(envVariable);
-  if (rdsConfig) {
-    return rdsConfig;
+export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
+  if (process.env.DATABASE_URL || (env && "DATABASE_URL" in env)) {
+    const url = process.env.DATABASE_URL ?? (env as DatabaseUrl).DATABASE_URL;
+    // It'd be great if `parse` returned ConnectionConfig directly
+    const options = parse(url);
+    const { database, port, host, user, password } = options;
+    return {
+      user,
+      password,
+      database: database ?? undefined,
+      host: host ?? undefined,
+      port: port ? Number(port) : undefined,
+    };
+  } else if (process.env.DB_DATABASE || (env && "DB_DATABASE" in env)) {
+    const e = process.env.DB_DATABASE ? process.env : (env as DbSettings);
+    return {
+      user: e.DB_USER,
+      password: e.DB_PASSWORD,
+      database: e.DB_DATABASE,
+      host: e.DB_HOST,
+      port: e.DB_PORT ? Number(e.DB_PORT) : undefined,
+    };
+  } else {
+    throw new Error("No DATABASE_URL or DB_DATABASE/etc. environment variable found");
   }
-  const opts = parse(envVariable);
-  return {
-    ...opts,
-    // Drop `| null` from the parse return type
-    database: opts.database || undefined,
-    host: opts.host || undefined,
-    port: opts.port !== undefined && opts.port !== null ? Number(opts.port) : undefined,
-    ssl:
-      typeof opts.ssl === "boolean"
-        ? opts.ssl
-        : typeof opts.ssl === "string"
-        ? fail("parsing string ssl not implemented")
-        : undefined,
-  };
 }

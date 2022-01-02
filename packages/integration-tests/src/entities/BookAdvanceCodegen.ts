@@ -5,6 +5,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
@@ -93,14 +94,14 @@ bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
 export abstract class BookAdvanceCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: BookAdvanceFilter;
     gqlFilterType: BookAdvanceGraphQLFilter;
     orderType: BookAdvanceOrder;
     optsType: BookAdvanceOpts;
     optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
-  } = null!;
+  };
 
   readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
 

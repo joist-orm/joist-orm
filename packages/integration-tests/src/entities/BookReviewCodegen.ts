@@ -7,6 +7,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EntityOrmField,
   FilterOf,
   Flavor,
   getEm,
@@ -94,14 +95,14 @@ bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: BookReviewFilter;
     gqlFilterType: BookReviewGraphQLFilter;
     orderType: BookReviewOrder;
     optsType: BookReviewOpts;
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
-  } = null!;
+  };
 
   readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 

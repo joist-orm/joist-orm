@@ -39,28 +39,28 @@ export interface EntityConstructor<T> {
 }
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
-export type OptsOf<T> = T extends { __types: { optsType: infer O } } ? O : never;
+export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
 
-export type OptIdsOf<T> = T extends { __types: { optIdsType: infer O } } ? O : never;
+export type OptIdsOf<T> = T extends { __orm: { optIdsType: infer O } } ? O : never;
 
 /** Return the `Foo` type for a given `Foo` entity constructor. */
 export type EntityOf<C> = C extends new (em: EntityManager, opts: any) => infer T ? T : never;
 
 /** Pulls the entity query type out of a given entity type T. */
-export type FilterOf<T> = T extends { __types: { filterType: infer Q } } ? Q : never;
+export type FilterOf<T> = T extends { __orm: { filterType: infer Q } } ? Q : never;
 
 /** Pulls the entity GraphQL query type out of a given entity type T. */
-export type GraphQLFilterOf<T> = T extends { __types: { gqlFilterType: infer Q } } ? Q : never;
+export type GraphQLFilterOf<T> = T extends { __orm: { gqlFilterType: infer Q } } ? Q : never;
 
 /** Pulls the entity order type out of a given entity type T. */
-export type OrderOf<T> = T extends { __types: { orderType: infer Q } } ? Q : never;
+export type OrderOf<T> = T extends { __orm: { orderType: infer Q } } ? Q : never;
 
 /**
  * Returns the opts of the entity's `newEntity` factory method, as exists in the actual file.
  *
  * This is because `FactoryOpts` is a set of defaults, but the user can customize it if they want.
  */
-export type ActualFactoryOpts<T> = T extends { __types: { factoryOptsType: infer Q } } ? Q : never;
+export type ActualFactoryOpts<T> = T extends { __orm: { factoryOptsType: infer Q } } ? Q : never;
 
 /** Pulls the entity's id type out of a given entity type T. */
 export type IdOf<T> = T extends { id: infer I | undefined } ? I : never;

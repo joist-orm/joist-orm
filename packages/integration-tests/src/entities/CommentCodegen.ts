@@ -7,6 +7,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EntityOrmField,
   Flavor,
   getEm,
   hasOnePolymorphic,
@@ -82,14 +83,14 @@ commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
 export abstract class CommentCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;
     optsType: CommentOpts;
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
-  } = null!;
+  };
 
   readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
 

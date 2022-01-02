@@ -3,6 +3,7 @@ import {
   Changes,
   ConfigApi,
   EntityManager,
+  EntityOrmField,
   Flavor,
   getEm,
   Lens,
@@ -58,14 +59,14 @@ criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class CriticCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;
     orderType: CriticOrder;
     optsType: CriticOpts;
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
-  } = null!;
+  };
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, {}, opts);

@@ -8,6 +8,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
@@ -145,14 +146,14 @@ authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
     orderType: AuthorOrder;
     optsType: AuthorOpts;
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
-  } = null!;
+  };
 
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 

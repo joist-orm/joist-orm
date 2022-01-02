@@ -1,5 +1,5 @@
 module.exports = {
-  preset: "ts-jest",
+  transform: { "^.+\\.tsx?$": "@swc/jest" },
   moduleNameMapper: {
     "^@src/(.*)": "<rootDir>/src/$1",
     "^src/(.*)": "<rootDir>/src/$1",

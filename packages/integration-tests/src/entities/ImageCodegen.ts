@@ -5,6 +5,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
@@ -105,14 +106,14 @@ imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
 export abstract class ImageCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;
     optsType: ImageOpts;
     optIdsType: ImageIdsOpts;
     factoryOptsType: Parameters<typeof newImage>[1];
-  } = null!;
+  };
 
   readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
 

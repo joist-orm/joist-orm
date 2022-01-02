@@ -14,6 +14,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityManager,
+  EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
@@ -301,14 +302,14 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     ${generateDefaultValidationRules(meta, configName)}
   
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
-      readonly __types: {
+      readonly __orm!: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;
         orderType: ${entityName}Order;
         optsType: ${entityName}Opts;
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
-      } = null!;
+      };
       ${[o2m, m2o, o2o, m2m, polymorphic]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {

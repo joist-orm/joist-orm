@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityManager,
+  EntityOrmField,
   Flavor,
   getEm,
   hasManyToMany,
@@ -63,14 +64,14 @@ tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class TagCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;
     optsType: TagOpts;
     optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
-  } = null!;
+  };
 
   readonly books: Collection<Tag, Book> = hasManyToMany(
     "books_to_tags",

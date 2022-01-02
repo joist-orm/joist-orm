@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityManager,
+  EntityOrmField,
   EnumGraphQLFilter,
   Flavor,
   getEm,
@@ -109,14 +110,14 @@ publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class PublisherCodegen extends BaseEntity {
-  readonly __types: {
+  readonly __orm!: EntityOrmField & {
     filterType: PublisherFilter;
     gqlFilterType: PublisherGraphQLFilter;
     orderType: PublisherOrder;
     optsType: PublisherOpts;
     optIdsType: PublisherIdsOpts;
     factoryOptsType: Parameters<typeof newPublisher>[1];
-  } = null!;
+  };
 
   readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 

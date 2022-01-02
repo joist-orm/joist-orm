@@ -3,7 +3,9 @@ title: Type-Safe Relations
 sidebar_position: 3
 ---
 
-Joist models all relations as async-by-default (i.e. you must access them via an `await`), but then to provide better ergonomics than constant `await Promise.all` calls, also provides TypeScript-magical morphing/marking of relations as loaded, which then enables synchronous, non-`await`-d access.
+Joist models all relations as async-by-default (i.e. you must access them via an `await`-d `.load()` call).
+
+But then to provide better ergonomics than constant `await Promise.all` calls, Joist also provides TypeScript-magical morphing/marking of relations as loaded, which then enables synchronous `.get`, non-`await`-d access.
 
 ## Background
 
@@ -11,11 +13,11 @@ One of the main affordances of ORMs is that relationships (relations) between ta
 
 For example, in most ORMs a `books.author_id` foreign key column means the `Author` entity will have an `author.books` collection (which loads all books for that author), and the `Book` entity will have a `book.author` reference (which loads the book's author).
 
-In all ORMs, these references & collections are inherently lazy: because you don't have your entire relational database in memory, objects start out with just a single/few rows loaded (i.e. a single `authors` row loaded as an `Author` instance) and then lazily loaded the data you need from there (i.e. you "walk the object graph" from that `Author` to the related data you need).
+In all ORMs, these references & collections are inherently lazy: because you don't have your entire relational database in memory, objects start out with just a single/few rows loaded (i.e. a single `authors` row with `id=1` loaded as an `Author#1` instance) and then lazily loaded the data you need from there (i.e. you "walk the object graph" from that `Author#1` to the related data you need).
 
 ## Joist Relations are Async By Default
 
-Because of the inherently lazy nature of references & collections, Joist takes the strong opinion, type-safe opinion that if they _might_ be unloaded, then they _must_ be marked as `async/await`.
+Because of the inherently lazy nature of references & collections, Joist takes the strong, type-safe opinion that if they _might_ be unloaded, then they _must_ be marked as `async/await`.
 
 For example, you have to access `author.books` via an `await`-d promise:
 
@@ -34,9 +36,9 @@ someComplicatedLogicThatLoadsBooks(author);
 const books = await author.books.load();
 ```
 
-## But Async Access is Kinda Annoying
+## But Async is Kinda Annoying
 
-While Joist's "async by default" approach is the safest, it is admittedly tedious when you get to double/triple levels of `await`s, i.e.:
+While Joist's "async by default" approach is the safest, it is admittedly tedious when you get to double/triple levels of `await`s, i.e. to go from an `Author` to their `Book`s to each `Book`'s `BookReview`s:
 
 ```typescript
 const author = await em.load(Author, "a:1");
@@ -50,7 +52,7 @@ await Promise.all((await author.books.load()).map(async (book) => {
 
 Yuck.
 
-Given this complication, some ORMs in the JavaScript/TypeScript space sometimes fudge this, and allow you to model collections as _synchronous_, i.e. you're allowed to do:
+Given this complication, some ORMs in the JavaScript/TypeScript space sometimes fudge the "collections must be async" approach, and allow you to model collections as _synchronous_, i.e. you're allowed to do:
 
 ```typescript
 const author = await em.load(Author, "a:1");
@@ -60,15 +62,15 @@ await author.books.load();
 author.books.get.length;
 ```
 
-Which is nice! But the wrinkle is that we're now trusting ourselves to only access `books` after an explicit `load`, and if we forget, i.e. when our code paths end up being complex enough that it's hard to tell, then we'll get a runtime error that `books.get` is not allowed to be called
+Which is nice! But the wrinkle is that we're now trusting ourselves to only access `books` _after_ an explicit `load`, and if we forget, i.e. when our code paths end up being complex enough that it's hard to tell, then we'll get a runtime error that `books.get` is not allowed to be called
 
 Because of this lack of safety, Joist avoids this approach, and instead has something fancier.
 
-## The Magic But Safe Escape Hatch
+## The Magic Escape Hatch
 
 Ideally what we want is to have relations lazy-by-default, except when we've explicitly told TypeScript that we've loaded them. This is what Joist does.
 
-In Joist, populate hints (which tell the ORM to pre-fetch data before it's actually accessed) _also_ change the type of the entity, and mark references that were explicitly listed in the hint as loaded.
+In Joist, populate hints (which tell the ORM to pre-fetch data before it's actually accessed) also _change the type of the entity_, and mark relations that were explicitly listed in the hint as loaded.
 
 This looks like:
 
@@ -87,7 +89,7 @@ Note that `originalBook`'s `originalBook.author` reference does _not_ have `.get
 
 :::tip
 
-You can avoid having two `book` variables by passing populate hints directly to `EntityManager.load`, which will then return the appropriate `.get`-able references:
+You can avoid having two `originalBook` / `book` variables by passing populate hints directly to `EntityManager.load`, which will then return the appropriate `.get`-able references:
 
 ```typescript
 const book = await em.load(

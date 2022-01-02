@@ -39,7 +39,7 @@ This `UPDATE` can have two outcomes:
 
 The SQL in this example only updates 1 row at a time, so is pretty straight forward.
 
-Technically because of Joist's [bulk everything](./bulk-everything.md) feature, the `UPDATE` SQL that Joist generates at runtime will look more complex than this example, but the effect is the same, i.e. that bulk `UPDATE`s will still check the individual/per-row `updated_at` values.
+Technically because of Joist's [bulk everything](./bulk-operations.md) feature, the `UPDATE` SQL that Joist generates at runtime will look more complex than this example, but the effect is the same, i.e. that bulk `UPDATE`s will still check the individual/per-row `updated_at` values.
 
 :::
 

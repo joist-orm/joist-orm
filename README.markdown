@@ -16,7 +16,7 @@ An opinionated ORM for TypeScript/node/postgres.
 
 ### Documentation
 
-See [joist-orm.io](https://joist-io.orm) for documentation.
+See [joist-orm.io](https://joist-orm.io) for documentation.
 
 ### Building Joist
 

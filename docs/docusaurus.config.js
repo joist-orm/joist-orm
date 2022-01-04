@@ -8,8 +8,8 @@ const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 const config = {
   title: "Joist",
   tagline: "An Idiomatic TypeScript ORM",
-  url: "https://stephenh.github.io",
-  baseUrl: "/joist-ts/",
+  url: "https://joist-orm.io",
+  baseUrl: "/",
   onBrokenLinks: "throw",
   onBrokenMarkdownLinks: "warn",
   organizationName: "stephenh",

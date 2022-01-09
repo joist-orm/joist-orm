@@ -1,5 +1,6 @@
 ---
 title: Tagged Ids
+sidebar_position: 3
 ---
 
 Joist automatically "tags" entity ids, which means prefixing them with a per-entity identifier.

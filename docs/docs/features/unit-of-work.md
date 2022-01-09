@@ -1,13 +1,25 @@
 ---
 title: Unit of Work
+sidebar_position: 1
 ---
 
-If you issue the same `EntityManager.find(Entity, { ...where... })` call multiple times within a single unit of work, the database query will only be issued once, and then the cached value used for subsequent calls.
+Joist's `EntityManager` acts as a [Unit of Work](https://www.martinfowler.com/eaaCatalog/unitOfWork.html), which caches instances of entities that are currently loaded/being mutated.
 
-If you do an `EntityManager.flush`, that will reset the find cache b/c the commit may have caused the cached query results to have changed.
+For example, if you issue multiple `.find` calls:
 
-Note that this is not a shared/second-level cache, i.e. shared across multiple requests to your webapp/API, which can be a good idea but means you have to worry about cache invalidation and staleness strategies.
+```typescript
+const a = await em.find(Author, { id: "a:1" });
+const b = await em.find(Author, { id: "a:1" });
+// Prints true
+console.log(a === b);
+```
 
-This cache is solely for queries issued with the current unit of work, and it is thrown away/re-created for each new Unit of Work, so there should not be any issues with stale data or need to invalidate the cache (beyond what Joist already does by invalidating it on each `EntityManager.flush()` call).
+Joist will issue 2 queries, one per `find` call (because the where clauses could be different), but when reading the query results, Joist will recognize that the 2nd `find` returns an already-loaded `Author#a:1` instance, and use that same instance.
 
-(Pedantically, currently Joist's Unit of Work does not currently open a transaction until `flush` is started, so without that transactional isolation, Joist's UoW find cache may actually be "hiding" changed results (between `find` 1 and `find` 2) than if it were to actually re-issue the query each time. That said, a) ideally/at some point Joist's UoW will use a transaction throughout, such that this isolation behavior of not noticing new changes is actually a desired feature (i.e. avoiding non-repeatable reads), and b) UoWs are assumed to be extremely short-lived, i.e. per request, so you should generally not be trying to observe changed results between `find` calls anyway.)
+This pattern generally makes reasoning about "what have I changed so far?", "what is the latest version of the entity?" easier, because when handling a given `POST` / API update, you don't have to worry about various parts of your code having stale/different versions of the `Author`.
+
+### Not a Cache
+
+Note that this is not a shared/second-level cache, i.e. shared across multiple requests to your webapp/API.
+
+Second-level caches can be a good idea, but means you have to worry about cache invalidation and staleness strategies, so for now Joist avoids that complexity.

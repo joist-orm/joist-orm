@@ -19,6 +19,23 @@ const review = await em.load(BookReview, "1", { author: "publisher" });
 expect(review.author.get.publisher.get.name).toEqual("p1");
 ```
 
+### hasManyThrough
+
+You can define common paths through your entity graph with `hasOneThrough`:
+
+```typescript
+export class BookReview extends BookReviewCodegen {
+  readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
+}
+```
+
+The `hasOneThrough` DSL is built on Joist's `CustomReferences`, so will also work with `populate`, i.e.:
+
+```typescript
+const review = await em.load(BookReview, "1", { author: "publisher" });
+expect(review.author.get.publisher.get.name).toEqual("p1");
+```
+
 ### hasOneDerived
 
 You can define a relation that is conditional with `hasOneDerived`:

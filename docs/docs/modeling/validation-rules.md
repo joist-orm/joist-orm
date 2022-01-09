@@ -5,20 +5,22 @@ title: Validation Rules
 Entities can have validation rules added that will be run during `EntityManager.flush()`:
 
 ```typescript
+import { authorConfig as config } from "./entities"
+
 class Author extends AuthorCodegen {
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, opts);
-  })
+  }
 }
 
-authorConfig.addRule((author) => {
+config.addRule((author) => {
   if (author.firstName && author.firstName === author.lastName) {
     return "firstName and lastName must be different";
   }
 });
 
 // Rules can be async
-authorConfig.addRule(async (author) => {
+config.addRule(async (author) => {
   const books = await authorthis.books.load();
   // ...
 });

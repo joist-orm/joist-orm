@@ -27,7 +27,7 @@ If we count the initial `SELECT * FROM books WHERE author_id = 1` query as `1`, 
 
 ## Common/Tedious Pitfall
 
-N+1s have fundamentally plagued ORMs, not just in Node/TypeScript but basically all programming languages & ORMs, because at the end of the day the ORM approach of modeling "foreign keys as collections" (i.e. `book.reviews` "looks like an in-memory collection") clashes with the usual behavior that "collections are cheap to access", **leading to a leaky abstraction**.
+N+1s have fundamentally plagued ORMs, not just in Node/TypeScript but basically all programming languages & ORMs, because at the end of the day the ORM approach of modeling "foreign keys as collections" (i.e. `book.reviews` "looks like an in-memory collection", but _actually_ requires an expensive I/O call to load) clashes with the usual (in-memory) semantics that "collections are cheap to access", **leading to a leaky abstraction**.
 
 Unfortunately, writing `for` loops, like above, that access a collection is a common and natural pattern for programmers to use, and typically is perfectly safe to do; however, and ORMs risk breaking this assumption.
 

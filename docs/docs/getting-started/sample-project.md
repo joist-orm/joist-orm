@@ -3,7 +3,7 @@ title: Sample Project
 sidebar_position: 1
 ---
 
-The [Joist Sample App](https://github.com/stephenh/joist-ts-sample) is a minimal repository setup with Joist.
+The Joist [Sample App](https://github.com/stephenh/joist-ts-sample) is a minimal repository setup with Joist.
 
 It does not include exposing the domain objects via a REST/GraphQL/etc. API, but just shows a minimal setup for working solely with the domain objects.
 

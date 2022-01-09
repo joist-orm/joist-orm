@@ -10,4 +10,8 @@ For example:
 - If you save 100 new authors, Joist will execute 1 SQL `INSERT` statement.
 - If you update 500 books, Joist will also execute 1 SQL `UPDATE` statement.
 
-Note that this capability, especially for bulk `UPDATE`s, currently uses a Postgres-specific `UPDATE` syntax, but that is part of the pay-off for Joist's "unapologetically Postgres-only (for now)" approach.
+:::info
+
+This capability, especially for bulk `UPDATE`s, currently uses a Postgres-specific `UPDATE` syntax, which is currently a benefit of Joist's "unapologetically Postgres-only (for now)" approach.
+
+:::

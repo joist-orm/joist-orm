@@ -3,6 +3,7 @@ import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
+  AsyncProperty,
   BaseEntity,
   BooleanFilter,
   BooleanGraphQLFilter,
@@ -63,12 +64,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     let getter: Code;
     if (p.derived === "async") {
       getter = code`
-        get ${fieldName}(): ${fieldType}${maybeOptional} {
-          if (!("${fieldName}" in this.__orm.data)) {
-            throw new Error("${fieldName} has not been derived yet");
-          }
-          return this.__orm.data["${fieldName}"];
-        }
+        abstract readonly ${fieldName}: ${AsyncProperty}<${entity.name}, ${p.fieldType}>;
      `;
     } else if (p.derived === "sync") {
       getter = code`

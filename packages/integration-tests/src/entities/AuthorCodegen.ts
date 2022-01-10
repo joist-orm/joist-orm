@@ -1,4 +1,5 @@
 import {
+  AsyncProperty,
   BaseEntity,
   BooleanFilter,
   BooleanGraphQLFilter,
@@ -192,12 +193,7 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   abstract get initials(): string;
 
-  get numberOfBooks(): number {
-    if (!("numberOfBooks" in this.__orm.data)) {
-      throw new Error("numberOfBooks has not been derived yet");
-    }
-    return this.__orm.data["numberOfBooks"];
-  }
+  abstract readonly numberOfBooks: AsyncProperty<Author, number>;
 
   get isPopular(): boolean | undefined {
     return this.__orm.data["isPopular"];

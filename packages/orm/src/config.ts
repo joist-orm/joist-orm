@@ -41,15 +41,6 @@ export class ConfigApi<T extends Entity, C> {
     });
   }
 
-  /** Registers `fn` as the lambda to provide the async value for `key`. */
-  setAsyncDerivedField<P extends keyof T, H extends LoadHint<T>>(
-    key: P,
-    populate: H,
-    fn: (entity: Loaded<T, H>) => T[P],
-  ): void {
-    this.__data.asyncDerivedFields[key] = [populate, fn as any];
-  }
-
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
     if (typeof ruleOrHint === "function") {
       this.__data.hooks[hook].push(ruleOrHint);
@@ -107,8 +98,6 @@ export class ConfigApi<T extends Entity, C> {
 export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRule<T>[] = [];
-  /** The async derived fields for this entity type. */
-  asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
   /** The hooks for this instance. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],

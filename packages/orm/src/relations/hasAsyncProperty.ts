@@ -5,6 +5,7 @@ import { Loaded, LoadHint } from "../loaded";
 const I = Symbol();
 
 export interface AsyncProperty<T extends Entity, V> {
+  loadHint: LoadHint<T>;
   isLoaded: boolean;
   load(): Promise<V>;
   [I]?: T;
@@ -33,7 +34,7 @@ export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
 export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
   private loaded = false;
   private loadPromise: any;
-  constructor(private entity: T, private loadHint: H, private fn: (entity: Loaded<T, H>) => V) {}
+  constructor(private entity: T, public loadHint: H, private fn: (entity: Loaded<T, H>) => V) {}
 
   load(): Promise<V> {
     const { entity, loadHint, fn } = this;

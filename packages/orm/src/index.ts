@@ -14,8 +14,9 @@ import {
   OptsOf,
   PolymorphicField,
 } from "./EntityManager";
+import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import { Reference } from "./relations";
+import { AsyncProperty, Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { reverseHint } from "./reverseHint";
 import { fail } from "./utils";
@@ -215,7 +216,9 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
   metas.forEach((meta) => {
     // Add each constructor into our tag -> constructor map for future lookups
     tagToConstructorMap.set(meta.tagName, meta.cstr);
+  });
 
+  metas.forEach((meta) => {
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
       if ((rule as any).hint) {
@@ -227,14 +230,17 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         });
       }
     });
+
     // Look for reactive async derived values rules to reverse
-    Object.entries(meta.config.__data.asyncDerivedFields).forEach(([, entry]) => {
-      const hint = entry![0];
-      const reversals = reverseHint(meta.cstr, hint);
-      reversals.forEach(([otherEntity, reverseHint]) => {
-        getMetadata(otherEntity).config.__data.reactiveDerivedValues.push(reverseHint);
+    Object.values(meta.fields)
+      .filter((f) => f.kind === "primitive" && f.derived === "async")
+      .forEach((field) => {
+        const asyncProperty = getFakeInstance(meta)[field.fieldName] as AsyncProperty<any, any>;
+        const reversals = reverseHint(meta.cstr, asyncProperty.loadHint);
+        reversals.forEach(([otherEntity, reverseHint]) => {
+          getMetadata(otherEntity).config.__data.reactiveDerivedValues.push(reverseHint);
+        });
       });
-    });
   });
 }
 

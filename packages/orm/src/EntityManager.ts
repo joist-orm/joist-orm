@@ -1153,17 +1153,17 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
  * entities that need fields re-calced, and has already added them to `todos`.
  */
 async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).map(async (todo) => {
-    const { asyncDerivedFields } = todo.metadata.config.__data;
-    const changed = [...todo.inserts, ...todo.updates];
-    const p = Object.entries(asyncDerivedFields).map(async ([key, entry]) => {
-      if (entry) {
-        const [hint, fn] = entry;
-        await em.populate(changed, hint);
-        await Promise.all(changed.map((entity) => setField(entity, key as any, fn(entity))));
-      }
+  const p = Object.values(todos).flatMap((todo) => {
+    const fields = Object.values(todo.metadata.fields).filter((f) => f.kind === "primitive" && f.derived === "async");
+    return [...todo.inserts, ...todo.updates].flatMap((entity) => {
+      return fields.map(async (field) => {
+        const asyncProperty = (entity as any)[field.fieldName];
+        await asyncProperty.load();
+        const value = asyncProperty.get;
+        console.log("setting", field.fieldName, "to", value);
+        setField(entity, field.fieldName as any, value);
+      });
     });
-    await Promise.all(p);
   });
   await Promise.all(p);
 }

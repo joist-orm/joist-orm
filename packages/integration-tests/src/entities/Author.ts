@@ -3,6 +3,7 @@ import { AuthorCodegen, authorConfig, Book, BookReview } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
+
   readonly reviewedBooks: Collection<Author, Book> = hasManyDerived({ books: "reviews" } as const, {
     get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
     // set / add / remove callbacks are totally contrived to test that they work
@@ -26,6 +27,16 @@ export class Author extends AuthorCodegen {
       const loaded = book as Loaded<Book, "reviews">;
       loaded.reviews.get.forEach((r) => getEm(author).delete(r));
     },
+  });
+
+  /** Example of a persisted async property that can be loaded via a populate hint. */
+  readonly numberOfBooks: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
+    return a.books.get.length;
+  });
+
+  /** Example of an unpersisted async property that can be loaded via a populate hint. */
+  readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
+    return a.books.get.length;
   });
 
   public beforeFlushRan = false;
@@ -66,11 +77,6 @@ export class Author extends AuthorCodegen {
   async hasBooks(): Promise<boolean> {
     return (await this.books.load()).length > 0;
   }
-
-  /** Example of an async property that can be loaded via a populate hint. */
-  readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
-    return a.books.get.length;
-  });
 }
 
 authorConfig.cascadeDelete("books");
@@ -139,8 +145,4 @@ authorConfig.afterCommit((author) => {
   author.afterCommitRan = true;
   author.afterCommitIdIsSet = author.id !== undefined;
   author.afterCommitIsNewEntity = author.isNewEntity;
-});
-
-authorConfig.setAsyncDerivedField("numberOfBooks", "books", (author) => {
-  return author.books.get.length;
 });

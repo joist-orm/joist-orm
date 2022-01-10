@@ -224,3 +224,22 @@ export class SuperstructSerde implements FieldSerde {
     return value;
   }
 }
+
+export class DerivedPropertySerde implements FieldSerde {
+  isArray = false;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string, public dbType: string) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
+  }
+
+  dbValue(data: any) {
+    return data[this.fieldName].get;
+  }
+
+  mapToDb(value: any) {
+    return value;
+  }
+}

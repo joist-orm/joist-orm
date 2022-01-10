@@ -15,6 +15,7 @@ export const Lens = imp("Lens@joist-orm");
 export const KeySerde = imp("KeySerde@joist-orm");
 export const ManyToOneReference = imp("ManyToOneReference@joist-orm");
 export const PolymorphicReference = imp("PolymorphicReference@joist-orm");
+export const AsyncProperty = imp("AsyncProperty@joist-orm");
 export const OneToOneReference = imp("OneToOneReference@joist-orm");
 export const ManyToManyCollection = imp("ManyToManyCollection@joist-orm");
 export const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");

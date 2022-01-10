@@ -221,7 +221,8 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "b1", author: a1 });
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(1);
+    // How to .get this?
+    expect(await a1.numberOfBooks.load()).toEqual(1);
     const rows = await knex.select("*").from("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -507,7 +508,7 @@ describe("Author", () => {
 
   it("can have async properties", async () => {
     const em = newEntityManager();
-    const a1 = newAuthor(em);
+    const a1 = newAuthor(em) as Author;
     expect(await a1.numberOfBooks2.load()).toEqual(0);
     const a2 = await em.populate(a1, "numberOfBooks2");
     expect(a2.numberOfBooks2.get).toEqual(0);

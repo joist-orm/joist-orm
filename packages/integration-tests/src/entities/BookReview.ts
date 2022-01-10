@@ -1,5 +1,5 @@
-import { hasOneDerived, hasOneThrough, Reference } from "joist-orm";
-import { Author, BookReviewCodegen, bookReviewConfig, Publisher } from "./entities";
+import { AsyncProperty, hasAsyncProperty, hasOneDerived, hasOneThrough, Reference } from "joist-orm";
+import { Author, BookReviewCodegen, Publisher } from "./entities";
 
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
@@ -11,10 +11,10 @@ export class BookReview extends BookReviewCodegen {
     { book: { author: "publisher" } },
     (review) => review.book.get.author.get.publisher.get,
   );
-}
 
-// Reviews are only public if the author is over the age of 21
-bookReviewConfig.setAsyncDerivedField("isPublic", { book: "author" }, (review) => {
-  const author = review.book.get.author.get;
-  return !!author.age && author.age >= 21;
-});
+  // Reviews are only public if the author is over the age of 21
+  readonly isPublic: AsyncProperty<BookReview, boolean> = hasAsyncProperty({ book: "author" }, (review) => {
+    const author = review.book.get.author.get;
+    return !!author.age && author.age >= 21;
+  });
+}

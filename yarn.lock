@@ -2654,7 +2654,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@jest/create-cache-key-function@npm:^27.3.1":
+"@jest/create-cache-key-function@npm:^27.4.2":
   version: 27.4.2
   resolution: "@jest/create-cache-key-function@npm:27.4.2"
   dependencies:
@@ -3282,14 +3282,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@swc/jest@npm:^0.2.15":
-  version: 0.2.15
-  resolution: "@swc/jest@npm:0.2.15"
+"@swc/jest@npm:^0.2.16":
+  version: 0.2.16
+  resolution: "@swc/jest@npm:0.2.16"
   dependencies:
-    "@jest/create-cache-key-function": ^27.3.1
+    "@jest/create-cache-key-function": ^27.4.2
   peerDependencies:
     "@swc/core": "*"
-  checksum: 37cc4012df91fbcb583131c0c8b399475c3bb6d85a4328bf5ac4207fa94d7b5a172347d038911d28655de23038ee3c566f9d392382bd8c837706a0dc62262be8
+  checksum: 5cf74edc5cac83b6cca4ffb947863f577ce702408379bc602ee6ed81a3541590e3dd205b0a309e8a9e84fc96cd4c7289eb1fde6b20058b6df326dc2cafa9ebf4
   languageName: node
   linkType: hard
 
@@ -9187,7 +9187,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-codegen@workspace:packages/codegen"
   dependencies:
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     "@types/pluralize": 0.0.29
@@ -9213,7 +9213,7 @@ __metadata:
   resolution: "joist-graphql-codegen@workspace:packages/graphql-codegen"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     change-case: ^4.1.1
@@ -9236,7 +9236,7 @@ __metadata:
   resolution: "joist-integration-tests@workspace:packages/integration-tests"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     dotenv: ^8.2.0
@@ -9261,7 +9261,7 @@ __metadata:
   resolution: "joist-migration-utils@workspace:packages/migration-utils"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     "@types/pluralize": 0.0.29
@@ -9284,7 +9284,7 @@ __metadata:
   resolution: "joist-orm@workspace:packages/orm"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     "@types/object-hash": ^1.3.1
@@ -9308,7 +9308,7 @@ __metadata:
   resolution: "joist-test-utils@workspace:packages/test-utils"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     jest: ^27.0.6
     prettier: ^2.5.1
@@ -9324,7 +9324,7 @@ __metadata:
   resolution: "joist-tests-uuid-ids@workspace:packages/tests/uuid-ids"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     dotenv: ^8.2.0
@@ -9348,7 +9348,7 @@ __metadata:
   resolution: "joist-utils@workspace:packages/utils"
   dependencies:
     "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.15
+    "@swc/jest": ^0.2.16
     "@types/jest": ^26.0.24
     "@types/node": ^16.4.10
     jest: ^27.0.6

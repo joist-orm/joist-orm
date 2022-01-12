@@ -27,7 +27,7 @@
     "ts-poet": "^4.8.0"
   },
   "devDependencies": {
-    "@swc/jest": "^0.2.15",
+    "@swc/jest": "^0.2.16",
     "@types/jest": "^26.0.24",
     "@types/node": "^16.4.10",
     "jest": "^27.0.6",

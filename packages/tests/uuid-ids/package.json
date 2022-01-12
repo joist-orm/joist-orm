@@ -18,7 +18,7 @@
   },
   "devDependencies": {
     "@swc/core": "^1.2.124",
-    "@swc/jest": "^0.2.15",
+    "@swc/jest": "^0.2.16",
     "@types/jest": "^26.0.24",
     "@types/node": "^16.4.10",
     "dotenv": "^8.2.0",

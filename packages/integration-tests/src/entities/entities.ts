@@ -26,5 +26,6 @@ export * from "./Critic";
 export * from "./Image";
 export * from "./Publisher";
 export * from "./Tag";
+export * from "./FavoriteShape";
 export * from "./factories";
 export * from "./metadata";

@@ -190,6 +190,37 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       primitives.push(getter, setter, ...accessors);
     });
 
+  meta.pgEnums.forEach((e) => {
+    const { fieldName, enumType, enumValues, notNull } = e;
+    const maybeOptional = notNull ? "" : " | undefined";
+
+    const getter = code`
+        get ${fieldName}(): ${enumType}${maybeOptional} {
+          return this.__orm.data["${fieldName}"];
+        }
+     `;
+    const setter = code`
+        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
+
+    const codes = new Set(enumValues);
+    const shouldPrefixAccessors = meta.pgEnums
+      .filter((other) => other !== e)
+      .some((other) => other.enumValues.some((r) => codes.has(r)));
+
+    const accessors = enumValues.map(
+      (row) => code`
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row)}(): boolean {
+            return this.${fieldName} === ${enumType}.${pascalCase(row)};
+          }
+        `,
+    );
+    // Group enums as primitives
+    primitives.push(getter, setter, ...accessors);
+  });
+
   // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
@@ -271,11 +302,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     ${generatePolymorphicTypes(meta)}
-    
+
     export interface ${entityName}Opts {
       ${generateOptsFields(config, meta)}
     }
-    
+
     export interface ${entityName}IdsOpts {
       ${generateOptIdsFields(config, meta)}
     }
@@ -294,13 +325,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       id?: ${OrderBy};
       ${generateOrderFields(meta)}
     }
-    
+
     ${hasDefaultValues ? code`export const ${defaultValuesName} = { ${defaultValues} };` : ""}
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(meta, configName)}
-  
+
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __orm!: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
@@ -389,6 +420,11 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
     .map(({ fieldName, columnDefault }) => {
       return code`${fieldName}: ${columnDefault},`;
     });
+  const pgEnums = meta.pgEnums
+    .filter((field) => !!field.columnDefault)
+    .map(({ fieldName, columnDefault }) => {
+      return code`${fieldName}: ${columnDefault},`;
+    });
   const enums = meta.enums
     .filter((field) => !!field.columnDefault && !field.isArray)
     .map(({ fieldName, columnDefault, enumRows, enumType, columnName }) => {
@@ -397,7 +433,7 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
         fail(`Invalid default value ${columnDefault} for ${meta.tableName}.${columnName}`);
       return code`${fieldName}: ${enumType}.${pascalCase(defaultRow.code)},`;
     });
-  return [...primitives, ...enums];
+  return [...primitives, ...enums, ...pgEnums];
 }
 
 function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
@@ -428,6 +464,9 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
       return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
     }
   });
+  const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
+    return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
+  });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
   });
@@ -443,7 +482,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${fieldType};`;
   });
-  return [...primitives, ...enums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
+  return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.
@@ -480,6 +519,10 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
     const maybeArray = isArray ? "[]" : "";
     return code`${fieldName}?: ${ValueFilter}<${enumType}${maybeArray}, ${nullOrNever(notNull)}>;`;
   });
+  const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
+    const maybeArray = "";
+    return code`${fieldName}?: ${ValueFilter}<${enumType}${maybeArray}, ${nullOrNever(notNull)}>;`;
+  });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
       otherEntity.type
@@ -491,7 +534,7 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...primitives, ...enums, ...m2o, ...o2o, ...polys];
+  return [...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
 }
 
 function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
@@ -505,6 +548,9 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const enums = meta.enums.map(({ fieldName, enumType }) => {
     return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
   });
+  const pgEnums = meta.pgEnums.map(({ fieldName, enumType }) => {
+    return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
+  });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
   });
@@ -514,7 +560,7 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never>;`;
   });
-  return [...primitives, ...enums, ...m2o, ...o2o, ...polys];
+  return [...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {
@@ -525,10 +571,13 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
   const enums = meta.enums.map(({ fieldName }) => {
     return code`${fieldName}?: ${OrderBy};`;
   });
+  const pgEnums = meta.pgEnums.map(({ fieldName }) => {
+    return code`${fieldName}?: ${OrderBy};`;
+  });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.orderType};`;
   });
-  return [...primitives, ...enums, ...m2o];
+  return [...primitives, ...enums, ...pgEnums, ...m2o];
 }
 
 function maybeOptional(notNull: boolean): string {

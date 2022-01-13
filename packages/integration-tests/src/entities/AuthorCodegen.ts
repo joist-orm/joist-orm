@@ -45,6 +45,7 @@ import {
   Color,
   ColorDetails,
   Colors,
+  FavoriteShape,
   Image,
   ImageId,
   imageMeta,
@@ -66,6 +67,7 @@ export interface AuthorOpts {
   wasEverPopular?: boolean | null;
   address?: Address | null;
   favoriteColors?: Color[];
+  favoriteShape?: FavoriteShape | null;
   mentor?: Author | null;
   publisher?: Publisher | null;
   image?: Image | null;
@@ -95,6 +97,7 @@ export interface AuthorFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   favoriteColors?: ValueFilter<Color[], null | undefined>;
+  favoriteShape?: ValueFilter<FavoriteShape, null | undefined>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
@@ -114,6 +117,7 @@ export interface AuthorGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: EnumGraphQLFilter<Color>;
+  favoriteShape?: EnumGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
@@ -133,6 +137,7 @@ export interface AuthorOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   favoriteColors?: OrderBy;
+  favoriteShape?: OrderBy;
   mentor?: AuthorOrder;
   publisher?: PublisherOrder;
 }
@@ -272,6 +277,26 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   get isBlue(): boolean {
     return this.favoriteColors.includes(Color.Blue);
+  }
+
+  get favoriteShape(): FavoriteShape | undefined {
+    return this.__orm.data["favoriteShape"];
+  }
+
+  set favoriteShape(favoriteShape: FavoriteShape | undefined) {
+    setField(this, "favoriteShape", favoriteShape);
+  }
+
+  get isCircle(): boolean {
+    return this.favoriteShape === FavoriteShape.Circle;
+  }
+
+  get isSquare(): boolean {
+    return this.favoriteShape === FavoriteShape.Square;
+  }
+
+  get isTriangle(): boolean {
+    return this.favoriteShape === FavoriteShape.Triangle;
   }
 
   set(opts: Partial<AuthorOpts>): void {

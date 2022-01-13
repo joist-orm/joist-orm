@@ -3,7 +3,7 @@ import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
 import { dirname } from "path";
 import { Client } from "pg";
-import pgStructure, { Db, Table } from "pg-structure";
+import pgStructure, { Db, EnumType, Table } from "pg-structure";
 import { Options } from "prettier";
 import { code, Code, def, imp } from "ts-poet";
 import { assignTags } from "./assignTags";
@@ -15,6 +15,7 @@ import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
+import { generatePgEnumFile } from "./generatePgEnumFile";
 import { configureMetadata, EntityManager } from "./symbols";
 import {
   isEntityTable,
@@ -51,7 +52,13 @@ export type EnumTableData = {
   rows: EnumRow[];
   extraPrimitives: PrimitiveField[];
 };
+export type PgEnumData = {
+  name: string;
+  values: string[];
+};
 export type EnumMetadata = Record<string, EnumTableData>;
+export type PgEnumMetadata = Record<string, PgEnumData>;
+
 export type EnumRow = { id: number; code: string; name: string; [key: string]: any };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
@@ -74,7 +81,7 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
 export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodeGenFile[]> {
-  const { entities, enums } = dbMeta;
+  const { entities, enums, pgEnums } = dbMeta;
   const entityFiles = entities
     .map((meta) => {
       const entityName = meta.entity.name;
@@ -101,6 +108,17 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       ];
     })
     .reduce(merge, []);
+  const pgEnumFiles = Object.values(pgEnums)
+    .map((enumData) => {
+      return [
+        {
+          name: `${enumData.name}.ts`,
+          contents: generatePgEnumFile(config, enumData),
+          overwrite: true,
+        },
+      ];
+    })
+    .reduce(merge, []);
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const BaseEntity = imp("BaseEntity@joist-orm");
@@ -109,7 +127,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     name: "./metadata.ts",
     contents: code`
       export class ${def("EntityManager")} extends ${EntityManager}<${contextType}> {}
-      
+
       export function getEm(e: ${BaseEntity}): EntityManager {
         return e.__orm.em as EntityManager;
       }
@@ -129,7 +147,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const entitiesFile: CodeGenFile = {
     name: "./entities.ts",
-    contents: generateEntitiesFile(config, entities, enumsTables),
+    contents: generateEntitiesFile(config, entities, enumsTables, Object.values(pgEnums)),
     overwrite: true,
   };
 
@@ -152,7 +170,16 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     )
   ).flat();
 
-  return [...entityFiles, ...enumFiles, entitiesFile, ...factoriesFiles, metadataFile, indexFile, ...pluginFiles];
+  return [
+    ...entityFiles,
+    ...enumFiles,
+    ...pgEnumFiles,
+    entitiesFile,
+    ...factoriesFiles,
+    metadataFile,
+    indexFile,
+    ...pluginFiles,
+  ];
 }
 
 export async function loadEnumMetadata(db: Db, client: Client, config: Config): Promise<EnumMetadata> {
@@ -174,6 +201,22 @@ export async function loadEnumMetadata(db: Db, client: Client, config: Config): 
     ] as [string, EnumTableData];
   });
   return Object.fromEntries(await Promise.all(promises));
+}
+
+export async function loadPgEnumMetadata(db: Db, client: Client, config: Config): Promise<PgEnumMetadata> {
+  return db.types.reduce((all, type) => {
+    if (type instanceof EnumType) {
+      return {
+        ...all,
+        [type.name]: {
+          name: pascalCase(type.name),
+          values: type.values,
+        },
+      };
+    }
+
+    return all;
+  }, {});
 }
 
 export async function contentToString(
@@ -201,11 +244,13 @@ if (require.main === module) {
     const client = new Client(pgConfig);
     await client.connect();
     const enums = await loadEnumMetadata(db, client, config);
+    const pgEnums = await loadPgEnumMetadata(db, client, config);
+
     await client.end();
 
     const entityTables = db.tables.filter(isEntityTable).sortBy("name");
     const entities = entityTables.map((table) => new EntityDbMetadata(config, table, enums));
-    const dbMetadata: DbMetadata = { entityTables, entities, enums };
+    const dbMetadata: DbMetadata = { entityTables, entities, enums, pgEnums };
 
     assignTags(config, dbMetadata);
     await writeConfig(config);
@@ -221,4 +266,5 @@ export interface DbMetadata {
   entityTables: Table[];
   entities: EntityDbMetadata[];
   enums: EnumMetadata;
+  pgEnums: PgEnumMetadata;
 }

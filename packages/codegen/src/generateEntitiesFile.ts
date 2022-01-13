@@ -1,10 +1,16 @@
+import { PgEnumData } from "index";
 import { Table } from "pg-structure";
 import { code, Code } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
-export function generateEntitiesFile(config: Config, entities: EntityDbMetadata[], enums: Table[]): Code {
+export function generateEntitiesFile(
+  config: Config,
+  entities: EntityDbMetadata[],
+  enums: Table[],
+  pgEnums: PgEnumData[],
+): Code {
   return code`
     // organize-imports-ignore
 
@@ -19,6 +25,9 @@ export function generateEntitiesFile(config: Config, entities: EntityDbMetadata[
     })}
     ${entities.map((meta) => {
       return `export * from "./${meta.entity.name}";`;
+    })}
+    ${pgEnums.map((meta) => {
+      return `export * from "./${meta.name}";`;
     })}
     export * from "./factories";
     export * from "./metadata";

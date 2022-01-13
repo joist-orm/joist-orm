@@ -39,6 +39,8 @@ export function up(b: MigrationBuilder): void {
     ["BLUE", "Blue"],
   ]);
 
+  b.createType("favorite_shape", ["circle", "square", "triangle"]);
+
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
     last_name: { type: "varchar(255)", notNull: false },
@@ -54,6 +56,8 @@ export function up(b: MigrationBuilder): void {
     graduated: { type: "date", notNull: false },
     // for testing enum[] fields
     favorite_colors: enumArrayColumn("color"),
+    // for testing native enum fields
+    favorite_shape: { type: "favorite_shape", notNull: false },
     // for testing protected fields
     was_ever_popular: { type: "boolean", notNull: false },
     // for testing FieldConfig.ignore

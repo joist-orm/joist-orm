@@ -1,5 +1,5 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
-import { Column, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
+import { Column, EnumType, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
 import {
@@ -83,6 +83,15 @@ export type EnumField = Field & {
   isArray: boolean;
 };
 
+export type PgEnumField = Field & {
+  columnName: string;
+  columnDefault: number | boolean | string | null;
+  enumName: string;
+  enumType: Import;
+  enumValues: string[];
+  notNull: boolean;
+};
+
 /** I.e. a `Book.author` reference pointing to an `Author`. */
 export type ManyToOneField = Field & {
   columnName: string;
@@ -138,6 +147,7 @@ export class EntityDbMetadata {
   idDbType: string;
   primitives: PrimitiveField[];
   enums: EnumField[];
+  pgEnums: PgEnumField[];
   manyToOnes: ManyToOneField[];
   oneToManys: OneToManyField[];
   oneToOnes: OneToOneField[];
@@ -149,9 +159,10 @@ export class EntityDbMetadata {
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
     this.idDbType = table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ?? fail();
+
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
-      .filter((c) => !isEnumArray(c))
+      .filter((c) => !isEnumArray(c) && !isPgEnum(c))
       .map((column) => newPrimitive(config, this.entity, column, table))
       .filter((f) => !f.ignore);
     this.enums = [
@@ -162,6 +173,12 @@ export class EntityDbMetadata {
       ...table.columns
         .filter((c) => isEnumArray(c))
         .map((column) => newEnumArrayField(config, this.entity, column, enums))
+        .filter((f) => !f.ignore),
+    ];
+    this.pgEnums = [
+      ...table.columns
+        .filter((c) => isPgEnum(c))
+        .map((column) => newPgEnumField(config, this.entity, column, table))
         .filter((f) => !f.ignore),
     ];
     this.manyToOnes = table.m2oRelations
@@ -319,6 +336,25 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     ignore,
     enumRows: enums[enumTable].rows,
     isArray: true,
+  };
+}
+
+function newPgEnumField(config: Config, entity: Entity, column: Column, table: Table): PgEnumField {
+  const fieldName = primitiveFieldName(column.name);
+  const columnName = column.name;
+  const enumName = pascalCase(column.type.name);
+  const enumType = imp(`${enumName}@./entities`);
+  const enumValues = (column.type as EnumType).values;
+
+  return {
+    fieldName,
+    columnName,
+    enumType,
+    enumName,
+    enumValues,
+    notNull: column.notNull,
+    columnDefault: column.default,
+    ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
   };
 }
 
@@ -496,6 +532,10 @@ function mapType(tableName: string, columnName: string, dbColumnType: DatabaseCo
 
 function isEnumArray(c: Column): boolean {
   return c.arrayDimension === 1 && !!c.comment && c.comment.startsWith("enum=");
+}
+
+function isPgEnum(c: Column): boolean {
+  return c.type instanceof EnumType;
 }
 
 function superstructType(s: string): Import {

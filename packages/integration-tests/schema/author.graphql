@@ -16,6 +16,9 @@ type Author {
   image: Image
   graduated: Date
   favoriteColors: [Color!]!
+  favoriteShape: FavoriteShape!
+  favoriteShapeWithDefault: FavoriteShapeWithDefault
+  favoriteShapeNull: FavoriteShapeNull
 }
 
 input SaveAuthorInput {
@@ -33,6 +36,9 @@ input SaveAuthorInput {
   publisherId: ID
   graduated: Date
   favoriteColors: [Color!]
+  favoriteShape: FavoriteShape
+  favoriteShapeWithDefault: FavoriteShapeWithDefault
+  favoriteShapeNull: FavoriteShapeNull
 }
 
 type SaveAuthorResult {

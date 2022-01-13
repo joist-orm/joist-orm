@@ -102,6 +102,10 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       const fieldType = isArray ? `[${enumType.symbol}!]!` : `${enumType.symbol}${maybeRequired(notNull)}`;
       return { ...common, fieldName, fieldType };
     });
+    const pgEnums = e.pgEnums.map(({ fieldName, enumType, notNull }) => {
+      const fieldType = `${enumType.symbol}${maybeRequired(notNull)}`;
+      return { ...common, fieldName, fieldType };
+    });
 
     const m2os = e.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
       const fieldType = `${otherEntity.name}${maybeRequired(notNull)}`;
@@ -126,7 +130,7 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName, fieldType };
     });
 
-    return [id, ...primitives, ...enums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
+    return [id, ...primitives, ...enums, ...pgEnums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
   });
 }
 
@@ -169,6 +173,9 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
     const enums = e.enums.map(({ fieldName, enumType, isArray }) => {
       return { ...common, fieldName, fieldType: isArray ? `[${enumType.symbol}!]` : enumType.symbol };
     });
+    const pgEnums = e.pgEnums.map(({ fieldName, enumType }) => {
+      return { ...common, fieldName, fieldType: enumType.symbol };
+    });
 
     const m2os = e.manyToOnes.map(({ fieldName }) => {
       return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
@@ -178,7 +185,7 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
     });
 
-    return [id, ...primitives, ...enums, ...m2os, ...polys];
+    return [id, ...primitives, ...enums, ...pgEnums, ...m2os, ...polys];
   });
 }
 

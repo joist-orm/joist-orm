@@ -11,7 +11,9 @@
     "migrate": "./run.sh ../migration-utils",
     "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
-    "codegen": "./run.sh ../codegen"
+    "codegen": "./run.sh ../codegen",
+    "docker:up": "docker-compose up -d db",
+    "docker:reset": "docker-compose exec db ./reset.sh"
   },
   "dependencies": {
     "joist-orm": "1.0.0-bump"

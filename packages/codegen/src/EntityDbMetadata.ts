@@ -342,7 +342,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
 function newPgEnumField(config: Config, entity: Entity, column: Column, table: Table): PgEnumField {
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
-  const enumName = pascalCase(column.name);
+  const enumName = pascalCase(column.type.name);
   const enumType = imp(`${enumName}@./entities`);
   const enumValues = (column.type as EnumType).values;
 

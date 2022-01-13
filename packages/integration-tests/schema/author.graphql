@@ -17,8 +17,6 @@ type Author {
   graduated: Date
   favoriteColors: [Color!]!
   favoriteShape: FavoriteShape!
-  favoriteShapeWithDefault: FavoriteShapeWithDefault
-  favoriteShapeNull: FavoriteShapeNull
 }
 
 input SaveAuthorInput {
@@ -37,8 +35,6 @@ input SaveAuthorInput {
   graduated: Date
   favoriteColors: [Color!]
   favoriteShape: FavoriteShape
-  favoriteShapeWithDefault: FavoriteShapeWithDefault
-  favoriteShapeNull: FavoriteShapeNull
 }
 
 type SaveAuthorResult {

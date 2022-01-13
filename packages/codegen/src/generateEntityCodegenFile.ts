@@ -190,6 +190,35 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       primitives.push(getter, setter, ...accessors);
     });
 
+  meta.pgEnums.forEach((e) => {
+    const { fieldName, enumType, enumValues } = e;
+    const getter = code`
+        get ${fieldName}(): ${enumType} {
+          return this.__orm.data["${fieldName}"];
+        }
+     `;
+    const setter = code`
+        set ${fieldName}(${fieldName}: ${enumType}) {
+          ${setField}(this, "${fieldName}", ${fieldName});
+        }
+      `;
+
+    const codes = new Set(enumValues);
+    const shouldPrefixAccessors = meta.pgEnums
+      .filter((other) => other !== e)
+      .some((other) => other.enumValues.some((r) => codes.has(r)));
+
+    const accessors = enumValues.map(
+      (row) => code`
+          get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row)}(): boolean {
+            return this.${fieldName} === ${enumType}.${pascalCase(row)};
+          }
+        `,
+    );
+    // Group enums as primitives
+    primitives.push(getter, setter, ...accessors);
+  });
+
   // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
@@ -271,11 +300,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     ${generatePolymorphicTypes(meta)}
-    
+
     export interface ${entityName}Opts {
       ${generateOptsFields(config, meta)}
     }
-    
+
     export interface ${entityName}IdsOpts {
       ${generateOptIdsFields(config, meta)}
     }
@@ -294,13 +323,13 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       id?: ${OrderBy};
       ${generateOrderFields(meta)}
     }
-    
+
     ${hasDefaultValues ? code`export const ${defaultValuesName} = { ${defaultValues} };` : ""}
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(meta, configName)}
-  
+
     export abstract class ${entityName}Codegen extends ${BaseEntity} {
       readonly __orm!: ${EntityOrmField} & {
         filterType: ${entityName}Filter;

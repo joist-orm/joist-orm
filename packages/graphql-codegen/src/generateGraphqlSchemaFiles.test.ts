@@ -360,6 +360,7 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
     idDbType: "int",
     primitives: [],
     enums: [],
+    pgEnums: [],
     manyToOnes: [],
     oneToManys: [],
     manyToManys: [],

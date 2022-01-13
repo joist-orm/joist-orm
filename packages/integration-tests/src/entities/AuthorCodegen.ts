@@ -45,6 +45,7 @@ import {
   Color,
   ColorDetails,
   Colors,
+  FavoriteShape,
   Image,
   ImageId,
   imageMeta,
@@ -272,6 +273,26 @@ export abstract class AuthorCodegen extends BaseEntity {
 
   get isBlue(): boolean {
     return this.favoriteColors.includes(Color.Blue);
+  }
+
+  get favoriteShape(): FavoriteShape {
+    return this.__orm.data["favoriteShape"];
+  }
+
+  set favoriteShape(favoriteShape: FavoriteShape) {
+    setField(this, "favoriteShape", favoriteShape);
+  }
+
+  get isCircle(): boolean {
+    return this.favoriteShape === FavoriteShape.Circle;
+  }
+
+  get isSquare(): boolean {
+    return this.favoriteShape === FavoriteShape.Square;
+  }
+
+  get isTriangle(): boolean {
+    return this.favoriteShape === FavoriteShape.Triangle;
   }
 
   set(opts: Partial<AuthorOpts>): void {

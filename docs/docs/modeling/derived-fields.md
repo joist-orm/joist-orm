@@ -9,9 +9,9 @@ There are two axis by which to categorize derived fields:
 
 - Synchronous vs. Asynchronous
 
-  Synchronous derived fields only rely on other fields/columns within the same entity, so do not need to load any other entities to calculate their value.
+  Synchronous derived fields only rely on other fields/columns within the same entity (i.e. an `Author`s initials only require knowing the same `Author`'s `firstName` and `lastName`), so do not need to load any other entities to calculate their value.
 
-  Async derived values do rely on fields from other entities, and so need to load references/collections before calculating their value.
+  Async derived values do rely on fields from other entities (i.e. an `Author`'s number of books requires loading the `author.books` one-to-many collection), and so need to load references/collections before calculating their value.
 
 - Persisted vs. Unpersisted
 
@@ -19,7 +19,7 @@ There are two axis by which to categorize derived fields:
 
   Unpersisted derived fields are not stored in the database, and have their value recalculated every time they're accessed.
 
-And so 4 combinations (async vs. sync `x` persisted vs. unpersisted).
+And so there are 4 combinations (async vs. sync `x` persisted vs. unpersisted), and Joist has an approach for modeling each combination.
 
 ## Synchronous, Unpersisted Fields
 

@@ -1,5 +1,5 @@
 import { BaseEntity } from "./BaseEntity";
-import { Entity, getMetadata } from "./EntityManager";
+import { Entity, EntityConstructor, getMetadata } from "./EntityManager";
 
 const tagDelimiter = ":";
 
@@ -57,21 +57,34 @@ export function assertIdsAreTagged(keys: readonly string[]): void {
 }
 
 /** Tags a potentially untagged id, while our API inputs still accept either tagged or untagged ids. */
-export function tagIfNeeded(meta: HasTagName, id: string): string {
+export function tagId(meta: HasTagName, id: string | number): string;
+export function tagId(cstr: EntityConstructor<any>, id: string | number): string;
+export function tagId(meta: HasTagName, id: string | number | null | undefined): string | undefined;
+export function tagId(cstr: EntityConstructor<any>, id: string | number | null | undefined): string | undefined;
+export function tagId(
+  metaOrCstr: HasTagName | EntityConstructor<any>,
+  id: string | number | null | undefined,
+): string | undefined {
+  if (typeof id === "number") {
+    return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;
+  }
+  if (id === null || id === undefined) {
+    return undefined;
+  }
   if (id.includes(tagDelimiter)) {
     return id;
   }
-  return `${meta.tagName}${tagDelimiter}${id}`;
-}
-
-/** Removes the tag prefixes so we can use the keys for SQL operations. */
-export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly string[] {
-  return keys.map((k) => deTagId(meta, k));
+  return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;
 }
 
 /** Adds the tag prefixes. */
-export function tagIds(meta: HasTagName, keys: readonly (string | number)[]): readonly string[] {
-  return keys.map((k) => tagIfNeeded(meta, String(k)));
+export function tagIds(meta: HasTagName, keys: readonly (string | number)[]): readonly string[];
+export function tagIds(cstr: EntityConstructor<any>, keys: readonly (string | number)[]): readonly string[];
+export function tagIds(
+  metaOrCstr: HasTagName | EntityConstructor<any>,
+  keys: readonly (string | number)[],
+): readonly string[] {
+  return keys.map((k) => tagId(metaOrCstr as any, k));
 }
 
 export function deTagId(meta: HasTagName, id: string | number): string;
@@ -83,14 +96,24 @@ export function deTagId(entityOrMeta: Entity | HasTagName, id?: string | number)
 }
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */
+export function deTagIds(meta: HasTagName, keys: readonly string[]): readonly string[] {
+  return keys.map((k) => deTagId(meta, k));
+}
+
+/** Removes the tag prefixes so we can use the keys for SQL operations. */
 export function unsafeDeTagIds(keys: readonly string[]): readonly string[] {
   return keys.map((k) => k.split(tagDelimiter)).map((t) => (t.length === 0 ? t[0] : t[1]));
 }
 
+/** Given a tagged id, returns its tag. */
 export function tagFromId(key: string): string {
   const parts = key.split(tagDelimiter);
   if (parts.length !== 2) {
     fail(`Unknown tagged id format: "${key}"`);
   }
   return parts[0];
+}
+
+function tagName(metaOrCstr: HasTagName | EntityConstructor<any>): string {
+  return typeof metaOrCstr === "function" ? getMetadata(metaOrCstr).tagName : metaOrCstr.tagName;
 }

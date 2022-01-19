@@ -23,7 +23,7 @@ import {
   Reference,
   setField,
   setOpts,
-  tagIfNeeded,
+  tagId,
   ValidationError,
   ValidationErrors,
   ValidationRuleResult,
@@ -427,7 +427,7 @@ export class EntityManager<C = {}> {
       throw new Error(`Expected ${id} to be a string`);
     }
     const meta = getMetadata(type);
-    const tagged = tagIfNeeded(meta, id);
+    const tagged = tagId(meta, id);
     const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
     if (!entity) {
       throw new Error(`${tagged} was not found`);
@@ -447,7 +447,7 @@ export class EntityManager<C = {}> {
   ): Promise<Loaded<T, H>[]>;
   async loadAll<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
     const meta = getMetadata(type);
-    const ids = _ids.map((id) => tagIfNeeded(meta, id));
+    const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
         return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
@@ -475,7 +475,7 @@ export class EntityManager<C = {}> {
   ): Promise<Loaded<T, H>[]>;
   async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
     const meta = getMetadata(type);
-    const ids = _ids.map((id) => tagIfNeeded(meta, id));
+    const ids = _ids.map((id) => tagId(meta, id));
     const entities = (
       await Promise.all(
         ids.map((id) => {
@@ -961,9 +961,10 @@ export function sameEntity(a: Entity, bMeta: EntityMetadata<any>, bCurrent: Enti
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(entityOrType: T | EntityConstructor<T>): EntityMetadata<T> {
+export function getMetadata<T extends Entity>(meta: EntityMetadata<T>): EntityMetadata<T>;
+export function getMetadata<T extends Entity>(param: T | EntityConstructor<T> | EntityMetadata<T>): EntityMetadata<T> {
   return (
-    typeof entityOrType === "function" ? (entityOrType as any).metadata : entityOrType.__orm.metadata
+    typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : param.__orm.metadata
   ) as EntityMetadata<T>;
 }
 

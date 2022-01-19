@@ -12,7 +12,7 @@ import {
   PrimitiveField,
 } from "./EntityManager";
 import { isManyToOneField, isOneToOneField, New } from "./index";
-import { tagIfNeeded } from "./keys";
+import { tagId } from "./keys";
 import { fail } from "./utils";
 
 /**
@@ -246,7 +246,7 @@ export function getTestIndex<T extends Entity>(em: EntityManager, type: EntityCo
 function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
   const meta = getMetadata(entity);
   const sameType = em.entities.filter((e) => e instanceof meta.cstr);
-  return tagIfNeeded(meta, String(sameType.indexOf(entity) + 1));
+  return tagId(meta, String(sameType.indexOf(entity) + 1));
 }
 
 function defaultValueForField(field: PrimitiveField): unknown {

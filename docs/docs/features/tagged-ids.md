@@ -65,7 +65,7 @@ Even if you're not using GraphQL, both benefits/rationale of:
 
 Are applicable to any system, so ideally you could apply the "id is a string" approach to your REST or GRPC or other APIs.
 
-That said, if you have an existing `number`-based API that you can't change, Joist provides `deTagId`, `deTagIds`, and `tagIfNeeded` methods to convert to/from tagged ids to the actual number value.
+That said, if you have an existing `number`-based API that you can't change, Joist provides `deTagId`, `deTagIds`, and `tagId` methods to convert to/from tagged ids to the actual number value.
 
 ### Running SQL Queries
 

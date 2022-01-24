@@ -991,7 +991,12 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       // Add the resulting "found" entities to the right todos to be validated
       (await followReverseHint(entities, reverseHint)).forEach((entity) => {
         const todo = getTodo(todos, entity);
-        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
+        if (
+          !todo.inserts.includes(entity) &&
+          !todo.updates.includes(entity) &&
+          !todo.validates.includes(entity) &&
+          !entity.isDeletedEntity
+        ) {
           todo.validates.push(entity);
         }
       });

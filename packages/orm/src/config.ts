@@ -29,6 +29,8 @@ export class ConfigApi<T extends Entity, C> {
       };
       // Squirrel our hint away where configureMetadata can find it
       (fn as any).hint = ruleOrHint;
+      // Keep the name for easy debugging/tracing later
+      (fn as any).ruleName = getCallerName();
       this.__data.rules.push(fn);
     }
   }
@@ -123,4 +125,20 @@ export class ConfigData<T extends Entity, C> {
   // Load-hint-ish structures that point back to instances that depend on us for derived values.
   reactiveDerivedValues: string[][] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
+}
+
+function getCallerName(): string {
+  const err = getErrorObject();
+  // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
+  const line = err.stack!.split("\n")[4];
+  const parts = line.split("/");
+  return parts[parts.length - 1].replace(")", "");
+}
+
+function getErrorObject(): Error {
+  try {
+    throw Error("");
+  } catch (err) {
+    return err as Error;
+  }
 }

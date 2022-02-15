@@ -164,8 +164,14 @@ export class EntityManager<C = {}> {
     }
   }
 
+  /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
     return [...this._entities];
+  }
+
+  /** Looks up `id` in the list of already-loaded entities. */
+  getEntity<T extends Entity>(id: IdOf<T>): T | undefined {
+    return this._entityIndex.get(id) as T | undefined;
   }
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
@@ -401,6 +407,7 @@ export class EntityManager<C = {}> {
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
+  public async load<T>(id: IdOf<T>): Promise<T>;
   public async load(id: string): Promise<Entity>;
   public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T>;
   public async load<T extends Entity, H extends LoadHint<T>>(

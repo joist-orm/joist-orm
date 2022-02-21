@@ -1,5 +1,5 @@
 import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
-import { Author, Book, Tag } from "../entities";
+import { Author, Book, newBook, newTag, Tag } from "../entities";
 import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
@@ -350,5 +350,103 @@ describe("ManyToManyCollection", () => {
     await em.flush();
 
     // We could recognize when M2M.set is called w/o a load, and issue a DELETE + INSERTs.
+  });
+
+  it("can include on a new entity", async () => {
+    // Given a tag
+    const em = newEntityManager();
+    await insertTag({ name: `t1` });
+    const tag = await em.load(Tag, "t:1");
+    resetQueryCount();
+    // And a new book
+    const book = newBook(em);
+    // When we ask the book if it has the tag
+    const includes = await book.tags.includes(tag);
+    // Then it does not
+    expect(includes).toBe(false);
+    // And we did not need to make a query
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("can include on a new other entity", async () => {
+    // Given a tag
+    const em = newEntityManager();
+    await insertTag({ name: `t1` });
+    const tag = await em.load(Tag, "t:1");
+    resetQueryCount();
+    // And a new book
+    const book = newBook(em);
+    // When we ask the tag if it has the book
+    const includes = await tag.books.includes(book);
+    // Then it does not
+    expect(includes).toBe(false);
+    // And we did not need to make a query
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("can include on existing entities", async () => {
+    // Given lots of tags and book
+    const em = newEntityManager();
+    await insertTag({ name: "t1" });
+    await insertTag({ name: "t2" });
+    await insertTag({ name: "t3" });
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    const t1 = await em.load(Tag, "t:1");
+    const book = await em.load(Book, "b:1");
+    resetQueryCount();
+    // When we ask each other if they include each other
+    const p1 = t1.books.includes(book);
+    const p2 = book.tags.includes(t1);
+    const [includes1, includes2] = await Promise.all([p1, p2]);
+    // Then they do
+    expect(includes1).toBe(true);
+    expect(includes2).toBe(true);
+    // And we used only a single query
+    expect(numberOfQueries).toEqual(1);
+    // And we did not load the other tags
+    expect(em.entities.length).toEqual(2);
+    // And if we redo a .includes
+    const includes3 = await t1.books.includes(book);
+    // Then it was cached
+    expect(includes3).toBe(true);
+    expect(numberOfQueries).toEqual(1);
+  });
+
+  it("can include just added entities on new entities", async () => {
+    // Given a new book and tag
+    const em = newEntityManager();
+    const book = newBook(em);
+    const tag = newTag(em, 1);
+    // And we've added them together in-memory
+    book.tags.add(tag);
+    // Then we can answer includes
+    const p1 = tag.books.includes(book);
+    const p2 = book.tags.includes(tag);
+    const [includes1, includes2] = await Promise.all([p1, p2]);
+    expect(includes1).toBe(true);
+    expect(includes2).toBe(true);
+    // And we did not make any db queries
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("can include just added entities on existing entities", async () => {
+    // Given an existing book and tag
+    const em = newEntityManager();
+    await insertTag({ name: "t1" });
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    resetQueryCount();
+    const book = await em.load(Book, "b:1");
+    const tag = await em.load(Tag, "t:1");
+    // And we've added them together in-memory
+    book.tags.add(tag);
+    // Then we can answer includes
+    const p1 = tag.books.includes(book);
+    const p2 = book.tags.includes(tag);
+    const [includes1, includes2] = await Promise.all([p1, p2]);
+    expect(includes1).toBe(true);
+    expect(includes2).toBe(true);
   });
 });

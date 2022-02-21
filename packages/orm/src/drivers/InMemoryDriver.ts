@@ -146,6 +146,22 @@ export class InMemoryDriver implements Driver {
     });
   }
 
+  async findManyToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
+    collection: ManyToManyCollection<T, U>,
+    keys: readonly string[],
+  ): Promise<JoinRow[]> {
+    const rows = Object.values(this.rowsOfTable(collection.joinTableName));
+    const set = new Set(keys);
+    const [column1, column2] = [collection.columnName, collection.otherColumnName];
+    return rows.filter((row) => {
+      // TODO need to tag the ids
+      const key1 = `${column1}=${row[column1]},${column2}=${row[column2]}`;
+      const key2 = `${column2}=${row[column2]},${column1}=${row[column1]}`;
+      return set.has(key1) || set.has(key2);
+    });
+  }
+
   async loadOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
@@ -153,6 +169,20 @@ export class InMemoryDriver implements Driver {
   ): Promise<unknown[]> {
     const rows = Object.values(this.rowsOfTable(collection.otherMeta.tableName));
     return rows.filter((row) => untaggedIds.includes(String(row[collection.otherColumnName])));
+  }
+
+  async findOneToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
+    collection: OneToManyCollection<T, U>,
+    keys: readonly string[],
+  ): Promise<JoinRow[]> {
+    const rows = Object.values(this.rowsOfTable(collection.meta.tableName));
+    const set = new Set(keys);
+    return rows.filter((row) => {
+      // TODO need to tag the ids
+      const key = `id=${row.id},${collection.otherColumnName}=${row[collection.otherColumnName]}`;
+      return set.has(key);
+    });
   }
 
   async loadOneToOne<T extends Entity, U extends Entity>(

@@ -104,6 +104,10 @@ export class CustomCollection<T extends Entity, U extends Entity>
     }
   }
 
+  async includes(other: U): Promise<boolean> {
+    throw new Error("Not implemented");
+  }
+
   add(other: U): void {
     ensureNewOrLoaded(this);
     const { add } = this.opts;

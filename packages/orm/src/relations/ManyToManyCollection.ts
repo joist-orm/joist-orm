@@ -9,6 +9,7 @@ import {
   IdOf,
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
+import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { getOrSet, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -76,7 +77,35 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    return (await this.load()).find((u) => u.id === id);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    if (this.loaded !== undefined) {
+      return this.loaded.find((u) => u.id === id);
+    } else {
+      const added = this.addedBeforeLoaded.find((u) => u.id === id);
+      if (added) {
+        return added;
+      }
+      // Make a cacheable tuple to look up this specific m2m row
+      const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
+      const includes = await manyToManyFindDataLoader(getEm(this.entity), this).load(key);
+      return includes ? getEm(this.entity).load(id) : undefined;
+    }
+  }
+
+  async includes(other: U): Promise<boolean> {
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    if (this.loaded !== undefined) {
+      return this.loaded.includes(other);
+    } else {
+      if (this.addedBeforeLoaded.includes(other)) {
+        return true;
+      } else if (other.isNewEntity) {
+        return false;
+      }
+      // Make a cacheable tuple to look up this specific m2m row
+      const key = `${this.columnName}=${this.entity.idOrFail},${this.otherColumnName}=${other.idOrFail}`;
+      return manyToManyFindDataLoader(getEm(this.entity), this).load(key);
+    }
   }
 
   add(other: U, percolated = false): void {
@@ -88,10 +117,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       }
       this.loaded.push(other);
     } else {
-      if (this.addedBeforeLoaded.includes(other)) {
-        return;
+      remove(this.removedBeforeLoaded, other);
+      if (!this.addedBeforeLoaded.includes(other)) {
+        this.addedBeforeLoaded.push(other);
       }
-      this.addedBeforeLoaded.push(other);
     }
 
     if (!percolated) {
@@ -132,7 +161,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       remove(this.loaded, other);
     } else {
       remove(this.addedBeforeLoaded, other);
-      this.removedBeforeLoaded.push(other);
+      if (!this.removedBeforeLoaded.includes(other)) {
+        this.removedBeforeLoaded.push(other);
+      }
     }
   }
 

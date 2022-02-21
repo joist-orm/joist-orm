@@ -1,4 +1,5 @@
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
+import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
   Collection,
   currentlyInstantiatingEntity,
@@ -65,7 +66,22 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    return (await this.load()).find((u) => u.id === id);
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    if (this.loaded !== undefined) {
+      return this.loaded.find((other) => other.id === id);
+    } else {
+      const added = this.addedBeforeLoaded.find((u) => u.id === id);
+      if (added) {
+        return added;
+      }
+      // Make a cacheable tuple to look up this specific o2m row
+      const key = `id=${id},${this.otherColumnName}=${this.entity.idOrFail}`;
+      return oneToManyFindDataLoader(getEm(this.entity), this).load(key);
+    }
+  }
+
+  async includes(other: U): Promise<boolean> {
+    return this.getOtherRelation(other).current() === this.entity;
   }
 
   get isLoaded(): boolean {
@@ -212,6 +228,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   current(opts?: { withDeleted?: boolean }): U[] {
     return this.filterDeleted(this.loaded || this.addedBeforeLoaded, opts);
+  }
+
+  public get meta(): EntityMetadata<T> {
+    return getMetadata(this.entity);
   }
 
   public toString(): string {

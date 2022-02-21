@@ -8,7 +8,11 @@ import { Relation } from "./Relation";
 export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
   load(opts?: { withDeleted: boolean }): Promise<ReadonlyArray<U>>;
 
+  /** Looks up the specific `id` without fully loading the collection. */
   find(id: IdOf<U>): Promise<U | undefined>;
+
+  /** Looks up the specific `other` without fully loading the collection. */
+  includes(other: U): Promise<boolean>;
 
   add(other: U): void;
 

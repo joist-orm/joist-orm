@@ -4,13 +4,18 @@ import { getEm, keyToString, ManyToManyCollection } from "../index";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { getOrSet } from "../utils";
 
+/** Batches m2m.load calls. */
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: ManyToManyCollection<T, U>,
 ) {
-  return getOrSet(em.loadLoaders, collection.joinTableName, () => {
-    return new DataLoader<string, Entity[]>((keys) => load(collection, keys));
-  });
+  // Note that we cache the dataloader on the joinTableName, and not
+  // which side of the relation the `collection` is coming from, so
+  // the `load` impl will have to handle keys that come from either
+  // side of the relation.
+  return getOrSet(em.loadLoaders, collection.joinTableName, () =>
+    new DataLoader<string, Entity[]>((keys) => load(collection, keys))
+  );
 }
 
 /**

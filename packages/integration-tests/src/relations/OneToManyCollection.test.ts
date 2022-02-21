@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
-import { Author, Book, BookOpts, Publisher } from "../entities";
-import { knex, newEntityManager } from "../setupDbTests";
+import { Author, Book, BookOpts, newAuthor, newBook, Publisher } from "../entities";
+import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -236,5 +236,84 @@ describe("OneToManyCollection", () => {
 
     // Then we still only have one entry
     expect(authors.length).toEqual(1);
+  });
+
+  it("can include on a new entity", async () => {
+    // Given a book
+    const em = newEntityManager();
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    const book = await em.load(Book, "b:1");
+    resetQueryCount();
+    // And a new author
+    const author = newAuthor(em);
+    // When we ask the author if it has the book
+    const includes = await author.books.includes(book);
+    // Then it does not
+    expect(includes).toEqual(false);
+    // And we did not need to make a query
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("can find on a new entity", async () => {
+    // Given a book
+    const em = newEntityManager();
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    resetQueryCount();
+    // And a new author
+    const author = newAuthor(em);
+    // When we ask the author if it has the book
+    const book = await author.books.find("b:1");
+    // Then it does not
+    expect(book).toBeUndefined();
+    // And we did not need to make a query
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("can find on existing entities", async () => {
+    // Given lots an author and many books
+    const em = newEntityManager();
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertBook({ author_id: 1, title: "b2" });
+    await insertBook({ author_id: 1, title: "b3" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ author_id: 2, title: "b4" });
+    const a1 = await em.load(Author, "a:1");
+    const a2 = await em.load(Author, "a:2");
+    resetQueryCount();
+    // When we ask each author if it has a specific book
+    const [p1, p2] = [a1.books.find("b:1"), a2.books.find("b:4")];
+    const [b1, b4] = await Promise.all([p1, p2]);
+    // Then they do
+    expect(b1).toBeInstanceOf(Book);
+    expect(b4).toBeInstanceOf(Book);
+    // And we used only a single query
+    expect(numberOfQueries).toEqual(1);
+    // And we did not load the other books
+    expect(em.entities.length).toEqual(4);
+    // And if we redo the find
+    const b1_2 = await a1.books.find("b:1");
+    // Then it was cached
+    expect(b1_2).toEqual(b1);
+    expect(numberOfQueries).toEqual(1);
+  });
+
+  it("can find just added entities on new entities", async () => {
+    // Given an existing book
+    const em = newEntityManager();
+    const book = newBook(em);
+    await em.flush();
+    resetQueryCount();
+    // When we make a new author
+    const author = newAuthor(em);
+    // And add the book to it
+    author.books.add(book);
+    // Then we can answer find
+    const book_1 = await author.books.find(book.idOrFail);
+    expect(book_1).toEqual(book);
+    // And we did not make any db queries
+    expect(numberOfQueries).toEqual(0);
   });
 });

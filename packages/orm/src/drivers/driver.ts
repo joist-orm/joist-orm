@@ -14,15 +14,32 @@ export interface Driver {
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 
+  /** Loads a given m2m relation for potentially multiple entities. */
   loadManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: ManyToManyCollection<T, U>,
+    // encoded tuples of `foo_id=2`, `bar_id=3`
+    keys: readonly string[],
+  ): Promise<JoinRow[]>;
+
+  /** Just finds presence in a m2m w/o loading the full relation. */
+  findManyToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
+    collection: ManyToManyCollection<T, U>,
+    // encoded tuples of `foo_id=2,bar_id=3`, `bar_id=4,foo_id=5`
     keys: readonly string[],
   ): Promise<JoinRow[]>;
 
   loadOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
+    untaggedIds: readonly string[],
+  ): Promise<unknown[]>;
+
+  findOneToMany<T extends Entity, U extends Entity>(
+    em: EntityManager,
+    collection: OneToManyCollection<T, U>,
+    // encoded tuples of `id=2,bar_id=3`
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 

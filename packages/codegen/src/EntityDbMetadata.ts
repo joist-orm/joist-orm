@@ -7,6 +7,7 @@ import {
   isAsyncDerived,
   isDerived,
   isFieldIgnored,
+  isLargeCollection,
   isProtected,
   ormMaintainedFields,
   RelationConfig,
@@ -56,6 +57,7 @@ interface Field {
   fieldName: string;
   ignore?: boolean;
 }
+
 export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object";
 
 export type PrimitiveField = Field & {
@@ -108,6 +110,7 @@ export type OneToManyField = Field & {
   otherFieldName: string;
   otherColumnName: string;
   otherColumnNotNull: boolean;
+  isLargeCollection: boolean;
 };
 
 /** I.e. a `Author.image` reference when `image.author_id` is unique. */
@@ -125,6 +128,7 @@ export type ManyToManyField = Field & {
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
+  isLargeCollection: boolean;
 };
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
@@ -150,8 +154,10 @@ export class EntityDbMetadata {
   pgEnums: PgEnumField[];
   manyToOnes: ManyToOneField[];
   oneToManys: OneToManyField[];
+  largeOneToManys: OneToManyField[];
   oneToOnes: OneToOneField[];
   manyToManys: ManyToManyField[];
+  largeManyToManys: ManyToManyField[];
   polymorphics: PolymorphicField[];
   tableName: string;
   tagName: string;
@@ -165,6 +171,7 @@ export class EntityDbMetadata {
       .filter((c) => !isEnumArray(c) && !isPgEnum(c))
       .map((column) => newPrimitive(config, this.entity, column, table))
       .filter((f) => !f.ignore);
+
     this.enums = [
       ...table.m2oRelations
         .filter((r) => isEnumTable(r.targetTable))
@@ -181,19 +188,25 @@ export class EntityDbMetadata {
         .map((column) => newPgEnumField(config, this.entity, column, table))
         .filter((f) => !f.ignore),
     ];
+
     this.manyToOnes = table.m2oRelations
       .filter((r) => !isEnumTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isComponentOfPolymorphicRelation(config, r))
       .map((r) => newManyToOneField(config, this.entity, r))
       .filter((f) => !f.ignore);
-    this.oneToManys = table.o2mRelations
+
+    // We split these into regular/large...
+    const allOneToManys = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(config, this.entity, r))
       .filter((f) => !f.ignore);
+    this.oneToManys = allOneToManys.filter((f) => !f.isLargeCollection);
+    this.largeOneToManys = allOneToManys.filter((f) => f.isLargeCollection);
+
     this.oneToOnes = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(r.targetTable))
@@ -201,7 +214,9 @@ export class EntityDbMetadata {
       .filter((r) => isOneToOneRelation(r))
       .map((r) => newOneToOne(config, this.entity, r))
       .filter((f) => !f.ignore);
-    this.manyToManys = table.m2mRelations
+
+    // We split these into regular/large
+    const allManyToManys = table.m2mRelations
       // pg-structure is really loose on what it considers a m2m relationship, i.e. any entity
       // that has a foreign key to us, and a foreign key to something else, is automatically
       // considered as a join table/m2m between "us" and "something else". Filter these out
@@ -210,6 +225,8 @@ export class EntityDbMetadata {
       .filter((r) => !isMultiColumnForeignKey(r))
       .map((r) => newManyToManyField(config, this.entity, r))
       .filter((f) => !f.ignore);
+    this.manyToManys = allManyToManys.filter((f) => !f.isLargeCollection);
+    this.largeManyToManys = allManyToManys.filter((f) => f.isLargeCollection);
 
     this.polymorphics = polymorphicRelations(config, table).map((rc) =>
       newPolymorphicField(config, table, this.entity, rc),
@@ -344,14 +361,12 @@ function newPgEnumField(config: Config, entity: Entity, column: Column, table: T
   const columnName = column.name;
   const enumName = pascalCase(column.type.name);
   const enumType = imp(`${enumName}@./entities`);
-  const enumValues = (column.type as EnumType).values;
-
   return {
     fieldName,
     columnName,
     enumType,
     enumName,
-    enumValues,
+    enumValues: (column.type as EnumType).values,
     notNull: column.notNull,
     columnDefault: column.default,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
@@ -380,10 +395,16 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const { singularName, fieldName } = collectionName(config, entity, otherEntity, r);
   const otherFieldName = referenceName(config, otherEntity, r);
-  const otherColumnName = column.name;
-  const otherColumnNotNull = column.notNull;
-  const ignore = isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName);
-  return { fieldName, singularName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, ignore };
+  return {
+    fieldName,
+    singularName,
+    otherEntity,
+    otherFieldName,
+    otherColumnName: column.name,
+    otherColumnNotNull: column.notNull,
+    ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
+    isLargeCollection: isLargeCollection(config, entity, fieldName),
+  };
 }
 
 function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneField {
@@ -401,7 +422,6 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
 
 function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): ManyToManyField {
   const { foreignKey, targetForeignKey, targetTable } = r;
-  const joinTableName = r.joinTable.name;
   const otherEntity = makeEntity(tableToEntityName(config, targetTable));
   const fieldName = relationName(
     config,
@@ -413,11 +433,17 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     otherEntity,
     camelCase(plural(foreignKey.columns[0].name.replace("_id", ""))),
   );
-  const columnName = foreignKey.columns[0].name;
-  const otherColumnName = targetForeignKey.columns[0].name;
-  const singularName = singular(fieldName);
-  const ignore = isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName);
-  return { joinTableName, fieldName, singularName, columnName, otherEntity, otherFieldName, otherColumnName, ignore };
+  return {
+    joinTableName: r.joinTable.name,
+    fieldName,
+    singularName: singular(fieldName),
+    columnName: foreignKey.columns[0].name,
+    otherEntity,
+    otherFieldName,
+    otherColumnName: targetForeignKey.columns[0].name,
+    ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
+    isLargeCollection: isLargeCollection(config, entity, fieldName),
+  };
 }
 
 function newPolymorphicField(config: Config, table: Table, entity: Entity, rc: RelationConfig) {

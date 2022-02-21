@@ -17,6 +17,7 @@ type Author {
   graduated: Date
   favoriteColors: [Color!]!
   favoriteShape: FavoriteShape!
+  tags: [Tag!]!
 }
 
 input SaveAuthorInput {

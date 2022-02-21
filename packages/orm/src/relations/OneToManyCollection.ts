@@ -10,6 +10,7 @@ import {
   getMetadata,
   IdOf,
   maybeResolveReferenceToId,
+  sameEntity,
 } from "../index";
 import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -81,7 +82,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   async includes(other: U): Promise<boolean> {
-    return this.getOtherRelation(other).current() === this.entity;
+    return sameEntity(this.entity, this.meta, this.getOtherRelation(other).current());
   }
 
   get isLoaded(): boolean {

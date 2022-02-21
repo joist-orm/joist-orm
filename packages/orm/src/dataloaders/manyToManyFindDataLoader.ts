@@ -1,12 +1,12 @@
 import DataLoader from "dataloader";
 import { Entity, EntityManager } from "../EntityManager";
-import { getEm, ManyToManyCollection, tagId } from "../index";
+import { getEm, ManyToManyCollection, ManyToManyLargeCollection, tagId } from "../index";
 import { getOrSet } from "../utils";
 
 /** Batches m2m.find/include calls (i.e. that don't fully load the m2m relation). */
 export function manyToManyFindDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
-  collection: ManyToManyCollection<T, U>,
+  collection: ManyToManyCollection<T, U> | ManyToManyLargeCollection<T, U>,
 ): DataLoader<string, boolean> {
   return getOrSet(
     em.loadLoaders,
@@ -16,7 +16,7 @@ export function manyToManyFindDataLoader<T extends Entity, U extends Entity>(
 }
 
 async function load<T extends Entity, U extends Entity>(
-  collection: ManyToManyCollection<T, U>,
+  collection: ManyToManyCollection<T, U> | ManyToManyLargeCollection<T, U>,
   keys: ReadonlyArray<string>,
 ): Promise<boolean[]> {
   const { joinTableName } = collection;

@@ -389,28 +389,32 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     await insertTag({ name: "t1" });
     await insertTag({ name: "t2" });
-    await insertTag({ name: "t3" });
     await insertAuthor({ first_name: "a1" });
     await insertBook({ author_id: 1, title: "b1" });
     await insertBookToTag({ book_id: 1, tag_id: 1 });
     const t1 = await em.load(Tag, "t:1");
+    const t2 = await em.load(Tag, "t:2");
     const book = await em.load(Book, "b:1");
     resetQueryCount();
     // When we ask each other if they include each other
     const p1 = t1.books.includes(book);
-    const p2 = book.tags.includes(t1);
-    const [includes1, includes2] = await Promise.all([p1, p2]);
+    const p2 = t2.books.includes(book);
+    const p3 = book.tags.includes(t1);
+    const p4 = book.tags.includes(t2);
+    const [includes1, includes2, includes3, includes4] = await Promise.all([p1, p2, p3, p4]);
     // Then they do
     expect(includes1).toBe(true);
-    expect(includes2).toBe(true);
+    expect(includes2).toBe(false);
+    expect(includes3).toBe(true);
+    expect(includes4).toBe(false);
     // And we used only a single query
     expect(numberOfQueries).toEqual(1);
     // And we did not load the other tags
-    expect(em.entities.length).toEqual(2);
+    expect(em.entities.length).toEqual(3);
     // And if we redo a .includes
-    const includes3 = await t1.books.includes(book);
+    const includes1_2 = await t1.books.includes(book);
     // Then it was cached
-    expect(includes3).toBe(true);
+    expect(includes1_2).toBe(true);
     expect(numberOfQueries).toEqual(1);
   });
 

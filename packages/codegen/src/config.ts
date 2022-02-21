@@ -13,6 +13,7 @@ export interface FieldConfig {
 export interface RelationConfig {
   name?: string;
   polymorphic?: "notNull" | true;
+  large?: true;
 }
 
 export interface EntityConfig {
@@ -56,6 +57,10 @@ export function superstructConfig(config: Config, entity: Entity, fieldName: str
   return config.entities[entity.name]?.fields?.[fieldName]?.superstruct;
 }
 
+export function isLargeCollection(config: Config, entity: Entity, fieldName: string): boolean {
+  return config.entities[entity.name]?.relations?.[fieldName]?.large === true;
+}
+
 export function isFieldIgnored(
   config: Config,
   entity: Entity,
@@ -64,7 +69,6 @@ export function isFieldIgnored(
   hasDefault: boolean = false,
 ): boolean {
   const ignore = config.entities[entity.name]?.fields?.[fieldName]?.ignore === true;
-
   if (ignore && notNull && !hasDefault) {
     fail(
       `notNull field ${entity.name}.${fieldName} cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.`,

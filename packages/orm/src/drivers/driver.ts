@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import { ManyToManyLargeCollection, OneToManyLargeCollection } from "src/relations";
 import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../EntityManager";
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
@@ -25,7 +26,7 @@ export interface Driver {
   /** Just finds presence in a m2m w/o loading the full relation. */
   findManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
+    collection: ManyToManyCollection<T, U> | ManyToManyLargeCollection<T, U>,
     // encoded tuples of `foo_id=2,bar_id=3`, `bar_id=4,foo_id=5`
     keys: readonly string[],
   ): Promise<JoinRow[]>;
@@ -38,7 +39,7 @@ export interface Driver {
 
   findOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
-    collection: OneToManyCollection<T, U>,
+    collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
     // encoded tuples of `id=2,bar_id=3`
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;

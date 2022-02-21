@@ -29,7 +29,7 @@
     },
     "Image": { "tag": "i" },
     "Publisher": { "tag": "p" },
-    "Tag": { "tag": "t" }
+    "Tag": { "relations": { "authors": { "large": true }, "publishers": { "large": true } }, "tag": "t" }
   },
   "entitiesDirectory": "./src/entities"
 }

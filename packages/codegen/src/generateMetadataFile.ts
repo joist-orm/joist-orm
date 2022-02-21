@@ -114,6 +114,21 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
     `;
   });
 
+  dbMetadata.largeOneToManys.forEach((m2o) => {
+    const { fieldName, singularName, otherEntity, otherFieldName } = m2o;
+    fields[fieldName] = code`
+      {
+        kind: "lo2m",
+        fieldName: "${fieldName}",
+        fieldIdName: "${singularName}Ids",
+        required: false,
+        otherMetadata: () => ${otherEntity.metaName},
+        otherFieldName: "${otherFieldName}",
+        serde: undefined,
+      }
+    `;
+  });
+
   dbMetadata.manyToManys.forEach((m2o) => {
     const { fieldName, singularName, otherEntity, otherFieldName } = m2o;
     fields[fieldName] = code`

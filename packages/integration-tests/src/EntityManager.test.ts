@@ -6,8 +6,20 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
-import { EntityConstructor, EntityManager, Loaded, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Color, Image, ImageType, newBook, Publisher, PublisherSize, Tag } from "./entities";
+import { EntityConstructor, EntityManager, Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import {
+  Author,
+  authorMeta,
+  Book,
+  Color,
+  Image,
+  ImageType,
+  newAuthor,
+  newBook,
+  Publisher,
+  PublisherSize,
+  Tag,
+} from "./entities";
 import { knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1275,6 +1287,43 @@ describe("EntityManager", () => {
     await knex("authors").update({ updated_at: "2050-01-01" });
     // When we try to save our changes
     await expect(em.flush()).rejects.toThrow("Oplock failure for a:1");
+  });
+
+  describe("sameEntity", () => {
+    it("handles new entities", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      const a2 = newAuthor(em);
+      expect(sameEntity(a1, authorMeta, a1)).toEqual(true);
+      expect(sameEntity(a1, authorMeta, a2)).toEqual(false);
+      expect(sameEntity(a1, authorMeta, undefined)).toEqual(false);
+      expect(sameEntity(undefined, authorMeta, a1)).toEqual(false);
+    });
+
+    it("handles mixed new/existing entities", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      await em.flush();
+      const a2 = newAuthor(em);
+      expect(sameEntity(a1, authorMeta, a1)).toEqual(true);
+      expect(sameEntity(a1, authorMeta, a2)).toEqual(false);
+      expect(sameEntity(a2, authorMeta, a1)).toEqual(false);
+    });
+
+    it("handles existing entities", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+      const a2 = newAuthor(em);
+      await em.flush();
+      expect(sameEntity(a1, authorMeta, a1)).toEqual(true);
+      expect(sameEntity(a1, authorMeta, a2)).toEqual(false);
+      expect(sameEntity(a1, authorMeta, undefined)).toEqual(false);
+      expect(sameEntity(undefined, authorMeta, a1)).toEqual(false);
+    });
+
+    it("handles both undefined", async () => {
+      expect(sameEntity(undefined, authorMeta, undefined)).toEqual(true);
+    });
   });
 });
 

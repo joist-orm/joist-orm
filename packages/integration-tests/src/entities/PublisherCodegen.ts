@@ -3,16 +3,22 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
   EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
+  FilterOf,
   Flavor,
   getEm,
+  GraphQLFilterOf,
   hasMany,
+  hasOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
@@ -43,6 +49,10 @@ import {
   PublisherType,
   PublisherTypeDetails,
   PublisherTypes,
+  Tag,
+  TagId,
+  tagMeta,
+  TagOrder,
 } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
@@ -54,12 +64,14 @@ export interface PublisherOpts {
   hugeNumber?: number | null;
   size?: PublisherSize | null;
   type?: PublisherType | null;
+  tag?: Tag | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
   images?: Image[];
 }
 
 export interface PublisherIdsOpts {
+  tagId?: TagId | null;
   authorIds?: AuthorId[] | null;
   bookAdvanceIds?: BookAdvanceId[] | null;
   imageIds?: ImageId[] | null;
@@ -75,6 +87,7 @@ export interface PublisherFilter {
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null | undefined>;
   type?: ValueFilter<PublisherType, null | undefined>;
+  tag?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface PublisherGraphQLFilter {
@@ -87,6 +100,7 @@ export interface PublisherGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: EnumGraphQLFilter<PublisherSize>;
   type?: EnumGraphQLFilter<PublisherType>;
+  tag?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>>;
 }
 
 export interface PublisherOrder {
@@ -99,6 +113,7 @@ export interface PublisherOrder {
   updatedAt?: OrderBy;
   size?: OrderBy;
   type?: OrderBy;
+  tag?: TagOrder;
 }
 
 export const publisherDefaultValues = { type: PublisherType.Small };
@@ -129,6 +144,8 @@ export abstract class PublisherCodegen extends BaseEntity {
   );
 
   readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
+
+  readonly tag: ManyToOneReference<Publisher, Tag, undefined> = hasOne(tagMeta, "tag", "publishers");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta, publisherDefaultValues, opts);

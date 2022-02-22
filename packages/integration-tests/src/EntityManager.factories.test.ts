@@ -221,4 +221,25 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newAuthor(em, { image: {} });
   });
+
+  it("should not reuse existing entities for o2os", async () => {
+    const em = newEntityManager();
+    // Given an existing image
+    const i = newImage(em);
+    // When we create an entity that o2os to the image
+    const a = newAuthor(em);
+    // Then we don't use the existing image
+    expect(a.image.get).toBeUndefined();
+  });
+
+  it("can reuse existing entities as m2o side of a o2o", async () => {
+    const em = newEntityManager();
+    // Given an existing author
+    const a = newAuthor(em);
+    expect(a.image.get).toBeUndefined();
+    // When we create an entity that has a m2o to author
+    const i = newImage(em);
+    // Then the m2o reused the existing entity
+    expect(i.author.get).toEqual(a);
+  });
 });

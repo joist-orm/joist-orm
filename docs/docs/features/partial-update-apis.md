@@ -194,6 +194,12 @@ Technically, Joist currently supports a 4th `{ op: "incremental" }` keyword that
 
 :::
 
+:::info
+
+If you're working in React, the [form-state](https://github.com/homebound-team/form-state/) library has built-in knowledge of Joist's `op` keyword/incremental collection semantics and makes it easy to craft optimized/only-what-changed payloads with a single `form.changedValue` call.
+
+:::
+
 ## Legacy Incremental Collection Updates
 
 Joist's initial version of incremental updates used separate `delete` and `remove` keys instead of `op`:

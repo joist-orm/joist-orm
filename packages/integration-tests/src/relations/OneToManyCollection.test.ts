@@ -239,7 +239,7 @@ describe("OneToManyCollection", () => {
   });
 
   it("can include on a new entity", async () => {
-    // Given a book
+    // Given an existing book
     const em = newEntityManager();
     await insertAuthor({ first_name: "a1" });
     await insertBook({ author_id: 1, title: "b1" });
@@ -252,6 +252,27 @@ describe("OneToManyCollection", () => {
     // Then it does not
     expect(includes).toEqual(false);
     // And we did not need to make a query
+    expect(numberOfQueries).toEqual(0);
+  });
+
+  it("can include on an existing entity", async () => {
+    const em = newEntityManager();
+    // Given two existing authors
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    // And one existing book
+    await insertBook({ author_id: 1, title: "b1" });
+    const [a1, a2] = await em.loadAll(Author, ["a:1", "a:2"]);
+    const book = await em.load(Book, "b:1");
+    resetQueryCount();
+    // When we ask authors if they have the book
+    const p1 = a1.books.includes(book);
+    const p2 = a2.books.includes(book);
+    const [i1, i2] = await Promise.all([p1, p2]);
+    // Then the 1st does, the 2nd does not
+    expect(i1).toEqual(true);
+    expect(i2).toEqual(false);
+    // And we didn't make any queries
     expect(numberOfQueries).toEqual(0);
   });
 
@@ -284,10 +305,11 @@ describe("OneToManyCollection", () => {
     const a2 = await em.load(Author, "a:2");
     resetQueryCount();
     // When we ask each author if it has a specific book
-    const [p1, p2] = [a1.books.find("b:1"), a2.books.find("b:4")];
-    const [b1, b4] = await Promise.all([p1, p2]);
+    const [p1, p2, p3] = [a1.books.find("b:1"), a1.books.find("b:4"), a2.books.find("b:4")];
+    const [b1, bNone, b4] = await Promise.all([p1, p2, p3]);
     // Then they do
     expect(b1).toBeInstanceOf(Book);
+    expect(bNone).toBeUndefined();
     expect(b4).toBeInstanceOf(Book);
     // And we used only a single query
     expect(numberOfQueries).toEqual(1);

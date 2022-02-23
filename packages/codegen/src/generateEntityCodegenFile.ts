@@ -20,12 +20,15 @@ import {
   Flavor,
   getEm,
   GraphQLFilterOf,
+  hasLargeMany,
+  hasLargeManyToMany,
   hasMany,
   hasManyToMany,
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
   IdOf,
+  LargeCollection,
   Lens,
   Loaded,
   LoadHint,
@@ -248,6 +251,19 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     `;
   });
 
+  // Add large OneToMany
+  const lo2m = meta.largeOneToManys.map((o2m) => {
+    const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
+    return code`
+      readonly ${fieldName}: ${LargeCollection}<${entity.type}, ${otherEntity.type}> = ${hasLargeMany}(
+        ${otherEntity.metaType},
+        "${fieldName}",
+        "${otherFieldName}",
+        "${otherColumnName}"
+      );
+    `;
+  });
+
   // Add OneToOne
   const o2o = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
@@ -267,6 +283,21 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
       readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasManyToMany}(
+        "${joinTableName}",
+        "${fieldName}",
+        "${columnName}",
+        ${otherEntity.metaType},
+        "${otherFieldName}",
+        "${otherColumnName}",
+      );
+    `;
+  });
+
+  // Add large ManyToMany
+  const lm2m = meta.largeManyToManys.map((m2m) => {
+    const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
+    return code`
+      readonly ${fieldName}: ${LargeCollection}<${entity.type}, ${otherEntity.type}> = ${hasLargeManyToMany}(
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -341,7 +372,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       };
-      ${[o2m, m2o, o2o, m2m, polymorphic]}
+      ${[o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         super(em, ${metadata}, ${hasDefaultValues ? `${defaultValuesName}` : "{}"}, opts);

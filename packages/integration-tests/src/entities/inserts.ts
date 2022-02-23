@@ -36,6 +36,7 @@ export async function insertPublisher(row: {
   latitude?: string | number;
   huge_number?: string | number;
   size_id?: number;
+  tag_id?: number;
 }) {
   await knex.insert(row).into("publishers");
 }
@@ -46,6 +47,10 @@ export async function insertTag(row: { id?: number; name: string }) {
 
 export async function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
   await knex.insert(row).into("books_to_tags");
+}
+
+export async function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
+  await knex.insert(row).into("authors_to_tags");
 }
 
 export async function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {

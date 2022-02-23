@@ -857,6 +857,7 @@ export type Field =
   | PrimitiveField
   | EnumField
   | OneToManyField
+  | LargeOneToManyField
   | ManyToOneField
   | ManyToManyField
   | OneToOneField
@@ -895,6 +896,16 @@ export type EnumField = {
 
 export type OneToManyField = {
   kind: "o2m";
+  fieldName: string;
+  fieldIdName: string;
+  required: boolean;
+  otherMetadata: () => EntityMetadata<any>;
+  otherFieldName: string;
+  serde: undefined;
+};
+
+export type LargeOneToManyField = {
+  kind: "lo2m";
   fieldName: string;
   fieldIdName: string;
   required: boolean;
@@ -957,12 +968,13 @@ export function isKey(k: any): k is string {
 }
 
 /** Compares `a` to `b`, where `b` might be an id. B/c ids can overlap, we need to know `b`'s metadata type. */
-export function sameEntity(a: Entity, bMeta: EntityMetadata<any>, bCurrent: Entity | string | undefined): boolean {
-  if (a === undefined || bCurrent === undefined) {
-    return false;
+export function sameEntity(a: Entity | undefined, meta: EntityMetadata<any>, b: Entity | string | undefined): boolean {
+  if (a === undefined || b === undefined) {
+    return a === undefined && b === undefined;
   }
   return (
-    a === bCurrent || (getMetadata(a) === bMeta && maybeResolveReferenceToId(a) === maybeResolveReferenceToId(bCurrent))
+    a === b ||
+    (!a.isNewEntity && getMetadata(a) === meta && maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
   );
 }
 

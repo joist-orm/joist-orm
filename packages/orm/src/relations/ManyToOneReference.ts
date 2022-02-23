@@ -1,11 +1,13 @@
-import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf, isEntity } from "../EntityManager";
+import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf, isEntity, sameEntity } from "../EntityManager";
 import {
   deTagIds,
   ensureNotDeleted,
   fail,
   getEm,
   maybeResolveReferenceToId,
+  OneToManyLargeCollection,
   OneToOneReference,
+  OneToOneReferenceImpl,
   Reference,
   setField,
 } from "../index";
@@ -197,8 +199,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       const o2m = this.getOtherRelation(current);
       if (o2m instanceof OneToManyCollection) {
         o2m.remove(this.entity, { requireLoaded: false });
-      } else {
+      } else if (o2m instanceof OneToManyLargeCollection) {
+        o2m.remove(this.entity);
+      } else if (o2m instanceof OneToOneReferenceImpl) {
         o2m.set(undefined as any);
+      } else {
+        throw new Error(`Unhandled ${o2m}`);
       }
     }
     setField(this.entity, this.fieldName, undefined);
@@ -208,9 +214,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | N): void {
-    // If other is new (i.e. has no id), we only noop/early exit if it matches our loaded reference.
-    // Otherwise, noop/early exit based on id comparison (b/c we may not be loaded yet).
-    if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
+    if (sameEntity(other, this.otherMeta, this.current())) {
       return;
     }
     ensureNotDeleted(this.entity, { ignore: "pending" });
@@ -230,6 +234,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       const prevRelation = this.getOtherRelation(other);
       if (prevRelation instanceof OneToManyCollection) {
         prevRelation.removeIfLoaded(this.entity);
+      } else if (prevRelation instanceof OneToManyLargeCollection) {
+        prevRelation.remove(this.entity);
       } else {
         prevRelation.set(undefined as any);
       }
@@ -240,6 +246,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (other) {
       const newRelation = this.getOtherRelation(other);
       if (newRelation instanceof OneToManyCollection) {
+        newRelation.add(this.entity);
+      } else if (newRelation instanceof OneToManyLargeCollection) {
         newRelation.add(this.entity);
       } else {
         newRelation.set(this.entity);
@@ -265,7 +273,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
-  private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<U, T> {
+  private getOtherRelation(
+    other: U,
+  ): OneToManyCollection<U, T> | OneToOneReference<U, T> | OneToManyLargeCollection<U, T> {
     return (other as U)[this.otherFieldName] as any;
   }
 

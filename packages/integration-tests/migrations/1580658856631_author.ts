@@ -24,6 +24,10 @@ export function up(b: MigrationBuilder): void {
     ["BIG", "Big"],
   ]);
 
+  createEntityTable(b, "tags", {
+    name: { type: "varchar(255)", notNull: true },
+  });
+
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
     size_id: { type: "integer", references: "publisher_size", notNull: false },
@@ -31,6 +35,8 @@ export function up(b: MigrationBuilder): void {
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },
+    // for testing large collections
+    tag_id: foreignKey("tags", { notNull: false }),
   });
 
   createEnumTable(b, "color", [
@@ -39,6 +45,7 @@ export function up(b: MigrationBuilder): void {
     ["BLUE", "Blue"],
   ]);
 
+  // Testing native pg enums
   b.createType("favorite_shape", ["circle", "square", "triangle"]);
 
   createEntityTable(b, "authors", {
@@ -107,12 +114,11 @@ export function up(b: MigrationBuilder): void {
     is_public: { type: "boolean", notNull: true },
   });
 
-  createEntityTable(b, "tags", {
-    name: { type: "varchar(255)", notNull: true },
-  });
-
   // for testing ignore of many to many
   createManyToManyTable(b, "critics_to_tags", "critics", "tags");
+
+  // for testing large many to many
+  createManyToManyTable(b, "authors_to_tags", "authors", "tags");
 
   createManyToManyTable(b, "books_to_tags", "books", "tags");
 

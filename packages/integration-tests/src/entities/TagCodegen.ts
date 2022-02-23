@@ -7,7 +7,10 @@ import {
   EntityOrmField,
   Flavor,
   getEm,
+  hasLargeMany,
+  hasLargeManyToMany,
   hasManyToMany,
+  LargeCollection,
   Lens,
   Loaded,
   LoadHint,
@@ -23,7 +26,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Book, BookId, bookMeta, newTag, Tag, tagMeta } from "./entities";
+import { Author, authorMeta, Book, BookId, bookMeta, newTag, Publisher, publisherMeta, Tag, tagMeta } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -73,6 +76,8 @@ export abstract class TagCodegen extends BaseEntity {
     factoryOptsType: Parameters<typeof newTag>[1];
   };
 
+  readonly publishers: LargeCollection<Tag, Publisher> = hasLargeMany(publisherMeta, "publishers", "tag", "tag_id");
+
   readonly books: Collection<Tag, Book> = hasManyToMany(
     "books_to_tags",
     "books",
@@ -80,6 +85,15 @@ export abstract class TagCodegen extends BaseEntity {
     bookMeta,
     "tags",
     "book_id",
+  );
+
+  readonly authors: LargeCollection<Tag, Author> = hasLargeManyToMany(
+    "authors_to_tags",
+    "authors",
+    "tag_id",
+    authorMeta,
+    "tags",
+    "author_id",
   );
 
   constructor(em: EntityManager, opts: TagOpts) {

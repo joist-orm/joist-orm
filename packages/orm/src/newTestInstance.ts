@@ -117,6 +117,11 @@ export function newTestInstance<T extends Entity>(
             return [fieldName, values];
           }
 
+          // If a child is passing themselves into a parent that is a large collection, just ignore it
+          if (field.kind === "lo2m") {
+            return [];
+          }
+
           // Look for strings that want to use the test index
           if (typeof optValue === "string" && optValue.includes(testIndex)) {
             const actualIndex = getTestIndex(em, meta.cstr);

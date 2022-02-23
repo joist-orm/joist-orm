@@ -59,18 +59,17 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
  * `O` is the generic from the call site so that if the caller passes `{ author: SomeLoadedAuthor }`,
  * we'll prefer that type, as it might have more nested load hints that we can't otherwise assume.
  */
-export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T &
-  {
-    // K will be `keyof T` and `keyof O` for codegen'd relations, but custom relations
-    // line `hasOneThrough` and `hasOneDerived` will not pass `keyof O` and so use the
-    // `: MarkLoaded`.
-    //
-    // Note that the safest thing is to probably make this `: unknown` instead so that
-    // custom relations are not marked loaded, b/c they will very likely require a `.load`
-    // to work. However, we have some tests that currently expect `author.image.get` to work
-    // on a new author, so keeping the `MarkLoaded` behavior for now.
-    [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
-  };
+export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T & {
+  // K will be `keyof T` and `keyof O` for codegen'd relations, but custom relations
+  // line `hasOneThrough` and `hasOneDerived` will not pass `keyof O` and so use the
+  // `: MarkLoaded`.
+  //
+  // Note that the safest thing is to probably make this `: unknown` instead so that
+  // custom relations are not marked loaded, b/c they will very likely require a `.load`
+  // to work. However, we have some tests that currently expect `author.image.get` to work
+  // on a new author, so keeping the `MarkLoaded` behavior for now.
+  [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
+};
 
 /** Detects whether an entity is newly created, and so we can treat all of the relations as loaded. */
 export function isNew<T extends Entity>(e: T): e is New<T> {
@@ -78,14 +77,13 @@ export function isNew<T extends Entity>(e: T): e is New<T> {
 }
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
-export type Loaded<T extends Entity, H extends LoadHint<T>> = T &
-  {
-    [K in keyof T]: H extends NestedLoadHint<T>
-      ? LoadedIfInNestedHint<T, K, H>
-      : H extends ReadonlyArray<infer U>
-      ? LoadedIfInKeyHint<T, K, U>
-      : LoadedIfInKeyHint<T, K, H>;
-  };
+export type Loaded<T extends Entity, H extends LoadHint<T>> = T & {
+  [K in keyof T]: H extends NestedLoadHint<T>
+    ? LoadedIfInNestedHint<T, K, H>
+    : H extends ReadonlyArray<infer U>
+    ? LoadedIfInKeyHint<T, K, U>
+    : LoadedIfInKeyHint<T, K, H>;
+};
 
 // We can use unknown here because everything non-loaded is pulled in from `T &`
 type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
@@ -103,7 +101,14 @@ export type Loadable<T extends Entity> = SubType<T, AsyncProperty<any, any> | Re
 type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
 
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
-export type LoadHint<T extends Entity> = keyof Loadable<T> | ReadonlyArray<keyof Loadable<T>> | NestedLoadHint<T>;
+export type LoadHint<T extends Entity> =
+  | keyof Loadable<T>
+  | ReadonlyArray<keyof Loadable<T>>
+  // If `T` has no loadable keys, this will be `{}`, and because `"foo" extends {}`, this
+  // essentially breaks type-checking of string-based load hints. However, if we try to
+  // check `if NestedLoadHint === {} ? never`, then passing in `{}` as a terminal load
+  // hint breaks.
+  | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
   [K in keyof Loadable<T>]?: T[K] extends Relation<any, infer U>

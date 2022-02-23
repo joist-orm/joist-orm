@@ -35,7 +35,7 @@ import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
-  new (em: EntityManager, opts: any): T;
+  new (em: EntityManager<any>, opts: any): T;
 }
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
@@ -90,6 +90,7 @@ export interface Entity {
   id: string | undefined;
   idOrFail: string;
   __orm: EntityOrmField;
+  readonly em: EntityManager<any>;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;

@@ -3,7 +3,6 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  EntityManager,
   EntityOrmField,
   Flavor,
   getEm,
@@ -26,6 +25,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import { Author, authorMeta, Book, BookId, bookMeta, newTag, Publisher, publisherMeta, Tag, tagMeta } from "./entities";
 
 export type TagId = Flavor<string, "Tag">;
@@ -66,7 +66,7 @@ tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class TagCodegen extends BaseEntity {
+export abstract class TagCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;

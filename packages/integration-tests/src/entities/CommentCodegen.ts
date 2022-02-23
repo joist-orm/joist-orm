@@ -6,7 +6,6 @@ import {
   EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   Flavor,
   getEm,
@@ -28,6 +27,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import { Book, BookReview, Comment, commentMeta, newComment } from "./entities";
 
 export type CommentId = Flavor<string, "Comment">;
@@ -82,7 +82,7 @@ commentConfig.addRule(newRequiredRule("createdAt"));
 commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
-export abstract class CommentCodegen extends BaseEntity {
+export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;

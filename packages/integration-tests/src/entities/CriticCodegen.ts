@@ -2,7 +2,6 @@ import {
   BaseEntity,
   Changes,
   ConfigApi,
-  EntityManager,
   EntityOrmField,
   Flavor,
   getEm,
@@ -21,6 +20,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import { Critic, criticMeta, newCritic } from "./entities";
 
 export type CriticId = Flavor<string, "Critic">;
@@ -58,7 +58,7 @@ criticConfig.addRule(newRequiredRule("name"));
 criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class CriticCodegen extends BaseEntity {
+export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;

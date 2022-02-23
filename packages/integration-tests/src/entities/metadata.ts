@@ -6,7 +6,7 @@ import { AdvanceStatuses, Author, authorConfig, Book, BookAdvance, bookAdvanceCo
 export class EntityManager extends EntityManager1<Context> {}
 
 export function getEm(e: BaseEntity): EntityManager {
-  return e.__orm.em as EntityManager;
+  return e.em as EntityManager;
 }
 
 export const authorMeta: EntityMetadata<Author> = {

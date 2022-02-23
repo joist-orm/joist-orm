@@ -18,7 +18,7 @@ export class Author extends AuthorCodegen {
       author.books.add(book);
 
       if (loaded.reviews.get.length === 0) {
-        getEm(author).create(BookReview, { rating: 5, book });
+        author.em.create(BookReview, { rating: 5, book });
       }
     },
     // needs a Loaded<Book, "reviews"> or will throw

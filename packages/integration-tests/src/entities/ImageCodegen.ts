@@ -4,7 +4,6 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
@@ -28,6 +27,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import {
   Author,
   AuthorId,
@@ -105,7 +105,7 @@ imageConfig.addRule(newRequiredRule("createdAt"));
 imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
-export abstract class ImageCodegen extends BaseEntity {
+export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;

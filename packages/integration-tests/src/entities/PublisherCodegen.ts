@@ -5,7 +5,6 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
@@ -30,6 +29,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import {
   Author,
   AuthorId,
@@ -124,7 +124,7 @@ publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class PublisherCodegen extends BaseEntity {
+export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: PublisherFilter;
     gqlFilterType: PublisherGraphQLFilter;

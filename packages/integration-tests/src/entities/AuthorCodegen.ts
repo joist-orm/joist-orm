@@ -7,7 +7,6 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
@@ -35,6 +34,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import { Address, address } from "src/entities/types";
 import { assert } from "superstruct";
 import {
@@ -156,7 +156,7 @@ authorConfig.addRule(newRequiredRule("numberOfBooks"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorCodegen extends BaseEntity {
+export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;

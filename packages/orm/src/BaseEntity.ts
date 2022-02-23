@@ -17,7 +17,7 @@ import {
  *
  * Currently this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
-export abstract class BaseEntity implements Entity {
+export abstract class BaseEntity<EM extends EntityManager = EntityManager> implements Entity {
   abstract id: string | undefined;
   readonly __orm: EntityOrmField;
 
@@ -80,6 +80,10 @@ export abstract class BaseEntity implements Entity {
     const id = keyToNumber(meta, this.id) || "new";
     // Returns `Author:1` instead of `author:1` to differentiate the instance's toString from the tagged id itself
     return `${meta.type}:${id}`;
+  }
+
+  public get em(): EM {
+    return this.__orm.em as EM;
   }
 
   /**

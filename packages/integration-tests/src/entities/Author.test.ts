@@ -520,4 +520,10 @@ describe("Author", () => {
     const pl = await p1.populate({ authors: { books: {}, numberOfBooks2: {} } });
     expect(pl.authors.get[0].numberOfBooks2.get).toEqual(0);
   });
+
+  it("has an em property", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    expect(a1.em).toEqual(em);
+  });
 });

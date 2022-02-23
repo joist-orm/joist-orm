@@ -5,7 +5,6 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   FilterOf,
   Flavor,
@@ -32,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import {
   Author,
   AuthorId,
@@ -117,7 +117,7 @@ bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
-export abstract class BookCodegen extends BaseEntity {
+export abstract class BookCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;

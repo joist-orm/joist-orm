@@ -16,7 +16,7 @@ import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
-import { configureMetadata, EntityManager } from "./symbols";
+import { configureMetadata, JoistEntityManager } from "./symbols";
 import {
   isEntityTable,
   isEnumTable,
@@ -126,10 +126,10 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const metadataFile: CodeGenFile = {
     name: "./metadata.ts",
     contents: code`
-      export class ${def("EntityManager")} extends ${EntityManager}<${contextType}> {}
+      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
 
       export function getEm(e: ${BaseEntity}): EntityManager {
-        return e.__orm.em as EntityManager;
+        return e.em as EntityManager;
       }
 
       ${entities.map((meta) => generateMetadataFile(config, meta))}

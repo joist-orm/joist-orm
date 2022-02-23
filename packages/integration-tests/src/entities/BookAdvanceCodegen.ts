@@ -4,7 +4,6 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
   FilterOf,
@@ -28,6 +27,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import {
   AdvanceStatus,
   AdvanceStatusDetails,
@@ -93,7 +93,7 @@ bookAdvanceConfig.addRule(newRequiredRule("status"));
 bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
-export abstract class BookAdvanceCodegen extends BaseEntity {
+export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   readonly __orm!: EntityOrmField & {
     filterType: BookAdvanceFilter;
     gqlFilterType: BookAdvanceGraphQLFilter;

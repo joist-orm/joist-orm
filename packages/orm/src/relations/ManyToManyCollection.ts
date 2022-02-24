@@ -4,7 +4,6 @@ import {
   ensureNotDeleted,
   Entity,
   EntityMetadata,
-  getEm,
   getMetadata,
   IdOf,
 } from "../";
@@ -70,7 +69,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
       const key = `${this.columnName}=${this.entity.id}`;
-      this.loaded = await manyToManyDataLoader(getEm(this.entity), this).load(key);
+      this.loaded = await manyToManyDataLoader(this.entity.em, this).load(key);
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
@@ -87,8 +86,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       }
       // Make a cacheable tuple to look up this specific m2m row
       const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
-      const includes = await manyToManyFindDataLoader(getEm(this.entity), this).load(key);
-      return includes ? getEm(this.entity).load(id) : undefined;
+      const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
+      return includes ? this.entity.em.load(id) : undefined;
     }
   }
 
@@ -104,7 +103,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       }
       // Make a cacheable tuple to look up this specific m2m row
       const key = `${this.columnName}=${this.entity.idOrFail},${this.otherColumnName}=${other.idOrFail}`;
-      return manyToManyFindDataLoader(getEm(this.entity), this).load(key);
+      return manyToManyFindDataLoader(this.entity.em, this).load(key);
     }
   }
 
@@ -130,7 +129,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         [this.columnName]: this.entity,
         [this.otherColumnName]: other,
       };
-      getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
+      getOrSet(this.entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.entity, true);
     }
   }
@@ -139,7 +138,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, { ignore: "pending" });
 
     if (!percolated) {
-      const joinRows = getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []);
+      const joinRows = getOrSet(this.entity.em.__data.joinRows, this.joinTableName, []);
       const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
       if (row) {
         row.deleted = true;
@@ -152,7 +151,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
           [this.otherColumnName]: other,
           deleted: true,
         };
-        getOrSet(getEm(this.entity).__data.joinRows, this.joinTableName, []).push(joinRow);
+        getOrSet(this.entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
       }
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
     }
@@ -241,13 +240,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.loaded !== undefined && this.entity.id !== undefined) {
       const key = `${this.columnName}=${this.entity.id}`;
-      this.loaded = await manyToManyDataLoader(getEm(this.entity), this).load(key);
+      this.loaded = await manyToManyDataLoader(this.entity.em, this).load(key);
     }
   }
 
   maybeCascadeDelete() {
     if (this.isCascadeDelete) {
-      this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
+      this.current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
     }
   }
 
@@ -266,7 +265,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       // this.addedBeforeLoaded = [];
       this.removedBeforeLoaded.forEach((e) => {
         remove(this.loaded!, e);
-        const em = getEm(this.entity);
+        const { em } = this.entity;
         const row = em.__data.joinRows[this.joinTableName].find(
           (r) => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
         );

@@ -1,5 +1,4 @@
 import { currentlyInstantiatingEntity, Entity } from "../EntityManager";
-import { getEm } from "../index";
 import { Loaded, LoadHint } from "../loaded";
 
 const I = Symbol();
@@ -38,12 +37,10 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   load(): Promise<V> {
     const { entity, loadHint, fn } = this;
     if (!this.loaded) {
-      return (this.loadPromise ??= getEm(entity)
-        .populate(entity, loadHint)
-        .then((loaded) => {
-          this.loaded = true;
-          return fn(loaded);
-        }));
+      return (this.loadPromise ??= entity.em.populate(entity, loadHint).then((loaded) => {
+        this.loaded = true;
+        return fn(loaded);
+      }));
     }
     return Promise.resolve(this.get);
   }

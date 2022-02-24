@@ -5,7 +5,6 @@ import {
   ConfigApi,
   EntityOrmField,
   Flavor,
-  getEm,
   hasLargeMany,
   hasLargeManyToMany,
   hasManyToMany,
@@ -138,6 +137,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {
-    return getEm(this).populate(this as any as Tag, hint);
+    return this.em.populate(this as any as Tag, hint);
   }
 }

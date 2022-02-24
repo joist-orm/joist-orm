@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity, EntityManager } from "../EntityManager";
-import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId, OneToManyCollection } from "../index";
+import { assertIdsAreTagged, deTagIds, maybeResolveReferenceToId, OneToManyCollection } from "../index";
 import { getOrSet, groupBy } from "../utils";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
@@ -17,7 +17,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const em = getEm(collection.entity);
+      const { em } = collection.entity;
       const rows = await em.driver.loadOneToMany(em, collection, keys);
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));

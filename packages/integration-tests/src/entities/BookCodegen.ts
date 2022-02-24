@@ -8,7 +8,6 @@ import {
   EntityOrmField,
   FilterOf,
   Flavor,
-  getEm,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -189,6 +188,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {
-    return getEm(this).populate(this as any as Book, hint);
+    return this.em.populate(this as any as Book, hint);
   }
 }

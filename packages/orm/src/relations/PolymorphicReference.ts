@@ -11,7 +11,6 @@ import {
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
-  getEm,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
   OneToOneReference,
@@ -93,7 +92,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = (await getEm(this.entity).load(getConstructorFromTaggedId(current), current)) as any as U;
+      this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded, opts);
@@ -169,7 +168,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     if (this._isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
-        this.loaded = (await getEm(this.entity).load(getConstructorFromTaggedId(current), current)) as any as U;
+        this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
       } else {
         this.loaded = current;
       }
@@ -180,7 +179,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
       if (current !== undefined && typeof current !== "string") {
-        getEm(this.entity).delete(current as U);
+        this.entity.em.delete(current as U);
       }
     }
   }
@@ -268,7 +267,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private maybeFindExisting(): U | undefined {
-    return this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined;
+    return this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined;
   }
 
   [RelationT]: T = null!;

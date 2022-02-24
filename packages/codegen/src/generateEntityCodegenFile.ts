@@ -18,7 +18,6 @@ import {
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
-  getEm,
   GraphQLFilterOf,
   hasLargeMany,
   hasLargeManyToMany,
@@ -402,7 +401,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       }
 
       async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {
-        return ${getEm}(this).populate(this as any as ${entityName}, hint);
+        return this.em.populate(this as any as ${entityName}, hint);
       }
     }
   `;

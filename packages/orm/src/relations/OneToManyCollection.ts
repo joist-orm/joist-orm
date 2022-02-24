@@ -6,7 +6,6 @@ import {
   ensureNotDeleted,
   Entity,
   EntityMetadata,
-  getEm,
   getMetadata,
   IdOf,
   maybeResolveReferenceToId,
@@ -59,7 +58,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       if (this.entity.id === undefined) {
         this.loaded = [];
       } else {
-        this.loaded = await oneToManyDataLoader(getEm(this.entity), this).load(this.entity.id);
+        this.loaded = await oneToManyDataLoader(this.entity.em, this).load(this.entity.id);
       }
       this.maybeAppendAddedBeforeLoaded();
     }
@@ -77,7 +76,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       }
       // Make a cacheable tuple to look up this specific o2m row
       const key = `id=${id},${this.otherColumnName}=${this.entity.idOrFail}`;
-      return oneToManyFindDataLoader(getEm(this.entity), this).load(key);
+      return oneToManyFindDataLoader(this.entity.em, this).load(key);
     }
   }
 
@@ -192,13 +191,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   async refreshIfLoaded(): Promise<void> {
     // TODO We should remember what load hints have been applied to this collection and re-apply them.
     if (this.loaded !== undefined && this.entity.id !== undefined) {
-      this.loaded = await oneToManyDataLoader(getEm(this.entity), this).load(this.entity.id);
+      this.loaded = await oneToManyDataLoader(this.entity.em, this).load(this.entity.id);
     }
   }
 
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete) {
-      this.current({ withDeleted: true }).forEach(getEm(this.entity).delete);
+      this.current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
     }
   }
 

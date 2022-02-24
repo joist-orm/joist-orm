@@ -1,6 +1,6 @@
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf } from "../EntityManager";
-import { ensureNotDeleted, getEm, getMetadata, ManyToManyCollection } from "../index";
+import { ensureNotDeleted, getMetadata, ManyToManyCollection } from "../index";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -68,8 +68,8 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
 
     // Make a cacheable tuple to look up this specific m2m row
     const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
-    const includes = await manyToManyFindDataLoader(getEm(this.entity), this).load(key);
-    return includes ? getEm(this.entity).load(id) : undefined;
+    const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
+    return includes ? this.entity.em.load(id) : undefined;
   }
 
   async includes(other: U): Promise<boolean> {
@@ -89,7 +89,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
 
     // Make a cacheable tuple to look up this specific m2m row
     const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${other.id}`;
-    return manyToManyFindDataLoader(getEm(this.entity), this).load(key);
+    return manyToManyFindDataLoader(this.entity.em, this).load(key);
   }
 
   add(other: U): void {

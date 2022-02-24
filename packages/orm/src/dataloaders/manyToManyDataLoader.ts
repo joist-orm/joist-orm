@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity, EntityManager } from "../EntityManager";
-import { getEm, keyToString, ManyToManyCollection } from "../index";
+import { keyToString, ManyToManyCollection } from "../index";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { getOrSet } from "../utils";
 
@@ -13,8 +13,10 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   // which side of the relation the `collection` is coming from, so
   // the `load` impl will have to handle keys that come from either
   // side of the relation.
-  return getOrSet(em.loadLoaders, collection.joinTableName, () =>
-    new DataLoader<string, Entity[]>((keys) => load(collection, keys))
+  return getOrSet(
+    em.loadLoaders,
+    collection.joinTableName,
+    () => new DataLoader<string, Entity[]>((keys) => load(collection, keys)),
   );
 }
 
@@ -29,7 +31,7 @@ async function load<T extends Entity, U extends Entity>(
   keys: ReadonlyArray<string>,
 ): Promise<Entity[][]> {
   const { joinTableName } = collection;
-  const em = getEm(collection.entity);
+  const { em } = collection.entity;
 
   // Make a map that will be both `tag_id=t:2 -> [...]` and `book_id=b:3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};

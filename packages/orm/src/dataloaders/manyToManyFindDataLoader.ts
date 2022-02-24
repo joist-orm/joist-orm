@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity, EntityManager } from "../EntityManager";
-import { getEm, ManyToManyCollection, ManyToManyLargeCollection, tagId } from "../index";
+import { ManyToManyCollection, ManyToManyLargeCollection, tagId } from "../index";
 import { getOrSet } from "../utils";
 
 /** Batches m2m.find/include calls (i.e. that don't fully load the m2m relation). */
@@ -20,7 +20,7 @@ async function load<T extends Entity, U extends Entity>(
   keys: ReadonlyArray<string>,
 ): Promise<boolean[]> {
   const { joinTableName } = collection;
-  const em = getEm(collection.entity);
+  const { em } = collection.entity;
 
   const rows = await em.driver.findManyToMany(em, collection, keys);
 

@@ -9,7 +9,6 @@ import {
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
-  getEm,
   GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -253,6 +252,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>> {
-    return getEm(this).populate(this as any as Publisher, hint);
+    return this.em.populate(this as any as Publisher, hint);
   }
 }

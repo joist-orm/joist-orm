@@ -11,7 +11,6 @@ import {
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
-  getEm,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -331,6 +330,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {
-    return getEm(this).populate(this as any as Author, hint);
+    return this.em.populate(this as any as Author, hint);
   }
 }

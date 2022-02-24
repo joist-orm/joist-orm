@@ -1,4 +1,4 @@
-import { currentlyInstantiatingEntity, getEm } from "../";
+import { currentlyInstantiatingEntity } from "../";
 import { Entity } from "../EntityManager";
 import { Loaded, LoadHint } from "../loaded";
 import { CustomReference } from "./CustomReference";
@@ -21,7 +21,7 @@ export function hasOneDerived<
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
     load: async (entity) => {
-      await getEm(entity).populate(entity, loadHint);
+      await entity.em.populate(entity, loadHint);
     },
     get: () => get(entity as Loaded<T, H>),
   });

@@ -1,4 +1,4 @@
-import { Collection, currentlyInstantiatingEntity, getEm } from "../";
+import { Collection, currentlyInstantiatingEntity } from "../";
 import { Entity } from "../EntityManager";
 import { Loaded, LoadHint } from "../loaded";
 import { CustomCollection } from "./CustomCollection";
@@ -25,7 +25,7 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
   const entity: T = currentlyInstantiatingEntity as T;
   const { load, ...rest } = opts;
   return new CustomCollection<T, U>(entity, {
-    load: load ?? ((entity) => getEm(entity).populate(entity, loadHint)),
+    load: load ?? ((entity) => entity.em.populate(entity, loadHint)),
     ...(rest as any),
   });
 }

@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity, EntityManager, getMetadata } from "../EntityManager";
-import { assertIdsAreTagged, deTagIds, getEm, maybeResolveReferenceToId } from "../index";
+import { assertIdsAreTagged, deTagIds, maybeResolveReferenceToId } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { getOrSet, groupBy } from "../utils";
 
@@ -18,7 +18,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const em = getEm(reference.entity);
+      const { em } = reference.entity;
       const rows = await em.driver.loadOneToOne(em, reference, keys);
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));

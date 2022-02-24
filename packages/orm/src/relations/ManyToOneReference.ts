@@ -3,7 +3,6 @@ import {
   deTagIds,
   ensureNotDeleted,
   fail,
-  getEm,
   maybeResolveReferenceToId,
   OneToManyLargeCollection,
   OneToOneReference,
@@ -86,7 +85,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = (await getEm(this.entity).load(this.otherMeta.cstr, current)) as any as U;
+      this.loaded = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);
@@ -142,7 +141,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       return;
     }
 
-    this.loaded = id ? getEm(this.entity)["findExistingInstance"](id) : undefined;
+    this.loaded = id ? this.entity.em.getEntity(id) : undefined;
     this._isLoaded = !!this.loaded;
     this.maybeRemove(previous);
     this.maybeAdd(this.maybeFindEntity());
@@ -177,7 +176,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (this._isLoaded) {
       const current = this.current();
       if (typeof current === "string") {
-        this.loaded = (await getEm(this.entity).load(this.otherMeta.cstr, current)) as any as U;
+        this.loaded = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
       } else {
         this.loaded = current;
       }
@@ -188,7 +187,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
       if (current !== undefined && typeof current !== "string") {
-        getEm(this.entity).delete(current as U);
+        this.entity.em.delete(current as U);
       }
     }
   }
@@ -285,7 +284,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
    */
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
-    return this.loaded ?? (this.id !== undefined ? getEm(this.entity)["findExistingInstance"](this.id) : undefined);
+    return this.loaded ?? (this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined);
   }
 
   [RelationT]: T = null!;

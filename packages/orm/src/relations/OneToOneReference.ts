@@ -1,13 +1,4 @@
-import {
-  currentlyInstantiatingEntity,
-  deTagIds,
-  ensureNotDeleted,
-  fail,
-  getEm,
-  IdOf,
-  LoadedReference,
-  setField,
-} from "../";
+import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, IdOf, LoadedReference, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -134,7 +125,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this._isLoaded) {
       if (!this.entity.isNewEntity) {
-        this.loaded = await oneToOneDataLoader(getEm(this.entity), this).load(this.entity.idOrFail);
+        this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idOrFail);
       }
       this._isLoaded = true;
     }
@@ -199,7 +190,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete && this.loaded) {
-      getEm(this.entity).delete(this.loaded);
+      this.entity.em.delete(this.loaded);
     }
   }
 

@@ -1,5 +1,5 @@
 import { Entity } from "./EntityManager";
-import { getEm, Loaded, LoadHint, RelationsIn } from "./index";
+import { Loaded, LoadHint, RelationsIn } from "./index";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { MaybePromise, ValidationRule } from "./rules";
 
@@ -23,8 +23,7 @@ export class ConfigApi<T extends Entity, C> {
       this.__data.rules.push(ruleOrHint);
     } else {
       const fn = async (entity: T) => {
-        const em = getEm(entity);
-        const loaded = await em.populate(entity, ruleOrHint);
+        const loaded = await entity.em.populate(entity, ruleOrHint);
         return maybeRule!(loaded);
       };
       // Squirrel our hint away where configureMetadata can find it
@@ -58,8 +57,7 @@ export class ConfigApi<T extends Entity, C> {
     } else {
       const fn = async (entity: T, ctx: C) => {
         // TODO Use this for reactive beforeFlush
-        const em = getEm(entity);
-        const loaded = await em.populate(entity, ruleOrHint);
+        const loaded = await entity.em.populate(entity, ruleOrHint);
         return maybeFn!(loaded, ctx);
       };
       // Squirrel our hint away where configureMetadata can find it

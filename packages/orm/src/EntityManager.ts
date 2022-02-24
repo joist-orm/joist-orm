@@ -13,7 +13,6 @@ import {
   FieldSerde,
   GenericError,
   getConstructorFromTaggedId,
-  getEm,
   getRelations,
   keyToString,
   maybeResolveReferenceToId,
@@ -1219,7 +1218,7 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
         if (hasChanged && originalValue) {
           const originalEntityMaybePromise = isEntity(originalValue)
             ? originalValue
-            : getEm(c).load((c as any)[fieldName].otherMeta.cstr, originalValue);
+            : c.em.load((c as any)[fieldName].otherMeta.cstr, originalValue);
           return [currentValuePromise, originalEntityMaybePromise];
         }
         return [currentValuePromise];

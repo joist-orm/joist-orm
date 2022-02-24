@@ -8,7 +8,6 @@ import {
   EnumGraphQLFilter,
   FilterOf,
   Flavor,
-  getEm,
   GraphQLFilterOf,
   hasOne,
   Lens,
@@ -187,6 +186,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>> {
-    return getEm(this).populate(this as any as Image, hint);
+    return this.em.populate(this as any as Image, hint);
   }
 }

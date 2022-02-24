@@ -8,7 +8,6 @@ import {
   EntityGraphQLFilter,
   EntityOrmField,
   Flavor,
-  getEm,
   hasOnePolymorphic,
   IdOf,
   Lens,
@@ -136,6 +135,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>> {
-    return getEm(this).populate(this as any as Comment, hint);
+    return this.em.populate(this as any as Comment, hint);
   }
 }

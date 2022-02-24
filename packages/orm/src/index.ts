@@ -54,7 +54,7 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
 export function setField<T extends Entity>(entity: T, fieldName: keyof T, newValue: any): boolean {
   ensureNotDeleted(entity, { ignore: "pending" });
-  const em = getEm(entity);
+  const { em } = entity;
 
   if (em.isFlushing) {
     const { flushSecret } = currentFlushSecret.getStore() || {};
@@ -156,7 +156,7 @@ export function setOpts<T extends Entity>(
           }
           values.forEach((v) => {
             if (v.op === "delete") {
-              getEm(entity).delete(v);
+              entity.em.delete(v);
             } else if (v.op === "remove") {
               (current as any).remove(v);
             } else if (v.op === "include") {
@@ -171,7 +171,7 @@ export function setOpts<T extends Entity>(
         const toSet: any[] = [];
         values.forEach((e) => {
           if (allowDelete && e.delete === true) {
-            getEm(entity).delete(e);
+            entity.em.delete(e);
           } else if (allowRemove && e.remove === true) {
             // Just leave out of `toSet`
           } else {

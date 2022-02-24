@@ -4,7 +4,6 @@ import {
   ConfigApi,
   EntityOrmField,
   Flavor,
-  getEm,
   Lens,
   Loaded,
   LoadHint,
@@ -110,6 +109,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   }
 
   async populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>> {
-    return getEm(this).populate(this as any as Critic, hint);
+    return this.em.populate(this as any as Critic, hint);
   }
 }

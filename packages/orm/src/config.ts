@@ -101,6 +101,11 @@ export class ConfigApi<T extends Entity, C> {
   afterCommit(fn: HookFn<T, C>): void {
     this.addHook("afterCommit", fn);
   }
+
+  /**
+   * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
+   * until the user is ready to use it. */
+  placeholder(): void {}
 }
 
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */

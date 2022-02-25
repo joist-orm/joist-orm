@@ -6,6 +6,11 @@ export function generateInitialEntityFile(meta: EntityDbMetadata): Code {
   const entityName = meta.entity.name;
   const codegenClass = imp(`${entityName}Codegen@./entities`);
   return code`
+    import { ${meta.entity.configConst.symbol} as config } from "./entities";
+
     export class ${entityName} extends ${codegenClass} {}
+
+    // remove once you have actual rules/hooks
+    config.placeholder();
   `;
 }

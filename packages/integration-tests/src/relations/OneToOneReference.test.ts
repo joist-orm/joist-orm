@@ -1,6 +1,6 @@
-import { insertAuthor, insertImage } from "@src/entities/inserts";
+import { insertAuthor, insertImage, select } from "@src/entities/inserts";
 import { Author, Image, ImageType, newAuthor } from "../entities";
-import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToOneReference", () => {
   it("can load a set reference", async () => {
@@ -28,7 +28,7 @@ describe("OneToOneReference", () => {
     expect(author.image.isSet).toEqual(true);
     await em.flush();
 
-    const rows = await knex.select("*").from("images");
+    const rows = await select("images");
     expect(rows[0].author_id).toEqual(1);
   });
 
@@ -120,7 +120,7 @@ describe("OneToOneReference", () => {
     expect(a1.image.isSet).toBeTruthy();
     em.delete(a1);
     await em.flush();
-    expect((await knex.select("*").from("images")).length).toEqual(0);
+    expect((await select("images")).length).toEqual(0);
   });
 
   it("can delete", async () => {
@@ -130,7 +130,7 @@ describe("OneToOneReference", () => {
     expect(a1.image.isSet).toBeFalsy();
     em.delete(a1);
     await em.flush();
-    expect((await knex.select("*").from("authors")).length).toEqual(0);
+    expect((await select("authors")).length).toEqual(0);
   });
 
   it("throws exception when image is not loaded", async () => {

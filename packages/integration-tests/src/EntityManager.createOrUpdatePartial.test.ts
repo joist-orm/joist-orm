@@ -7,11 +7,12 @@ import {
   insertBook,
   insertBookToTag,
   insertTag,
+  select,
 } from "@src/entities/inserts";
 import { Author, Book } from "./entities";
-import { knex, newEntityManager } from "./setupDbTests";
+import { newEntityManager } from "./setupDbTests";
 
-describe("EntityManager", () => {
+describe("EntityManager.createOrUpdatePartial", () => {
   it("can create new entity with valid data", async () => {
     const em = newEntityManager();
     const a1 = await em.createOrUpdatePartial(Author, { firstName: "a1" });
@@ -182,7 +183,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", delete: true }, { id: "b:2" }] });
     await em.flush();
-    const rows = await knex.select("*").from("books");
+    const rows = await select("books");
     expect(rows.length).toEqual(1);
   });
 

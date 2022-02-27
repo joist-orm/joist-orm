@@ -1,50 +1,48 @@
 import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
+import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
 import { config } from "dotenv";
-import { PostgresDriver } from "joist-orm";
+import { Driver } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
-import { newPgConnectionConfig } from "joist-utils";
-import { knex as createKnex, Knex } from "knex";
+import { Knex } from "knex";
 
 if (process.env.DATABASE_URL === undefined) {
   config({ path: "./local.env" });
 }
 
-// Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
+// Eventually set this via an env flag for dual CI builds, but for now just hard-coding
+const inMemory = false;
+
+// Create a shared test context that tests can use, and also we'll use to auto-flush the db between tests.
+export let testDriver: TestDriver;
+export let driver: Driver;
 export let knex: Knex;
 export const makeApiCall = jest.fn();
+export let numberOfQueries = 0;
+export let queries: string[] = [];
 
 export function newEntityManager() {
   const ctx = { knex };
-  const em = new EntityManager(ctx as any, new PostgresDriver(knex));
+  const em = new EntityManager(ctx as any, driver);
   Object.assign(ctx, { em, makeApiCall });
   return em;
 }
 
-export let numberOfQueries = 0;
-export let queries: string[] = [];
-
 expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
-  knex = createKnex({
-    client: "pg",
-    connection: newPgConnectionConfig(),
-    debug: false,
-    asyncStackTraces: true,
-  }).on("query", (e: any) => {
-    numberOfQueries++;
-    queries.push(e.sql);
-  });
+  testDriver = inMemory ? new InMemoryTestDriver() : new PostgresTestDriver();
+  driver = testDriver.driver;
+  knex = testDriver.knex;
 });
 
 beforeEach(async () => {
-  await knex.select(knex.raw("flush_database()"));
+  await testDriver.beforeEach();
   resetQueryCount();
 });
 
 afterAll(async () => {
-  await knex.destroy();
+  await testDriver.destroy();
 });
 
 export function resetQueryCount() {
@@ -52,8 +50,39 @@ export function resetQueryCount() {
   queries = [];
 }
 
+export function recordQuery(sql: string): void {
+  numberOfQueries++;
+  queries.push(sql);
+}
+
+export function maybeBeginAndCommit(): number {
+  // the in-memory driver doesn't issue BEGIN or COMMIT queries, so
+  // the query count will be lower by two than the real pg driver
+  return testDriver.isInMemory ? 0 : 2;
+}
+
 type itWithCtxFn = (ctx: Context) => Promise<void>;
+
 it.withCtx = (name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) => {
   const fn: itWithCtxFn = typeof fnOrOpts === "function" ? fnOrOpts : maybeFn!;
   it(name, async () => fn({ em: newEntityManager(), knex, makeApiCall: async () => {} }));
 };
+
+it.unlessInMemory = Object.assign(
+  (name: string, fn: any) => {
+    if (inMemory) {
+      it.skip(name, () => {});
+    } else {
+      it(name, fn);
+    }
+  },
+  {
+    withCtx(name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) {
+      if (inMemory) {
+        it.skip(name, () => {});
+      } else {
+        (it.withCtx as any)(name, fnOrOpts, maybeFn);
+      }
+    },
+  },
+);

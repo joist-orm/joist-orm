@@ -1,6 +1,24 @@
-import { knex } from "../setupDbTests";
+import { testDriver } from "../setupDbTests";
 
-export async function insertAuthor(row: {
+// Note this test infrastructure exist solely to test Joist itself, i.e. to use
+// the low-level driver infra to setup/assert against data. Downstream applications
+// should not copy this approach, and instead just use the factories and entities to
+// setup and assert against test data.
+
+export function select(tableName: string): Promise<readonly any[]> {
+  return testDriver.select(tableName);
+}
+
+export function update(tableName: string, row: Record<string, any>): Promise<void> {
+  return testDriver.update(tableName, row);
+}
+
+// turns out delete as a function is not allowed, but it is as a method
+export function del(tableName: string, id: number): Promise<void> {
+  return testDriver.delete(tableName, id);
+}
+
+export function insertAuthor(row: {
   id?: number;
   first_name: string;
   last_name?: string | null;
@@ -12,24 +30,26 @@ export async function insertAuthor(row: {
   number_of_books?: number;
   favorite_colors?: number[];
   address?: object;
+  graduated?: any;
+  updated_at?: any;
 }) {
-  await knex.insert({ initials: row.first_name[0], number_of_books: 0, ...row }).into("authors");
+  return testDriver.insert("authors", { initials: row.first_name[0], number_of_books: 0, ...row });
 }
 
-export async function insertBook(row: { id?: number; title: string; author_id: number | null }) {
-  await knex.insert(row).into("books");
+export function insertBook(row: { id?: number; title: string; author_id: number | null }) {
+  return testDriver.insert("books", row);
 }
 
-export async function insertComment(row: {
+export function insertComment(row: {
   id?: number;
   text: string;
   parent_book_id?: number;
   parent_book_review_id?: number;
 }) {
-  await knex.insert(row).into("comments");
+  return testDriver.insert("comments", row);
 }
 
-export async function insertPublisher(row: {
+export function insertPublisher(row: {
   id?: number;
   name: string;
   longitude?: string | number;
@@ -38,26 +58,26 @@ export async function insertPublisher(row: {
   size_id?: number;
   tag_id?: number;
 }) {
-  await knex.insert(row).into("publishers");
+  return testDriver.insert("publishers", row);
 }
 
-export async function insertTag(row: { id?: number; name: string }) {
-  await knex.insert(row).into("tags");
+export function insertTag(row: { id?: number; name: string }) {
+  return testDriver.insert("tags", row);
 }
 
-export async function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
-  await knex.insert(row).into("books_to_tags");
+export function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
+  return testDriver.insert("books_to_tags", row);
 }
 
-export async function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
-  await knex.insert(row).into("authors_to_tags");
+export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
+  return testDriver.insert("authors_to_tags", row);
 }
 
-export async function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
-  await knex.insert({ is_public: true, ...row }).into("book_reviews");
+export function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
+  return testDriver.insert("book_reviews", { is_public: true, ...row });
 }
 
-export async function insertImage(row: {
+export function insertImage(row: {
   id?: number;
   type_id: number;
   book_id?: number | null;
@@ -65,21 +85,21 @@ export async function insertImage(row: {
   publisher_id?: number | null;
   file_name: string;
 }) {
-  await knex.insert(row).into("images");
+  return testDriver.insert("images", row);
 }
 
-export async function countOfBooks() {
-  return (await knex.select("*").from("books")).length;
+export function countOfBooks() {
+  return testDriver.count("books");
 }
 
-export async function countOfTags() {
-  return (await knex.select("*").from("tags")).length;
+export function countOfTags() {
+  return testDriver.count("tags");
 }
 
-export async function countOfBookToTags() {
-  return (await knex.select("*").from("books_to_tags")).length;
+export function countOfBookToTags() {
+  return testDriver.count("books_to_tags");
 }
 
-export async function countOfAuthors() {
-  return (await knex.select("*").from("authors")).length;
+export function countOfAuthors() {
+  return testDriver.count("authors");
 }

@@ -4,10 +4,14 @@ type ContextOpts = Partial<import("./context").Context & import("./context").App
 };
 type itWithCtxFn = (context: import("./context").Context) => Promise<void>;
 
+type F = Function;
+
 declare namespace jest {
   interface It {
     withCtx(name: string, fn: itWithCtxFn);
     withCtx(name: string, opts: ContextOpts, fn: itWithCtxFn);
-    withMemoryCtx(name: string, fn: itWithCtxFn);
+    unlessInMemory: Pick<It, "withCtx"> & {
+      (name: string, fn: () => any): void;
+    };
   }
 }

@@ -1,6 +1,6 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
 import { Author, Book } from "../entities";
-import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
@@ -26,7 +26,7 @@ describe("ManyToOneReference", () => {
     new Book(em, { title: "t1", author });
     await em.flush();
 
-    const rows = await knex.select("*").from("books");
+    const rows = await select("books");
     expect(rows[0].author_id).toEqual(1);
   });
 
@@ -56,7 +56,7 @@ describe("ManyToOneReference", () => {
     b1.author.set(a2);
     await em.flush();
 
-    const rows = await knex.select("*").from("books");
+    const rows = await select("books");
     expect(rows[0].author_id).toEqual(2);
   });
 

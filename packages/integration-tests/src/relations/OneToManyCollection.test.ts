@@ -1,6 +1,6 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
 import { Author, Book, BookOpts, newAuthor, newBook, Publisher } from "../entities";
-import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -63,7 +63,7 @@ describe("OneToManyCollection", () => {
     expect(b1.author.get).toEqual(a1);
     await em.flush();
 
-    const rows = await knex.select("*").from("books");
+    const rows = await select("books");
     expect(rows[0].author_id).toEqual(1);
   });
 
@@ -88,7 +88,7 @@ describe("OneToManyCollection", () => {
 
     // And the book association to a2 is persisted to the database.
     await em.flush();
-    const rows = await knex.select("*").from("books");
+    const rows = await select("books");
     expect(`a:${rows[0].author_id}`).toEqual(a2.id);
   });
 
@@ -119,7 +119,7 @@ describe("OneToManyCollection", () => {
 
     // And the book association to a2 is persisted to the database.
     await em2.flush();
-    const rows = await knex.select("*").from("books");
+    const rows = await select("books");
     expect(`a:${rows[0].author_id}`).toEqual(a2_2.id);
   });
 
@@ -213,7 +213,7 @@ describe("OneToManyCollection", () => {
     await em.flush();
 
     // Then we removed a1, left a2, and added a3
-    const rows = await knex.select("*").from("authors").orderBy("id");
+    const rows = await select("authors");
     expect(rows.length).toEqual(3);
     expect(rows[0]).toEqual(expect.objectContaining({ publisher_id: null }));
     expect(rows[1]).toEqual(expect.objectContaining({ publisher_id: 1 }));

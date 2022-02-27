@@ -1,6 +1,6 @@
-import { insertAuthor, insertBook, insertBookReview, insertComment } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
 import { Author, Book, BookReview, Comment, newBook } from "../entities";
-import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -28,7 +28,7 @@ describe("PolymorphicReference", () => {
     em.create(Comment, { text: "t", parent: book });
     await em.flush();
 
-    const [row] = await knex.select("*").from("comments");
+    const [row] = await select("comments");
     expect(row.parent_book_id).toEqual(1);
   });
 
@@ -61,7 +61,7 @@ describe("PolymorphicReference", () => {
     comment.parent.set(book);
     await em.flush();
 
-    const [row] = await knex.select("*").from("comments");
+    const [row] = await select("comments");
     expect(row.parent_book_id).toEqual(2);
   });
 
@@ -72,14 +72,14 @@ describe("PolymorphicReference", () => {
     await insertBookReview({ rating: 0, book_id: 1 });
 
     const em = newEntityManager();
-    const book = await em.load(Book, "1");
-    const bookReview = await em.load(BookReview, "1");
-    const comment = await em.load(Comment, "1", "parent");
+    const book = await em.load(Book, "b:1");
+    const bookReview = await em.load(BookReview, "br:1");
+    const comment = await em.load(Comment, "comment:1", "parent");
     expect(comment.parent.get).toEqual(book);
     comment.parent.set(bookReview);
     await em.flush();
 
-    const [row] = await knex.select("*").from("comments");
+    const [row] = await select("comments");
     expect(row.parent_book_id).toBeNull();
     expect(row.parent_book_review_id).toEqual(1);
   });

@@ -1,6 +1,6 @@
-import { insertAuthor, insertBook, insertBookReview, insertImage } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertImage, select } from "@src/entities/inserts";
 import { Author, Book, BookReview, Image, ImageType } from "../entities";
-import { knex, newEntityManager } from "../setupDbTests";
+import { newEntityManager } from "../setupDbTests";
 
 describe("CustomReference", () => {
   it("can load a reference", async () => {
@@ -42,7 +42,7 @@ describe("CustomReference", () => {
     image.owner.set(author);
     await em.flush();
 
-    const rows = await knex.select("*").from("images");
+    const rows = await select("images");
     expect(rows[0].author_id).toEqual(1);
   });
 
@@ -57,7 +57,7 @@ describe("CustomReference", () => {
     i1.owner.set(a2);
     await em.flush();
 
-    const rows = await knex.select("*").from("images");
+    const rows = await select("images");
     expect(rows[0].author_id).toEqual(2);
   });
 

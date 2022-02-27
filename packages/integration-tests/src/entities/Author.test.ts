@@ -1,9 +1,9 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
 import { defaultValue } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, BookReview, newAuthor, newPublisher, Publisher } from "../entities";
-import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
+import { makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
 describe("Author", () => {
@@ -222,7 +222,7 @@ describe("Author", () => {
     new Book(em, { title: "b1", author: a1 });
     await em.flush();
     expect(a1.numberOfBooks).toEqual(1);
-    const rows = await knex.select("*").from("authors");
+    const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
 
@@ -237,7 +237,7 @@ describe("Author", () => {
     // Then the author derived value is re-derived
     await em.flush();
     expect(a1.numberOfBooks).toEqual(1);
-    const rows = await knex.select("*").from("authors");
+    const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
 
@@ -284,7 +284,7 @@ describe("Author", () => {
     b1.author.set(a2);
     await em.flush();
     // Then both authors derived values got updated
-    const rows = await knex.select("id", "number_of_books").from("authors").orderBy("id");
+    const rows = await select("authors");
     expect(rows[0]).toMatchObject({ id: 1, number_of_books: 0 });
     expect(rows[1]).toMatchObject({ id: 2, number_of_books: 1 });
   });
@@ -314,7 +314,7 @@ describe("Author", () => {
     em.create(BookReview, { rating: 1, book: b1 });
     await em.flush();
     // Then the review is initially private
-    const rows = await knex.select("is_public").from("book_reviews");
+    const rows = await select("book_reviews");
     expect(rows[0].is_public).toBe(false);
 
     // And when the author age changes
@@ -323,7 +323,7 @@ describe("Author", () => {
     a1.age = 30;
     await em2.flush();
     // Then the review is now public
-    const rows2 = await knex.select("is_public").from("book_reviews");
+    const rows2 = await select("book_reviews");
     expect(rows2[0].is_public).toBe(true);
   });
 

@@ -1,5 +1,10 @@
 import { knex } from "@src/setupDbTests";
 
+// Note this test infrastructure exist solely to test Joist itself, i.e. to use
+// the low-level driver infra to setup/assert against data. Downstream applications
+// should not copy this approach, and instead just use the factories and entities to
+// setup and assert against test data.
+
 let _nextId = 0;
 
 /**

@@ -1,6 +1,6 @@
 import { Knex } from "knex";
 import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
-import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, unsafeDeTagIds } from "../keys";
+import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
@@ -12,23 +12,41 @@ import { Driver } from "./driver";
 export class InMemoryDriver implements Driver {
   // Map from table name --> string untagged id --> record
   private data: Record<string, Record<number, any>> = {};
+  // This is a WIP/hacky way to try and expose to our tests the "number of queries"
+  // that are made during a test; granted for in-memory mode that doesn't really matter
+  // per se, but we have a lot of existing tests that cover batching behavior, and so
+  // instead of skipping / conditionalizing all of those for "in memory or not", it seems
+  // easier to have the driver provide a count of "basically a query" to the test suite.
+  //
+  // This is primarily for Joist's own internal test suite, and downstream applications
+  // should not work about this, unless they have their own "assert # of queries made"
+  // tests that want to run against both the pg driver and in memory driver.
+  private onQuery: () => void;
+
+  constructor(onQuery?: () => void) {
+    this.onQuery = onQuery || (() => {});
+  }
 
   select(tableName: string): readonly any[] {
+    this.onQuery();
     return Object.values(this.data[tableName] || {});
   }
 
   insert(tableName: string, row: any): void {
+    this.onQuery();
     // Purposefully assign row.id as a side-effect
     row.id ||= this.nextId(tableName);
     this.rowsOfTable(tableName)[row.id] = { ...row }; // Make a copy
   }
 
   update(tableName: string, row: any): void {
+    this.onQuery();
     const existingRow = this.rowsOfTable(tableName)[row.id];
     this.rowsOfTable(tableName)[row.id] = { ...existingRow, ...row };
   }
 
   delete(tableName: string, id: number): void {
+    this.onQuery();
     delete this.rowsOfTable(tableName)[id];
   }
 
@@ -41,6 +59,7 @@ export class InMemoryDriver implements Driver {
     type: EntityConstructor<T>,
     queries: readonly FilterAndSettings<T>[],
   ): Promise<unknown[][]> {
+    this.onQuery();
     return queries.map((query) => {
       const { where, orderBy, limit, offset = 0 } = query;
       const meta = getMetadata(type);
@@ -53,20 +72,21 @@ export class InMemoryDriver implements Driver {
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const updatedAt = new Date();
+
+    // do our version of assign ids
     Object.entries(todos).forEach(([_, todo]) => {
       todo.inserts.forEach((i) => {
-        const row: Record<string, any> = {};
-        Object.values(todo.metadata.fields)
-          .filter(hasSerde)
-          .flatMap((f) => f.serde.columns.map((c) => [f, c] as const))
-          .forEach(([f, c]) => {
-            row[c.columnName] = c.mapToDb(i.__orm.data[f.fieldName]) ?? null;
-          });
-        row.id = this.nextId(todo.metadata.tableName);
-        this.rowsOfTable(todo.metadata.tableName)[row.id] = row;
-        i.__orm.data["id"] = keyToString(todo.metadata, row.id);
+        const id = this.nextId(todo.metadata.tableName);
+        i.__orm.data["id"] = keyToString(todo.metadata, id);
+        this.rowsOfTable(todo.metadata.tableName)[id] = {};
       });
-      todo.updates.forEach((u) => {
+    });
+
+    Object.entries(todos).forEach(([_, todo]) => {
+      // Because our assign id step effectively inserts the row, we can handle
+      // both inserts and updates with the same code path.
+      [...todo.updates, ...todo.inserts].forEach((u) => {
+        this.onQuery();
         // TODO Do this in EntityManager instead of the drivers
         u.__orm.data["updatedAt"] = updatedAt;
         const id = deTagId(todo.metadata, u.idOrFail);
@@ -75,11 +95,13 @@ export class InMemoryDriver implements Driver {
           .filter(hasSerde)
           .flatMap((f) => f.serde.columns.map((c) => [f, c] as const))
           .forEach(([f, c]) => {
-            row[c.columnName] = c.mapToDb(u.__orm.data[f.fieldName]) ?? null;
+            // Kinda surprised mapToDb doesn't work here...
+            row[c.columnName] = c.dbValue(u.__orm.data) ?? null;
           });
         this.rowsOfTable(todo.metadata.tableName)[id] = row;
       });
       todo.deletes.forEach((d) => {
+        this.onQuery();
         const id = deTagId(todo.metadata, d.idOrFail);
         delete this.rowsOfTable(todo.metadata.tableName)[id];
         d.__orm.deleted = "deleted";
@@ -96,6 +118,7 @@ export class InMemoryDriver implements Driver {
           const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
           fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
         });
+        this.onQuery();
         this.insert(joinTableName, fkColumns);
         row.id = fkColumns.id as number;
       });
@@ -103,7 +126,10 @@ export class InMemoryDriver implements Driver {
       // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
       const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
 
-      haveIds.forEach((row) => this.delete(joinTableName, row.id!));
+      haveIds.forEach((row) => {
+        this.onQuery();
+        this.delete(joinTableName, row.id!);
+      });
 
       noIds.forEach((noIdRow) => {
         const rows = Object.values(this.rowsOfTable(joinTableName));
@@ -116,7 +142,10 @@ export class InMemoryDriver implements Driver {
               deTagId(m2m.otherMeta, maybeResolveReferenceToId(noIdRow[m2m.otherColumnName])!);
             return a || b;
           })
-          .forEach((found) => this.delete(joinTableName, found.id));
+          .forEach((found) => {
+            this.onQuery();
+            this.delete(joinTableName, found.id);
+          });
       });
     }
   }
@@ -126,6 +155,7 @@ export class InMemoryDriver implements Driver {
     meta: EntityMetadata<T>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
+    this.onQuery();
     const rows = Object.values(this.data[meta.tableName] || {});
     return rows.filter((row) => untaggedIds.includes(String(row["id"])));
   }
@@ -135,6 +165,7 @@ export class InMemoryDriver implements Driver {
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
+    this.onQuery();
     const ids: Record<string, string[]> = {};
     keys.forEach((key) => {
       const [column, id] = key.split("=");
@@ -151,13 +182,14 @@ export class InMemoryDriver implements Driver {
     collection: ManyToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
+    this.onQuery();
     const rows = Object.values(this.rowsOfTable(collection.joinTableName));
     const set = new Set(keys);
     const [column1, column2] = [collection.columnName, collection.otherColumnName];
+    const [m1, m2] = [collection.meta, collection.otherMeta];
     return rows.filter((row) => {
-      // TODO need to tag the ids
-      const key1 = `${column1}=${row[column1]},${column2}=${row[column2]}`;
-      const key2 = `${column2}=${row[column2]},${column1}=${row[column1]}`;
+      const key1 = `${column1}=${tagId(m1, row[column1])},${column2}=${tagId(m2, row[column2])}`;
+      const key2 = `${column2}=${tagId(m2, row[column2])},${column1}=${tagId(m1, row[column1])}`;
       return set.has(key1) || set.has(key2);
     });
   }
@@ -167,6 +199,7 @@ export class InMemoryDriver implements Driver {
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
+    this.onQuery();
     const rows = Object.values(this.rowsOfTable(collection.otherMeta.tableName));
     return rows.filter((row) => untaggedIds.includes(String(row[collection.otherColumnName])));
   }
@@ -176,12 +209,14 @@ export class InMemoryDriver implements Driver {
     collection: OneToManyCollection<T, U>,
     keys: readonly string[],
   ): Promise<JoinRow[]> {
-    const rows = Object.values(this.rowsOfTable(collection.meta.tableName));
+    this.onQuery();
+    // If we're loading author.books, we need to look in the books table
+    const rows = Object.values(this.rowsOfTable(collection.otherMeta.tableName));
     const set = new Set(keys);
     return rows.filter((row) => {
-      // TODO need to tag the ids
-      const key = `id=${row.id},${collection.otherColumnName}=${row[collection.otherColumnName]}`;
-      return set.has(key);
+      const col1 = `id=${tagId(collection.otherMeta, row.id)}`;
+      const col2 = `${collection.otherColumnName}=${tagId(collection.meta, row[collection.otherColumnName])}`;
+      return set.has(`${col1},${col2}`);
     });
   }
 
@@ -190,6 +225,7 @@ export class InMemoryDriver implements Driver {
     reference: OneToOneReferenceImpl<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
+    this.onQuery();
     const rows = Object.values(this.rowsOfTable(reference.otherMeta.tableName));
     return rows.filter((row) => untaggedIds.includes(String(row[reference.otherColumnName])));
   }

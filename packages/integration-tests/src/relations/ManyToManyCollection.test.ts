@@ -1,6 +1,6 @@
-import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
+import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
 import { Author, Book, newBook, newTag, Tag } from "../entities";
-import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {
@@ -94,7 +94,7 @@ describe("ManyToManyCollection", () => {
     book.tags.add(tag);
     await em.flush();
 
-    const rows = await knex.select("*").from("books_to_tags");
+    const rows = await select("books_to_tags");
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
   });
 
@@ -123,7 +123,7 @@ describe("ManyToManyCollection", () => {
     await em.flush();
 
     // Then both the old and new m2ms exist
-    let rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    let rows = await select("books_to_tags");
     expect(rows).toMatchObject([
       { id: 1, book_id: 2, tag_id: 4 },
       { id: 2, book_id: 3, tag_id: 5 },
@@ -139,7 +139,7 @@ describe("ManyToManyCollection", () => {
     await em.flush();
 
     // Then there are none left
-    rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    rows = await select("books_to_tags");
     expect(rows).toMatchObject([]);
   });
 
@@ -155,7 +155,7 @@ describe("ManyToManyCollection", () => {
     tag.books.add(book);
     await em.flush();
 
-    const rows = await knex.select("*").from("books_to_tags");
+    const rows = await select("books_to_tags");
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
   });
 
@@ -189,7 +189,7 @@ describe("ManyToManyCollection", () => {
     expect(book.tags.get.length).toEqual(1);
     await em.flush();
 
-    const rows = await knex.select("*").from("books_to_tags");
+    const rows = await select("books_to_tags");
     expect(rows.length).toEqual(1);
   });
 
@@ -252,9 +252,9 @@ describe("ManyToManyCollection", () => {
     // Then the deleted tag is removed from the book collection
     expect(b1.tags.get.map((t) => t.id)).toEqual([t2.id]);
     // And the tag itself was deleted
-    expect((await knex.select("*").from("tags")).length).toEqual(1);
+    expect((await select("tags")).length).toEqual(1);
     // And the join table entry was deleted
-    expect((await knex.select("*").from("books_to_tags")).length).toEqual(1);
+    expect((await select("books_to_tags")).length).toEqual(1);
   });
 
   it("can delete multiple tags on a book", async () => {
@@ -276,7 +276,7 @@ describe("ManyToManyCollection", () => {
     // Then the deleted tag is removed from the book collection
     expect(b1.tags.get.length).toEqual(0);
     // And the join table rows were deleted
-    expect((await knex.select("*").from("books_to_tags")).length).toEqual(0);
+    expect((await select("books_to_tags")).length).toEqual(0);
   });
 
   it("cannot add to a deleted entity's m2m", async () => {
@@ -326,7 +326,7 @@ describe("ManyToManyCollection", () => {
     await em.flush();
 
     // Then we removed t1, left t2, and added t3
-    const rows = await knex.select("*").from("books_to_tags").orderBy("id");
+    const rows = await select("books_to_tags");
     expect(rows.length).toEqual(2);
     expect(rows[0]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 4 }));
     expect(rows[1]).toEqual(expect.objectContaining({ book_id: 2, tag_id: 5 }));

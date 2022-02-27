@@ -1,17 +1,22 @@
-import { insertPublisher } from "@src/entities/inserts";
+import { insertPublisher, select } from "@src/entities/inserts";
 import { Publisher } from "./entities";
-import { knex, newEntityManager } from "./setupDbTests";
+import { newEntityManager, testDriver } from "./setupDbTests";
 
-describe("EntityManager", () => {
+describe("EntityManager.types", () => {
   it("supports decimals", async () => {
     const em = newEntityManager();
     // Given we make an entity with some decimals
     await em.create(Publisher, { name: "p1", latitude: 38.46281, longitude: -122.72805 });
     await em.flush();
-    // Then knex will read them as strings
-    const rows = await knex.select("*").from("publishers");
-    expect(rows[0].latitude).toEqual("38.462810");
-    expect(rows[0].longitude).toEqual("-122.728050");
+    const rows = await select("publishers");
+    if (testDriver.isInMemory) {
+      expect(rows[0].latitude).toEqual(38.46281);
+      expect(rows[0].longitude).toEqual(-122.72805);
+    } else {
+      // Then knex will read them as strings
+      expect(rows[0].latitude).toEqual("38.462810");
+      expect(rows[0].longitude).toEqual("-122.728050");
+    }
     // And we'll read them as numbers
     const em2 = newEntityManager();
     const p1 = await em2.load(Publisher, "p:1");

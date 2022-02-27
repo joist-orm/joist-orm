@@ -1,6 +1,6 @@
 import { newPublisher, newTag, Publisher, Tag } from "@src/entities";
-import { insertPublisher, insertTag } from "@src/entities/inserts";
-import { knex, newEntityManager, numberOfQueries, resetQueryCount } from "@src/setupDbTests";
+import { insertPublisher, insertTag, select } from "@src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/setupDbTests";
 import { LoadHint } from "joist-orm";
 
 describe("OneToManyLargeCollection", () => {
@@ -51,7 +51,7 @@ describe("OneToManyLargeCollection", () => {
     // @ts-expect-error
     const tag = newTag(em, { publishers: [{}, {}] });
     await em.flush();
-    const rows = await knex.select("*").from("publishers");
+    const rows = await select("publishers");
     expect(rows.length).toEqual(0);
   });
 

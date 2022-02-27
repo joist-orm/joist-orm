@@ -1,4 +1,3 @@
-import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
 import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
 import { config } from "dotenv";
@@ -11,7 +10,7 @@ if (process.env.DATABASE_URL === undefined) {
 }
 
 // Eventually set this via an env flag for dual CI builds, but for now just hard-coding
-const inMemory = false;
+export const inMemory = false;
 
 // Create a shared test context that tests can use, and also we'll use to auto-flush the db between tests.
 export let testDriver: TestDriver;
@@ -60,29 +59,3 @@ export function maybeBeginAndCommit(): number {
   // the query count will be lower by two than the real pg driver
   return testDriver.isInMemory ? 0 : 2;
 }
-
-type itWithCtxFn = (ctx: Context) => Promise<void>;
-
-it.withCtx = (name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) => {
-  const fn: itWithCtxFn = typeof fnOrOpts === "function" ? fnOrOpts : maybeFn!;
-  it(name, async () => fn({ em: newEntityManager(), knex, makeApiCall: async () => {} }));
-};
-
-it.unlessInMemory = Object.assign(
-  (name: string, fn: any) => {
-    if (inMemory) {
-      it.skip(name, () => {});
-    } else {
-      it(name, fn);
-    }
-  },
-  {
-    withCtx(name: string, fnOrOpts: itWithCtxFn | ContextOpts, maybeFn?: itWithCtxFn) {
-      if (inMemory) {
-        it.skip(name, () => {});
-      } else {
-        (it.withCtx as any)(name, fnOrOpts, maybeFn);
-      }
-    },
-  },
-);

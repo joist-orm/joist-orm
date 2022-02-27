@@ -5,7 +5,7 @@ module.exports = {
     "^src/(.*)": "<rootDir>/src/$1",
   },
   globalSetup: "<rootDir>/src/setupTestEnv.ts",
-  setupFilesAfterEnv: ["<rootDir>/src/setupDbTests.ts"],
+  setupFilesAfterEnv: ["<rootDir>/src/setupIt.ts", "<rootDir>/src/setupDbTests.ts"],
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   testEnvironment: "node",
   maxConcurrency: 1,

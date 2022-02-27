@@ -125,10 +125,10 @@ describe("ManyToManyCollection", () => {
     // Then both the old and new m2ms exist
     let rows = await select("books_to_tags");
     expect(rows).toMatchObject([
-      { id: 1, book_id: 2, tag_id: 4 },
-      { id: 2, book_id: 3, tag_id: 5 },
-      { id: 5, book_id: 2, tag_id: 5 },
-      { id: 6, book_id: 3, tag_id: 4 },
+      { book_id: 2, tag_id: 4 },
+      { book_id: 3, tag_id: 5 },
+      { book_id: 2, tag_id: 5 },
+      { book_id: 3, tag_id: 4 },
     ]);
 
     // And if we then remove all of those rows

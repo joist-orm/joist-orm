@@ -111,42 +111,54 @@ export class InMemoryDriver implements Driver {
 
   async flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void> {
     for (const [joinTableName, { m2m, newRows, deletedRows }] of Object.entries(joinRows)) {
+      // Any newRows count as 1 query
+      if (newRows.length > 0) {
+        this.onQuery();
+      }
       newRows.forEach((row) => {
-        const { id, created_at, m2m, ...fkColumns } = row;
+        const { id, created_at, deleted, m2m, ...fkColumns } = row;
         // The rows in EntityManager.joinRows point to entities, change those to integers
         Object.keys(fkColumns).forEach((key) => {
           const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
           fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
         });
-        this.onQuery();
-        this.insert(joinTableName, fkColumns);
-        row.id = fkColumns.id as number;
+        // Mimic an ON CONFLICT upsert
+        const existing = Object.values(this.rowsOfTable(joinTableName)).find((row) => {
+          const [col1, col2] = Object.keys(fkColumns);
+          return fkColumns[col1] === row[col1] && fkColumns[col2] === row[col2];
+        });
+        if (!existing) {
+          this.insert(joinTableName, fkColumns);
+          row.id = fkColumns.id as number;
+        } else {
+          row.id = existing.id;
+        }
       });
 
       // `remove`s that were done against unloaded ManyToManyCollections will not have row ids
       const [haveIds, noIds] = partition(deletedRows, (r) => r.id !== -1);
 
-      haveIds.forEach((row) => {
+      if (haveIds.length > 0) {
         this.onQuery();
-        this.delete(joinTableName, row.id!);
-      });
+        haveIds.forEach((row) => this.delete(joinTableName, row.id!));
+      }
 
-      noIds.forEach((noIdRow) => {
-        const rows = Object.values(this.rowsOfTable(joinTableName));
-        rows
-          .filter((row) => {
-            const a =
-              String(row[m2m.columnName]) === deTagId(m2m.meta, maybeResolveReferenceToId(noIdRow[m2m.columnName])!);
-            const b =
-              String(row[m2m.otherColumnName]) ===
-              deTagId(m2m.otherMeta, maybeResolveReferenceToId(noIdRow[m2m.otherColumnName])!);
-            return a || b;
-          })
-          .forEach((found) => {
-            this.onQuery();
-            this.delete(joinTableName, found.id);
-          });
-      });
+      if (noIds.length > 0) {
+        this.onQuery();
+        noIds.forEach((noIdRow) => {
+          const rows = Object.values(this.rowsOfTable(joinTableName));
+          rows
+            .filter((row) => {
+              const a =
+                String(row[m2m.columnName]) === deTagId(m2m.meta, maybeResolveReferenceToId(noIdRow[m2m.columnName])!);
+              const b =
+                String(row[m2m.otherColumnName]) ===
+                deTagId(m2m.otherMeta, maybeResolveReferenceToId(noIdRow[m2m.otherColumnName])!);
+              return a && b;
+            })
+            .forEach((found) => this.delete(joinTableName, found.id));
+        });
+      }
     }
   }
 

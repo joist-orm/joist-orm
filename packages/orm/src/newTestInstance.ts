@@ -154,7 +154,18 @@ export function newTestInstance<T extends Entity>(
           }
           // Otherwise only make a new entity only if the field is required
           if (field.required) {
-            return [fieldName, otherMeta.factory(em, applyUse({}, use, otherMeta))];
+            // Find the opposite side, to see if it's a o2o or o2m pointing back at us
+            const otherField = field.otherMetadata().fields[field.otherFieldName]!;
+            return [
+              fieldName,
+              otherMeta.factory(em, {
+                ...applyUse({}, use, otherMeta),
+                // We include `[]` as a marker for "don't create the children", i.e. if you're doing
+                // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
+                // factory, i.e. `lineItems: [{}]`, should be skipped.
+                [field.otherFieldName]: otherField.kind === "o2o" ? null : [],
+              }),
+            ];
           }
         } else if (field.kind === "enum" && field.required) {
           return [fieldName, field.enumDetailType.getValues()[0]];
@@ -177,15 +188,19 @@ export function newTestInstance<T extends Entity>(
   return entity;
 }
 
-// When a factory is called, opts will only have:
-// - values explicitly passed by the user/other factories
-// - values from the user's explicit `use` parameter
+// When a factory is called, i.e. `newAuthor`, opts will:
 //
-// This allows the factory to "fan out" by i.e. InternalUser creating its own User,
-// and Market creating its own ProductAttribute.
+// - Have values explicitly passed by the user/other factories
+// - Have values from the user's explicit `use` parameter
+// - NOT have guessed (i.e. "only existing entity") or an implicitly-created `use` parameter
 //
-// However, if the factory doesn't explicitly "fan out", we will "fan in" by using factory
-// created instances.
+// This allows the factory to "fan out" by default, i.e. newInternalUser creating its own User
+// and Market creating its own ProductAttribute, which originally we couldn't do when
+// guessed/implicit opts were passed directly to `newAuthor`.
+//
+// Now, if the `newAuthor` factory doesn't explicitly "fan out" (by passing `user: {}` to
+// `newTestInstance`), we still "fan in" by having `newTestInstance` sneak in the guessed/implicit
+// opts of only-one-existing or factory-created instances.
 
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
 function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): object {

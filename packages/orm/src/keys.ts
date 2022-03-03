@@ -72,6 +72,10 @@ export function tagId(
     return undefined;
   }
   if (id.includes(tagDelimiter)) {
+    const [tag] = id.split(tagDelimiter);
+    if (tag !== tagName(metaOrCstr)) {
+      throw new Error(`Invalid tagged id, expected tag ${tagName(metaOrCstr)}, got ${id}`);
+    }
     return id;
   }
   return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;

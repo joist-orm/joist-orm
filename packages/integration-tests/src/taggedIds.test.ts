@@ -5,6 +5,8 @@ describe("taggedIds", () => {
   it("can tag id", async () => {
     expect(tagId(Author, 1)).toEqual("a:1");
     expect(tagId(Author, "1")).toEqual("a:1");
+    expect(tagId(Author, "a:1")).toEqual("a:1");
+    expect(() => tagId(Author, "b:1")).toThrow("Invalid tagged id, expected tag a, got b:1");
     expect(tagId(Author, null)).toBeUndefined();
     expect(tagId(Author, undefined)).toBeUndefined();
     expect(tagId(getMetadata(Author), 1)).toEqual("a:1");
@@ -13,7 +15,8 @@ describe("taggedIds", () => {
 
   it("can tag ids", async () => {
     expect(tagIds(Author, [1, 2])).toEqual(["a:1", "a:2"]);
-    expect(tagIds(Author, ["1", "2"])).toEqual(["a:1", "a:2"]);
+    expect(tagIds(Author, ["1", "2", "a:3"])).toEqual(["a:1", "a:2", "a:3"]);
+    expect(() => tagIds(Author, ["b:1"])).toThrow("Invalid tagged id, expected tag a, got b:1");
     expect(tagIds(getMetadata(Author), [1, 2])).toEqual(["a:1", "a:2"]);
     expect(tagIds(getMetadata(Author), ["1", "2"])).toEqual(["a:1", "a:2"]);
   });

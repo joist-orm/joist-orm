@@ -101,20 +101,31 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.firstName).toEqual("a3");
   });
 
+  it("can create a child and override the parent's default child", async () => {
+    const em = newEntityManager();
+    // Given we make a book that requires an author
+    const b = newBook(em);
+    // Then the newAuthor factory was told to override any `books: [{}]` defaults
+    expect(lastAuthorFactoryOpts).toStrictEqual({
+      books: [],
+      use: expect.any(Map),
+    });
+  });
+
   it("can create a grandchild and specify the grandparent", async () => {
     const em = newEntityManager();
     // Given there are multiple existing publishers
-    const p1 = newPublisher(em);
-    newPublisher(em);
+    const [p1] = [newPublisher(em), newPublisher(em)];
     // When we make a book and pass along the specific publisher p1
     const b1 = newBook(em, { use: p1 });
-    await em.flush();
-    // Then we create a new author
+    // Then we created a new author
     const a1 = b1.author.get as New<Author>;
     expect(a1.firstName).toEqual("a1");
     // And it has the publisher set
     expect(a1.publisher.get).toEqual(p1);
+    // And we explicitly passed the publisher b/c it's an explicit `use` entry
     expect(lastAuthorFactoryOpts).toStrictEqual({
+      books: [],
       publisher: p1,
       use: expect.any(Map),
     });

@@ -1,17 +1,27 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
-import { Collection, Entity, isCollection, isEntity, isReference, Reference } from "joist-orm";
+import {
+  Collection,
+  Entity,
+  EntityManager,
+  getMetadata,
+  isCollection,
+  isEntity,
+  isReference,
+  Reference,
+} from "joist-orm";
 
 export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Promise<CustomMatcherResult> {
   // Because the `actual` entity has lots of __orm, Reference, Collection, etc cruft in it,
   // we make a simplified copy of it, where we use the keys in `expected` to pull out/eval a
   // subset of the complex keys in an entity to be "dumb data" versions of themselves.
-  const copy = {};
+  const clean = {};
+  const { em } = actual;
 
   // Because we might assert again `expect(entity).toMatchEntity({ children: [{ name: "p1" }])`, we keep
   // a queue of entities/copies to make, and work through it as we recurse through the expected/actual pair.
-  const queue: [any, any, any][] = [[actual, expected, copy]];
+  const queue: [any, any, any][] = [[actual, expected, clean]];
   while (queue.length > 0) {
-    const [actual, expected, copy] = queue.pop()!;
+    const [actual, expected, clean] = queue.pop()!;
     const keys = Object.keys(expected);
     for (const key of keys) {
       const value = actual[key];
@@ -21,34 +31,42 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
         if (loaded instanceof Array) {
           const actualList = loaded;
           const expectedList = expected[key];
-          const copyList = [];
+          const cleanList = [];
           // Do a hacky zip of each actual/expected pair
           for (let i = 0; i < Math.max(actualList.length, expectedList.length); i++) {
             const actualI = actualList[i];
             const expectedI = expectedList[i];
             // If actual is a list of entities (and expected is not), make a copy of each
-            if (isEntity(actualI) && !isEntity(expectedI)) {
-              const child = {};
-              queue.push([actualI, expectedI, child]);
-              copyList.push(child);
+            // so that we can recurse into their `{ title: ... }` properties.
+            if (isEntity(actualI) && !isEntity(expectedI) && expectedI) {
+              const cleanI = {};
+              queue.push([actualI, expectedI, cleanI]);
+              cleanList.push(cleanI);
             } else {
-              copyList.push(actualI);
+              // Given we're stopping here, make sure neither side is an entity
+              if (i < expectedList.length) {
+                expectedList[i] = maybeTestId(em, expectedI);
+              }
+              if (i < actualList.length) {
+                cleanList.push(maybeTestId(em, actualI));
+              }
             }
           }
-          copy[key] = copyList;
+          clean[key] = cleanList;
         } else {
           // If the `.load` result wasn't a list, assume it's an entity that we'll copy
           if (isEntity(loaded) && !isEntity(expected[key])) {
-            const child = {};
-            queue.push([loaded, expected[key], child]);
-            copy[key] = child;
+            const loadedClean = {};
+            queue.push([loaded, expected[key], loadedClean]);
+            clean[key] = loadedClean;
           } else {
-            copy[key] = loaded;
+            expected[key] = maybeTestId(em, expected[key]);
+            clean[key] = maybeTestId(em, loaded);
           }
         }
       } else {
         // Otherwise assume it's regular data. Probably need to handle getters/promises?
-        copy[key] = value;
+        clean[key] = value;
       }
     }
   }
@@ -56,7 +74,21 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
   // Blatantly grab `toMatchObject` from the guts of expect
   const { getMatchers } = require("expect/build/jestMatchersObject");
   // @ts-ignore
-  return getMatchers().toMatchObject.call(this, copy, expected);
+  return getMatchers().toMatchObject.call(this, clean, expected);
+}
+
+function maybeTestId(em: EntityManager, maybeEntity: any): any {
+  return isEntity(maybeEntity) ? getTestId(em, maybeEntity) : maybeEntity;
+}
+
+/** Returns either the persisted id or `tag#<offset-in-EntityManager>`. */
+function getTestId(em: EntityManager, entity: Entity): string {
+  if (entity.id) {
+    return entity.id;
+  }
+  const meta = getMetadata(entity);
+  const sameType = em.entities.filter((e) => e instanceof meta.cstr);
+  return `${meta.tagName}#${sameType.indexOf(entity) + 1}`;
 }
 
 /**

@@ -64,6 +64,10 @@ export type ActualFactoryOpts<T> = T extends { __orm: { factoryOptsType: infer Q
 /** Pulls the entity's id type out of a given entity type T. */
 export type IdOf<T> = T extends { id: infer I | undefined } ? I : never;
 
+export function isId(value: any): value is IdOf<unknown> {
+  return value && typeof value === "string";
+}
+
 /** The `__orm` metadata field we track on each instance. */
 export interface EntityOrmField {
   /** A point to our entity type's metadata. */

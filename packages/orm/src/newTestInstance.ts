@@ -8,6 +8,11 @@ import {
   getMetadata,
   IdOf,
   isEntity,
+  isId,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
   OptsOf,
   PrimitiveField,
 } from "./EntityManager";
@@ -40,7 +45,7 @@ export function newTestInstance<T extends Entity>(
 ): New<T> {
   const meta = getMetadata(cstr);
   // We share a single `use` map for a given `newEntity` factory call
-  const use = useMap(opts.use);
+  const use = useMap(opts);
 
   // fullOpts will end up being a full/type-safe opts with every required field
   // filled in, either driven by the passed-in opts or by making new entities as-needed
@@ -63,57 +68,13 @@ export function newTestInstance<T extends Entity>(
 
           // If this is a partial with defaults for the entity, call newTestInstance to get it created
           if (field.kind === "m2o" || field.kind === "o2o") {
-            if (isEntity(optValue)) {
-              return [fieldName, optValue];
-            } else if (optValue && typeof optValue === "string") {
-              return [
-                fieldName,
-                em.entities.find((e) => e.id === optValue || getTestId(em, e) === optValue) ||
-                  fail(`Did not find tagged id ${optValue}`),
-              ];
-            } else if (optValue && !isPlainObject(optValue)) {
-              // If optValue isn't a POJO, assume this is a completely-custom factory
-              return [fieldName, field.otherMetadata().factory(em, optValue)];
-            }
-            // Find the opposite side, to see if it's a o2o or o2m pointing back at us
-            const otherField = field.otherMetadata().fields[field.otherFieldName]!;
-            return [
-              fieldName,
-              field.otherMetadata().factory(em, {
-                // Because of the `!isPlainObject` above, optValue will either be undefined or an object here
-                ...applyUse(optValue || {}, use, field.otherMetadata()),
-                // We include `[]` as a marker for "don't create the children", i.e. if you're doing
-                // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
-                // factory, i.e. `lineItems: [{}]`, should be skipped.
-                [field.otherFieldName]: otherField.kind === "o2o" ? null : [],
-              }),
-            ];
+            const other = resolveFactoryOpt(em, opts, field, optValue);
+            return [fieldName, other];
           }
 
           // If this is a list of children, watch for partials that should be newTestInstance'd
           if (field.kind === "o2m" || field.kind == "m2m") {
-            const values = (optValue as Array<any>).map((optValue) => {
-              if (isEntity(optValue)) {
-                return optValue;
-              } else if (optValue && typeof optValue === "string") {
-                return (
-                  em.entities.find((e) => e.id === optValue || getTestId(em, e) === optValue) ||
-                  fail(`Did not find tagged id ${optValue}`)
-                );
-              } else if (optValue && !isPlainObject(optValue)) {
-                // If optValue isn't a POJO, assume this is a completely-custom factory
-                return field.otherMetadata().factory(em, optValue);
-              }
-              return field.otherMetadata().factory(em, {
-                // Because of the `!isPlainObject` above, optValue will either be undefined or an object here
-                ...applyUse(optValue || {}, use, field.otherMetadata()),
-                // We include null as a marker for "don't create the parent"; even if it's required,
-                // once the child has been created, the act of adding it to our collection will get the
-                // parent set. It might be better to do o2ms as a 2nd-pass, after we've done the em.create
-                // call and could directly pass this entity instead of null.
-                [field.otherFieldName]: null,
-              });
-            });
+            const values = (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt));
             return [fieldName, values];
           }
 
@@ -140,32 +101,15 @@ export function newTestInstance<T extends Entity>(
         ) {
           return [fieldName, defaultValueForField(field)];
         } else if (field.kind === "m2o") {
-          const otherMeta = field.otherMetadata();
-          // If there is a single existing instance of this type, assume the caller is fine with that,
-          // even if the field is not required.
-          const existing = em.entities.filter((e) => e instanceof otherMeta.cstr);
-          if (existing.length === 1) {
-            return [fieldName, existing[0]];
-          }
           // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
-          // then look in use for either a) explicit use entities, or b) required fields, so that we "fan in"
-          if (use.has(otherMeta.cstr) && (use.get(otherMeta.cstr)![1] || field.required)) {
-            return [fieldName, use.get(otherMeta.cstr)![0]];
+          // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
+          const existing = getObviousDefault(em, field.otherMetadata(), opts);
+          if (existing) {
+            return [fieldName, existing];
           }
-          // Otherwise only make a new entity only if the field is required
+          // Otherwise, only make a new entity only if the field is required
           if (field.required) {
-            // Find the opposite side, to see if it's a o2o or o2m pointing back at us
-            const otherField = field.otherMetadata().fields[field.otherFieldName]!;
-            return [
-              fieldName,
-              otherMeta.factory(em, {
-                ...applyUse({}, use, otherMeta),
-                // We include `[]` as a marker for "don't create the children", i.e. if you're doing
-                // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
-                // factory, i.e. `lineItems: [{}]`, should be skipped.
-                [field.otherFieldName]: otherField.kind === "o2o" ? null : [],
-              }),
-            ];
+            return [fieldName, resolveFactoryOpt(em, opts, field, undefined)];
           }
         } else if (field.kind === "enum" && field.required) {
           return [fieldName, field.enumDetailType.getValues()[0]];
@@ -186,6 +130,84 @@ export function newTestInstance<T extends Entity>(
   }
 
   return entity;
+}
+
+/**
+ * Resolves a `FactoryEntityOpt` (i.e. maybe an existing entity, maybe an id, maybe a hash of opts) to an entity.
+ *
+ * If `opt` is `undefined`, then the usual factory semantics of "check use", "look for only one instance" are
+ * checked before finally creating a brand new entity.
+ *
+ * We also accept an optional `otherFieldName` so that, if we do create a new entity, we pass along the null
+ * marker for them to know not to create their own version of us.
+ *
+ * (This was originally intended to be a public API, but the use case ended up being handled
+ * by the more-ergonomic `maybeNew` feature; we could explore making this public if another
+ * similar use case comes up in the future.)
+ */
+function resolveFactoryOpt<T extends Entity>(
+  em: EntityManager,
+  opts: FactoryOpts<any>,
+  field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField,
+  opt: FactoryEntityOpt<T> | undefined,
+): T {
+  const meta = field.otherMetadata();
+  if (isEntity(opt)) {
+    return opt;
+  } else if (isId(opt)) {
+    return (
+      (em.entities.find((e) => e.id === opt || getTestId(em, e) === opt) as T) || fail(`Did not find tagged id ${opt}`)
+    );
+  } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
+    // If opt isn't a POJO, assume this is a completely-custom factory
+    return meta.factory(em, opt);
+  } else {
+    // Look for an obvious default
+    if (opt === undefined || opt instanceof MaybeNew) {
+      const existing = getObviousDefault(em, meta, opts);
+      if (existing) {
+        return existing;
+      }
+      // Otherwise fall though to making a new entity via the factory
+    }
+    // Find the opposite side, to see if it's an o2o or o2m pointing back at us
+    const otherField = field.otherMetadata().fields[field.otherFieldName];
+    return meta.factory(em, {
+      // Because of the `!isPlainObject` above, opt will either be undefined or an object here
+      ...applyUse((opt as any) || {}, useMap(opts), meta),
+      ...(opt instanceof MaybeNew && opt.opts),
+      // We include `[]` as a marker for "don't create the children", i.e. if you're doing
+      // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
+      // factory, i.e. `lineItems: [{}]`, should be skipped.
+      [otherField.fieldName]: otherField.kind === "o2o" || otherField.kind === "m2o" ? null : [],
+    });
+  }
+}
+
+/** We look for `use`-cached and "if-only-one" defaults. */
+function getObviousDefault<T extends Entity>(
+  em: EntityManager,
+  metadata: EntityMetadata<T>,
+  opts: FactoryOpts<any>,
+): T | undefined {
+  // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field then look in use
+  const use = useMap(opts);
+  // ...we used to check "explicit use" vs. "implicit use" here and only use implicit values
+  // if the field was required; but in theory our "use if-only-one" heuristic was already looser
+  // that this, so it seems fine to just always check use, regardless of field required/optional.
+  //
+  // Note that we still use explicit/implicit use to know whether the user's `newAuthor` factory
+  // should have a use param passed to it, or if we should apply it here after-the-fact. (This gives
+  // `newAuthor` the opportunity to apply defaults.)
+  if (use.has(metadata.cstr)) {
+    return use.get(metadata.cstr)![0] as T;
+  }
+  // If there is a single existing instance of this type, assume the caller is fine with that
+  const existing = em.entities.filter((e) => e instanceof metadata.cstr);
+  if (existing.length === 1) {
+    return existing[0] as T;
+  }
+  return undefined;
 }
 
 // When a factory is called, i.e. `newAuthor`, opts will:
@@ -249,6 +271,32 @@ export function defaultValue<T>(): T {
 }
 
 /**
+ * Allows a factory to provide a default, i.e. for a field that would otherwise
+ * be optional, but still have that field be override by opts & use, without
+ * accidentally creating an extra entity as a side-effect.
+ *
+ * I.e.:
+ *
+ * ```typescript
+ * export function newAuthor(em: Entity, opts: FactoryOpts<Author>) {
+ *   return newTestInstance(em, Author, {
+ *     // publisher is not technically required, but make one
+ *     publisher: maybeNew<Publisher>({}),
+ *     ...opts,
+ *   });
+ * }
+ * ```
+ */
+export function maybeNew<T extends Entity>(opts: FactoryOpts<T> = {}): FactoryEntityOpt<T> {
+  // Return a marker that resolveFactoryOpt will look for
+  return new MaybeNew(opts) as any;
+}
+
+class MaybeNew<T extends Entity> {
+  constructor(public opts: FactoryOpts<T>) {}
+}
+
+/**
  * Returns a unique-ish test index for putting in `name` fields.
  *
  * Note that `testIndex` is easier to just include in a string, because it doesn't require passing
@@ -284,18 +332,21 @@ function defaultValueForField(field: PrimitiveField): unknown {
 }
 
 // Utility type to destructure T out of T | undefined
-type DefinedOr<T> = T | undefined;
+type DefinedOr<T> = T | undefined | null;
 
 type DeepPartialOpts<T extends Entity> = AllowRelationsOrPartials<OptsOf<T>>;
+
+/** What a factory can accept for a given entity. */
+export type FactoryEntityOpt<T extends Entity> = T | IdOf<T> | ActualFactoryOpts<T>;
 
 type AllowRelationsOrPartials<T> = {
   [P in keyof T]?: T[P] extends DefinedOr<infer U>
     ? U extends Array<infer V>
       ? V extends Entity
-        ? Array<V | IdOf<V> | ActualFactoryOpts<V>>
+        ? Array<FactoryEntityOpt<V>>
         : T[P]
       : U extends Entity
-      ? U | IdOf<U> | ActualFactoryOpts<U>
+      ? FactoryEntityOpt<U>
       : T[P]
     : T[P];
 };
@@ -304,18 +355,40 @@ type AllowRelationsOrPartials<T> = {
 type UseMap = Map<Function, [Entity, boolean]>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use
-function useMap(use: Entity | Entity[] | UseMap | undefined): UseMap {
-  if (!use) {
-    return new Map();
-  } else if (use instanceof Map) {
-    return use;
-  } else if (use instanceof Array) {
-    const map: UseMap = new Map();
-    use.forEach((e) => map.set(e.constructor, [e, true]));
-    return map;
+function useMap(opts: FactoryOpts<any>): UseMap {
+  const use: Entity | Entity[] | UseMap | undefined = opts.use;
+  let map: UseMap;
+  if (use instanceof Map) {
+    // it's already a map
+    map = use;
   } else {
-    const map: UseMap = new Map();
-    map.set(use.constructor, [use, true]);
-    return map;
+    map = new Map();
+    if (use instanceof Array) {
+      // it's a top-level `newAuthor` with a user-passed `use: array`
+      use.forEach((e) => map.set(e.constructor, [e, true]));
+    } else if (use) {
+      // it's a top-level `newAuthor` w/o a `use: entity` param
+      map.set(use.constructor, [use, true]);
+    }
+    // Scan opts for entities to implicitly add to the map, i.e. if the user
+    // calls `newAuthor(em, { book: b1 })`, we'll use `b1` for any other books we
+    // might happen to create.
+    const todo = [opts];
+    while (todo.length > 0) {
+      const opts = todo.pop();
+      Object.values(opts || {}).forEach((opt) => {
+        if (isEntity(opt) && !map.has(opt.constructor)) {
+          map.set(opt.constructor, [opt, false]);
+        } else if (opt instanceof Array) {
+          todo.push(...opt);
+        } else if (isPlainObject(opt)) {
+          todo.push(opt);
+        }
+      });
+    }
   }
+  // Store our potentially-massaged map back into opts i.e. in case resolveFactoryOpt needs it.
+  // Use as any b/c UseMap is our internal impl detail and not public.
+  (opts as any).use = map;
+  return map;
 }

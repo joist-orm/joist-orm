@@ -13,7 +13,7 @@ import {
   Publisher,
   Tag,
 } from "@src/entities";
-import { New } from "joist-orm";
+import { maybeNew, New, newTestInstance } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.factories", () => {
@@ -252,5 +252,43 @@ describe("EntityManager.factories", () => {
     const i = newImage(em);
     // Then the m2o reused the existing entity
     expect(i.author.get).toEqual(a);
+  });
+
+  describe("maybeNew", () => {
+    it("creates a new entity if needed", async () => {
+      const em = newEntityManager();
+      const a = newTestInstance(em, Author, {
+        publisher: maybeNew<Publisher>({}),
+      });
+      expect(a.publisher.get).toBeInstanceOf(Publisher);
+    });
+
+    it("uses an if-only-one entity", async () => {
+      const em = newEntityManager();
+      const p = newPublisher(em);
+      const a = newTestInstance(em, Author, {
+        publisher: maybeNew<Publisher>({}),
+      });
+      expect(a.publisher.get).toEqual(p);
+    });
+
+    it("uses a use entity", async () => {
+      const em = newEntityManager();
+      const p1 = newPublisher(em);
+      const p2 = newPublisher(em);
+      const a = newTestInstance(em, Author, {
+        publisher: maybeNew<Publisher>({}),
+        use: p2,
+      });
+      expect(a.publisher.get).toEqual(p2);
+    });
+
+    it("can provide defaults", async () => {
+      const em = newEntityManager();
+      const a = newTestInstance(em, Author, {
+        publisher: maybeNew<Publisher>({ name: "p2" }),
+      });
+      expect(a.publisher.get!.name).toEqual("p2");
+    });
   });
 });

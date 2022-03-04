@@ -59,9 +59,20 @@ export function newTestInstance<T extends Entity>(
           const optValue = (opts as any)[fieldName];
 
           // Watch for our "the parent is not yet created" null marker.
-          // Or just a factory having a `const { field } = opts`; that makes it undefined (...as long
-          // as the field is not required, as we have a potentially odd test case for creating a required
-          // parent if an opt key is undefined).
+          //
+          // Or allow a user/factory to explicit request an optional field not be set with
+          // a use / if-only-one default, i.e. by passing `newAuthor({ publisher: undefined })`.
+          //
+          // Note that a factory doing `const { publisher } = opts;` and then passing `publisher`
+          // back in can unwittingly look like `newAuthor({ publisher: undefined })`, so we use
+          // the same heuristic of "well, a required field can't _actually_ be unset" to guess
+          // that the user is using this pattern, and we set the field anyway. If a factory really
+          // does want to leave a required field unset, they can pass the null marker, although
+          // that would require an `as undefined` at the moment.
+          //
+          // TODO: Remove the `!field.required` and just fix our internal tests to behave better.
+          // Probably requires https://github.com/stephenh/joist-ts/issues/268 first b/c we have
+          // tests that are unwittingly sending in `undefined` but still getting back entities.
           if (optValue === null || (optValue === undefined && !field.required)) {
             return [];
           }

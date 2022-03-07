@@ -18,7 +18,7 @@ import {
 } from "./EntityManager";
 import { isManyToOneField, isOneToOneField, New } from "./index";
 import { tagId } from "./keys";
-import { fail } from "./utils";
+import { assertNever, fail } from "./utils";
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -47,90 +47,71 @@ export function newTestInstance<T extends Entity>(
   // We share a single `use` map for a given `newEntity` factory call
   const use = useMap(opts);
 
-  // fullOpts will end up being a full/type-safe opts with every required field
-  // filled in, either driven by the passed-in opts or by making new entities as-needed
-  const fullOpts = Object.fromEntries(
-    Object.values(meta.fields)
-      .map((field) => {
-        const { fieldName } = field;
+  // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
+  // instance of the entity. We'll do the o2m/other fields as a second pass.
+  const initialOpts = Object.values(meta.fields).map((field) => {
+    const { fieldName } = field;
 
-        // Use the opts value if they passed one in
-        if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
-          const optValue = (opts as any)[fieldName];
-
-          // Watch for our "the parent is not yet created" null marker.
-          //
-          // Or allow a user/factory to explicit request an optional field not be set with
-          // a use / if-only-one default, i.e. by passing `newAuthor({ publisher: undefined })`.
-          //
-          // Note that a factory doing `const { publisher } = opts;` and then passing `publisher`
-          // back in can unwittingly look like `newAuthor({ publisher: undefined })`, so we use
-          // the same heuristic of "well, a required field can't _actually_ be unset" to guess
-          // that the user is using this pattern, and we set the field anyway. If a factory really
-          // does want to leave a required field unset, they can pass the null marker, although
-          // that would require an `as undefined` at the moment.
-          //
-          // TODO: Remove the `!field.required` and just fix our internal tests to behave better.
-          // Probably requires https://github.com/stephenh/joist-ts/issues/268 first b/c we have
-          // tests that are unwittingly sending in `undefined` but still getting back entities.
-          if (optValue === null || (optValue === undefined && !field.required)) {
-            return [];
-          }
-
-          // If this is a partial with defaults for the entity, call newTestInstance to get it created
-          if (field.kind === "m2o" || field.kind === "o2o") {
-            const other = resolveFactoryOpt(em, opts, field, optValue);
-            return [fieldName, other];
-          }
-
-          // If this is a list of children, watch for partials that should be newTestInstance'd
-          if (field.kind === "o2m" || field.kind == "m2m") {
-            const values = (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt));
-            return [fieldName, values];
-          }
-
+    // Use the opts value if they passed one in
+    if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
+      const optValue = (opts as any)[fieldName];
+      // We don't explicitly support null (callers should pass undefined), but we accept it
+      // for good measure.
+      if (optValue === null || (optValue === undefined && !field.required)) {
+        return [];
+      }
+      switch (field.kind) {
+        case "m2o":
+          return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined)];
+        case "o2o":
+        case "o2m":
+        case "m2m":
+          // We do these in the 2nd pass after `entity` exists (see additionalOpts)
+          return [];
+        case "lo2m":
           // If a child is passing themselves into a parent that is a large collection, just ignore it
-          if (field.kind === "lo2m") {
-            return [];
-          }
-
+          return [];
+        case "primitive":
+        case "enum":
+        case "poly":
+        case "primaryKey":
           // Look for strings that want to use the test index
           if (typeof optValue === "string" && optValue.includes(testIndex)) {
             const actualIndex = getTestIndex(em, meta.cstr);
             return [fieldName, optValue.replace(testIndex, String(actualIndex))];
           }
-
           // Otherwise just use the user's opt value as-is
           return [fieldName, optValue];
-        }
+        default:
+          return assertNever(field);
+      }
+    }
 
-        if (
-          field.kind === "primitive" &&
-          (field.required || (opts as any)[fieldName] === defaultValueMarker) &&
-          !field.derived &&
-          !field.protected
-        ) {
-          return [fieldName, defaultValueForField(field)];
-        } else if (field.kind === "m2o") {
-          // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
-          // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
-          const existing = getObviousDefault(em, field.otherMetadata(), opts);
-          if (existing) {
-            return [fieldName, existing];
-          }
-          // Otherwise, only make a new entity only if the field is required
-          if (field.required) {
-            return [fieldName, resolveFactoryOpt(em, opts, field, undefined)];
-          }
-        } else if (field.kind === "enum" && field.required) {
-          return [fieldName, field.enumDetailType.getValues()[0]];
-        }
-        return [];
-      })
-      .filter((t) => t.length > 0),
-  );
+    if (
+      field.kind === "primitive" &&
+      (field.required || (opts as any)[fieldName] === defaultValueMarker) &&
+      !field.derived &&
+      !field.protected
+    ) {
+      return [fieldName, defaultValueForField(field)];
+    } else if (field.kind === "m2o") {
+      // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
+      // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
+      const existing = getObviousDefault(em, field.otherMetadata(), opts);
+      if (existing) {
+        return [fieldName, existing];
+      }
+      // Otherwise, only make a new entity only if the field is required
+      if (field.required) {
+        return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+      }
+    } else if (field.kind === "enum" && field.required) {
+      return [fieldName, field.enumDetailType.getValues()[0]];
+    }
+    return [];
+  });
 
-  const entity = em.create(meta.cstr, fullOpts as any) as New<T>;
+  const entity = em.create(meta.cstr, Object.fromEntries(initialOpts.filter((t) => t.length > 0)) as any) as New<T>;
 
   // If the type we just made doesn't exist in `use` yet, remember it. This works better than
   // looking at the values in `fullOpts`, because instead of waiting until the end of the
@@ -139,6 +120,30 @@ export function newTestInstance<T extends Entity>(
   if (!use.has(entity.constructor)) {
     use.set(entity.constructor, [entity, false]);
   }
+
+  // Now that we've got the entity, do a 2nd pass for o2m/m2m where we pass
+  // `{ parent: entity }` down to children (i.e. to replace our original
+  // null marker approach).
+  const additionalOpts = Object.entries(opts).map(([fieldName, optValue]) => {
+    const field = meta.fields[fieldName];
+    // Check `!field` b/c `use` won't have a field
+    if (optValue === null || optValue === undefined || !field) {
+      return [];
+    }
+    if (field.kind === "o2m") {
+      // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
+      return [fieldName, (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, entity))];
+    } else if (field.kind == "m2m") {
+      return [fieldName, (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, [entity]))];
+    } else if (field.kind === "o2o") {
+      // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
+      return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity)];
+    } else {
+      return [];
+    }
+  });
+
+  entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
 
   return entity;
 }
@@ -161,6 +166,7 @@ function resolveFactoryOpt<T extends Entity>(
   opts: FactoryOpts<any>,
   field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField,
   opt: FactoryEntityOpt<T> | undefined,
+  maybeEntity: T | undefined,
 ): T {
   const meta = field.otherMetadata();
   if (isEntity(opt)) {
@@ -181,16 +187,15 @@ function resolveFactoryOpt<T extends Entity>(
       }
       // Otherwise fall though to making a new entity via the factory
     }
-    // Find the opposite side, to see if it's an o2o or o2m pointing back at us
-    const otherField = field.otherMetadata().fields[field.otherFieldName];
+    if (maybeEntity === undefined) {
+      // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
+      maybeEntity = (field.otherMetadata().fields[field.otherFieldName].kind === "o2o" ? null : []) as any;
+    }
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, useMap(opts), meta),
       ...(opt instanceof MaybeNew && opt.opts),
-      // We include `[]` as a marker for "don't create the children", i.e. if you're doing
-      // `newLineItem(em, { parent: { ... } });` then any factory defaults inside the parent's
-      // factory, i.e. `lineItems: [{}]`, should be skipped.
-      [otherField.fieldName]: otherField.kind === "o2o" || otherField.kind === "m2o" ? null : [],
+      [field.otherFieldName]: maybeEntity,
     });
   }
 }

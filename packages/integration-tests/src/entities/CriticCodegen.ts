@@ -2,14 +2,20 @@ import {
   BaseEntity,
   Changes,
   ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
   EntityOrmField,
+  FilterOf,
   Flavor,
+  GraphQLFilterOf,
+  hasOneToOne,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -20,21 +26,25 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import { EntityManager } from "src/entities";
-import { Critic, criticMeta, newCritic } from "./entities";
+import { Critic, CriticColumn, CriticColumnId, criticColumnMeta, criticMeta, newCritic } from "./entities";
 
 export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticOpts {
   name: string;
+  criticColumn?: CriticColumn | null;
 }
 
-export interface CriticIdsOpts {}
+export interface CriticIdsOpts {
+  criticColumnId?: CriticColumnId | null;
+}
 
 export interface CriticFilter {
   id?: ValueFilter<CriticId, never>;
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  criticColumn?: EntityFilter<CriticColumn, CriticColumnId, FilterOf<CriticColumn>, null | undefined>;
 }
 
 export interface CriticGraphQLFilter {
@@ -42,6 +52,7 @@ export interface CriticGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  criticColumn?: EntityGraphQLFilter<CriticColumn, CriticColumnId, GraphQLFilterOf<CriticColumn>>;
 }
 
 export interface CriticOrder {
@@ -66,6 +77,13 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
+
+  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(
+    criticColumnMeta,
+    "criticColumn",
+    "critic",
+    "critic_id",
+  );
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, {}, opts);

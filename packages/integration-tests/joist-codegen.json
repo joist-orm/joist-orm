@@ -27,6 +27,7 @@
       },
       "tag": "c"
     },
+    "CriticColumn": { "tag": "cc" },
     "Image": { "tag": "i" },
     "Publisher": { "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true }, "publishers": { "large": true } }, "tag": "t" }

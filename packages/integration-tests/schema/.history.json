@@ -39,7 +39,8 @@
   "BookReview": ["book", "comment", "createdAt", "id", "isPublic", "rating", "updatedAt"],
   "Comment": ["createdAt", "id", "parent", "text", "updatedAt"],
   "CommentParent": ["Book", "BookReview"],
-  "Critic": ["createdAt", "id", "name", "updatedAt"],
+  "Critic": ["createdAt", "criticColumn", "id", "name", "updatedAt"],
+  "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
   "Mutation": [
     "saveAuthor",
@@ -48,6 +49,7 @@
     "saveBookReview",
     "saveComment",
     "saveCritic",
+    "saveCriticColumn",
     "saveImage",
     "savePublisher",
     "saveTag"
@@ -94,6 +96,8 @@
   "SaveBookReviewResult": ["bookReview"],
   "SaveCommentInput": ["id", "parentId", "text"],
   "SaveCommentResult": ["comment"],
+  "SaveCriticColumnInput": ["criticId", "id", "name"],
+  "SaveCriticColumnResult": ["criticColumn"],
   "SaveCriticInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],

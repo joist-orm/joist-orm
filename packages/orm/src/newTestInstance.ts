@@ -187,10 +187,8 @@ function resolveFactoryOpt<T extends Entity>(
       }
       // Otherwise fall though to making a new entity via the factory
     }
-    if (maybeEntity === undefined) {
-      // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
-      maybeEntity = (field.otherMetadata().fields[field.otherFieldName].kind === "o2o" ? null : []) as any;
-    }
+    // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
+    maybeEntity ??= (field.otherMetadata().fields[field.otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, useMap(opts), meta),

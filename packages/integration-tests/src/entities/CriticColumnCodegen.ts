@@ -1,0 +1,129 @@
+import {
+  BaseEntity,
+  Changes,
+  ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
+  EntityOrmField,
+  FilterOf,
+  Flavor,
+  GraphQLFilterOf,
+  hasOne,
+  Lens,
+  Loaded,
+  LoadHint,
+  loadLens,
+  ManyToOneReference,
+  newChangesProxy,
+  newRequiredRule,
+  OptsOf,
+  OrderBy,
+  PartialOrNull,
+  setField,
+  setOpts,
+  ValueFilter,
+  ValueGraphQLFilter,
+} from "joist-orm";
+import { Context } from "src/context";
+import { EntityManager } from "src/entities";
+import { Critic, CriticColumn, criticColumnMeta, CriticId, criticMeta, CriticOrder, newCriticColumn } from "./entities";
+
+export type CriticColumnId = Flavor<string, "CriticColumn">;
+
+export interface CriticColumnOpts {
+  name: string;
+  critic: Critic;
+}
+
+export interface CriticColumnIdsOpts {
+  criticId?: CriticId | null;
+}
+
+export interface CriticColumnFilter {
+  id?: ValueFilter<CriticColumnId, never>;
+  name?: ValueFilter<string, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
+  critic?: EntityFilter<Critic, CriticId, FilterOf<Critic>, never>;
+}
+
+export interface CriticColumnGraphQLFilter {
+  id?: ValueGraphQLFilter<CriticColumnId>;
+  name?: ValueGraphQLFilter<string>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+  critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>>;
+}
+
+export interface CriticColumnOrder {
+  id?: OrderBy;
+  name?: OrderBy;
+  createdAt?: OrderBy;
+  updatedAt?: OrderBy;
+  critic?: CriticOrder;
+}
+
+export const criticColumnConfig = new ConfigApi<CriticColumn, Context>();
+
+criticColumnConfig.addRule(newRequiredRule("name"));
+criticColumnConfig.addRule(newRequiredRule("createdAt"));
+criticColumnConfig.addRule(newRequiredRule("updatedAt"));
+criticColumnConfig.addRule(newRequiredRule("critic"));
+
+export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
+  readonly __orm!: EntityOrmField & {
+    filterType: CriticColumnFilter;
+    gqlFilterType: CriticColumnGraphQLFilter;
+    orderType: CriticColumnOrder;
+    optsType: CriticColumnOpts;
+    optIdsType: CriticColumnIdsOpts;
+    factoryOptsType: Parameters<typeof newCriticColumn>[1];
+  };
+
+  readonly critic: ManyToOneReference<CriticColumn, Critic, never> = hasOne(criticMeta, "critic", "criticColumn");
+
+  constructor(em: EntityManager, opts: CriticColumnOpts) {
+    super(em, criticColumnMeta, {}, opts);
+    setOpts(this as any as CriticColumn, opts, { calledFromConstructor: true });
+  }
+
+  get id(): CriticColumnId | undefined {
+    return this.__orm.data["id"];
+  }
+
+  get name(): string {
+    return this.__orm.data["name"];
+  }
+
+  set name(name: string) {
+    setField(this, "name", name);
+  }
+
+  get createdAt(): Date {
+    return this.__orm.data["createdAt"];
+  }
+
+  get updatedAt(): Date {
+    return this.__orm.data["updatedAt"];
+  }
+
+  set(opts: Partial<CriticColumnOpts>): void {
+    setOpts(this as any as CriticColumn, opts);
+  }
+
+  setPartial(opts: PartialOrNull<CriticColumnOpts>): void {
+    setOpts(this as any as CriticColumn, opts as OptsOf<CriticColumn>, { partial: true });
+  }
+
+  get changes(): Changes<CriticColumn> {
+    return newChangesProxy(this as any as CriticColumn);
+  }
+
+  async load<U, V>(fn: (lens: Lens<CriticColumn>) => Lens<U, V>): Promise<V> {
+    return loadLens(this as any as CriticColumn, fn);
+  }
+
+  async populate<H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>> {
+    return this.em.populate(this as any as CriticColumn, hint);
+  }
+}

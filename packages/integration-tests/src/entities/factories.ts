@@ -4,6 +4,7 @@ export * from "./BookAdvance.factories";
 export * from "./BookReview.factories";
 export * from "./Comment.factories";
 export * from "./Critic.factories";
+export * from "./CriticColumn.factories";
 export * from "./Image.factories";
 export * from "./Publisher.factories";
 export * from "./Tag.factories";

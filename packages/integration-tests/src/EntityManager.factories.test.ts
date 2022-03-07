@@ -4,10 +4,13 @@ import {
   Book,
   lastAuthorFactoryOpts,
   lastBookFactoryOpts,
+  lastCriticFactory,
   newAuthor,
   newBook,
   newBookAdvance,
   newBookReview,
+  newCritic,
+  newCriticColumn,
   newImage,
   newPublisher,
   Publisher,
@@ -27,7 +30,7 @@ describe("EntityManager.factories", () => {
     expect(em.numberOfEntities).toEqual(1);
   });
 
-  it("can create a child and a required parent", async () => {
+  it("can create a child and a required parent implicity", async () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em);
@@ -40,9 +43,10 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em, { author: undefined });
+    // Then we still create the author b/c it's required and we assume the factory did
+    // `const { author } = opts` and doesn't _really_ want the author undefined.
+    // If they do, they can pass `null`.
     await em.flush();
-    // Then we create the author b/c it's required
-    expect(b1.author.get.firstName).toEqual("a1");
   });
 
   it("can create a child and a required parent with opts", async () => {
@@ -159,6 +163,11 @@ describe("EntityManager.factories", () => {
     expect(b2.author.get).toEqual(a1);
     // And we didn't create an extra author
     expect(em.numberOfEntities).toEqual(3);
+    // And the book factory saw the real author and not a null marker
+    expect(lastBookFactoryOpts).toStrictEqual({
+      author: expect.any(Author),
+      use: expect.any(Map),
+    });
   });
 
   it("can default a required enum", async () => {
@@ -186,7 +195,7 @@ describe("EntityManager.factories", () => {
   it("cannot pass invalid customized opts", async () => {
     const em = newEntityManager();
     // @ts-expect-error
-    newBook(em, { tags: [{ name: "t1" }] });
+    newBook(em, { tags: [new Date()] });
   });
 
   it("can use tagged ids as shortcuts", async () => {
@@ -230,7 +239,35 @@ describe("EntityManager.factories", () => {
 
   it("can create o2o from a parent", async () => {
     const em = newEntityManager();
+    // author.image is an o2o
     newAuthor(em, { image: {} });
+    expect(em.numberOfEntities).toEqual(2);
+  });
+
+  it("can create required o2o from o2o side explicitly", async () => {
+    const em = newEntityManager();
+    newCritic(em, { criticColumn: {} });
+    expect(em.numberOfEntities).toEqual(2);
+  });
+
+  it("can create required o2o from m2o side explicitly", async () => {
+    const em = newEntityManager();
+    newCriticColumn(em, { critic: {} });
+    expect(em.numberOfEntities).toEqual(2);
+    expect(lastCriticFactory).toStrictEqual({
+      criticColumn: null,
+      use: expect.any(Map),
+    });
+  });
+
+  it("can create required o2o from m2o side implicitly", async () => {
+    const em = newEntityManager();
+    newCriticColumn(em, {});
+    expect(em.numberOfEntities).toEqual(2);
+    expect(lastCriticFactory).toStrictEqual({
+      criticColumn: null,
+      use: expect.any(Map),
+    });
   });
 
   it("should not reuse existing entities for o2os", async () => {
@@ -252,6 +289,12 @@ describe("EntityManager.factories", () => {
     const i = newImage(em);
     // Then the m2o reused the existing entity
     expect(i.author.get).toEqual(a);
+  });
+
+  it("can create m2m", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em, { tags: [{}, {}] });
+    await em.flush();
   });
 
   describe("maybeNew", () => {

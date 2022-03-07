@@ -7,6 +7,7 @@ const mappers = {
   ColorDetail: "src/entities#Color",
   Comment: "src/entities#CommentId",
   Critic: "src/entities#CriticId",
+  CriticColumn: "src/entities#CriticColumnId",
   Image: "src/entities#ImageId",
   ImageTypeDetail: "src/entities#ImageType",
   Publisher: "src/entities#PublisherId",

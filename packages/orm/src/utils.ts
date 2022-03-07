@@ -66,3 +66,7 @@ export function toArray<T>(maybeArray: T | T[]): T[] {
 
 // Utility type to strip off null and defined and infer only T.
 export type NullOrDefinedOr<T> = T | null | undefined;
+
+export function assertNever(x: never): never {
+  throw new Error("Unexpected object: " + x);
+}

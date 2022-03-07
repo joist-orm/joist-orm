@@ -100,11 +100,18 @@ export function up(b: MigrationBuilder): void {
     book_id: foreignKey("books", { notNull: true }),
   });
 
+  // for testing m2m w/tags (iirc)
   createEntityTable(b, "critics", {
     name: { type: "varchar(255)", notNull: true },
     // ignore test
     ignore_favourite_book_id: foreignKey("books", { notNull: false }),
     ignore_worst_book_id: foreignKey("books", { notNull: false, unique: true }),
+  });
+
+  // for testing a required m2o -> o2o
+  createEntityTable(b, "critic_columns", {
+    name: { type: "varchar(255)", notNull: true },
+    critic_id: foreignKey("critics", { notNull: true, unique: true }),
   });
 
   // for testing children that are named a prefix of their parent

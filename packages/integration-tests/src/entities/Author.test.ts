@@ -378,10 +378,12 @@ describe("Author", () => {
       const a1 = await em.load(Author, "1");
       expect(a1.changes.publisher.hasChanged).toBeFalsy();
       expect(a1.changes.publisher.originalValue).toBeUndefined();
+      expect(await a1.changes.publisher.originalEntity).toBeUndefined();
       expect(a1.changes.fields).toEqual([]);
       a1.publisher.set(await em.load(Publisher, "2"));
       expect(a1.changes.publisher.hasChanged).toBeTruthy();
       expect(a1.changes.publisher.originalValue).toEqual("p:1");
+      expect(await a1.changes.publisher.originalEntity).toBeInstanceOf(Publisher);
       expect(a1.changes.fields).toEqual(["publisher"]);
     });
   });

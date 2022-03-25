@@ -301,9 +301,9 @@ export function defaultValue<T>(): T {
  * }
  * ```
  */
-export function maybeNew<T extends Entity>(opts: FactoryOpts<T> = {}): FactoryEntityOpt<T> {
+export function maybeNew<T extends Entity>(opts?: ActualFactoryOpts<T>): FactoryEntityOpt<T> {
   // Return a marker that resolveFactoryOpt will look for
-  return new MaybeNew(opts) as any;
+  return new MaybeNew<T>((opts || {}) as any) as any;
 }
 
 class MaybeNew<T extends Entity> {

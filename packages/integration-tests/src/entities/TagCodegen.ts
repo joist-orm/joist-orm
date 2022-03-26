@@ -66,6 +66,8 @@ tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class TagCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
@@ -96,7 +98,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   );
 
   constructor(em: EntityManager, opts: TagOpts) {
-    super(em, tagMeta, {}, opts);
+    super(em, tagMeta, TagCodegen.defaultValues, opts);
     setOpts(this as any as Tag, opts, { calledFromConstructor: true });
   }
 

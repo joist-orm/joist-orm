@@ -14,6 +14,7 @@ import {
   newImage,
   newPublisher,
   Publisher,
+  PublisherType,
   Tag,
 } from "@src/entities";
 import { maybeNew, New, newTestInstance } from "joist-orm";
@@ -217,6 +218,18 @@ describe("EntityManager.factories", () => {
     const a1 = newAuthor(em);
     expect(a1.firstName).toEqual("a1");
     expect(a1.lastName).toBeUndefined();
+  });
+
+  it("uses the entity's default values for primitives", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    expect(b1.order).toEqual(1);
+  });
+
+  it("uses the entity's default values for enums", async () => {
+    const em = newEntityManager();
+    const p1 = newPublisher(em);
+    expect(p1.type).toEqual(PublisherType.Big);
   });
 
   it("should default children to empty array if created bottom-up", async () => {

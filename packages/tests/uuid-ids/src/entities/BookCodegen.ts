@@ -4,11 +4,9 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   FilterOf,
   Flavor,
-  getEm,
   GraphQLFilterOf,
   hasOne,
   Lens,
@@ -27,6 +25,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, newBook } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
@@ -71,7 +70,9 @@ bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
-export abstract class BookCodegen extends BaseEntity {
+export abstract class BookCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;
@@ -84,7 +85,7 @@ export abstract class BookCodegen extends BaseEntity {
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super(em, bookMeta, {}, opts);
+    super(em, bookMeta, BookCodegen.defaultValues, opts);
     setOpts(this as any as Book, opts, { calledFromConstructor: true });
   }
 
@@ -125,6 +126,6 @@ export abstract class BookCodegen extends BaseEntity {
   }
 
   async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {
-    return getEm(this).populate(this as any as Book, hint);
+    return this.em.populate(this as any as Book, hint);
   }
 }

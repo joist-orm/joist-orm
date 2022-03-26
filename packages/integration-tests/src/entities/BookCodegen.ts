@@ -60,7 +60,7 @@ export type BookId = Flavor<string, "Book">;
 
 export interface BookOpts {
   title: string;
-  order?: number | null;
+  order?: number;
   author: Author;
   image?: Image | null;
   advances?: BookAdvance[];
@@ -81,7 +81,7 @@ export interface BookIdsOpts {
 export interface BookFilter {
   id?: ValueFilter<BookId, never>;
   title?: ValueFilter<string, never>;
-  order?: ValueFilter<number, null | undefined>;
+  order?: ValueFilter<number, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
@@ -107,16 +107,19 @@ export interface BookOrder {
   author?: AuthorOrder;
 }
 
-export const bookDefaultValues = { order: 0 };
-
 export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
+bookConfig.addRule(newRequiredRule("order"));
 bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {
+    order: 1,
+  };
+
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;
@@ -139,7 +142,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
-    super(em, bookMeta, bookDefaultValues, opts);
+    super(em, bookMeta, BookCodegen.defaultValues, opts);
     setOpts(this as any as Book, opts, { calledFromConstructor: true });
   }
 
@@ -155,11 +158,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     setField(this, "title", title);
   }
 
-  get order(): number | undefined {
+  get order(): number {
     return this.__orm.data["order"];
   }
 
-  set order(order: number | undefined) {
+  set order(order: number) {
     setField(this, "order", order);
   }
 

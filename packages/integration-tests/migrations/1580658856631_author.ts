@@ -31,7 +31,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
     size_id: { type: "integer", references: "publisher_size", notNull: false },
-    type_id: { type: "integer", references: "publisher_type", notNull: false, default: 1 },
+    type_id: { type: "integer", references: "publisher_type", notNull: true, default: 2 },
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },
@@ -89,8 +89,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "books", {
     title: { type: "varchar(255)", notNull: true },
     author_id: foreignKey("authors", { notNull: true }),
-    // for testing columns that are keywords
-    order: { type: "integer", notNull: false, default: 0 },
+    // for testing columns that are keywords (and testing default values)
+    order: { type: "integer", notNull: true, default: 1 },
   });
 
   createEntityTable(b, "book_advances", {

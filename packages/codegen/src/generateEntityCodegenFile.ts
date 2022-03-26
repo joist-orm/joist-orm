@@ -1,7 +1,7 @@
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
-import { EntityDbMetadata, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
+import { EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
   BaseEntity,
   BooleanFilter,
@@ -322,8 +322,6 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
 
   const defaultValues = generateDefaultValues(config, meta);
-  const hasDefaultValues = defaultValues.length > 0;
-  const defaultValuesName = `${camelCase(entityName)}DefaultValues`;
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities`);
@@ -356,13 +354,15 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${generateOrderFields(meta)}
     }
 
-    ${hasDefaultValues ? code`export const ${defaultValuesName} = { ${defaultValues} };` : ""}
-
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(meta, configName)}
 
     export abstract class ${entityName}Codegen extends ${BaseEntity}<${EntityManager}> {
+      private static defaultValues = {
+        ${defaultValues}
+      };
+
       readonly __orm!: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;
@@ -374,7 +374,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${[o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic]}
 
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        super(em, ${metadata}, ${hasDefaultValues ? `${defaultValuesName}` : "{}"}, opts);
+        super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
       }
 
@@ -407,8 +407,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   `;
 }
 
-function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: PrimitiveField): boolean {
-  let { fieldType, columnDefault, derived } = field;
+function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
+  let { columnDefault } = field;
 
   // if there's no default at all, return false
   if (columnDefault === null) {
@@ -420,9 +420,11 @@ function fieldHasDefaultValue(config: Config, meta: EntityDbMetadata, field: Pri
   columnDefault = columnDefault.toString();
 
   // if this value should be set elsewhere, return false
-  if (derived !== false) {
+  if (field.kind === "primitive" && field.derived !== false) {
     return false;
   }
+
+  const fieldType = field.kind === "primitive" ? field.fieldType : "number";
 
   // try to validate that we actually got a primitive value and not arbitrary SQL
   return (
@@ -446,7 +448,7 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
 
 function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
   const primitives = meta.primitives
-    .filter((field) => fieldHasDefaultValue(config, meta, field))
+    .filter((field) => fieldHasDefaultValue(field))
     .map(({ fieldName, columnDefault }) => {
       return code`${fieldName}: ${columnDefault},`;
     });
@@ -482,16 +484,15 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     if (derived) {
       return code``;
     }
-    return code`${fieldName}${maybeOptional(
-      notNull && !fieldHasDefaultValue(config, meta, field),
-    )}: ${fieldType}${maybeUnionNull(notNull)};`;
+    return code`${fieldName}${maybeOptionalOrDefault(field)}: ${fieldType}${maybeUnionNull(notNull)};`;
   });
-  const enums = meta.enums.map(({ fieldName, enumType, notNull, isArray }) => {
+  const enums = meta.enums.map((field) => {
+    const { fieldName, enumType, notNull, isArray } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}?: ${enumType}[];`;
     } else {
-      return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
+      return code`${fieldName}${maybeOptionalOrDefault(field)}: ${enumType}${maybeUnionNull(notNull)};`;
     }
   });
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
@@ -612,6 +613,10 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
 
 function maybeOptional(notNull: boolean): string {
   return notNull ? "" : "?";
+}
+
+function maybeOptionalOrDefault(field: PrimitiveField | EnumField): string {
+  return field.notNull && !fieldHasDefaultValue(field) ? "" : "?";
 }
 
 function maybeUnionNull(notNull: boolean): string {

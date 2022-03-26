@@ -6,6 +6,6 @@ describe("Publisher", () => {
   it("has a default type", async () => {
     const em = newEntityManager();
     const p = em.create(Publisher, { name: "p1" });
-    expect(p.type).toEqual(PublisherType.Small);
+    expect(p.type).toEqual(PublisherType.Big);
   });
 });

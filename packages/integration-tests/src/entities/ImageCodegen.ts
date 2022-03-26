@@ -105,6 +105,8 @@ imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
 export abstract class ImageCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;
@@ -121,7 +123,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
 
   constructor(em: EntityManager, opts: ImageOpts) {
-    super(em, imageMeta, {}, opts);
+    super(em, imageMeta, ImageCodegen.defaultValues, opts);
     setOpts(this as any as Image, opts, { calledFromConstructor: true });
   }
 

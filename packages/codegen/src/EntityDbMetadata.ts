@@ -61,6 +61,7 @@ interface Field {
 export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object";
 
 export type PrimitiveField = Field & {
+  kind: "primitive";
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
@@ -74,6 +75,7 @@ export type PrimitiveField = Field & {
 };
 
 export type EnumField = Field & {
+  kind: "enum";
   columnName: string;
   columnDefault: number | boolean | string | null;
   enumName: string;
@@ -86,6 +88,7 @@ export type EnumField = Field & {
 };
 
 export type PgEnumField = Field & {
+  kind: "pg-enum";
   columnName: string;
   columnDefault: number | boolean | string | null;
   enumName: string;
@@ -96,6 +99,7 @@ export type PgEnumField = Field & {
 
 /** I.e. a `Book.author` reference pointing to an `Author`. */
 export type ManyToOneField = Field & {
+  kind: "m2o";
   columnName: string;
   dbType: string;
   otherFieldName: string;
@@ -105,6 +109,7 @@ export type ManyToOneField = Field & {
 
 /** I.e. a `Author.books` collection. */
 export type OneToManyField = Field & {
+  kind: "o2m";
   singularName: string;
   otherEntity: Entity;
   otherFieldName: string;
@@ -115,6 +120,7 @@ export type OneToManyField = Field & {
 
 /** I.e. a `Author.image` reference when `image.author_id` is unique. */
 export type OneToOneField = Field & {
+  kind: "o2o";
   otherEntity: Entity;
   otherFieldName: string;
   otherColumnName: string;
@@ -122,6 +128,7 @@ export type OneToOneField = Field & {
 };
 
 export type ManyToManyField = Field & {
+  kind: "m2m";
   joinTableName: string;
   singularName: string;
   columnName: string;
@@ -279,6 +286,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const superstruct = superstructConfig(config, entity, fieldName);
   const maybeUserType = fieldType === "Object" && superstruct ? superstructType(superstruct) : fieldType;
   return {
+    kind: "primitive",
     fieldName,
     columnName,
     columnType,
@@ -316,6 +324,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
+    kind: "enum",
     fieldName,
     columnName,
     columnDefault: column.default,
@@ -342,6 +351,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
+    kind: "enum",
     fieldName,
     columnName,
     columnDefault: column.default,
@@ -362,6 +372,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column, table: T
   const enumName = pascalCase(column.type.name);
   const enumType = imp(`${enumName}@./entities`);
   return {
+    kind: "pg-enum",
     fieldName,
     columnName,
     enumType,
@@ -385,7 +396,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
-  return { fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
+  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {
@@ -396,6 +407,7 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
   const { singularName, fieldName } = collectionName(config, entity, otherEntity, r);
   const otherFieldName = referenceName(config, otherEntity, r);
   return {
+    kind: "o2m",
     fieldName,
     singularName,
     otherEntity,
@@ -417,7 +429,7 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName);
-  return { fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, ignore };
+  return { kind: "o2o", fieldName, otherEntity, otherFieldName, otherColumnName, otherColumnNotNull, ignore };
 }
 
 function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): ManyToManyField {
@@ -434,6 +446,7 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
     camelCase(plural(foreignKey.columns[0].name.replace("_id", ""))),
   );
   return {
+    kind: "m2m",
     joinTableName: r.joinTable.name,
     fieldName,
     singularName: singular(fieldName),

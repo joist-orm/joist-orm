@@ -156,6 +156,8 @@ authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
@@ -185,7 +187,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
-    super(em, authorMeta, {}, opts);
+    super(em, authorMeta, AuthorCodegen.defaultValues, opts);
     setOpts(this as any as Author, opts, { calledFromConstructor: true });
   }
 

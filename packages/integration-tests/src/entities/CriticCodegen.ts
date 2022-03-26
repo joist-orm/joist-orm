@@ -69,6 +69,8 @@ criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class CriticCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;
@@ -86,7 +88,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   );
 
   constructor(em: EntityManager, opts: CriticOpts) {
-    super(em, criticMeta, {}, opts);
+    super(em, criticMeta, CriticCodegen.defaultValues, opts);
     setOpts(this as any as Critic, opts, { calledFromConstructor: true });
   }
 

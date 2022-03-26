@@ -51,7 +51,7 @@ export const bookMeta: EntityMetadata<Book> = {
   fields: {
     id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int") },
     title: { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying") },
-    order: { kind: "primitive", fieldName: "order", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("order", "order", "int") },
+    order: { kind: "primitive", fieldName: "order", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("order", "order", "int") },
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int") },
@@ -212,7 +212,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     size: { kind: "enum", fieldName: "size", fieldIdName: undefined, required: false, enumDetailType: PublisherSizes, serde: new EnumFieldSerde("size", "size_id", PublisherSizes) },
-    type: { kind: "enum", fieldName: "type", fieldIdName: undefined, required: false, enumDetailType: PublisherTypes, serde: new EnumFieldSerde("type", "type_id", PublisherTypes) },
+    type: { kind: "enum", fieldName: "type", fieldIdName: undefined, required: true, enumDetailType: PublisherTypes, serde: new EnumFieldSerde("type", "type_id", PublisherTypes) },
     tag: { kind: "m2o", fieldName: "tag", fieldIdName: "tagId", required: false, otherMetadata: () => tagMeta, otherFieldName: "publishers", serde: new KeySerde("t", "tag", "tag_id", "int") },
     authors: { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "publisher", serde: undefined },
     bookAdvances: { kind: "o2m", fieldName: "bookAdvances", fieldIdName: "bookAdvanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "publisher", serde: undefined },

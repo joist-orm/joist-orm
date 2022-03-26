@@ -339,6 +339,7 @@ function newFs(files: Record<string, string>): Fs {
 
 function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveField> = {}): PrimitiveField {
   return {
+    kind: "primitive",
     fieldName,
     columnName: snakeCase(fieldName),
     columnType: "varchar",
@@ -380,6 +381,7 @@ function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): EnumFie
   const enumDetailType = imp(`${plural(enumName)}@./entities`);
   const enumDetailsType = imp(`${enumName}Details@./entities`);
   return {
+    kind: "enum",
     fieldName,
     columnName: snakeCase(fieldName),
     columnDefault: null,

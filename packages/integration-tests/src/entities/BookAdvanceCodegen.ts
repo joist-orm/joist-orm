@@ -93,6 +93,8 @@ bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
 export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: BookAdvanceFilter;
     gqlFilterType: BookAdvanceGraphQLFilter;
@@ -111,7 +113,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   );
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
-    super(em, bookAdvanceMeta, {}, opts);
+    super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);
     setOpts(this as any as BookAdvance, opts, { calledFromConstructor: true });
   }
 

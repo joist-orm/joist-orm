@@ -3,10 +3,8 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  EntityManager,
   EntityOrmField,
   Flavor,
-  getEm,
   hasMany,
   Lens,
   Loaded,
@@ -23,6 +21,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { EntityManager } from "src/entities";
 import { Author, authorMeta, Book, BookId, bookMeta, newAuthor } from "./entities";
 
 export type AuthorId = Flavor<string, "Author">;
@@ -67,7 +66,9 @@ authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorCodegen extends BaseEntity {
+export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
@@ -80,7 +81,7 @@ export abstract class AuthorCodegen extends BaseEntity {
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
-    super(em, authorMeta, {}, opts);
+    super(em, authorMeta, AuthorCodegen.defaultValues, opts);
     setOpts(this as any as Author, opts, { calledFromConstructor: true });
   }
 
@@ -129,6 +130,6 @@ export abstract class AuthorCodegen extends BaseEntity {
   }
 
   async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {
-    return getEm(this).populate(this as any as Author, hint);
+    return this.em.populate(this as any as Author, hint);
   }
 }

@@ -94,6 +94,8 @@ bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: BookReviewFilter;
     gqlFilterType: BookReviewGraphQLFilter;
@@ -113,7 +115,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   );
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
-    super(em, bookReviewMeta, {}, opts);
+    super(em, bookReviewMeta, BookReviewCodegen.defaultValues, opts);
     setOpts(this as any as BookReview, opts, { calledFromConstructor: true });
   }
 

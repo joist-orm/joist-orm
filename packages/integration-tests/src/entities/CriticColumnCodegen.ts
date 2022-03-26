@@ -71,6 +71,8 @@ criticColumnConfig.addRule(newRequiredRule("updatedAt"));
 criticColumnConfig.addRule(newRequiredRule("critic"));
 
 export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {};
+
   readonly __orm!: EntityOrmField & {
     filterType: CriticColumnFilter;
     gqlFilterType: CriticColumnGraphQLFilter;
@@ -83,7 +85,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
   readonly critic: ManyToOneReference<CriticColumn, Critic, never> = hasOne(criticMeta, "critic", "criticColumn");
 
   constructor(em: EntityManager, opts: CriticColumnOpts) {
-    super(em, criticColumnMeta, {}, opts);
+    super(em, criticColumnMeta, CriticColumnCodegen.defaultValues, opts);
     setOpts(this as any as CriticColumn, opts, { calledFromConstructor: true });
   }
 

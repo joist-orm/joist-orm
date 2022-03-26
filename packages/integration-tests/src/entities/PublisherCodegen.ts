@@ -62,7 +62,7 @@ export interface PublisherOpts {
   longitude?: number | null;
   hugeNumber?: number | null;
   size?: PublisherSize | null;
-  type?: PublisherType | null;
+  type?: PublisherType;
   tag?: Tag | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
@@ -85,7 +85,7 @@ export interface PublisherFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   size?: ValueFilter<PublisherSize, null | undefined>;
-  type?: ValueFilter<PublisherType, null | undefined>;
+  type?: ValueFilter<PublisherType, never>;
   tag?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
@@ -115,15 +115,18 @@ export interface PublisherOrder {
   tag?: TagOrder;
 }
 
-export const publisherDefaultValues = { type: PublisherType.Small };
-
 export const publisherConfig = new ConfigApi<Publisher, Context>();
 
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
+publisherConfig.addRule(newRequiredRule("type"));
 
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
+  private static defaultValues = {
+    type: PublisherType.Big,
+  };
+
   readonly __orm!: EntityOrmField & {
     filterType: PublisherFilter;
     gqlFilterType: PublisherGraphQLFilter;
@@ -147,7 +150,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   readonly tag: ManyToOneReference<Publisher, Tag, undefined> = hasOne(tagMeta, "tag", "publishers");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
-    super(em, publisherMeta, publisherDefaultValues, opts);
+    super(em, publisherMeta, PublisherCodegen.defaultValues, opts);
     setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
   }
 
@@ -215,15 +218,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["size"] === PublisherSize.Large;
   }
 
-  get type(): PublisherType | undefined {
+  get type(): PublisherType {
     return this.__orm.data["type"];
   }
 
-  get typeDetails(): PublisherTypeDetails | undefined {
-    return this.type ? PublisherTypes.getByCode(this.type) : undefined;
+  get typeDetails(): PublisherTypeDetails {
+    return PublisherTypes.getByCode(this.type);
   }
 
-  set type(type: PublisherType | undefined) {
+  set type(type: PublisherType) {
     setField(this, "type", type);
   }
 

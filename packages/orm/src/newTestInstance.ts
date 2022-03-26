@@ -93,7 +93,8 @@ export function newTestInstance<T extends Entity>(
       !field.derived &&
       !field.protected
     ) {
-      return [fieldName, defaultValueForField(field)];
+      const codegenDefault = (cstr as any).defaultValues[field.fieldName];
+      return [fieldName, codegenDefault ?? defaultValueForField(field)];
     } else if (field.kind === "m2o") {
       // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
       // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
@@ -106,7 +107,8 @@ export function newTestInstance<T extends Entity>(
         return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
       }
     } else if (field.kind === "enum" && field.required) {
-      return [fieldName, field.enumDetailType.getValues()[0]];
+      const codegenDefault = (cstr as any).defaultValues[field.fieldName];
+      return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
     }
     return [];
   });

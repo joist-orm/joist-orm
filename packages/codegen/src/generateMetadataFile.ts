@@ -68,6 +68,21 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       }`;
   });
 
+  // Treat native enums as primitives
+  dbMetadata.pgEnums.forEach(({ columnName, fieldName, notNull }) => {
+    fields[fieldName] = code`
+      {
+        kind: "primitive",
+        fieldName: "${fieldName}",
+        fieldIdName: undefined,
+        derived: false,
+        required: ${notNull},
+        protected: false,
+        type: "string",
+        serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "string"),
+      }`;
+  });
+
   dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull, isArray, columnName }) => {
     fields[fieldName] = code`
       {

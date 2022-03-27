@@ -1,3 +1,10 @@
+## [1.1.2](https://github.com/stephenh/joist-ts/compare/v1.1.1...v1.1.2) (2022-03-27)
+
+
+### Bug Fixes
+
+* Don't use workspaces foreach to publish. ([e098ed7](https://github.com/stephenh/joist-ts/commit/e098ed7063a0cb7a8dfbd84201380a6d83a48ce0))
+
 ## [1.1.1](https://github.com/stephenh/joist-ts/compare/v1.1.0...v1.1.1) (2022-03-27)
 
 

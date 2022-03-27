@@ -1,3 +1,10 @@
+## [1.1.3](https://github.com/stephenh/joist-ts/compare/v1.1.2...v1.1.3) (2022-03-27)
+
+
+### Bug Fixes
+
+* Forgot to publish joist-test-utils. ([71d6d97](https://github.com/stephenh/joist-ts/commit/71d6d97468f93206f43bcb7a86f02ceaba3a5d1c))
+
 ## [1.1.2](https://github.com/stephenh/joist-ts/compare/v1.1.1...v1.1.2) (2022-03-27)
 
 

@@ -1,3 +1,10 @@
+# [1.1.0](https://github.com/stephenh/joist-ts/compare/v1.0.0...v1.1.0) (2022-03-27)
+
+
+### Features
+
+* Fix semantic-release. ([74ac911](https://github.com/stephenh/joist-ts/commit/74ac91119db97eb96b36248029a722cf5980c3ee))
+
 # 1.0.0 (2022-03-27)
 
 

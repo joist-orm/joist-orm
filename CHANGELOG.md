@@ -1,3 +1,10 @@
+## [1.1.4](https://github.com/stephenh/joist-ts/compare/v1.1.3...v1.1.4) (2022-03-27)
+
+
+### Bug Fixes
+
+* Fix EntityConstructor w/defaultValues. ([#284](https://github.com/stephenh/joist-ts/issues/284)) ([07dcc3c](https://github.com/stephenh/joist-ts/commit/07dcc3cf9dd75c8b4fc4aa8d1e0d288a7f09514c))
+
 ## [1.1.3](https://github.com/stephenh/joist-ts/compare/v1.1.2...v1.1.3) (2022-03-27)
 
 

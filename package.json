@@ -1,7 +1,8 @@
 {
   "private": true,
   "scripts": {
-    "build": "tsc --build"
+    "build": "tsc --build",
+    "semantic-release": "semantic-release"
   },
   "workspaces": [
     "docs",
@@ -14,6 +15,15 @@
     "packages/test-utils",
     "packages/tests/uuid-ids"
   ],
+  "devDependencies": {
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^9.0.2",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^8.0.2",
+    "@semantic-release/npm": "^9.0.1",
+    "@semantic-release/release-notes-generator": "^10.0.3",
+    "semantic-release": "^19.0.2"
+  },
   "dependencies": {
     "typescript": "^4.5.2"
   },

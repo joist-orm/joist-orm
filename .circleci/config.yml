@@ -67,5 +67,4 @@ jobs:
           steps:
             - run:
                 name: Release
-                command: |
-                  ./release.sh
+                command: yarn semantic-release

@@ -1,7 +1,8 @@
 {
   "name": "joist-tests-uuid-ids",
-  "version": "workspace:*",
+  "version": "1.0.0",
   "license": "MIT",
+  "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/stephenh/joist-ts.git",

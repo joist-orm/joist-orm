@@ -4501,6 +4501,22 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@semantic-release/exec@npm:^6.0.3":
+  version: 6.0.3
+  resolution: "@semantic-release/exec@npm:6.0.3"
+  dependencies:
+    "@semantic-release/error": ^3.0.0
+    aggregate-error: ^3.0.0
+    debug: ^4.0.0
+    execa: ^5.0.0
+    lodash: ^4.17.4
+    parse-json: ^5.0.0
+  peerDependencies:
+    semantic-release: ">=18.0.0"
+  checksum: c6ad2f02ff01a4709c4914f560d0343efea9afe993c733ff971da8bf89604a1460d87b26a1a2ace5992c5ace8e8d384cf314504e0c4b623fc8433e8e8d9e2fe0
+  languageName: node
+  linkType: hard
+
 "@semantic-release/git@npm:^10.0.1":
   version: 10.0.1
   resolution: "@semantic-release/git@npm:10.0.1"
@@ -12136,6 +12152,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"joist@workspace:.":
+  version: 0.0.0-use.local
+  resolution: "joist@workspace:."
+  dependencies:
+    "@semantic-release/changelog": ^6.0.1
+    "@semantic-release/commit-analyzer": ^9.0.2
+    "@semantic-release/exec": ^6.0.3
+    "@semantic-release/git": ^10.0.1
+    "@semantic-release/github": ^8.0.2
+    "@semantic-release/npm": ^9.0.1
+    "@semantic-release/release-notes-generator": ^10.0.3
+    semantic-release: ^19.0.2
+    typescript: ^4.5.2
+  languageName: unknown
+  linkType: soft
+
 "js-tokens@npm:^3.0.0 || ^4.0.0, js-tokens@npm:^4.0.0":
   version: 4.0.0
   resolution: "js-tokens@npm:4.0.0"
@@ -16610,21 +16642,6 @@ __metadata:
   checksum: 87f4164e396f0171b0a3386cc1877a817f572148ee13a7e113b238e48e8a9f2f31d009a92ec38a591ff1567d9662c6b67fd8818a2dbbaed74bc26a87a2a4a9a0
   languageName: node
   linkType: hard
-
-"root-workspace-0b6124@workspace:.":
-  version: 0.0.0-use.local
-  resolution: "root-workspace-0b6124@workspace:."
-  dependencies:
-    "@semantic-release/changelog": ^6.0.1
-    "@semantic-release/commit-analyzer": ^9.0.2
-    "@semantic-release/git": ^10.0.1
-    "@semantic-release/github": ^8.0.2
-    "@semantic-release/npm": ^9.0.1
-    "@semantic-release/release-notes-generator": ^10.0.3
-    semantic-release: ^19.0.2
-    typescript: ^4.5.2
-  languageName: unknown
-  linkType: soft
 
 "rtl-detect@npm:^1.0.4":
   version: 1.0.4

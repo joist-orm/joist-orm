@@ -1,6 +1,6 @@
 {
   "name": "joist-migration-utils",
-  "version": "1.0.0-bump",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -17,7 +17,7 @@
   ],
   "dependencies": {
     "@types/pluralize": "0.0.29",
-    "joist-utils": "1.0.0-bump",
+    "joist-utils": "workspace:*",
     "node-pg-migrate": "^5.0.0",
     "pg": "^8.7.1",
     "pg-structure": "^7.13.0",

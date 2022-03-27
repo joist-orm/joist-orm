@@ -1,6 +1,6 @@
 {
   "name": "joist-codegen",
-  "version": "1.0.0-bump",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
     "@types/pluralize": "0.0.29",
     "change-case": "^4.1.1",
     "is-plain-object": "^3.0.1",
-    "joist-utils": "1.0.0-bump",
+    "joist-utils": "workspace:*",
     "knex": "^0.95.9",
     "pg": "^8.7.1",
     "pg-structure": "^7.13.0",

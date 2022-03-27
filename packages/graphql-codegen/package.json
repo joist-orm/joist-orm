@@ -1,6 +1,6 @@
 {
   "name": "joist-graphql-codegen",
-  "version": "1.0.0-bump",
+  "version": "1.0.0",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,8 +19,8 @@
     "change-case": "^4.1.1",
     "graphql": "^15.3.0",
     "is-plain-object": "^3.0.1",
-    "joist-codegen": "1.0.0-bump",
-    "joist-utils": "1.0.0-bump",
+    "joist-codegen": "workspace:*",
+    "joist-utils": "workspace:*",
     "pluralize": "^8.0.0",
     "ts-poet": "^4.8.0"
   },

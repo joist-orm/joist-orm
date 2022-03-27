@@ -359,7 +359,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     ${generateDefaultValidationRules(meta, configName)}
 
     export abstract class ${entityName}Codegen extends ${BaseEntity}<${EntityManager}> {
-      private static defaultValues = {
+      static defaultValues: object = {
         ${defaultValues}
       };
 

@@ -69,7 +69,7 @@ criticConfig.addRule(newRequiredRule("createdAt"));
 criticConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class CriticCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {};
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: CriticFilter;

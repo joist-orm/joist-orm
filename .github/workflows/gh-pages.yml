@@ -8,6 +8,9 @@ on:
       - '.github/workflows/gh-pages.yml'
       - 'docs/**'
   pull_request:
+    paths:
+      - '.github/workflows/gh-pages.yml'
+      - 'docs/**'
 
 jobs:
   deploy:

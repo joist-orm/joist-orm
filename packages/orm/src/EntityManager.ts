@@ -35,6 +35,8 @@ import { fail, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
+
+  defaultValues: object;
 }
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */

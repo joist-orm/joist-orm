@@ -94,7 +94,7 @@ bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {};
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: BookReviewFilter;

@@ -123,7 +123,7 @@ publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
 
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {
+  static defaultValues: object = {
     type: PublisherType.Big,
   };
 

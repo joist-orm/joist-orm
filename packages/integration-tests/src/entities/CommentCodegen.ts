@@ -82,7 +82,7 @@ commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
 export abstract class CommentCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {};
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: CommentFilter;

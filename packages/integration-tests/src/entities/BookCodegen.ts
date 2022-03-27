@@ -116,7 +116,7 @@ bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {
+  static defaultValues: object = {
     order: 1,
   };
 

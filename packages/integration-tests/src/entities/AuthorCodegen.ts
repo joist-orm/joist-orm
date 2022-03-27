@@ -156,7 +156,7 @@ authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {};
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: AuthorFilter;

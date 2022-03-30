@@ -8,6 +8,7 @@ import {
   hasLargeMany,
   hasLargeManyToMany,
   hasManyToMany,
+  isLoaded,
   LargeCollection,
   Lens,
   Loaded,
@@ -140,5 +141,9 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {
     return this.em.populate(this as any as Tag, hint);
+  }
+
+  isLoaded<H extends LoadHint<Tag>>(hint: H): this is Loaded<Tag, H> {
+    return isLoaded(this as any as Tag, hint);
   }
 }

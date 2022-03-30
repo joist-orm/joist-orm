@@ -10,6 +10,7 @@ import {
   Flavor,
   GraphQLFilterOf,
   hasOne,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -171,5 +172,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>> {
     return this.em.populate(this as any as BookAdvance, hint);
+  }
+
+  isLoaded<H extends LoadHint<BookAdvance>>(hint: H): this is Loaded<BookAdvance, H> {
+    return isLoaded(this as any as BookAdvance, hint);
   }
 }

@@ -29,7 +29,17 @@ export * from "./drivers";
 export * from "./EntityManager";
 export * from "./getProperties";
 export * from "./keys";
-export { isNew, Loadable, Loaded, LoadHint, New, RelationsIn } from "./loaded";
+export {
+  ensureLoaded,
+  ensureLoadedThen,
+  isLoaded,
+  isNew,
+  Loadable,
+  Loaded,
+  LoadHint,
+  New,
+  RelationsIn,
+} from "./loaded";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
@@ -245,7 +255,7 @@ export function getEm(entity: Entity): EntityManager<any> {
 }
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
-  return Object.values(entity).filter((v) => v instanceof AbstractRelationImpl);
+  return Object.values(entity).filter((v: any) => v instanceof AbstractRelationImpl);
 }
 
 export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {

@@ -117,3 +117,38 @@ export type NestedLoadHint<T extends Entity> = {
     ? {}
     : never;
 };
+
+/** recursively checks if the relations from a load hint are loaded on an entity */
+export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): entity is Loaded<T, H> {
+  if (typeof hint === "string") {
+    return (entity as any)[hint].isLoaded;
+  } else if (Array.isArray(hint)) {
+    return (hint as string[]).every((key) => (entity as any)[key].isLoaded);
+  } else if (typeof hint === "object") {
+    return Object.entries(hint as object).every(([key, nestedHint]) => {
+      const relation = (entity as any)[key];
+      if (relation.isLoaded) {
+        const result = relation.get;
+        return Array.isArray(result)
+          ? result.every((entity) => isLoaded(entity, nestedHint))
+          : isLoaded(result, nestedHint);
+      } else {
+        return false;
+      }
+    });
+  } else {
+    throw new Error(`Unexpected hint ${hint}`);
+  }
+}
+
+export function ensureLoaded<T extends Entity, H extends LoadHint<T>, R>(entity: T, hint: H): Promise<Loaded<T, H>> {
+  return isLoaded(entity, hint) ? entity : (entity as any).populate(hint);
+}
+
+export function ensureLoadedThen<T extends Entity, H extends LoadHint<T>, R>(
+  entity: T,
+  hint: H,
+  fn: (loaded: Loaded<T, H>) => R,
+): R | Promise<R> {
+  return isLoaded(entity, hint) ? fn(entity) : (entity as any).populate(hint).then(fn);
+}

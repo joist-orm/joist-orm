@@ -10,6 +10,7 @@ import {
   Flavor,
   hasOnePolymorphic,
   IdOf,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -138,5 +139,9 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>> {
     return this.em.populate(this as any as Comment, hint);
+  }
+
+  isLoaded<H extends LoadHint<Comment>>(hint: H): this is Loaded<Comment, H> {
+    return isLoaded(this as any as Comment, hint);
   }
 }

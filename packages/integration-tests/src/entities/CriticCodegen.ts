@@ -9,6 +9,7 @@ import {
   Flavor,
   GraphQLFilterOf,
   hasOneToOne,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -130,5 +131,9 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>> {
     return this.em.populate(this as any as Critic, hint);
+  }
+
+  isLoaded<H extends LoadHint<Critic>>(hint: H): this is Loaded<Critic, H> {
+    return isLoaded(this as any as Critic, hint);
   }
 }

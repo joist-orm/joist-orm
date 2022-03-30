@@ -13,6 +13,7 @@ import {
   hasManyToMany,
   hasOne,
   hasOneToOne,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -192,5 +193,9 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {
     return this.em.populate(this as any as Book, hint);
+  }
+
+  isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
+    return isLoaded(this as any as Book, hint);
   }
 }

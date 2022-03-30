@@ -12,6 +12,7 @@ import {
   GraphQLFilterOf,
   hasOne,
   hasOneToOne,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -164,5 +165,9 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>> {
     return this.em.populate(this as any as BookReview, hint);
+  }
+
+  isLoaded<H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {
+    return isLoaded(this as any as BookReview, hint);
   }
 }

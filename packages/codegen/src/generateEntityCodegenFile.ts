@@ -27,6 +27,7 @@ import {
   hasOnePolymorphic,
   hasOneToOne,
   IdOf,
+  isLoaded,
   LargeCollection,
   Lens,
   Loaded,
@@ -402,6 +403,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {
         return this.em.populate(this as any as ${entityName}, hint);
+      }
+      
+      isLoaded<H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}, H> {
+        return ${isLoaded}(this as any as ${entityName}, hint);
       }
     }
   `;

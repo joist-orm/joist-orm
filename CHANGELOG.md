@@ -1,3 +1,10 @@
+## [1.1.5](https://github.com/stephenh/joist-ts/compare/v1.1.4...v1.1.5) (2022-04-01)
+
+
+### Bug Fixes
+
+* Resolve [#273](https://github.com/stephenh/joist-ts/issues/273) Added isLoaded, ensureLoaded, and ensureLoadedThen ([#286](https://github.com/stephenh/joist-ts/issues/286)) ([a9f366e](https://github.com/stephenh/joist-ts/commit/a9f366e2541c82f3ba6082d836fce20c47f34d96))
+
 ## [1.1.4](https://github.com/stephenh/joist-ts/compare/v1.1.3...v1.1.4) (2022-03-27)
 
 

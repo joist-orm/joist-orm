@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/stephenh/joist-ts/compare/v1.1.5...v1.2.0) (2022-04-03)
+
+
+### Features
+
+* Loosen restrictions on timestamp columns. ([#289](https://github.com/stephenh/joist-ts/issues/289)) ([ec8290e](https://github.com/stephenh/joist-ts/commit/ec8290e9558f93be61ba5cd5d828bd42c9891f30))
+
 ## [1.1.5](https://github.com/stephenh/joist-ts/compare/v1.1.4...v1.1.5) (2022-04-01)
 
 

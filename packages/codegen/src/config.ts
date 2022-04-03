@@ -23,11 +23,39 @@ export interface EntityConfig {
   relations?: Record<string, RelationConfig>;
 }
 
+export interface TimestampConfig {
+  /** The names to check for this timestamp, i.e. `created_at` `created`, etc. */
+  names: string[];
+  /** Whether this timestamp column is required to consider a table an entity, defaults to `false`. */
+  optional?: boolean;
+}
+
 export interface Config {
   contextType?: string;
+  /**
+   * Allows the user to specify the `updated_at` / `created_at` column names to look up, and if they're optional.
+   *
+   * We default to looking for `updated_at`, `updatedAt`, `created_at`, `createdAt`, and optional to true,
+   * e.g. tables are not required to have both timestamp columns to be considered entities.
+   *
+   * These defaults are the most lenient, to facilitate running Joist against an existing schema and
+   * seeing all of your entities, regardless of your previous conventions.
+   */
+  timestampColumns?: {
+    createdAt?: TimestampConfig;
+    updatedAt?: TimestampConfig;
+  };
+  /**
+   * By default, we create a `flush_database` function for super fast testing.
+   *
+   * However, if you don't want to use this, or you have your own bespoke function like we do
+   * that is more application-aware, then you can disable Joist's out-of-the-box one.
+   */
+  createFlushFunction?: boolean;
   entitiesDirectory: string;
   codegenPlugins: string[];
   entities: Record<string, EntityConfig>;
+  ignoredTables?: string[];
   // We don't persist this, and instead just use it as a cache
   __tableToEntityName?: Record<string, string>;
 }
@@ -107,4 +135,23 @@ export async function writeConfig(config: Config): Promise<void> {
   const input = JSON.stringify(sorted);
   const content = prettier.format(input.trim(), { parser: "json", ...prettierConfig });
   await fs.writeFile(configPath, content);
+}
+
+/** Applies defaults to the timestamp config. */
+export function getTimestampConfig(config: Config): {
+  updatedAtConf: Required<TimestampConfig>;
+  createdAtConf: Required<TimestampConfig>;
+} {
+  return {
+    createdAtConf: {
+      names: ["created_at", "createdAt"],
+      optional: true,
+      ...config?.timestampColumns?.createdAt,
+    },
+    updatedAtConf: {
+      names: ["updated_at", "updatedAt"],
+      optional: true,
+      ...config?.timestampColumns?.updatedAt,
+    },
+  };
 }

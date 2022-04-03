@@ -126,6 +126,8 @@ export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
+export type TimestampFields = { updatedAt: string | undefined; createdAt: string | undefined };
+
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
   skipValidation?: boolean;
@@ -590,8 +592,13 @@ export class EntityManager<C = {}> {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
-    entity.__orm.data["createdAt"] = new Date();
-    entity.__orm.data["updatedAt"] = new Date();
+    const { createdAt, updatedAt } = getMetadata(entity).timestampFields;
+    if (createdAt) {
+      entity.__orm.data[createdAt] = new Date();
+    }
+    if (updatedAt) {
+      entity.__orm.data[updatedAt] = new Date();
+    }
 
     this._entities.push(entity);
     if (entity.id) {
@@ -855,7 +862,8 @@ export interface EntityMetadata<T extends Entity> {
   tagName: string;
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
-  factory: (em: EntityManager, opts?: any) => New<T>;
+  timestampFields: TimestampFields;
+  factory: (em: EntityManager<any>, opts?: any) => New<T>;
 }
 
 export type Field =

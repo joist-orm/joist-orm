@@ -37,6 +37,7 @@ export const authorMeta: EntityMetadata<Author> = {
     tags: { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined },
     image: { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: authorConfig,
   factory: newAuthor,
 };
@@ -62,6 +63,7 @@ export const bookMeta: EntityMetadata<Book> = {
     tags: { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined },
     image: { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "book", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: bookConfig,
   factory: newBook,
 };
@@ -82,6 +84,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
     book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: true, otherMetadata: () => bookMeta, otherFieldName: "advances", serde: new KeySerde("b", "book", "book_id", "int") },
     publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: true, otherMetadata: () => publisherMeta, otherFieldName: "bookAdvances", serde: new KeySerde("p", "publisher", "publisher_id", "int") },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: bookAdvanceConfig,
   factory: newBookAdvance,
 };
@@ -103,6 +106,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
     book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: true, otherMetadata: () => bookMeta, otherFieldName: "reviews", serde: new KeySerde("b", "book", "book_id", "int") },
     comment: { kind: "o2o", fieldName: "comment", fieldIdName: "commentId", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: bookReviewConfig,
   factory: newBookReview,
 };
@@ -132,6 +136,7 @@ export const commentMeta: EntityMetadata<Comment> = {
       serde: new PolymorphicKeySerde(() => commentMeta, "parent"),
     },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: commentConfig,
   factory: newComment,
 };
@@ -151,6 +156,7 @@ export const criticMeta: EntityMetadata<Critic> = {
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     criticColumn: { kind: "o2o", fieldName: "criticColumn", fieldIdName: "criticColumnId", required: false, otherMetadata: () => criticColumnMeta, otherFieldName: "critic", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: criticConfig,
   factory: newCritic,
 };
@@ -170,6 +176,7 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     critic: { kind: "m2o", fieldName: "critic", fieldIdName: "criticId", required: true, otherMetadata: () => criticMeta, otherFieldName: "criticColumn", serde: new KeySerde("c", "critic", "critic_id", "int") },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: criticColumnConfig,
   factory: newCriticColumn,
 };
@@ -192,6 +199,7 @@ export const imageMeta: EntityMetadata<Image> = {
     book: { kind: "m2o", fieldName: "book", fieldIdName: "bookId", required: false, otherMetadata: () => bookMeta, otherFieldName: "image", serde: new KeySerde("b", "book", "book_id", "int") },
     publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: false, otherMetadata: () => publisherMeta, otherFieldName: "images", serde: new KeySerde("p", "publisher", "publisher_id", "int") },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: imageConfig,
   factory: newImage,
 };
@@ -219,6 +227,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     bookAdvances: { kind: "o2m", fieldName: "bookAdvances", fieldIdName: "bookAdvanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "publisher", serde: undefined },
     images: { kind: "o2m", fieldName: "images", fieldIdName: "imageIds", required: false, otherMetadata: () => imageMeta, otherFieldName: "publisher", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: publisherConfig,
   factory: newPublisher,
 };
@@ -239,6 +248,7 @@ export const tagMeta: EntityMetadata<Tag> = {
     publishers: { kind: "lo2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "tag", serde: undefined },
     books: { kind: "m2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "tags", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: tagConfig,
   factory: newTag,
 };

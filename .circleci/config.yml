@@ -34,12 +34,17 @@ jobs:
             docker-compose build db
             docker-compose up db-wait
       - run:
-          name: Run migrations
+          name: Run migrations & codegen
           command: |
             cd packages/integration-tests
             ./run.sh ../migration-utils/build/index.js
-            cd ../tests/uuid-ids
+            ./run.sh ../codegen/build/index.js
+            cd ../tests/schema-misc
+            yarn migrate
+            ./run.sh ../../codegen/build/index.js
+            cd ../uuid-ids
             ./run.sh ../../migration-utils/build/index.js
+            ./run.sh ../../codegen/build/index.js
       - run:
           name: Run integration-tests
           command: |
@@ -55,6 +60,14 @@ jobs:
           environment:
             JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
             JEST_JUNIT_OUTPUT_NAME: junit-uuid-ids.xml
+      - run:
+          name: Run schema-misc tests
+          command: |
+            cd packages/tests/schema-misc
+            yarn test --reporters=default --reporters=jest-junit
+          environment:
+            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
+            JEST_JUNIT_OUTPUT_NAME: junit-schema-misc.xml
       - store_test_results:
           path: /tmp/reports/junit/
       - store_artifacts:

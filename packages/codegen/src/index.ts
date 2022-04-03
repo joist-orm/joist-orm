@@ -13,6 +13,7 @@ import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
 import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
+import { createFlushFunction } from "./generateFlushFunction";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
@@ -132,7 +133,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         return e.em as EntityManager;
       }
 
-      ${entities.map((meta) => generateMetadataFile(config, meta))}
+      ${entities.map((meta) => generateMetadataFile(config, dbMeta, meta))}
 
       export const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];
       ${configureMetadata}(allMetadata);
@@ -183,23 +184,25 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 }
 
 export async function loadEnumMetadata(db: Db, client: Client, config: Config): Promise<EnumMetadata> {
-  const promises = db.tables.filter(isEnumTable).mapToArray(async (table) => {
-    const result = await client.query(`SELECT * FROM ${table.name} ORDER BY id`);
-    const rows = result.rows.map((row) => row as EnumRow);
-    // We're not really an entity, but appropriate EntityDbMetadata's `primitives` filtering
-    const extraPrimitives = new EntityDbMetadata(config, table).primitives.filter(
-      (p) => !["code", "name"].includes(p.fieldName),
-    );
-    return [
-      table.name,
-      {
-        table,
-        name: pascalCase(table.name), // use tableToEntityName?
-        rows,
-        extraPrimitives,
-      },
-    ] as [string, EnumTableData];
-  });
+  const promises = db.tables
+    .filter((t) => isEnumTable(config, t))
+    .mapToArray(async (table) => {
+      const result = await client.query(`SELECT * FROM ${table.name} ORDER BY id`);
+      const rows = result.rows.map((row) => row as EnumRow);
+      // We're not really an entity, but appropriate EntityDbMetadata's `primitives` filtering
+      const extraPrimitives = new EntityDbMetadata(config, table).primitives.filter(
+        (p) => !["code", "name"].includes(p.fieldName),
+      );
+      return [
+        table.name,
+        {
+          table,
+          name: pascalCase(table.name), // use tableToEntityName?
+          rows,
+          extraPrimitives,
+        },
+      ] as [string, EnumTableData];
+    });
   return Object.fromEntries(await Promise.all(promises));
 }
 
@@ -246,11 +249,23 @@ if (require.main === module) {
     const enums = await loadEnumMetadata(db, client, config);
     const pgEnums = await loadPgEnumMetadata(db, client, config);
 
-    await client.end();
-
-    const entityTables = db.tables.filter(isEntityTable).sortBy("name");
+    const entityTables = db.tables.filter((t) => isEntityTable(config, t)).sortBy("name");
     const entities = entityTables.map((table) => new EntityDbMetadata(config, table, enums));
+
     const dbMetadata: DbMetadata = { entityTables, entities, enums, pgEnums };
+    console.log(
+      `Found ${db.tables.length} total tables, ${entityTables.length} entity tables, ${
+        Object.entries(enums).length
+      } enum tables`,
+    );
+
+    // In graphql-service we have our own custom flush function, so allow skipping this
+    if (config.createFlushFunction !== false) {
+      console.log("Creating flush_database function");
+      await createFlushFunction(db, client, config);
+    }
+
+    await client.end();
 
     assignTags(config, dbMetadata);
     await writeConfig(config);

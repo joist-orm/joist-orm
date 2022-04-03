@@ -4,6 +4,7 @@ import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
 import {
   Config,
+  getTimestampConfig,
   isAsyncDerived,
   isDerived,
   isFieldIgnored,
@@ -45,6 +46,7 @@ export type DatabaseColumnType =
   | "character varying"
   | "varchar"
   | "timestamp with time zone"
+  | "timestamp without time zone"
   | "date"
   | "jsonb";
 
@@ -168,6 +170,8 @@ export class EntityDbMetadata {
   polymorphics: PolymorphicField[];
   tableName: string;
   tagName: string;
+  createdAt: PrimitiveField | undefined;
+  updatedAt: PrimitiveField | undefined;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -181,7 +185,7 @@ export class EntityDbMetadata {
 
     this.enums = [
       ...table.m2oRelations
-        .filter((r) => isEnumTable(r.targetTable))
+        .filter((r) => isEnumTable(config, r.targetTable))
         .map((r) => newEnumField(config, this.entity, r, enums))
         .filter((f) => !f.ignore),
       ...table.columns
@@ -197,7 +201,7 @@ export class EntityDbMetadata {
     ];
 
     this.manyToOnes = table.m2oRelations
-      .filter((r) => !isEnumTable(r.targetTable))
+      .filter((r) => !isEnumTable(config, r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isComponentOfPolymorphicRelation(config, r))
       .map((r) => newManyToOneField(config, this.entity, r))
@@ -206,7 +210,7 @@ export class EntityDbMetadata {
     // We split these into regular/large...
     const allOneToManys = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
-      .filter((r) => !isJoinTable(r.targetTable))
+      .filter((r) => !isJoinTable(config, r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(config, this.entity, r))
@@ -216,7 +220,7 @@ export class EntityDbMetadata {
 
     this.oneToOnes = table.o2mRelations
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
-      .filter((r) => !isJoinTable(r.targetTable))
+      .filter((r) => !isJoinTable(config, r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => isOneToOneRelation(r))
       .map((r) => newOneToOne(config, this.entity, r))
@@ -228,7 +232,7 @@ export class EntityDbMetadata {
       // that has a foreign key to us, and a foreign key to something else, is automatically
       // considered as a join table/m2m between "us" and "something else". Filter these out
       // by looking for only true join tables, i.e. tables with only id, fk1, and fk2.
-      .filter((r) => isJoinTable(r.joinTable))
+      .filter((r) => isJoinTable(config, r.joinTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .map((r) => newManyToManyField(config, this.entity, r))
       .filter((f) => !f.ignore);
@@ -241,6 +245,10 @@ export class EntityDbMetadata {
 
     this.tableName = table.name;
     this.tagName = config.entities[this.entity.name]?.tag;
+
+    const { createdAtConf, updatedAtConf } = getTimestampConfig(config);
+    this.createdAt = this.primitives.find((f) => createdAtConf.names.includes(f.columnName));
+    this.updatedAt = this.primitives.find((f) => updatedAtConf.names.includes(f.columnName));
   }
 
   get name(): string {
@@ -463,7 +471,7 @@ function newPolymorphicField(config: Config, table: Table, entity: Entity, rc: R
   const { polymorphic, name } = rc;
   const fieldName = name!;
   const components = table.m2oRelations
-    .filter((r) => !isEnumTable(r.targetTable))
+    .filter((r) => !isEnumTable(config, r.targetTable))
     .filter((r) => !isMultiColumnForeignKey(r))
     .filter((r) => polymorphicFieldName(config, r) === fieldName)
     .map((r) => newPolymorphicFieldComponent(config, entity, r));

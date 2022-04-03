@@ -9,7 +9,7 @@ To reset the database between each unit test, Joist generates a `flush_database`
 await knex.select(knex.raw("flush_database()"));
 ```
 
-This is generated at the end of the `joist-migation-utils` set only if `ADD_FLUSH_DATABASE` environment variable is set, i.e. this function should never exist in your production database. It is only for local testing.
+This is generated at the end of the `joist-codegen`, which should only be invoked against local development databases, i.e. this function should never exist in your production database. It is only for local testing.
 
 ### What About Per-Test Transactions?
 

@@ -1,3 +1,4 @@
+import { DbMetadata } from "index";
 import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
@@ -11,11 +12,12 @@ import {
   PrimitiveSerde,
   SuperstructSerde,
 } from "./symbols";
+import { q } from "./utils";
 
-export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadata): Code {
-  const { entity } = dbMetadata;
+export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
+  const { entity, createdAt, updatedAt } = meta;
 
-  const fields = generateFields(config, dbMetadata);
+  const fields = generateFields(config, meta);
 
   Object.values(fields).forEach((code) => code.asOneline());
 
@@ -23,10 +25,11 @@ export function generateMetadataFile(config: Config, dbMetadata: EntityDbMetadat
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
-      idType: "${dbMetadata.idDbType}",
-      tagName: "${dbMetadata.tagName}",
-      tableName: "${dbMetadata.tableName}",
+      idType: "${meta.idDbType}",
+      tagName: "${meta.tagName}",
+      tableName: "${meta.tableName}",
       fields: ${fields},
+      timestampFields: { createdAt: ${q(createdAt?.fieldName)}, updatedAt: ${q(updatedAt?.fieldName)} },
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
     };

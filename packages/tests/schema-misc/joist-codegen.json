@@ -1,0 +1,11 @@
+{
+  "codegenPlugins": [],
+  "contextType": "Context@src/context",
+  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
+  "entitiesDirectory": "./src/entities",
+  "ignoredTables": ["pgmigrations"],
+  "timestampColumns": {
+    "createdAt": { "names": ["created_at", "createdAt"], "optional": true },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "optional": true }
+  }
+}

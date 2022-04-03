@@ -276,7 +276,7 @@ export class PostgresDriver implements Driver {
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
-    const updatedAt = new Date();
+    const now = new Date();
     await this.idAssigner.assignNewIds(knex, todos);
     for await (const todo of Object.values(todos)) {
       if (todo) {
@@ -285,12 +285,17 @@ export class PostgresDriver implements Driver {
           await batchInsert(knex, meta, todo.inserts);
         }
         if (todo.updates.length > 0) {
-          todo.updates.forEach((e) => {
-            // Should we just go through a setter?
-            e.__orm.originalData["updatedAt"] = e.__orm.data["updatedAt"];
-            e.__orm.data["updatedAt"] = updatedAt;
-          });
-          await batchUpdate(knex, meta, todo.updates);
+          const { updatedAt } = todo.metadata.timestampFields;
+          if (updatedAt) {
+            todo.updates.forEach((e) => {
+              // Should we just go through a setter?
+              e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
+              e.__orm.data[updatedAt] = now;
+            });
+            await batchUpdate(knex, meta, todo.updates);
+          } else {
+            await batchUpdateWithoutUpdatedAt(knex, meta, todo.updates);
+          }
         }
         if (todo.deletes.length > 0) {
           await batchDelete(knex, meta, todo.deletes);
@@ -376,11 +381,10 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 
 // Uses a pg-specific syntax to issue a bulk update
 async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  const { updatedAt } = meta.timestampFields;
+  if (!updatedAt) throw new Error("This batchUpdate expects updatedAt");
   // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
-  const changedFields = new Set<string>();
-  // Id doesn't change, but we need it for our WHERE clause
-  changedFields.add("id");
-  changedFields.add("updatedAt");
+  const changedFields = new Set<string>(["id", updatedAt]);
   entities.forEach((entity) => {
     Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
   });
@@ -406,7 +410,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     // and bindings is each individual value.
     bindings = entities.flatMap((entity) => [
       ...columns.map((c) => c.dbValue(entity.__orm.data) ?? null),
-      entity.__orm.originalData.updatedAt,
+      entity.__orm.originalData[updatedAt],
     ]);
     sql = `
       UPDATE ${meta.tableName}
@@ -432,7 +436,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       columns.forEach((c, i) => {
         bindings[i].push(c.dbValue(entity.__orm.data) ?? null);
       });
-      originalUpdatedAt.push(entity.__orm.originalData.updatedAt);
+      originalUpdatedAt.push(entity.__orm.originalData[updatedAt]);
     }
     sql = `
       UPDATE ${meta.tableName}
@@ -457,6 +461,44 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     const missing = entities.map((e) => e.idOrFail).filter((id) => !updated.has(id));
     throw new Error(`Oplock failure for ${tagIds(meta, missing).join(", ")}`);
   }
+}
+
+async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
+  const changedFields = new Set<string>(["id"]);
+  entities.forEach((entity) => {
+    Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
+  });
+
+  // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't changed,
+  // it'll be a noop, so just short-circuit if it looks like that happened, i.e. we have no changed fields.
+  // (unless one of the entities was `EntityManager.touch`-d, which seems force the save / updatedAt tick.)
+  if (changedFields.size === 1 && !entities.some((e) => e.__orm.isTouched)) {
+    return;
+  }
+
+  const fields = Object.values(meta.fields)
+    .filter((f) => changedFields.has(f.fieldName))
+    .filter(hasSerde);
+  const columns = fields.flatMap((f) => f.serde.columns);
+
+  // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
+  // and bindings is each individual value.
+  const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data) ?? null));
+  const sql = `
+    UPDATE ${meta.tableName}
+    SET ${columns
+      .filter((c) => c.columnName !== "id")
+      .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
+      .join(", ")}
+    FROM (
+        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")})`).join(",")}
+        ) AS data(${columns.map((c) => c.columnName).join(",")})
+    WHERE
+        ${meta.tableName}.id = data.id
+        RETURNING ${meta.tableName}.id
+  `;
+  await knex.raw(cleanSql(sql), bindings);
 }
 
 async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {

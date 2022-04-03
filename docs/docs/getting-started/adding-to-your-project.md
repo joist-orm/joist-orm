@@ -47,7 +47,7 @@ If you do use `node-pg-migrate`, the `joist-migration-utils` package has some he
 ./run.sh joist-migration-utils
 ```
 
-This will apply any `node-pg-migrate` migrations located in your `./migrations/` directory, and then, if `ADD_FLUSH_DATABASE` is set, add the `flush_database()` function for your tests to use.
+This will apply any `node-pg-migrate` migrations located in your `./migrations/` directory.
 
 Note that usually `joist-migration-utils` / your migration library of choice is run first, i.e. a flow would be:
 

@@ -5,57 +5,56 @@ sidebar_position: 3
 
 Joist makes several assumptions about your database schema, as described below.
 
-:::caution
+## Entity Tables
 
-Ideally you are developing your database schema greenfield with Joist from day one, so you can just adopt these assumptions/conventions from the beginning.
+Joist expects entity tables (i.e. `authors`, `books`) to have a single primary key column, `id`, that is either:
 
-However, if this is not the case, hopefully it would not be too bad to nudge your schema towards what Joist expects.
+1. A `id` / `serial` type, that uses a sequence called `${tableName}_id_seq`, or
+2. A `uuid` type
 
-Eventually Joist may have configuration options to work with different schema conventions, but today is does not. 
+### Singular vs. Plural
+
+You can use either singular table names, e.g. `book`, or plural table names, e.g. `books`.
+
+### Timestamp Columns
+
+Entity tables can optionally have `created_at` and `updated_at` columns, which when present Joist will auto-manage the setting of `created_at` when creating entities, and updating `updated_at` when updating entities.
+
+In `joist-codegen.json`, you can configure the names of the `timestampColumns`, which defaults to:
+
+```json
+{
+  "timestampColumns": {
+    "createdAt": { "names": ["created_at", "createdAt"], "optional": true },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "optional": true }
+  }
+}
+```
+
+For example, if you want to strictly require `created_at` and `updated_at` on all entities in your application's schema, you can use:
+
+```json
+{
+  "timestampColumns": {
+    "createdAt": { "names": ["created_at"], "optional": false },
+    "updatedAt": { "names": ["updated_at"], "optional": false }
+  }
+}
+```
+
+:::tip
+
+ If you have non-Joist clients that update entities tables, or use bulk/raw SQL updates, you can create triggers that mimic this functionality (but will not overwrite `INSERT`s / `UPDATE`s that do set the columns), see [joist-migration-utils](https://github.com/stephenh/joist-ts/blob/main/packages/migration-utils/src/utils.ts#L73).
+
+(This methods use `node-pg-migrate`, but you can use whatever migration library you prefer to apply the DDL.)
 
 :::
 
-### Entity Tables
-
-Joist expects entity tables (i.e. `authors`, `books`) to:
- 
-1. Be named using plurals, i.e. `authors` instead of `author`,
-
-   :::note
-
-   Technically Joist rarely "guesses" table names, mostly just for the initial "what is the entity name for this table name?", so this constraint may actually be pretty soft in practice.
-
-   :::
-
-2. Always have at least these three columns:
-
-    * `id` primary key/serial
-    * `created_at` `timestamptz`
-    * `updated_at` `timestamptz`
-
-   Joist automatically maintains the `created_at`/`updated_at` columns for each row/entity during `EntityManager.flush`.
-
-   :::tip
-
-    If you have non-Joist clients that update entities tables, or use bulk/raw SQL updates, you can create triggers that mimic this functionality (but will not overwrite `INSERT`s / `UPDATE`s that do set the columns), see [joist-migration-utils](https://github.com/stephenh/joist-ts/blob/main/packages/migration-utils/src/utils.ts#L73).
-
-   (This methods use `node-pg-migrate`, but you can use whatever migration library you prefer to apply the DDL.)
-
-   :::
-
-   :::note
-
-    Eventually Joist should configurable enablement of `created_at`/`updated_at` columns, but for now it is assumed/required to have them.
-
-   :::
-
-5. Have a single primary key column, `id`, that is `SERIAL`/auto-increment
-
-### Enums as Tables
+## Enum Tables
 
 Joist models enums (i.e. `EmployeeStatus`) as their own database tables with a row-per-value. 
 
-I.e. `epmloyee_status` (singular) might have two rows like:
+For example, `employee_status` might have two rows like:
 
 ```
 id  | code          | name
@@ -64,7 +63,7 @@ id  | code          | name
 2   | PART_TIME     | Part Time
 ```
 
-And will be codegen'd as:
+And Joist will generate code that looks like:
 
 ```typescript
 enum EmployeeStatus {
@@ -88,18 +87,18 @@ The `joist-migration-utils` package has `createEnumTable`, `addEnumValue`, and `
 
 And, as mentioned, entities that want to use this enum should have a foreign key that references the appropriate enum table.
 
-### Many-to-many tables
+## Many-to-many Join Tables
 
-Joist expects join tables to have four columns:
+Joist expects join tables to have three or four columns:
 
 * `id` primary key/serial
 * One foreign key column for 1st side
 * One foreign key column for 2nd side
-* `created_at` `timestamptz`
+* `created_at` `timestamptz` (optional)
 
 (`updated_at` is not applicable to join tables.)
 
-### Deferred Foreign Key Constraints
+## Deferred Foreign Key Constraints
 
 Joist's goal of "batch all operations" can be difficult to achieve and still satisfy foreign key constraints, particularly as multiple types of entities are flushed to the database in a single transaction.
 
@@ -140,7 +139,3 @@ for (const table of db.tables) {
 ```
 
 :::
-
-### Composite Primary Keys
-
-Joist does not support composite primary keys.

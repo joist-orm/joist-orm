@@ -1,3 +1,10 @@
+## [1.2.1](https://github.com/stephenh/joist-ts/compare/v1.2.0...v1.2.1) (2022-04-04)
+
+
+### Bug Fixes
+
+* Use workspaces foreach to drive semantic-release. ([#290](https://github.com/stephenh/joist-ts/issues/290)) ([6098647](https://github.com/stephenh/joist-ts/commit/6098647e579d4a5616c43804392f52cbd74a63fb))
+
 # [1.2.0](https://github.com/stephenh/joist-ts/compare/v1.1.5...v1.2.0) (2022-04-03)
 
 

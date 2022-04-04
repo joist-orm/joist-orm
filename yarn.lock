@@ -4561,7 +4561,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@semantic-release/npm@npm:^9.0.0, @semantic-release/npm@npm:^9.0.1":
+"@semantic-release/npm@npm:^9.0.0":
   version: 9.0.1
   resolution: "@semantic-release/npm@npm:9.0.1"
   dependencies:
@@ -12195,7 +12195,6 @@ __metadata:
     "@semantic-release/exec": ^6.0.3
     "@semantic-release/git": ^10.0.1
     "@semantic-release/github": ^8.0.2
-    "@semantic-release/npm": ^9.0.1
     "@semantic-release/release-notes-generator": ^10.0.3
     semantic-release: ^19.0.2
     typescript: ^4.5.2

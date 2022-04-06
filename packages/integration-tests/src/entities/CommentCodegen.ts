@@ -28,13 +28,13 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import { EntityManager } from "src/entities";
-import { Book, BookReview, Comment, commentMeta, newComment } from "./entities";
+import { Author, Book, BookReview, Comment, commentMeta, newComment, Publisher } from "./entities";
 
 export type CommentId = Flavor<string, "Comment">;
 
-export type CommentParent = Book | BookReview;
+export type CommentParent = Author | Book | BookReview | Publisher;
 export function getCommentParentConstructors(): EntityConstructor<CommentParent>[] {
-  return [Book, BookReview];
+  return [Author, Book, BookReview, Publisher];
 }
 export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEntity is CommentParent {
   return (

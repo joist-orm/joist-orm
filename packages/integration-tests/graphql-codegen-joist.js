@@ -1,7 +1,6 @@
 const mappers = {
   AdvanceStatusDetail: "src/entities#AdvanceStatus",
   Author: "src/entities#AuthorId",
-  AuthorFavorite: "src/entities#AuthorFavoriteId",
   Book: "src/entities#BookId",
   BookAdvance: "src/entities#BookAdvanceId",
   BookReview: "src/entities#BookReviewId",
@@ -9,7 +8,6 @@ const mappers = {
   Comment: "src/entities#CommentId",
   Critic: "src/entities#CriticId",
   CriticColumn: "src/entities#CriticColumnId",
-  FavoriteThing: "src/entities#FavoriteThingId",
   Image: "src/entities#ImageId",
   ImageTypeDetail: "src/entities#ImageType",
   Publisher: "src/entities#PublisherId",

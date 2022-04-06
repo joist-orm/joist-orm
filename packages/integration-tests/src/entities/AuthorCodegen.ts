@@ -39,9 +39,6 @@ import { Address, address } from "src/entities/types";
 import { assert } from "superstruct";
 import {
   Author,
-  AuthorFavorite,
-  AuthorFavoriteId,
-  authorFavoriteMeta,
   authorMeta,
   Book,
   BookId,
@@ -49,10 +46,10 @@ import {
   Color,
   ColorDetails,
   Colors,
+  Comment,
+  CommentId,
+  commentMeta,
   FavoriteShape,
-  FavoriteThing,
-  FavoriteThingId,
-  favoriteThingMeta,
   Image,
   ImageId,
   imageMeta,
@@ -82,9 +79,8 @@ export interface AuthorOpts {
   publisher?: Publisher | null;
   image?: Image | null;
   authors?: Author[];
-  favorites?: AuthorFavorite[];
   books?: Book[];
-  favoriteThings?: FavoriteThing[];
+  comments?: Comment[];
   tags?: Tag[];
 }
 
@@ -93,9 +89,8 @@ export interface AuthorIdsOpts {
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   authorIds?: AuthorId[] | null;
-  favoriteIds?: AuthorFavoriteId[] | null;
   bookIds?: BookId[] | null;
-  favoriteThingIds?: FavoriteThingId[] | null;
+  commentIds?: CommentId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -180,21 +175,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 
-  readonly favorites: Collection<Author, AuthorFavorite> = hasMany(
-    authorFavoriteMeta,
-    "favorites",
-    "author",
-    "author_id",
-  );
-
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
 
-  readonly favoriteThings: Collection<Author, FavoriteThing> = hasMany(
-    favoriteThingMeta,
-    "favoriteThings",
-    "parent",
-    "parent_author_id",
-  );
+  readonly comments: Collection<Author, Comment> = hasMany(commentMeta, "comments", "parent", "parent_author_id");
 
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 

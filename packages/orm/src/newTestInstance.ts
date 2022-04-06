@@ -342,12 +342,13 @@ export function maybeNew<T extends Entity>(opts?: ActualFactoryOpts<T>): Factory
  * 2) Allows you to prioritize which existing entities to select
  *
  * For example below, we are specifying that an Author should be created if needed (and it's default opts),
- * and also that the priority order for choosing existing entities is Author, Book, and then Publisher
+ * and also that the priority order for choosing existing entities is Author, Book, and then Publisher.
+ * Also, since BookReview is excluded, an existing BookReview will never be chosen.
  *
  * ```typescript
- * export function newFavoriteThing(em: EntityManager, opts: FactoryOpts<FavoriteThing> = {}): New<FavoriteThing> {
- *   return newTestInstance(em, FavoriteThing, {
- *     parent: maybeNewPoly<FavoriteThingParent>(Author, {}, Book, Publisher),
+ * export function newComment(em: EntityManager, opts: FactoryOpts<Comment> = {}): New<Comment> {
+ *   return newTestInstance(em, Comment, {
+ *     parent: maybeNewPoly<CommentParent>(Author, {}, Book, Publisher),
  *     ...opts,
  *   });
  * }

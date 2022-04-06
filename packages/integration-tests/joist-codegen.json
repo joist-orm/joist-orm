@@ -15,7 +15,6 @@
       },
       "tag": "a"
     },
-    "AuthorFavorite": { "tag": "af" },
     "Book": { "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
@@ -29,7 +28,6 @@
       "tag": "c"
     },
     "CriticColumn": { "tag": "cc" },
-    "FavoriteThing": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "ft" },
     "Image": { "tag": "i" },
     "Publisher": { "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true }, "publishers": { "large": true } }, "tag": "t" }

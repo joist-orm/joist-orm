@@ -7,7 +7,6 @@ describe("getProperties", () => {
       "advances",
       "reviews",
       "comments",
-      "favoriteThings",
       "author",
       "image",
       "tags",

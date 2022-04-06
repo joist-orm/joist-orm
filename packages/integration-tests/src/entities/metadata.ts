@@ -1,49 +1,7 @@
 import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address } from "src/entities/types";
-import {
-  AdvanceStatuses,
-  Author,
-  authorConfig,
-  AuthorFavorite,
-  authorFavoriteConfig,
-  Book,
-  BookAdvance,
-  bookAdvanceConfig,
-  bookConfig,
-  BookReview,
-  bookReviewConfig,
-  Colors,
-  Comment,
-  commentConfig,
-  Critic,
-  CriticColumn,
-  criticColumnConfig,
-  criticConfig,
-  FavoriteThing,
-  favoriteThingConfig,
-  Image,
-  imageConfig,
-  ImageTypes,
-  newAuthor,
-  newAuthorFavorite,
-  newBook,
-  newBookAdvance,
-  newBookReview,
-  newComment,
-  newCritic,
-  newCriticColumn,
-  newFavoriteThing,
-  newImage,
-  newPublisher,
-  newTag,
-  Publisher,
-  publisherConfig,
-  PublisherSizes,
-  PublisherTypes,
-  Tag,
-  tagConfig,
-} from "./entities";
+import { AdvanceStatuses, Author, authorConfig, Book, BookAdvance, bookAdvanceConfig, bookConfig, BookReview, bookReviewConfig, Colors, Comment, commentConfig, Critic, CriticColumn, criticColumnConfig, criticConfig, Image, imageConfig, ImageTypes, newAuthor, newBook, newBookAdvance, newBookReview, newComment, newCritic, newCriticColumn, newImage, newPublisher, newTag, Publisher, publisherConfig, PublisherSizes, PublisherTypes, Tag, tagConfig } from "./entities";
 
 export class EntityManager extends EntityManager1<Context> {}
 
@@ -75,9 +33,8 @@ export const authorMeta: EntityMetadata<Author> = {
     mentor: { kind: "m2o", fieldName: "mentor", fieldIdName: "mentorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "authors", serde: new KeySerde("a", "mentor", "mentor_id", "int") },
     publisher: { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", required: false, otherMetadata: () => publisherMeta, otherFieldName: "authors", serde: new KeySerde("p", "publisher", "publisher_id", "int") },
     authors: { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "mentor", serde: undefined },
-    favorites: { kind: "o2m", fieldName: "favorites", fieldIdName: "favoriteIds", required: false, otherMetadata: () => authorFavoriteMeta, otherFieldName: "author", serde: undefined },
     books: { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined },
-    favoriteThings: { kind: "o2m", fieldName: "favoriteThings", fieldIdName: "favoriteThingIds", required: false, otherMetadata: () => favoriteThingMeta, otherFieldName: "parent", serde: undefined },
+    comments: { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined },
     tags: { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined },
     image: { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", serde: undefined },
   },
@@ -87,26 +44,6 @@ export const authorMeta: EntityMetadata<Author> = {
 };
 
 (Author as any).metadata = authorMeta;
-
-export const authorFavoriteMeta: EntityMetadata<AuthorFavorite> = {
-  cstr: AuthorFavorite,
-  type: "AuthorFavorite",
-  idType: "int",
-  tagName: "af",
-  tableName: "author_favorites",
-  fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("af", "id", "id", "int") },
-    createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
-    updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
-    author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: true, otherMetadata: () => authorMeta, otherFieldName: "favorites", serde: new KeySerde("a", "author", "author_id", "int") },
-    favoriteThing: { kind: "m2o", fieldName: "favoriteThing", fieldIdName: "favoriteThingId", required: true, otherMetadata: () => favoriteThingMeta, otherFieldName: "authorFavorites", serde: new KeySerde("ft", "favoriteThing", "favorite_thing_id", "int") },
-  },
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
-  config: authorFavoriteConfig,
-  factory: newAuthorFavorite,
-};
-
-(AuthorFavorite as any).metadata = authorFavoriteMeta;
 
 export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
@@ -124,7 +61,6 @@ export const bookMeta: EntityMetadata<Book> = {
     advances: { kind: "o2m", fieldName: "advances", fieldIdName: "advanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "book", serde: undefined },
     reviews: { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined },
     comments: { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined },
-    favoriteThings: { kind: "o2m", fieldName: "favoriteThings", fieldIdName: "favoriteThingIds", required: false, otherMetadata: () => favoriteThingMeta, otherFieldName: "parent", serde: undefined },
     tags: { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined },
     image: { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "book", serde: undefined },
   },
@@ -195,8 +131,10 @@ export const commentMeta: EntityMetadata<Comment> = {
       fieldIdName: "parentId",
       required: true,
       components: [
+        { otherMetadata: () => authorMeta, otherFieldName: "comments", columnName: "parent_author_id" },
         { otherMetadata: () => bookMeta, otherFieldName: "comments", columnName: "parent_book_id" },
         { otherMetadata: () => bookReviewMeta, otherFieldName: "comment", columnName: "parent_book_review_id" },
+        { otherMetadata: () => publisherMeta, otherFieldName: "comments", columnName: "parent_publisher_id" },
       ],
       serde: new PolymorphicKeySerde(() => commentMeta, "parent"),
     },
@@ -248,37 +186,6 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
 
 (CriticColumn as any).metadata = criticColumnMeta;
 
-export const favoriteThingMeta: EntityMetadata<FavoriteThing> = {
-  cstr: FavoriteThing,
-  type: "FavoriteThing",
-  idType: "int",
-  tagName: "ft",
-  tableName: "favorite_things",
-  fields: {
-    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("ft", "id", "id", "int") },
-    createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
-    updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
-    authorFavorites: { kind: "o2m", fieldName: "authorFavorites", fieldIdName: "authorFavoriteIds", required: false, otherMetadata: () => authorFavoriteMeta, otherFieldName: "favoriteThing", serde: undefined },
-    parent: {
-      kind: "poly",
-      fieldName: "parent",
-      fieldIdName: "parentId",
-      required: true,
-      components: [
-        { otherMetadata: () => authorMeta, otherFieldName: "favoriteThings", columnName: "parent_author_id" },
-        { otherMetadata: () => bookMeta, otherFieldName: "favoriteThings", columnName: "parent_book_id" },
-        { otherMetadata: () => publisherMeta, otherFieldName: "favoriteThings", columnName: "parent_publisher_id" },
-      ],
-      serde: new PolymorphicKeySerde(() => favoriteThingMeta, "parent"),
-    },
-  },
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
-  config: favoriteThingConfig,
-  factory: newFavoriteThing,
-};
-
-(FavoriteThing as any).metadata = favoriteThingMeta;
-
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
@@ -321,7 +228,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
     tag: { kind: "m2o", fieldName: "tag", fieldIdName: "tagId", required: false, otherMetadata: () => tagMeta, otherFieldName: "publishers", serde: new KeySerde("t", "tag", "tag_id", "int") },
     authors: { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "publisher", serde: undefined },
     bookAdvances: { kind: "o2m", fieldName: "bookAdvances", fieldIdName: "bookAdvanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "publisher", serde: undefined },
-    favoriteThings: { kind: "o2m", fieldName: "favoriteThings", fieldIdName: "favoriteThingIds", required: false, otherMetadata: () => favoriteThingMeta, otherFieldName: "parent", serde: undefined },
+    comments: { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined },
     images: { kind: "o2m", fieldName: "images", fieldIdName: "imageIds", required: false, otherMetadata: () => imageMeta, otherFieldName: "publisher", serde: undefined },
   },
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
@@ -352,5 +259,5 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-export const allMetadata = [authorMeta, authorFavoriteMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, favoriteThingMeta, imageMeta, publisherMeta, tagMeta];
+export const allMetadata = [authorMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, publisherMeta, tagMeta];
 configureMetadata(allMetadata);

@@ -2,8 +2,8 @@ import {
   AdvanceStatus,
   Author,
   Book,
-  FavoriteThing,
-  FavoriteThingParent,
+  Comment,
+  CommentParent,
   lastAuthorFactoryOpts,
   lastBookFactoryOpts,
   lastCriticFactory,
@@ -363,38 +363,38 @@ describe("EntityManager.factories", () => {
   });
 
   describe("maybeNewPoly", () => {
-    it("should use the Author from an existing Book for the FavoriteThing.parent", async () => {
+    it("should use the Author from an existing Book for the Comment.parent", async () => {
       const em = newEntityManager();
       const b1 = newBook(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
       });
       expect(ft1.parent.get).toEqual(b1.author.get);
     });
 
-    it("should use an existing Publisher for the FavoriteThing.parent when no Book or Author exist", async () => {
+    it("should use an existing Publisher for the Comment.parent when no Book or Author exist", async () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
       });
       expect(ft1.parent.get).toEqual(p1);
     });
 
-    it("should use an existing Publisher for the FavoriteThing.parent even though there is a book/author", async () => {
+    it("should use an existing Publisher for the Comment.parent even though there is a book/author", async () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
       newBook(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Publisher, {}, Author, Book),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Publisher, {}, Author, Book),
       });
       expect(ft1.parent.get).toEqual(p1);
     });
 
     it("creates a new entity if needed", async () => {
       const em = newEntityManager();
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
       });
       expect(ft1.parent.isSet).toBeTruthy();
       expect(await ft1.parent.load()).toBeInstanceOf(Author);
@@ -402,7 +402,7 @@ describe("EntityManager.factories", () => {
 
     it("creates a new entity if needed using the first component type", async () => {
       const em = newEntityManager();
-      const ft1 = newTestInstance(em, FavoriteThing, {
+      const ft1 = newTestInstance(em, Comment, {
         parent: {},
       });
       expect(ft1.parent.isSet).toBeTruthy();
@@ -412,8 +412,8 @@ describe("EntityManager.factories", () => {
     it("creates a new entity when configured not to search for books as a possible default", async () => {
       const em = newEntityManager();
       const b1 = newBook(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Publisher),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Publisher),
       });
       expect(ft1.parent.isSet).toBeTruthy();
       expect(await ft1.parent.load()).toBeInstanceOf(Author);
@@ -422,8 +422,8 @@ describe("EntityManager.factories", () => {
     it("uses an if-only-one entity", async () => {
       const em = newEntityManager();
       const p = newPublisher(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
       });
       expect(ft1.parent.get).toEqual(p);
     });
@@ -432,8 +432,8 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Publisher, {}),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Publisher, {}),
       });
       expect(ft1.parent.get).not.toEqual(p1);
       expect(ft1.parent.get).not.toEqual(p2);
@@ -444,8 +444,8 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Publisher, {}),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Publisher, {}),
         use: p2,
       });
       expect(ft1.parent.get).toEqual(p2);
@@ -453,8 +453,8 @@ describe("EntityManager.factories", () => {
 
     it("can provide defaults", async () => {
       const em = newEntityManager();
-      const ft1 = newTestInstance(em, FavoriteThing, {
-        parent: maybeNewPoly<FavoriteThingParent>(Publisher, { name: "p2" }),
+      const ft1 = newTestInstance(em, Comment, {
+        parent: maybeNewPoly<CommentParent>(Publisher, { name: "p2" }),
       });
       expect((ft1.parent.get as Publisher).name).toEqual("p2");
     });

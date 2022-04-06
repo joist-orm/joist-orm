@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
-import { Author, Book, BookReview, Comment, newBook } from "../entities";
+import { Book, BookReview, Comment, newBook } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("PolymorphicReference", () => {
@@ -86,10 +86,10 @@ describe("PolymorphicReference", () => {
 
   it("throws when trying to set an entity of the wrong type", async () => {
     const em = newEntityManager();
-    const comment = em.createPartial(Comment, {});
-    const author = em.createPartial(Author, {});
+    const c1 = em.createPartial(Comment, {});
+    const c2 = em.createPartial(Comment, {});
 
-    expect(() => comment.parent.set(author as any)).toThrow("Author:new cannot be set as 'parent' on Comment:new");
+    expect(() => c1.parent.set(c2 as any)).toThrow("Comment:new cannot be set as 'parent' on Comment:new");
   });
 
   it("removes deleted entities", async () => {

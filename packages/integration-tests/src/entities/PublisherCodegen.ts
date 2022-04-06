@@ -37,6 +37,9 @@ import {
   BookAdvance,
   BookAdvanceId,
   bookAdvanceMeta,
+  FavoriteThing,
+  FavoriteThingId,
+  favoriteThingMeta,
   Image,
   ImageId,
   imageMeta,
@@ -67,6 +70,7 @@ export interface PublisherOpts {
   tag?: Tag | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
+  favoriteThings?: FavoriteThing[];
   images?: Image[];
 }
 
@@ -74,6 +78,7 @@ export interface PublisherIdsOpts {
   tagId?: TagId | null;
   authorIds?: AuthorId[] | null;
   bookAdvanceIds?: BookAdvanceId[] | null;
+  favoriteThingIds?: FavoriteThingId[] | null;
   imageIds?: ImageId[] | null;
 }
 
@@ -144,6 +149,13 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "bookAdvances",
     "publisher",
     "publisher_id",
+  );
+
+  readonly favoriteThings: Collection<Publisher, FavoriteThing> = hasMany(
+    favoriteThingMeta,
+    "favoriteThings",
+    "parent",
+    "parent_publisher_id",
   );
 
   readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");

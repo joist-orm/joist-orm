@@ -2,6 +2,8 @@ import {
   AdvanceStatus,
   Author,
   Book,
+  FavoriteThing,
+  FavoriteThingParent,
   lastAuthorFactoryOpts,
   lastBookFactoryOpts,
   lastCriticFactory,
@@ -17,7 +19,7 @@ import {
   PublisherType,
   Tag,
 } from "@src/entities";
-import { maybeNew, New, newTestInstance } from "joist-orm";
+import { maybeNew, maybeNewPoly, New, newTestInstance } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.factories", () => {
@@ -328,6 +330,18 @@ describe("EntityManager.factories", () => {
       expect(a.publisher.get).toEqual(p);
     });
 
+    it("creates new if there is no obvious default entity to choose", async () => {
+      const em = newEntityManager();
+      const p1 = newPublisher(em);
+      const p2 = newPublisher(em);
+      const a = newTestInstance(em, Author, {
+        publisher: maybeNew<Publisher>({}),
+      });
+      expect(a.publisher.get).not.toEqual(p1);
+      expect(a.publisher.get).not.toEqual(p2);
+      expect(a.publisher.get).toBeInstanceOf(Publisher);
+    });
+
     it("uses a use entity", async () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
@@ -345,6 +359,104 @@ describe("EntityManager.factories", () => {
         publisher: maybeNew<Publisher>({ name: "p2" }),
       });
       expect(a.publisher.get!.name).toEqual("p2");
+    });
+  });
+
+  describe("maybeNewPoly", () => {
+    it("should use the Author from an existing Book for the FavoriteThing.parent", async () => {
+      const em = newEntityManager();
+      const b1 = newBook(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      });
+      expect(ft1.parent.get).toEqual(b1.author.get);
+    });
+
+    it("should use an existing Publisher for the FavoriteThing.parent when no Book or Author exist", async () => {
+      const em = newEntityManager();
+      const p1 = newPublisher(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      });
+      expect(ft1.parent.get).toEqual(p1);
+    });
+
+    it("should use an existing Publisher for the FavoriteThing.parent even though there is a book/author", async () => {
+      const em = newEntityManager();
+      const p1 = newPublisher(em);
+      newBook(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Publisher, {}, Author, Book),
+      });
+      expect(ft1.parent.get).toEqual(p1);
+    });
+
+    it("creates a new entity if needed", async () => {
+      const em = newEntityManager();
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      });
+      expect(ft1.parent.isSet).toBeTruthy();
+      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+    });
+
+    it("creates a new entity if needed using the first component type", async () => {
+      const em = newEntityManager();
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: {},
+      });
+      expect(ft1.parent.isSet).toBeTruthy();
+      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+    });
+
+    it("creates a new entity when configured not to search for books as a possible default", async () => {
+      const em = newEntityManager();
+      const b1 = newBook(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Publisher),
+      });
+      expect(ft1.parent.isSet).toBeTruthy();
+      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+    });
+
+    it("uses an if-only-one entity", async () => {
+      const em = newEntityManager();
+      const p = newPublisher(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Author, { firstName: "test" }, Book, Publisher),
+      });
+      expect(ft1.parent.get).toEqual(p);
+    });
+
+    it("creates new if there is no obvious default entity to choose", async () => {
+      const em = newEntityManager();
+      const p1 = newPublisher(em);
+      const p2 = newPublisher(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Publisher, {}),
+      });
+      expect(ft1.parent.get).not.toEqual(p1);
+      expect(ft1.parent.get).not.toEqual(p2);
+      expect(ft1.parent.get).toBeInstanceOf(Publisher);
+    });
+
+    it("uses a use entity", async () => {
+      const em = newEntityManager();
+      const p1 = newPublisher(em);
+      const p2 = newPublisher(em);
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Publisher, {}),
+        use: p2,
+      });
+      expect(ft1.parent.get).toEqual(p2);
+    });
+
+    it("can provide defaults", async () => {
+      const em = newEntityManager();
+      const ft1 = newTestInstance(em, FavoriteThing, {
+        parent: maybeNewPoly<FavoriteThingParent>(Publisher, { name: "p2" }),
+      });
+      expect((ft1.parent.get as Publisher).name).toEqual("p2");
     });
   });
 });

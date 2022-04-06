@@ -158,4 +158,17 @@ export function up(b: MigrationBuilder): void {
     parent_book_review_id: foreignKey("book_reviews", { notNull: false, unique: true }),
     text: "text",
   });
+
+  // testing for a required polymorphic field
+  createEntityTable(b, "favorite_things", {
+    parent_book_id: foreignKey("books", { notNull: false }),
+    parent_publisher_id: foreignKey("publishers", { notNull: false }),
+    parent_author_id: foreignKey("authors", { notNull: false }),
+  });
+
+  // testing for a required polymorphic field
+  createEntityTable(b, "author_favorites", {
+    favorite_thing_id: foreignKey("favorite_things", { notNull: true }),
+    author_id: foreignKey("authors", { notNull: true }),
+  });
 }

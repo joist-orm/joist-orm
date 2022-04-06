@@ -48,6 +48,9 @@ import {
   Comment,
   CommentId,
   commentMeta,
+  FavoriteThing,
+  FavoriteThingId,
+  favoriteThingMeta,
   Image,
   ImageId,
   imageMeta,
@@ -67,6 +70,7 @@ export interface BookOpts {
   advances?: BookAdvance[];
   reviews?: BookReview[];
   comments?: Comment[];
+  favoriteThings?: FavoriteThing[];
   tags?: Tag[];
 }
 
@@ -76,6 +80,7 @@ export interface BookIdsOpts {
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
   commentIds?: CommentId[] | null;
+  favoriteThingIds?: FavoriteThingId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -135,6 +140,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
 
   readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
+
+  readonly favoriteThings: Collection<Book, FavoriteThing> = hasMany(
+    favoriteThingMeta,
+    "favoriteThings",
+    "parent",
+    "parent_book_id",
+  );
 
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 

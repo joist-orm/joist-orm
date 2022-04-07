@@ -37,6 +37,9 @@ import {
   BookAdvance,
   BookAdvanceId,
   bookAdvanceMeta,
+  Comment,
+  CommentId,
+  commentMeta,
   Image,
   ImageId,
   imageMeta,
@@ -67,6 +70,7 @@ export interface PublisherOpts {
   tag?: Tag | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
+  comments?: Comment[];
   images?: Image[];
 }
 
@@ -74,6 +78,7 @@ export interface PublisherIdsOpts {
   tagId?: TagId | null;
   authorIds?: AuthorId[] | null;
   bookAdvanceIds?: BookAdvanceId[] | null;
+  commentIds?: CommentId[] | null;
   imageIds?: ImageId[] | null;
 }
 
@@ -145,6 +150,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "publisher",
     "publisher_id",
   );
+
+  readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
 
   readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
 

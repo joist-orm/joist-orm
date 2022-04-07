@@ -156,6 +156,8 @@ export function up(b: MigrationBuilder): void {
     parent_book_id: foreignKey("books", { notNull: false }),
     // inverse is o2o
     parent_book_review_id: foreignKey("book_reviews", { notNull: false, unique: true }),
+    parent_publisher_id: foreignKey("publishers", { notNull: false }),
+    parent_author_id: foreignKey("authors", { notNull: false }),
     text: "text",
   });
 }

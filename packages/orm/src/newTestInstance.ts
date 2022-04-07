@@ -14,6 +14,7 @@ import {
   OneToManyField,
   OneToOneField,
   OptsOf,
+  PolymorphicField,
   PrimitiveField,
 } from "./EntityManager";
 import { isManyToOneField, isOneToOneField, New } from "./index";
@@ -62,6 +63,7 @@ export function newTestInstance<T extends Entity>(
       }
       switch (field.kind) {
         case "m2o":
+        case "poly":
           return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined)];
         case "o2o":
         case "o2m":
@@ -73,7 +75,6 @@ export function newTestInstance<T extends Entity>(
           return [];
         case "primitive":
         case "enum":
-        case "poly":
         case "primaryKey":
           // Look for strings that want to use the test index
           if (typeof optValue === "string" && optValue.includes(testIndex)) {
@@ -166,11 +167,13 @@ export function newTestInstance<T extends Entity>(
 function resolveFactoryOpt<T extends Entity>(
   em: EntityManager,
   opts: FactoryOpts<any>,
-  field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField,
+  field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
   opt: FactoryEntityOpt<T> | undefined,
   maybeEntity: T | undefined,
 ): T {
-  const meta = field.otherMetadata();
+  const { meta, otherFieldName } = metaFromFieldAndOpt(field, opt);
+  // const meta = field.kind === "poly" ? field.components[0].otherMetadata() : field.otherMetadata();
+  // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
   if (isEntity(opt)) {
     return opt;
   } else if (isId(opt)) {
@@ -182,22 +185,47 @@ function resolveFactoryOpt<T extends Entity>(
     return meta.factory(em, opt);
   } else {
     // Look for an obvious default
-    if (opt === undefined || opt instanceof MaybeNew) {
+    if (opt === undefined || (opt instanceof MaybeNew && field.kind !== "poly")) {
       const existing = getObviousDefault(em, meta, opts);
       if (existing) {
         return existing;
       }
       // Otherwise fall though to making a new entity via the factory
+    } else if (field.kind === "poly" && opt instanceof MaybeNew) {
+      // We have a polymorphic maybeNew to sort through
+      const existing = opt.polyRefPreferredOrder
+        .map((cstr) => getObviousDefault(em, getMetadata(cstr), opts))
+        .find((existing) => !!existing);
+      if (existing) {
+        return existing;
+      }
     }
     // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
-    maybeEntity ??= (field.otherMetadata().fields[field.otherFieldName].kind === "o2o" ? null : []) as any;
+    maybeEntity ??= (meta.fields[otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, useMap(opts), meta),
       ...(opt instanceof MaybeNew && opt.opts),
-      [field.otherFieldName]: maybeEntity,
+      [otherFieldName]: maybeEntity,
     });
   }
+}
+
+/** Determines the metadata and otherFieldName to use in resolveFactoryOpt to account for polymorphic fields */
+function metaFromFieldAndOpt<T extends Entity>(
+  field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
+  opt: FactoryEntityOpt<T> | undefined,
+): { meta: EntityMetadata<T>; otherFieldName: string } {
+  if (field.kind !== "poly") {
+    // If it isn't a poly field, then the field itself can tell us everything we need to know
+    return { meta: field.otherMetadata(), otherFieldName: field.otherFieldName };
+  }
+  const componentToUse =
+    // Otherwise, we check if the `opt` specifies a particular component to use, and if not fall back to the first one
+    field.components.find(
+      (component) => opt instanceof MaybeNew && component.otherMetadata().cstr === opt.polyRefPreferredOrder[0],
+    ) ?? field.components[0];
+  return { meta: componentToUse.otherMetadata(), otherFieldName: componentToUse.otherFieldName };
 }
 
 /** We look for `use`-cached and "if-only-one" defaults. */
@@ -308,8 +336,41 @@ export function maybeNew<T extends Entity>(opts?: ActualFactoryOpts<T>): Factory
   return new MaybeNew<T>((opts || {}) as any) as any;
 }
 
+/**
+ * Similar to `maybeNew` in behaviour/use but with enhancements to support polymorphic fields:
+ * 1) Allows you to specify which entity type to create, if it is found a new one is needed
+ * 2) Allows you to prioritize which existing entities to select
+ *
+ * For example below, we are specifying that an Author should be created if needed (and optionally it's default opts
+ * in the `ifNewOpts` field), and also that the priority order for choosing existing entities is Author, Book, and then Publisher.
+ * Note since BookReview is excluded from `existingSearchOrder`, an existing BookReview will never be chosen.
+ *
+ * ```typescript
+ * export function newComment(em: EntityManager, opts: FactoryOpts<Comment> = {}): New<Comment> {
+ *   return newTestInstance(em, Comment, {
+ *     parent: maybeNewPoly<CommentParent, Author>(
+ *       Author, {
+ *         ifNewOpts: { firstName: "optional"},
+ *         existingSearchOrder: [Author, Book, Publisher]
+ *       }),
+ *     ...opts,
+ *   });
+ * }
+ * ```
+ */
+export function maybeNewPoly<T extends Entity, NewT extends T = T>(
+  ifNewCstr: EntityConstructor<NewT>,
+  opts?: {
+    ifNewOpts?: ActualFactoryOpts<NewT>;
+    existingSearchOrder?: EntityConstructor<T>[];
+  },
+): FactoryEntityOpt<NewT> {
+  // Return a marker that resolveFactoryOpt will look for
+  return new MaybeNew<T>((opts?.ifNewOpts || {}) as any, opts?.existingSearchOrder ?? [ifNewCstr]) as any;
+}
+
 class MaybeNew<T extends Entity> {
-  constructor(public opts: FactoryOpts<T>) {}
+  constructor(public opts: FactoryOpts<T>, public polyRefPreferredOrder: EntityConstructor<T>[] = []) {}
 }
 
 /**

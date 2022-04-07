@@ -46,6 +46,9 @@ import {
   Color,
   ColorDetails,
   Colors,
+  Comment,
+  CommentId,
+  commentMeta,
   FavoriteShape,
   Image,
   ImageId,
@@ -77,6 +80,7 @@ export interface AuthorOpts {
   image?: Image | null;
   authors?: Author[];
   books?: Book[];
+  comments?: Comment[];
   tags?: Tag[];
 }
 
@@ -86,6 +90,7 @@ export interface AuthorIdsOpts {
   imageId?: ImageId | null;
   authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
+  commentIds?: CommentId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -171,6 +176,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
+
+  readonly comments: Collection<Author, Comment> = hasMany(commentMeta, "comments", "parent", "parent_author_id");
 
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 

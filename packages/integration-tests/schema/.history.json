@@ -38,7 +38,7 @@
   "BookAdvance": ["book", "createdAt", "id", "publisher", "status", "updatedAt"],
   "BookReview": ["book", "comment", "createdAt", "id", "isPublic", "rating", "updatedAt"],
   "Comment": ["createdAt", "id", "parent", "text", "updatedAt"],
-  "CommentParent": ["Book", "BookReview"],
+  "CommentParent": ["Author", "Book", "BookReview", "Publisher"],
   "Critic": ["createdAt", "criticColumn", "id", "name", "updatedAt"],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
@@ -57,6 +57,7 @@
   "Publisher": [
     "authors",
     "bookAdvances",
+    "comments",
     "createdAt",
     "hugeNumber",
     "id",

@@ -341,26 +341,32 @@ export function maybeNew<T extends Entity>(opts?: ActualFactoryOpts<T>): Factory
  * 1) Allows you to specify which entity type to create, if it is found a new one is needed
  * 2) Allows you to prioritize which existing entities to select
  *
- * For example below, we are specifying that an Author should be created if needed (and it's default opts),
- * and also that the priority order for choosing existing entities is Author, Book, and then Publisher.
- * Also, since BookReview is excluded, an existing BookReview will never be chosen.
+ * For example below, we are specifying that an Author should be created if needed (and optionally it's default opts
+ * in the `ifNewOpts` field), and also that the priority order for choosing existing entities is Author, Book, and then Publisher.
+ * Note since BookReview is excluded from `existingSearchOrder`, an existing BookReview will never be chosen.
  *
  * ```typescript
  * export function newComment(em: EntityManager, opts: FactoryOpts<Comment> = {}): New<Comment> {
  *   return newTestInstance(em, Comment, {
- *     parent: maybeNewPoly<CommentParent>(Author, {}, Book, Publisher),
+ *     parent: maybeNewPoly<CommentParent, Author>(
+ *       Author, {
+ *         ifNewOpts: { firstName: "optional"},
+ *         existingSearchOrder: [Author, Book, Publisher]
+ *       }),
  *     ...opts,
  *   });
  * }
  * ```
  */
-export function maybeNewPoly<T extends Entity>(
-  cstr: EntityConstructor<T>,
-  opts?: ActualFactoryOpts<T>,
-  ...orExisting: EntityConstructor<T>[]
-): FactoryEntityOpt<T> {
+export function maybeNewPoly<T extends Entity, NewT extends T = T>(
+  ifNewCstr: EntityConstructor<NewT>,
+  opts?: {
+    ifNewOpts?: ActualFactoryOpts<NewT>;
+    existingSearchOrder?: EntityConstructor<T>[];
+  },
+): FactoryEntityOpt<NewT> {
   // Return a marker that resolveFactoryOpt will look for
-  return new MaybeNew<T>((opts || {}) as any, [cstr, ...orExisting]) as any;
+  return new MaybeNew<T>((opts?.ifNewOpts || {}) as any, opts?.existingSearchOrder ?? [ifNewCstr]) as any;
 }
 
 class MaybeNew<T extends Entity> {

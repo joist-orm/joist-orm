@@ -367,7 +367,9 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const b1 = newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
+        parent: maybeNewPoly<CommentParent, Author>(Author, {
+          existingSearchOrder: [Author, Book, Publisher],
+        }),
       });
       expect(ft1.parent.get).toEqual(b1.author.get);
     });
@@ -376,7 +378,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
+        parent: maybeNewPoly<CommentParent, Author>(Author, { existingSearchOrder: [Author, Book, Publisher] }),
       });
       expect(ft1.parent.get).toEqual(p1);
     });
@@ -386,7 +388,7 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Publisher, {}, Author, Book),
+        parent: maybeNewPoly<CommentParent>(Publisher, { existingSearchOrder: [Publisher, Author, Book] }),
       });
       expect(ft1.parent.get).toEqual(p1);
     });
@@ -394,10 +396,15 @@ describe("EntityManager.factories", () => {
     it("creates a new entity if needed", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
+        parent: maybeNewPoly<CommentParent, Author>(Author, {
+          ifNewOpts: { firstName: "test" },
+          existingSearchOrder: [Author, Book, Publisher],
+        }),
       });
       expect(ft1.parent.isSet).toBeTruthy();
-      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+      const a1 = await ft1.parent.load();
+      expect(a1).toBeInstanceOf(Author);
+      expect((a1 as Author).firstName).toEqual("test");
     });
 
     it("creates a new entity if needed using the first component type", async () => {
@@ -413,7 +420,9 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const b1 = newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Publisher),
+        parent: maybeNewPoly<CommentParent>(Author, {
+          existingSearchOrder: [Author, Publisher],
+        }),
       });
       expect(ft1.parent.isSet).toBeTruthy();
       expect(await ft1.parent.load()).toBeInstanceOf(Author);
@@ -423,7 +432,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Author, { firstName: "test" }, Book, Publisher),
+        parent: maybeNewPoly<CommentParent>(Author, { existingSearchOrder: [Publisher] }),
       });
       expect(ft1.parent.get).toEqual(p);
     });
@@ -433,7 +442,7 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Publisher, {}),
+        parent: maybeNewPoly(Publisher),
       });
       expect(ft1.parent.get).not.toEqual(p1);
       expect(ft1.parent.get).not.toEqual(p2);
@@ -445,7 +454,7 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Publisher, {}),
+        parent: maybeNewPoly(Publisher),
         use: p2,
       });
       expect(ft1.parent.get).toEqual(p2);
@@ -454,7 +463,7 @@ describe("EntityManager.factories", () => {
     it("can provide defaults", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Publisher, { name: "p2" }),
+        parent: maybeNewPoly(Publisher, { ifNewOpts: { name: "p2" } }),
       });
       expect((ft1.parent.get as Publisher).name).toEqual("p2");
     });

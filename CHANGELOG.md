@@ -1,3 +1,10 @@
+# [1.3.0](https://github.com/stephenh/joist-ts/compare/v1.2.1...v1.3.0) (2022-04-07)
+
+
+### Features
+
+* [SC-14739] Improved newTestInstance support for polymorphic references ([#291](https://github.com/stephenh/joist-ts/issues/291)) ([d68351d](https://github.com/stephenh/joist-ts/commit/d68351df2efbb42b55854e89b6ba1c9f2558f19a))
+
 ## [1.2.1](https://github.com/stephenh/joist-ts/compare/v1.2.0...v1.2.1) (2022-04-04)
 
 

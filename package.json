@@ -5,6 +5,7 @@
     "build": "tsc --build",
     "semantic-release": "semantic-release"
   },
+  "private": true,
   "workspaces": [
     "docs",
     "packages/codegen",

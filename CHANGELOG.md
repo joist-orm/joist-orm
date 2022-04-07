@@ -1,3 +1,10 @@
+## [1.3.2](https://github.com/stephenh/joist-ts/compare/v1.3.1...v1.3.2) (2022-04-07)
+
+
+### Bug Fixes
+
+* Make the root workspace private ([#293](https://github.com/stephenh/joist-ts/issues/293)) ([9c917e5](https://github.com/stephenh/joist-ts/commit/9c917e54cf3fa446bced9b4fa5a2d8dfa520934f))
+
 ## [1.3.1](https://github.com/stephenh/joist-ts/compare/v1.3.0...v1.3.1) (2022-04-07)
 
 

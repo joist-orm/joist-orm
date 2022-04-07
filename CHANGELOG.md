@@ -1,3 +1,10 @@
+## [1.3.1](https://github.com/stephenh/joist-ts/compare/v1.3.0...v1.3.1) (2022-04-07)
+
+
+### Bug Fixes
+
+* Correct semantic release publishCmd ([#292](https://github.com/stephenh/joist-ts/issues/292)) ([d87df5c](https://github.com/stephenh/joist-ts/commit/d87df5cd681fa2dfc17c5ea55f51a200fcc3ab02))
+
 # [1.3.0](https://github.com/stephenh/joist-ts/compare/v1.2.1...v1.3.0) (2022-04-07)
 
 

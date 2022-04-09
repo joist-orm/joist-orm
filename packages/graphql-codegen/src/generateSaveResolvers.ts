@@ -3,7 +3,7 @@ import { CodeGenFile, Config, EntityDbMetadata } from "joist-codegen";
 import { code, imp } from "ts-poet";
 
 const context = imp("Context@src/context");
-const saveEntities = imp("saveEntities@src/resolvers/mutations/utils");
+const saveEntity = imp("saveEntity@src/resolvers/mutations/utils");
 const mutationResolvers = imp("MutationResolvers@src/generated/graphql-types");
 const run = imp("run@src/resolvers/testUtils");
 
@@ -25,8 +25,7 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
     const contents = code`
       export const save${name}: Pick<${mutationResolvers}, "save${name}"> = {
         async save${name}(root, args, ctx) {
-          const [id] = await ${saveEntities}(ctx, ${type}, [args.input]);
-          return { ${camelName}: id };
+          return { ${camelName}: await ${saveEntity}(ctx, ${type}, args.input) };
         },
       };
     `;
@@ -48,14 +47,12 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
         it.withCtx("can create", async (ctx) => {
           const { em } = ctx;
           const result = await runSave${name}(ctx, () => ({}));
-          const ${tagName} = await em.load(${type}, result.${camelName});
+          expect(result).toBeDefined()
         });
       });
 
-      async function runSave${name}(ctx: ${context}, inputFn: () => ${inputType}) {
-        return await ${run}(ctx, async (ctx) => {
-          return ${resolverConst}.save${name}({}, { input: inputFn() }, ctx, undefined!);
-        });
+      function runSave${name}(ctx: ${context}, inputFn: () => ${inputType}) {
+        return ${run}(ctx, (ctx) => ${resolverConst}.save${name}({}, { input: inputFn() }, ctx, undefined!));
       }
     `;
     return { name: `resolvers/mutations/${camelName}/save${name}Resolver.test.ts`, overwrite: false, contents };

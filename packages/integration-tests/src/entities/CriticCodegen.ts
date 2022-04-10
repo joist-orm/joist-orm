@@ -125,12 +125,14 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Critic);
   }
 
-  async load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Critic, fn);
   }
 
-  async populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>> {
-    return this.em.populate(this as any as Critic, hint);
+  populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>>;
+  populate<H extends LoadHint<Critic>, V>(hint: H, fn: (c: Loaded<Critic, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Critic>, V>(hint: H, fn?: (c: Loaded<Critic, H>) => V): Promise<Loaded<Critic, H> | V> {
+    return this.em.populate(this as any as Critic, hint, fn);
   }
 
   isLoaded<H extends LoadHint<Critic>>(hint: H): this is Loaded<Critic, H> {

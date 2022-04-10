@@ -184,12 +184,14 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Image);
   }
 
-  async load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Image, fn);
   }
 
-  async populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>> {
-    return this.em.populate(this as any as Image, hint);
+  populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>>;
+  populate<H extends LoadHint<Image>, V>(hint: H, fn: (i: Loaded<Image, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Image>, V>(hint: H, fn?: (i: Loaded<Image, H>) => V): Promise<Loaded<Image, H> | V> {
+    return this.em.populate(this as any as Image, hint, fn);
   }
 
   isLoaded<H extends LoadHint<Image>>(hint: H): this is Loaded<Image, H> {

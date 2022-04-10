@@ -133,12 +133,17 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Comment);
   }
 
-  async load<U, V>(fn: (lens: Lens<Comment>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Comment>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Comment, fn);
   }
 
-  async populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>> {
-    return this.em.populate(this as any as Comment, hint);
+  populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
+  populate<H extends LoadHint<Comment>, V>(hint: H, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Comment>, V>(
+    hint: H,
+    fn?: (comment: Loaded<Comment, H>) => V,
+  ): Promise<Loaded<Comment, H> | V> {
+    return this.em.populate(this as any as Comment, hint, fn);
   }
 
   isLoaded<H extends LoadHint<Comment>>(hint: H): this is Loaded<Comment, H> {

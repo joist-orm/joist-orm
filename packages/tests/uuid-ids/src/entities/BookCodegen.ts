@@ -9,6 +9,7 @@ import {
   Flavor,
   GraphQLFilterOf,
   hasOne,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -71,7 +72,7 @@ bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {};
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
@@ -121,11 +122,17 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Book);
   }
 
-  async load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Book, fn);
   }
 
-  async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {
-    return this.em.populate(this as any as Book, hint);
+  populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
+  populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(hint: H, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
+    return this.em.populate(this as any as Book, hint, fn);
+  }
+
+  isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
+    return isLoaded(this as any as Book, hint);
   }
 }

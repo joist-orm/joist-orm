@@ -148,4 +148,25 @@ describe("EntityManager.populate", () => {
     expect(a1.publisher.get).toEqual(undefined);
     expect(a1.books.get.flatMap((b) => b.reviews.get)).toEqual([]);
   });
+
+  it("can take a function when calling Entity.populate", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    const result = await book.populate(["author", "tags"], (book) => [book.author.get.firstName, book.tags.get.length]);
+    expect(result).toEqual(["a1", 0]);
+  });
+
+  it("can take a function when calling EntityManager.populate", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    const result = await em.populate(book, ["author", "tags"], (book) => [
+      book.author.get.firstName,
+      book.tags.get.length,
+    ]);
+    expect(result).toEqual(["a1", 0]);
+  });
 });

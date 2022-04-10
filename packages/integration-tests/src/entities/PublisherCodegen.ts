@@ -258,12 +258,17 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Publisher);
   }
 
-  async load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Publisher, fn);
   }
 
-  async populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>> {
-    return this.em.populate(this as any as Publisher, hint);
+  populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
+  populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(
+    hint: H,
+    fn?: (p: Loaded<Publisher, H>) => V,
+  ): Promise<Loaded<Publisher, H> | V> {
+    return this.em.populate(this as any as Publisher, hint, fn);
   }
 
   isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {

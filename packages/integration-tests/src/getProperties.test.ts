@@ -8,6 +8,7 @@ describe("getProperties", () => {
       "reviews",
       "comments",
       "author",
+      "currentDraftAuthor",
       "image",
       "tags",
       "rulesInvoked",

@@ -6,6 +6,8 @@ type BookReview {
   updatedAt: Date!
   book: Book!
   comment: Comment
+  parent: Comment
+  parentComment: Comment
 }
 
 input SaveBookReviewInput {

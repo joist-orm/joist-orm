@@ -18,6 +18,8 @@ type Author {
   favoriteColors: [Color!]!
   favoriteShape: FavoriteShape!
   tags: [Tag!]!
+  currentDraftBook: Book
+  author: Image
 }
 
 input SaveAuthorInput {
@@ -36,6 +38,7 @@ input SaveAuthorInput {
   graduated: Date
   favoriteColors: [Color!]
   favoriteShape: FavoriteShape
+  currentDraftBookId: ID
 }
 
 type SaveAuthorResult {

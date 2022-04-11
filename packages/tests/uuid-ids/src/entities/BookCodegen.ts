@@ -9,6 +9,7 @@ import {
   Flavor,
   GraphQLFilterOf,
   hasOne,
+  isLoaded,
   Lens,
   Loaded,
   LoadHint,
@@ -71,7 +72,7 @@ bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
-  private static defaultValues = {};
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
@@ -127,5 +128,9 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
 
   async populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>> {
     return this.em.populate(this as any as Book, hint);
+  }
+
+  isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
+    return isLoaded(this as any as Book, hint);
   }
 }

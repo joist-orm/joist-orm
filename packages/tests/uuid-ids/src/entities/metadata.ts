@@ -22,6 +22,7 @@ export const authorMeta: EntityMetadata<Author> = {
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     books: { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: authorConfig,
   factory: newAuthor,
 };
@@ -41,6 +42,7 @@ export const bookMeta: EntityMetadata<Book> = {
     updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
     author: { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "uuid") },
   },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
   config: bookConfig,
   factory: newBook,
 };

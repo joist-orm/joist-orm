@@ -1,3 +1,15 @@
+# [1.4.0](https://github.com/stephenh/joist-ts/compare/v1.3.2...v1.4.0) (2022-04-12)
+
+
+### Bug Fixes
+
+* Fix o2o/m2o naming collisions. ([#298](https://github.com/stephenh/joist-ts/issues/298)) ([4b7b101](https://github.com/stephenh/joist-ts/commit/4b7b1018a9990b3a8f229f26d0810ac07c0c5b4f))
+
+
+### Features
+
+* Add populate(hint, fn) overload. ([#297](https://github.com/stephenh/joist-ts/issues/297)) ([d093de5](https://github.com/stephenh/joist-ts/commit/d093de575b3ba4cf3b2ca44d203f57c072fe9848)), closes [#296](https://github.com/stephenh/joist-ts/issues/296)
+
 ## [1.3.2](https://github.com/stephenh/joist-ts/compare/v1.3.1...v1.3.2) (2022-04-07)
 
 

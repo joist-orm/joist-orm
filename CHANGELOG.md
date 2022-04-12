@@ -1,3 +1,10 @@
+## [1.4.1](https://github.com/stephenh/joist-ts/compare/v1.4.0...v1.4.1) (2022-04-12)
+
+
+### Bug Fixes
+
+* Fix type safety of idOrFail. ([#299](https://github.com/stephenh/joist-ts/issues/299)) ([d585a7d](https://github.com/stephenh/joist-ts/commit/d585a7daf0c585665118bc705f0ddd9a40697b2a))
+
 # [1.4.0](https://github.com/stephenh/joist-ts/compare/v1.3.2...v1.4.0) (2022-04-12)
 
 

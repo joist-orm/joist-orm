@@ -120,6 +120,18 @@ export function createManyToManyTable(b: MigrationBuilder, tableName: string, ta
   b.createIndex(tableName, [column1, column2], { unique: true });
 }
 
+/** Adds columns + auto-indexes any foreign keys. */
+export function addColumns(b: MigrationBuilder, tableName: string, columns: ColumnDefinitions): void {
+  b.addColumns(tableName, columns);
+  Object.entries(columns).forEach(([name, def]) => {
+    if (typeof def === "object" && def.references) {
+      b.sql(`CREATE INDEX ${tableName}_${name}_idx ON ${tableName} USING btree (${name})`);
+    }
+  });
+}
+
+
 export function fail(message?: string): never {
   throw new Error(message || "Failed");
 }
+

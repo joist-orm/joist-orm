@@ -400,7 +400,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
   const otherFieldName = isOneToOne
-    ? oneToOneName(config, otherEntity, entity)
+    ? oneToOneName(config, otherEntity, entity, r)
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
@@ -432,7 +432,7 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
   // source == parent i.e. the reference of the foreign key column
   // target == child i.e. the table with the foreign key column in it
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
-  const fieldName = oneToOneName(config, entity, otherEntity);
+  const fieldName = oneToOneName(config, entity, otherEntity, r);
   const otherFieldName = referenceName(config, otherEntity, r);
   const otherColumnName = column.name;
   const otherColumnNotNull = column.notNull;
@@ -490,13 +490,44 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
   const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
   const otherFieldName = isOneToOne
-    ? oneToOneName(config, otherEntity, entity)
+    ? oneToOneName(config, otherEntity, entity, r)
     : collectionName(config, otherEntity, entity, r).fieldName;
   return { columnName, otherEntity, otherFieldName };
 }
 
-export function oneToOneName(config: Config, entity: Entity, otherEntity: Entity): string {
-  return relationName(config, entity, camelCase(otherEntity.name));
+/** Finds the field name for o2o side of a o2o/m2o. */
+export function oneToOneName(
+  config: Config,
+  //  I.e. the Book for o2o Book.image <-- `images.book_id`
+  refEntity: Entity,
+  // I.e. the Image for o2o Book.image <-- `images.book_id`
+  keyEntity: Entity,
+  r: M2ORelation | O2MRelation,
+): string {
+  // For `comments.parent_book_review_id`, we would just use `BookReview.comment` as the name
+  // For `authors.draft_current_book_id`, we would just use `Book.author` as the name
+  // For `project_items.current_selection_id`, we would use `HomeownerSelection.currentProjectItem`
+  const keyTable = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
+  const refTable = r instanceof M2ORelation ? r.targetTable : r.sourceTable;
+  // Does the ref table have any m2o pointing table at the key table?
+  const found = refTable.m2oRelations.find((s) => tableToEntityName(config, s.targetTable) === keyEntity.name);
+  // console.log({refTable: refTable.name, keyTable: keyTable.name, found: found?.name, fieldName});
+  if (!found) {
+    // If there aren't any m2os, just use the raw type name like `.image` or `.comment`
+    const fieldName = camelCase(keyEntity.name);
+    return relationName(config, refEntity, fieldName);
+  } else {
+    // If there is a m2o, assume we might conflict, and use the column name to at least be unique
+    // Start with `book` from `images.book_id` or `current_draft_book` from `authors.current_draft_book_id`
+    let fieldName = r.foreignKey.columns[0].name.replace("_id", "");
+    // Suffix the new type that we're pointing to, to `current_draft_book_author`
+    fieldName = `${fieldName}_${keyEntity.name}`;
+    // And drop the `book`, to `current_draft__author`
+    fieldName = fieldName.replace(refEntity.name.toLowerCase(), "");
+    // Then camel case, to `currentDraftAuthor`
+    fieldName = camelCase(fieldName);
+    return relationName(config, refEntity, fieldName);
+  }
 }
 
 export function referenceName(config: Config, entity: Entity, r: M2ORelation | O2MRelation): string {
@@ -516,22 +547,25 @@ function primitiveFieldName(columnName: string) {
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
 export function collectionName(
   config: Config,
-  entity: Entity,
-  otherEntity: Entity,
+  // I.e. the Author for o2m Author.books --> books.author_id
+  singleEntity: Entity,
+  // I.e. the Book for o2m Author.books --> books.author_id
+  collectionEntity: Entity,
   r: M2ORelation | O2MRelation,
 ): { fieldName: string; singularName: string } {
-  // TODO Handle conflicts in names
-  // I.e. if the other side is `child.project_id`, use `children`.
-  let fieldName = otherEntity.name;
-  // check if we have multiple FKs from otherEntity --> entity and prefix with FK name if so
+  // I.e. if the m2o is `books.author_id`, use `Author.books` as the collection name (we pluralize a few lines down).
+  let fieldName = collectionEntity.name;
+  // Check if we have multiple FKs from collectionEntity --> singleEntity and prefix with FK name if so
   const sourceTable = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
   const targetTable = r instanceof M2ORelation ? r.targetTable : r.sourceTable;
+  // If `books.foo_author_id` and `books.bar_author_id` both exist
   if (sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
+    // Use `fooAuthorBooks`, `barAuthorBooks`
     fieldName = `${r.foreignKey.columns[0].name.replace("_id", "")}_${fieldName}`;
   }
-  // If the other side is `book_reviews.book_id`, use `reviews`.
-  if (fieldName.length > entity.name.length) {
-    fieldName = fieldName.replace(entity.name, "");
+  // If we've guessed `Book.bookReviews` based on `book_reviews.book_id` --> `bookReviews`, strip the `Book` prefix
+  if (fieldName.length > singleEntity.name.length) {
+    fieldName = fieldName.replace(singleEntity.name, "");
   }
 
   // camelize the name
@@ -539,7 +573,7 @@ export function collectionName(
   fieldName = camelCase(plural(fieldName));
 
   // If the name is overridden, use that, but also singularize it
-  const maybeOverriddenName = relationName(config, entity, fieldName);
+  const maybeOverriddenName = relationName(config, singleEntity, fieldName);
   if (maybeOverriddenName !== fieldName) {
     singularName = singular(maybeOverriddenName);
     fieldName = maybeOverriddenName;

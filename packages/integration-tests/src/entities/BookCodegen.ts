@@ -63,6 +63,7 @@ export interface BookOpts {
   title: string;
   order?: number;
   author: Author;
+  currentDraftAuthor?: Author | null;
   image?: Image | null;
   advances?: BookAdvance[];
   reviews?: BookReview[];
@@ -72,6 +73,7 @@ export interface BookOpts {
 
 export interface BookIdsOpts {
   authorId?: AuthorId | null;
+  currentDraftAuthorId?: AuthorId | null;
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
@@ -86,6 +88,7 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
@@ -96,6 +99,7 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
 }
 
@@ -137,6 +141,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
+
+  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
+    authorMeta,
+    "currentDraftAuthor",
+    "currentDraftBook",
+    "current_draft_book_id",
+  );
 
   readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
 

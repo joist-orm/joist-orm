@@ -1,4 +1,5 @@
 import {
+  addColumns,
   createCreatedAtFunction,
   createEntityTable,
   createEnumTable,
@@ -92,6 +93,11 @@ export function up(b: MigrationBuilder): void {
     // for testing columns that are keywords (and testing default values)
     order: { type: "integer", notNull: true, default: 1 },
   });
+
+  // For testing o2o and m2o w/overlapping names in Book.author
+  addColumns(b, "authors", {
+    current_draft_book_id: foreignKey("books", { notNull: false, unique: true})
+  })
 
   createEntityTable(b, "book_advances", {
     // for testing required enums

@@ -43,6 +43,7 @@ import {
   Book,
   BookId,
   bookMeta,
+  BookOrder,
   Color,
   ColorDetails,
   Colors,
@@ -76,6 +77,7 @@ export interface AuthorOpts {
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
   mentor?: Author | null;
+  currentDraftBook?: Book | null;
   publisher?: Publisher | null;
   image?: Image | null;
   authors?: Author[];
@@ -86,6 +88,7 @@ export interface AuthorOpts {
 
 export interface AuthorIdsOpts {
   mentorId?: AuthorId | null;
+  currentDraftBookId?: BookId | null;
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   authorIds?: AuthorId[] | null;
@@ -110,6 +113,7 @@ export interface AuthorFilter {
   favoriteColors?: ValueFilter<Color[], null | undefined>;
   favoriteShape?: ValueFilter<FavoriteShape, null | undefined>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
@@ -130,6 +134,7 @@ export interface AuthorGraphQLFilter {
   favoriteColors?: EnumGraphQLFilter<Color>;
   favoriteShape?: EnumGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
 }
@@ -150,6 +155,7 @@ export interface AuthorOrder {
   favoriteColors?: OrderBy;
   favoriteShape?: OrderBy;
   mentor?: AuthorOrder;
+  currentDraftBook?: BookOrder;
   publisher?: PublisherOrder;
 }
 
@@ -180,6 +186,12 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   readonly comments: Collection<Author, Comment> = hasMany(commentMeta, "comments", "parent", "parent_author_id");
 
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
+
+  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
+    bookMeta,
+    "currentDraftBook",
+    "currentDraftAuthor",
+  );
 
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 

@@ -1,9 +1,13 @@
 import { defaultConfig } from "./config";
-import { collectionName, makeEntity } from "./EntityDbMetadata";
+import { collectionName, makeEntity, oneToOneName } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
 const relationDummy: any = { targetTable: { m2oRelations: [] } };
-const configDummy: any = { relationNameOverrides: {} };
+const configDummy: any = { relationNameOverrides: {}, entities: [] };
+const author = makeEntity("Author");
+const book = makeEntity("Book");
+const bookReview = makeEntity("BookReview");
+const image = makeEntity("Image");
 
 describe("EntityDbMetadata", () => {
   describe("tableToEntityName", () => {
@@ -22,21 +26,43 @@ describe("EntityDbMetadata", () => {
 
   describe("collectionName", () => {
     it("handles base case", () => {
-      expect(collectionName(configDummy, makeEntity("Author"), makeEntity("Book"), relationDummy).fieldName).toEqual(
-        "books",
-      );
+      // For `books.author_id` create `Author.books`
+      expect(collectionName(configDummy, author, book, relationDummy).fieldName).toEqual("books");
     });
 
     it("handles author/mentor", () => {
-      expect(collectionName(configDummy, makeEntity("Author"), makeEntity("Author"), relationDummy).fieldName).toEqual(
-        "authors",
-      );
+      // For `authors.mentor_id` create `Author.authors` (ideally would be mentors?)
+      expect(collectionName(configDummy, author, author, relationDummy).fieldName).toEqual("authors");
     });
 
-    it("handles book/book review", () => {
-      expect(
-        collectionName(configDummy, makeEntity("Book"), makeEntity("BookReview"), relationDummy).fieldName,
-      ).toEqual("reviews");
+    it("drops the book prefix from book reviews", () => {
+      // For `book_reviews.book_id` create `Book.reviews`
+      expect(collectionName(configDummy, book, bookReview, relationDummy).fieldName).toEqual("reviews");
+    });
+  });
+
+  describe("oneToOneName", () => {
+    it("use the other side type name by default", () => {
+      // For `images.book_id` create `Book.image`
+      const relation = {
+        foreignKey: { columns: [{ name: "book_id" }] },
+        targetTable: { name: "images" },
+        sourceTable: { m2oRelations: [] },
+      };
+      expect(oneToOneName(configDummy, book, image, relation as any)).toEqual("image");
+    });
+
+    it("keeps the column prefix if necessary to avoid collisions", () => {
+      // For `authors.current_draft_book_id` create `Book.currentDraftAuthor`
+      const relation = {
+        // Given authors.current_draft_book_id is a m2o to book
+        foreignKey: { columns: [{ name: "current_draft_book_id" }] },
+        targetTable: { name: "authors" },
+        // And `books` already has a m2o pointing back to `authors`
+        sourceTable: { m2oRelations: [{ targetTable: { name: "authors" } }] },
+      };
+      // Then we use the tweaked column name
+      expect(oneToOneName(configDummy, book, author, relation as any)).toEqual("currentDraftAuthor");
     });
   });
 });

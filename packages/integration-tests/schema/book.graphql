@@ -10,6 +10,9 @@ type Book {
   tags: [Tag!]!
   image: Image
   comments: [Comment!]!
+  currentDraftBook: Author
+  book: Image
+  currentDraftAuthor: Author
 }
 
 input SaveBookInput {

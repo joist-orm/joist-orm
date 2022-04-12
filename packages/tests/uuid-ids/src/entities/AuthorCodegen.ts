@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityOrmField,
+  fail,
   Flavor,
   hasMany,
   isLoaded,
@@ -90,6 +91,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idOrFail(): AuthorId {
+    return this.id || fail("Author has no id yet");
+  }
+
   get firstName(): string {
     return this.__orm.data["firstName"];
   }
@@ -134,10 +139,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
   populate<H extends LoadHint<Author>, V>(hint: H, fn?: (a: Loaded<Author, H>) => V): Promise<Loaded<Author, H> | V> {
     return this.em.populate(this as any as Author, hint, fn);
-  }
-
-  isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {
-    return isLoaded(this as any as Author, hint);
   }
 
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {

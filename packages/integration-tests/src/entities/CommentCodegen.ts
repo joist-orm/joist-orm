@@ -7,6 +7,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
+  fail,
   Flavor,
   hasOnePolymorphic,
   IdOf,
@@ -103,6 +104,10 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
 
   get id(): CommentId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): CommentId {
+    return this.id || fail("Comment has no id yet");
   }
 
   get text(): string | undefined {

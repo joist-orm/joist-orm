@@ -5,7 +5,6 @@ import {
   EntityOrmField,
   fail,
   getMetadata,
-  IdOf,
   isEntity,
   keyToNumber,
   OptsOf,
@@ -42,17 +41,15 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
     return this.idUntagged || fail("Entity has no id yet");
   }
 
-  abstract set(values: Partial<OptsOf<this>>): void;
+  abstract set(values: Partial<OptsOf<Entity>>): void;
 
   /**
    * Similar to `set` but applies "Partial API" semantics, i.e. `null` means unset and `undefined` means don't change.
    */
-  abstract setPartial(values: PartialOrNull<OptsOf<this>>): void;
+  abstract setPartial(values: PartialOrNull<OptsOf<Entity>>): void;
 
   /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
-  get idOrFail(): IdOf<this> {
-    return this.__orm.data["id"] || fail("Entity has no id yet");
-  }
+  abstract get idOrFail(): string;
 
   get isNewEntity(): boolean {
     return this.__orm.isNew;

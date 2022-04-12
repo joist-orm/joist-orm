@@ -5,6 +5,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
+  fail,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -94,6 +95,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idOrFail(): BookId {
+    return this.id || fail("Book has no id yet");
+  }
+
   get title(): string {
     return this.__orm.data["title"];
   }
@@ -130,10 +135,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
   populate<H extends LoadHint<Book>, V>(hint: H, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
     return this.em.populate(this as any as Book, hint, fn);
-  }
-
-  isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
-    return isLoaded(this as any as Book, hint);
   }
 
   isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {

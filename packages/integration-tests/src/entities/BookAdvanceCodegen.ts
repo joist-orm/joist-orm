@@ -6,6 +6,7 @@ import {
   EntityGraphQLFilter,
   EntityOrmField,
   EnumGraphQLFilter,
+  fail,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -120,6 +121,10 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
 
   get id(): BookAdvanceId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): BookAdvanceId {
+    return this.id || fail("BookAdvance has no id yet");
   }
 
   get createdAt(): Date {

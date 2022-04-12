@@ -525,15 +525,20 @@ export class EntityManager<C = {}> {
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
-  public async populate<T extends Entity, H extends LoadHint<T>>(entity: T, hint: Const<H>): Promise<Loaded<T, H>>;
+  public async populate<T extends Entity, H extends LoadHint<T>, V = Loaded<T, H>>(
+    entity: T,
+    hint: Const<H>,
+    fn?: (entity: Loaded<T, H>) => V,
+  ): Promise<V>;
   public async populate<T extends Entity, H extends LoadHint<T>>(
     entities: ReadonlyArray<T>,
     hint: Const<H>,
   ): Promise<Loaded<T, H>[]>;
-  async populate<T extends Entity, H extends LoadHint<T>>(
+  async populate<T extends Entity, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
     hint: H,
-  ): Promise<Loaded<T, H> | Array<Loaded<T, H>>> {
+    fn?: (entity: Loaded<T, H>) => V,
+  ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
     const list = toArray(entityOrList);
     const promises = list
       .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
@@ -558,7 +563,7 @@ export class EntityManager<C = {}> {
         }
       });
     await Promise.all(promises);
-    return entityOrList as any;
+    return !fn ? (entityOrList as any) : fn(entityOrList as any);
   }
 
   /**

@@ -55,7 +55,7 @@ export interface ColumnMetaData {
 
 /** Creates the base class with the boilerplate annotations. */
 export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata): Code {
-  const { entity } = meta;
+  const { entity, tagName } = meta;
   const entityName = entity.name;
 
   // Add the primitives
@@ -397,14 +397,16 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         return ${newChangesProxy}(this as any as ${entityName});
       }
 
-      async load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
+      load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn);
       }
 
-      async populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>> {
-        return this.em.populate(this as any as ${entityName}, hint);
+      populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
+      populate<H extends ${LoadHint}<${entityName}>, V>(hint: H, fn: (${tagName}: Loaded<${entityName}, H>) => V): Promise<V>;
+      populate<H extends ${LoadHint}<${entityName}>, V>(hint: H, fn?: (${tagName}: Loaded<${entityName}, H>) => V): Promise<${Loaded}<${entityName}, H> | V> {
+        return this.em.populate(this as any as ${entityName}, hint, fn);
       }
-      
+
       isLoaded<H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}, H> {
         return ${isLoaded}(this as any as ${entityName}, hint);
       }

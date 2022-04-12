@@ -347,12 +347,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Author);
   }
 
-  async load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Author, fn);
   }
 
-  async populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>> {
-    return this.em.populate(this as any as Author, hint);
+  populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
+  populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Author>, V>(hint: H, fn?: (a: Loaded<Author, H>) => V): Promise<Loaded<Author, H> | V> {
+    return this.em.populate(this as any as Author, hint, fn);
   }
 
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {

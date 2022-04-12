@@ -135,12 +135,14 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as Tag);
   }
 
-  async load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as Tag, fn);
   }
 
-  async populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>> {
-    return this.em.populate(this as any as Tag, hint);
+  populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;
+  populate<H extends LoadHint<Tag>, V>(hint: H, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Tag>, V>(hint: H, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
+    return this.em.populate(this as any as Tag, hint, fn);
   }
 
   isLoaded<H extends LoadHint<Tag>>(hint: H): this is Loaded<Tag, H> {

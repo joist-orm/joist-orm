@@ -122,12 +122,17 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this as any as CriticColumn);
   }
 
-  async load<U, V>(fn: (lens: Lens<CriticColumn>) => Lens<U, V>): Promise<V> {
+  load<U, V>(fn: (lens: Lens<CriticColumn>) => Lens<U, V>): Promise<V> {
     return loadLens(this as any as CriticColumn, fn);
   }
 
-  async populate<H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>> {
-    return this.em.populate(this as any as CriticColumn, hint);
+  populate<H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>>;
+  populate<H extends LoadHint<CriticColumn>, V>(hint: H, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
+  populate<H extends LoadHint<CriticColumn>, V>(
+    hint: H,
+    fn?: (cc: Loaded<CriticColumn, H>) => V,
+  ): Promise<Loaded<CriticColumn, H> | V> {
+    return this.em.populate(this as any as CriticColumn, hint, fn);
   }
 
   isLoaded<H extends LoadHint<CriticColumn>>(hint: H): this is Loaded<CriticColumn, H> {

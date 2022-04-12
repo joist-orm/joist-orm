@@ -6,6 +6,7 @@ import {
   EntityGraphQLFilter,
   EntityOrmField,
   EnumGraphQLFilter,
+  fail,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -130,6 +131,10 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
 
   get id(): ImageId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): ImageId {
+    return this.id || fail("Image has no id yet");
   }
 
   get fileName(): string {

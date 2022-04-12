@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityOrmField,
+  fail,
   Flavor,
   hasLargeMany,
   hasLargeManyToMany,
@@ -105,6 +106,10 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
 
   get id(): TagId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): TagId {
+    return this.id || fail("Tag has no id yet");
   }
 
   get name(): string {

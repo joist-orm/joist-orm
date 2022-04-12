@@ -7,6 +7,7 @@ import {
   EntityGraphQLFilter,
   EntityOrmField,
   EnumGraphQLFilter,
+  fail,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -164,6 +165,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
 
   get id(): PublisherId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): PublisherId {
+    return this.id || fail("Publisher has no id yet");
   }
 
   get name(): string {

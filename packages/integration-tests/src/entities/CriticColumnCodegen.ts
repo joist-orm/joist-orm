@@ -5,6 +5,7 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
+  fail,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -92,6 +93,10 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
 
   get id(): CriticColumnId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): CriticColumnId {
+    return this.id || fail("CriticColumn has no id yet");
   }
 
   get name(): string {

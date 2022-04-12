@@ -16,6 +16,7 @@ import {
   EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
+  fail as failSymbol,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -381,6 +382,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       get id(): ${entityName}Id | undefined {
         return this.__orm.data["id"];
+      }
+
+      get idOrFail(): ${entityName}Id {
+        return this.id || ${failSymbol}("${entityName} has no id yet");
       }
 
       ${primitives}

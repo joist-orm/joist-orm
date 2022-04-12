@@ -9,6 +9,7 @@ import {
   EntityGraphQLFilter,
   EntityOrmField,
   EnumGraphQLFilter,
+  fail,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -213,6 +214,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   get id(): AuthorId | undefined {
     return this.__orm.data["id"];
+  }
+
+  get idOrFail(): AuthorId {
+    return this.id || fail("Author has no id yet");
   }
 
   get firstName(): string {

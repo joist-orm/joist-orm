@@ -54,7 +54,7 @@ export {
   ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
-export { fail } from "./utils";
+export { asNew, fail } from "./utils";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

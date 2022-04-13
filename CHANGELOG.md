@@ -1,3 +1,10 @@
+## [1.4.2](https://github.com/stephenh/joist-ts/compare/v1.4.1...v1.4.2) (2022-04-13)
+
+
+### Bug Fixes
+
+* Move filter earlier for easier debugging. ([#300](https://github.com/stephenh/joist-ts/issues/300)) ([a42830a](https://github.com/stephenh/joist-ts/commit/a42830a2f7ae904138a3600244e4f33ed9abc4a4))
+
 ## [1.4.1](https://github.com/stephenh/joist-ts/compare/v1.4.0...v1.4.1) (2022-04-12)
 
 

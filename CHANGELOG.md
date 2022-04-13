@@ -1,3 +1,10 @@
+## [1.4.3](https://github.com/stephenh/joist-ts/compare/v1.4.2...v1.4.3) (2022-04-13)
+
+
+### Bug Fixes
+
+* Add asNew helper method. ([#301](https://github.com/stephenh/joist-ts/issues/301)) ([9e6aca3](https://github.com/stephenh/joist-ts/commit/9e6aca3707b20112e2c8faaf446b237126d98125))
+
 ## [1.4.2](https://github.com/stephenh/joist-ts/compare/v1.4.1...v1.4.2) (2022-04-13)
 
 

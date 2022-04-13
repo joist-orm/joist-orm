@@ -50,71 +50,73 @@ export function newTestInstance<T extends Entity>(
 
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
   // instance of the entity. We'll do the o2m/other fields as a second pass.
-  const initialOpts = Object.values(meta.fields).map((field) => {
-    const { fieldName } = field;
+  const initialOpts = Object.values(meta.fields)
+    .map((field) => {
+      const { fieldName } = field;
 
-    // Use the opts value if they passed one in
-    if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
-      const optValue = (opts as any)[fieldName];
-      // We don't explicitly support null (callers should pass undefined), but we accept it
-      // for good measure.
-      if (optValue === null || (optValue === undefined && !field.required)) {
-        return [];
-      }
-      switch (field.kind) {
-        case "m2o":
-        case "poly":
-          return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined)];
-        case "o2o":
-        case "o2m":
-        case "m2m":
-          // We do these in the 2nd pass after `entity` exists (see additionalOpts)
+      // Use the opts value if they passed one in
+      if (fieldName in opts && (opts as any)[fieldName] !== defaultValueMarker) {
+        const optValue = (opts as any)[fieldName];
+        // We don't explicitly support null (callers should pass undefined), but we accept it
+        // for good measure.
+        if (optValue === null || (optValue === undefined && !field.required)) {
           return [];
-        case "lo2m":
-          // If a child is passing themselves into a parent that is a large collection, just ignore it
-          return [];
-        case "primitive":
-        case "enum":
-        case "primaryKey":
-          // Look for strings that want to use the test index
-          if (typeof optValue === "string" && optValue.includes(testIndex)) {
-            const actualIndex = getTestIndex(em, meta.cstr);
-            return [fieldName, optValue.replace(testIndex, String(actualIndex))];
-          }
-          // Otherwise just use the user's opt value as-is
-          return [fieldName, optValue];
-        default:
-          return assertNever(field);
+        }
+        switch (field.kind) {
+          case "m2o":
+          case "poly":
+            return [fieldName, resolveFactoryOpt(em, opts, field, optValue, undefined)];
+          case "o2o":
+          case "o2m":
+          case "m2m":
+            // We do these in the 2nd pass after `entity` exists (see additionalOpts)
+            return [];
+          case "lo2m":
+            // If a child is passing themselves into a parent that is a large collection, just ignore it
+            return [];
+          case "primitive":
+          case "enum":
+          case "primaryKey":
+            // Look for strings that want to use the test index
+            if (typeof optValue === "string" && optValue.includes(testIndex)) {
+              const actualIndex = getTestIndex(em, meta.cstr);
+              return [fieldName, optValue.replace(testIndex, String(actualIndex))];
+            }
+            // Otherwise just use the user's opt value as-is
+            return [fieldName, optValue];
+          default:
+            return assertNever(field);
+        }
       }
-    }
 
-    if (
-      field.kind === "primitive" &&
-      (field.required || (opts as any)[fieldName] === defaultValueMarker) &&
-      !field.derived &&
-      !field.protected
-    ) {
-      const codegenDefault = (cstr as any).defaultValues[field.fieldName];
-      return [fieldName, codegenDefault ?? defaultValueForField(field)];
-    } else if (field.kind === "m2o") {
-      // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
-      // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
-      const existing = getObviousDefault(em, field.otherMetadata(), opts);
-      if (existing) {
-        return [fieldName, existing];
+      if (
+        field.kind === "primitive" &&
+        (field.required || (opts as any)[fieldName] === defaultValueMarker) &&
+        !field.derived &&
+        !field.protected
+      ) {
+        const codegenDefault = (cstr as any).defaultValues[field.fieldName];
+        return [fieldName, codegenDefault ?? defaultValueForField(field)];
+      } else if (field.kind === "m2o") {
+        // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
+        // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
+        const existing = getObviousDefault(em, field.otherMetadata(), opts);
+        if (existing) {
+          return [fieldName, existing];
+        }
+        // Otherwise, only make a new entity only if the field is required
+        if (field.required) {
+          return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+        }
+      } else if (field.kind === "enum" && field.required) {
+        const codegenDefault = (cstr as any).defaultValues[field.fieldName];
+        return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
       }
-      // Otherwise, only make a new entity only if the field is required
-      if (field.required) {
-        return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
-      }
-    } else if (field.kind === "enum" && field.required) {
-      const codegenDefault = (cstr as any).defaultValues[field.fieldName];
-      return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
-    }
-    return [];
-  });
+      return [];
+    })
+    .filter((t) => t.length > 0);
 
-  const entity = em.create(meta.cstr, Object.fromEntries(initialOpts.filter((t) => t.length > 0)) as any) as New<T>;
+  const entity = em.create(meta.cstr, Object.fromEntries(initialOpts)) as New<T>;
 
   // If the type we just made doesn't exist in `use` yet, remember it. This works better than
   // looking at the values in `fullOpts`, because instead of waiting until the end of the

@@ -1,3 +1,6 @@
+import { Entity } from "src/EntityManager";
+import { New } from "src/loaded";
+
 export function getOrSet<T extends Record<keyof unknown, unknown>>(
   record: T,
   key: keyof T,
@@ -69,4 +72,17 @@ export type NullOrDefinedOr<T> = T | null | undefined;
 
 export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);
+}
+
+/**
+ * Utility method for casting `entity` to a `New` entity.
+ *
+ * Note that we don't actually do any runtime checks; a very simple one would be if the id is undefined,
+ * but we want this method to be used in tests that are post-`flush` but still "know" the entity is
+ * effectively new / fully loaded.
+ *
+ * Granted, we could do a runtime check that all relations are loaded.
+ */
+export function asNew<T extends Entity>(entity: T): New<T> {
+  return entity as New<T>;
 }

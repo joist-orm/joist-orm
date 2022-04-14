@@ -5,6 +5,7 @@ import { code, imp } from "ts-poet";
 const getMetadata = imp("getMetadata@joist-orm");
 const entityResolver = imp("entityResolver@src/resolvers/entityResolver");
 const makeRunResolverKeys = imp("makeRunResolverKeys@src/resolvers/testUtils");
+const makeRunResolver = imp("makeRunResolver@src/resolvers/testUtils");
 
 /**
  * Generates a base resolver using the entityResolver utility.
@@ -39,6 +40,8 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
 
     const tagName = config.entities[name].tag || "entity";
 
+    const keys = e.primitives.map((field) => `"${field.fieldName}"`).join(", ");
+
     const contents = code`
       describe("${camelName}Resolvers", () => {
         it.withCtx("can return", async (ctx) => {
@@ -46,12 +49,13 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
           // Given a ${sentenceCase(name)}
           const ${tagName} = ${factory}(em);
           // Then we can query it
-          const result = await run${name}(ctx, ${tagName}, []);
-          expect(result).toMatchObject({});
+          const result = await run${name}Keys(ctx, ${tagName}, [${keys}]);
+          expect(${tagName}).toMatchObject(result);
         });
       });
 
-      const run${name} = ${makeRunResolverKeys}<${resolverType}, ${idType}>(${resolverConst});
+      const run${name}Keys = ${makeRunResolverKeys}(${resolverConst});
+      const run${name} = ${makeRunResolver}(${resolverConst});
     `;
     return { name: `resolvers/objects/${camelName}/${camelName}Resolvers.test.ts`, overwrite: false, contents };
   });

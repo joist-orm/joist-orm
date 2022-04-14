@@ -8,7 +8,7 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
   // Combine the entity mapped types and enum detail mapped types
   const mappedTypes = sortObject(
     Object.fromEntries([
-      ...entities.map(({ entity }) => [entity.name, `src/entities#${entity.idType.symbol}`]),
+      ...entities.map(({ entity }) => [entity.name, `src/entities#${entity.name}`]),
       ...enumNames.map((name) => [`${name}Detail`, `src/entities#${name}`]),
     ]),
   );

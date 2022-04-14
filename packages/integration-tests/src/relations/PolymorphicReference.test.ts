@@ -89,7 +89,7 @@ describe("PolymorphicReference", () => {
     const c1 = em.createPartial(Comment, {});
     const c2 = em.createPartial(Comment, {});
 
-    expect(() => c1.parent.set(c2 as any)).toThrow("Comment:new cannot be set as 'parent' on Comment:new");
+    expect(() => c1.parent.set(c2 as any)).toThrow("Comment#2 cannot be set as 'parent' on Comment#1");
   });
 
   it("removes deleted entities", async () => {

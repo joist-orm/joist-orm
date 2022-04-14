@@ -1,3 +1,10 @@
+# [1.5.0](https://github.com/stephenh/joist-ts/compare/v1.4.3...v1.5.0) (2022-04-14)
+
+
+### Features
+
+* changed graphql mapping from ids to entities and updated scaffolding ([#294](https://github.com/stephenh/joist-ts/issues/294)) ([43fede2](https://github.com/stephenh/joist-ts/commit/43fede2c85eb28f749736e88d340cbcf4256b551))
+
 ## [1.4.3](https://github.com/stephenh/joist-ts/compare/v1.4.2...v1.4.3) (2022-04-13)
 
 

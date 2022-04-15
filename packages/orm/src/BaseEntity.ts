@@ -73,10 +73,16 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
 
   toString(): string {
     const meta = getMetadata(this);
-    // Strip the tag because we add back the entity prefix
-    const id = keyToNumber(meta, this.id) || "new";
-    // Returns `Author:1` instead of `author:1` to differentiate the instance's toString from the tagged id itself
-    return `${meta.type}:${id}`;
+    if (this.id) {
+      // Strip the tag because we add back the entity prefix
+      const id = keyToNumber(meta, this.id) || "new";
+      // Returns `Author:1` instead of `author:1` to differentiate the instance's toString from the tagged id itself
+      return `${meta.type}:${id}`;
+    } else {
+      const sameType = this.em.entities.filter((e) => e instanceof meta.cstr);
+      // Returns `Author#1` as a hint that it's a test id and not the real id
+      return `${meta.type}#${sameType.indexOf(this) + 1}`;
+    }
   }
 
   public get em(): EM {
@@ -101,6 +107,15 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   }
 
   [Symbol.toStringTag](): string {
+    return this.toString();
+  }
+
+  /**
+   * Hooks into node's `console.log` to avoid sprawling output of our relations/internal state.
+   *
+   * See https://nodejs.org/api/util.html#custom-inspection-functions-on-objects.
+   */
+  [Symbol.for("nodejs.util.inspect.custom")](): string {
     return this.toString();
   }
 }

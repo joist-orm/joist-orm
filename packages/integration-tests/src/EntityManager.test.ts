@@ -687,7 +687,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => p1.authors.add(a1)).toThrow(
-      "Cannot set 'publisher' on Author:new during a flush outside of a entity hook or from afterCommit",
+      "Cannot set 'publisher' on Author#1 during a flush outside of a entity hook or from afterCommit",
     );
     await flushPromise;
   });
@@ -928,7 +928,7 @@ describe("EntityManager", () => {
     expect(a1.toJSON()).toMatchObject({
       id: "a:1",
       firstName: "a1",
-      publisher: "Publisher:new",
+      publisher: "Publisher#1",
     });
   });
 

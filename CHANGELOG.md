@@ -1,3 +1,10 @@
+# [1.6.0](https://github.com/stephenh/joist-ts/compare/v1.5.0...v1.6.0) (2022-04-15)
+
+
+### Features
+
+* Implement custom inspect method. ([#302](https://github.com/stephenh/joist-ts/issues/302)) ([80d7ad7](https://github.com/stephenh/joist-ts/commit/80d7ad7f27310ed9bd73c03cc3298ec2e9c662d2))
+
 # [1.5.0](https://github.com/stephenh/joist-ts/compare/v1.4.3...v1.5.0) (2022-04-14)
 
 

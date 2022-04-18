@@ -1,3 +1,10 @@
+## [1.6.1](https://github.com/stephenh/joist-ts/compare/v1.6.0...v1.6.1) (2022-04-18)
+
+
+### Bug Fixes
+
+* Use joist util fail ([#304](https://github.com/stephenh/joist-ts/issues/304)) ([7830131](https://github.com/stephenh/joist-ts/commit/7830131a951760442c97de43ca48ae6a3608da5f))
+
 # [1.6.0](https://github.com/stephenh/joist-ts/compare/v1.5.0...v1.6.0) (2022-04-15)
 
 

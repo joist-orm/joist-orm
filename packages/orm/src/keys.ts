@@ -1,5 +1,6 @@
 import { BaseEntity } from "./BaseEntity";
 import { Entity, EntityConstructor, getMetadata } from "./EntityManager";
+import { fail } from "./utils";
 
 const tagDelimiter = ":";
 

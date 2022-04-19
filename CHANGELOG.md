@@ -1,3 +1,10 @@
+# [1.7.0](https://github.com/stephenh/joist-ts/compare/v1.6.1...v1.7.0) (2022-04-19)
+
+
+### Features
+
+* Make clone smarter. ([#305](https://github.com/stephenh/joist-ts/issues/305)) ([fef395b](https://github.com/stephenh/joist-ts/commit/fef395b46de15712340ed46ddc4df023c69736e1))
+
 ## [1.6.1](https://github.com/stephenh/joist-ts/compare/v1.6.0...v1.6.1) (2022-04-18)
 
 

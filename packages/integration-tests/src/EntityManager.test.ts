@@ -1109,14 +1109,14 @@ describe("EntityManager", () => {
 
     // When we clone that entity and its reference
     const a2 = await em.clone(a1, "books");
-    const [b2] = a2.books.get;
     await em.flush();
 
     // Then we expect the cloned entity to have a cloned copy of the original's reference
     expect(a2.books.get[0].title).toEqual(b1.title);
     // But the book is a different book
+    const [b2] = a2.books.get;
     expect(b2).not.toBe(b1);
-    // But a2 got updated to point to the cloned book
+    // And a2 got updated to point to its cloned book
     expect(a2.currentDraftBook.get).toBe(b2);
   });
 
@@ -1152,8 +1152,8 @@ describe("EntityManager", () => {
     // Then we expect the cloned entity to have cloned copies of all its nested references
     const b2 = (await a2.books.load())[0];
     const i2 = await b2.image.load();
-    expect(i2).toBeTruthy();
-    expect(i2?.id).not.toEqual(i1.id);
+    expect(i2).toBeDefined();
+    expect(i2).not.toEqual(i1);
     expect(i2?.fileName).toEqual(i1.fileName);
     expect(i2?.type).toEqual(i1.type);
     expect(await numberOf(em, Author, Book, Image)).toEqual([2, 2, 2]);

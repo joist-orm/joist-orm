@@ -1230,18 +1230,7 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   return current;
 }
 
-function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadHint<T> {
-  if ((typeof hint as any) === "string") {
-    return { [hint as any]: {} } as any;
-  } else if (Array.isArray(hint)) {
-    return Object.fromEntries(hint.map((relation) => [relation, {}]));
-  } else if (hint) {
-    return hint as NestedLoadHint<T>;
-  } else {
-    return {};
-  }
-}
-
+/** Recursively crawls through `entity`, with the given populate `hint`, and adds anything found to `found`. */
 async function crawl<T extends Entity>(found: Entity[], entity: T, hint: LoadHint<T>): Promise<void> {
   found.push(entity);
   await Promise.all(
@@ -1265,4 +1254,17 @@ async function crawl<T extends Entity>(found: Entity[], entity: T, hint: LoadHin
       }
     }),
   );
+}
+
+/** Takes our flexible string or array or hash load hint and makes it always a hash. */
+function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadHint<T> {
+  if ((typeof hint as any) === "string") {
+    return { [hint as any]: {} } as any;
+  } else if (Array.isArray(hint)) {
+    return Object.fromEntries(hint.map((relation) => [relation, {}]));
+  } else if (hint) {
+    return hint as NestedLoadHint<T>;
+  } else {
+    return {};
+  }
 }

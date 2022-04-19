@@ -19,7 +19,6 @@ import {
   OneToManyCollection,
   PartialOrNull,
   PolymorphicKeySerde,
-  Reference,
   setField,
   setOpts,
   tagId,
@@ -353,65 +352,46 @@ export class EntityManager<C = {}> {
    * // This will duplicate the author and all their related book entities
    * const duplicatedAuthorAndBooks = await em.clone(author, "books")
    *
-   * @exmaple
+   * @example
    * // This will duplicate the author, all their books, and the images for those books
    * const duplicatedAuthorAndBooksAndImages = await em.clone(author, {books: "image"})
    */
   public async clone<T extends Entity, H extends LoadHint<T>>(entity: T, hint?: H): Promise<Loaded<T, H>> {
-    const meta = getMetadata(entity);
-    const { id, ...data } = entity.__orm.data;
-    const clone = this.create(meta.cstr, {} as OptsOf<T>);
-    clone.__orm.data = data;
-    if (hint) {
-      if ((typeof hint as any) === "string") {
-        hint = { [hint as any]: {} } as any;
-      } else if (Array.isArray(hint)) {
-        hint = Object.fromEntries(hint.map((relation) => [relation, {}]));
-      }
-      await Promise.all(
-        (Object.entries(hint as NestedLoadHint<T>) as [keyof RelationsIn<T>, LoadHint<any>][]).map(
-          async ([relationName, nested]) => {
-            const relation = entity[relationName] as any as
-              | OneToManyCollection<T, any>
-              | OneToOneReferenceImpl<T, any>
-              | ManyToOneReferenceImpl<T, any, undefined | never>;
-            if (relation instanceof OneToManyCollection) {
-              const relatedEntities = await relation.load();
-              await Promise.all(
-                relatedEntities.map(async (related) => {
-                  const clonedRelated = await this.clone(related, nested);
-                  // Clear to avoid `set` mutating the original/source entity's relationship
-                  clonedRelated.__orm.data[relation.otherFieldName] = undefined;
-                  const relationToClone = clonedRelated[relation.otherFieldName] as Reference<Entity, T, undefined>;
-                  relationToClone.set(clone);
-                }),
-              );
-            } else if (relation instanceof OneToOneReferenceImpl) {
-              const related = await relation.load();
-              if (related) {
-                const clonedRelated = await this.clone(related, nested);
-                // Clear to avoid `set` mutating the original/source entity's relationship
-                clonedRelated.__orm.data[relation.otherFieldName] = undefined;
-                const relationToClone = clone[relation.fieldName] as any;
-                relationToClone.set(clonedRelated);
-              }
-            } else if (relation instanceof ManyToOneReferenceImpl) {
-              const related = await relation.load();
-              if (related) {
-                const clonedRelated = await this.clone(related, nested);
-                // Clear to avoid `set` mutating the original/source entity's relationship
-                clone.__orm.data[relationName] = undefined;
-                const relationToClone = clone[relationName] as any;
-                relationToClone.set(clonedRelated);
-              }
-            } else {
-              fail(`Uncloneable relation: ${relationName}`);
-            }
-          },
-        ),
-      );
-    }
-    return clone as Loaded<T, H>;
+    // Keep a list that we can work against synchronously after doing the async find/crawl
+    const todo: Entity[] = [];
+
+    // 1. Find all entities w/o mutating them yet
+    await crawl(todo, entity, hint || {});
+
+    // 2. Clone each found entity
+    const clones = todo.map((entity) => {
+      const { id, ...data } = entity.__orm.data;
+      const clone = new (getMetadata(entity).cstr)(this, {} as any);
+      clone.__orm.data = data;
+      return [entity, clone] as const;
+    });
+    const entityToClone = new Map(clones);
+
+    // 3. Now mutate the m2o relations. We focus on only m2o's because they "own" the field/column,
+    // and will drive percolation to keep the other-side o2m & o2o updated.
+    clones.forEach(([entity, clone]) => {
+      Object.entries(clone).forEach(([fieldName, value]) => {
+        if (value instanceof ManyToOneReferenceImpl) {
+          // What's the existing entity? Have we cloned it?
+          const existingIdOrEntity = clone.__orm.data[fieldName];
+          const existing = this.entities.find((e) => sameEntity(e, getMetadata(e), existingIdOrEntity));
+          // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
+          // and b) we don't need to bother telling it about the newly cloned entity
+          if (existing) {
+            // Clear the existing value so that set's percolation treats us as a new entity
+            clone.__orm.data[fieldName] = undefined;
+            ((clone as any)[fieldName] as any).set(entityToClone.get(existing) ?? existing);
+          }
+        }
+      });
+    });
+
+    return clones[0][1] as Loaded<T, H>;
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
@@ -1248,4 +1228,41 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
     current = entities as Entity[];
   }
   return current;
+}
+
+function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadHint<T> {
+  if ((typeof hint as any) === "string") {
+    return { [hint as any]: {} } as any;
+  } else if (Array.isArray(hint)) {
+    return Object.fromEntries(hint.map((relation) => [relation, {}]));
+  } else if (hint) {
+    return hint as NestedLoadHint<T>;
+  } else {
+    return {};
+  }
+}
+
+async function crawl<T extends Entity>(found: Entity[], entity: T, hint: LoadHint<T>): Promise<void> {
+  found.push(entity);
+  await Promise.all(
+    (Object.entries(adaptHint(hint)) as [keyof RelationsIn<T>, LoadHint<any>][]).map(async ([relationName, nested]) => {
+      const relation = entity[relationName];
+      if (relation instanceof OneToManyCollection) {
+        const relatedEntities = await relation.load();
+        await Promise.all(relatedEntities.map((entity) => crawl(found, entity, nested)));
+      } else if (relation instanceof OneToOneReferenceImpl) {
+        const related = await relation.load();
+        if (related) {
+          await crawl(found, related, nested);
+        }
+      } else if (relation instanceof ManyToOneReferenceImpl) {
+        const related = await relation.load();
+        if (related) {
+          await crawl(found, related, nested);
+        }
+      } else {
+        fail(`Uncloneable relation: ${relationName}`);
+      }
+    }),
+  );
 }

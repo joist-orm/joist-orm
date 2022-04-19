@@ -19,6 +19,7 @@ import {
   ImageType,
   newAuthor,
   newBook,
+  newPublisher,
   Publisher,
   PublisherSize,
   Tag,
@@ -1080,7 +1081,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
 
     // Given an entity
-    const p1 = new Publisher(em, { name: "p1" });
+    const p1 = newPublisher(em, { name: "p1" });
     const a1 = new Author(em, { firstName: "a1", publisher: p1 });
     await em.flush();
 
@@ -1093,23 +1094,30 @@ describe("EntityManager", () => {
     expect(a2.publisher.idOrFail).toEqual(p1.id);
     expect(a2.id).not.toEqual(a1.id);
     expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
+    expect(p1.authors.get).toEqual([a1, a2]);
   });
 
   it("can clone entities and referenced entities", async () => {
     const em = newEntityManager();
 
     // Given an entity with a reference to another entity
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const b1 = newBook(em, { title: "b1", author: a1 });
+    // And the author itself points to the book we'll clone
+    a1.currentDraftBook.set(b1);
     await em.flush();
 
     // When we clone that entity and its reference
     const a2 = await em.clone(a1, "books");
+    const [b2] = a2.books.get;
     await em.flush();
 
     // Then we expect the cloned entity to have a cloned copy of the original's reference
     expect(a2.books.get[0].title).toEqual(b1.title);
-    expect(a2.books.get[0].id).not.toEqual(b1.id);
+    // But the book is a different book
+    expect(b2).not.toBe(b1);
+    // But a2 got updated to point to the cloned book
+    expect(a2.currentDraftBook.get).toBe(b2);
   });
 
   it("cannot clone many-to-many references", async () => {

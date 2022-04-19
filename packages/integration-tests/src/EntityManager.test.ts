@@ -19,6 +19,7 @@ import {
   ImageType,
   newAuthor,
   newBook,
+  newPublisher,
   Publisher,
   PublisherSize,
   Tag,
@@ -1080,7 +1081,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
 
     // Given an entity
-    const p1 = new Publisher(em, { name: "p1" });
+    const p1 = newPublisher(em, { name: "p1" });
     const a1 = new Author(em, { firstName: "a1", publisher: p1 });
     await em.flush();
 
@@ -1093,14 +1094,17 @@ describe("EntityManager", () => {
     expect(a2.publisher.idOrFail).toEqual(p1.id);
     expect(a2.id).not.toEqual(a1.id);
     expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
+    expect(p1.authors.get).toEqual([a1, a2]);
   });
 
   it("can clone entities and referenced entities", async () => {
     const em = newEntityManager();
 
     // Given an entity with a reference to another entity
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const b1 = newBook(em, { title: "b1", author: a1 });
+    // And the author itself points to the book we'll clone
+    a1.currentDraftBook.set(b1);
     await em.flush();
 
     // When we clone that entity and its reference
@@ -1109,7 +1113,11 @@ describe("EntityManager", () => {
 
     // Then we expect the cloned entity to have a cloned copy of the original's reference
     expect(a2.books.get[0].title).toEqual(b1.title);
-    expect(a2.books.get[0].id).not.toEqual(b1.id);
+    // But the book is a different book
+    const [b2] = a2.books.get;
+    expect(b2).not.toBe(b1);
+    // And a2 got updated to point to its cloned book
+    expect(a2.currentDraftBook.get).toBe(b2);
   });
 
   it("cannot clone many-to-many references", async () => {
@@ -1144,8 +1152,8 @@ describe("EntityManager", () => {
     // Then we expect the cloned entity to have cloned copies of all its nested references
     const b2 = (await a2.books.load())[0];
     const i2 = await b2.image.load();
-    expect(i2).toBeTruthy();
-    expect(i2?.id).not.toEqual(i1.id);
+    expect(i2).toBeDefined();
+    expect(i2).not.toEqual(i1);
     expect(i2?.fileName).toEqual(i1.fileName);
     expect(i2?.type).toEqual(i1.type);
     expect(await numberOf(em, Author, Book, Image)).toEqual([2, 2, 2]);

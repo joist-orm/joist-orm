@@ -1,3 +1,10 @@
+## [1.7.1](https://github.com/stephenh/joist-ts/compare/v1.7.0...v1.7.1) (2022-04-20)
+
+
+### Bug Fixes
+
+* bump knex to 1.0.7 ([#306](https://github.com/stephenh/joist-ts/issues/306)) ([41f96f9](https://github.com/stephenh/joist-ts/commit/41f96f9e5efd99539d1b3138603daaddab080a00))
+
 # [1.7.0](https://github.com/stephenh/joist-ts/compare/v1.6.1...v1.7.0) (2022-04-19)
 
 

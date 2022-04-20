@@ -20,7 +20,7 @@
     "change-case": "^4.1.1",
     "is-plain-object": "^3.0.1",
     "joist-utils": "workspace:*",
-    "knex": "^0.95.9",
+    "knex": "^1.0.7",
     "pg": "^8.7.1",
     "pg-structure": "^7.13.0",
     "pluralize": "^8.0.0",

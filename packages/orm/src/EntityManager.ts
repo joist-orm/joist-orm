@@ -511,16 +511,28 @@ export class EntityManager<C = {}> {
     hint: Const<H>,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<V>;
+  public async populate<T extends Entity, H extends LoadHint<T>, V = Loaded<T, H>>(
+    entity: T,
+    opts: { hint: Const<H>; forceReload?: boolean },
+    fn?: (entity: Loaded<T, H>) => V,
+  ): Promise<V>;
   public async populate<T extends Entity, H extends LoadHint<T>>(
     entities: ReadonlyArray<T>,
     hint: Const<H>,
   ): Promise<Loaded<T, H>[]>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(
+    entities: ReadonlyArray<T>,
+    opts: { hint: Const<H>; forceReload?: boolean },
+  ): Promise<Loaded<T, H>[]>;
   async populate<T extends Entity, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
-    hint: H,
+    hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
     const list = toArray(entityOrList);
+    const { hint, ...opts } =
+      // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
+      typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
     const promises = list
       .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
       .flatMap((entity) => {
@@ -530,13 +542,13 @@ export class EntityManager<C = {}> {
         // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
         // in).
         if (typeof hint === "string") {
-          return (entity as any)[hint].load();
+          return (entity as any)[hint].load(opts);
         } else if (Array.isArray(hint)) {
-          return (hint as string[]).map((key) => (entity as any)[key].load());
+          return (hint as string[]).map((key) => (entity as any)[key].load(opts));
         } else if (typeof hint === "object") {
           return Object.entries(hint as object).map(async ([key, nestedHint]) => {
             const relation = (entity as any)[key];
-            const result = await relation.load();
+            const result = await relation.load(opts);
             return this.populate(result, nestedHint);
           });
         } else {

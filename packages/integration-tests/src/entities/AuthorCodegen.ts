@@ -363,8 +363,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     opts: { hint: H; forceReload?: boolean },
     fn: (a: Loaded<Author, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Author>, V>(hint: H, fn?: (a: Loaded<Author, H>) => V): Promise<Loaded<Author, H> | V> {
-    return this.em.populate(this as any as Author, hint as any, fn);
+  populate<H extends LoadHint<Author>, V>(
+    hintOrOpts: any,
+    fn?: (a: Loaded<Author, H>) => V,
+  ): Promise<Loaded<Author, H> | V> {
+    return this.em.populate(this as any as Author, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {

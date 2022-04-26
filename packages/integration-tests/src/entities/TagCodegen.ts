@@ -151,8 +151,8 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     opts: { hint: H; forceReload?: boolean },
     fn: (t: Loaded<Tag, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Tag>, V>(hint: H, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
-    return this.em.populate(this as any as Tag, hint as any, fn);
+  populate<H extends LoadHint<Tag>, V>(hintOrOpts: any, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
+    return this.em.populate(this as any as Tag, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<Tag>>(hint: H): this is Loaded<Tag, H> {

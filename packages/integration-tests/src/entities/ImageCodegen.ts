@@ -200,8 +200,11 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     opts: { hint: H; forceReload?: boolean },
     fn: (i: Loaded<Image, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Image>, V>(hint: H, fn?: (i: Loaded<Image, H>) => V): Promise<Loaded<Image, H> | V> {
-    return this.em.populate(this as any as Image, hint as any, fn);
+  populate<H extends LoadHint<Image>, V>(
+    hintOrOpts: any,
+    fn?: (i: Loaded<Image, H>) => V,
+  ): Promise<Loaded<Image, H> | V> {
+    return this.em.populate(this as any as Image, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<Image>>(hint: H): this is Loaded<Image, H> {

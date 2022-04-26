@@ -142,10 +142,10 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
     fn: (cc: Loaded<CriticColumn, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<CriticColumn>, V>(
-    hint: H,
+    hintOrOpts: any,
     fn?: (cc: Loaded<CriticColumn, H>) => V,
   ): Promise<Loaded<CriticColumn, H> | V> {
-    return this.em.populate(this as any as CriticColumn, hint as any, fn);
+    return this.em.populate(this as any as CriticColumn, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<CriticColumn>>(hint: H): this is Loaded<CriticColumn, H> {

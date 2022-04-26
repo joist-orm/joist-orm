@@ -176,10 +176,10 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
     fn: (br: Loaded<BookReview, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<BookReview>, V>(
-    hint: H,
+    hintOrOpts: any,
     fn?: (br: Loaded<BookReview, H>) => V,
   ): Promise<Loaded<BookReview, H> | V> {
-    return this.em.populate(this as any as BookReview, hint as any, fn);
+    return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {

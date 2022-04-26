@@ -87,11 +87,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     );
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     const current = this.current();
     // Resolve the id to an entity
-    if (!isEntity(current) && current !== undefined) {
+    if (!isEntity(current) && current !== undefined && (!this._isLoaded || opts.forceReload)) {
       this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
     }
     this._isLoaded = true;
@@ -161,18 +161,6 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   initializeForNewEntity(): void {
     // Our codegened Opts type will ensure our field is initialized if necessary/notNull
     this._isLoaded = true;
-  }
-
-  async refreshIfLoaded(): Promise<void> {
-    // TODO We should remember what load hints have been applied to this collection and re-apply them.
-    if (this._isLoaded) {
-      const current = this.current();
-      if (typeof current === "string") {
-        this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
-      } else {
-        this.loaded = current;
-      }
-    }
   }
 
   maybeCascadeDelete(): void {

@@ -8,6 +8,7 @@ import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
   ConfigApi,
+  DeepNew,
   DeepPartialOrNull,
   EntityHook,
   FieldSerde,
@@ -743,32 +744,54 @@ export class EntityManager<C = {}> {
    *
    * This works with primitive fields as well as references and collections.
    *
-   * TODO Newly-found collection entries will not have prior load hints applied to this.
+   * TODO Newly-found collection entries will not have prior load hints applied to this, unless using
+   * `deepLoad` which should only be used by tests to avoid loading your entire database in memory.
    */
-  async refresh(): Promise<void>;
+  async refresh(opts?: { deepLoad?: boolean }): Promise<void>;
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
-  async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
+  async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
     this.loadLoaders = {};
     this.findLoaders = {};
-    const list =
-      entityOrListOrUndefined === undefined
-        ? this._entities
-        : Array.isArray(entityOrListOrUndefined)
-        ? entityOrListOrUndefined
-        : [entityOrListOrUndefined];
-    await Promise.all(
-      list.map(async (entity) => {
-        if (entity.id) {
-          // Clear the original cached loader result and fetch the new primitives
-          await loadDataLoader(this, getMetadata(entity)).load(entity.id);
-          if (entity.__orm.deleted === undefined) {
+    const deepLoad = param && "deepLoad" in param && param.deepLoad;
+    let todo =
+      param === undefined ? this._entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this._entities;
+    const done = new Set<Entity>();
+    while (todo.length > 0) {
+      const copy = [...todo];
+      copy.forEach((e) => done.add(e));
+      todo = [];
+      await Promise.all(
+        copy
+          .filter((e) => e.id)
+          .map(async (entity) => {
+            // Clear the original cached loader result and fetch the new primitives
+            await loadDataLoader(this, getMetadata(entity)).load(entity.id);
+            if (entity.__orm.deleted !== undefined) {
+              return;
+            }
             // Then refresh any loaded collections
-            await Promise.all(getRelations(entity).map((r) => r.refreshIfLoaded()));
-          }
-        }
-      }),
-    );
+            await Promise.all(getRelations(entity).map((r) => r.load({ forceReload: true })));
+            if (deepLoad) {
+              getRelations(entity).forEach((r) => {
+                if ("get" in r) {
+                  const value = (r as any).get;
+                  if (isEntity(value) && !done.has(value)) {
+                    todo.push(value);
+                  }
+                  if (Array.isArray(value)) {
+                    for (const e of value) {
+                      if (isEntity(value) && !done.has(value)) {
+                        todo.push(value);
+                      }
+                    }
+                  }
+                }
+              });
+            }
+          }),
+      );
+    }
   }
 
   public get numberOfEntities(): number {
@@ -848,7 +871,7 @@ export interface EntityMetadata<T extends Entity> {
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;
-  factory: (em: EntityManager<any>, opts?: any) => New<T>;
+  factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
 }
 
 export type Field =

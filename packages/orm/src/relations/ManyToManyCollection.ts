@@ -65,9 +65,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<ReadonlyArray<U>> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (this.loaded === undefined) {
+    if (this.loaded === undefined || opts.forceReload) {
       const key = `${this.columnName}=${this.entity.id}`;
       this.loaded = await manyToManyDataLoader(this.entity.em, this).load(key);
       this.maybeApplyAddedAndRemovedBeforeLoaded();
@@ -232,15 +232,6 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     // Don't overwrite any opts values
     if (this.loaded === undefined) {
       this.loaded = [];
-    }
-  }
-
-  async refreshIfLoaded(): Promise<void> {
-    ensureNotDeleted(this.entity);
-    // TODO We should remember what load hints have been applied to this collection and re-apply them.
-    if (this.loaded !== undefined && this.entity.id !== undefined) {
-      const key = `${this.columnName}=${this.entity.id}`;
-      this.loaded = await manyToManyDataLoader(this.entity.em, this).load(key);
     }
   }
 

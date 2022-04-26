@@ -1,4 +1,3 @@
-/** Marks a given `T[P]` as the loaded/synchronous version of the collection. */
 import { Entity, OptsOf } from "./EntityManager";
 import {
   AsyncProperty,
@@ -13,12 +12,27 @@ import {
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { NullOrDefinedOr } from "./utils";
 
+const deepLoad = Symbol();
+type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
+
+/** Marks a given `T[P]` field as the loaded/synchronous version of the collection. */
 type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, H>>
   : P extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
   : P extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
+  : P extends AsyncProperty<T, infer V>
+  ? LoadedProperty<T, V>
+  : unknown;
+
+/** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
+type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<T, infer U>
+  ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
+  : P extends Reference<T, infer U, infer N>
+  ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
+  : P extends Collection<T, infer U>
+  ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
   : P extends AsyncProperty<T, infer V>
   ? LoadedProperty<T, V>
   : unknown;
@@ -71,6 +85,12 @@ export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T & {
   [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
 };
 
+/**
+ * Marks all references/collections of `T` as deeply loaded, which is only useful for
+ * tests where we can have "the whole object graph" in-memory.
+ */
+export type DeepNew<T extends Entity> = Loaded<T, DeepLoadHint<T>>;
+
 /** Detects whether an entity is newly created, and so we can treat all of the relations as loaded. */
 export function isNew<T extends Entity>(e: T): e is New<T> {
   return e.id === undefined;
@@ -78,7 +98,9 @@ export function isNew<T extends Entity>(e: T): e is New<T> {
 
 /** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
 export type Loaded<T extends Entity, H extends LoadHint<T>> = T & {
-  [K in keyof T]: H extends NestedLoadHint<T>
+  [K in keyof T]: H extends DeepLoadHint<T>
+    ? MarkDeepLoaded<T, T[K]>
+    : H extends NestedLoadHint<T>
     ? LoadedIfInNestedHint<T, K, H>
     : H extends ReadonlyArray<infer U>
     ? LoadedIfInKeyHint<T, K, U>

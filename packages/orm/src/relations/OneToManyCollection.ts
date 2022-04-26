@@ -52,9 +52,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  async load(opts?: { withDeleted?: boolean }): Promise<readonly U[]> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (this.loaded === undefined) {
+    if (this.loaded === undefined || opts.forceReload) {
       if (this.entity.id === undefined) {
         this.loaded = [];
       } else {
@@ -185,13 +185,6 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       remove(this.loaded, other);
     } else {
       remove(this.addedBeforeLoaded, other);
-    }
-  }
-
-  async refreshIfLoaded(): Promise<void> {
-    // TODO We should remember what load hints have been applied to this collection and re-apply them.
-    if (this.loaded !== undefined && this.entity.id !== undefined) {
-      this.loaded = await oneToManyDataLoader(this.entity.em, this).load(this.entity.id);
     }
   }
 

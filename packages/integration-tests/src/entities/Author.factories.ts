@@ -1,10 +1,10 @@
-import { EntityManager, FactoryOpts, New, newTestInstance, testIndex } from "joist-orm";
+import { DeepNew, EntityManager, FactoryOpts, newTestInstance, testIndex } from "joist-orm";
 import { Author } from "./entities";
 
 // for testing factories
 export let lastAuthorFactoryOpts: any = null;
 
-export function newAuthor(em: EntityManager, opts?: FactoryOpts<Author>): New<Author> {
+export function newAuthor(em: EntityManager, opts?: FactoryOpts<Author>): DeepNew<Author> {
   lastAuthorFactoryOpts = opts;
   return newTestInstance(em, Author, {
     firstName: `a${testIndex}`,

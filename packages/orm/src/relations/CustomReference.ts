@@ -48,9 +48,9 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return this._isLoaded;
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (!this.isLoaded) {
+    if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
         this.loadPromise = this.opts.load(this.entity);
         await this.loadPromise;
@@ -60,7 +60,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
         await this.loadPromise;
       }
     }
-
     return this.doGet(opts);
   }
 
@@ -111,7 +110,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
   async cleanupOnEntityDeleted(): Promise<void> {}
   maybeCascadeDelete(): void {}
-  async refreshIfLoaded(): Promise<void> {}
 
   /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {

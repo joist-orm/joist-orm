@@ -6,7 +6,7 @@ import { RelationT, RelationU } from "./Relation";
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
   // each time it's invoked so that it reflects any changed values.
-  load: (entity: T) => Promise<any>;
+  load: (entity: T, opts: { forceReload?: boolean }) => Promise<any>;
   get: (entity: T) => readonly U[];
   set?: (entity: T, other: U[]) => void;
   find?: (entity: T, id: IdOf<U>) => U | undefined;
@@ -50,11 +50,11 @@ export class CustomCollection<T extends Entity, U extends Entity>
     return this._isLoaded;
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<readonly U[]> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (!this.isLoaded) {
+    if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        this.loadPromise = this.opts.load(this.entity);
+        this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
         this._isLoaded = true;
@@ -62,7 +62,6 @@ export class CustomCollection<T extends Entity, U extends Entity>
         await this.loadPromise;
       }
     }
-
     return this.doGet(opts);
   }
 
@@ -129,7 +128,6 @@ export class CustomCollection<T extends Entity, U extends Entity>
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
   async cleanupOnEntityDeleted(): Promise<void> {}
   maybeCascadeDelete(): void {}
-  async refreshIfLoaded(): Promise<void> {}
 
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {

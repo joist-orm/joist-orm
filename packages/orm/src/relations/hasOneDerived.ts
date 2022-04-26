@@ -20,8 +20,8 @@ export function hasOneDerived<
 >(loadHint: H, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
-    load: async (entity) => {
-      await entity.em.populate(entity, loadHint);
+    load: async (entity, opts) => {
+      await entity.em.populate(entity, { hint: loadHint, ...opts });
     },
     get: () => get(entity as Loaded<T, H>),
   });

@@ -7,7 +7,7 @@ import { RelationT, RelationU } from "./Relation";
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
   // each time it's invoked so that it reflects any changed values.
-  load: (entity: T) => Promise<void>;
+  load: (entity: T, opts: { forceReload?: boolean }) => Promise<void>;
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
 };
@@ -52,7 +52,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        this.loadPromise = this.opts.load(this.entity);
+        this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
         this._isLoaded = true;

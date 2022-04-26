@@ -784,22 +784,15 @@ export class EntityManager<C = {}> {
             }
             // Then refresh any loaded collections
             await Promise.all(getRelations(entity).map((r) => r.load({ forceReload: true })));
+            // If deep loading, get all entity/entities in the relation and push them on the list
             if (deepLoad) {
-              getRelations(entity).forEach((r) => {
-                if ("get" in r) {
-                  const value = (r as any).get;
-                  if (isEntity(value) && !done.has(value)) {
-                    todo.push(value);
-                  }
-                  if (Array.isArray(value)) {
-                    for (const e of value) {
-                      if (isEntity(value) && !done.has(value)) {
-                        todo.push(value);
-                      }
-                    }
-                  }
-                }
-              });
+              todo.push(
+                ...getRelations(entity)
+                  .filter((r) => "get" in r)
+                  .map((r) => (r as any).get)
+                  .flatMap((value) => (Array.isArray(value) ? value : [value]))
+                  .filter((value) => isEntity(value) && !done.has(value)),
+              );
             }
           }),
       );

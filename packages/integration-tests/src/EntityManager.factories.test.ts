@@ -21,8 +21,6 @@ import {
 import { maybeNew, maybeNewPoly, New, newTestInstance } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
 
-jest.setTimeout(100_000);
-
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
     const em = newEntityManager();

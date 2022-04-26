@@ -422,6 +422,7 @@ describe("EntityManager", () => {
     expect(p1.name).toEqual("p2");
   });
 
+  jest.setTimeout(100_000);
   it("refresh an entity with a loaded o2m collection", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });

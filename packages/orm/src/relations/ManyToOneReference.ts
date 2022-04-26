@@ -79,7 +79,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (this._isLoaded && this.loaded) {
+    if (this._isLoaded && this.loaded && !opts.forceReload) {
       return this.loaded;
     }
     const current = this.current();

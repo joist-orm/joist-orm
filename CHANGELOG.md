@@ -1,3 +1,10 @@
+## [1.8.1](https://github.com/stephenh/joist-ts/compare/v1.8.0...v1.8.1) (2022-04-29)
+
+
+### Bug Fixes
+
+* Fix hasManyDerived w/forceReload. ([#308](https://github.com/stephenh/joist-ts/issues/308)) ([326840a](https://github.com/stephenh/joist-ts/commit/326840a05b92eac4af6909523238a422913fed22))
+
 # [1.8.0](https://github.com/stephenh/joist-ts/compare/v1.7.1...v1.8.0) (2022-04-29)
 
 

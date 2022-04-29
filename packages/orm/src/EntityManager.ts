@@ -549,7 +549,7 @@ export class EntityManager<C = {}> {
           return Object.entries(hint as object).map(async ([key, nestedHint]) => {
             const relation = (entity as any)[key];
             const result = await relation.load(opts);
-            return this.populate(result, nestedHint);
+            return this.populate(result, { hint: nestedHint, ...opts });
           });
         } else {
           throw new Error(`Unexpected hint ${hint}`);

@@ -84,4 +84,18 @@ describe("hasManyDerived", () => {
     await em.flush();
     expect(author.reviewedBooks.get).toHaveLength(0);
   });
+
+  it("can be refreshed", async () => {
+    await insertAuthor({ first_name: "a1" });
+
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1", "reviewedBooks");
+    expect(author.reviewedBooks.get).toEqual([]);
+
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ rating: 5, book_id: 1 });
+    await em.refresh(author);
+
+    expect(author.reviewedBooks.get.length).toEqual(1);
+  });
 });

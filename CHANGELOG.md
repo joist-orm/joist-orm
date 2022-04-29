@@ -1,3 +1,10 @@
+# [1.8.0](https://github.com/stephenh/joist-ts/compare/v1.7.1...v1.8.0) (2022-04-29)
+
+
+### Features
+
+* Implement DeepNew for factories and tests ([#307](https://github.com/stephenh/joist-ts/issues/307)) ([696dd67](https://github.com/stephenh/joist-ts/commit/696dd67bddf990c0366e9c63533e003fefd7367c))
+
 ## [1.7.1](https://github.com/stephenh/joist-ts/compare/v1.7.0...v1.7.1) (2022-04-20)
 
 

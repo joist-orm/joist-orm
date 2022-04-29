@@ -1,5 +1,5 @@
-import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
-import { Author, Book } from "../entities";
+import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
+import { Author, Book, newAuthor } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("ManyToOneReference", () => {
@@ -104,5 +104,19 @@ describe("ManyToOneReference", () => {
     // Then both a1 and a2 book collections are correct
     expect(a1.books.get).toEqual([]);
     expect(a2.books.get).toEqual([b1]);
+  });
+
+  it("can refresh", async () => {
+    const em = newEntityManager();
+    // Given an author with a publisher
+    const a1 = newAuthor(em, { publisher: {} });
+    expect(a1.publisher.get).toBeDefined();
+    await em.flush();
+    // When another transaction unsets the fk
+    await update("authors", { id: 1, publisher_id: null });
+    // And we refresh
+    await em.refresh(a1);
+    // Then the foreign key is now unset
+    expect(a1.publisher.get).toBeUndefined();
   });
 });

@@ -1,3 +1,10 @@
+## [1.8.3](https://github.com/stephenh/joist-ts/compare/v1.8.2...v1.8.3) (2022-04-29)
+
+
+### Bug Fixes
+
+* Skip recursing into custom relations. ([#310](https://github.com/stephenh/joist-ts/issues/310)) ([08df732](https://github.com/stephenh/joist-ts/commit/08df7327d1952630f8728ab9fa8e9d1445e9c595))
+
 ## [1.8.2](https://github.com/stephenh/joist-ts/compare/v1.8.1...v1.8.2) (2022-04-29)
 
 

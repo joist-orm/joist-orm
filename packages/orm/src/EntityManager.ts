@@ -775,37 +775,37 @@ export class EntityManager<C = {}> {
       const copy = [...todo];
       copy.forEach((e) => done.add(e));
       todo = [];
-      await Promise.all(
-        copy
-          .filter((e) => e.id)
-          .map(async (entity) => {
-            // Clear the original cached loader result and fetch the new primitives
-            await loadDataLoader(this, getMetadata(entity)).load(entity.id);
-            if (entity.__orm.deleted !== undefined) {
-              return;
-            }
-            // Then refresh any loaded collections
-            await Promise.all(getRelations(entity).map((r) => r.load({ forceReload: true })));
-            // If deep loading, get all entity/entities in the relation and push them on the list
-            if (deepLoad) {
-              todo.push(
-                ...getRelations(entity)
-                  .filter((r) => "get" in r)
-                  // We skip recursing into CustomCollections and CustomReferences for two reasons:
-                  // 1. It can be tricky to ensure `{ forceReload: true }` is passed all the way through their custom load
-                  // implementations, and so it's easy to have `.get` accidentally come across a not-yet-loaded collection, and
-                  // 2. Any custom load functions should use the underlying o2m/m2o/etc relations anyway, so if we crawl/refresh
-                  // those, then when the user calls `.get` on custom collections/references, they should be talking to always-loaded
-                  // relations, w/o us having to tackle the tricky bookkeeping problem passing `forceReload` all through their
-                  // custom load function + any other collections they call.
-                  .filter((r) => !(r instanceof CustomCollection || r instanceof CustomReference))
-                  .map((r) => (r as any).get)
-                  .flatMap((value) => (Array.isArray(value) ? value : [value]))
-                  .filter((value) => isEntity(value) && !done.has(value)),
-              );
-            }
-          }),
+
+      // Clear the original cached loader result and fetch the new primitives
+      const entities = await Promise.all(
+        copy.filter((e) => e.id).map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.id)),
       );
+
+      // Then refresh any non-deleted loaded collections
+      const relations = entities
+        .filter((e) => e && e.__orm.deleted === undefined)
+        .flatMap((entity) => getRelations(entity))
+        .filter((r) => deepLoad || r.isLoaded);
+      await Promise.all(relations.map((r) => r.load({ forceReload: true })));
+
+      // If deep loading, get all entity/entities in the relation and push them on the list
+      if (deepLoad) {
+        todo.push(
+          ...relations
+            .filter((r) => "get" in r)
+            // We skip recursing into CustomCollections and CustomReferences for two reasons:
+            // 1. It can be tricky to ensure `{ forceReload: true }` is passed all the way through their custom load
+            // implementations, and so it's easy to have `.get` accidentally come across a not-yet-loaded collection, and
+            // 2. Any custom load functions should use the underlying o2m/m2o/etc relations anyway, so if we crawl/refresh
+            // those, then when the user calls `.get` on custom collections/references, they should be talking to always-loaded
+            // relations, w/o us having to tackle the tricky bookkeeping problem passing `forceReload` all through their
+            // custom load function + any other collections they call.
+            .filter((r) => !(r instanceof CustomCollection || r instanceof CustomReference))
+            .map((r) => (r as any).get)
+            .flatMap((value) => (Array.isArray(value) ? value : [value]))
+            .filter((value) => isEntity(value) && !done.has(value)),
+        );
+      }
     }
   }
 

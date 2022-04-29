@@ -1,3 +1,10 @@
+## [1.8.4](https://github.com/stephenh/joist-ts/compare/v1.8.3...v1.8.4) (2022-04-29)
+
+
+### Bug Fixes
+
+* Flatten promises within refresh. ([#311](https://github.com/stephenh/joist-ts/issues/311)) ([9327e63](https://github.com/stephenh/joist-ts/commit/9327e63c4724910f603005e0a22345102ca883fe))
+
 ## [1.8.3](https://github.com/stephenh/joist-ts/compare/v1.8.2...v1.8.3) (2022-04-29)
 
 

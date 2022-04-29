@@ -1,3 +1,10 @@
+## [1.8.2](https://github.com/stephenh/joist-ts/compare/v1.8.1...v1.8.2) (2022-04-29)
+
+
+### Bug Fixes
+
+* Fix m2o refresh. ([#309](https://github.com/stephenh/joist-ts/issues/309)) ([53a9976](https://github.com/stephenh/joist-ts/commit/53a99763e410d7baaea525395b970127ecc2e6a9))
+
 ## [1.8.1](https://github.com/stephenh/joist-ts/compare/v1.8.0...v1.8.1) (2022-04-29)
 
 

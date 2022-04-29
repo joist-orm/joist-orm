@@ -121,9 +121,9 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   // opts is an internal parameter
-  async load(opts?: { withDeleted?: boolean }): Promise<U | undefined> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (!this._isLoaded) {
+    if (!this._isLoaded || opts.forceReload) {
       if (!this.entity.isNewEntity) {
         this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idOrFail);
       }
@@ -179,13 +179,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   initializeForNewEntity(): void {
     this._isLoaded = true;
-  }
-
-  async refreshIfLoaded(): Promise<void> {
-    if (this._isLoaded) {
-      this._isLoaded = false;
-      await this.load();
-    }
   }
 
   maybeCascadeDelete(): void {

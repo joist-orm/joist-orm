@@ -30,6 +30,7 @@ export * from "./EntityManager";
 export * from "./getProperties";
 export * from "./keys";
 export {
+  DeepNew,
   ensureLoaded,
   ensureLoadedThen,
   isLoaded,

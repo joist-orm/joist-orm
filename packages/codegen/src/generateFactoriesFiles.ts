@@ -2,7 +2,7 @@ import { pascalCase } from "change-case";
 import { code } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { CodeGenFile } from "./index";
-import { EntityManager, FactoryOpts, New, newTestInstance } from "./symbols";
+import { DeepNew, EntityManager, FactoryOpts, newTestInstance } from "./symbols";
 
 export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodeGenFile[] {
   // One-time create an Author.factories.ts for each entity
@@ -12,7 +12,7 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodeGenFil
       export function new${name}(
         em: ${EntityManager},
         opts: ${FactoryOpts}<${entity.type}> = {},
-      ): ${New}<${entity.type}> {
+      ): ${DeepNew}<${entity.type}> {
         return ${newTestInstance}(em, ${entity.type}, opts);
       }`;
     return { name: `./${entity.name}.factories.ts`, contents, overwrite: false };

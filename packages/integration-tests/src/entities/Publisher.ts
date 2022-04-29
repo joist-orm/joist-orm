@@ -5,7 +5,7 @@ const allImagesHint = { images: [], authors: { image: [], books: "image" } } as 
 
 export class Publisher extends PublisherCodegen {
   readonly allImages: Collection<Publisher, Image> = new CustomCollection(this, {
-    load: (entity) => entity.populate(allImagesHint),
+    load: (entity, opts) => entity.populate({ hint: allImagesHint, ...opts }),
     get: (entity) => {
       const loaded = entity as Loaded<Publisher, typeof allImagesHint>;
 

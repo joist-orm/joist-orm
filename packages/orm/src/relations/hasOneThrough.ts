@@ -12,8 +12,8 @@ export function hasOneThrough<T extends Entity, U extends Entity, N extends neve
 ): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
-    load: async (entity) => {
-      await loadLens(entity, lens);
+    load: async (entity, opts) => {
+      await loadLens(entity, lens, opts);
     },
     get: () => getLens(entity, lens),
   });

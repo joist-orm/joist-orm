@@ -7,7 +7,7 @@ import { RelationT, RelationU } from "./Relation";
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
   // each time it's invoked so that it reflects any changed values.
-  load: (entity: T) => Promise<void>;
+  load: (entity: T, opts: { forceReload?: boolean }) => Promise<void>;
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
 };
@@ -48,11 +48,11 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return this._isLoaded;
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (!this.isLoaded) {
+    if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        this.loadPromise = this.opts.load(this.entity);
+        this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
         this._isLoaded = true;
@@ -60,7 +60,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
         await this.loadPromise;
       }
     }
-
     return this.doGet(opts);
   }
 
@@ -111,7 +110,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
   async cleanupOnEntityDeleted(): Promise<void> {}
   maybeCascadeDelete(): void {}
-  async refreshIfLoaded(): Promise<void> {}
 
   /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {

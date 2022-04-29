@@ -268,12 +268,17 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
+  populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
   populate<H extends LoadHint<Publisher>, V>(
-    hint: H,
+    opts: { hint: H; forceReload?: boolean },
+    fn: (p: Loaded<Publisher, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(
+    hintOrOpts: any,
     fn?: (p: Loaded<Publisher, H>) => V,
   ): Promise<Loaded<Publisher, H> | V> {
-    return this.em.populate(this as any as Publisher, hint, fn);
+    return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {

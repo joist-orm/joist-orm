@@ -77,9 +77,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
-  async load(opts?: { withDeleted?: boolean }): Promise<U | N> {
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (this._isLoaded && this.loaded) {
+    if (this._isLoaded && this.loaded && !opts.forceReload) {
       return this.loaded;
     }
     const current = this.current();
@@ -169,18 +169,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   initializeForNewEntity(): void {
     // Our codegen'd Opts type will ensure our field is inititalized if necessary/notNull
     this._isLoaded = true;
-  }
-
-  async refreshIfLoaded(): Promise<void> {
-    // TODO We should remember what load hints have been applied to this collection and re-apply them.
-    if (this._isLoaded) {
-      const current = this.current();
-      if (typeof current === "string") {
-        this.loaded = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
-      } else {
-        this.loaded = current;
-      }
-    }
   }
 
   maybeCascadeDelete(): void {

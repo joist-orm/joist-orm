@@ -137,7 +137,6 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    await em.refresh();
     expect(() => (a1.image as any).isSet).toThrow("Author:1.image was not loaded");
   });
 });

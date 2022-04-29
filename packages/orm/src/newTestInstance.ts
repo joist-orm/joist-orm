@@ -17,7 +17,7 @@ import {
   PolymorphicField,
   PrimitiveField,
 } from "./EntityManager";
-import { isManyToOneField, isOneToOneField, New } from "./index";
+import { DeepNew, isManyToOneField, isOneToOneField, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever, fail } from "./utils";
 
@@ -43,7 +43,7 @@ export function newTestInstance<T extends Entity>(
   em: EntityManager,
   cstr: EntityConstructor<T>,
   opts: FactoryOpts<T> = {},
-): New<T> {
+): DeepNew<T> {
   const meta = getMetadata(cstr);
   // We share a single `use` map for a given `newEntity` factory call
   const use = useMap(opts);
@@ -150,7 +150,7 @@ export function newTestInstance<T extends Entity>(
 
   entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
 
-  return entity;
+  return entity as DeepNew<T>;
 }
 
 /**

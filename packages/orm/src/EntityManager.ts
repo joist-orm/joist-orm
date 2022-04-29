@@ -8,6 +8,7 @@ import { Driver } from "./drivers/driver";
 import {
   assertIdsAreTagged,
   ConfigApi,
+  DeepNew,
   DeepPartialOrNull,
   EntityHook,
   FieldSerde,
@@ -510,16 +511,28 @@ export class EntityManager<C = {}> {
     hint: Const<H>,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<V>;
+  public async populate<T extends Entity, H extends LoadHint<T>, V = Loaded<T, H>>(
+    entity: T,
+    opts: { hint: Const<H>; forceReload?: boolean },
+    fn?: (entity: Loaded<T, H>) => V,
+  ): Promise<V>;
   public async populate<T extends Entity, H extends LoadHint<T>>(
     entities: ReadonlyArray<T>,
     hint: Const<H>,
   ): Promise<Loaded<T, H>[]>;
+  public async populate<T extends Entity, H extends LoadHint<T>>(
+    entities: ReadonlyArray<T>,
+    opts: { hint: Const<H>; forceReload?: boolean },
+  ): Promise<Loaded<T, H>[]>;
   async populate<T extends Entity, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
-    hint: H,
+    hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
     const list = toArray(entityOrList);
+    const { hint, ...opts } =
+      // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
+      typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
     const promises = list
       .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
       .flatMap((entity) => {
@@ -529,13 +542,13 @@ export class EntityManager<C = {}> {
         // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
         // in).
         if (typeof hint === "string") {
-          return (entity as any)[hint].load();
+          return (entity as any)[hint].load(opts);
         } else if (Array.isArray(hint)) {
-          return (hint as string[]).map((key) => (entity as any)[key].load());
+          return (hint as string[]).map((key) => (entity as any)[key].load(opts));
         } else if (typeof hint === "object") {
           return Object.entries(hint as object).map(async ([key, nestedHint]) => {
             const relation = (entity as any)[key];
-            const result = await relation.load();
+            const result = await relation.load(opts);
             return this.populate(result, nestedHint);
           });
         } else {
@@ -743,32 +756,47 @@ export class EntityManager<C = {}> {
    *
    * This works with primitive fields as well as references and collections.
    *
-   * TODO Newly-found collection entries will not have prior load hints applied to this.
+   * TODO Newly-found collection entries will not have prior load hints applied to this, unless using
+   * `deepLoad` which should only be used by tests to avoid loading your entire database in memory.
    */
-  async refresh(): Promise<void>;
+  async refresh(opts?: { deepLoad?: boolean }): Promise<void>;
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
-  async refresh(entityOrListOrUndefined?: Entity | ReadonlyArray<Entity>): Promise<void> {
+  async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
     this.loadLoaders = {};
     this.findLoaders = {};
-    const list =
-      entityOrListOrUndefined === undefined
-        ? this._entities
-        : Array.isArray(entityOrListOrUndefined)
-        ? entityOrListOrUndefined
-        : [entityOrListOrUndefined];
-    await Promise.all(
-      list.map(async (entity) => {
-        if (entity.id) {
-          // Clear the original cached loader result and fetch the new primitives
-          await loadDataLoader(this, getMetadata(entity)).load(entity.id);
-          if (entity.__orm.deleted === undefined) {
+    const deepLoad = param && "deepLoad" in param && param.deepLoad;
+    let todo =
+      param === undefined ? this._entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this._entities;
+    const done = new Set<Entity>();
+    while (todo.length > 0) {
+      const copy = [...todo];
+      copy.forEach((e) => done.add(e));
+      todo = [];
+      await Promise.all(
+        copy
+          .filter((e) => e.id)
+          .map(async (entity) => {
+            // Clear the original cached loader result and fetch the new primitives
+            await loadDataLoader(this, getMetadata(entity)).load(entity.id);
+            if (entity.__orm.deleted !== undefined) {
+              return;
+            }
             // Then refresh any loaded collections
-            await Promise.all(getRelations(entity).map((r) => r.refreshIfLoaded()));
-          }
-        }
-      }),
-    );
+            await Promise.all(getRelations(entity).map((r) => r.load({ forceReload: true })));
+            // If deep loading, get all entity/entities in the relation and push them on the list
+            if (deepLoad) {
+              todo.push(
+                ...getRelations(entity)
+                  .filter((r) => "get" in r)
+                  .map((r) => (r as any).get)
+                  .flatMap((value) => (Array.isArray(value) ? value : [value]))
+                  .filter((value) => isEntity(value) && !done.has(value)),
+              );
+            }
+          }),
+      );
+    }
   }
 
   public get numberOfEntities(): number {
@@ -848,7 +876,7 @@ export interface EntityMetadata<T extends Entity> {
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;
-  factory: (em: EntityManager<any>, opts?: any) => New<T>;
+  factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
 }
 
 export type Field =

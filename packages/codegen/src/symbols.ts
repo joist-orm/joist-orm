@@ -60,6 +60,7 @@ export const hasManyToMany = imp("hasManyToMany@joist-orm");
 export const hasLargeManyToMany = imp("hasLargeManyToMany@joist-orm");
 export const newTestInstance = imp("newTestInstance@joist-orm");
 export const New = imp("New@joist-orm");
+export const DeepNew = imp("DeepNew@joist-orm");
 export const FactoryOpts = imp("FactoryOpts@joist-orm");
 export const SSAssert = imp("assert@superstruct");
 export const EntityConstructor = imp("EntityConstructor@joist-orm");

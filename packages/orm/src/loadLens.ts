@@ -49,28 +49,32 @@ export type Lens<T, R = T> = {
 // For some reason accepting Lens<this, this> does not work when called from within the entity
 // subclass itself, so we use the codegen hammer in our subclass to force the right Lens type
 // in a .load stub that just calls us for the implementation.
-export async function loadLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): Promise<V> {
+export async function loadLens<T, U, V>(
+  start: T,
+  fn: (lens: Lens<T>) => Lens<U, V>,
+  opts: { forceReload?: boolean } = {},
+): Promise<V> {
   const paths = collectPaths(fn);
   let current: any = start;
   // Now evaluate each step of the path
   for await (const path of paths) {
     if (Array.isArray(current)) {
-      current = (await Promise.all(current.map((c) => maybeLoad(c, path)))).flat();
+      current = (await Promise.all(current.map((c) => maybeLoad(c, path, opts)))).flat();
       current = [...new Set(current.filter((c: any) => c !== undefined))];
     } else {
-      current = await maybeLoad(current, path);
+      current = await maybeLoad(current, path, opts);
     }
   }
   return current!;
 }
 
-function maybeLoad(object: any, path: string): unknown {
+function maybeLoad(object: any, path: string, opts: { forceReload?: boolean }): unknown {
   if (object === undefined || object === null) {
     return undefined;
   }
   const value = object[path];
   if (value && typeof value === "object" && "load" in value) {
-    return value.load();
+    return value.load(opts);
   } else if (value && typeof value === "function") {
     return value.apply(object);
   } else {

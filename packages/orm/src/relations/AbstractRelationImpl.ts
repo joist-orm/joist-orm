@@ -11,8 +11,11 @@ export abstract class AbstractRelationImpl<U> {
   /** Similar to setFromOpts, but called post-construction. */
   abstract set(value: U): void;
 
-  /** Called on `EntityManager.refresh()` to reload the collection from the latest db values. */
-  abstract refreshIfLoaded(): Promise<void>;
+  /** Whether this relation is loaded. */
+  abstract get isLoaded(): boolean;
+
+  /** Loads the other side of this relation. */
+  abstract load(opts?: { forceReload?: boolean }): Promise<any>;
 
   /**
    * Called when our entity has been `EntityManager.delete`'d _and_ `EntityManager.flush` is being called,

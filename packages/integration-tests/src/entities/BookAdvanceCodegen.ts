@@ -176,12 +176,17 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>>;
+  populate<H extends LoadHint<BookAdvance>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookAdvance, H>>;
   populate<H extends LoadHint<BookAdvance>, V>(hint: H, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
   populate<H extends LoadHint<BookAdvance>, V>(
-    hint: H,
+    opts: { hint: H; forceReload?: boolean },
+    fn: (ba: Loaded<BookAdvance, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<BookAdvance>, V>(
+    hintOrOpts: any,
     fn?: (ba: Loaded<BookAdvance, H>) => V,
   ): Promise<Loaded<BookAdvance, H> | V> {
-    return this.em.populate(this as any as BookAdvance, hint, fn);
+    return this.em.populate(this as any as BookAdvance, hintOrOpts, fn);
   }
 
   isLoaded<H extends LoadHint<BookAdvance>>(hint: H): this is Loaded<BookAdvance, H> {

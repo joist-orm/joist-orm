@@ -7,20 +7,31 @@ type NoArgKeys<T> = keyof {
   [K in keyof T]: T[K] extends Resolver<any, {}, any> ? T[K] : never;
 };
 
-// For a type-union of keys `KS`, return what each key is in the resolver `T`.
-type ResolverResult<T, KS> = {
-  [K1 in keyof KS]: K1 extends keyof T ? T[K1] : never;
-};
+// Returns the keys of resolver T that only take no arguments.
+export type ResolverRoot<T> = T extends { [key in keyof T]: infer F }
+  ? F extends Resolver<infer R, any, any>
+    ? R
+    : never
+  : never;
+export type ResolverArgs<T, K extends keyof T> = T[K] extends Resolver<any, infer U, any> ? U : never;
+export type ResolverResult<T, K extends keyof T> = T[K] extends Resolver<any, any, infer U> ? U : never;
 
 // The return type for makeRunResolverKeys
-type RunKeysResolverMethod<T, R> = <K extends Array<NoArgKeys<T>>>(
+type RunKeysResolverMethod<T, R extends ResolverRoot<T>> = <K extends (keyof T)[]>(
   ctx: Context,
-  root: (R extends string ? Entity : never) | (() => R),
+  root: R,
   keys: K,
-) => Promise<ResolverResult<T, K>>;
+) => Promise<{ [k in K[number]]: ResolverResult<T, k> }>;
 
 /** Creates a `runResolverKeys` method that can invoke multiple keys against a resolver. */
-export function makeRunResolverKeys<T, R>(resolver: T): RunKeysResolverMethod<T, R> {
+export function makeRunResolverKeys<T, R extends ResolverRoot<T>>(resolver: T): RunKeysResolverMethod<T, R> {
+  return async (ctx: Context, root: (R extends string ? Entity : never) | (() => R), keys) => {
+    return {} as any;
+  };
+}
+
+/** Creates a `runResolverKeys` method that can invoke multiple keys against a resolver. */
+export function makeRunResolver<T, R extends ResolverRoot<T>>(resolver: T): RunKeysResolverMethod<T, R> {
   return async (ctx: Context, root: (R extends string ? Entity : never) | (() => R), keys) => {
     return {} as any;
   };

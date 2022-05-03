@@ -1,5 +1,4 @@
-import { CommentId, newComment } from "src/entities";
-import { CommentResolvers } from "src/generated/graphql-types";
+import { newComment } from "src/entities";
 import { commentResolvers } from "src/resolvers/objects/comment/commentResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("commentResolvers", () => {
   });
 });
 
-const runComment = makeRunResolverKeys<CommentResolvers, CommentId>(commentResolvers);
+const runComment = makeRunResolverKeys(commentResolvers);

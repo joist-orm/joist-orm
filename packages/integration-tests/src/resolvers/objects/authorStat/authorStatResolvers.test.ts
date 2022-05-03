@@ -8,19 +8,7 @@ describe("authorStatResolvers", () => {
     // Given a Author stat
     const as = newAuthorStat(em);
     // Then we can query it
-    const result = await runAuthorStatKeys(ctx, as, [
-      "smallint",
-      "integer",
-      "bigint",
-      "decimal",
-      "real",
-      "smallserial",
-      "serial",
-      "bigserial",
-      "doubleOrecision",
-      "createdAt",
-      "updatedAt",
-    ]);
+    const result = await runAuthorStatKeys(ctx, as, ["smallint"]);
     expect(as).toMatchObject(result);
   });
 });

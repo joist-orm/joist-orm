@@ -1,5 +1,4 @@
-import { ImageId, newImage } from "src/entities";
-import { ImageResolvers } from "src/generated/graphql-types";
+import { newImage } from "src/entities";
 import { imageResolvers } from "src/resolvers/objects/image/imageResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("imageResolvers", () => {
   });
 });
 
-const runImage = makeRunResolverKeys<ImageResolvers, ImageId>(imageResolvers);
+const runImage = makeRunResolverKeys(imageResolvers);

@@ -2,6 +2,8 @@
   "files": [
     "resolvers/mutations/author/saveAuthorResolver.test.ts",
     "resolvers/mutations/author/saveAuthorResolver.ts",
+    "resolvers/mutations/authorStat/saveAuthorStatResolver.test.ts",
+    "resolvers/mutations/authorStat/saveAuthorStatResolver.ts",
     "resolvers/mutations/book/saveBookResolver.test.ts",
     "resolvers/mutations/book/saveBookResolver.ts",
     "resolvers/mutations/bookAdvance/saveBookAdvanceResolver.test.ts",
@@ -22,6 +24,8 @@
     "resolvers/mutations/tag/saveTagResolver.ts",
     "resolvers/objects/author/authorResolvers.test.ts",
     "resolvers/objects/author/authorResolvers.ts",
+    "resolvers/objects/authorStat/authorStatResolvers.test.ts",
+    "resolvers/objects/authorStat/authorStatResolvers.ts",
     "resolvers/objects/book/bookResolvers.test.ts",
     "resolvers/objects/book/bookResolvers.ts",
     "resolvers/objects/bookAdvance/bookAdvanceResolvers.test.ts",

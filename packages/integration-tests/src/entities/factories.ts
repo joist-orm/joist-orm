@@ -1,4 +1,5 @@
 export * from "./Author.factories";
+export * from "./AuthorStat.factories";
 export * from "./Book.factories";
 export * from "./BookAdvance.factories";
 export * from "./BookReview.factories";

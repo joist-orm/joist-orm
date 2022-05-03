@@ -1,3 +1,10 @@
+## [1.8.5](https://github.com/stephenh/joist-ts/compare/v1.8.4...v1.8.5) (2022-05-03)
+
+
+### Bug Fixes
+
+* add numeric types ([#312](https://github.com/stephenh/joist-ts/issues/312)) ([d972fdb](https://github.com/stephenh/joist-ts/commit/d972fdb1d04056fb517e0e48318f0eac66f66119))
+
 ## [1.8.4](https://github.com/stephenh/joist-ts/compare/v1.8.3...v1.8.4) (2022-04-29)
 
 

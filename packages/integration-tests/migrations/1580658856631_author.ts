@@ -96,8 +96,8 @@ export function up(b: MigrationBuilder): void {
 
   // For testing o2o and m2o w/overlapping names in Book.author
   addColumns(b, "authors", {
-    current_draft_book_id: foreignKey("books", { notNull: false, unique: true})
-  })
+    current_draft_book_id: foreignKey("books", { notNull: false, unique: true }),
+  });
 
   createEntityTable(b, "book_advances", {
     // for testing required enums
@@ -165,5 +165,17 @@ export function up(b: MigrationBuilder): void {
     parent_publisher_id: foreignKey("publishers", { notNull: false }),
     parent_author_id: foreignKey("authors", { notNull: false }),
     text: "text",
+  });
+
+  createEntityTable(b, "author_stats", {
+    smallint: { type: "smallint", notNull: true },
+    integer: { type: "integer", notNull: true },
+    bigint: { type: "bigint", notNull: true },
+    decimal: { type: "decimal", notNull: true },
+    real: { type: "real", notNull: true },
+    smallserial: { type: "smallserial", notNull: true },
+    serial: { type: "serial", notNull: true },
+    bigserial: { type: "bigserial", notNull: true },
+    doublePrecision: { type: "double precision", notNull: true },
   });
 }

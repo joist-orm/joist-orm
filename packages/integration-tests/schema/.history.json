@@ -24,6 +24,21 @@
     "updatedAt",
     "wasEverPopular"
   ],
+  "AuthorStat": [
+    "bigint",
+    "bigserial",
+    "createdAt",
+    "decimal",
+    "doubleOrecision",
+    "doublePrecision",
+    "id",
+    "integer",
+    "real",
+    "serial",
+    "smallint",
+    "smallserial",
+    "updatedAt"
+  ],
   "Book": [
     "advances",
     "author",
@@ -49,6 +64,7 @@
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
   "Mutation": [
     "saveAuthor",
+    "saveAuthorStat",
     "saveBook",
     "saveBookAdvance",
     "saveBookReview",
@@ -95,6 +111,20 @@
     "wasEverPopular"
   ],
   "SaveAuthorResult": ["author"],
+  "SaveAuthorStatInput": [
+    "bigint",
+    "bigserial",
+    "decimal",
+    "doubleOrecision",
+    "doublePrecision",
+    "id",
+    "integer",
+    "real",
+    "serial",
+    "smallint",
+    "smallserial"
+  ],
+  "SaveAuthorStatResult": ["authorStat"],
   "SaveBookAdvanceInput": ["bookId", "createdAt", "id", "publisherId", "status", "updatedAt"],
   "SaveBookAdvanceResult": ["bookAdvance"],
   "SaveBookInput": ["authorId", "createdAt", "id", "order", "title", "updatedAt"],

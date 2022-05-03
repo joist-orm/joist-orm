@@ -73,6 +73,15 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
       return "boolean";
     case "int":
     case "numeric":
+    case "smallint":
+    case "integer":
+    case "bigint":
+    case "decimal":
+    case "real":
+    case "smallserial":
+    case "serial":
+    case "bigserial":
+    case "double precision":
       return "number";
     case "text":
     case "citext":

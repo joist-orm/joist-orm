@@ -1,0 +1,37 @@
+type AuthorStat {
+  id: ID!
+  smallint: Int!
+  integer: Int!
+  bigint: Int!
+  decimal: Int!
+  real: Int!
+  smallserial: Int!
+  serial: Int!
+  bigserial: Int!
+  doubleOrecision: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  doublePrecision: Int!
+}
+
+extend type Mutation {
+  saveAuthorStat(input: SaveAuthorStatInput!): SaveAuthorStatResult!
+}
+
+input SaveAuthorStatInput {
+  id: ID
+  smallint: Int
+  integer: Int
+  bigint: Int
+  decimal: Int
+  real: Int
+  smallserial: Int
+  serial: Int
+  bigserial: Int
+  doubleOrecision: Int
+  doublePrecision: Int
+}
+
+type SaveAuthorStatResult {
+  authorStat: AuthorStat!
+}

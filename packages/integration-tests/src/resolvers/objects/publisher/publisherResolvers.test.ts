@@ -1,5 +1,4 @@
-import { newPublisher, PublisherId } from "src/entities";
-import { PublisherResolvers } from "src/generated/graphql-types";
+import { newPublisher } from "src/entities";
 import { publisherResolvers } from "src/resolvers/objects/publisher/publisherResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("publisherResolvers", () => {
   });
 });
 
-const runPublisher = makeRunResolverKeys<PublisherResolvers, PublisherId>(publisherResolvers);
+const runPublisher = makeRunResolverKeys(publisherResolvers);

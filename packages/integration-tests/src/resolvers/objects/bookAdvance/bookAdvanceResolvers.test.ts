@@ -1,5 +1,4 @@
-import { BookAdvanceId, newBookAdvance } from "src/entities";
-import { BookAdvanceResolvers } from "src/generated/graphql-types";
+import { newBookAdvance } from "src/entities";
 import { bookAdvanceResolvers } from "src/resolvers/objects/bookAdvance/bookAdvanceResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("bookAdvanceResolvers", () => {
   });
 });
 
-const runBookAdvance = makeRunResolverKeys<BookAdvanceResolvers, BookAdvanceId>(bookAdvanceResolvers);
+const runBookAdvance = makeRunResolverKeys(bookAdvanceResolvers);

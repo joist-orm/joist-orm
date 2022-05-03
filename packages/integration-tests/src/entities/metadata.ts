@@ -1,7 +1,46 @@
 import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address } from "src/entities/types";
-import { AdvanceStatuses, Author, authorConfig, Book, BookAdvance, bookAdvanceConfig, bookConfig, BookReview, bookReviewConfig, Colors, Comment, commentConfig, Critic, CriticColumn, criticColumnConfig, criticConfig, Image, imageConfig, ImageTypes, newAuthor, newBook, newBookAdvance, newBookReview, newComment, newCritic, newCriticColumn, newImage, newPublisher, newTag, Publisher, publisherConfig, PublisherSizes, PublisherTypes, Tag, tagConfig } from "./entities";
+import {
+  AdvanceStatuses,
+  Author,
+  authorConfig,
+  AuthorStat,
+  authorStatConfig,
+  Book,
+  BookAdvance,
+  bookAdvanceConfig,
+  bookConfig,
+  BookReview,
+  bookReviewConfig,
+  Colors,
+  Comment,
+  commentConfig,
+  Critic,
+  CriticColumn,
+  criticColumnConfig,
+  criticConfig,
+  Image,
+  imageConfig,
+  ImageTypes,
+  newAuthor,
+  newAuthorStat,
+  newBook,
+  newBookAdvance,
+  newBookReview,
+  newComment,
+  newCritic,
+  newCriticColumn,
+  newImage,
+  newPublisher,
+  newTag,
+  Publisher,
+  publisherConfig,
+  PublisherSizes,
+  PublisherTypes,
+  Tag,
+  tagConfig,
+} from "./entities";
 
 export class EntityManager extends EntityManager1<Context> {}
 
@@ -45,6 +84,33 @@ export const authorMeta: EntityMetadata<Author> = {
 };
 
 (Author as any).metadata = authorMeta;
+
+export const authorStatMeta: EntityMetadata<AuthorStat> = {
+  cstr: AuthorStat,
+  type: "AuthorStat",
+  idType: "int",
+  tagName: "as",
+  tableName: "author_stats",
+  fields: {
+    id: { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("as", "id", "id", "int") },
+    smallint: { kind: "primitive", fieldName: "smallint", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("smallint", "smallint", "smallint") },
+    integer: { kind: "primitive", fieldName: "integer", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("integer", "integer", "int") },
+    bigint: { kind: "primitive", fieldName: "bigint", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("bigint", "bigint", "bigint") },
+    decimal: { kind: "primitive", fieldName: "decimal", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new DecimalToNumberSerde("decimal", "decimal") },
+    real: { kind: "primitive", fieldName: "real", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("real", "real", "real") },
+    smallserial: { kind: "primitive", fieldName: "smallserial", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("smallserial", "smallserial", "smallint") },
+    serial: { kind: "primitive", fieldName: "serial", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("serial", "serial", "int") },
+    bigserial: { kind: "primitive", fieldName: "bigserial", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("bigserial", "bigserial", "bigint") },
+    doublePrecision: { kind: "primitive", fieldName: "doublePrecision", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("doublePrecision", "double_precision", "double precision") },
+    createdAt: { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone") },
+    updatedAt: { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone") },
+  },
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt" },
+  config: authorStatConfig,
+  factory: newAuthorStat,
+};
+
+(AuthorStat as any).metadata = authorStatMeta;
 
 export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
@@ -261,5 +327,5 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-export const allMetadata = [authorMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, publisherMeta, tagMeta];
+export const allMetadata = [authorMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, publisherMeta, tagMeta];
 configureMetadata(allMetadata);

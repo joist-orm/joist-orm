@@ -1,5 +1,4 @@
-import { BookId, newBook } from "src/entities";
-import { BookResolvers } from "src/generated/graphql-types";
+import { newBook } from "src/entities";
 import { bookResolvers } from "src/resolvers/objects/book/bookResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("bookResolvers", () => {
   });
 });
 
-const runBook = makeRunResolverKeys<BookResolvers, BookId>(bookResolvers);
+const runBook = makeRunResolverKeys(bookResolvers);

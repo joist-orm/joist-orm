@@ -1,5 +1,4 @@
-import { newTag, TagId } from "src/entities";
-import { TagResolvers } from "src/generated/graphql-types";
+import { newTag } from "src/entities";
 import { tagResolvers } from "src/resolvers/objects/tag/tagResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("tagResolvers", () => {
   });
 });
 
-const runTag = makeRunResolverKeys<TagResolvers, TagId>(tagResolvers);
+const runTag = makeRunResolverKeys(tagResolvers);

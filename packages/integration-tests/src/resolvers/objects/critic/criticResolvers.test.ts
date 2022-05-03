@@ -1,5 +1,4 @@
-import { CriticId, newCritic } from "src/entities";
-import { CriticResolvers } from "src/generated/graphql-types";
+import { newCritic } from "src/entities";
 import { criticResolvers } from "src/resolvers/objects/critic/criticResolvers";
 import { makeRunResolverKeys } from "src/resolvers/testUtils";
 
@@ -14,4 +13,4 @@ describe("criticResolvers", () => {
   });
 });
 
-const runCritic = makeRunResolverKeys<CriticResolvers, CriticId>(criticResolvers);
+const runCritic = makeRunResolverKeys(criticResolvers);

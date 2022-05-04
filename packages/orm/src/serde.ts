@@ -92,10 +92,16 @@ export class DecimalToNumberSerde implements FieldSerde {
 export class KeySerde implements FieldSerde {
   isArray = false;
   columns = [this];
-  private meta: { tagName: string; idType: "int" | "uuid" };
+  private meta: { tagName: string; idType: "int" | "uuid"; disableTags: boolean };
 
-  constructor(tagName: string, private fieldName: string, public columnName: string, public dbType: "int" | "uuid") {
-    this.meta = { tagName, idType: dbType };
+  constructor(
+    tagName: string,
+    private fieldName: string,
+    public columnName: string,
+    public dbType: "int" | "uuid",
+    public disableTags?: boolean,
+  ) {
+    this.meta = { tagName, idType: dbType, disableTags: disableTags || false };
   }
 
   setOnEntity(data: any, row: any): void {

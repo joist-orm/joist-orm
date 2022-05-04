@@ -6,7 +6,7 @@ const tagDelimiter = ":";
 
 // I'm not entirely sure this is still necessary, but use a small subset of EntityMetadata so
 // that this file doesn't have to import the type and potentially create import cycles.
-type HasTagName = { tagName: string; idType: "int" | "uuid" };
+type HasTagName = { tagName: string; idType: "int" | "uuid"; disableTags: boolean };
 
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
@@ -66,12 +66,18 @@ export function tagId(
   metaOrCstr: HasTagName | EntityConstructor<any>,
   id: string | number | null | undefined,
 ): string | undefined {
-  if (typeof id === "number") {
-    return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;
-  }
   if (id === null || id === undefined) {
     return undefined;
   }
+
+  if (typeof metaOrCstr === "function" ? getMetadata(metaOrCstr).disableTags : metaOrCstr.disableTags) {
+    return String(id);
+  }
+
+  if (typeof id === "number") {
+    return `${tagName(metaOrCstr)}${tagDelimiter}${id}`;
+  }
+
   if (id.includes(tagDelimiter)) {
     const [tag] = id.split(tagDelimiter);
     if (tag !== tagName(metaOrCstr)) {

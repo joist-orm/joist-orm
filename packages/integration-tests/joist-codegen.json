@@ -15,7 +15,7 @@
       },
       "tag": "a"
     },
-    "AuthorStat": { "tag": "as" },
+    "AuthorStat": { "tag": null },
     "Book": { "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },

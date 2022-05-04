@@ -371,7 +371,6 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
     polymorphics: [],
     tableName: snakeCase(plural(name)),
     tagName: name,
-    disableTags: false,
     updatedAt: undefined,
     createdAt: undefined,
     ...opts,

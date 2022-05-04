@@ -883,7 +883,6 @@ export interface EntityMetadata<T extends Entity> {
   idType: "int" | "uuid";
   tableName: string;
   tagName: string;
-  disableTags: boolean;
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;

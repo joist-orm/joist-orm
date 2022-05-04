@@ -178,8 +178,7 @@ export class EntityDbMetadata {
   largeManyToManys: ManyToManyField[];
   polymorphics: PolymorphicField[];
   tableName: string;
-  tagName: string;
-  disableTags: boolean;
+  tagName: string | undefined;
   createdAt: PrimitiveField | undefined;
   updatedAt: PrimitiveField | undefined;
 
@@ -254,8 +253,8 @@ export class EntityDbMetadata {
     );
 
     this.tableName = table.name;
-    this.tagName = config.entities[this.entity.name]?.tag;
-    this.disableTags = config.disableTags || false;
+    const taggedIds = config.taggedIds ?? true;
+    this.tagName = taggedIds ? config.entities[this.entity.name]?.tag : undefined;
 
     const { createdAtConf, updatedAtConf } = getTimestampConfig(config);
     this.createdAt = this.primitives.find((f) => createdAtConf.names.includes(f.columnName));

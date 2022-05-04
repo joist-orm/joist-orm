@@ -56,7 +56,7 @@ export interface Config {
   codegenPlugins: string[];
   entities: Record<string, EntityConfig>;
   ignoredTables?: string[];
-  disableTags?: boolean;
+  taggedIds?: boolean;
   // We don't persist this, and instead just use it as a cache
   __tableToEntityName?: Record<string, string>;
 }

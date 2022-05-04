@@ -27,7 +27,6 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       type: "${entity.name}",
       idType: "${meta.idDbType}",
       tagName: "${meta.tagName}",
-      disableTags: ${config.disableTags || false},
       tableName: "${meta.tableName}",
       fields: ${fields},
       timestampFields: { createdAt: ${q(createdAt?.fieldName)}, updatedAt: ${q(updatedAt?.fieldName)} },
@@ -48,7 +47,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.idDbType}", ${dbMetadata.disableTags}),
+      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.idDbType}"),
     }
   `;
 

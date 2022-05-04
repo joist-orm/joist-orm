@@ -144,14 +144,14 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
 
   populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
   populate<H extends LoadHint<Comment>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Comment, H>>;
-  populate<H extends LoadHint<Comment>, V>(hint: H, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Comment>, V>(hint: H, fn: (undefined: Loaded<Comment, H>) => V): Promise<V>;
   populate<H extends LoadHint<Comment>, V>(
     opts: { hint: H; forceReload?: boolean },
-    fn: (comment: Loaded<Comment, H>) => V,
+    fn: (undefined: Loaded<Comment, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<Comment>, V>(
     hintOrOpts: any,
-    fn?: (comment: Loaded<Comment, H>) => V,
+    fn?: (undefined: Loaded<Comment, H>) => V,
   ): Promise<Loaded<Comment, H> | V> {
     return this.em.populate(this as any as Comment, hintOrOpts, fn);
   }

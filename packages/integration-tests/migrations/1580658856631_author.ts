@@ -176,6 +176,6 @@ export function up(b: MigrationBuilder): void {
     smallserial: { type: "smallserial", notNull: true },
     serial: { type: "serial", notNull: true },
     bigserial: { type: "bigserial", notNull: true },
-    doublePrecision: { type: "double precision", notNull: true },
+    double_precision: { type: "double precision", notNull: true },
   });
 }

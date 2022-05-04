@@ -1,6 +1,7 @@
 import {
   del,
   insertAuthor,
+  insertAuthorStat,
   insertBook,
   insertBookReview,
   insertBookToTag,
@@ -13,6 +14,7 @@ import { EntityConstructor, EntityManager, Loaded, sameEntity, setDefaultEntityL
 import {
   Author,
   authorMeta,
+  AuthorStat,
   Book,
   Color,
   Image,
@@ -46,6 +48,23 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "a:1");
     expect(author.firstName).toEqual("f");
+  });
+
+  it("can load an entity without tagged id", async () => {
+    await insertAuthorStat({
+      smallint: 1,
+      integer: 1,
+      bigint: 1,
+      decimal: 1,
+      real: 1,
+      smallserial: 1,
+      serial: 1,
+      bigserial: 1,
+      double_precision: 1,
+    });
+    const em = newEntityManager();
+    const authorStat = await em.load(AuthorStat, "1");
+    expect(authorStat.id).toEqual("1");
   });
 
   it("can load all entities by id", async () => {

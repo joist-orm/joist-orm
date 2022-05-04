@@ -882,7 +882,7 @@ export interface EntityMetadata<T extends Entity> {
   type: string;
   idType: "int" | "uuid";
   tableName: string;
-  tagName: string;
+  tagName: string | undefined;
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;

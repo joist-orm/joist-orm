@@ -37,6 +37,21 @@ export function insertAuthor(row: {
   return testDriver.insert("authors", { initials: row.first_name[0], number_of_books: 0, ...row });
 }
 
+export function insertAuthorStat(row: {
+  id?: number;
+  smallint: number;
+  integer: number;
+  bigint: number;
+  decimal: number;
+  real: number;
+  smallserial: number;
+  serial: number;
+  bigserial: number;
+  double_precision: number;
+}) {
+  return testDriver.insert("author_stats", row);
+}
+
 export function insertBook(row: { id?: number; title: string; author_id: number | null }) {
   return testDriver.insert("books", row);
 }

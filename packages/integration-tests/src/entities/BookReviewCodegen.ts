@@ -170,14 +170,14 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
 
   populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
   populate<H extends LoadHint<BookReview>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookReview, H>>;
-  populate<H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookReview>, V>(hint: H, fn: (undefined: Loaded<BookReview, H>) => V): Promise<V>;
   populate<H extends LoadHint<BookReview>, V>(
     opts: { hint: H; forceReload?: boolean },
-    fn: (br: Loaded<BookReview, H>) => V,
+    fn: (undefined: Loaded<BookReview, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<BookReview>, V>(
     hintOrOpts: any,
-    fn?: (br: Loaded<BookReview, H>) => V,
+    fn?: (undefined: Loaded<BookReview, H>) => V,
   ): Promise<Loaded<BookReview, H> | V> {
     return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }

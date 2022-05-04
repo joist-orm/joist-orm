@@ -222,14 +222,14 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
 
   populate<H extends LoadHint<AuthorStat>>(hint: H): Promise<Loaded<AuthorStat, H>>;
   populate<H extends LoadHint<AuthorStat>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<AuthorStat, H>>;
-  populate<H extends LoadHint<AuthorStat>, V>(hint: H, fn: (as: Loaded<AuthorStat, H>) => V): Promise<V>;
+  populate<H extends LoadHint<AuthorStat>, V>(hint: H, fn: (undefined: Loaded<AuthorStat, H>) => V): Promise<V>;
   populate<H extends LoadHint<AuthorStat>, V>(
     opts: { hint: H; forceReload?: boolean },
-    fn: (as: Loaded<AuthorStat, H>) => V,
+    fn: (undefined: Loaded<AuthorStat, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<AuthorStat>, V>(
     hintOrOpts: any,
-    fn?: (as: Loaded<AuthorStat, H>) => V,
+    fn?: (undefined: Loaded<AuthorStat, H>) => V,
   ): Promise<Loaded<AuthorStat, H> | V> {
     return this.em.populate(this as any as AuthorStat, hintOrOpts, fn);
   }

@@ -227,7 +227,9 @@ const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
   metas.forEach((meta) => {
     // Add each constructor into our tag -> constructor map for future lookups
-    tagToConstructorMap.set(meta.tagName, meta.cstr);
+    if (meta.tagName) {
+      tagToConstructorMap.set(meta.tagName, meta.cstr);
+    }
 
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {

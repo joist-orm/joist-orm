@@ -15,7 +15,7 @@
       },
       "tag": "a"
     },
-    "AuthorStat": { "tag": "as" },
+    "AuthorStat": { "tag": null },
     "Book": { "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
@@ -33,6 +33,5 @@
     "Publisher": { "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true }, "publishers": { "large": true } }, "tag": "t" }
   },
-  "entitiesDirectory": "./src/entities",
-  "taggedIds": false
+  "entitiesDirectory": "./src/entities"
 }

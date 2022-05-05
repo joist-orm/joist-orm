@@ -17,7 +17,7 @@ export interface RelationConfig {
 }
 
 export interface EntityConfig {
-  tag: string;
+  tag: string | null;
   tableName?: string;
   fields?: Record<string, FieldConfig>;
   relations?: Record<string, RelationConfig>;

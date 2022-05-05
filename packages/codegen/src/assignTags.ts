@@ -20,10 +20,15 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
   const existingTagNames = Object.values(existingTags);
 
   dbMetadata.entities
-    .filter((e) => !existingTags[e.name])
+    .filter((e) => existingTags[e.name] === undefined)
     .forEach((e) => {
       const abbreviatedTag = guessTagName(e.name);
-      const tagName = existingTagNames.includes(abbreviatedTag) ? camelCase(e.name) : abbreviatedTag;
+      const tagName =
+        config.taggedIds === false
+          ? null
+          : existingTagNames.includes(abbreviatedTag)
+          ? camelCase(e.name)
+          : abbreviatedTag;
       const oc = config.entities[e.name];
       if (!oc) {
         config.entities[e.name] = { tag: tagName };
@@ -37,7 +42,7 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
 }
 
 /** Abbreviates `BookReview` -> `book_review` -> `br`. */
-function guessTagName(name: string): string {
+export function guessTagName(name: string): string {
   return snakeCase(name)
     .split("_")
     .map((w) => w[0])

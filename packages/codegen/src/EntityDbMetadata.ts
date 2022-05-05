@@ -2,6 +2,7 @@ import { camelCase, pascalCase, snakeCase } from "change-case";
 import { Column, EnumType, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
+import { guessTagName } from "./assignTags";
 import {
   Config,
   getTimestampConfig,
@@ -254,7 +255,7 @@ export class EntityDbMetadata {
 
     this.tableName = table.name;
     const taggedIds = config.taggedIds ?? true;
-    this.tagName = taggedIds ? config.entities[this.entity.name]?.tag : undefined;
+    this.tagName = config.entities[this.entity.name]?.tag || undefined;
 
     const { createdAtConf, updatedAtConf } = getTimestampConfig(config);
     this.createdAt = this.primitives.find((f) => createdAtConf.names.includes(f.columnName));
@@ -263,6 +264,11 @@ export class EntityDbMetadata {
 
   get name(): string {
     return this.entity.name;
+  }
+
+  /** Returns basically the tagName, but always set even if tagged ids are disabled; useful for variable names. */
+  get abbrName(): string {
+    return guessTagName(this.name);
   }
 }
 

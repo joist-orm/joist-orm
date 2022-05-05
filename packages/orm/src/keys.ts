@@ -27,7 +27,7 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
     if (id === undefined) {
       return maybeNumberUnlessUuid(meta, value);
     }
-    if (tag !== meta.tagName) {
+    if (meta.tagName !== undefined && tag !== meta.tagName) {
       throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${value}`);
     }
     return maybeNumberUnlessUuid(meta, id);

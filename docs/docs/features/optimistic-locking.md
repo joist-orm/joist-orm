@@ -6,7 +6,7 @@ Joist implements optimistic locking to avoid conflicting/dropped `UPDATE`s.
 
 Optimistic locking is a pattern where reading data (i.e. `em.load(Author, "a:1")`) does not lock data (i.e. within the database at the row level, holding a lock that prevents other transactions from reading the row until we're "done").
 
-Instead, optimistic locking assumes we are not going to conflict (hence the term "optimistic"), and so does not bother prematurely locking data (which would be "pessimistic locking"). 
+Instead, optimistic locking assumes we are not going to conflict (hence the term "optimistic"), and so does not bother prematurely locking data (which would be "pessimistic locking").
 
 However, when _writing_ data, we check that the data has not changed since we read it.
 
@@ -33,13 +33,13 @@ UPDATE authors
 This `UPDATE` can have two outcomes:
 
 * The `UPDATE` modifies 1 row, and we know no one else changed the data, so our write is successful.
-* The `UPDATE` modifies 0 rows, and we know that a different thread changed the data since we had read it, so our write was not successful, and Joist will throw an `Oplock failure` error. 
+* The `UPDATE` modifies 0 rows, and we know that a different thread changed the data since we had read it, so our write was not successful, and Joist will throw an `Oplock failure` error.
 
 :::note
 
 The SQL in this example only updates 1 row at a time, so is pretty straight forward.
 
-Technically because of Joist's [bulk everything](./bulk-operations.md) feature, the `UPDATE` SQL that Joist generates at runtime will look more complex than this example, but the effect is the same, i.e. that bulk `UPDATE`s will still check the individual/per-row `updated_at` values.
+Technically because of Joist's [bulk everything](../querying/bulk-operations.md) feature, the `UPDATE` SQL that Joist generates at runtime will look more complex than this example, but the effect is the same, i.e. that bulk `UPDATE`s will still check the individual/per-row `updated_at` values.
 
 :::
 
@@ -53,9 +53,9 @@ So if you have two clients that are trying to simultaneously update separate col
 -- thread 1, sets first name
 UPDATE authors SET first_name = 'bob'
   WHERE id = 1 AND updated_at = '...10:00am...'
-  
+
 -- thread 2, sets last name
-UPDATE authors SET last_name = 'smith'   
+UPDATE authors SET last_name = 'smith'
   WHERE id = 1 AND updated_at = '...10:00am...'
 ```
 

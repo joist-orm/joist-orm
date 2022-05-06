@@ -51,6 +51,9 @@ In general priority/itch order:
 - `hasOneThrough` that can be used as `find`/SQL filters
   - Need to declare in codegen to a) add to FilterType + b) verify once traverses relations
 
+
+
+
 ### License
 
 MIT

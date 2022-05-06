@@ -37,10 +37,8 @@ const config = {
         title: "Joist",
         // logo: { alt: "My Site Logo", src: "img/logo.svg" },
         items: [
-          { type: "doc", docId: "getting-started/overview", position: "left", label: "Getting Started" },
+          { type: "doc", docId: "getting-started/installation", position: "left", label: "Getting Started" },
           { type: "doc", docId: "goals/overview", position: "left", label: "Goals" },
-          { type: "doc", docId: "modeling/overview", position: "left", label: "Domain Modeling" },
-          { type: "doc", docId: "features/overview", position: "left", label: "Features" },
           { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
         ],
       },

@@ -5,6 +5,22 @@ sidebar_position: 1
 
 One of the primary ways Joist achieves ActiveRecord-level productivity and DRY-ness is by leveraging **continual, schema-driven code generation**.
 
+### Understanding the Generated Code
+
+Joist will generate:
+
+- Each codegen entity file (`AuthorCodegen.ts`) (every time)
+    - Contains the generated `AuthorCodegen` class that extends `BaseEntity`
+    - Contains fields for all primitive columns
+    - Contains fields for all relations (references and collections)
+    - Contains auto-generated validations (from not null constraints)
+- Each working entity file (`Author.ts`) (just once)
+    - Contains an empty `Author` class that extends `AuthorCodegen`
+- Each entity factory file (`Author.factories.ts`) (just once)
+- A `metadata.ts` file with schema information (every time)
+
+### Example Entity File
+
 I.e. for an `authors` table, the initial `Author.ts` file is as clean & simple as:
 
 ```typescript
@@ -25,32 +41,32 @@ These columns/fields are added to the `AuthorCodegen.ts` file, which looks (heav
 ```typescript
 // This is all generated code
 export abstract class AuthorCodegen extends BaseEntity {
-   readonly books: Collection<Author, Book> = hasMany(
-           bookMeta,
-           "books",
-           "author",
-           "author_id",
-   );
+  readonly books: Collection<Author, Book> = hasMany(
+    bookMeta,
+    "books",
+    "author",
+    "author_id",
+  );
 
-   readonly publisher: Reference<Author, Publisher, undefined> = hasOne(
-           publisherMeta,
-           "publisher",
-           "authors",
-   );
+  readonly publisher: Reference<Author, Publisher, undefined> = hasOne(
+    publisherMeta,
+    "publisher",
+    "authors",
+  );
 
-   // ...
+  // ...
 
-   get id(): AuthorId | undefined {
-      return this.__orm.data["id"];
-   }
+  get id(): AuthorId | undefined {
+    return this.__orm.data["id"];
+  }
 
-   get firstName(): string {
-      return this.__orm.data["firstName"];
-   }
+  get firstName(): string {
+    return this.__orm.data["firstName"];
+  }
 
-   set firstName(firstName: string) {
-      setField(this, "firstName", firstName);
-   }
+  set firstName(firstName: string) {
+     setField(this, "firstName", firstName);
+  }
 }
 ```
 :::tip
@@ -60,20 +76,6 @@ Note that, while ActiveRecord leverages Ruby's runtime meta-programming to add g
 This approach allows the generated types to be seen by the TypeScript compiler and IDEs, and so provides your codebase a type-safe view of your database.
 
 :::
-
-### Understanding the Generated Code
-
-Joist will generate:
-
-- Each codegen entity file (`AuthorCodegen.ts`) (every time)
-  - Contains the generated `AuthorCodegen` class that extends `BaseEntity`
-  - Contains fields for all primitive columns
-  - Contains fields for all relations (references and collections)
-  - Contains auto-generated validations (from not null constraints)
-- Each working entity file (`Author.ts`) (just once)
-  - Contains an empty `Author` class that extends `AuthorCodegen`
-- Each entity factory file (`Author.factories.ts`) (just once)
-- A `metadata.ts` file with schema information (every time)
 
 ### Evergreen Code Generation
 

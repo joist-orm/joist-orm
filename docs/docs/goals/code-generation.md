@@ -61,22 +61,23 @@ This approach allows the generated types to be seen by the TypeScript compiler a
 
 :::
 
+### Understanding the Generated Code
 
-### Understanding the generated code
 Joist will generate:
-- Codegen entity files (`AuthorCodegen.ts`)
-  - This will contain the generated entity that extends `BaseEntity`
-  - Types for the entity fields
-  - Generated validations
-  - Model config
-- The working entity file (`Author.ts` that extends `AuthorCodegen`)
-- Test file (`Author.test.ts`)
-- Factory (`Author.factories.ts`)
-- A `metadata.ts` file which contains the schema and fields
+
+- Each codegen entity file (`AuthorCodegen.ts`) (every time)
+  - Contains the generated `AuthorCodegen` class that extends `BaseEntity`
+  - Contains fields for all primitive columns
+  - Contains fields for all relations (references and collections)
+  - Contains auto-generated validations (from not null constraints)
+- Each working entity file (`Author.ts`) (just once)
+  - Contains an empty `Author` class that extends `AuthorCodegen`
+- Each entity factory file (`Author.factories.ts`) (just once)
+- A `metadata.ts` file with schema information (every time)
 
 ### Evergreen Code Generation
 
-Joist's code generation runs continually (although currently invoked by hand, i.e. individual `npm run joist-codegen` commands), after every migration/schema change, so your domain objects will always 1-to-1 match your schema, without having to worry about them mismatching or tediously keeping the two in sync.
+Joist's code generation runs continually (although currently invoked by hand, i.e. individual `npm run joist-codegen` commands), after every migration/schema change, so your domain objects will always 1-to-1 match your schema, without having to worry about keeping the two in sync.
 
 ### Custom Business Logic
 

@@ -96,13 +96,27 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
    * wire as an API response, but instead is to keep accidental/debugging
    * JSON-ification of an Entity (i.e. by a logger like pino) to not
    * recurse into all of our References/Collections/EntityManager/etc.
-   *  */
+   *
+   * That said, we do happen match Prisma's wire format to ease migration.
+   */
   public toJSON(): object {
     return Object.fromEntries(
-      Object.entries(this.__orm.data).map(([key, value]) => {
-        // Don't recurse into new entities b/c the point is to stay shallow
-        return [key, isEntity(value) ? value.toString() : value];
-      }),
+      Object.values(getMetadata(this).fields)
+        .map((f) => {
+          switch (f.kind) {
+            case "primaryKey":
+            case "primitive":
+            case "enum":
+              return [[f.fieldName, (this as any)[f.fieldName] || null]];
+            case "m2o":
+              // Don't recurse into new entities b/c the point is to stay shallow
+              const value = (this as any)[f.fieldName].current();
+              return [[f.fieldName, isEntity(value) ? value.id : value || null]];
+            default:
+              return [];
+          }
+        })
+        .flat(1),
     );
   }
 

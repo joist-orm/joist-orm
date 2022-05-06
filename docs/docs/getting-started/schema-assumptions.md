@@ -16,6 +16,10 @@ Joist expects entity tables (i.e. `authors`, `books`) to have a single primary k
 
 You can use either singular table names, e.g. `book`, or plural table names, e.g. `books`.
 
+### camelCase or snake_case
+
+Joist will work with column names that are camelCase or snake_case.
+
 ### Timestamp Columns
 
 Entity tables can optionally have `created_at` and `updated_at` columns, which when present Joist will auto-manage the setting of `created_at` when creating entities, and updating `updated_at` when updating entities.
@@ -52,7 +56,7 @@ For example, if you want to strictly require `created_at` and `updated_at` on al
 
 ## Enum Tables
 
-Joist models enums (i.e. `EmployeeStatus`) as their own database tables with a row-per-value. 
+Joist can model enums (i.e. `EmployeeStatus`) as their own database tables with a row-per-value.
 
 For example, `employee_status` might have two rows like:
 
@@ -73,7 +77,7 @@ enum EmployeeStatus {
 ```
 
 This "enums-as-tables" approach allows the entities reference to the enum, i.e. `Employee.status` pointing to the `EmployeeStatus` enum, to use foreign keys to the enum table, i.e. `employees.status_id` is a foreign key to the `employee_status` table. This enables:
- 
+
 1. Data integrity, ensuring that all `status_id` values are valid statuses, and
 2. Allows Joist's code generator to tell both that `employees.status_id` is a) of the type `EmployeeStatus` and b) how many enum values `EmployeeStatus` has.
 
@@ -86,6 +90,8 @@ Joist expects enum tables to have three columns:
 The `joist-migration-utils` package has `createEnumTable`, `addEnumValue`, and `updateEnumValue` helper methods to use in your migrations.
 
 And, as mentioned, entities that want to use this enum should have a foreign key that references the appropriate enum table.
+
+If you do not wish to use enums as tables, native enums can be used as well, and Joist will generate the Typescript enum.
 
 ## Many-to-many Join Tables
 
@@ -115,7 +121,7 @@ CREATE TABLE "authors" (
   "publisher_id" integer REFERENCES "publishers" DEFERRABLE INITIALLY DEFERRED,
   ...
 );
-``` 
+```
 
 See the `joist-migration-utils` utility methods, i.e. `createEntityTable` and `foreignKey` to always apply these defaults for you.
 

@@ -71,7 +71,7 @@ const a1 = newAuthor({
 
 If either the `Author` or `Book` had other required fields, the `newAuthor` and `newBook` factories will apply them as needed.
 
-See the [factories](../features/test-factories.md) for more information on custom flags.
+See the [factories](../testing/test-factories.md) for more information on custom flags.
 
 ## Fast Enough Tests
 

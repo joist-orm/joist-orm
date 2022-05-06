@@ -15,4 +15,4 @@ The major goals are:
 - [Avoid N+1s](./avoiding-n-plus-1s.md) through first-class [dataloader](https://github.com/graphql/dataloader) integration
 - Differentiate [loaded vs. unloaded collections](./type-safe-relations.md) in the type system
 - Enable [great testing](./great-tests.md) with built-in factories and other support
-- Provide a variety of primitives of [domain modeling options](/docs/modeling)
+- Provide a variety of primitives of domain modeling options

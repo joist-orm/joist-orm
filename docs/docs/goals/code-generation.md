@@ -51,7 +51,7 @@ export abstract class AuthorCodegen extends BaseEntity {
    set firstName(firstName: string) {
       setField(this, "firstName", firstName);
    }
-}   
+}
 ```
 :::tip
 
@@ -60,6 +60,19 @@ Note that, while ActiveRecord leverages Ruby's runtime meta-programming to add g
 This approach allows the generated types to be seen by the TypeScript compiler and IDEs, and so provides your codebase a type-safe view of your database.
 
 :::
+
+
+### Understanding the generated code
+Joist will generate:
+- Codegen entity files (`AuthorCodegen.ts`)
+  - This will contain the generated entity that extends `BaseEntity`
+  - Types for the entity fields
+  - Generated validations
+  - Model config
+- The working entity file (`Author.ts` that extends `AuthorCodegen`)
+- Test file (`Author.test.ts`)
+- Factory (`Author.factories.ts`)
+- A `metadata.ts` file which contains the schema and fields
 
 ### Evergreen Code Generation
 

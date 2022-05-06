@@ -1,3 +1,10 @@
+## [1.8.6](https://github.com/stephenh/joist-ts/compare/v1.8.5...v1.8.6) (2022-05-06)
+
+
+### Bug Fixes
+
+* Fix bug in m2o forceReload when already an entity. ([#316](https://github.com/stephenh/joist-ts/issues/316)) ([f01bf4a](https://github.com/stephenh/joist-ts/commit/f01bf4ad2bbe43f9e1ffb26e0de73413d49919cc))
+
 ## [1.8.5](https://github.com/stephenh/joist-ts/compare/v1.8.4...v1.8.5) (2022-05-03)
 
 

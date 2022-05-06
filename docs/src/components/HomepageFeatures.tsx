@@ -6,6 +6,8 @@
  */
 import clsx from "clsx";
 import React from "react";
+// @ts-expect-error
+import Goals from "../../docs/goals/overview.md";
 import styles from "./HomepageFeatures.module.css";
 
 type FeatureItem = {
@@ -30,22 +32,6 @@ const FeatureList: FeatureItem[] = [
       </>
     ),
   },
-  {
-    title: "Modeling",
-    description: (
-      <>
-        How Joist faciliates<a href={"/docs/modeling"}>modeling your domain</a>
-      </>
-    ),
-  },
-  {
-    title: "Features",
-    description: (
-      <>
-        A misc list of Joist's <a href={"/docs/features"}>features</a>
-      </>
-    ),
-  },
 ];
 
 function Feature({ title, description }: FeatureItem) {
@@ -64,9 +50,7 @@ export default function HomepageFeatures(): JSX.Element {
     <section className={styles.features}>
       <div className="container">
         <div className="row">
-          {FeatureList.map((props, idx) => (
-            <Feature key={idx} {...props} />
-          ))}
+          <Goals />
         </div>
       </div>
     </section>

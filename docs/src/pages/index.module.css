@@ -21,3 +21,9 @@
   align-items: center;
   justify-content: center;
 }
+
+.button {
+  background: white;
+  padding: 12px 16px;
+  border-radius: 4px;
+}

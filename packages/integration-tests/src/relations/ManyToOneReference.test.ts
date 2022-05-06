@@ -119,4 +119,15 @@ describe("ManyToOneReference", () => {
     // Then the foreign key is now unset
     expect(a1.publisher.get).toBeUndefined();
   });
+
+  it("can forceReload with a new value", async () => {
+    const em = newEntityManager();
+    // Given an author with a publisher
+    const a1 = newAuthor(em, { publisher: {} });
+    expect(a1.publisher.get).toBeDefined();
+    // When we forceReload the publisher
+    await a1.publisher.load({ forceReload: true });
+    // Then it is still defined
+    expect(a1.publisher.get).toBeDefined();
+  });
 });

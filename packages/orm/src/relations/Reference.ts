@@ -19,7 +19,7 @@ export const ReferenceN = Symbol();
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
   readonly isLoaded: boolean;
 
-  load(opts?: { withDeleted: boolean }): Promise<U | N>;
+  load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   set(other: U | N): void;
 

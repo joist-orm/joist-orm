@@ -87,7 +87,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (!isEntity(current) && current !== undefined) {
       this.loaded = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
     } else {
-      this.loaded = undefined;
+      this.loaded = current;
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);

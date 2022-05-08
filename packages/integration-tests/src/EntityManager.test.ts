@@ -926,10 +926,25 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.publisher.set(em.create(Publisher, { name: "p1" }));
-    expect(a1.toJSON()).toMatchObject({
+    await em.flush();
+    expect(a1.toJSON()).toEqual({
       id: "a:1",
+      address: null,
+      age: null,
+      createdAt: expect.anything(),
+      currentDraftBook: null,
+      favoriteColors: [],
+      favoriteShape: null,
       firstName: "a1",
-      publisher: "Publisher#1",
+      graduated: null,
+      initials: "a",
+      isPopular: null,
+      lastName: null,
+      mentor: null,
+      numberOfBooks: null,
+      publisher: "p:1",
+      updatedAt: expect.anything(),
+      wasEverPopular: null,
     });
   });
 

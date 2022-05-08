@@ -1,3 +1,10 @@
+## [1.8.7](https://github.com/stephenh/joist-ts/compare/v1.8.6...v1.8.7) (2022-05-08)
+
+
+### Bug Fixes
+
+* Make BaseEntity.toJSON more Prisma-like. ([#319](https://github.com/stephenh/joist-ts/issues/319)) ([4cf56f9](https://github.com/stephenh/joist-ts/commit/4cf56f9563f4becfcc707be6705dee1c8f910b38))
+
 ## [1.8.6](https://github.com/stephenh/joist-ts/compare/v1.8.5...v1.8.6) (2022-05-06)
 
 

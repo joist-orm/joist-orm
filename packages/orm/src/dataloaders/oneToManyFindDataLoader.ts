@@ -20,7 +20,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
         const [otherKey, parentKey] = k.split(",");
         const [, otherId] = otherKey.split("=");
         const [, parentId] = parentKey.split("=");
-        const other = em.getEntity(otherId as IdOf<U>);
+        const other = em.getEntity(collection.otherMeta.tableName, otherId as IdOf<U>);
         // We have may fetched `other` for a different parent in our batch
         const isMine = (other as any)?.[collection.otherFieldName].id === parentId;
         return isMine ? other : undefined;

@@ -180,8 +180,8 @@ export class EntityManager<C = {}> {
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
-  getEntity<T extends Entity>(id: IdOf<T>): T | undefined {
-    return this._entityIndex.get(id) as T | undefined;
+  getEntity<T extends Entity>(tableName: string, id: IdOf<T>): T | undefined {
+    return this._entityIndex.get(`${tableName}:${id}`) as T | undefined;
   }
 
   public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
@@ -426,7 +426,8 @@ export class EntityManager<C = {}> {
     }
     const meta = getMetadata(type);
     const tagged = tagId(meta, id);
-    const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
+    const entity =
+      this.findExistingInstance<T>(meta.tableName, tagged) || (await loadDataLoader(this, meta).load(tagged));
     if (!entity) {
       throw new Error(`${tagged} was not found`);
     }
@@ -448,7 +449,7 @@ export class EntityManager<C = {}> {
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
+        return this.findExistingInstance(meta.tableName, id) || loadDataLoader(this, meta).load(id);
       }),
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
@@ -477,7 +478,7 @@ export class EntityManager<C = {}> {
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
+          return this.findExistingInstance(meta.tableName, id) || loadDataLoader(this, meta).load(id);
         }),
       )
     ).filter(Boolean);
@@ -588,7 +589,7 @@ export class EntityManager<C = {}> {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(meta: EntityMetadata<any>, entity: Entity): void {
-    if (entity.id && this.findExistingInstance(entity.id) !== undefined) {
+    if (entity.id && this.findExistingInstance(meta.tableName, entity.id) !== undefined) {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
@@ -603,7 +604,8 @@ export class EntityManager<C = {}> {
     this._entities.push(entity);
     if (entity.id) {
       assertIdsAreTagged([entity.id]);
-      this._entityIndex.set(entity.id, entity);
+
+      this._entityIndex.set(`${entity.__orm.metadata.tableName}:${entity.id}`, entity);
     }
 
     if (this._entities.length >= entityLimit) {
@@ -714,7 +716,7 @@ export class EntityManager<C = {}> {
 
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => {
-            this._entityIndex.set(e.id!, e);
+            this._entityIndex.set(`${e.__orm.metadata.tableName}:${e.id!}`, e);
             e.__orm.isNew = false;
           });
           [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
@@ -815,9 +817,9 @@ export class EntityManager<C = {}> {
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // Currently only public for the driver impls
-  public findExistingInstance<T>(id: string): T | undefined {
+  public findExistingInstance<T>(tableName: string, id: string): T | undefined {
     assertIdsAreTagged([id]);
-    return this._entityIndex.get(id) as T | undefined;
+    return this._entityIndex.get(`${tableName}:${id}`) as T | undefined;
   }
 
   /**
@@ -833,7 +835,7 @@ export class EntityManager<C = {}> {
     const meta = getMetadata(type);
     const id = keyToString(meta, row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
-    let entity = this.findExistingInstance(id) as T;
+    let entity = this.findExistingInstance(meta.tableName, id) as T;
     if (!entity) {
       // Pass id as a hint that we're in hydrate mode
       entity = new type(this, id);

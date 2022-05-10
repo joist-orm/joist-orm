@@ -255,7 +255,9 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private maybeFindExisting(): U | undefined {
-    return this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined;
+    return this.id !== undefined
+      ? this.entity.em.getEntity(this.currentComponent?.otherMetadata()?.tableName || "", this.id)
+      : undefined;
   }
 
   [RelationT]: T = null!;

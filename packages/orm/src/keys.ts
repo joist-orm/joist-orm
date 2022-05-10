@@ -46,15 +46,15 @@ function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
 
 /** Converts `value` to a tagged string, i.e. for string ids, unless its undefined. */
 export function keyToString(meta: HasTagName, value: any): string | undefined {
-  return value === undefined || value === null ? undefined : `${meta.tagName}:${value}`;
+  return value === undefined || value === null ? undefined : meta.tagName ? `${meta.tagName}:${value}` : `${value}`;
 }
 
 /** Fails if any keys are tagged; used by internal functions b/c we still allow most direct API input to be untagged. */
 export function assertIdsAreTagged(keys: readonly string[]): void {
-  const invalidKeys = keys.filter((k) => k.indexOf(tagDelimiter) === -1);
-  if (invalidKeys.length > 0) {
-    throw new Error(`Some keys are missing tags ${invalidKeys}`);
-  }
+  // const invalidKeys = keys.filter((k) => k.indexOf(tagDelimiter) === -1);
+  // if (invalidKeys.length > 0) {
+  //   throw new Error(`Some keys are missing tags ${invalidKeys}`);
+  // }
 }
 
 /** Tags a potentially untagged id, while our API inputs still accept either tagged or untagged ids. */

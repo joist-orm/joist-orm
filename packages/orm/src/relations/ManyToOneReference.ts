@@ -143,7 +143,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       return;
     }
 
-    this.loaded = id ? this.entity.em.getEntity(id) : undefined;
+    this.loaded = id ? this.entity.em.getEntity(this.otherMeta.tableName, id) : undefined;
     this._isLoaded = !!this.loaded;
     this.maybeRemove(previous);
     this.maybeAdd(this.maybeFindEntity());
@@ -274,7 +274,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
    */
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
-    return this.loaded ?? (this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined);
+    return (
+      this.loaded ?? (this.id !== undefined ? this.entity.em.getEntity(this.otherMeta.tableName, this.id) : undefined)
+    );
   }
 
   [RelationT]: T = null!;

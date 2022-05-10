@@ -25,7 +25,7 @@ export function loadDataLoader<T extends Entity>(
         // `findOneOrFail` or for `EntityManager.refresh` when the entity has been deleted out from
         // under us.
         if (entity === undefined) {
-          const existingEntity = em.findExistingInstance<T>(k);
+          const existingEntity = em.findExistingInstance<T>(meta.tableName, k);
           if (existingEntity) {
             existingEntity.__orm.deleted = "deleted";
           }

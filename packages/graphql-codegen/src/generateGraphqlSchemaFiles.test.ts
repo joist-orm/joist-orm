@@ -373,6 +373,7 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
     tagName: name,
     updatedAt: undefined,
     createdAt: undefined,
+    abbrName: name,
     ...opts,
   };
 }

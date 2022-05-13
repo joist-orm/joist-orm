@@ -94,7 +94,14 @@ export let currentlyInstantiatingEntity: Entity | undefined;
 
 /** A marker/base interface for all of our entity types. */
 export interface Entity {
+  /**
+   * The entity's primary key, or undefined if it's new.
+   *
+   * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-codegen.json`.
+   */
   id: string | undefined;
+  /** The entity id that is always tagged, regardless of the idType config. */
+  taggedId: string | undefined;
   idOrFail: string;
   __orm: EntityOrmField;
   readonly em: EntityManager<any>;
@@ -588,7 +595,7 @@ export class EntityManager<C = {}> {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(meta: EntityMetadata<any>, entity: Entity): void {
-    if (entity.id && this.findExistingInstance(entity.id) !== undefined) {
+    if (entity.taggedId && this.findExistingInstance(entity.taggedId) !== undefined) {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
@@ -601,9 +608,9 @@ export class EntityManager<C = {}> {
     }
 
     this._entities.push(entity);
-    if (entity.id) {
-      assertIdsAreTagged([entity.id]);
-      this._entityIndex.set(entity.id, entity);
+    if (entity.taggedId) {
+      assertIdsAreTagged([entity.taggedId]);
+      this._entityIndex.set(entity.taggedId, entity);
     }
 
     if (this._entities.length >= entityLimit) {

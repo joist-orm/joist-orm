@@ -18,6 +18,7 @@ import {
  */
 export abstract class BaseEntity<EM extends EntityManager = EntityManager> implements Entity {
   abstract id: string | undefined;
+  abstract taggedId: string | undefined;
   readonly __orm: EntityOrmField;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {

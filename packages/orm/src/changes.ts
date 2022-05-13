@@ -51,7 +51,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
       }
 
       const originalValue = entity.__orm.originalData[p];
-      const hasChanged = (entity.isNewEntity && p in entity.__orm.data) || p in entity.__orm.originalData;
+      const hasChanged = (entity.isNewEntity && entity.__orm.data[p] !== undefined) || p in entity.__orm.originalData;
       const hasUpdated = !entity.isNewEntity && p in entity.__orm.originalData;
       return {
         hasChanged,

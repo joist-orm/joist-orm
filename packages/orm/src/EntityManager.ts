@@ -366,11 +366,22 @@ export class EntityManager<C = {}> {
     // 1. Find all entities w/o mutating them yet
     await crawl(todo, entity, hint || {});
 
+    const now = new Date();
+
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
-      const { id, ...data } = entity.__orm.data;
-      const clone = new (getMetadata(entity).cstr)(this, {} as any);
-      clone.__orm.data = data;
+      const { id, ...copy } = entity.__orm.data;
+      const meta = getMetadata(entity);
+      const clone = new meta.cstr(this, {} as any);
+      clone.__orm.data = copy;
+      const { updatedAt, createdAt } = meta.timestampFields;
+      if (createdAt) {
+        copy[createdAt] = now;
+      }
+      if (updatedAt) {
+        copy[updatedAt] = now;
+      }
+      clone.__orm.originalData = Object.fromEntries(Object.keys(copy).map((key) => [key, undefined]));
       return [entity, clone] as const;
     });
     const entityToClone = new Map(clones);

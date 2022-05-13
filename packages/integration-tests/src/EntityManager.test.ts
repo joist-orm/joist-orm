@@ -1189,6 +1189,33 @@ describe("EntityManager", () => {
     expect(await a2.books.load()).toHaveLength(0);
   });
 
+  it("can clone entities and report what has changed", async () => {
+    const em = newEntityManager();
+    // Given an entity
+    const p1 = newPublisher(em, { name: "p1" });
+    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    await em.flush();
+    // When we clone that entity
+    const a2 = await em.clone(a1);
+    // Then it is new
+    expect(a2.isNewEntity).toBe(true);
+    // And all the fields look changed
+    expect(a2.changes.fields).toEqual([
+      "createdAt",
+      "updatedAt",
+      "firstName",
+      "publisher",
+      "initials",
+      "numberOfBooks",
+    ]);
+
+    // And if we revert the publisher
+    a2.publisher.set(undefined);
+    // Then it is no longer changed
+    expect(a2.changes.publisher.hasChanged).toBe(false);
+    expect(a2.changes.publisher.originalValue).toBe(undefined);
+  });
+
   it("can touch an entity to force it to be flushed", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

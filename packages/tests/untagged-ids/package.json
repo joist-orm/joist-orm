@@ -1,12 +1,12 @@
 {
-  "name": "joist-tests-uuid-ids",
+  "name": "joist-tests-untagged-ids",
   "version": "1.0.0",
   "license": "MIT",
   "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/stephenh/joist-ts.git",
-    "directory": "packages/tests/uuid-ids"
+    "directory": "packages/tests/untagged-ids"
   },
   "scripts": {
     "migrate": "./run.sh ../../migration-utils",

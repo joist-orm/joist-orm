@@ -117,11 +117,15 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): AuthorStatId | undefined {
-    return this.__orm.data["id"];
+    return this.taggedId;
   }
 
   get idOrFail(): AuthorStatId {
     return this.id || fail("AuthorStat has no id yet");
+  }
+
+  get taggedId(): AuthorStatId | undefined {
+    return this.__orm.data["id"];
   }
 
   get smallint(): number {

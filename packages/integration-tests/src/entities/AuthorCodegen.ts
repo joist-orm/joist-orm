@@ -213,11 +213,15 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): AuthorId | undefined {
-    return this.__orm.data["id"];
+    return this.taggedId;
   }
 
   get idOrFail(): AuthorId {
     return this.id || fail("Author has no id yet");
+  }
+
+  get taggedId(): AuthorId | undefined {
+    return this.__orm.data["id"];
   }
 
   get firstName(): string {

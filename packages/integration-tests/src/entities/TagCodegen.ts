@@ -105,11 +105,15 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): TagId | undefined {
-    return this.__orm.data["id"];
+    return this.taggedId;
   }
 
   get idOrFail(): TagId {
     return this.id || fail("Tag has no id yet");
+  }
+
+  get taggedId(): TagId | undefined {
+    return this.__orm.data["id"];
   }
 
   get name(): string {

@@ -122,11 +122,15 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): BookReviewId | undefined {
-    return this.__orm.data["id"];
+    return this.taggedId;
   }
 
   get idOrFail(): BookReviewId {
     return this.id || fail("BookReview has no id yet");
+  }
+
+  get taggedId(): BookReviewId | undefined {
+    return this.__orm.data["id"];
   }
 
   get rating(): number {

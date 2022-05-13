@@ -721,7 +721,7 @@ export class EntityManager<C = {}> {
 
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => {
-            this._entityIndex.set(e.id!, e);
+            this._entityIndex.set(e.taggedId!, e);
             e.__orm.isNew = false;
           });
           [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
@@ -785,7 +785,7 @@ export class EntityManager<C = {}> {
 
       // Clear the original cached loader result and fetch the new primitives
       const entities = await Promise.all(
-        copy.filter((e) => e.id).map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.id)),
+        copy.filter((e) => e.taggedId).map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.taggedId)),
       );
 
       // Then refresh any non-deleted loaded collections

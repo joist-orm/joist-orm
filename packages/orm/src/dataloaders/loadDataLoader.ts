@@ -16,7 +16,7 @@ export function loadDataLoader<T extends Entity>(
 
       // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
       const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
-      const entitiesById = indexBy(entities, (e) => e.id!);
+      const entitiesById = indexBy(entities, (e) => e.taggedId!);
 
       // Return the results back in the same order as the keys
       return _keys.map((k) => {

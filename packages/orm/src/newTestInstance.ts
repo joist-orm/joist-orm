@@ -180,7 +180,8 @@ function resolveFactoryOpt<T extends Entity>(
     return opt;
   } else if (isId(opt)) {
     return (
-      (em.entities.find((e) => e.id === opt || getTestId(em, e) === opt) as T) || fail(`Did not find tagged id ${opt}`)
+      (em.entities.find((e) => e.taggedId === opt || getTestId(em, e) === opt) as T) ||
+      fail(`Did not find tagged id ${opt}`)
     );
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory

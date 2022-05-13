@@ -1,3 +1,10 @@
+## [1.8.8](https://github.com/stephenh/joist-ts/compare/v1.8.7...v1.8.8) (2022-05-13)
+
+
+### Bug Fixes
+
+* Fix hasChanged on cloned fields that are unset. ([#321](https://github.com/stephenh/joist-ts/issues/321)) ([c24bb23](https://github.com/stephenh/joist-ts/commit/c24bb23caad661b7303f902d726d7880bdbb7cae))
+
 ## [1.8.7](https://github.com/stephenh/joist-ts/compare/v1.8.6...v1.8.7) (2022-05-08)
 
 

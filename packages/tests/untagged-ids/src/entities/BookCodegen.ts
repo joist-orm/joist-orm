@@ -93,11 +93,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): BookId | undefined {
-    if (this.taggedId) {
-      return deTagId(bookMeta, this.taggedId);
-    }
-
-    return this.taggedId;
+    return deTagId(bookMeta, this.taggedId);
   }
 
   get idOrFail(): BookId {

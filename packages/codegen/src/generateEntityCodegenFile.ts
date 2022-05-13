@@ -330,17 +330,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const factoryMethod = imp(`new${entity.name}@./entities`);
 
   const idCode =
-    config.idType === "untagged"
-      ? code`
-    if (this.taggedId) {
-      return ${deTagId}(${metadata}, this.taggedId);
-    }
-
-    return this.taggedId;
-  `
-      : code`
-  return this.taggedId;
-  `;
+    config.idType === "untagged" ? code`return ${deTagId}(${metadata}, this.taggedId);` : code`return this.taggedId;`;
 
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;

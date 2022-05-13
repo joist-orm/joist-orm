@@ -89,11 +89,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): AuthorId | undefined {
-    if (this.taggedId) {
-      return deTagId(authorMeta, this.taggedId);
-    }
-
-    return this.taggedId;
+    return deTagId(authorMeta, this.taggedId);
   }
 
   get idOrFail(): AuthorId {

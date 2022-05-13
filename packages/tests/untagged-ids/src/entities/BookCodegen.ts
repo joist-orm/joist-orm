@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Changes,
   ConfigApi,
+  deTagId,
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
@@ -92,6 +93,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): BookId | undefined {
+    if (this.taggedId) {
+      return deTagId(bookMeta, this.taggedId);
+    }
+
     return this.taggedId;
   }
 

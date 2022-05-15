@@ -3,7 +3,10 @@
   "name": "joist",
   "scripts": {
     "build": "tsc --build",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "migrate": "yarn workspaces foreach run migrate",
+    "codegen": "yarn workspaces foreach run codegen",
+    "test": "yarn workspaces foreach run test"
   },
   "private": true,
   "workspaces": [

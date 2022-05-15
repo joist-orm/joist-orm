@@ -14,11 +14,11 @@ import {
 /**
  * The base class for all entities.
  *
- * Currently this just adds the `.load(lensFn)` method for declarative reference traversal.
+ * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
 export abstract class BaseEntity<EM extends EntityManager = EntityManager> implements Entity {
   abstract id: string | undefined;
-  abstract taggedId: string | undefined;
+  abstract idTagged: string | undefined;
   readonly __orm: EntityOrmField;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {

@@ -180,7 +180,7 @@ function resolveFactoryOpt<T extends Entity>(
     return opt;
   } else if (isId(opt)) {
     return (
-      (em.entities.find((e) => e.taggedId === opt || getTestId(em, e) === opt) as T) ||
+      (em.entities.find((e) => e.idTagged === opt || getTestId(em, e) === opt) as T) ||
       fail(`Did not find tagged id ${opt}`)
     );
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {

@@ -120,14 +120,14 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): BookAdvanceId | undefined {
-    return this.taggedId;
+    return this.idTagged;
   }
 
   get idOrFail(): BookAdvanceId {
     return this.id || fail("BookAdvance has no id yet");
   }
 
-  get taggedId(): BookAdvanceId | undefined {
+  get idTagged(): BookAdvanceId | undefined {
     return this.__orm.data["id"];
   }
 

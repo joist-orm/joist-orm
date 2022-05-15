@@ -331,8 +331,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   const idCode =
     config.idType === "untagged-string"
-      ? code`return ${deTagId}(${metadata}, this.taggedId);`
-      : code`return this.taggedId;`;
+      ? code`return ${deTagId}(${metadata}, this.idTagged);`
+      : code`return this.idTagged;`;
 
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
@@ -394,7 +394,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         return this.id || ${failSymbol}("${entityName} has no id yet");
       }
 
-      get taggedId(): ${entityName}Id | undefined {
+      get idTagged(): ${entityName}Id | undefined {
         return this.__orm.data["id"];
       }
 

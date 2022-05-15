@@ -92,14 +92,14 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): CriticColumnId | undefined {
-    return this.taggedId;
+    return this.idTagged;
   }
 
   get idOrFail(): CriticColumnId {
     return this.id || fail("CriticColumn has no id yet");
   }
 
-  get taggedId(): CriticColumnId | undefined {
+  get idTagged(): CriticColumnId | undefined {
     return this.__orm.data["id"];
   }
 

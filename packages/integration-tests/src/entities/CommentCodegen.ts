@@ -103,14 +103,14 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): CommentId | undefined {
-    return this.taggedId;
+    return this.idTagged;
   }
 
   get idOrFail(): CommentId {
     return this.id || fail("Comment has no id yet");
   }
 
-  get taggedId(): CommentId | undefined {
+  get idTagged(): CommentId | undefined {
     return this.__orm.data["id"];
   }
 

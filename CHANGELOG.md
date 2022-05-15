@@ -1,3 +1,10 @@
+# [1.9.0](https://github.com/stephenh/joist-ts/compare/v1.8.8...v1.9.0) (2022-05-15)
+
+
+### Features
+
+* detag ids with config ([#322](https://github.com/stephenh/joist-ts/issues/322)) ([59d47c1](https://github.com/stephenh/joist-ts/commit/59d47c196230ecb4ed8d514a770e5115de89fb47))
+
 ## [1.8.8](https://github.com/stephenh/joist-ts/compare/v1.8.7...v1.8.8) (2022-05-13)
 
 

@@ -94,7 +94,14 @@ export let currentlyInstantiatingEntity: Entity | undefined;
 
 /** A marker/base interface for all of our entity types. */
 export interface Entity {
+  /**
+   * The entity's primary key, or undefined if it's new.
+   *
+   * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-codegen.json`.
+   */
   id: string | undefined;
+  /** The entity id that is always tagged, regardless of the idType config. */
+  idTagged: string | undefined;
   idOrFail: string;
   __orm: EntityOrmField;
   readonly em: EntityManager<any>;
@@ -599,7 +606,7 @@ export class EntityManager<C = {}> {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(meta: EntityMetadata<any>, entity: Entity): void {
-    if (entity.id && this.findExistingInstance(entity.id) !== undefined) {
+    if (entity.idTagged && this.findExistingInstance(entity.idTagged) !== undefined) {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
@@ -612,9 +619,9 @@ export class EntityManager<C = {}> {
     }
 
     this._entities.push(entity);
-    if (entity.id) {
-      assertIdsAreTagged([entity.id]);
-      this._entityIndex.set(entity.id, entity);
+    if (entity.idTagged) {
+      assertIdsAreTagged([entity.idTagged]);
+      this._entityIndex.set(entity.idTagged, entity);
     }
 
     if (this._entities.length >= entityLimit) {
@@ -725,7 +732,7 @@ export class EntityManager<C = {}> {
 
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => {
-            this._entityIndex.set(e.id!, e);
+            this._entityIndex.set(e.idTagged!, e);
             e.__orm.isNew = false;
           });
           [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
@@ -789,7 +796,7 @@ export class EntityManager<C = {}> {
 
       // Clear the original cached loader result and fetch the new primitives
       const entities = await Promise.all(
-        copy.filter((e) => e.id).map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.id)),
+        copy.filter((e) => e.idTagged).map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.idTagged)),
       );
 
       // Then refresh any non-deleted loaded collections

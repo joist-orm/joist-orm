@@ -1,6 +1,6 @@
 import { Author, newAuthor } from "@src/entities";
 import { newEntityManager } from "@src/setupDbTests";
-import { getMetadata, tagId, tagIds } from "joist-orm";
+import { deTagId, getMetadata, tagId, tagIds } from "joist-orm";
 
 describe("taggedIds", () => {
   it("can tag id", async () => {
@@ -34,5 +34,10 @@ describe("taggedIds", () => {
     a2 = a.id;
     // @ts-expect-error
     a2 = a.idOrFail;
+  });
+
+  it("can detag ids", async () => {
+    expect(deTagId(getMetadata(Author), "a:1")).toEqual("1");
+    expect(deTagId(getMetadata(Author), undefined)).toBeUndefined();
   });
 });

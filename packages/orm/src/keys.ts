@@ -93,11 +93,12 @@ export function tagIds(
 }
 
 export function deTagId(meta: HasTagName, id: string | number): string;
+export function deTagId(meta: HasTagName, id: string | number | undefined): string | undefined;
 export function deTagId(entity: Entity): string;
-export function deTagId(entityOrMeta: Entity | HasTagName, id?: string | number): string {
+export function deTagId(entityOrMeta: Entity | HasTagName, id?: string | number): string | undefined {
   const meta = entityOrMeta instanceof BaseEntity ? getMetadata(entityOrMeta) : (entityOrMeta as HasTagName);
   id = id ?? (entityOrMeta as Entity).id;
-  return keyToNumber(meta, id!).toString();
+  return id === undefined ? undefined : keyToNumber(meta, id).toString();
 }
 
 /** Removes the tag prefixes so we can use the keys for SQL operations. */

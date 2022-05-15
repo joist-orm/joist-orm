@@ -9,6 +9,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  deTagId,
   Entity,
   EntityConstructor,
   EntityFilter,
@@ -328,6 +329,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities`);
 
+  const idCode =
+    config.idType === "untagged-string"
+      ? code`return ${deTagId}(${metadata}, this.idTagged);`
+      : code`return this.idTagged;`;
+
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
@@ -381,11 +387,15 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       }
 
       get id(): ${entityName}Id | undefined {
-        return this.__orm.data["id"];
+        ${idCode}
       }
 
       get idOrFail(): ${entityName}Id {
         return this.id || ${failSymbol}("${entityName} has no id yet");
+      }
+
+      get idTagged(): ${entityName}Id | undefined {
+        return this.__orm.data["id"];
       }
 
       ${primitives}

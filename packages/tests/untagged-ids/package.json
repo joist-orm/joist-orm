@@ -1,0 +1,38 @@
+{
+  "name": "joist-tests-untagged-ids",
+  "version": "1.0.0",
+  "license": "MIT",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stephenh/joist-ts.git",
+    "directory": "packages/tests/untagged-ids"
+  },
+  "scripts": {
+    "migrate": "./run.sh ../../migration-utils",
+    "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "codegen": "./run.sh ../../codegen"
+  },
+  "dependencies": {
+    "joist-orm": "workspace:*"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.2.124",
+    "@swc/jest": "^0.2.16",
+    "@types/jest": "^26.0.24",
+    "@types/node": "^16.4.10",
+    "dotenv": "^8.2.0",
+    "jest": "^27.0.6",
+    "jest-junit": "^12.2.0",
+    "joist-codegen": "workspace:*",
+    "joist-migration-utils": "workspace:*",
+    "joist-test-utils": "workspace:*",
+    "prettier": "^2.5.1",
+    "prettier-plugin-organize-imports": "^2.3.4",
+    "superstruct": "^0.15.2",
+    "ts-node": "^10.1.0",
+    "tsconfig-paths": "^3.10.1",
+    "typescript": "^4.5.2"
+  }
+}

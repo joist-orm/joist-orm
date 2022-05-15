@@ -506,7 +506,7 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     .del()
     .whereIn(
       "id",
-      entities.map((e) => keyToNumber(meta, e.id!).toString()),
+      entities.map((e) => keyToNumber(meta, e.idTagged!).toString()),
     );
   entities.forEach((entity) => (entity.__orm.deleted = "deleted"));
 }

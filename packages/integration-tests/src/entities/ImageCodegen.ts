@@ -130,11 +130,15 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): ImageId | undefined {
-    return this.__orm.data["id"];
+    return this.idTagged;
   }
 
   get idOrFail(): ImageId {
     return this.id || fail("Image has no id yet");
+  }
+
+  get idTagged(): ImageId | undefined {
+    return this.__orm.data["id"];
   }
 
   get fileName(): string {

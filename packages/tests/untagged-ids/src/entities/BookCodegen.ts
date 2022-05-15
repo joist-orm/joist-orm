@@ -1,8 +1,8 @@
 import {
   BaseEntity,
   Changes,
-  Collection,
   ConfigApi,
+  deTagId,
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
@@ -10,10 +10,7 @@ import {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  hasMany,
-  hasManyToMany,
   hasOne,
-  hasOneToOne,
   isLoaded,
   Lens,
   Loaded,
@@ -22,7 +19,6 @@ import {
   ManyToOneReference,
   newChangesProxy,
   newRequiredRule,
-  OneToOneReference,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -33,81 +29,38 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import { EntityManager } from "src/entities";
-import {
-  Author,
-  AuthorId,
-  authorMeta,
-  AuthorOrder,
-  Book,
-  BookAdvance,
-  BookAdvanceId,
-  bookAdvanceMeta,
-  bookMeta,
-  BookReview,
-  BookReviewId,
-  bookReviewMeta,
-  Comment,
-  CommentId,
-  commentMeta,
-  Image,
-  ImageId,
-  imageMeta,
-  newBook,
-  Tag,
-  TagId,
-  tagMeta,
-} from "./entities";
+import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, newBook } from "./entities";
 
 export type BookId = Flavor<string, "Book">;
 
 export interface BookOpts {
   title: string;
-  order?: number;
   author: Author;
-  currentDraftAuthor?: Author | null;
-  image?: Image | null;
-  advances?: BookAdvance[];
-  reviews?: BookReview[];
-  comments?: Comment[];
-  tags?: Tag[];
 }
 
 export interface BookIdsOpts {
   authorId?: AuthorId | null;
-  currentDraftAuthorId?: AuthorId | null;
-  imageId?: ImageId | null;
-  advanceIds?: BookAdvanceId[] | null;
-  reviewIds?: BookReviewId[] | null;
-  commentIds?: CommentId[] | null;
-  tagIds?: TagId[] | null;
 }
 
 export interface BookFilter {
   id?: ValueFilter<BookId, never>;
   title?: ValueFilter<string, never>;
-  order?: ValueFilter<number, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
-  currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
 export interface BookGraphQLFilter {
   id?: ValueGraphQLFilter<BookId>;
   title?: ValueGraphQLFilter<string>;
-  order?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
-  currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
-  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
 }
 
 export interface BookOrder {
   id?: OrderBy;
   title?: OrderBy;
-  order?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   author?: AuthorOrder;
@@ -116,15 +69,12 @@ export interface BookOrder {
 export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
-bookConfig.addRule(newRequiredRule("order"));
 bookConfig.addRule(newRequiredRule("createdAt"));
 bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
-  static defaultValues: object = {
-    order: 1,
-  };
+  static defaultValues: object = {};
 
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
@@ -135,24 +85,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
-
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
-
-  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
-
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
-
-  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
-    authorMeta,
-    "currentDraftAuthor",
-    "currentDraftBook",
-    "current_draft_book_id",
-  );
-
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
-
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
@@ -160,7 +93,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): BookId | undefined {
-    return this.idTagged;
+    return deTagId(bookMeta, this.idTagged);
   }
 
   get idOrFail(): BookId {
@@ -177,14 +110,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
 
   set title(title: string) {
     setField(this, "title", title);
-  }
-
-  get order(): number {
-    return this.__orm.data["order"];
-  }
-
-  set order(order: number) {
-    setField(this, "order", order);
   }
 
   get createdAt(): Date {

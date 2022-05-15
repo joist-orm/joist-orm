@@ -3,6 +3,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  deTagId,
   EntityOrmField,
   fail,
   Flavor,
@@ -80,7 +81,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "authorId", "authorId");
+  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
@@ -88,7 +89,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   get id(): AuthorId | undefined {
-    return this.idTagged;
+    return deTagId(authorMeta, this.idTagged);
   }
 
   get idOrFail(): AuthorId {

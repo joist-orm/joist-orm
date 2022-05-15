@@ -3,7 +3,10 @@
   "name": "joist",
   "scripts": {
     "build": "tsc --build",
-    "semantic-release": "semantic-release"
+    "semantic-release": "semantic-release",
+    "migrate": "yarn workspaces foreach run migrate",
+    "codegen": "yarn workspaces foreach run codegen",
+    "test": "yarn workspaces foreach run test"
   },
   "private": true,
   "workspaces": [
@@ -16,7 +19,8 @@
     "packages/utils",
     "packages/test-utils",
     "packages/tests/uuid-ids",
-    "packages/tests/schema-misc"
+    "packages/tests/schema-misc",
+    "packages/tests/untagged-ids"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.1",

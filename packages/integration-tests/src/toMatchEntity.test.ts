@@ -34,15 +34,15 @@ describe("toMatchEntity", () => {
     const b1 = newBook(em, { author: a1 });
     await em.flush();
     await expect(expect(b1).toMatchEntity({ author: a2 })).rejects.toThrowErrorMatchingInlineSnapshot(`
-<d>expect(</><r>received</><d>).</>toMatchObject<d>(</><g>expected</><d>)</>
+expect(received).toMatchObject(expected)
 
-<g>- Expected  - 1</>
-<r>+ Received  + 1</>
+- Expected  - 1
++ Received  + 1
 
-<d>  Object {</>
-<g>-   "author": "a:2",</>
-<r>+   "author": "a:1",</>
-<d>  }</>
+  Object {
+-   "author": "a:2",
++   "author": "a:1",
+  }
 `);
   });
 
@@ -73,17 +73,17 @@ describe("toMatchEntity", () => {
     await em.flush();
     // Then it fails if we assert against only one
     await expect(expect(a1).toMatchEntity({ books: [b2] })).rejects.toThrowErrorMatchingInlineSnapshot(`
-<d>expect(</><r>received</><d>).</>toMatchObject<d>(</><g>expected</><d>)</>
+expect(received).toMatchObject(expected)
 
-<g>- Expected  - 0</>
-<r>+ Received  + 1</>
+- Expected  - 0
++ Received  + 1
 
-<d>  Object {</>
-<d>    "books": Array [</>
-<r>+     "b:1",</>
-<d>      "b:2",</>
-<d>    ],</>
-<d>  }</>
+  Object {
+    "books": Array [
++     "b:1",
+      "b:2",
+    ],
+  }
 `);
   });
 
@@ -97,17 +97,17 @@ describe("toMatchEntity", () => {
     await em.flush();
     // Then it fails if we include the extra book
     await expect(expect(a1).toMatchEntity({ books: [b1, b2] })).rejects.toThrowErrorMatchingInlineSnapshot(`
-<d>expect(</><r>received</><d>).</>toMatchObject<d>(</><g>expected</><d>)</>
+expect(received).toMatchObject(expected)
 
-<g>- Expected  - 1</>
-<r>+ Received  + 0</>
+- Expected  - 1
++ Received  + 0
 
-<d>  Object {</>
-<d>    "books": Array [</>
-<d>      "b:1",</>
-<g>-     "b:2",</>
-<d>    ],</>
-<d>  }</>
+  Object {
+    "books": Array [
+      "b:1",
+-     "b:2",
+    ],
+  }
 `);
   });
 
@@ -119,17 +119,17 @@ describe("toMatchEntity", () => {
     // And we don't flush
     // Then it fails if we assert against only one
     await expect(expect(a1).toMatchEntity({ books: [b2] })).rejects.toThrowErrorMatchingInlineSnapshot(`
-<d>expect(</><r>received</><d>).</>toMatchObject<d>(</><g>expected</><d>)</>
+expect(received).toMatchObject(expected)
 
-<g>- Expected  - 0</>
-<r>+ Received  + 1</>
+- Expected  - 0
++ Received  + 1
 
-<d>  Object {</>
-<d>    "books": Array [</>
-<r>+     "b#1",</>
-<d>      "b#2",</>
-<d>    ],</>
-<d>  }</>
+  Object {
+    "books": Array [
++     "b#1",
+      "b#2",
+    ],
+  }
 `);
   });
 

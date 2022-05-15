@@ -11,9 +11,11 @@ RUN echo "#!/bin/bash" > /init.sh && \
   echo "  CREATE DATABASE ${APP_DBNAME};" >> /init.sh && \
   echo "  CREATE DATABASE uuid_ids;" >> /init.sh && \
   echo "  CREATE DATABASE schema_misc;" >> /init.sh && \
+  echo "  CREATE DATABASE untagged_ids;" >> /init.sh && \
   echo "  GRANT ALL PRIVILEGES ON DATABASE ${APP_DBNAME} TO ${APP_USERNAME};" >> /init.sh && \
   echo "  GRANT ALL PRIVILEGES ON DATABASE uuid_ids TO ${APP_USERNAME};" >> /init.sh && \
   echo "  GRANT ALL PRIVILEGES ON DATABASE schema_misc TO ${APP_USERNAME};" >> /init.sh && \
+  echo "  GRANT ALL PRIVILEGES ON DATABASE untagged_ids TO ${APP_USERNAME};" >> /init.sh && \
   echo "EOSQL" >> /init.sh && \
   chmod u+x /init.sh && \
   mv /init.sh /docker-entrypoint-initdb.d/
@@ -31,6 +33,9 @@ RUN echo "#!/bin/bash" > /reset.sh && \
   echo "  DROP DATABASE IF EXISTS schema_misc;" >> /reset.sh && \
   echo "  CREATE DATABASE schema_misc;" >> /reset.sh && \
   echo "  GRANT ALL PRIVILEGES ON DATABASE schema_misc TO ${APP_USERNAME};" >> /reset.sh && \
+  echo "  DROP DATABASE IF EXISTS untagged_ids;" >> /reset.sh && \
+  echo "  CREATE DATABASE untagged_ids;" >> /reset.sh && \
+  echo "  GRANT ALL PRIVILEGES ON DATABASE untagged_ids TO ${APP_USERNAME};" >> /reset.sh && \
   echo "EOSQL" >> /reset.sh && \
   chmod u+x /reset.sh
 

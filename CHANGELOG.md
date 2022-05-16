@@ -1,3 +1,10 @@
+## [1.9.1](https://github.com/stephenh/joist-ts/compare/v1.9.0...v1.9.1) (2022-05-16)
+
+
+### Bug Fixes
+
+* Fix dirty logic when data has an entity. ([#324](https://github.com/stephenh/joist-ts/issues/324)) ([b8ab60f](https://github.com/stephenh/joist-ts/commit/b8ab60ff84ca3d6fc484a997bab1cc3ceb422a99))
+
 # [1.9.0](https://github.com/stephenh/joist-ts/compare/v1.8.8...v1.9.0) (2022-05-15)
 
 

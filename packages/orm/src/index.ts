@@ -7,6 +7,7 @@ import {
   EntityOrmField,
   Field,
   getMetadata,
+  isEntity,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
@@ -83,7 +84,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T, newVal
 
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
-    if (equal(originalData[fieldName], newValue)) {
+    if (equalOrSameEntity(originalData[fieldName], newValue)) {
       data[fieldName] = newValue;
       delete originalData[fieldName];
       return true;
@@ -92,7 +93,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T, newVal
 
   // Push this logic into a field serde type abstraction?
   const currentValue = data[fieldName];
-  if (equal(currentValue, newValue)) {
+  if (equalOrSameEntity(currentValue, newValue)) {
     return false;
   }
 
@@ -269,6 +270,15 @@ export function maybeGetConstructorFromReference(
 ): EntityConstructor<any> | undefined {
   const id = maybeResolveReferenceToId(value);
   return id ? getConstructorFromTaggedId(id) : undefined;
+}
+
+function equalOrSameEntity(a: any, b: any): boolean {
+  return (
+    equal(a, b) ||
+    // This is kind of gross, but make sure not to compare two both-new entities
+    (((isEntity(a) && !a.isNewEntity) || (isEntity(b) && !b.isNewEntity)) &&
+      maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
+  );
 }
 
 function equal(a: any, b: any): boolean {

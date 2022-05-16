@@ -377,16 +377,40 @@ describe("Author", () => {
       await insertPublisher({ name: "p2" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();
-      const a1 = await em.load(Author, "1");
+      const a1 = await em.load(Author, "a:1");
+      const [p1, p2] = await em.loadAll(Publisher, ["p:1", "p:2"]);
       expect(a1.changes.publisher.hasChanged).toBeFalsy();
       expect(a1.changes.publisher.originalValue).toBeUndefined();
       expect(await a1.changes.publisher.originalEntity).toBeUndefined();
       expect(a1.changes.fields).toEqual([]);
-      a1.publisher.set(await em.load(Publisher, "2"));
+      a1.publisher.set(p2);
       expect(a1.changes.publisher.hasChanged).toBeTruthy();
       expect(a1.changes.publisher.originalValue).toEqual("p:1");
       expect(await a1.changes.publisher.originalEntity).toBeInstanceOf(Publisher);
       expect(a1.changes.fields).toEqual(["publisher"]);
+      a1.publisher.set(p1);
+      expect(a1.changes.publisher.hasChanged).toBe(false);
+      expect(await a1.changes.publisher.originalEntity).toBeUndefined();
+      expect(a1.changes.fields).toEqual([]);
+    });
+
+    it("works for references when already loaded", async () => {
+      const em = newEntityManager();
+      const [p1, p2] = [newPublisher(em), newPublisher(em)];
+      const a1 = newAuthor(em, { publisher: p1 });
+      expect(a1.changes.publisher.hasChanged).toBe(true);
+      expect(a1.changes.publisher.hasUpdated).toBe(false);
+      await em.flush();
+      a1.publisher.set(p1);
+      expect(a1.changes.publisher.hasChanged).toBe(false);
+      expect(a1.changes.publisher.hasUpdated).toBe(false);
+      a1.publisher.set(p2);
+      expect(a1.changes.publisher.hasChanged).toBe(true);
+      expect(a1.changes.publisher.hasUpdated).toBe(true);
+      a1.publisher.set(p1);
+      expect(a1.changes.publisher.hasChanged).toBe(false);
+      expect(a1.changes.publisher.hasUpdated).toBe(false);
+      expect(a1.publisher.get!.name).toBe("name");
     });
   });
 

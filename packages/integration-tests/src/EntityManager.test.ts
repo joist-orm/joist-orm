@@ -1213,6 +1213,7 @@ describe("EntityManager", () => {
     a2.publisher.set(undefined);
     // Then it is no longer changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
+    expect(a2.changes.publisher.hasUpdated).toBe(false);
     expect(a2.changes.publisher.originalValue).toBe(undefined);
   });
 

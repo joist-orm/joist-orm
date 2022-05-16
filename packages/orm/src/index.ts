@@ -275,7 +275,9 @@ export function maybeGetConstructorFromReference(
 function equalOrSameEntity(a: any, b: any): boolean {
   return (
     equal(a, b) ||
-    ((isEntity(a) || isEntity(b)) && a !== undefined && maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
+    // This is kind of gross, but make sure not to compare two both-new entities
+    (((isEntity(a) && !a.isNewEntity) || (isEntity(b) && !b.isNewEntity)) &&
+      maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
   );
 }
 

@@ -28,7 +28,7 @@ describe("EntityManager.factories", () => {
     const p1 = newPublisher(em);
     await em.flush();
     // Then we create only that entity
-    expect(p1.name).toEqual("name");
+    expect(p1.name).toEqual("Publisher 1");
     expect(em.numberOfEntities).toEqual(1);
   });
 
@@ -492,5 +492,12 @@ describe("EntityManager.factories", () => {
     // Then both books are deeply loaded
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
+  });
+
+  it("uniquely assigns name fields", async () => {
+    const em = newEntityManager();
+    const [p1, p2] = [newPublisher(em), newPublisher(em)];
+    expect(p1.name).toEqual("Publisher 1");
+    expect(p2.name).toEqual("Publisher 2");
   });
 });

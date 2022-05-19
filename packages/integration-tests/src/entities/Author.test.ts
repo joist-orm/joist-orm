@@ -410,7 +410,7 @@ describe("Author", () => {
       a1.publisher.set(p1);
       expect(a1.changes.publisher.hasChanged).toBe(false);
       expect(a1.changes.publisher.hasUpdated).toBe(false);
-      expect(a1.publisher.get!.name).toBe("name");
+      expect(a1.publisher.get!.name).toBe("Publisher 1");
     });
   });
 

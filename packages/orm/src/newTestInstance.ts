@@ -96,7 +96,7 @@ export function newTestInstance<T extends Entity>(
         !field.protected
       ) {
         const codegenDefault = (cstr as any).defaultValues[field.fieldName];
-        return [fieldName, codegenDefault ?? defaultValueForField(field)];
+        return [fieldName, codegenDefault ?? defaultValueForField(em, cstr, field)];
       } else if (field.kind === "m2o") {
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
         // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
@@ -397,9 +397,12 @@ function getTestId<T extends Entity>(em: EntityManager, entity: T): string {
   return tagId(meta, String(sameType.indexOf(entity) + 1));
 }
 
-function defaultValueForField(field: PrimitiveField): unknown {
+function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, field: PrimitiveField): unknown {
   switch (field.type) {
     case "string":
+      if (field.fieldName === "name") {
+        return `${cstr.name} ${getTestIndex(em, cstr)}`;
+      }
       return field.fieldName;
     case "number":
       return 0;

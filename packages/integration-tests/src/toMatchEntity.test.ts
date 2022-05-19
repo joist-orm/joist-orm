@@ -9,7 +9,7 @@ describe("toMatchEntity", () => {
     const em = newEntityManager();
     const p1 = newPublisher(em);
     await em.flush();
-    await expect(p1).toMatchEntity({ name: "name" });
+    await expect(p1).toMatchEntity({ name: "Publisher 1" });
   });
 
   it("can match references", async () => {

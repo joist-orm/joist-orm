@@ -1,3 +1,10 @@
+# [1.10.0](https://github.com/stephenh/joist-ts/compare/v1.9.1...v1.10.0) (2022-05-19)
+
+
+### Features
+
+* Better defaults for name fields. ([#325](https://github.com/stephenh/joist-ts/issues/325)) ([0b40d7c](https://github.com/stephenh/joist-ts/commit/0b40d7cfc562d04048db32434965ef455c346bea))
+
 ## [1.9.1](https://github.com/stephenh/joist-ts/compare/v1.9.0...v1.9.1) (2022-05-16)
 
 

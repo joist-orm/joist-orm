@@ -15,12 +15,12 @@ describe("generateGraphqlSchemaFiles", () => {
     await generateGraphqlSchemaFiles(fs, entities);
     // We now have a graphql file
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "type Author {
-        id: ID!
-      }
-
-      extend type Mutation {
+      "extend type Mutation {
         saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+      
+      type Author {
+        id: ID!
       }
 
       input SaveAuthorInput {

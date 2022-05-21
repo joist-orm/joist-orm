@@ -23,8 +23,8 @@ import { Fs } from "./utils";
 export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetadata[]): Promise<void> {
   // Generate all of the "ideal" fields based solely on the domain model
   const fields = [
-    ...createEntityFields(entities),
     ...createSaveMutation(entities),
+    ...createEntityFields(entities),
     ...createSaveEntityInputFields(entities),
     ...createSaveEntityResultFields(entities),
   ];

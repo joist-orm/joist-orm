@@ -1,3 +1,10 @@
+## [1.10.1](https://github.com/stephenh/joist-ts/compare/v1.10.0...v1.10.1) (2022-05-21)
+
+
+### Bug Fixes
+
+* Add enum details to the GraphQL scaffolding. ([#326](https://github.com/stephenh/joist-ts/issues/326)) ([ac0ada3](https://github.com/stephenh/joist-ts/commit/ac0ada307a49ebc95f8c7884bc46f4dd87ad9a55))
+
 # [1.10.0](https://github.com/stephenh/joist-ts/compare/v1.9.1...v1.10.0) (2022-05-19)
 
 

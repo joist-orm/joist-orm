@@ -307,8 +307,7 @@ type SaveAuthorResult {
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
 "type Author {
   id: ID!
-  color: Color!
-  colorDetail: ColorDetail!
+  color: ColorDetail!
 }
 
 extend type Mutation {

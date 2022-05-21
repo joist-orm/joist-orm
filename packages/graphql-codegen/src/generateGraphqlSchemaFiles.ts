@@ -98,9 +98,13 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
         return { ...common, fieldName, fieldType };
       });
 
-    const enums = e.enums.map(({ fieldName, enumType, notNull, isArray }) => {
+    const enums = e.enums.flatMap(({ fieldName, enumType, notNull, isArray }) => {
       const fieldType = isArray ? `[${enumType.symbol}!]!` : `${enumType.symbol}${maybeRequired(notNull)}`;
-      return { ...common, fieldName, fieldType };
+      const detailType = `${enumType.symbol}Detail${maybeRequired(notNull)}`;
+      return [
+        { ...common, fieldName, fieldType },
+        ...(isArray ? [] : [{ ...common, fieldName: `${fieldName}Detail`, fieldType: detailType }]),
+      ];
     });
     const pgEnums = e.pgEnums.map(({ fieldName, enumType, notNull }) => {
       const fieldType = `${enumType.symbol}${maybeRequired(notNull)}`;

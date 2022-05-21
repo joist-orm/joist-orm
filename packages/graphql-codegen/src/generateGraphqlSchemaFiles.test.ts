@@ -292,6 +292,41 @@ type SaveAuthorResult {
 `);
   });
 
+  it("adds enum details", async () => {
+    // Given an author
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Author", {
+        // With an enum array field
+        enums: [newEnumField("color")],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then the input has both both types of fields as appropriate
+    expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
+"type Author {
+  id: ID!
+  color: Color!
+  colorDetail: ColorDetail!
+}
+
+extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}
+
+input SaveAuthorInput {
+  id: ID
+  color: Color
+}
+
+type SaveAuthorResult {
+  author: Author!
+}
+"
+`);
+  });
+
   it("can enum array types", async () => {
     // Given an author
     const entities: EntityDbMetadata[] = [

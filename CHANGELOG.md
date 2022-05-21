@@ -1,3 +1,10 @@
+## [1.10.2](https://github.com/stephenh/joist-ts/compare/v1.10.1...v1.10.2) (2022-05-21)
+
+
+### Bug Fixes
+
+* Only generate an enum detail field. ([#327](https://github.com/stephenh/joist-ts/issues/327)) ([9329882](https://github.com/stephenh/joist-ts/commit/93298824c7b5589d1a7576e52a42f5fe633707c2))
+
 ## [1.10.1](https://github.com/stephenh/joist-ts/compare/v1.10.0...v1.10.1) (2022-05-21)
 
 

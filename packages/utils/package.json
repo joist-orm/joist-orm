@@ -12,7 +12,8 @@
     "pg-connection-string": "^2.2.3"
   },
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
+    "test": "jest"
   },
   "devDependencies": {
     "@swc/core": "^1.2.124",

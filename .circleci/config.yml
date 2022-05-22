@@ -49,40 +49,11 @@ jobs:
             ./run.sh ../../migration-utils/build/index.js
             ./run.sh ../../codegen/build/index.js
       - run:
-          name: Run integration-tests
+          name: Run tests
           command: |
-            cd packages/integration-tests
-            yarn test --reporters=default --reporters=jest-junit
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
-      - run:
-          name: Run uuid-ids tests
-          command: |
-            cd packages/tests/uuid-ids
-            yarn test --reporters=default --reporters=jest-junit
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
-            JEST_JUNIT_OUTPUT_NAME: junit-uuid-ids.xml
-      - run:
-          name: Run schema-misc tests
-          command: |
-            cd packages/tests/schema-misc
-            yarn test --reporters=default --reporters=jest-junit
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
-            JEST_JUNIT_OUTPUT_NAME: junit-schema-misc.xml
-      - run:
-          name: Run untagged-ids tests
-          command: |
-            cd packages/tests/untagged-ids
-            yarn test --reporters=default --reporters=jest-junit
-          environment:
-            JEST_JUNIT_OUTPUT_DIR: /tmp/reports/junit/
-            JEST_JUNIT_OUTPUT_NAME: junit-untagged-ids.xml
+            yarn test
       - store_test_results:
-          path: /tmp/reports/junit/
-      - store_artifacts:
-          path: /tmp/reports/junit/
+          path: ./artifacts
       - when:
           condition:
             and:

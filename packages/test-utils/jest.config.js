@@ -5,5 +5,11 @@ module.exports = {
   },
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   testEnvironment: "node",
-  maxConcurrency: 1,
+  reporters: [
+    "default",
+    [
+      "jest-junit",
+      { outputDirectory: "../../artifacts", outputName: "junit-test-utils.xml", usePathForSuiteName: "true" },
+    ],
+  ],
 };

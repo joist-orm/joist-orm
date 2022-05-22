@@ -6,5 +6,11 @@ module.exports = {
   // globalSetup: "<rootDir>/src/setupTestEnv.js",
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   testEnvironment: "node",
-  maxConcurrency: 1,
+  reporters: [
+    "default",
+    [
+      "jest-junit",
+      { outputDirectory: "../../artifacts", outputName: "junit-graphql-codegen.xml", usePathForSuiteName: "true" },
+    ],
+  ],
 };

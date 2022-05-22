@@ -9,4 +9,11 @@ module.exports = {
   testEnvironment: "node",
   maxConcurrency: 1,
   resetMocks: true,
+  reporters: [
+    "default",
+    [
+      "jest-junit",
+      { outputDirectory: "../../../artifacts", outputName: "junit-schema-misc.xml", usePathForSuiteName: "true" },
+    ],
+  ],
 };

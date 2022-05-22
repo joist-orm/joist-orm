@@ -1,3 +1,10 @@
+## [1.10.3](https://github.com/stephenh/joist-ts/compare/v1.10.2...v1.10.3) (2022-05-22)
+
+
+### Bug Fixes
+
+* Fix scaffolding order so that extends comes first. ([#328](https://github.com/stephenh/joist-ts/issues/328)) ([e890466](https://github.com/stephenh/joist-ts/commit/e890466032471889a25002929b8b5059d948be21))
+
 ## [1.10.2](https://github.com/stephenh/joist-ts/compare/v1.10.1...v1.10.2) (2022-05-21)
 
 

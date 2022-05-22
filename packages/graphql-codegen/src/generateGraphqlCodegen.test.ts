@@ -1,12 +1,13 @@
 import { EntityDbMetadata, EnumMetadata } from "joist-codegen";
+import { Code } from "ts-poet";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
 
 describe("generateGraphqlCodegen", () => {
-  it("creates a json file", () => {
+  it("creates a json file", async () => {
     const entities: EntityDbMetadata[] = [];
     const enums: EnumMetadata = {};
     const file = generateGraphqlCodegen(entities, enums);
-    expect(file.contents.toString()).toMatchInlineSnapshot(`
+    expect(await (file.contents as Code).toStringWithImports()).toMatchInlineSnapshot(`
       "const mappers = {};
 
       const enumValues = {};

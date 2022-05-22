@@ -226,14 +226,14 @@ describe("generateGraphqlSchemaFiles", () => {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input does not have the createdAt field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "type Author {
+      "extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
+
+      type Author {
         id: ID!
         firstName: String!
         createdAt: String!
-      }
-
-      extend type Mutation {
-        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
       }
 
       input SaveAuthorInput {
@@ -267,15 +267,15 @@ describe("generateGraphqlSchemaFiles", () => {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input has both both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-"type Author {
+"extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+}
+
+type Author {
   id: ID!
   firstName: String!
   createdAt: DateTime!
   startDate: Date!
-}
-
-extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
 }
 
 input SaveAuthorInput {
@@ -305,13 +305,13 @@ type SaveAuthorResult {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input has both both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-"type Author {
-  id: ID!
-  color: ColorDetail!
+"extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
 }
 
-extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+type Author {
+  id: ID!
+  color: ColorDetail!
 }
 
 input SaveAuthorInput {
@@ -339,13 +339,13 @@ type SaveAuthorResult {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input has both both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-"type Author {
-  id: ID!
-  color: [Color!]!
+"extend type Mutation {
+  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
 }
 
-extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+type Author {
+  id: ID!
+  color: [Color!]!
 }
 
 input SaveAuthorInput {

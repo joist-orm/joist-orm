@@ -1,3 +1,10 @@
+## [1.10.5](https://github.com/stephenh/joist-ts/compare/v1.10.4...v1.10.5) (2022-05-24)
+
+
+### Bug Fixes
+
+* Fix incorrect clone hasChanged against a non-new entity. ([#334](https://github.com/stephenh/joist-ts/issues/334)) ([8117599](https://github.com/stephenh/joist-ts/commit/8117599ab70e3a36ef30585597a1dd650411f645))
+
 ## [1.10.4](https://github.com/stephenh/joist-ts/compare/v1.10.3...v1.10.4) (2022-05-24)
 
 

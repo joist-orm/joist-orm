@@ -378,6 +378,11 @@ export class EntityManager<C = {}> {
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
       const { id, ...copy } = entity.__orm.data;
+      // Delete any keys that are undefined, b/c we're making a new entity, and Joist's infra
+      // doesn't expect `isNewEntity` entity to have `__orm.data` keys set to undefined
+      Object.entries(copy)
+        .filter(([, value]) => value === undefined)
+        .forEach(([key]) => delete copy[key]);
       const meta = getMetadata(entity);
       const clone = new meta.cstr(this, {} as any);
       clone.__orm.data = copy;

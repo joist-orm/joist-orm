@@ -1208,10 +1208,33 @@ describe("EntityManager", () => {
       "initials",
       "numberOfBooks",
     ]);
-
     // And if we revert the publisher
     a2.publisher.set(undefined);
     // Then it is no longer changed
+    expect(a2.changes.publisher.hasChanged).toBe(false);
+    expect(a2.changes.publisher.hasUpdated).toBe(false);
+    expect(a2.changes.publisher.originalValue).toBe(undefined);
+  });
+
+  it("can clone entities and report what has changed w/undefined m2o", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    // Given we load an existing entity
+    const a1 = await em.load(Author, "a:1");
+    // When we clone that entity
+    const a2 = await em.clone(a1);
+    // Then it is new
+    expect(a2.isNewEntity).toBe(true);
+    // And only the currently set fields look changed
+    expect(a2.changes.fields).toEqual([
+      "createdAt",
+      "updatedAt",
+      "firstName",
+      "initials",
+      "numberOfBooks",
+      "favoriteColors",
+    ]);
+    // And specifically the publisher is not changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
     expect(a2.changes.publisher.originalValue).toBe(undefined);

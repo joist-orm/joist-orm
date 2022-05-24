@@ -30,11 +30,13 @@ describe("Author", () => {
   it("can load author and books", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
+    const a2 = newAuthor(em);
     const b1 = newBook(em, { author: a1 });
+    const b2 = newBook(em, { author: a2 });
     await em.flush();
-
+    await em.refresh();
     const authors = await em.find(Author, {}, { populate: "books" });
 
-    expect(authors).toHaveLength(1);
+    expect(authors).toHaveLength(2);
   });
 });

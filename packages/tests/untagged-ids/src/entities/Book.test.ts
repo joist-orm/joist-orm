@@ -23,4 +23,16 @@ describe("Book", () => {
     b1.author.set(a2);
     await em.flush();
   });
+
+  it("can load author", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    const b1 = newBook(em, { author: a1 });
+    await em.flush();
+    await em.refresh();
+
+    const books = await em.find(Book, {}, { populate: "author" });
+
+    expect(books).toHaveLength(1);
+  });
 });

@@ -124,8 +124,8 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this._isLoaded || opts.forceReload) {
-      if (!this.entity.isNewEntity) {
-        this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idOrFail);
+      if (!this.entity.isNewEntity && this.entity.idTagged) {
+        this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idTagged);
       }
       this._isLoaded = true;
     }

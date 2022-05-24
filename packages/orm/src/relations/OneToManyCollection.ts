@@ -55,10 +55,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined || opts.forceReload) {
-      if (this.entity.id === undefined) {
+      if (this.entity.idTagged === undefined) {
         this.loaded = [];
       } else {
-        this.loaded = await oneToManyDataLoader(this.entity.em, this).load(this.entity.id);
+        this.loaded = await oneToManyDataLoader(this.entity.em, this).load(this.entity.idTagged);
       }
       this.maybeAppendAddedBeforeLoaded();
     }

@@ -1,3 +1,10 @@
+## [1.10.4](https://github.com/stephenh/joist-ts/compare/v1.10.3...v1.10.4) (2022-05-24)
+
+
+### Bug Fixes
+
+* Quote table names. ([#330](https://github.com/stephenh/joist-ts/issues/330)) ([f13a89c](https://github.com/stephenh/joist-ts/commit/f13a89c0345d9616ac61a149fb94229b795adad3)), closes [#329](https://github.com/stephenh/joist-ts/issues/329)
+
 ## [1.10.3](https://github.com/stephenh/joist-ts/compare/v1.10.2...v1.10.3) (2022-05-22)
 
 

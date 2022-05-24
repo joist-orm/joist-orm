@@ -16,7 +16,7 @@ describe("Author", () => {
 Array [
   "BEGIN;",
   "select nextval('authors_id_seq') from generate_series(1, 1)",
-  "INSERT INTO authors (\\"id\\", \\"firstName\\", \\"lastName\\", \\"createdAt\\", \\"updatedAt\\") VALUES ($1, $2, $3, $4, $5)",
+  "INSERT INTO \\"authors\\" (\\"id\\", \\"firstName\\", \\"lastName\\", \\"createdAt\\", \\"updatedAt\\") VALUES ($1, $2, $3, $4, $5)",
   "COMMIT;",
 ]
 `);

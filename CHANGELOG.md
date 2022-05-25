@@ -1,3 +1,10 @@
+## [1.10.6](https://github.com/stephenh/joist-ts/compare/v1.10.5...v1.10.6) (2022-05-25)
+
+
+### Bug Fixes
+
+* Bump dependencies ([#336](https://github.com/stephenh/joist-ts/issues/336)) ([5378810](https://github.com/stephenh/joist-ts/commit/5378810f80e589227a3f9fc490b24d6449ae5a2c))
+
 ## [1.10.5](https://github.com/stephenh/joist-ts/compare/v1.10.4...v1.10.5) (2022-05-24)
 
 

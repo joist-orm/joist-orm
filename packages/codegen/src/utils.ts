@@ -1,5 +1,5 @@
 import { pascalCase } from "change-case";
-import isPlainObject from "is-plain-object";
+import { isPlainObject } from "is-plain-object";
 import { Table } from "pg-structure";
 import pluralize from "pluralize";
 import { Config, getTimestampConfig } from "./config";

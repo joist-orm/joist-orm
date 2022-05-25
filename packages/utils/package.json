@@ -9,22 +9,22 @@
   ],
   "dependencies": {
     "pg": "^8.7.1",
-    "pg-connection-string": "^2.2.3"
+    "pg-connection-string": "^2.5.0"
   },
   "scripts": {
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "test": "jest"
   },
   "devDependencies": {
-    "@swc/core": "^1.2.124",
-    "@swc/jest": "^0.2.16",
+    "@swc/core": "^1.2.192",
+    "@swc/jest": "^0.2.21",
     "@types/jest": "^26.0.24",
-    "@types/node": "^16.4.10",
-    "jest": "^27.0.6",
-    "prettier": "^2.5.1",
+    "@types/node": "^16.11.36",
+    "jest": "^27.5.1",
+    "prettier": "^2.6.2",
     "prettier-plugin-organize-imports": "^2.3.4",
     "ts-node-dev": "^1.1.8",
-    "tsconfig-paths": "^3.10.1",
+    "tsconfig-paths": "^4.0.0",
     "typescript": "^4.7.2"
   }
 }

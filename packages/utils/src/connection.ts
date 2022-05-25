@@ -1,10 +1,19 @@
-import { ConnectionConfig } from "pg";
+import { ConnectionConfig as PgConnectionConfig } from "pg";
 import { parse } from "pg-connection-string";
 
 type DatabaseUrl = { DATABASE_URL: string };
 type DbSettings = { DB_USER: string; DB_PASSWORD: string; DB_HOST: string; DB_DATABASE: string; DB_PORT: string };
 
 export type ConnectionEnv = DatabaseUrl | DbSettings;
+
+/**
+ * A connection config with a dumb password.
+ *
+ * The `PgConnectionConfig` has a fancy password that can be a function/async, i.e. to like dynamically
+ * load it somehow; that's fine, but is more complex than knex expects, so we simplify it to "just a string",
+ * which is what we provide anyway.
+ */
+export type ConnectionConfig = Omit<PgConnectionConfig, "password"> & { password: string | undefined };
 
 /**
  * Returns the `ConnectionConfig` that joist will use to connect to pg.

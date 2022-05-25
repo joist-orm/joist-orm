@@ -8660,7 +8660,7 @@ __metadata:
     prism-react-renderer: ^1.2.1
     react: ^17.0.1
     react-dom: ^17.0.1
-    typescript: ^4.3.5
+    typescript: ^4.7.2
     url-loader: ^4.1.1
   languageName: unknown
   linkType: soft
@@ -12010,7 +12010,7 @@ __metadata:
     ts-node-dev: ^1.1.8
     ts-poet: ^4.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12033,7 +12033,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-poet: ^4.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12058,7 +12058,7 @@ __metadata:
     superstruct: ^0.15.2
     ts-node: ^10.1.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12081,7 +12081,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12105,7 +12105,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12121,7 +12121,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12146,7 +12146,7 @@ __metadata:
     superstruct: ^0.15.2
     ts-node: ^10.1.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12170,7 +12170,7 @@ __metadata:
     superstruct: ^0.15.2
     ts-node: ^10.1.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12194,7 +12194,7 @@ __metadata:
     superstruct: ^0.15.2
     ts-node: ^10.1.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12213,7 +12213,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12228,7 +12228,7 @@ __metadata:
     "@semantic-release/github": ^8.0.2
     "@semantic-release/release-notes-generator": ^10.0.3
     semantic-release: ^19.0.2
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -18487,23 +18487,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^4.3.5, typescript@npm:^4.5.2":
-  version: 4.5.2
-  resolution: "typescript@npm:4.5.2"
+"typescript@npm:^4.7.2":
+  version: 4.7.2
+  resolution: "typescript@npm:4.7.2"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 74f9ce65d532bdf5d0214b3f60cf37992180023388c87a11ee6f838a803067ef0b63c600fa501b0deb07f989257dce1e244c9635ed79feca40bbccf6e0aa1ebc
+  checksum: 5163585e6b56410f77d5483b698d9489bbee8902c99029eb70cf6d21525a186530ce19a00951af84eefd4a131cc51d0959f5118e25e70ab61f45ac4057dbd1ef
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@^4.3.5#~builtin<compat/typescript>, typescript@patch:typescript@^4.5.2#~builtin<compat/typescript>":
-  version: 4.5.2
-  resolution: "typescript@patch:typescript@npm%3A4.5.2#~builtin<compat/typescript>::version=4.5.2&hash=bda367"
+"typescript@patch:typescript@^4.7.2#~builtin<compat/typescript>":
+  version: 4.7.2
+  resolution: "typescript@patch:typescript@npm%3A4.7.2#~builtin<compat/typescript>::version=4.7.2&hash=bda367"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: e25e689eba64f7da7cfc43f8ea76cac7176b56caba42655f0a4cb29c0b7c36e67ca54f33df95902859f56108464245d8b45bcdfe21e3d66d9560feb8db780246
+  checksum: 09d93fc0983d38eadd9b0427f790b49b4437f45002a87d447be3fbe53120880e87a91dd03e1d900498f99205d6e0b7c9784fe41fca11d56f4bbce371f74bb160
   languageName: node
   linkType: hard
 

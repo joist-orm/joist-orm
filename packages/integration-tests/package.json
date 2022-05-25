@@ -36,6 +36,6 @@
     "superstruct": "^0.15.2",
     "ts-node": "^10.1.0",
     "tsconfig-paths": "^3.10.1",
-    "typescript": "^4.5.2"
+    "typescript": "^4.7.2"
   }
 }

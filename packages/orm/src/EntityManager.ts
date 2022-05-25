@@ -102,6 +102,7 @@ export interface Entity {
   id: string | undefined;
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: string | undefined;
+  idTaggedOrFail: string;
   idOrFail: string;
   __orm: EntityOrmField;
   readonly em: EntityManager<any>;

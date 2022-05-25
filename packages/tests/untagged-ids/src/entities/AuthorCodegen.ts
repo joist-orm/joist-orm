@@ -100,6 +100,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idTaggedOrFail(): AuthorId {
+    return this.idTagged || fail("Author has no id tagged yet");
+  }
+
   get firstName(): string {
     return this.__orm.data["firstName"];
   }

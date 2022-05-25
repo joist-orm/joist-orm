@@ -398,6 +398,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         return this.__orm.data["id"];
       }
 
+      get idTaggedOrFail(): ${entityName}Id {
+        return this.idTagged || ${failSymbol}("${entityName} has no id tagged yet");
+      }
+
       ${primitives}
 
       set(opts: Partial<${entityName}Opts>): void {

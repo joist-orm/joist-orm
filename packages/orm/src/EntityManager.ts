@@ -1295,25 +1295,27 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
 async function crawl<T extends Entity>(found: Entity[], entity: T, hint: LoadHint<T>): Promise<void> {
   found.push(entity);
   await Promise.all(
-    (Object.entries(adaptHint(hint)) as [keyof RelationsIn<T>, LoadHint<any>][]).map(async ([relationName, nested]) => {
-      const relation = entity[relationName];
-      if (relation instanceof OneToManyCollection) {
-        const relatedEntities = await relation.load();
-        await Promise.all(relatedEntities.map((entity) => crawl(found, entity, nested)));
-      } else if (relation instanceof OneToOneReferenceImpl) {
-        const related = await relation.load();
-        if (related) {
-          await crawl(found, related, nested);
+    (Object.entries(adaptHint(hint)) as [keyof RelationsIn<T> & string, LoadHint<any>][]).map(
+      async ([relationName, nested]) => {
+        const relation = entity[relationName];
+        if (relation instanceof OneToManyCollection) {
+          const relatedEntities = await relation.load();
+          await Promise.all(relatedEntities.map((entity) => crawl(found, entity, nested)));
+        } else if (relation instanceof OneToOneReferenceImpl) {
+          const related = await relation.load();
+          if (related) {
+            await crawl(found, related, nested);
+          }
+        } else if (relation instanceof ManyToOneReferenceImpl) {
+          const related = await relation.load();
+          if (related) {
+            await crawl(found, related, nested);
+          }
+        } else {
+          fail(`Uncloneable relation: ${relationName}`);
         }
-      } else if (relation instanceof ManyToOneReferenceImpl) {
-        const related = await relation.load();
-        if (related) {
-          await crawl(found, related, nested);
-        }
-      } else {
-        fail(`Uncloneable relation: ${relationName}`);
-      }
-    }),
+      },
+    ),
   );
 }
 

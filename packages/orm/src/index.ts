@@ -64,7 +64,7 @@ interface Flavoring<FlavorT> {
 }
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
-export function setField<T extends Entity>(entity: T, fieldName: keyof T, newValue: any): boolean {
+export function setField<T extends Entity>(entity: T, fieldName: keyof T & string, newValue: any): boolean {
   ensureNotDeleted(entity, { ignore: "pending" });
   const { em } = entity;
 

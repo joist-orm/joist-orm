@@ -8,10 +8,10 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `ManyToManyLargeCollection`s. */
 export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
-  fieldName: keyof T,
+  fieldName: keyof T & string,
   columnName: string,
   otherMeta: EntityMetadata<U>,
-  otherFieldName: keyof U,
+  otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
   const entity = currentlyInstantiatingEntity as T;
@@ -40,10 +40,10 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     // otherFieldName = books, how tags points to us
     // otherColumnName = tag_id, how the other side finds its join table rows
     public entity: T,
-    public fieldName: keyof T,
+    public fieldName: keyof T & string,
     public columnName: string,
     public otherMeta: EntityMetadata<U>,
-    public otherFieldName: keyof U,
+    public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {}
 

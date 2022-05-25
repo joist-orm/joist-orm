@@ -16,10 +16,10 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
-  fieldName: keyof T,
+  fieldName: keyof T & string,
   columnName: string,
   otherMeta: EntityMetadata<U>,
-  otherFieldName: keyof U,
+  otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
   const entity = currentlyInstantiatingEntity as T;
@@ -51,10 +51,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     // otherFieldName = books, how tags points to us
     // otherColumnName = tag_id, how the other side finds its join table rows
     public entity: T,
-    public fieldName: keyof T,
+    public fieldName: keyof T & string,
     public columnName: string,
     public otherMeta: EntityMetadata<U>,
-    public otherFieldName: keyof U,
+    public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
     super();

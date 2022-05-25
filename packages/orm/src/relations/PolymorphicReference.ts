@@ -24,7 +24,7 @@ import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
 export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
-  fieldName: keyof T,
+  fieldName: keyof T & string,
 ): PolymorphicReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
   return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
@@ -71,7 +71,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   private _isLoaded = false;
   private field: PolymorphicField;
 
-  constructor(private entity: T, private fieldName: keyof T) {
+  constructor(private entity: T, private fieldName: keyof T & string) {
     super();
     this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
   }

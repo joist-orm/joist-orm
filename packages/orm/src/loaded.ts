@@ -124,8 +124,8 @@ type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyo
 
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
 export type LoadHint<T extends Entity> =
-  | keyof Loadable<T>
-  | ReadonlyArray<keyof Loadable<T>>
+  | (keyof Loadable<T> & string)
+  | ReadonlyArray<keyof Loadable<T> & string>
   // If `T` has no loadable keys, this will be `{}`, and because `"foo" extends {}`, this
   // essentially breaks type-checking of string-based load hints. However, if we try to
   // check `if NestedLoadHint === {} ? never`, then passing in `{}` as a terminal load

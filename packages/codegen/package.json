@@ -17,24 +17,24 @@
   ],
   "dependencies": {
     "@types/pluralize": "0.0.29",
-    "change-case": "^4.1.1",
-    "is-plain-object": "^3.0.1",
+    "change-case": "^4.1.2",
+    "is-plain-object": "^5.0.0",
     "joist-utils": "workspace:*",
     "knex": "^1.0.7",
     "pg": "^8.7.1",
     "pg-structure": "^7.13.0",
     "pluralize": "^8.0.0",
-    "ts-poet": "^4.8.0"
+    "ts-poet": "^4.11.0"
   },
   "devDependencies": {
-    "@swc/jest": "^0.2.16",
+    "@swc/jest": "^0.2.21",
     "@types/jest": "^26.0.24",
-    "@types/node": "^16.4.10",
-    "jest": "^27.0.6",
-    "prettier": "^2.5.1",
+    "@types/node": "^16.11.36",
+    "jest": "^27.5.1",
+    "prettier": "^2.6.2",
     "prettier-plugin-organize-imports": "^2.3.4",
     "ts-node-dev": "^1.1.8",
-    "tsconfig-paths": "^3.10.1",
+    "tsconfig-paths": "^4.0.0",
     "typescript": "^4.7.2"
   }
 }

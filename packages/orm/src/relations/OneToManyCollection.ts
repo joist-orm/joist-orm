@@ -19,8 +19,8 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
   otherMeta: EntityMetadata<U>,
-  fieldName: keyof T,
-  otherFieldName: keyof U,
+  fieldName: keyof T & string,
+  otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
   const entity = currentlyInstantiatingEntity as T;
@@ -43,8 +43,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     // These are public to our internal implementation but not exposed in the Collection API
     public entity: T,
     public otherMeta: EntityMetadata<U>,
-    public fieldName: keyof T,
-    public otherFieldName: keyof U,
+    public fieldName: keyof T & string,
+    public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
     super();

@@ -18,8 +18,8 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
   otherMeta: EntityMetadata<U>,
-  fieldName: keyof T,
-  otherFieldName: keyof U,
+  fieldName: keyof T & string,
+  otherFieldName: keyof U & string,
 ): ManyToOneReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
   return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
@@ -70,8 +70,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   constructor(
     private entity: T,
     public otherMeta: EntityMetadata<U>,
-    private fieldName: keyof T,
-    public otherFieldName: keyof U,
+    private fieldName: keyof T & string,
+    public otherFieldName: keyof U & string,
   ) {
     super();
     this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);

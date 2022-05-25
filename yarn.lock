@@ -3229,6 +3229,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@cspotcode/source-map-support@npm:^0.8.0":
+  version: 0.8.1
+  resolution: "@cspotcode/source-map-support@npm:0.8.1"
+  dependencies:
+    "@jridgewell/trace-mapping": 0.3.9
+  checksum: 5718f267085ed8edb3e7ef210137241775e607ee18b77d95aa5bd7514f47f5019aa2d82d96b3bf342ef7aa890a346fa1044532ff7cc3009e7d24fce3ce6200fa
+  languageName: node
+  linkType: hard
+
 "@docsearch/css@npm:3.0.0-alpha.41":
   version: 3.0.0-alpha.41
   resolution: "@docsearch/css@npm:3.0.0-alpha.41"
@@ -4013,6 +4022,16 @@ __metadata:
   version: 1.4.11
   resolution: "@jridgewell/sourcemap-codec@npm:1.4.11"
   checksum: 3b2afaf8400fb07a36db60e901fcce6a746cdec587310ee9035939d89878e57b2dec8173b0b8f63176f647efa352294049a53c49739098eb907ff81fec2547c8
+  languageName: node
+  linkType: hard
+
+"@jridgewell/trace-mapping@npm:0.3.9":
+  version: 0.3.9
+  resolution: "@jridgewell/trace-mapping@npm:0.3.9"
+  dependencies:
+    "@jridgewell/resolve-uri": ^3.0.3
+    "@jridgewell/sourcemap-codec": ^1.4.10
+  checksum: d89597752fd88d3f3480845691a05a44bd21faac18e2185b6f436c3b0fd0c5a859fbbd9aaa92050c4052caf325ad3e10e2e1d1b64327517471b7d51babc0ddef
   languageName: node
   linkType: hard
 
@@ -5159,7 +5178,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tsconfig/node16@npm:^1.0.1":
+"@tsconfig/node16@npm:^1.0.2":
   version: 1.0.2
   resolution: "@tsconfig/node16@npm:1.0.2"
   checksum: ca94d3639714672bbfd55f03521d3f56bb6a25479bd425da81faf21f13e1e9d15f40f97377dedbbf477a5841c5b0c8f4cd1b391f33553d750b9202c54c2c07aa
@@ -5982,7 +6001,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"acorn-walk@npm:^8.0.0":
+"acorn-walk@npm:^8.0.0, acorn-walk@npm:^8.1.1":
   version: 8.2.0
   resolution: "acorn-walk@npm:8.2.0"
   checksum: 1715e76c01dd7b2d4ca472f9c58968516a4899378a63ad5b6c2d668bba8da21a71976c14ec5f5b75f887b6317c4ae0b897ab141c831d741dc76024d8745f1ad1
@@ -8660,7 +8679,7 @@ __metadata:
     prism-react-renderer: ^1.2.1
     react: ^17.0.1
     react-dom: ^17.0.1
-    typescript: ^4.3.5
+    typescript: ^4.7.2
     url-loader: ^4.1.1
   languageName: unknown
   linkType: soft
@@ -12010,7 +12029,7 @@ __metadata:
     ts-node-dev: ^1.1.8
     ts-poet: ^4.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12033,7 +12052,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-poet: ^4.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12056,9 +12075,9 @@ __metadata:
     prettier: ^2.5.1
     prettier-plugin-organize-imports: ^2.3.4
     superstruct: ^0.15.2
-    ts-node: ^10.1.0
+    ts-node: ^10.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12081,7 +12100,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12105,7 +12124,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12121,7 +12140,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12144,9 +12163,9 @@ __metadata:
     prettier: ^2.5.1
     prettier-plugin-organize-imports: ^2.3.4
     superstruct: ^0.15.2
-    ts-node: ^10.1.0
+    ts-node: ^10.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12168,9 +12187,9 @@ __metadata:
     prettier: ^2.5.1
     prettier-plugin-organize-imports: ^2.3.4
     superstruct: ^0.15.2
-    ts-node: ^10.1.0
+    ts-node: ^10.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12192,9 +12211,9 @@ __metadata:
     prettier: ^2.5.1
     prettier-plugin-organize-imports: ^2.3.4
     superstruct: ^0.15.2
-    ts-node: ^10.1.0
+    ts-node: ^10.8.0
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12213,7 +12232,7 @@ __metadata:
     prettier-plugin-organize-imports: ^2.3.4
     ts-node-dev: ^1.1.8
     tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -12228,7 +12247,7 @@ __metadata:
     "@semantic-release/github": ^8.0.2
     "@semantic-release/release-notes-generator": ^10.0.3
     semantic-release: ^19.0.2
-    typescript: ^4.5.2
+    typescript: ^4.7.2
   languageName: unknown
   linkType: soft
 
@@ -18301,19 +18320,22 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-node@npm:^10.1.0":
-  version: 10.1.0
-  resolution: "ts-node@npm:10.1.0"
+"ts-node@npm:^10.8.0":
+  version: 10.8.0
+  resolution: "ts-node@npm:10.8.0"
   dependencies:
+    "@cspotcode/source-map-support": ^0.8.0
     "@tsconfig/node10": ^1.0.7
     "@tsconfig/node12": ^1.0.7
     "@tsconfig/node14": ^1.0.0
-    "@tsconfig/node16": ^1.0.1
+    "@tsconfig/node16": ^1.0.2
+    acorn: ^8.4.1
+    acorn-walk: ^8.1.1
     arg: ^4.1.0
     create-require: ^1.1.0
     diff: ^4.0.1
     make-error: ^1.1.1
-    source-map-support: ^0.5.17
+    v8-compile-cache-lib: ^3.0.1
     yn: 3.1.1
   peerDependencies:
     "@swc/core": ">=1.2.50"
@@ -18328,10 +18350,11 @@ __metadata:
   bin:
     ts-node: dist/bin.js
     ts-node-cwd: dist/bin-cwd.js
+    ts-node-esm: dist/bin-esm.js
     ts-node-script: dist/bin-script.js
     ts-node-transpile-only: dist/bin-transpile.js
     ts-script: dist/bin-script-deprecated.js
-  checksum: 96979e9a81f801733195fbfe2db540e7d223f1b0affbd29c9c2d346ef3879a8c3c562cab9ef712b96b624905b9a0f31b12fd5b6f9e087fcd6038df253b104cf2
+  checksum: 1c22dc8dd80d0ba4dd4250b82cc032b63f6fbe8c87f8197cef43e7f9e2d43f5b333b445ed712e3006e24119257b4bff2c46605f7da61ab6f5e9514885d296f0c
   languageName: node
   linkType: hard
 
@@ -18487,23 +18510,23 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:^4.3.5, typescript@npm:^4.5.2":
-  version: 4.5.2
-  resolution: "typescript@npm:4.5.2"
+"typescript@npm:^4.7.2":
+  version: 4.7.2
+  resolution: "typescript@npm:4.7.2"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: 74f9ce65d532bdf5d0214b3f60cf37992180023388c87a11ee6f838a803067ef0b63c600fa501b0deb07f989257dce1e244c9635ed79feca40bbccf6e0aa1ebc
+  checksum: 5163585e6b56410f77d5483b698d9489bbee8902c99029eb70cf6d21525a186530ce19a00951af84eefd4a131cc51d0959f5118e25e70ab61f45ac4057dbd1ef
   languageName: node
   linkType: hard
 
-"typescript@patch:typescript@^4.3.5#~builtin<compat/typescript>, typescript@patch:typescript@^4.5.2#~builtin<compat/typescript>":
-  version: 4.5.2
-  resolution: "typescript@patch:typescript@npm%3A4.5.2#~builtin<compat/typescript>::version=4.5.2&hash=bda367"
+"typescript@patch:typescript@^4.7.2#~builtin<compat/typescript>":
+  version: 4.7.2
+  resolution: "typescript@patch:typescript@npm%3A4.7.2#~builtin<compat/typescript>::version=4.7.2&hash=bda367"
   bin:
     tsc: bin/tsc
     tsserver: bin/tsserver
-  checksum: e25e689eba64f7da7cfc43f8ea76cac7176b56caba42655f0a4cb29c0b7c36e67ca54f33df95902859f56108464245d8b45bcdfe21e3d66d9560feb8db780246
+  checksum: 09d93fc0983d38eadd9b0427f790b49b4437f45002a87d447be3fbe53120880e87a91dd03e1d900498f99205d6e0b7c9784fe41fca11d56f4bbce371f74bb160
   languageName: node
   linkType: hard
 
@@ -18934,6 +18957,13 @@ __metadata:
   bin:
     uuid: dist/bin/uuid
   checksum: 5575a8a75c13120e2f10e6ddc801b2c7ed7d8f3c8ac22c7ed0c7b2ba6383ec0abda88c905085d630e251719e0777045ae3236f04c812184b7c765f63a70e58df
+  languageName: node
+  linkType: hard
+
+"v8-compile-cache-lib@npm:^3.0.1":
+  version: 3.0.1
+  resolution: "v8-compile-cache-lib@npm:3.0.1"
+  checksum: 78089ad549e21bcdbfca10c08850022b22024cdcc2da9b168bcf5a73a6ed7bf01a9cebb9eac28e03cd23a684d81e0502797e88f3ccd27a32aeab1cfc44c39da0
   languageName: node
   linkType: hard
 

@@ -1252,6 +1252,7 @@ describe("EntityManager", () => {
     expect(a2.comments.get.length).toBe(2);
     expect(a2.comments.get[0].id).toBe("comment:3");
     expect(a2.comments.get[1].id).toBe("comment:4");
+    expect(a2.comments.get[0].parent.get).toBe(a2);
   });
 
   it("can touch an entity to force it to be flushed", async () => {

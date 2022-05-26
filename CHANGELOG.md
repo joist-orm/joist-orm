@@ -1,3 +1,10 @@
+## [1.10.7](https://github.com/stephenh/joist-ts/compare/v1.10.6...v1.10.7) (2022-05-26)
+
+
+### Bug Fixes
+
+* Export ConnectionConfig. ([#337](https://github.com/stephenh/joist-ts/issues/337)) ([1196a56](https://github.com/stephenh/joist-ts/commit/1196a5655b004c8a37c7ad76a9cff0dea7894973))
+
 ## [1.10.6](https://github.com/stephenh/joist-ts/compare/v1.10.5...v1.10.6) (2022-05-25)
 
 

@@ -130,8 +130,6 @@ export function addColumns(b: MigrationBuilder, tableName: string, columns: Colu
   });
 }
 
-
 export function fail(message?: string): never {
   throw new Error(message || "Failed");
 }
-

@@ -1240,6 +1240,20 @@ describe("EntityManager", () => {
     expect(a2.changes.publisher.originalValue).toBe(undefined);
   });
 
+  it("can clone polymorphic references", async () => {
+    const em = newEntityManager();
+    // Given an entity that is a polymorphic parent of two children
+    const a1 = newAuthor(em, { comments: [{}, {}] });
+    await em.flush();
+    // When we clone the entity
+    const a2 = await em.clone(a1, "comments");
+    await em.flush();
+    // Then we expect the cloned entity to have cloned copies of all its nested references
+    expect(a2.comments.get.length).toBe(2);
+    expect(a2.comments.get[0].id).toBe("comment:3");
+    expect(a2.comments.get[1].id).toBe("comment:4");
+  });
+
   it("can touch an entity to force it to be flushed", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

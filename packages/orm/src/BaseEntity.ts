@@ -51,6 +51,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
 
   /** @returns the current entity id or a runtime error if it's unassigned, i.e. it's not been assigned from the db yet. */
   abstract get idOrFail(): string;
+  abstract get idTaggedOrFail(): string;
 
   get isNewEntity(): boolean {
     return this.__orm.isNew;

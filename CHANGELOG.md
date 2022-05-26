@@ -1,3 +1,10 @@
+## [1.10.8](https://github.com/stephenh/joist-ts/compare/v1.10.7...v1.10.8) (2022-05-26)
+
+
+### Bug Fixes
+
+* Fix cloning polymorphic references. ([#338](https://github.com/stephenh/joist-ts/issues/338)) ([ba5f46b](https://github.com/stephenh/joist-ts/commit/ba5f46b1f0ab7d098b1cba7329c1b94ee25625c8)), closes [#333](https://github.com/stephenh/joist-ts/issues/333)
+
 ## [1.10.7](https://github.com/stephenh/joist-ts/compare/v1.10.6...v1.10.7) (2022-05-26)
 
 

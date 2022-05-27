@@ -1,3 +1,10 @@
+## [1.10.10](https://github.com/stephenh/joist-ts/compare/v1.10.9...v1.10.10) (2022-05-27)
+
+
+### Bug Fixes
+
+* import type entity manager ([#339](https://github.com/stephenh/joist-ts/issues/339)) ([cf6c75d](https://github.com/stephenh/joist-ts/commit/cf6c75dd8e273de93d03352d55fa02898565249c))
+
 ## [1.10.9](https://github.com/stephenh/joist-ts/compare/v1.10.8...v1.10.9) (2022-05-27)
 
 

@@ -14,7 +14,6 @@ import {
   EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityManager,
   EntityOrmField,
   EnumGraphQLFilter,
   fail as failSymbol,
@@ -328,6 +327,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities`);
+  const EntityManager = imp("t:EntityManager@./entities");
 
   const idCode =
     config.idType === "untagged-string"

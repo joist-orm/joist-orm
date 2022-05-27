@@ -30,7 +30,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { EntityManager } from "src/entities";
+import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,

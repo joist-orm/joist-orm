@@ -35,9 +35,9 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { EntityManager } from "src/entities";
 import { Address, address } from "src/entities/types";
 import { assert } from "superstruct";
+import type { EntityManager } from "./entities";
 import {
   Author,
   authorMeta,

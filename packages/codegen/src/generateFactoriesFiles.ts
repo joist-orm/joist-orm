@@ -1,8 +1,10 @@
 import { pascalCase } from "change-case";
-import { code } from "ts-poet";
+import { code, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import { CodeGenFile } from "./index";
-import { DeepNew, EntityManager, FactoryOpts, newTestInstance } from "./symbols";
+import { DeepNew, FactoryOpts, newTestInstance } from "./symbols";
+
+const EntityManager = imp("t:EntityManager@./entities");
 
 export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodeGenFile[] {
   // One-time create an Author.factories.ts for each entity

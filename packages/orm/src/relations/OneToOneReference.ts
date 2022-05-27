@@ -125,7 +125,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (!this._isLoaded || opts.forceReload) {
       if (!this.entity.isNewEntity) {
-        this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idOrFail);
+        this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idTaggedOrFail);
       }
       this._isLoaded = true;
     }

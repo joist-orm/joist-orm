@@ -128,6 +128,10 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idTaggedOrFail(): AuthorStatId {
+    return this.idTagged || fail("AuthorStat has no id tagged yet");
+  }
+
   get smallint(): number {
     return this.__orm.data["smallint"];
   }

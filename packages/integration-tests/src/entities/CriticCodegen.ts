@@ -106,6 +106,10 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idTaggedOrFail(): CriticId {
+    return this.idTagged || fail("Critic has no id tagged yet");
+  }
+
   get name(): string {
     return this.__orm.data["name"];
   }

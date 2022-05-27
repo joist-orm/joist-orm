@@ -175,6 +175,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idTaggedOrFail(): PublisherId {
+    return this.idTagged || fail("Publisher has no id tagged yet");
+  }
+
   get name(): string {
     return this.__orm.data["name"];
   }

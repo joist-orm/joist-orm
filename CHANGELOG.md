@@ -1,3 +1,10 @@
+## [1.10.9](https://github.com/stephenh/joist-ts/compare/v1.10.8...v1.10.9) (2022-05-27)
+
+
+### Bug Fixes
+
+* untagged association ([#332](https://github.com/stephenh/joist-ts/issues/332)) ([6486d2f](https://github.com/stephenh/joist-ts/commit/6486d2fa4de057a601fa5e66b86b6e281089f2dd))
+
 ## [1.10.8](https://github.com/stephenh/joist-ts/compare/v1.10.7...v1.10.8) (2022-05-26)
 
 

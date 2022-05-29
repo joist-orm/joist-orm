@@ -1,4 +1,6 @@
-import { Entity, EntityConstructor, getMetadata } from "./EntityManager";
+import { Entity } from "./Entity";
+import { EntityConstructor } from "./EntityManager";
+import { getMetadata } from "./EntityMetadata";
 import { LoadHint } from "./loaded";
 import { fail } from "./utils";
 

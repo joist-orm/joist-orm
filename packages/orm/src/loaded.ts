@@ -1,4 +1,5 @@
-import { Entity, OptsOf } from "./EntityManager";
+import { Entity } from "./Entity";
+import { OptsOf } from "./EntityManager";
 import {
   AsyncProperty,
   Collection,

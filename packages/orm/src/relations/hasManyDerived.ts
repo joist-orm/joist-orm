@@ -1,5 +1,5 @@
 import { Collection, currentlyInstantiatingEntity } from "../";
-import { Entity } from "../EntityManager";
+import { Entity } from "../Entity";
 import { Loaded, LoadHint } from "../loaded";
 import { CustomCollection } from "./CustomCollection";
 

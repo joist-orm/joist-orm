@@ -1,4 +1,4 @@
-import { Entity } from "../EntityManager";
+import { Entity } from "../Entity";
 import { isCollection } from "./Collection";
 import { isReference } from "./Reference";
 

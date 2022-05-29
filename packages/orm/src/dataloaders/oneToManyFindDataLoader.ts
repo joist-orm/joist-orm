@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
-import { Entity, EntityManager, IdOf } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityManager, IdOf } from "../EntityManager";
 import { OneToManyCollection, OneToManyLargeCollection } from "../index";
 import { getOrSet } from "../utils";
 

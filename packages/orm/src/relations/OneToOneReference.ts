@@ -1,6 +1,7 @@
 import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, IdOf, LoadedReference, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
-import { Entity, EntityMetadata, getMetadata } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";

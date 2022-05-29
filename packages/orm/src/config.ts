@@ -1,4 +1,4 @@
-import { Entity } from "./EntityManager";
+import { Entity } from "./Entity";
 import { Loaded, LoadHint, RelationsIn } from "./index";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ValidationRule } from "./rules";

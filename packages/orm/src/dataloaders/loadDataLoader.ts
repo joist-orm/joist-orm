@@ -1,5 +1,7 @@
 import DataLoader from "dataloader";
-import { Entity, EntityManager, EntityMetadata } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityManager } from "../EntityManager";
+import { EntityMetadata } from "../EntityMetadata";
 import { assertIdsAreTagged, deTagIds } from "../keys";
 import { getOrSet, indexBy } from "../utils";
 

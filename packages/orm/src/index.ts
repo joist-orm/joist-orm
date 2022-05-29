@@ -1,20 +1,6 @@
-import {
-  currentFlushSecret,
-  Entity,
-  EntityConstructor,
-  EntityManager,
-  EntityMetadata,
-  EntityOrmField,
-  Field,
-  getMetadata,
-  isEntity,
-  ManyToManyField,
-  ManyToOneField,
-  OneToManyField,
-  OneToOneField,
-  OptsOf,
-  PolymorphicField,
-} from "./EntityManager";
+import { Entity, EntityOrmField, isEntity } from "./Entity";
+import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -27,7 +13,9 @@ export * from "./changes";
 export { ConfigApi, EntityHook } from "./config";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
+export { Entity, EntityOrmField, isEntity } from "./Entity";
 export * from "./EntityManager";
+export * from "./EntityMetadata";
 export * from "./getProperties";
 export * from "./keys";
 export {
@@ -284,32 +272,4 @@ function equalOrSameEntity(a: any, b: any): boolean {
 
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
-}
-
-export function isOneToManyField(ormField: Field): ormField is OneToManyField {
-  return ormField.kind === "o2m";
-}
-
-export function isManyToOneField(ormField: Field): ormField is ManyToOneField {
-  return ormField.kind === "m2o";
-}
-
-export function isManyToManyField(ormField: Field): ormField is ManyToManyField {
-  return ormField.kind === "m2m";
-}
-
-export function isOneToOneField(ormField: Field): ormField is OneToOneField {
-  return ormField.kind === "o2o";
-}
-
-export function isPolymorphicField(ormField: Field): ormField is PolymorphicField {
-  return ormField.kind === "poly";
-}
-
-export function isReferenceField(ormField: Field): ormField is ManyToOneField | OneToOneField | PolymorphicField {
-  return ormField.kind === "m2o" || ormField.kind === "o2o" || ormField.kind === "poly";
-}
-
-export function isCollectionField(ormField: Field): ormField is OneToManyField | ManyToManyField {
-  return ormField.kind === "o2m" || ormField.kind === "m2m";
 }

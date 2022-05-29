@@ -1,4 +1,5 @@
-import { Entity, IdOf } from "../EntityManager";
+import { Entity } from "../Entity";
+import { IdOf } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";

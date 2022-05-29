@@ -1,6 +1,8 @@
 import { Knex } from "knex";
 import { ManyToManyLargeCollection, OneToManyLargeCollection } from "src/relations";
-import { Entity, EntityConstructor, EntityManager, EntityMetadata } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityConstructor, EntityManager } from "../EntityManager";
+import { EntityMetadata } from "../EntityMetadata";
 import { FilterAndSettings } from "../QueryBuilder";
 import { JoinRow, ManyToManyCollection } from "../relations/ManyToManyCollection";
 import { OneToManyCollection } from "../relations/OneToManyCollection";

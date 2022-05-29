@@ -1,5 +1,7 @@
 import DataLoader from "dataloader";
-import { Entity, EntityManager, getMetadata } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityManager } from "../EntityManager";
+import { getMetadata } from "../EntityMetadata";
 import { assertIdsAreTagged, deTagIds, maybeResolveReferenceToId } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
 import { getOrSet, groupBy } from "../utils";

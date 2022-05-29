@@ -1,4 +1,4 @@
-import { Field, PolymorphicField, SerdeField } from "./EntityManager";
+import { Field, PolymorphicField, SerdeField } from "./EntityMetadata";
 import {
   EntityMetadata,
   getConstructorFromTaggedId,

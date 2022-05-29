@@ -1,5 +1,6 @@
 /** The operations for a given entity type, so they can be executed in bulk. */
-import { Entity, EntityMetadata, getMetadata } from "./EntityManager";
+import { Entity } from "./Entity";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { ManyToManyCollection } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 

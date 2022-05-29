@@ -1,4 +1,5 @@
-import { Entity, IdOf, isEntity, isId, OptsOf } from "./EntityManager";
+import { Entity, isEntity } from "./Entity";
+import { IdOf, isId, OptsOf } from "./EntityManager";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {

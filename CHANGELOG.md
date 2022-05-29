@@ -1,3 +1,10 @@
+# [1.11.0](https://github.com/stephenh/joist-ts/compare/v1.10.10...v1.11.0) (2022-05-29)
+
+
+### Features
+
+* Upstream cannotBeUpdated. ([#340](https://github.com/stephenh/joist-ts/issues/340)) ([fc08af1](https://github.com/stephenh/joist-ts/commit/fc08af17464a76943550b59b10c760df4ee2252b))
+
 ## [1.10.10](https://github.com/stephenh/joist-ts/compare/v1.10.9...v1.10.10) (2022-05-27)
 
 

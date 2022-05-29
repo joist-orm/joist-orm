@@ -1,11 +1,6 @@
-import {
-  currentlyInstantiatingEntity,
-  Entity,
-  getMetadata,
-  IdOf,
-  isEntity,
-  PolymorphicFieldComponent,
-} from "../EntityManager";
+import { Entity, isEntity } from "../Entity";
+import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
+import { getMetadata, PolymorphicFieldComponent } from "../EntityMetadata";
 import {
   deTagId,
   ensureNotDeleted,

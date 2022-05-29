@@ -1,4 +1,5 @@
-import { Entity, IdOf } from "../EntityManager";
+import { Entity } from "../Entity";
+import { IdOf } from "../EntityManager";
 import { CustomCollection } from "./CustomCollection";
 import { ManyToManyCollection } from "./ManyToManyCollection";
 import { OneToManyCollection } from "./OneToManyCollection";

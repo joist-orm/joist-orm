@@ -1,4 +1,5 @@
-import { Entity, IdOf } from "../EntityManager";
+import { Entity } from "../Entity";
+import { IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";

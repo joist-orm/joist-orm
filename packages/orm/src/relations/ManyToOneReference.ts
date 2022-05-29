@@ -1,4 +1,6 @@
-import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf, isEntity, sameEntity } from "../EntityManager";
+import { Entity, isEntity } from "../Entity";
+import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
+import { EntityMetadata } from "../EntityMetadata";
 import {
   deTagIds,
   ensureNotDeleted,

@@ -1,14 +1,6 @@
-import {
-  Entity,
-  EntityConstructor,
-  EntityManager,
-  getMetadata,
-  IdOf,
-  isEntity,
-  isKey,
-  OptIdsOf,
-  OptsOf,
-} from "./EntityManager";
+import { Entity, isEntity } from "./Entity";
+import { EntityConstructor, EntityManager, IdOf, isKey, OptIdsOf, OptsOf } from "./EntityManager";
+import { getMetadata } from "./EntityMetadata";
 import { getConstructorFromTaggedId, PartialOrNull } from "./index";
 import { NullOrDefinedOr } from "./utils";
 

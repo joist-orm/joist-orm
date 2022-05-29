@@ -1,6 +1,6 @@
 import { capitalCase } from "change-case";
 import { Changes, EntityChanges } from "./changes";
-import { Entity } from "./EntityManager";
+import { Entity } from "./Entity";
 import { MaybePromise, maybePromiseThen } from "./utils";
 
 /**

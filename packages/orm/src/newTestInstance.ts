@@ -1,23 +1,19 @@
 import { isPlainObject } from "is-plain-object";
+import { Entity, isEntity } from "./Entity";
+import { ActualFactoryOpts, EntityConstructor, EntityManager, IdOf, isId, OptsOf } from "./EntityManager";
 import {
-  ActualFactoryOpts,
-  Entity,
-  EntityConstructor,
-  EntityManager,
   EntityMetadata,
   getMetadata,
-  IdOf,
-  isEntity,
-  isId,
+  isManyToOneField,
+  isOneToOneField,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
-  OptsOf,
   PolymorphicField,
   PrimitiveField,
-} from "./EntityManager";
-import { DeepNew, isManyToOneField, isOneToOneField, New } from "./index";
+} from "./EntityMetadata";
+import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
 import { assertNever, fail } from "./utils";
 

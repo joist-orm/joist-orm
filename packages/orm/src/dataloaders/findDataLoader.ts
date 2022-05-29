@@ -1,6 +1,7 @@
 import DataLoader from "dataloader";
 import hash from "object-hash";
-import { Entity, EntityConstructor, EntityManager, isEntity } from "../EntityManager";
+import { Entity, isEntity } from "../Entity";
+import { EntityConstructor, EntityManager } from "../EntityManager";
 import { FilterAndSettings } from "../QueryBuilder";
 import { getOrSet } from "../utils";
 

@@ -1,5 +1,5 @@
-import { Entity } from "src/EntityManager";
-import { New } from "src/loaded";
+import { Entity } from "./Entity";
+import { New } from "./loaded";
 
 export type MaybePromise<T> = T | Promise<T>;
 

@@ -1,5 +1,7 @@
 import { Knex } from "knex";
-import { Entity, EntityConstructor, entityLimit, EntityManager, EntityMetadata, getMetadata } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager";
+import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
 import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";

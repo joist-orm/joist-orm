@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
-import { Entity, EntityManager } from "../EntityManager";
+import { Entity } from "../Entity";
+import { EntityManager } from "../EntityManager";
 import { keyToString, ManyToManyCollection } from "../index";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { getOrSet } from "../utils";

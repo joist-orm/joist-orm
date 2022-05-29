@@ -1,16 +1,8 @@
 import { groupBy } from "joist-utils";
 import { Knex } from "knex";
-import {
-  Entity,
-  EntityConstructor,
-  entityLimit,
-  EntityMetadata,
-  FilterOf,
-  getMetadata,
-  isEntity,
-  OrderOf,
-  PolymorphicField,
-} from "./EntityManager";
+import { Entity, isEntity } from "./Entity";
+import { EntityConstructor, entityLimit, FilterOf, OrderOf } from "./EntityManager";
+import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
 import {
   Column,
   getConstructorFromTaggedId,

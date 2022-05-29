@@ -1,5 +1,6 @@
+import { Entity } from "./Entity";
 import * as EM from "./EntityManager";
-import { Entity, EntityMetadata } from "./EntityManager";
+import { EntityMetadata } from "./EntityMetadata";
 
 // Hack to make currentlyInstantiatingEntity assignable
 const em = EM;

@@ -5,23 +5,22 @@ import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
+import { Entity, isEntity } from "./Entity";
 import {
   assertIdsAreTagged,
-  ConfigApi,
   CustomCollection,
   CustomReference,
-  DeepNew,
   DeepPartialOrNull,
   EntityHook,
-  FieldSerde,
+  EntityMetadata,
   GenericError,
   getConstructorFromTaggedId,
+  getMetadata,
   getRelations,
   keyToString,
   maybeResolveReferenceToId,
   OneToManyCollection,
   PartialOrNull,
-  PolymorphicKeySerde,
   PolymorphicReferenceImpl,
   setField,
   setOpts,
@@ -73,50 +72,10 @@ export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
 }
 
-/** The `__orm` metadata field we track on each instance. */
-export interface EntityOrmField {
-  /** A point to our entity type's metadata. */
-  metadata: EntityMetadata<Entity>;
-  /** A bag for our primitives/fk column values. */
-  data: Record<any, any>;
-  /** A bag to keep the original values, lazily populated. */
-  originalData: Record<any, any>;
-  /** Whether our entity has been deleted or not. */
-  deleted?: "pending" | "deleted";
-  /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
-  em: EntityManager;
-  /** Whether our entity is new or not. */
-  isNew: boolean;
-  /** Whether our entity should flush regardless of any other changes. */
-  isTouched: boolean;
-}
-
 export let currentlyInstantiatingEntity: Entity | undefined;
 
-/** A marker/base interface for all of our entity types. */
-export interface Entity {
-  /**
-   * The entity's primary key, or undefined if it's new.
-   *
-   * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-codegen.json`.
-   */
-  id: string | undefined;
-  /** The entity id that is always tagged, regardless of the idType config. */
-  idTagged: string | undefined;
-  idTaggedOrFail: string;
-  idOrFail: string;
-  __orm: EntityOrmField;
-  readonly em: EntityManager<any>;
-  readonly isNewEntity: boolean;
-  readonly isDeletedEntity: boolean;
-  readonly isDirtyEntity: boolean;
-  readonly isPendingFlush: boolean;
-  readonly isPendingDelete: boolean;
-  set(opts: Partial<OptsOf<this>>): void;
-  setPartial(values: PartialOrNull<OptsOf<this>>): void;
-}
-
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
+
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 /**
@@ -902,129 +861,6 @@ export function setDefaultEntityLimit() {
   entityLimit = 10_000;
 }
 
-export interface EntityMetadata<T extends Entity> {
-  cstr: EntityConstructor<T>;
-  type: string;
-  idType: "int" | "uuid";
-  tableName: string;
-  tagName: string;
-  fields: Record<string, Field>;
-  config: ConfigApi<T, any>;
-  timestampFields: TimestampFields;
-  factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
-}
-
-export type Field =
-  | PrimaryKeyField
-  | PrimitiveField
-  | EnumField
-  | OneToManyField
-  | LargeOneToManyField
-  | ManyToOneField
-  | ManyToManyField
-  | OneToOneField
-  | PolymorphicField;
-
-// Only the fields that have defined `serde` keys; should be a mapped type of Field
-export type SerdeField = PrimaryKeyField | PrimitiveField | EnumField | ManyToOneField | PolymorphicField;
-
-export type PrimaryKeyField = {
-  kind: "primaryKey";
-  fieldName: string;
-  fieldIdName: undefined;
-  required: true;
-  serde: FieldSerde;
-};
-
-export type PrimitiveField = {
-  kind: "primitive";
-  fieldName: string;
-  fieldIdName: undefined;
-  required: boolean;
-  derived: "orm" | "sync" | "async" | false;
-  protected: boolean;
-  type: string | Function;
-  serde: FieldSerde;
-};
-
-export type EnumField = {
-  kind: "enum";
-  fieldName: string;
-  fieldIdName: undefined;
-  required: boolean;
-  enumDetailType: { getValues(): ReadonlyArray<unknown> };
-  serde: FieldSerde;
-};
-
-export type OneToManyField = {
-  kind: "o2m";
-  fieldName: string;
-  fieldIdName: string;
-  required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string;
-  serde: undefined;
-};
-
-export type LargeOneToManyField = {
-  kind: "lo2m";
-  fieldName: string;
-  fieldIdName: string;
-  required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string;
-  serde: undefined;
-};
-
-export type ManyToOneField = {
-  kind: "m2o";
-  fieldName: string;
-  fieldIdName: string;
-  required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string;
-  serde: FieldSerde;
-};
-
-export type ManyToManyField = {
-  kind: "m2m";
-  fieldName: string;
-  fieldIdName: string;
-  required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string;
-  serde: undefined;
-};
-
-export type OneToOneField = {
-  kind: "o2o";
-  fieldName: string;
-  fieldIdName: string;
-  required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string;
-  serde: undefined;
-};
-
-export type PolymorphicField = {
-  kind: "poly";
-  fieldName: string; // eg `parent`
-  fieldIdName: string; // `parentId`
-  required: boolean;
-  components: PolymorphicFieldComponent[];
-  serde: PolymorphicKeySerde;
-};
-
-export type PolymorphicFieldComponent = {
-  otherMetadata: () => EntityMetadata<any>;
-  otherFieldName: string; // eg `comment` or `comments`
-  columnName: string; // eg `parent_book_id` or `parent_book_review_id`
-};
-
-export function isEntity(maybeEntity: any): maybeEntity is Entity {
-  return maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
-}
-
 export function isKey(k: any): k is string {
   return typeof k === "string";
 }
@@ -1038,15 +874,6 @@ export function sameEntity(a: Entity | undefined, meta: EntityMetadata<any>, b: 
     a === b ||
     (!a.isNewEntity && getMetadata(a) === meta && maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
   );
-}
-
-export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(meta: EntityMetadata<T>): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(param: T | EntityConstructor<T> | EntityMetadata<T>): EntityMetadata<T> {
-  return (
-    typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : param.__orm.metadata
-  ) as EntityMetadata<T>;
 }
 
 /** Thrown by `findOneOrFail` if an entity is not found. */

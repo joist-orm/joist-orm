@@ -1,5 +1,7 @@
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
-import { currentlyInstantiatingEntity, Entity, EntityMetadata, IdOf, sameEntity } from "../EntityManager";
+import { Entity } from "../Entity";
+import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
+import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";

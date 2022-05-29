@@ -571,4 +571,13 @@ describe("Author", () => {
     expect((a2 as any)[inspect]()).toEqual("Author:2");
     expect((a3 as any)[inspect]()).toEqual("Author#3");
   });
+
+  // cover cannotBeUpdated
+  it("cannot change wasEverPopular to false", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    a1.age = 101;
+    await expect(em.flush()).rejects.toThrow("Age cannot be updated");
+  });
 });

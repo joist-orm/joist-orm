@@ -1,6 +1,24 @@
 import { Entity } from "src/EntityManager";
 import { New } from "src/loaded";
 
+export type MaybePromise<T> = T | Promise<T>;
+
+/**
+ * Given a `MaybePromise` of T, invoke `callback` against `T` either immediately or via `then`.
+ *
+ * This is the same as:
+ *
+ * ```
+ * const r = await maybePromise;
+ * return callback(r;;
+ * ```
+ *
+ * But saves an `await` if `maybePromise` is not actually a promise.
+ */
+export function maybePromiseThen<T, U>(promiseOrObj: MaybePromise<T>, callback: (obj: T) => U): MaybePromise<U> {
+  return promiseOrObj instanceof Promise ? promiseOrObj.then(callback) : callback(promiseOrObj);
+}
+
 export function getOrSet<T extends Record<keyof unknown, unknown>>(
   record: T,
   key: keyof T,

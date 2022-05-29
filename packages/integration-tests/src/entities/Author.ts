@@ -1,5 +1,14 @@
-import { AsyncProperty, Collection, getEm, hasAsyncProperty, hasManyDerived, hasManyThrough, Loaded } from "joist-orm";
-import { AuthorCodegen, authorConfig, Book, BookReview } from "./entities";
+import {
+  AsyncProperty,
+  cannotBeUpdated,
+  Collection,
+  getEm,
+  hasAsyncProperty,
+  hasManyDerived,
+  hasManyThrough,
+  Loaded,
+} from "joist-orm";
+import { AuthorCodegen, authorConfig as config, Book, BookReview } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -53,6 +62,10 @@ export class Author extends AuthorCodegen {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
 
+  get isPopular(): boolean | undefined {
+    return super.isPopular;
+  }
+
   /** Implements a public API for controlling access to a protected field (`wasEverPopular`). */
   set isPopular(isPopular: boolean | undefined) {
     super.isPopular = isPopular;
@@ -73,44 +86,47 @@ export class Author extends AuthorCodegen {
   });
 }
 
-authorConfig.cascadeDelete("books");
-authorConfig.cascadeDelete("image");
+config.cascadeDelete("books");
+config.cascadeDelete("image");
 
-authorConfig.addRule((a) => {
+config.addRule((a) => {
   if (a.firstName && a.firstName === a.lastName) {
     return "firstName and lastName must be different";
   }
 });
 
-authorConfig.addRule((a) => {
+config.addRule((a) => {
   if (a.lastName === "NotAllowedLastName") {
     return "lastName is invalid";
   }
 });
 
-authorConfig.addRule((a) => {
+config.addRule((a) => {
   if (!a.isNewEntity && a.changes.lastName.hasChanged) {
     return "lastName cannot be changed";
   }
 });
 
 // Example of reactive rule being fired on Book change
-authorConfig.addRule("books", async (a) => {
+config.addRule("books", async (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {
     return "A book title cannot be the author's firstName";
   }
 });
 
 // Example of reactive rule being fired on Book insertion/deletion
-authorConfig.addRule("books", async (a) => {
+config.addRule("books", async (a) => {
   if (a.books.get.length === 13) {
     return "An author cannot have 13 books";
   }
 });
 
-authorConfig.cascadeDelete("books");
+// Example of cannotBeUpdated
+config.addRule(cannotBeUpdated("age", (a) => !!a.age && a.age < 100));
 
-authorConfig.beforeFlush(async (author, ctx) => {
+config.cascadeDelete("books");
+
+config.beforeFlush(async (author, ctx) => {
   await ctx.makeApiCall("Author.beforeFlush");
   author.beforeFlushRan = true;
   if (author.ageForBeforeFlush !== undefined) {
@@ -118,29 +134,29 @@ authorConfig.beforeFlush(async (author, ctx) => {
   }
 });
 
-authorConfig.beforeCreate((author) => {
+config.beforeCreate((author) => {
   author.beforeCreateRan = true;
 });
 
-authorConfig.beforeUpdate((author) => {
+config.beforeUpdate((author) => {
   author.beforeUpdateRan = true;
 });
 
-authorConfig.afterValidation((author) => {
+config.afterValidation((author) => {
   author.afterValidationRan = true;
 });
 
-authorConfig.beforeDelete((author) => {
+config.beforeDelete((author) => {
   author.beforeDeleteRan = true;
 });
 
-authorConfig.afterCommit((author) => {
+config.afterCommit((author) => {
   // make sure we're still a new entity even though the id has been set
   author.afterCommitRan = true;
   author.afterCommitIdIsSet = author.id !== undefined;
   author.afterCommitIsNewEntity = author.isNewEntity;
 });
 
-authorConfig.setAsyncDerivedField("numberOfBooks", "books", (author) => {
+config.setAsyncDerivedField("numberOfBooks", "books", (author) => {
   return author.books.get.length;
 });

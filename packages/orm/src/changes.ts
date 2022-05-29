@@ -39,6 +39,19 @@ export type Changes<T extends Entity> = { fields: (keyof OptsOf<T>)[] } & Exclud
     : never;
 }>;
 
+/**
+ * A strongly-typed Entity with its changes field.
+ *
+ * Ideally this would live on `Entity` directly, but results in circular type issues.
+ */
+export interface EntityChanges<T extends Entity> {
+  // Ideally we could use Record<keyof T, { hasChanged: boolean }> but we only want
+  // keys that are actually columns. Right now OptsOf<T> has collections (not in .changed)
+  // and OrderOf<T> has id/createdAt/updatedAt (also not in .changed), so just using an index
+  // type for now.
+  changes: Changes<T>;
+}
+
 export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
   return new Proxy(entity, {
     get(target, p: PropertyKey): FieldStatus<any> | ManyToOneFieldStatus<any> | (keyof OptsOf<T>)[] {

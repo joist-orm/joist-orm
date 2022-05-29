@@ -1,7 +1,8 @@
 import { Entity } from "./EntityManager";
 import { Loaded, LoadHint, RelationsIn } from "./index";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { MaybePromise, ValidationRule } from "./rules";
+import { ValidationRule } from "./rules";
+import { MaybePromise } from "./utils";
 
 export type EntityHook =
   | "beforeFlush"

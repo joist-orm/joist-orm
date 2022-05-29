@@ -29,3 +29,26 @@ config.addRule(async (author) => {
 If any validation rule returns a non-`undefined` string, `flush()` will throw a `ValidationErrors` error.
 
 If you would like to skip validation rules, you can pass `skipValidation: true` to `flush()`. Use this technique with caution, as it can create invalid entities.
+
+## Built-in Rules
+
+### Required
+
+Joist automatically adds required rules to any column with a not null constraint.
+
+### Cannot Be Updated
+
+If a field can only be set on create (i.e. a parent), you can use `cannotBeUpdated`:
+
+```typescript
+// Don't let the parent change
+config.addRule(cannotBeUpdated("parent"));
+```
+
+Also, you can make this conditional, i.e. on a status:
+
+```typescript
+// Only allow updating cost while draft
+config.addRule(cannotBeUpdated("cost", e => e.isDraft));
+```
+

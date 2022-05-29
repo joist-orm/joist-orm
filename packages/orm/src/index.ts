@@ -48,6 +48,7 @@ export * from "./QueryBuilder";
 export * from "./relations";
 export * from "./reverseHint";
 export {
+  cannotBeUpdated,
   GenericError,
   newRequiredRule,
   ValidationError,

@@ -34,7 +34,7 @@ import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loaded";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
-import { fail, toArray } from "./utils";
+import { fail, MaybePromise, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
@@ -115,7 +115,7 @@ export interface Entity {
   set(opts: Partial<OptsOf<this>>): void;
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
 }
-type MaybePromise<T> = T | PromiseLike<T>;
+
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 

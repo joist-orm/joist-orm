@@ -27,7 +27,7 @@ describe("Author", () => {
     const em = newEntityManager();
     new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
     await expect(em.flush()).rejects.toThrow(
-      "Validation errors (2): firstName and lastName must be different, lastName is invalid",
+      "Validation errors (2): Author#1 firstName and lastName must be different, lastName is invalid",
     );
   });
 
@@ -35,7 +35,9 @@ describe("Author", () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "a1", author: a1 });
-    await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
+    await expect(em.flush()).rejects.toThrow(
+      "Validation error: Author#1 A book title cannot be the author's firstName",
+    );
   });
 
   it("can have reactive validation rules", async () => {
@@ -47,7 +49,9 @@ describe("Author", () => {
     // When the book name is later changed to collide with the author
     b1.title = "a1";
     // Then the validation rule is ran even though it's on the author entity
-    await expect(em.flush()).rejects.toThrow("Validation error: A book title cannot be the author's firstName");
+    await expect(em.flush()).rejects.toThrow(
+      "Validation error: Author:1 A book title cannot be the author's firstName",
+    );
   });
 
   it("can have reactive validation fired on new child", async () => {
@@ -59,7 +63,7 @@ describe("Author", () => {
     const a1 = await em.load(Author, "1");
     const b1 = new Book(em, { title: "b1", author: a1 });
     // Then the Author validation rule fails
-    await expect(em.flush()).rejects.toThrow("An author cannot have 13 books");
+    await expect(em.flush()).rejects.toThrow("Author:1 An author cannot have 13 books");
   });
 
   it("can have reactive validation fired on deleted child", async () => {
@@ -419,7 +423,7 @@ describe("Author", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.lastName = "l2";
-    await expect(em.flush()).rejects.toThrow("Validation error: lastName cannot be changed");
+    await expect(em.flush()).rejects.toThrow("Validation error: Author:1 lastName cannot be changed");
   });
 
   it("can set new opts", async () => {
@@ -472,7 +476,7 @@ describe("Author", () => {
   it("gets not-null validation rules for free", async () => {
     const em = newEntityManager();
     em.createPartial(Author, {});
-    await expect(em.flush()).rejects.toThrow("Validation error: firstName is required");
+    await expect(em.flush()).rejects.toThrow("Validation error: Author#1 firstName is required");
   });
 
   it("has an index on the publisher_id foreign key", async () => {

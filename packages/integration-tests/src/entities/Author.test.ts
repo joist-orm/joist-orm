@@ -582,6 +582,6 @@ describe("Author", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "a:1");
     a1.age = 101;
-    await expect(em.flush()).rejects.toThrow("Age cannot be updated");
+    await expect(em.flush()).rejects.toThrow("Author:1 age cannot be updated");
   });
 });

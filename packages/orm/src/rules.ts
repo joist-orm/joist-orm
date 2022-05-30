@@ -1,4 +1,3 @@
-import { capitalCase } from "change-case";
 import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
 import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
@@ -47,7 +46,7 @@ export function cannotBeUpdated<T extends Entity & EntityChanges<T>, K extends k
     if (entity.changes[field].hasUpdated) {
       return maybePromiseThen(unless ? unless(entity) : false, (result) => {
         if (!result) {
-          return `${capitalCase(field)} cannot be updated`;
+          return `${field} cannot be updated`;
         }
         return undefined;
       });

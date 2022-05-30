@@ -1,3 +1,10 @@
+# [1.12.0](https://github.com/stephenh/joist-ts/compare/v1.11.0...v1.12.0) (2022-05-30)
+
+
+### Features
+
+* Add entity to validation errors. ([#342](https://github.com/stephenh/joist-ts/issues/342)) ([3296249](https://github.com/stephenh/joist-ts/commit/32962499def6789e7598c93887442abd22e73c2c))
+
 # [1.11.0](https://github.com/stephenh/joist-ts/compare/v1.10.10...v1.11.0) (2022-05-29)
 
 

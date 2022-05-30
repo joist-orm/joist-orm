@@ -1,3 +1,10 @@
+## [1.12.2](https://github.com/stephenh/joist-ts/compare/v1.12.1...v1.12.2) (2022-05-30)
+
+
+### Bug Fixes
+
+* Don't capital case field name. ([#344](https://github.com/stephenh/joist-ts/issues/344)) ([48a5500](https://github.com/stephenh/joist-ts/commit/48a55007f5493570f419e67587a61d7361dbea55))
+
 ## [1.12.1](https://github.com/stephenh/joist-ts/compare/v1.12.0...v1.12.1) (2022-05-30)
 
 

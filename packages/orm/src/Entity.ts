@@ -18,6 +18,7 @@ export interface Entity {
   idTagged: string | undefined;
   idTaggedOrFail: string;
   idOrFail: string;
+  /** Joist internal metadata, should be considered a private implementation detail. */
   __orm: EntityOrmField;
   readonly em: EntityManager<any>;
   readonly isNewEntity: boolean;
@@ -27,6 +28,13 @@ export interface Entity {
   readonly isPendingDelete: boolean;
   set(opts: Partial<OptsOf<this>>): void;
   setPartial(values: PartialOrNull<OptsOf<this>>): void;
+  /**
+   * Returns `type:id`, i.e. `Author:1` for persisted entities and `Author#1` for new entities.
+   *
+   * This is meant to be used for developer-facing logging and debugging, and not a user-facing
+   * name / display name.
+   */
+  toString(): string;
 }
 
 /** The `__orm` metadata field we track on each instance. */

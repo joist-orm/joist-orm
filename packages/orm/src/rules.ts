@@ -1,7 +1,7 @@
 import { capitalCase } from "change-case";
 import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
-import { MaybePromise, maybePromiseThen } from "./utils";
+import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 
 /**
  * The return type of `ValidationRule`.
@@ -58,8 +58,11 @@ export function cannotBeUpdated<T extends Entity & EntityChanges<T>, K extends k
 
 function errorMessage(errors: ValidationError[]): string {
   if (errors.length === 1) {
-    return `Validation error: ${errors[0].message}`;
+    return `Validation error: ${errors[0].entity.toString()} ${errors[0].message}`;
   } else {
-    return `Validation errors (${errors.length}): ${errors.map((e) => e.message).join(", ")}`;
+    const message = [...groupBy(errors, (e) => e.entity.toString()).entries()]
+      .map(([entityToString, errors]) => `${entityToString} ${errors.map((e) => e.message).join(", ")}`)
+      .join(", ");
+    return `Validation errors (${errors.length}): ${message}`;
   }
 }

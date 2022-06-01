@@ -8,7 +8,7 @@ describe("Book", () => {
     const b = newBook(em);
     // Then we did not set any updatedAt/createdAt values
     expect(b.__orm.data).toEqual({
-      authorId: expect.anything(),
+      author: expect.anything(),
       title: "title",
     });
     // And after we flush
@@ -25,7 +25,7 @@ Array [
     // Then we still don't see any values
     expect(b.__orm.data).toEqual({
       id: "b:1",
-      authorId: expect.anything(),
+      author: expect.anything(),
       title: "title",
     });
   });

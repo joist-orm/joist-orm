@@ -80,7 +80,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "authorId", "authorId");
+  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "authorId");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);

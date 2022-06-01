@@ -12125,30 +12125,6 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"joist-tests-camel-cased@workspace:packages/tests/camel-cased":
-  version: 0.0.0-use.local
-  resolution: "joist-tests-camel-cased@workspace:packages/tests/camel-cased"
-  dependencies:
-    "@swc/core": ^1.2.124
-    "@swc/jest": ^0.2.16
-    "@types/jest": ^26.0.24
-    "@types/node": ^16.4.10
-    dotenv: ^8.2.0
-    jest: ^27.0.6
-    jest-junit: ^12.2.0
-    joist-codegen: "workspace:*"
-    joist-migration-utils: "workspace:*"
-    joist-orm: "workspace:*"
-    joist-test-utils: "workspace:*"
-    prettier: ^2.5.1
-    prettier-plugin-organize-imports: ^2.3.4
-    superstruct: ^0.15.2
-    ts-node: ^10.1.0
-    tsconfig-paths: ^3.10.1
-    typescript: ^4.5.2
-  languageName: unknown
-  linkType: soft
-
 "joist-tests-schema-misc@workspace:packages/tests/schema-misc":
   version: 0.0.0-use.local
   resolution: "joist-tests-schema-misc@workspace:packages/tests/schema-misc"

@@ -1,7 +1,12 @@
 {
   "codegenPlugins": [],
   "contextType": "Context@src/context",
-  "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
+  "entities": {
+    "Artist": { "tag": "artist" },
+    "Author": { "tag": "a" },
+    "Book": { "tag": "b" },
+    "Painting": { "tag": "p" }
+  },
   "entitiesDirectory": "./src/entities",
   "ignoredTables": ["pgmigrations"],
   "timestampColumns": {

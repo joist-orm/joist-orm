@@ -34,35 +34,35 @@ export type BookId = Flavor<string, "Book">;
 
 export interface BookOpts {
   title: string;
-  authorId: Author;
+  author: Author;
 }
 
 export interface BookIdsOpts {
-  authorIdId?: AuthorId | null;
+  authorId?: AuthorId | null;
 }
 
 export interface BookFilter {
   id?: ValueFilter<BookId, never>;
   title?: ValueFilter<string, never>;
-  authorId?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
 }
 
 export interface BookGraphQLFilter {
   id?: ValueGraphQLFilter<BookId>;
   title?: ValueGraphQLFilter<string>;
-  authorId?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
 }
 
 export interface BookOrder {
   id?: OrderBy;
   title?: OrderBy;
-  authorId?: AuthorOrder;
+  author?: AuthorOrder;
 }
 
 export const bookConfig = new ConfigApi<Book, Context>();
 
 bookConfig.addRule(newRequiredRule("title"));
-bookConfig.addRule(newRequiredRule("authorId"));
+bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
@@ -76,7 +76,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly authorId: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "authorId", "books");
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);

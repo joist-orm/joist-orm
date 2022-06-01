@@ -14,4 +14,35 @@ exports.up = (b) => {
     title: { type: "varchar(255)", notNull: true },
     authorId: { type: "int", references: "authors", notNull: true, deferrable: true, deferred: true },
   });
+
+  b.sql(`
+  CREATE TABLE public."artists" (
+    id uuid NOT NULL,
+    "firstName" varchar(255) NOT NULL,
+    "lastName" varchar(255) NOT NULL,
+    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    "updatedAt" timestamp(3) without time zone NOT NULL
+  );
+`);
+  b.sql(`
+    CREATE TABLE public."paintings" (
+      id uuid NOT NULL,
+      "title" varchar(255) NOT NULL,
+      "artistId" uuid NOT NULL,
+      "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+      "updatedAt" timestamp(3) without time zone NOT NULL
+    );
+  `);
+  b.sql(`
+  ALTER TABLE ONLY public."artists"
+    ADD CONSTRAINT "artists_pkey" PRIMARY KEY (id);
+  `);
+  b.sql(`
+  ALTER TABLE ONLY public."paintings"
+    ADD CONSTRAINT "paintings_pkey" PRIMARY KEY (id);
+  `);
+  b.sql(`
+    ALTER TABLE ONLY public."paintings"
+    ADD CONSTRAINT "paintings_artistId_fkey" FOREIGN KEY ("artistId") REFERENCES public."artists"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+    `);
 };

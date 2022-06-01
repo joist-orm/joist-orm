@@ -1,0 +1,160 @@
+import {
+  BaseEntity,
+  Changes,
+  Collection,
+  ConfigApi,
+  EntityOrmField,
+  fail,
+  Flavor,
+  hasMany,
+  isLoaded,
+  Lens,
+  Loaded,
+  LoadHint,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  OptsOf,
+  OrderBy,
+  PartialOrNull,
+  setField,
+  setOpts,
+  ValueFilter,
+  ValueGraphQLFilter,
+} from "joist-orm";
+import { Context } from "src/context";
+import { EntityManager } from "src/entities";
+import { Artist, artistMeta, newArtist, Painting, PaintingId, paintingMeta } from "./entities";
+
+export type ArtistId = Flavor<string, "Artist">;
+
+export interface ArtistOpts {
+  firstName: string;
+  lastName: string;
+  paintings?: Painting[];
+}
+
+export interface ArtistIdsOpts {
+  paintingIds?: PaintingId[] | null;
+}
+
+export interface ArtistFilter {
+  id?: ValueFilter<ArtistId, never>;
+  firstName?: ValueFilter<string, never>;
+  lastName?: ValueFilter<string, never>;
+  createdAt?: ValueFilter<Date, never>;
+  updatedAt?: ValueFilter<Date, never>;
+}
+
+export interface ArtistGraphQLFilter {
+  id?: ValueGraphQLFilter<ArtistId>;
+  firstName?: ValueGraphQLFilter<string>;
+  lastName?: ValueGraphQLFilter<string>;
+  createdAt?: ValueGraphQLFilter<Date>;
+  updatedAt?: ValueGraphQLFilter<Date>;
+}
+
+export interface ArtistOrder {
+  id?: OrderBy;
+  firstName?: OrderBy;
+  lastName?: OrderBy;
+  createdAt?: OrderBy;
+  updatedAt?: OrderBy;
+}
+
+export const artistConfig = new ConfigApi<Artist, Context>();
+
+artistConfig.addRule(newRequiredRule("firstName"));
+artistConfig.addRule(newRequiredRule("lastName"));
+artistConfig.addRule(newRequiredRule("createdAt"));
+artistConfig.addRule(newRequiredRule("updatedAt"));
+
+export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
+  static defaultValues: object = {};
+
+  readonly __orm!: EntityOrmField & {
+    filterType: ArtistFilter;
+    gqlFilterType: ArtistGraphQLFilter;
+    orderType: ArtistOrder;
+    optsType: ArtistOpts;
+    optIdsType: ArtistIdsOpts;
+    factoryOptsType: Parameters<typeof newArtist>[1];
+  };
+
+  readonly paintings: Collection<Artist, Painting> = hasMany(paintingMeta, "paintings", "artist", "artistId");
+
+  constructor(em: EntityManager, opts: ArtistOpts) {
+    super(em, artistMeta, ArtistCodegen.defaultValues, opts);
+    setOpts(this as any as Artist, opts, { calledFromConstructor: true });
+  }
+
+  get id(): ArtistId | undefined {
+    return this.idTagged;
+  }
+
+  get idOrFail(): ArtistId {
+    return this.id || fail("Artist has no id yet");
+  }
+
+  get idTagged(): ArtistId | undefined {
+    return this.__orm.data["id"];
+  }
+
+  get firstName(): string {
+    return this.__orm.data["firstName"];
+  }
+
+  set firstName(firstName: string) {
+    setField(this, "firstName", firstName);
+  }
+
+  get lastName(): string {
+    return this.__orm.data["lastName"];
+  }
+
+  set lastName(lastName: string) {
+    setField(this, "lastName", lastName);
+  }
+
+  get createdAt(): Date {
+    return this.__orm.data["createdAt"];
+  }
+
+  get updatedAt(): Date {
+    return this.__orm.data["updatedAt"];
+  }
+
+  set(opts: Partial<ArtistOpts>): void {
+    setOpts(this as any as Artist, opts);
+  }
+
+  setPartial(opts: PartialOrNull<ArtistOpts>): void {
+    setOpts(this as any as Artist, opts as OptsOf<Artist>, { partial: true });
+  }
+
+  get changes(): Changes<Artist> {
+    return newChangesProxy(this as any as Artist);
+  }
+
+  load<U, V>(fn: (lens: Lens<Artist>) => Lens<U, V>): Promise<V> {
+    return loadLens(this as any as Artist, fn);
+  }
+
+  populate<H extends LoadHint<Artist>>(hint: H): Promise<Loaded<Artist, H>>;
+  populate<H extends LoadHint<Artist>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Artist, H>>;
+  populate<H extends LoadHint<Artist>, V>(hint: H, fn: (undefined: Loaded<Artist, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Artist>, V>(
+    opts: { hint: H; forceReload?: boolean },
+    fn: (undefined: Loaded<Artist, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<Artist>, V>(
+    hintOrOpts: any,
+    fn?: (undefined: Loaded<Artist, H>) => V,
+  ): Promise<Loaded<Artist, H> | V> {
+    return this.em.populate(this as any as Artist, hintOrOpts, fn);
+  }
+
+  isLoaded<H extends LoadHint<Artist>>(hint: H): this is Loaded<Artist, H> {
+    return isLoaded(this as any as Artist, hint);
+  }
+}

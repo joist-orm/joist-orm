@@ -20,8 +20,7 @@
     "packages/test-utils",
     "packages/tests/uuid-ids",
     "packages/tests/schema-misc",
-    "packages/tests/untagged-ids",
-    "packages/tests/camel-cased"
+    "packages/tests/untagged-ids"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.1",

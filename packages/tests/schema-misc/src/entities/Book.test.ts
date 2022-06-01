@@ -25,7 +25,7 @@ Array [
     // Then we still don't see any values
     expect(b.__orm.data).toEqual({
       id: "b:1",
-      authorId: expect.anything(),
+      author: expect.anything(),
       title: "title",
     });
   });

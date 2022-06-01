@@ -1,3 +1,10 @@
+# [1.13.0](https://github.com/stephenh/joist-ts/compare/v1.12.2...v1.13.0) (2022-06-01)
+
+
+### Features
+
+* support for camel cased table names and columns ([#346](https://github.com/stephenh/joist-ts/issues/346)) ([15e7a73](https://github.com/stephenh/joist-ts/commit/15e7a738db5c274c5cd8ada1ba9a817c1aab28e6))
+
 ## [1.12.2](https://github.com/stephenh/joist-ts/compare/v1.12.1...v1.12.2) (2022-05-30)
 
 

@@ -48,6 +48,9 @@ jobs:
             cd ../untagged-ids
             ./run.sh ../../migration-utils/build/index.js
             ./run.sh ../../codegen/build/index.js
+            cd ../camel-cased
+            ./run.sh ../../migration-utils/build/index.js
+            ./run.sh ../../codegen/build/index.js
       - run:
           name: Run tests
           command: |

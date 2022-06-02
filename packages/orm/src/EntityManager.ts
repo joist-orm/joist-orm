@@ -18,7 +18,6 @@ import {
   getMetadata,
   getRelations,
   keyToString,
-  maybeResolveReferenceToId,
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
@@ -149,6 +148,7 @@ export class EntityManager<C = {}> {
 
   /** Looks up `id` in the list of already-loaded entities. */
   getEntity<T extends Entity>(id: IdOf<T>): T | undefined {
+    assertIdsAreTagged([id]);
     return this._entityIndex.get(id) as T | undefined;
   }
 
@@ -866,14 +866,24 @@ export function isKey(k: any): k is string {
 }
 
 /** Compares `a` to `b`, where `b` might be an id. B/c ids can overlap, we need to know `b`'s metadata type. */
-export function sameEntity(a: Entity | undefined, meta: EntityMetadata<any>, b: Entity | string | undefined): boolean {
+export function sameEntity(
+  a: Entity | string | undefined,
+  meta: EntityMetadata<any>,
+  b: Entity | string | undefined,
+): boolean {
+  if (a === b) {
+    return true;
+  }
   if (a === undefined || b === undefined) {
     return a === undefined && b === undefined;
   }
-  return (
-    a === b ||
-    (!a.isNewEntity && getMetadata(a) === meta && maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
-  );
+  // If either entity is new, then neither can be a persisted id
+  if ((isEntity(a) && a.isNewEntity) || (isEntity(b) && b.isNewEntity)) {
+    return a === b;
+  }
+  const aId = isEntity(a) && getMetadata(a) === meta ? a.id : a;
+  const bId = isEntity(b) && getMetadata(b) === meta ? b.id : b;
+  return aId === bId;
 }
 
 /** Thrown by `findOneOrFail` if an entity is not found. */

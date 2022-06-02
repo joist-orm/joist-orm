@@ -23,7 +23,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { EntityManager } from "src/entities";
+import type { EntityManager } from "./entities";
 import { Artist, artistMeta, newArtist, Painting, PaintingId, paintingMeta } from "./entities";
 
 export type ArtistId = Flavor<string, "Artist">;
@@ -100,6 +100,10 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idTaggedOrFail(): ArtistId {
+    return this.idTagged || fail("Artist has no id tagged yet");
+  }
+
   get firstName(): string {
     return this.__orm.data["firstName"];
   }
@@ -142,14 +146,14 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
 
   populate<H extends LoadHint<Artist>>(hint: H): Promise<Loaded<Artist, H>>;
   populate<H extends LoadHint<Artist>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Artist, H>>;
-  populate<H extends LoadHint<Artist>, V>(hint: H, fn: (undefined: Loaded<Artist, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Artist>, V>(hint: H, fn: (artist: Loaded<Artist, H>) => V): Promise<V>;
   populate<H extends LoadHint<Artist>, V>(
     opts: { hint: H; forceReload?: boolean },
-    fn: (undefined: Loaded<Artist, H>) => V,
+    fn: (artist: Loaded<Artist, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<Artist>, V>(
     hintOrOpts: any,
-    fn?: (undefined: Loaded<Artist, H>) => V,
+    fn?: (artist: Loaded<Artist, H>) => V,
   ): Promise<Loaded<Artist, H> | V> {
     return this.em.populate(this as any as Artist, hintOrOpts, fn);
   }

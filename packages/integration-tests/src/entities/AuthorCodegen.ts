@@ -77,9 +77,9 @@ export interface AuthorOpts {
   address?: Address | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
-  mentor?: Author | null;
-  currentDraftBook?: Book | null;
-  publisher?: Publisher | null;
+  mentor?: Author | AuthorId | null;
+  currentDraftBook?: Book | BookId | null;
+  publisher?: Publisher | PublisherId | null;
   image?: Image | null;
   authors?: Author[];
   books?: Book[];

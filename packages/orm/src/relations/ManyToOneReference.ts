@@ -151,6 +151,28 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.maybeAdd(this.maybeFindEntity());
   }
 
+  // Internal method used by OneToManyCollection
+  setImpl(other: U | IdOf<U> | N): void {
+    ensureNotDeleted(this.entity, { ignore: "pending" });
+    if (sameEntity(other, this.otherMeta, this.current())) {
+      return;
+    }
+
+    const previous = this.maybeFindEntity();
+    // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
+    setField(this.entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);
+
+    if (typeof other === "string") {
+      this.loaded = undefined;
+      this._isLoaded = false;
+    } else {
+      this.loaded = other;
+      this._isLoaded = true;
+    }
+    this.maybeRemove(previous);
+    this.maybeAdd(this.maybeFindEntity());
+  }
+
   get idOrFail(): IdOf<U> {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     return (this.id as IdOf<U> | undefined) || fail("Reference is unset or assigned to a new entity");
@@ -171,8 +193,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   initializeForNewEntity(): void {
-    // Our codegen'd Opts type will ensure our field is inititalized if necessary/notNull
-    this._isLoaded = true;
+    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
+    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
+    if (this.current() === undefined) {
+      this._isLoaded = true;
+    }
   }
 
   maybeCascadeDelete(): void {
@@ -201,23 +226,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     setField(this.entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = true;
-  }
-
-  // Internal method used by OneToManyCollection
-  setImpl(other: U | N): void {
-    if (sameEntity(other, this.otherMeta, this.current())) {
-      return;
-    }
-    ensureNotDeleted(this.entity, { ignore: "pending" });
-    const previous = this.maybeFindEntity();
-
-    // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName, other?.id ?? other);
-
-    this.loaded = other;
-    this._isLoaded = true;
-    this.maybeRemove(previous);
-    this.maybeAdd(other);
   }
 
   maybeRemove(other: U | undefined) {

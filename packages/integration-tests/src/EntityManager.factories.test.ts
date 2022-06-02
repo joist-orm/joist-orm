@@ -18,7 +18,7 @@ import {
   Publisher,
   PublisherType,
 } from "@src/entities";
-import { maybeNew, maybeNewPoly, New, newTestInstance } from "joist-orm";
+import { maybeNew, maybeNewPoly, newTestInstance } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.factories", () => {
@@ -125,7 +125,7 @@ describe("EntityManager.factories", () => {
     // When we make a book and pass along the specific publisher p1
     const b1 = newBook(em, { use: p1 });
     // Then we created a new author
-    const a1 = b1.author.get as New<Author>;
+    const a1 = b1.author.get;
     expect(a1.firstName).toEqual("a1");
     // And it has the publisher set
     expect(a1.publisher.get).toEqual(p1);
@@ -143,10 +143,10 @@ describe("EntityManager.factories", () => {
     const b1 = newBook(em, { author: { publisher: { name: "p1" } } });
     await em.flush();
     // Then we create a new author
-    const a1 = b1.author.get as New<Author>;
+    const a1 = b1.author.get;
     expect(a1.firstName).toEqual("a1");
     // And we create a new publisher
-    const p1 = a1.publisher.get as New<Publisher>;
+    const p1 = a1.publisher.get!;
     expect(p1.name).toEqual("p1");
   });
 
@@ -156,11 +156,11 @@ describe("EntityManager.factories", () => {
     const a1 = newAuthor(em, { books: [{ title: "b1" }, {}] });
     await em.flush();
     // Then we have the 1st book
-    const b1 = a1.books.get[0] as New<Book>;
+    const b1 = a1.books.get[0];
     expect(b1.title).toEqual("b1");
     expect(b1.author.get).toEqual(a1);
     // And the 2nd book
-    const b2 = a1.books.get[1] as New<Book>;
+    const b2 = a1.books.get[1];
     expect(b2.title).toEqual("title");
     expect(b2.author.get).toEqual(a1);
     // And we didn't create an extra author

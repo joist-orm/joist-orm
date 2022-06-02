@@ -27,14 +27,14 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { EntityManager } from "src/entities";
+import type { EntityManager } from "./entities";
 import { Artist, ArtistId, artistMeta, ArtistOrder, newPainting, Painting, paintingMeta } from "./entities";
 
 export type PaintingId = Flavor<string, "Painting">;
 
 export interface PaintingOpts {
   title: string;
-  artist: Artist;
+  artist: Artist | ArtistId;
 }
 
 export interface PaintingIdsOpts {
@@ -103,6 +103,10 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["id"];
   }
 
+  get idTaggedOrFail(): PaintingId {
+    return this.idTagged || fail("Painting has no id tagged yet");
+  }
+
   get title(): string {
     return this.__orm.data["title"];
   }
@@ -137,14 +141,14 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
 
   populate<H extends LoadHint<Painting>>(hint: H): Promise<Loaded<Painting, H>>;
   populate<H extends LoadHint<Painting>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Painting, H>>;
-  populate<H extends LoadHint<Painting>, V>(hint: H, fn: (undefined: Loaded<Painting, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Painting>, V>(hint: H, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
   populate<H extends LoadHint<Painting>, V>(
     opts: { hint: H; forceReload?: boolean },
-    fn: (undefined: Loaded<Painting, H>) => V,
+    fn: (p: Loaded<Painting, H>) => V,
   ): Promise<V>;
   populate<H extends LoadHint<Painting>, V>(
     hintOrOpts: any,
-    fn?: (undefined: Loaded<Painting, H>) => V,
+    fn?: (p: Loaded<Painting, H>) => V,
   ): Promise<Loaded<Painting, H> | V> {
     return this.em.populate(this as any as Painting, hintOrOpts, fn);
   }

@@ -50,8 +50,8 @@ export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
 export interface BookAdvanceOpts {
   status: AdvanceStatus;
-  book: Book;
-  publisher: Publisher;
+  book: Book | BookId;
+  publisher: Publisher | PublisherId;
 }
 
 export interface BookAdvanceIdsOpts {

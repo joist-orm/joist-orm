@@ -7,7 +7,6 @@ import {
   fail,
   maybeResolveReferenceToId,
   OneToManyLargeCollection,
-  OneToOneReference,
   OneToOneReferenceImpl,
   Reference,
   setField,
@@ -236,7 +235,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       } else if (prevRelation instanceof OneToManyLargeCollection) {
         prevRelation.remove(this.entity);
       } else {
-        prevRelation.set(undefined as any);
+        prevRelation.set(undefined as any, { percolating: true });
       }
     }
   }
@@ -249,7 +248,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       } else if (newRelation instanceof OneToManyLargeCollection) {
         newRelation.add(this.entity);
       } else {
-        newRelation.set(this.entity);
+        newRelation.set(this.entity, { percolating: true });
       }
     }
   }
@@ -274,7 +273,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
   private getOtherRelation(
     other: U,
-  ): OneToManyCollection<U, T> | OneToOneReference<U, T> | OneToManyLargeCollection<U, T> {
+  ): OneToManyCollection<U, T> | OneToOneReferenceImpl<U, T> | OneToManyLargeCollection<U, T> {
     return (other as U)[this.otherFieldName] as any;
   }
 

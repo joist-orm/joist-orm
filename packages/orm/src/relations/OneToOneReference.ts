@@ -133,20 +133,20 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     return this.filterDeleted(this.loaded, opts);
   }
 
-  set(other: U): void {
+  set(other: U, opts: { percolating?: boolean } = {}): void {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (other === this.loaded) {
       return;
     }
     if (this._isLoaded) {
-      if (this.loaded) {
+      if (this.loaded && !opts.percolating) {
         this.getOtherRelation(this.loaded).set(undefined);
       }
     }
     this.loaded = other;
     this._isLoaded = true;
     // This will no-op and mark other dirty if necessary
-    if (other) {
+    if (other && !opts.percolating) {
       this.getOtherRelation(other).set(this.entity);
     }
   }

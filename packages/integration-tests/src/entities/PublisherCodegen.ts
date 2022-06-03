@@ -68,7 +68,7 @@ export interface PublisherOpts {
   hugeNumber?: number | null;
   size?: PublisherSize | null;
   type?: PublisherType;
-  tag?: Tag | null;
+  tag?: Tag | TagId | null;
   authors?: Author[];
   bookAdvances?: BookAdvance[];
   comments?: Comment[];

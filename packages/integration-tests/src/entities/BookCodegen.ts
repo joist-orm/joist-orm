@@ -63,7 +63,7 @@ export type BookId = Flavor<string, "Book">;
 export interface BookOpts {
   title: string;
   order?: number;
-  author: Author;
+  author: Author | AuthorId;
   currentDraftAuthor?: Author | null;
   image?: Image | null;
   advances?: BookAdvance[];

@@ -30,12 +30,10 @@ type ExcludeNever<T> = Pick<T, { [P in keyof T]: T[P] extends never ? never : P 
  */
 export type Changes<T extends Entity> = { fields: (keyof OptsOf<T>)[] } & ExcludeNever<{
   [P in keyof OptsOf<T>]-?: OptsOf<T>[P] extends NullOrDefinedOr<infer U>
-    ? U extends Array<infer E>
-      ? E extends string
-        ? FieldStatus<U>
-        : never
-      : U extends Entity
-      ? ManyToOneFieldStatus<U>
+    ? U extends Array<infer E extends Entity>
+      ? never
+      : U extends (infer E extends Entity) | string
+      ? ManyToOneFieldStatus<E>
       : FieldStatus<U>
     : never;
 }>;

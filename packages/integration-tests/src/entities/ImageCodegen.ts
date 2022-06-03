@@ -55,9 +55,9 @@ export type ImageId = Flavor<string, "Image">;
 export interface ImageOpts {
   fileName: string;
   type: ImageType;
-  author?: Author | null;
-  book?: Book | null;
-  publisher?: Publisher | null;
+  author?: Author | AuthorId | null;
+  book?: Book | BookId | null;
+  publisher?: Publisher | PublisherId | null;
 }
 
 export interface ImageIdsOpts {

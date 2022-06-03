@@ -527,7 +527,8 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type}${maybeUnionNull(notNull)};`;
+    const maybeNull = maybeUnionNull(notNull);
+    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type} | ${otherEntity.idType} ${maybeNull};`;
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type} | null;`;

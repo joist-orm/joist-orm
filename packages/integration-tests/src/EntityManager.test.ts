@@ -1305,6 +1305,20 @@ describe("EntityManager", () => {
     expect(rows[0].favorite_colors).toEqual([2]);
   });
 
+  it("can create with a foreign key id", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = newEntityManager();
+    const b = em.create(Book, { author: "a:1", title: "b1" });
+    expect(() => {
+      // @ts-expect-error
+      b.author.get;
+    }).toThrow();
+    expect(b.author.isLoaded).toBe(false);
+    await em.flush();
+    const rows = await select("books");
+    expect(rows[0].author_id).toEqual(1);
+  });
+
   it("can create an empty enum array", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1" });

@@ -49,7 +49,7 @@ export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewOpts {
   rating: number;
-  book: Book;
+  book: Book | BookId;
   comment?: Comment | null;
 }
 

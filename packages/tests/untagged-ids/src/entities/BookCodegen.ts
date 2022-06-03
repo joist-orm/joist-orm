@@ -35,7 +35,7 @@ export type BookId = Flavor<string, "Book">;
 
 export interface BookOpts {
   title: string;
-  author: Author;
+  author: Author | AuthorId;
 }
 
 export interface BookIdsOpts {

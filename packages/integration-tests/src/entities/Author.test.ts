@@ -392,7 +392,7 @@ describe("Author", () => {
       expect(a1.changes.publisher.originalValue).toEqual("p:1");
       const op = await a1.changes.publisher.originalEntity;
       expect(op).toBeInstanceOf(Publisher);
-      expect(op!.isSizeLarge).toBe(true);
+      expect(op!.isSizeLarge).toBe(false);
       expect(a1.changes.fields).toEqual(["publisher"]);
       a1.publisher.set(p1);
       expect(a1.changes.publisher.hasChanged).toBe(false);

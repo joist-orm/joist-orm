@@ -661,9 +661,10 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
-    author.ageForBeforeFlush = 27;
+    author.setGraduatedInFlush = true;
+    expect(author.graduated).toBeUndefined();
     await em.flush();
-    expect(author.age).toEqual(27);
+    expect(author.graduated).toBeDefined();
   });
 
   it("cannot modify an entity during a flush outside hooks", async () => {

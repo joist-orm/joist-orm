@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
-import { defaultValue } from "joist-orm";
+import { defaultValue, getMetadata } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, BookReview, newAuthor, newPublisher, Publisher } from "../entities";
@@ -311,8 +311,8 @@ describe("Author", () => {
   });
 
   it("can derive async fields across multiple hops", async () => {
-    // Given an author is who under age 21
-    await insertAuthor({ first_name: "a1", age: 10 });
+    // Given an author is 21 but not graduated (so won't be published)
+    await insertAuthor({ first_name: "a1", age: 21 });
     await insertBook({ title: "b1", author_id: 1 });
     // And a new book review is created
     const em = newEntityManager();
@@ -323,10 +323,10 @@ describe("Author", () => {
     const rows = await select("book_reviews");
     expect(rows[0].is_public).toBe(false);
 
-    // And when the author age changes
+    // And when the author graduates
     const em2 = newEntityManager();
     const a1 = await em2.load(Author, "1");
-    a1.age = 30;
+    a1.graduated = new Date();
     await em2.flush();
     // Then the review is now public
     const rows2 = await select("book_reviews");
@@ -578,12 +578,18 @@ describe("Author", () => {
     expect((a3 as any)[inspect]()).toEqual("Author#3");
   });
 
-  // cover cannotBeUpdated
-  it("cannot change wasEverPopular to false", async () => {
-    await insertAuthor({ first_name: "a1" });
-    const em = newEntityManager();
-    const a1 = await em.load(Author, "a:1");
-    a1.age = 101;
-    await expect(em.flush()).rejects.toThrow("Author:1 age cannot be updated");
+  describe("cannotBeUpdated", () => {
+    it("cannot change wasEverPopular to false", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      a1.age = 101;
+      await expect(em.flush()).rejects.toThrow("Author:1 age cannot be updated");
+    });
+
+    it("marks the field as immutable", async () => {
+      const m = getMetadata(Author);
+      expect(m.fields["age"].immutable).toBe(true);
+    });
   });
 });

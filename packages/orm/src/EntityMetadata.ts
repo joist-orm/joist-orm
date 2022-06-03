@@ -46,6 +46,7 @@ export type PrimaryKeyField = {
   fieldIdName: undefined;
   required: true;
   serde: FieldSerde;
+  immutable: true;
 };
 
 export type PrimitiveField = {
@@ -57,6 +58,7 @@ export type PrimitiveField = {
   protected: boolean;
   type: string | Function;
   serde: FieldSerde;
+  immutable: boolean;
 };
 
 export type EnumField = {
@@ -66,6 +68,7 @@ export type EnumField = {
   required: boolean;
   enumDetailType: { getValues(): ReadonlyArray<unknown> };
   serde: FieldSerde;
+  immutable: boolean;
 };
 
 export type OneToManyField = {
@@ -76,6 +79,7 @@ export type OneToManyField = {
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
   serde: undefined;
+  immutable: false;
 };
 
 export type LargeOneToManyField = {
@@ -86,6 +90,7 @@ export type LargeOneToManyField = {
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
   serde: undefined;
+  immutable: false;
 };
 
 export type ManyToOneField = {
@@ -96,6 +101,7 @@ export type ManyToOneField = {
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
   serde: FieldSerde;
+  immutable: boolean;
 };
 
 export type ManyToManyField = {
@@ -106,6 +112,7 @@ export type ManyToManyField = {
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
   serde: undefined;
+  immutable: false;
 };
 
 export type OneToOneField = {
@@ -116,6 +123,7 @@ export type OneToOneField = {
   otherMetadata: () => EntityMetadata<any>;
   otherFieldName: string;
   serde: undefined;
+  immutable: false;
 };
 
 export type PolymorphicField = {
@@ -125,6 +133,7 @@ export type PolymorphicField = {
   required: boolean;
   components: PolymorphicFieldComponent[];
   serde: PolymorphicKeySerde;
+  immutable: boolean;
 };
 
 export type PolymorphicFieldComponent = {

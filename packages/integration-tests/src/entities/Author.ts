@@ -122,7 +122,7 @@ config.addRule("books", async (a) => {
 });
 
 // Example of cannotBeUpdated
-config.addRule(cannotBeUpdated("age", (a) => !!a.age && a.age < 100));
+config.addRule(cannotBeUpdated("age"));
 
 config.cascadeDelete("books");
 

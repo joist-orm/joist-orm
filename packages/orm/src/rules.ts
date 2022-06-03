@@ -41,8 +41,8 @@ export function newRequiredRule<T extends Entity>(key: keyof T & string): Valida
 export function cannotBeUpdated<T extends Entity & EntityChanges<T>, K extends keyof Changes<T> & string>(
   field: K,
   unless?: (entity: T) => MaybePromise<boolean>,
-): ValidationRule<T> {
-  return async (entity) => {
+): CannotBeUpdatedRule<T> {
+  const fn = async (entity: T) => {
     if (entity.changes[field].hasUpdated) {
       return maybePromiseThen(unless ? unless(entity) : false, (result) => {
         if (!result) {
@@ -53,6 +53,13 @@ export function cannotBeUpdated<T extends Entity & EntityChanges<T>, K extends k
     }
     return undefined;
   };
+  return Object.assign(fn, { field, immutable: unless === undefined });
+}
+
+type CannotBeUpdatedRule<T extends Entity> = ValidationRule<T> & { field: string; immutable: boolean };
+
+export function isCannotBeUpdatedRule(rule: Function): rule is CannotBeUpdatedRule<any> {
+  return "field" in rule && "immutable" in rule;
 }
 
 function errorMessage(errors: ValidationError[]): string {

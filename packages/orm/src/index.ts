@@ -5,6 +5,7 @@ import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { reverseHint } from "./reverseHint";
+import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
 export { newPgConnectionConfig } from "joist-utils";
@@ -228,6 +229,9 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         reversals.forEach(([otherEntity, reverseHint]) => {
           getMetadata(otherEntity).config.__data.reactiveRules.push(reverseHint);
         });
+      }
+      if (isCannotBeUpdatedRule(rule) && rule.immutable) {
+        meta.fields[rule.field].immutable = true;
       }
     });
     // Look for reactive async derived values rules to reverse

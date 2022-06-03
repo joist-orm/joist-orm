@@ -48,6 +48,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldIdName: undefined,
       required: true,
       serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.idDbType}"),
+      immutable: true,
     }
   `;
 
@@ -68,6 +69,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         protected: ${p.protected},
         type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
         serde: ${serdeType},
+        immutable: false,
       }`;
   });
 
@@ -83,6 +85,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         protected: false,
         type: "string",
         serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "string"),
+        immutable: false,
       }`;
   });
 
@@ -97,6 +100,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         serde: new ${
           isArray ? EnumArrayFieldSerde : EnumFieldSerde
         }("${fieldName}", "${columnName}", ${enumDetailType}),
+        immutable: false,
       }
     `;
   });
@@ -113,6 +117,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
+        immutable: false,
       }
     `;
   });
@@ -128,6 +133,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: undefined,
+        immutable: false,
       }
     `;
   });
@@ -143,6 +149,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: undefined,
+        immutable: false,
       }
     `;
   });
@@ -158,6 +165,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: undefined,
+        immutable: false,
       }
     `;
   });
@@ -173,6 +181,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: undefined,
+        immutable: false,
       }
     `;
   });
@@ -194,6 +203,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
           },`,
         )}],
         serde: new ${PolymorphicKeySerde}(() => ${dbMetadata.entity.metaName}, "${fieldName}"),
+        immutable: false,
       }
     `;
   });

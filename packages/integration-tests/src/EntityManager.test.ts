@@ -661,7 +661,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
-    author.setGradatedInFlush = true;
+    author.setGraduatedInFlush = true;
     expect(author.graduated).toBeUndefined();
     await em.flush();
     expect(author.graduated).toBeDefined();

@@ -1,3 +1,10 @@
+# [1.14.0](https://github.com/stephenh/joist-ts/compare/v1.13.0...v1.14.0) (2022-06-03)
+
+
+### Features
+
+* Allow em.create m2os with an id. ([#347](https://github.com/stephenh/joist-ts/issues/347)) ([10b28a9](https://github.com/stephenh/joist-ts/commit/10b28a93dd3708890657d02c0fd8b416afe13b5a))
+
 # [1.13.0](https://github.com/stephenh/joist-ts/compare/v1.12.2...v1.13.0) (2022-06-01)
 
 

@@ -45,7 +45,7 @@ export class Author extends AuthorCodegen {
   public afterCommitRan = false;
   public afterCommitIdIsSet = false;
   public afterCommitIsNewEntity = false;
-  public ageForBeforeFlush?: number;
+  public setGradatedInFlush?: boolean;
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
@@ -129,8 +129,8 @@ config.cascadeDelete("books");
 config.beforeFlush(async (author, ctx) => {
   await ctx.makeApiCall("Author.beforeFlush");
   author.beforeFlushRan = true;
-  if (author.ageForBeforeFlush !== undefined) {
-    author.age = author.ageForBeforeFlush;
+  if (author.setGradatedInFlush) {
+    author.graduated = new Date();
   }
 });
 

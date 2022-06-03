@@ -1,3 +1,10 @@
+# [1.15.0](https://github.com/stephenh/joist-ts/compare/v1.14.1...v1.15.0) (2022-06-03)
+
+
+### Features
+
+* Add field-level immutability to the metadata. ([#349](https://github.com/stephenh/joist-ts/issues/349)) ([269762f](https://github.com/stephenh/joist-ts/commit/269762fb9c3588230dccd9d157cbd7cc9d724c92))
+
 ## [1.14.1](https://github.com/stephenh/joist-ts/compare/v1.14.0...v1.14.1) (2022-06-03)
 
 

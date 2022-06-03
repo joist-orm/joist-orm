@@ -1,3 +1,10 @@
+## [1.14.1](https://github.com/stephenh/joist-ts/compare/v1.14.0...v1.14.1) (2022-06-03)
+
+
+### Bug Fixes
+
+* Fix type of changes.originalEntity. ([#348](https://github.com/stephenh/joist-ts/issues/348)) ([779e281](https://github.com/stephenh/joist-ts/commit/779e281199fcde314d166a7c2d2ec1040209b129))
+
 # [1.14.0](https://github.com/stephenh/joist-ts/compare/v1.13.0...v1.14.0) (2022-06-03)
 
 

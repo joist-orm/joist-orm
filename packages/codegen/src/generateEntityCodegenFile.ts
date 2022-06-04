@@ -572,10 +572,10 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}: ${enumType}${maybeUndefined(notNull)};`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}: ${otherEntity.type} ${maybeUndefined(notNull)};`;
+    return code`${fieldName}: ${otherEntity.type}${maybeUndefined(notNull)};`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}: ${fieldType};`;
+    return code`${fieldName}: ${fieldType}${maybeUndefined(notNull)}`;
   });
   return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
 }

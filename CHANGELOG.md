@@ -1,3 +1,10 @@
+## [1.15.1](https://github.com/stephenh/joist-ts/compare/v1.15.0...v1.15.1) (2022-06-04)
+
+
+### Bug Fixes
+
+* Fix changes type for strings via new EntityFields type. ([#350](https://github.com/stephenh/joist-ts/issues/350)) ([5425d78](https://github.com/stephenh/joist-ts/commit/5425d7801990ed7df916803b7b20079f21d42c0f))
+
 # [1.15.0](https://github.com/stephenh/joist-ts/compare/v1.14.1...v1.15.0) (2022-06-03)
 
 

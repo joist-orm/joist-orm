@@ -52,6 +52,7 @@ export { asNew, fail } from "./utils";
 interface Flavoring<FlavorT> {
   _type?: FlavorT;
 }
+
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
 export function setField<T extends Entity>(entity: T, fieldName: keyof T & string, newValue: any): boolean {

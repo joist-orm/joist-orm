@@ -67,6 +67,21 @@ import {
 
 export type AuthorId = Flavor<string, "Author">;
 
+export interface AuthorFields {
+  firstName: string;
+  lastName: string | undefined;
+  isPopular: boolean | undefined;
+  age: number | undefined;
+  graduated: Date | undefined;
+  wasEverPopular: boolean | undefined;
+  address: Address | undefined;
+  favoriteColors: Color[];
+  favoriteShape: FavoriteShape | undefined;
+  mentor: Author | undefined;
+  currentDraftBook: Book | undefined;
+  publisher: Publisher | undefined;
+}
+
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
@@ -176,6 +191,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: AuthorGraphQLFilter;
     orderType: AuthorOrder;
     optsType: AuthorOpts;
+    fieldsType: AuthorFields;
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };

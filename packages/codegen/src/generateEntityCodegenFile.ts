@@ -338,6 +338,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     ${generatePolymorphicTypes(meta)}
+    
+    export interface ${entityName}Fields {
+      ${generateFieldsType(config, meta)}
+    }
 
     export interface ${entityName}Opts {
       ${generateOptsFields(config, meta)}
@@ -376,6 +380,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         gqlFilterType: ${entityName}GraphQLFilter;
         orderType: ${entityName}Order;
         optsType: ${entityName}Opts;
+        fieldsType: ${entityName}Fields;
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       };
@@ -545,6 +550,36 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys, ...o2o, ...o2m, ...m2m];
 }
 
+// Make our fields type
+function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
+  const primitives = meta.primitives.map((field) => {
+    const { fieldName, fieldType, notNull, derived } = field;
+    if (derived) {
+      return code``;
+    }
+    return code`${fieldName}: ${fieldType}${maybeUndefined(notNull)};`;
+  });
+  const enums = meta.enums.map((field) => {
+    const { fieldName, enumType, notNull, isArray } = field;
+    if (isArray) {
+      // Arrays are always optional and we'll default to `[]`
+      return code`${fieldName}: ${enumType}[];`;
+    } else {
+      return code`${fieldName}: ${enumType}${maybeUndefined(notNull)};`;
+    }
+  });
+  const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
+    return code`${fieldName}: ${enumType}${maybeUndefined(notNull)};`;
+  });
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}: ${otherEntity.type} ${maybeUndefined(notNull)};`;
+  });
+  const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
+    return code`${fieldName}: ${fieldType};`;
+  });
+  return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
+}
+
 // We know the OptIds types are only used in partials, so we make everything optional.
 // This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
 // in the partial type and of course the caller will only be setting one.
@@ -650,6 +685,10 @@ function maybeOptionalOrDefault(field: PrimitiveField | EnumField): string {
 
 function maybeUnionNull(notNull: boolean): string {
   return notNull ? "" : " | null";
+}
+
+function maybeUndefined(notNull: boolean): string {
+  return notNull ? "" : " | undefined";
 }
 
 function nullOrNever(notNull: boolean): string {

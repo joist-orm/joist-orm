@@ -48,6 +48,12 @@ import {
 
 export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
+export interface BookAdvanceFields {
+  status: AdvanceStatus;
+  book: Book;
+  publisher: Publisher;
+}
+
 export interface BookAdvanceOpts {
   status: AdvanceStatus;
   book: Book | BookId;
@@ -102,6 +108,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: BookAdvanceGraphQLFilter;
     orderType: BookAdvanceOrder;
     optsType: BookAdvanceOpts;
+    fieldsType: BookAdvanceFields;
     optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   };

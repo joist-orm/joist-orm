@@ -118,6 +118,7 @@ type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? M
 /** From any `Relations` field in `T`, i.e. for loader hints. */
 export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
 
+/** All the loadable fields, i.e. relations or lazy-loaded/async properties, in an entity. */
 export type Loadable<T extends Entity> = SubType<T, AsyncProperty<any, any> | Relation<any, any>>;
 
 // https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c

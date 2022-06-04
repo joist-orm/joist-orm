@@ -32,6 +32,11 @@ import { Artist, ArtistId, artistMeta, ArtistOrder, newPainting, Painting, paint
 
 export type PaintingId = Flavor<string, "Painting">;
 
+export interface PaintingFields {
+  title: string;
+  artist: Artist;
+}
+
 export interface PaintingOpts {
   title: string;
   artist: Artist | ArtistId;
@@ -80,6 +85,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: PaintingGraphQLFilter;
     orderType: PaintingOrder;
     optsType: PaintingOpts;
+    fieldsType: PaintingFields;
     optIdsType: PaintingIdsOpts;
     factoryOptsType: Parameters<typeof newPainting>[1];
   };

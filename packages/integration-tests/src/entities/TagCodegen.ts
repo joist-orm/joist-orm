@@ -31,6 +31,10 @@ import { Author, authorMeta, Book, BookId, bookMeta, newTag, Publisher, publishe
 
 export type TagId = Flavor<string, "Tag">;
 
+export interface TagFields {
+  name: string;
+}
+
 export interface TagOpts {
   name: string;
   books?: Book[];
@@ -75,6 +79,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;
     optsType: TagOpts;
+    fieldsType: TagFields;
     optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
   };

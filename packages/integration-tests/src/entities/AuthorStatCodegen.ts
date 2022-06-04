@@ -26,6 +26,18 @@ import { AuthorStat, authorStatMeta, newAuthorStat } from "./entities";
 
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 
+export interface AuthorStatFields {
+  smallint: number;
+  integer: number;
+  bigint: number;
+  decimal: number;
+  real: number;
+  smallserial: number;
+  serial: number;
+  bigserial: number;
+  doublePrecision: number;
+}
+
 export interface AuthorStatOpts {
   smallint: number;
   integer: number;
@@ -107,6 +119,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: AuthorStatGraphQLFilter;
     orderType: AuthorStatOrder;
     optsType: AuthorStatOpts;
+    fieldsType: AuthorStatFields;
     optIdsType: AuthorStatIdsOpts;
     factoryOptsType: Parameters<typeof newAuthorStat>[1];
   };

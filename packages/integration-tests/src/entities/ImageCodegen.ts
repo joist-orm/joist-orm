@@ -52,6 +52,14 @@ import {
 
 export type ImageId = Flavor<string, "Image">;
 
+export interface ImageFields {
+  fileName: string;
+  type: ImageType;
+  author: Author | undefined;
+  book: Book | undefined;
+  publisher: Publisher | undefined;
+}
+
 export interface ImageOpts {
   fileName: string;
   type: ImageType;
@@ -114,6 +122,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;
     optsType: ImageOpts;
+    fieldsType: ImageFields;
     optIdsType: ImageIdsOpts;
     factoryOptsType: Parameters<typeof newImage>[1];
   };

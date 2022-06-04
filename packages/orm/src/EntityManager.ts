@@ -43,6 +43,8 @@ export interface EntityConstructor<T> {
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
 export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
 
+export type FieldsOf<T> = T extends { __orm: { fieldsType: infer O } } ? O : never;
+
 export type OptIdsOf<T> = T extends { __orm: { optIdsType: infer O } } ? O : never;
 
 /** Return the `Foo` type for a given `Foo` entity constructor. */

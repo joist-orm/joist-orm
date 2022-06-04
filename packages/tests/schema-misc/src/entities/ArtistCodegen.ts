@@ -28,6 +28,11 @@ import { Artist, artistMeta, newArtist, Painting, PaintingId, paintingMeta } fro
 
 export type ArtistId = Flavor<string, "Artist">;
 
+export interface ArtistFields {
+  firstName: string;
+  lastName: string;
+}
+
 export interface ArtistOpts {
   firstName: string;
   lastName: string;
@@ -77,6 +82,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: ArtistGraphQLFilter;
     orderType: ArtistOrder;
     optsType: ArtistOpts;
+    fieldsType: ArtistFields;
     optIdsType: ArtistIdsOpts;
     factoryOptsType: Parameters<typeof newArtist>[1];
   };

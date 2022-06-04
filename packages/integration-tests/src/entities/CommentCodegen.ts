@@ -45,6 +45,11 @@ export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEn
   );
 }
 
+export interface CommentFields {
+  text: string | undefined;
+  parent: CommentParent;
+}
+
 export interface CommentOpts {
   text?: string | null;
   parent: CommentParent;
@@ -91,6 +96,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;
     optsType: CommentOpts;
+    fieldsType: CommentFields;
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   };

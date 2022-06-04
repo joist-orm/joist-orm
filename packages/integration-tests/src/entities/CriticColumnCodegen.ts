@@ -32,6 +32,11 @@ import { Critic, CriticColumn, criticColumnMeta, CriticId, criticMeta, CriticOrd
 
 export type CriticColumnId = Flavor<string, "CriticColumn">;
 
+export interface CriticColumnFields {
+  name: string;
+  critic: Critic;
+}
+
 export interface CriticColumnOpts {
   name: string;
   critic: Critic | CriticId;
@@ -80,6 +85,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: CriticColumnGraphQLFilter;
     orderType: CriticColumnOrder;
     optsType: CriticColumnOpts;
+    fieldsType: CriticColumnFields;
     optIdsType: CriticColumnIdsOpts;
     factoryOptsType: Parameters<typeof newCriticColumn>[1];
   };

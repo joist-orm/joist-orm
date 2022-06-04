@@ -32,6 +32,11 @@ import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, newBook } fr
 
 export type BookId = Flavor<string, "Book">;
 
+export interface BookFields {
+  title: string;
+  author: Author;
+}
+
 export interface BookOpts {
   title: string;
   author: Author | AuthorId;
@@ -72,6 +77,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;
     optsType: BookOpts;
+    fieldsType: BookFields;
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   };

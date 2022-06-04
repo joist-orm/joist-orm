@@ -47,6 +47,11 @@ import {
 
 export type BookReviewId = Flavor<string, "BookReview">;
 
+export interface BookReviewFields {
+  rating: number;
+  book: Book;
+}
+
 export interface BookReviewOpts {
   rating: number;
   book: Book | BookId;
@@ -103,6 +108,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: BookReviewGraphQLFilter;
     orderType: BookReviewOrder;
     optsType: BookReviewOpts;
+    fieldsType: BookReviewFields;
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   };

@@ -376,6 +376,14 @@ describe("Author", () => {
       a1.changes.books;
     });
 
+    it("has the right type for strings", async () => {
+      const em = newEntityManager();
+      const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
+      await em.flush();
+      a1.firstName = "f11";
+      expect(a1.changes.firstName.originalValue!.length).toEqual(2);
+    });
+
     it("works for references", async () => {
       await insertPublisher({ name: "p1" });
       await insertPublisher({ name: "p2" });

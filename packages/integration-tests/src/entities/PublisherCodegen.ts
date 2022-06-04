@@ -61,6 +61,16 @@ import {
 
 export type PublisherId = Flavor<string, "Publisher">;
 
+export interface PublisherFields {
+  name: string;
+  latitude: number | undefined;
+  longitude: number | undefined;
+  hugeNumber: number | undefined;
+  size: PublisherSize | undefined;
+  type: PublisherType;
+  tag: Tag | undefined;
+}
+
 export interface PublisherOpts {
   name: string;
   latitude?: number | null;
@@ -139,6 +149,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: PublisherGraphQLFilter;
     orderType: PublisherOrder;
     optsType: PublisherOpts;
+    fieldsType: PublisherFields;
     optIdsType: PublisherIdsOpts;
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };

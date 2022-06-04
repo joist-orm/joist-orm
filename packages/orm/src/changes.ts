@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "./Entity";
-import { IdOf, isId, OptsOf } from "./EntityManager";
+import { FieldsOf, IdOf, isId, OptsOf } from "./EntityManager";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -17,7 +17,6 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
   originalEntity: Promise<T | undefined>;
 }
 
-type NullOrDefinedOr<T> = T | null | undefined;
 type ExcludeNever<T> = Pick<T, { [P in keyof T]: T[P] extends never ? never : P }[keyof T]>;
 
 /**
@@ -28,15 +27,19 @@ type ExcludeNever<T> = Pick<T, { [P in keyof T]: T[P] extends never ? never : P 
  * - Exclude collections
  * - Convert entity types to id types to match what is stored in originalData
  */
-export type Changes<T extends Entity> = { fields: (keyof OptsOf<T>)[] } & ExcludeNever<{
-  [P in keyof OptsOf<T>]-?: OptsOf<T>[P] extends NullOrDefinedOr<infer U>
-    ? U extends Array<infer E extends Entity>
-      ? never // If U is an entity[] like o2m/m2m, we don't provide changes for those
-      : Exclude<U, string> extends (infer E extends Entity)
-      ? ManyToOneFieldStatus<E>
+export type Changes<T extends Entity> = { fields: (keyof FieldsOf<T>)[] } & {
+  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends infer U | undefined
+    ? U extends Entity
+      ? ManyToOneFieldStatus<U>
       : FieldStatus<U>
     : never;
-}>;
+};
+
+// type A1 = never extends string ? 1 : 2;
+// type A2 = Book extends Entity | undefined ? 1 : 2;
+// type A2a = string extends Entity | string | undefined ? 1 : 2;
+// type A3 = Book | undefined extends Entity ? 1 : 2;
+// type A4 = Book | undefined | null extends (infer E extends Entity) | undefined | null ? E : 2;
 
 /**
  * A strongly-typed Entity with its changes field.

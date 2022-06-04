@@ -60,6 +60,12 @@ import {
 
 export type BookId = Flavor<string, "Book">;
 
+export interface BookFields {
+  title: string;
+  order: number;
+  author: Author;
+}
+
 export interface BookOpts {
   title: string;
   order?: number;
@@ -131,6 +137,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;
     optsType: BookOpts;
+    fieldsType: BookFields;
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   };

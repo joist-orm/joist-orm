@@ -1,3 +1,10 @@
+## [1.15.2](https://github.com/stephenh/joist-ts/compare/v1.15.1...v1.15.2) (2022-06-04)
+
+
+### Bug Fixes
+
+* Add maybeUndefined for polys. ([be2f8e3](https://github.com/stephenh/joist-ts/commit/be2f8e369bf5f9256ef62e5cc1d1f68e57f37821))
+
 ## [1.15.1](https://github.com/stephenh/joist-ts/compare/v1.15.0...v1.15.1) (2022-06-04)
 
 

@@ -17,8 +17,6 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
   originalEntity: Promise<T | undefined>;
 }
 
-type ExcludeNever<T> = Pick<T, { [P in keyof T]: T[P] extends never ? never : P }[keyof T]>;
-
 /**
  * Creates the `this.changes.firstName` changes API for a given entity `T`.
  *

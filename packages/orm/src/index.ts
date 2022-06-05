@@ -29,6 +29,8 @@ export {
   Loaded,
   LoadHint,
   New,
+  Reactable,
+  ReactiveHint,
   RelationsIn,
 } from "./loaded";
 export * from "./loadLens";

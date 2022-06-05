@@ -970,9 +970,9 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    return todo.metadata.config.__data.reactiveRules.map(async (reverseHint) => {
+    return todo.metadata.config.__data.reactiveRules.map(async (rule) => {
       // Add the resulting "found" entities to the right todos to be validated
-      (await followReverseHint(entities, reverseHint)).forEach((entity) => {
+      (await followReverseHint(entities, rule.reversePath)).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (
           !todo.inserts.includes(entity) &&

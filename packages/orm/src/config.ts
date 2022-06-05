@@ -109,6 +109,18 @@ export class ConfigApi<T extends Entity, C> {
   placeholder(): void {}
 }
 
+/**
+ * Stores a path back to a reactive rule.
+ *
+ * I.e. if `Book` has a `ruleFn` that reacts to `Author.title`, then `Author`'s config will have
+ * a `ReactiveRule` with fields `["title"]`, reversePath `books`, and rule `ruleFn`.
+ */
+interface ReactiveRule {
+  fields: string[];
+  reversePath: string[];
+  rule: ValidationRule<any>;
+}
+
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
 export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
@@ -124,8 +136,8 @@ export class ConfigData<T extends Entity, C> {
     afterCommit: [],
     afterValidation: [],
   };
-  // Load-hint-ish structures that point back to instances that depend on us for validation rules.
-  reactiveRules: string[][] = [];
+  // An array of my X fields, via reverse path, trigger some target entity+fn
+  reactiveRules: ReactiveRule[] = [];
   // Load-hint-ish structures that point back to instances that depend on us for derived values.
   reactiveDerivedValues: string[][] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];

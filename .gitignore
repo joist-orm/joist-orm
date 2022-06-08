@@ -2,6 +2,7 @@ build/
 node_modules/
 /artifacts/
 /.idea/
+/.vscode/
 *.tsbuildinfo
 
 .yarn/*

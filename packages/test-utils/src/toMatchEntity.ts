@@ -1,4 +1,6 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
+// @ts-ignore
+import matchers from "expect/build/matchers";
 import {
   Collection,
   Entity,
@@ -71,10 +73,8 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
     }
   }
 
-  // Blatantly grab `toMatchObject` from the guts of expect
-  const { getMatchers } = require("expect/build/jestMatchersObject");
   // @ts-ignore
-  return getMatchers().toMatchObject.call(this, clean, expected);
+  return matchers.toMatchObject.call(this, clean, expected);
 }
 
 function maybeTestId(em: EntityManager, maybeEntity: any): any {

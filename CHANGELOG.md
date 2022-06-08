@@ -1,3 +1,10 @@
+## [1.15.3](https://github.com/stephenh/joist-ts/compare/v1.15.2...v1.15.3) (2022-06-08)
+
+
+### Bug Fixes
+
+* support jest 28 ([#352](https://github.com/stephenh/joist-ts/issues/352)) ([adac4a2](https://github.com/stephenh/joist-ts/commit/adac4a235a55c016897ba418128bcb3e44ad1d5d))
+
 ## [1.15.2](https://github.com/stephenh/joist-ts/compare/v1.15.1...v1.15.2) (2022-06-04)
 
 

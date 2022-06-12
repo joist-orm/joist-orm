@@ -1,27 +1,27 @@
-import { reverseHint as reverse } from "joist-orm";
+import { reverseHint } from "joist-orm";
 import { Author, Book, BookReview, Image, Publisher } from "./entities";
 
 describe("reverseHint", () => {
   it("can do string hint", () => {
-    expect(reverse(Author, "books")).toEqual([{ entity: Book, fields: ["author"], path: ["author"] }]);
+    expect(reverseHint(Author, "books")).toEqual([{ entity: Book, fields: ["author"], path: ["author"] }]);
   });
 
   it("can do array of string hints", () => {
-    expect(reverse(Author, ["books", "authors"])).toEqual([
+    expect(reverseHint(Author, ["books", "authors"])).toEqual([
       { entity: Book, fields: ["author"], path: ["author"] },
       { entity: Author, fields: ["mentor"], path: ["mentor"] },
     ]);
   });
 
   it("can do hash of hints", () => {
-    expect(reverse(Author, { books: "reviews" })).toEqual([
+    expect(reverseHint(Author, { books: "reviews" })).toEqual([
       { entity: Book, fields: ["author"], path: ["author"] },
       { entity: BookReview, fields: ["book"], path: ["book", "author"] },
     ]);
   });
 
   it("returns hints for entities in the middle", () => {
-    expect(reverse(Publisher, { authors: { books: ["author", "reviews"] } })).toEqual([
+    expect(reverseHint(Publisher, { authors: { books: ["author", "reviews"] } })).toEqual([
       { entity: Author, fields: ["publisher"], path: ["publisher"] },
       { entity: Book, fields: ["author"], path: ["author", "publisher"] },
       { entity: Author, fields: ["books"], path: ["books", "author", "publisher"] },
@@ -30,6 +30,6 @@ describe("reverseHint", () => {
   });
 
   it("can do a o2o relationship from object", () => {
-    expect(reverse(Book, "image")).toEqual([{ entity: Image, fields: ["book"], path: ["book"] }]);
+    expect(reverseHint(Book, "image")).toEqual([{ entity: Image, fields: ["book"], path: ["book"] }]);
   });
 });

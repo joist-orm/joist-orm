@@ -229,8 +229,8 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         const reversals = reverseHint(meta.cstr, (rule as any).hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
-        reversals.forEach(([otherEntity, reversePath]) => {
-          getMetadata(otherEntity).config.__data.reactiveRules.push({ fields: [], reversePath, rule });
+        reversals.forEach(({ entity, path }) => {
+          getMetadata(entity).config.__data.reactiveRules.push({ fields: [], reversePath: path, rule });
         });
       }
       if (isCannotBeUpdatedRule(rule) && rule.immutable) {
@@ -241,8 +241,8 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     Object.entries(meta.config.__data.asyncDerivedFields).forEach(([, entry]) => {
       const hint = entry![0];
       const reversals = reverseHint(meta.cstr, hint);
-      reversals.forEach(([otherEntity, reverseHint]) => {
-        getMetadata(otherEntity).config.__data.reactiveDerivedValues.push(reverseHint);
+      reversals.forEach(({ entity, path }) => {
+        getMetadata(entity).config.__data.reactiveDerivedValues.push(path);
       });
     });
   });

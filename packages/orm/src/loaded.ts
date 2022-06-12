@@ -13,7 +13,6 @@ import {
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { NullOrDefinedOr } from "./utils";
-import {PerformanceNodeTiming} from "perf_hooks";
 
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };

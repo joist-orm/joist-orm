@@ -20,11 +20,11 @@ export function reverseHint<T extends Entity>(entityType: EntityConstructor<T>, 
       throw new Error("Invalid hint");
     }
     const otherMeta = field.otherMetadata();
-    const me = { entity: otherMeta.cstr, path: [field.otherFieldName] };
+    const me = { entity: otherMeta.cstr, fields: [field.otherFieldName], path: [field.otherFieldName] };
     return [
       me,
-      ...reverseHint(otherMeta.cstr, subHint).map(({ entity, path }) => {
-        return { entity, path: [...path, field.otherFieldName] };
+      ...reverseHint(otherMeta.cstr, subHint).map(({ entity, fields, path }) => {
+        return { entity, fields, path: [...path, field.otherFieldName] };
       }),
     ];
   });
@@ -32,6 +32,7 @@ export function reverseHint<T extends Entity>(entityType: EntityConstructor<T>, 
 
 export interface ReactiveTarget {
   entity: EntityConstructor<any>;
+  fields: string[];
   path: string[];
 }
 

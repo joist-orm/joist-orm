@@ -1,4 +1,4 @@
-import { reverseHint } from "joist-orm";
+import { reverseHint, reverseHint2 } from "joist-orm";
 import { Author, Book, BookReview, Image, Publisher } from "./entities";
 
 describe("reverseHint", () => {
@@ -31,5 +31,28 @@ describe("reverseHint", () => {
 
   it("can do a o2o relationship from object", () => {
     expect(reverseHint(Book, "image")).toEqual([{ entity: Image, fields: ["book"], path: ["book"] }]);
+  });
+
+  it("can do immediate primitive field names", () => {
+    expect(reverseHint2(Author, "firstName")).toEqual([{ entity: Author, fields: ["firstName"], path: [] }]);
+  });
+
+  it("can do parent primitive field names", () => {
+    expect(reverseHint2(Book, { author: ["firstName", "lastName"] })).toEqual([
+      { entity: Author, fields: ["firstName", "lastName"], path: ["books"] },
+    ]);
+  });
+
+  it("can do grand-parent primitive field names", () => {
+    expect(reverseHint2(BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
+      { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
+    ]);
+  });
+
+  it("can do parent and grand-parent primitive field names", () => {
+    expect(reverseHint2(BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
+      { entity: Book, fields: ["title"], path: ["reviews"] },
+      { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
+    ]);
   });
 });

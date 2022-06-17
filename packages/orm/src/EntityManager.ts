@@ -13,11 +13,13 @@ import {
   DeepPartialOrNull,
   EntityHook,
   EntityMetadata,
+  FieldStatus,
   GenericError,
   getConstructorFromTaggedId,
   getMetadata,
   getRelations,
   keyToString,
+  ManyToOneFieldStatus,
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
@@ -1108,19 +1110,15 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
     const fieldName = paths.shift()!;
     // The path might touch either a reference or a collection
     const entitiesOrLists = await Promise.all(
-      current.flatMap((c) => {
-        const currentValuePromise = (c as any)[fieldName].load();
+      current.flatMap((c: any) => {
+        const currentValuePromise = c[fieldName].load();
         // If we're going from Book.author back to Author to re-validate the Author.books collection,
-        // see if Book.author has changed so we can re-validate both the old author's books and the
+        // see if Book.author has changed, so we can re-validate both the old author's books and the
         // new author's books.
         const isReference = getMetadata(c).fields[fieldName]?.kind === "m2o";
-        const hasChanged = isReference && (c as any).changes[fieldName].hasChanged;
-        const originalValue = (c as any).changes[fieldName].originalValue;
-        if (hasChanged && originalValue) {
-          const originalEntityMaybePromise = isEntity(originalValue)
-            ? originalValue
-            : c.em.load((c as any)[fieldName].otherMeta.cstr, originalValue);
-          return [currentValuePromise, originalEntityMaybePromise];
+        const changed = c.changes[fieldName] as FieldStatus<any>;
+        if (isReference && changed.hasUpdated && changed.originalValue) {
+          return [currentValuePromise, (changed as ManyToOneFieldStatus<any>).originalEntity];
         }
         return [currentValuePromise];
       }),

@@ -35,7 +35,7 @@ export {
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
-export { Reactable, ReactiveHint, reverseHint, reverseReactiveHint } from "./reactiveHints";
+export { Reactable, Reacted, ReactiveHint, reverseHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
   cannotBeUpdated,

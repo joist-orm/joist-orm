@@ -1,5 +1,4 @@
-import { Loaded, LoadHint, ReactiveHint } from "joist-orm";
-import { Reacted } from "joist-orm/build/src/loaded";
+import { Loaded, LoadHint, Reacted, ReactiveHint } from "joist-orm";
 import { BookCodegen, bookConfig as config, BookReview } from "./entities";
 
 export class Book extends BookCodegen {

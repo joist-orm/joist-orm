@@ -116,18 +116,25 @@ type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends ke
 
 type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : unknown;
 
-/** Given an entity field/value, i.e. `Author.books` as a Reference or Collection, return the loadable entity, i.e. `Book`. */
-export type LoadableEntity<V> = V extends Reference<any, infer U, any>
+/**
+ * Given an entity field/value, return the loadable entity.
+ *
+ * I.e. `Author.books` as a Reference or Collection, return `Book`.
+ *
+ * Note that we usually return entities, but for AsyncProperties it could be
+ * a calculated primitive value like number or string.
+ */
+export type LoadableValue<V> = V extends Reference<any, infer U, any>
   ? U
   : V extends Collection<any, infer U>
   ? U
-  : V extends AsyncProperty<any, infer P extends Entity>
+  : V extends AsyncProperty<any, infer P>
   ? P
   : never;
 
 /** All the loadable fields, i.e. relations or lazy-loaded/async properties, in an entity. */
 export type Loadable<T extends Entity> = {
-  -readonly [K in keyof T as LoadableEntity<T[K]> extends never ? never : K]: LoadableEntity<T[K]>;
+  -readonly [K in keyof T as LoadableValue<T[K]> extends never ? never : K]: LoadableValue<T[K]>;
 };
 
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
@@ -141,7 +148,9 @@ export type LoadHint<T extends Entity> =
   | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
-  [K in keyof T]?: LoadHint<LoadableEntity<T[K]>>;
+  [K in keyof Loadable<T> as Loadable<T>[K] extends Entity ? K : never]?: Loadable<T>[K] extends Entity
+    ? LoadHint<Loadable<T>[K]>
+    : never;
 };
 
 /** The keys in `T` that rules & hooks can react to. */

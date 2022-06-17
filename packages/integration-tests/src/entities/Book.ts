@@ -1,6 +1,6 @@
-import { ReactiveHint } from "joist-orm";
+import { Loaded, LoadHint, ReactiveHint } from "joist-orm";
 import { Reacted } from "joist-orm/build/src/loaded";
-import { BookCodegen, bookConfig as config } from "./entities";
+import { BookCodegen, bookConfig as config, BookReview } from "./entities";
 
 export class Book extends BookCodegen {
   rulesInvoked = 0;
@@ -14,6 +14,12 @@ config.addRule((book) => {
 config.addRule("author", () => {});
 
 config.cascadeDelete("reviews");
+
+function testLoads() {
+  const b1: LoadHint<BookReview> = { book: { author: "publisher" } };
+  const br: Loaded<BookReview, { book: { author: "publisher" } }> = null!;
+  console.log(br.book.get.author.get.publisher.get);
+}
 
 function testing() {
   const b1: ReactiveHint<Book> = { author: "firstName" };

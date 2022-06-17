@@ -72,7 +72,7 @@ export interface ReactiveTarget {
   path: string[];
 }
 
-function normalizeHint<T extends Entity>(hint: LoadHint<T>): object {
+function normalizeHint<T extends Entity>(hint: LoadHint<T> | ReactiveHint<T>): object {
   if (typeof hint === "string") {
     return { [hint]: {} };
   } else if (Array.isArray(hint)) {

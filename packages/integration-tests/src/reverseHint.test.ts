@@ -1,4 +1,4 @@
-import { Loadable, reverseHint, reverseHint2 } from "joist-orm";
+import { Loadable, reverseHint, reverseReactiveHint } from "joist-orm";
 import { Author, Book, BookReview, Image, Publisher } from "./entities";
 
 describe("reverseHint", () => {
@@ -34,30 +34,30 @@ describe("reverseHint", () => {
   });
 
   it("can do immediate primitive field names", () => {
-    expect(reverseHint2(Author, "firstName")).toEqual([{ entity: Author, fields: ["firstName"], path: [] }]);
+    expect(reverseReactiveHint(Author, "firstName")).toEqual([{ entity: Author, fields: ["firstName"], path: [] }]);
   });
 
   it("can do parent primitive field names", () => {
-    expect(reverseHint2(Book, { author: ["firstName", "lastName"] })).toEqual([
+    expect(reverseReactiveHint(Book, { author: ["firstName", "lastName"] })).toEqual([
       { entity: Author, fields: ["firstName", "lastName"], path: ["books"] },
     ]);
   });
 
   it("can do grand-parent primitive field names", () => {
-    expect(reverseHint2(BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
+    expect(reverseReactiveHint(BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
   });
 
   it("can do parent and grand-parent primitive field names", () => {
-    expect(reverseHint2(BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
+    expect(reverseReactiveHint(BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
       { entity: Book, fields: ["title"], path: ["reviews"] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
   });
 
   it("can do child o2m with primitive field names", () => {
-    expect(reverseHint2(Author, { books: "title" })).toEqual([
+    expect(reverseReactiveHint(Author, { books: "title" })).toEqual([
       {
         entity: Book,
         fields: ["title"],
@@ -68,7 +68,7 @@ describe("reverseHint", () => {
 
   it("can do child o2o with primitive field names", () => {
     type l = Loadable<Book>;
-    expect(reverseHint2(Author, { image: "fileName" })).toEqual([
+    expect(reverseReactiveHint(Author, { image: "fileName" })).toEqual([
       {
         entity: Image,
         fields: ["fileName"],

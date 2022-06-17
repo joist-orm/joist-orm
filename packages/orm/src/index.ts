@@ -2,9 +2,9 @@ import { Entity, EntityOrmField, isEntity } from "./Entity";
 import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { reverseHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { reverseHint } from "./reverseHint";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -29,15 +29,13 @@ export {
   Loaded,
   LoadHint,
   New,
-  Reactable,
-  ReactiveHint,
   RelationsIn,
-} from "./loaded";
+} from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
+export { Reactable, ReactiveHint, reverseHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
-export * from "./reverseHint";
 export {
   cannotBeUpdated,
   GenericError,

@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { Const, currentlyInstantiatingEntity } from "../EntityManager";
-import { Loaded, LoadHint } from "../loaded";
+import { Loaded, LoadHint } from "../loadHints";
 
 const I = Symbol();
 

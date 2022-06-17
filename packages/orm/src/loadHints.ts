@@ -1,12 +1,11 @@
 import { Entity } from "./Entity";
-import { FieldsOf, OptsOf } from "./EntityManager";
+import { OptsOf } from "./EntityManager";
 import {
   AsyncProperty,
   Collection,
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
-  ManyToOneReference,
   OneToOneReference,
   Reference,
   Relation,
@@ -93,7 +92,7 @@ export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T & {
  */
 export type DeepNew<T extends Entity> = Loaded<T, DeepLoadHint<T>>;
 
-/** Detects whether an entity is newly created, and so we can treat all of the relations as loaded. */
+/** Detects whether an entity is newly created, and so we can treat all the relations as loaded. */
 export function isNew<T extends Entity>(e: T): e is New<T> {
   return e.idTagged === undefined;
 }
@@ -152,32 +151,6 @@ export type NestedLoadHint<T extends Entity> = {
     ? LoadHint<Loadable<T>[K]>
     : never;
 };
-
-/** The keys in `T` that rules & hooks can react to. */
-export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T>;
-
-export type ReactiveHint<T extends Entity> =
-  | (keyof Reactable<T> & string)
-  | ReadonlyArray<keyof Reactable<T> & string>
-  | NestedReactiveHint<T>;
-
-export type NestedReactiveHint<T extends Entity> = {
-  [K in keyof Reactable<T>]?: Reactable<T>[K] extends infer E extends Entity ? ReactiveHint<E> : {};
-};
-
-/** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
-export type Reacted<T extends Entity, H> = {
-  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends ManyToOneReference<any, infer U, infer N>
-    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
-    : T[K];
-};
-
-/** Normalizes a `key | key[] | { key: nested }` hint into `{ key: nested }`. */
-type NormalizeHint<T extends Entity, H> = H extends keyof T
-  ? Record<H, {}>
-  : H extends ReadonlyArray<keyof T>
-  ? Record<H[number], {}>
-  : H;
 
 /** recursively checks if the relations from a load hint are loaded on an entity */
 export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): entity is Loaded<T, H> {

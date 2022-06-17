@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { New } from "./loaded";
+import { New } from "./loadHints";
 
 export type MaybePromise<T> = T | Promise<T>;
 

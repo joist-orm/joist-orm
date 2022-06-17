@@ -1,8 +1,29 @@
 import { Entity } from "./Entity";
-import { EntityConstructor } from "./EntityManager";
+import { EntityConstructor, FieldsOf } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { LoadHint, ReactiveHint } from "./loaded";
+import { Loadable, LoadHint } from "./loadHints";
+import { NormalizeHint, normalizeHint } from "./normalizeHints";
+import { LoadedReference, ManyToOneReference } from "./relations";
 import { fail } from "./utils";
+
+/** The keys in `T` that rules & hooks can react to. */
+export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T>;
+
+export type ReactiveHint<T extends Entity> =
+  | (keyof Reactable<T> & string)
+  | ReadonlyArray<keyof Reactable<T> & string>
+  | NestedReactiveHint<T>;
+
+export type NestedReactiveHint<T extends Entity> = {
+  [K in keyof Reactable<T>]?: Reactable<T>[K] extends infer E extends Entity ? ReactiveHint<E> : {};
+};
+
+/** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
+export type Reacted<T extends Entity, H> = {
+  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends ManyToOneReference<any, infer U, infer N>
+    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+    : T[K];
+};
 
 /**
  * Given a load hint of "given an entity, load these N things", return an array
@@ -30,7 +51,7 @@ export function reverseHint<T extends Entity>(entityType: EntityConstructor<T>, 
   });
 }
 
-export function reverseHint2<T extends Entity>(
+export function reverseReactiveHint<T extends Entity>(
   entityType: EntityConstructor<T>,
   hint: ReactiveHint<T>,
 ): ReactiveTarget[] {
@@ -47,7 +68,7 @@ export function reverseHint2<T extends Entity>(
         const me = { entity: otherMeta.cstr, fields: [field.otherFieldName], path: [field.otherFieldName] };
         return [
           // me,
-          ...reverseHint2(otherMeta.cstr, subHint).map(({ entity, fields, path }) => {
+          ...reverseReactiveHint(otherMeta.cstr, subHint).map(({ entity, fields, path }) => {
             return { entity, fields, path: [...path, field.otherFieldName] };
           }),
         ];
@@ -70,14 +91,4 @@ export interface ReactiveTarget {
   entity: EntityConstructor<any>;
   fields: string[];
   path: string[];
-}
-
-function normalizeHint<T extends Entity>(hint: LoadHint<T> | ReactiveHint<T>): object {
-  if (typeof hint === "string") {
-    return { [hint]: {} };
-  } else if (Array.isArray(hint)) {
-    return Object.fromEntries(hint.map((field) => [field, {}]));
-  } else {
-    return hint;
-  }
 }

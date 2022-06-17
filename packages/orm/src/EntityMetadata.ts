@@ -1,7 +1,7 @@
 import { ConfigApi } from "./config";
 import { Entity } from "./Entity";
 import { EntityConstructor, EntityManager, TimestampFields } from "./EntityManager";
-import { DeepNew } from "./loaded";
+import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;

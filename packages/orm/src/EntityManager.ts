@@ -30,7 +30,7 @@ import {
   ValidationErrors,
   ValidationRuleResult,
 } from "./index";
-import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loaded";
+import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";

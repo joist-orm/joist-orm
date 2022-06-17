@@ -116,14 +116,19 @@ type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends ke
 
 type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : unknown;
 
-/** From any `Relations` field in `T`, i.e. for loader hints. */
-export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
+/** Given an entity field/value, i.e. `Author.books` as a Reference or Collection, return the loadable entity, i.e. `Book`. */
+export type LoadableEntity<V> = V extends Reference<any, infer U, any>
+  ? U
+  : V extends Collection<any, infer U>
+  ? U
+  : V extends AsyncProperty<any, infer P extends Entity>
+  ? P
+  : never;
 
 /** All the loadable fields, i.e. relations or lazy-loaded/async properties, in an entity. */
-export type Loadable<T extends Entity> = SubType<T, AsyncProperty<any, any> | Relation<any, any>>;
-
-// https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
-type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;
+export type Loadable<T extends Entity> = {
+  -readonly [K in keyof T as LoadableEntity<T[K]> extends never ? never : K]: LoadableEntity<T[K]>;
+};
 
 // We accept load hints as a string, or a string[], or a hash of { key: nested };
 export type LoadHint<T extends Entity> =
@@ -136,15 +141,11 @@ export type LoadHint<T extends Entity> =
   | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
-  [K in keyof Loadable<T>]?: T[K] extends Relation<any, infer U>
-    ? LoadHint<U>
-    : T[K] extends AsyncProperty<any, any>
-    ? {}
-    : never;
+  [K in keyof T]?: LoadHint<LoadableEntity<T[K]>>;
 };
 
 /** The keys in `T` that rules & hooks can react to. */
-export type Reactable<T extends Entity> = FieldsOf<T>;
+export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T>;
 
 export type ReactiveHint<T extends Entity> =
   | (keyof Reactable<T> & string)
@@ -152,26 +153,22 @@ export type ReactiveHint<T extends Entity> =
   | NestedReactiveHint<T>;
 
 export type NestedReactiveHint<T extends Entity> = {
-  [K in keyof Reactable<T>]?: Reactable<T>[K] extends (infer E extends Entity)
-    ? ReactiveHint<E>
-    : {}
+  [K in keyof Reactable<T>]?: Reactable<T>[K] extends infer E extends Entity ? ReactiveHint<E> : {};
 };
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
 export type Reacted<T extends Entity, H> = {
-  [K in keyof NormalizeHint<T, H> & keyof T]:
-    T[K] extends ManyToOneReference<any, infer U, infer N>
-      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
-      : T[K];
+  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends ManyToOneReference<any, infer U, infer N>
+    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+    : T[K];
 };
 
 /** Normalizes a `key | key[] | { key: nested }` hint into `{ key: nested }`. */
-type NormalizeHint<T extends Entity, H> =
-  H extends keyof T
-    ? Record<H, {}>
-    : H extends ReadonlyArray<keyof T>
-    ? Record<H[number], {}>
-    : H;
+type NormalizeHint<T extends Entity, H> = H extends keyof T
+  ? Record<H, {}>
+  : H extends ReadonlyArray<keyof T>
+  ? Record<H[number], {}>
+  : H;
 
 /** recursively checks if the relations from a load hint are loaded on an entity */
 export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): entity is Loaded<T, H> {
@@ -207,3 +204,9 @@ export function ensureLoadedThen<T extends Entity, H extends LoadHint<T>, R>(
 ): R | Promise<R> {
   return isLoaded(entity, hint) ? fn(entity) : (entity as any).populate(hint).then(fn);
 }
+
+/** From any `Relations` field in `T`, i.e. for loader hints. */
+export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
+
+// https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
+type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;

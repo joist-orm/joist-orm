@@ -1,4 +1,4 @@
-import { reverseHint, reverseHint2 } from "joist-orm";
+import { Loadable, reverseHint, reverseHint2 } from "joist-orm";
 import { Author, Book, BookReview, Image, Publisher } from "./entities";
 
 describe("reverseHint", () => {
@@ -53,6 +53,27 @@ describe("reverseHint", () => {
     expect(reverseHint2(BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
       { entity: Book, fields: ["title"], path: ["reviews"] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
+    ]);
+  });
+
+  it("can do child o2m with primitive field names", () => {
+    expect(reverseHint2(Author, { books: "title" })).toEqual([
+      {
+        entity: Book,
+        fields: ["title"],
+        path: ["author"],
+      },
+    ]);
+  });
+
+  it("can do child o2o with primitive field names", () => {
+    type l = Loadable<Book>;
+    expect(reverseHint2(Author, { image: "fileName" })).toEqual([
+      {
+        entity: Image,
+        fields: ["fileName"],
+        path: ["author"],
+      },
     ]);
   });
 });

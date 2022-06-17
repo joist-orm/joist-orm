@@ -29,7 +29,7 @@
     "joist-codegen": "workspace:*",
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
-    "prettier": "^2.6.2",
+    "prettier": "^2.7.1",
     "prettier-plugin-organize-imports": "^2.3.4",
     "superstruct": "^0.15.4",
     "ts-node": "^10.8.0",

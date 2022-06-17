@@ -1,5 +1,6 @@
 import { Entity } from "./Entity";
 import { OptsOf } from "./EntityManager";
+import { NormalizeHint } from "./normalizeHints";
 import {
   AsyncProperty,
   Collection,
@@ -16,8 +17,8 @@ import { NullOrDefinedOr } from "./utils";
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
 
-/** Marks a given `T[P]` field as the loaded/synchronous version of the collection. */
-type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
+/** Marks a given `T[K]` field as the loaded/synchronous version of the collection. */
+export type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, H>>
   : P extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
@@ -97,23 +98,16 @@ export function isNew<T extends Entity>(e: T): e is New<T> {
   return e.idTagged === undefined;
 }
 
-/** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
-export type Loaded<T extends Entity, H extends LoadHint<T>> = T & {
-  [K in keyof T]: H extends DeepLoadHint<T>
-    ? MarkDeepLoaded<T, T[K]>
-    : H extends NestedLoadHint<T>
-    ? LoadedIfInNestedHint<T, K, H>
-    : H extends ReadonlyArray<infer U>
-    ? LoadedIfInKeyHint<T, K, U>
-    : LoadedIfInKeyHint<T, K, H>;
+/**
+ * All the loadable fields, i.e. relations or lazy-loaded/async properties, in an entity.
+ *
+ * We use a mapped type (instead of a code-generated type) so that we can pick up custom
+ * fields that have be added to the entity classes, i.e. `Author.numberOfBooks2` async
+ * properties.
+ */
+export type Loadable<T extends Entity> = {
+  -readonly [K in keyof T as LoadableValue<T[K]> extends never ? never : K]: LoadableValue<T[K]>;
 };
-
-// We can use unknown here because everything non-loaded is pulled in from `T &`
-type LoadedIfInNestedHint<T extends Entity, K extends keyof T, H> = K extends keyof H
-  ? MarkLoaded<T, T[K], H[K]>
-  : unknown;
-
-type LoadedIfInKeyHint<T extends Entity, K extends keyof T, H> = K extends H ? MarkLoaded<T, T[K]> : unknown;
 
 /**
  * Given an entity field/value, return the loadable entity.
@@ -131,28 +125,31 @@ export type LoadableValue<V> = V extends Reference<any, infer U, any>
   ? P
   : never;
 
-/** All the loadable fields, i.e. relations or lazy-loaded/async properties, in an entity. */
-export type Loadable<T extends Entity> = {
-  -readonly [K in keyof T as LoadableValue<T[K]> extends never ? never : K]: LoadableValue<T[K]>;
-};
-
-// We accept load hints as a string, or a string[], or a hash of { key: nested };
+/**
+ *  A load hint of a single key, multiple keys, or nested keys and sub-hints.
+ *
+ * Load hints are different from reactive hints in that load hints include only references,
+ * collections, and async properties to preload (like `Book.author` or `Author.books`), and
+ * do not include any primitive fields (like `Author.firstName`).
+ */
 export type LoadHint<T extends Entity> =
   | (keyof Loadable<T> & string)
   | ReadonlyArray<keyof Loadable<T> & string>
-  // If `T` has no loadable keys, this will be `{}`, and because `"foo" extends {}`, this
-  // essentially breaks type-checking of string-based load hints. However, if we try to
-  // check `if NestedLoadHint === {} ? never`, then passing in `{}` as a terminal load
-  // hint breaks.
   | NestedLoadHint<T>;
 
 export type NestedLoadHint<T extends Entity> = {
-  [K in keyof Loadable<T> as Loadable<T>[K] extends Entity ? K : never]?: Loadable<T>[K] extends Entity
-    ? LoadHint<Loadable<T>[K]>
-    : never;
+  // Don't filter out entity-loadable keys, because we need to support `{ numberOfBooks2: {} }`
+  [K in keyof Loadable<T>]?: Loadable<T>[K] extends infer U extends Entity ? LoadHint<U> : {};
 };
 
-/** recursively checks if the relations from a load hint are loaded on an entity */
+/** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
+export type Loaded<T extends Entity, H extends LoadHint<T>> = T & {
+  [K in keyof T & keyof NormalizeHint<T, H>]: H extends DeepLoadHint<T>
+    ? MarkDeepLoaded<T, T[K]>
+    : MarkLoaded<T, T[K], NormalizeHint<T, H>[K]>;
+};
+
+/** Recursively checks if the relations from a load hint are loaded on an entity. */
 export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hint: H): entity is Loaded<T, H> {
   if (typeof hint === "string") {
     return (entity as any)[hint].isLoaded;

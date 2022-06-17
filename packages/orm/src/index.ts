@@ -28,6 +28,7 @@ export {
   Loadable,
   Loaded,
   LoadHint,
+  MarkLoaded,
   New,
   RelationsIn,
 } from "./loadHints";

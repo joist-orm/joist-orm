@@ -9,13 +9,20 @@ import { fail } from "./utils";
 /** The keys in `T` that rules & hooks can react to. */
 export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T>;
 
+/**
+ * A reactive hint of a single key, multiple keys, or nested keys and sub-hints.
+ *
+ * Reactive hints are different from load hints in that reactive hints include specific
+ * fields to react against, while load hints contain only relations, collections, and async
+ * properties to preload.
+ */
 export type ReactiveHint<T extends Entity> =
   | (keyof Reactable<T> & string)
   | ReadonlyArray<keyof Reactable<T> & string>
   | NestedReactiveHint<T>;
 
 export type NestedReactiveHint<T extends Entity> = {
-  [K in keyof Reactable<T>]?: Reactable<T>[K] extends infer E extends Entity ? ReactiveHint<E> : {};
+  [K in keyof Reactable<T>]?: Reactable<T>[K] extends infer U extends Entity ? ReactiveHint<U> : {};
 };
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */

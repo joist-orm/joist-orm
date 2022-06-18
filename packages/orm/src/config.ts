@@ -120,6 +120,7 @@ export class ConfigApi<T extends Entity, C> {
  * a `ReactiveRule` with fields `["title"]`, reversePath `books`, and rule `ruleFn`.
  */
 interface ReactiveRule {
+  name: string;
   fields: string[];
   reversePath: string[];
   rule: ValidationRule<any>;
@@ -152,7 +153,7 @@ function getCallerName(): string {
   // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
   const line = err.stack!.split("\n")[4];
   const parts = line.split("/");
-  return parts[parts.length - 1].replace(")", "");
+  return parts[parts.length - 1].replace(")", "").replace(/:\d+$/, "");
 }
 
 function getErrorObject(): Error {

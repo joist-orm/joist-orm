@@ -108,7 +108,8 @@ config.addRule((a) => {
 });
 
 // Example of reactive rule being fired on Book change
-config.addRule("books", async (a) => {
+// config.addRule("books", async (a) => {
+config.addRule({ books: ["title"], firstName: {} }, async (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {
     return "A book title cannot be the author's firstName";
   }

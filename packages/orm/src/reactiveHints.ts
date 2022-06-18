@@ -3,7 +3,7 @@ import { EntityConstructor, FieldsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Loadable, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint } from "./normalizeHints";
-import { LoadedReference, ManyToOneReference } from "./relations";
+import { Collection, LoadedCollection, LoadedReference, Reference } from "./relations";
 import { fail } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
@@ -27,8 +27,10 @@ export type NestedReactiveHint<T extends Entity> = {
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
 export type Reacted<T extends Entity, H> = Entity & {
-  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends ManyToOneReference<any, infer U, infer N>
+  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends Reference<any, infer U, infer N>
     ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+    : T[K] extends Collection<any, infer U>
+    ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
     : T[K];
 } & { entity: T };
 

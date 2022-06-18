@@ -1,5 +1,5 @@
 import { Author, Book, BookReview, Image, Publisher } from "@src/entities";
-import { getMetadata, reverseHint, reverseReactiveHint } from "joist-orm";
+import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, reverseHint, reverseReactiveHint } from "joist-orm";
 import { convertToLoadHint } from "joist-orm/build/src/reactiveHints";
 
 describe("reactiveHints", () => {
@@ -93,6 +93,44 @@ describe("reactiveHints", () => {
         book: { author: {} },
       });
     });
+  });
+
+  describe("typings", () => {
+    function testLoads() {
+      const b1: LoadHint<BookReview> = { book: { author: "publisher" } };
+      const br: Loaded<BookReview, { book: { author: "publisher" } }> = null!;
+      console.log(br.book.get.author.get.publisher.get);
+    }
+
+    function testing() {
+      // just book 1 field
+      const b4: ReactiveHint<Book> = "title";
+      const b4e: Reacted<Book, "title"> = null!;
+      console.log(b4e.title);
+
+      // just book 2 fields
+      const b5: ReactiveHint<Book> = ["title", "order"];
+      const b5e: Reacted<Book, ["title", "order"]> = null!;
+      console.log(b5e.order, b5e.title);
+
+      // book m2o to author and 1 field
+      const b1: ReactiveHint<Book> = { author: "firstName" };
+
+      // book m2o to author and 2 fields
+      const b2: ReactiveHint<Book> = { author: ["firstName", "lastName"] };
+      const b2e: Reacted<Book, { author: ["firstName", "lastName"] }> = null!;
+      console.log(b2e.author.get.firstName, b2e.author.get.lastName);
+
+      // book m2o to author and nested hint to publisher
+      const b3: ReactiveHint<Book> = { author: { publisher: "name", firstName: {} } };
+      const b3e: Reacted<Book, { author: { publisher: "name"; firstName: {} } }> = null!;
+      console.log(b3e.author.get.firstName, b3e.author.get.publisher.get!.name);
+
+      // author o2m to books
+      const b6: ReactiveHint<Author> = { books: {} };
+      const b6e: Reacted<Author, { books: {} }> = null!;
+      console.log(b6e.books.get.length);
+    }
   });
 
   // it("can type-check", () => {

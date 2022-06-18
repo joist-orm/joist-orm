@@ -8,6 +8,7 @@ import { Driver } from "./drivers/driver";
 import { Entity, isEntity } from "./Entity";
 import {
   assertIdsAreTagged,
+  Changes,
   CustomCollection,
   CustomReference,
   DeepPartialOrNull,
@@ -972,7 +973,12 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
     // Find each statically-declared reactive rule for the given entity type
     return todo.metadata.config.__data.reactiveRules.map(async (rule) => {
       // Add the resulting "found" entities to the right todos to be validated
-      (await followReverseHint(entities, rule.reversePath)).forEach((entity) => {
+      (
+        await followReverseHint(
+          entities.filter((e) => ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f))),
+          rule.reversePath,
+        )
+      ).forEach((entity) => {
         const todo = getTodo(todos, entity);
         if (
           !todo.inserts.includes(entity) &&

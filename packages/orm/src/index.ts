@@ -228,8 +228,8 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         const reversals = reverseReactiveHint(meta.cstr, (rule as any).hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
-        reversals.forEach(({ entity, path }) => {
-          getMetadata(entity).config.__data.reactiveRules.push({ fields: [], reversePath: path, rule });
+        reversals.forEach(({ entity, path, fields }) => {
+          getMetadata(entity).config.__data.reactiveRules.push({ fields, reversePath: path, rule });
         });
       }
       if (isCannotBeUpdatedRule(rule) && rule.immutable) {

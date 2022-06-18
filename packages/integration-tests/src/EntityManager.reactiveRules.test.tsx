@@ -1,4 +1,4 @@
-import { newAuthor, newBook } from "@src/entities";
+import { Color, newAuthor, newBook } from "@src/entities";
 
 describe("EntityManager.reactiveRules", () => {
   it.withCtx("runs m2o reactive rules", async ({ em }) => {
@@ -12,6 +12,11 @@ describe("EntityManager.reactiveRules", () => {
     a.firstName = "a2";
     await em.flush();
     // Then the validation rule runs again
+    expect(b.firstNameRuleInvoked).toBe(2);
+    // But when we change something else about the author
+    a.favoriteColors = [Color.Red];
+    await em.flush();
+    // Then the validation rule is not ran again
     expect(b.firstNameRuleInvoked).toBe(2);
   });
 });

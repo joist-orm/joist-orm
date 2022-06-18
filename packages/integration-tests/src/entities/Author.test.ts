@@ -68,7 +68,7 @@ describe("Author", () => {
     expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
       { name: "Author.ts:112", fields: ["author", "title"], reversePath: ["author"], rule: expect.any(Function) },
       { name: "Author.ts:119", fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
-      { name: "Book.ts:14", fields: ["title", "author"], reversePath: [], rule: expect.any(Function) },
+      { name: "Book.ts:14", fields: ["author"], reversePath: [], rule: expect.any(Function) },
       { name: "Book.ts:19", fields: ["author"], reversePath: [], rule: expect.any(Function) },
     ]);
   });

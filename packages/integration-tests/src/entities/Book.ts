@@ -11,7 +11,7 @@ config.addRule((book) => {
 });
 
 // A noop rule to make Book reactive on author.firstName
-config.addRule({ title: {}, author: "firstName" }, (b) => {
+config.addRule({ author: "firstName" }, (b) => {
   b.entity.firstNameRuleInvoked++;
 });
 

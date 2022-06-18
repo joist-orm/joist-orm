@@ -26,7 +26,7 @@ describe("Driver", () => {
           inserts: [author],
           deletes: [],
           updates: [],
-          validates: [],
+          validates: new Map(),
         },
       });
       const authors = await select("authors");
@@ -36,7 +36,7 @@ describe("Driver", () => {
       expect(authors[0].graduated).toEqual(null);
     });
 
-    // This is currently not passing in the main pg driver tests due to an oplock error
+    // This is currently not passing in the main pg driver tests due to an op-lock error
     it.skip("can update", async () => {
       const jan1 = new Date(2000, 0, 1);
       await insertAuthor({ first_name: "a1", updated_at: jan1 });
@@ -52,7 +52,7 @@ describe("Driver", () => {
           inserts: [],
           deletes: [],
           updates: [author],
-          validates: [],
+          validates: new Map(),
         },
       });
 

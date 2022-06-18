@@ -975,19 +975,19 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       // Add the resulting "found" entities to the right todos to be validated
       (
         await followReverseHint(
-          entities.filter((e) =>
-            // ((e as any).changes as Changes<any>).fields.length === 0 ||
-            ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
+          entities.filter(
+            (e) => e.isNewEntity || ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
           ),
           rule.reversePath,
         )
       ).forEach((entity) => {
-        const { inserts, updates, validates } = getTodo(todos, entity);
-        if (!inserts.includes(entity) && !updates.includes(entity) && !entity.isDeletedEntity) {
+        const { validates } = getTodo(todos, entity);
+        // Even if the entity is in inserts/updates, we need to explicitly mark it for validation
+        if (!entity.isDeletedEntity) {
           if (!validates.has(entity)) {
-            validates.set(entity, []);
+            validates.set(entity, new Set());
           }
-          validates.get(entity)!.push(rule.rule);
+          validates.get(entity)!.add(rule.rule);
         }
       });
     });
@@ -1023,22 +1023,21 @@ async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<voi
 async function validate(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap(({ metadata, inserts, updates, validates }) => {
     const { rules } = metadata.config.__data;
-    // Run rules against explicitly mutated entities
+    // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
+    // because even for reactive validations on mutated entities, we defer to addReactiveValidations
+    // to mark only the rules that need to run.
     const a = [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
         return rules
-          .filter(({ fields }) => {
-            const changedFields = (entity as any).changes.fields;
-            return fields === undefined || fields.some((f) => changedFields.includes(f));
-          })
+          .filter(({ fields }) => fields === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
       });
     // Run rules against unchanged-but-reacting entities
     const b = [...validates.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fns]) => {
-        return fns.flatMap(async (fn) => coerceError(entity, await fn(entity)));
+        return [...fns.values()].flatMap(async (fn) => coerceError(entity, await fn(entity)));
       });
     return a.concat(b);
   });

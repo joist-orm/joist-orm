@@ -12,6 +12,8 @@ describe("getProperties", () => {
       "image",
       "tags",
       "rulesInvoked",
+      "firstNameRuleInvoked",
+      "favoriteColorsRuleInvoked",
     ]);
   });
 

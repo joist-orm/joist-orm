@@ -9,7 +9,7 @@ export class Todo {
   inserts: Entity[] = [];
   updates: Entity[] = [];
   deletes: Entity[] = [];
-  validates: Map<Entity, Function[]> = new Map();
+  validates: Map<Entity, Set<Function>> = new Map();
   constructor(public metadata: EntityMetadata<any>) {}
 }
 

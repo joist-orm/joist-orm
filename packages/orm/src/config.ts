@@ -1,5 +1,6 @@
 import { Entity } from "./Entity";
-import { Loaded, LoadHint, RelationsIn } from "./index";
+import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn } from "./index";
+import { convertToLoadHint } from "./reactiveHints";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ValidationRule } from "./rules";
 import { MaybePromise } from "./utils";
@@ -17,6 +18,7 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 export class ConfigApi<T extends Entity, C> {
   __data = new ConfigData<T, C>();
 
+  addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule<H extends LoadHint<T>>(populate: H, rule: ValidationRule<Loaded<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
@@ -24,7 +26,10 @@ export class ConfigApi<T extends Entity, C> {
       this.__data.rules.push(ruleOrHint);
     } else {
       const fn = async (entity: T) => {
-        const loaded = await entity.em.populate(entity, ruleOrHint);
+        const loadHint = convertToLoadHint(getMetadata(entity), ruleOrHint);
+        const loaded = await entity.em.populate(entity, loadHint);
+        // Give the rule a way to access the fully typed object
+        (loaded as any).entity = loaded;
         return maybeRule!(loaded);
       };
       // Squirrel our hint away where configureMetadata can find it

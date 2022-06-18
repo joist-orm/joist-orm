@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { EntityConstructor, FieldsOf } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Loadable, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint } from "./normalizeHints";
 import { LoadedReference, ManyToOneReference } from "./relations";
@@ -26,11 +26,11 @@ export type NestedReactiveHint<T extends Entity> = {
 };
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
-export type Reacted<T extends Entity, H> = {
+export type Reacted<T extends Entity, H> = Entity & {
   [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends ManyToOneReference<any, infer U, infer N>
     ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
     : T[K];
-};
+} & { entity: T };
 
 /**
  * Given a load hint of "given an entity, load these N things", return an array
@@ -92,6 +92,26 @@ export function reverseReactiveHint<T extends Entity>(
   } else {
     return [{ entity: entityType, fields: primitives, path: [] }, ...subHints];
   }
+}
+
+export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hint: ReactiveHint<T>): LoadHint<T> {
+  return Object.fromEntries(
+    Object.entries(normalizeHint(hint)).flatMap(([key, subHint]) => {
+      const field = meta.fields[key] || fail(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
+      switch (field.kind) {
+        case "m2m":
+        case "m2o":
+        case "o2m":
+        case "o2o": {
+          return [[key, convertToLoadHint(field.otherMetadata(), subHint)]];
+        }
+        case "primitive":
+          return [];
+        default:
+          throw new Error("Invalid hint");
+      }
+    }),
+  ) as any;
 }
 
 export interface ReactiveTarget {

@@ -3,6 +3,7 @@ import { BookCodegen, bookConfig as config, BookReview } from "./entities";
 
 export class Book extends BookCodegen {
   rulesInvoked = 0;
+  firstNameRuleInvoked = 0;
 }
 
 config.addRule((book) => {
@@ -10,7 +11,9 @@ config.addRule((book) => {
 });
 
 // A noop rule to make book reactive on author
-config.addRule("author", () => {});
+config.addRule({ author: "firstName" }, (b) => {
+  b.entity.firstNameRuleInvoked++;
+});
 
 config.cascadeDelete("reviews");
 

@@ -2,7 +2,7 @@ import { Entity, EntityOrmField, isEntity } from "./Entity";
 import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import { reverseHint } from "./reactiveHints";
+import { reverseHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { isCannotBeUpdatedRule } from "./rules";
@@ -225,7 +225,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
       if ((rule as any).hint) {
-        const reversals = reverseHint(meta.cstr, (rule as any).hint);
+        const reversals = reverseReactiveHint(meta.cstr, (rule as any).hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
         reversals.forEach(({ entity, path }) => {

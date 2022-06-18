@@ -153,7 +153,8 @@ function getCallerName(): string {
   // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
   const line = err.stack!.split("\n")[4];
   const parts = line.split("/");
-  return parts[parts.length - 1].replace(")", "").replace(/:\d+$/, "");
+  // Get the last part, which will be the file name, i.e. Activity.ts:86:8
+  return parts[parts.length - 1].replace(/:\d+\)?$/, "");
 }
 
 function getErrorObject(): Error {

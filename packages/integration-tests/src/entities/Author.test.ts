@@ -64,6 +64,12 @@ describe("Author", () => {
     const b1 = new Book(em, { title: "b1", author: a1 });
     // Then the Author validation rule fails
     await expect(em.flush()).rejects.toThrow("Author:1 An author cannot have 13 books");
+    // And assert against the rules for good measure
+    expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
+      { fields: ["author", "title"], reversePath: ["author"], rule: expect.any(Function) },
+      { fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
+      { fields: ["author"], reversePath: [], rule: expect.any(Function) },
+    ]);
   });
 
   it("can have reactive validation fired on deleted child", async () => {

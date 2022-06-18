@@ -975,7 +975,10 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       // Add the resulting "found" entities to the right todos to be validated
       (
         await followReverseHint(
-          entities.filter((e) => ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f))),
+          entities.filter((e) =>
+            // ((e as any).changes as Changes<any>).fields.length === 0 ||
+            ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
+          ),
           rule.reversePath,
         )
       ).forEach((entity) => {

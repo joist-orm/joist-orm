@@ -40,19 +40,23 @@ describe("reactiveHints", () => {
 
   it("can do parent primitive field names", () => {
     expect(reverseReactiveHint(Book, { author: ["firstName", "lastName"] })).toEqual([
+      { entity: Book, fields: ["author"], path: [] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books"] },
     ]);
   });
 
   it("can do grand-parent primitive field names", () => {
     expect(reverseReactiveHint(BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
+      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: Book, fields: ["author"], path: ["reviews"] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
   });
 
   it("can do parent and grand-parent primitive field names", () => {
     expect(reverseReactiveHint(BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
-      { entity: Book, fields: ["title"], path: ["reviews"] },
+      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: Book, fields: ["title", "author"], path: ["reviews"] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
   });
@@ -61,7 +65,17 @@ describe("reactiveHints", () => {
     expect(reverseReactiveHint(Author, { books: "title" })).toEqual([
       {
         entity: Book,
-        fields: ["title"],
+        fields: ["author", "title"],
+        path: ["author"],
+      },
+    ]);
+  });
+
+  it("can do child o2m with w/o any ", () => {
+    expect(reverseReactiveHint(Author, "books")).toEqual([
+      {
+        entity: Book,
+        fields: ["author"],
         path: ["author"],
       },
     ]);
@@ -71,13 +85,13 @@ describe("reactiveHints", () => {
     expect(reverseReactiveHint(Author, { image: "fileName" })).toEqual([
       {
         entity: Image,
-        fields: ["fileName"],
+        fields: ["author", "fileName"],
         path: ["author"],
       },
     ]);
   });
 
-  describe("convertToPopulateHint", () => {
+  describe("convertToLoadHint", () => {
     it("works with child o2o and primitive field names", () => {
       expect(convertToLoadHint(getMetadata(Author), { image: "fileName" })).toEqual({ image: {} });
     });

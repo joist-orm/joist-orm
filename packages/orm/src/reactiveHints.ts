@@ -71,20 +71,20 @@ export function reverseReactiveHint<T extends Entity>(
     const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
     switch (field.kind) {
       case "m2o": {
-        const otherMeta = field.otherMetadata();
         primitives.push(field.fieldName);
-        return reverseReactiveHint(otherMeta.cstr, subHint).map(({ entity, fields, path }) => {
+        return reverseReactiveHint(field.otherMetadata().cstr, subHint).map(({ entity, fields, path }) => {
           return { entity, fields, path: [...path, field.otherFieldName] };
         });
       }
       case "m2m":
       case "o2m":
       case "o2o": {
-        const otherMeta = field.otherMetadata();
         // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
-        return reverseReactiveHint(otherMeta.cstr, subHint, field.otherFieldName).map(({ entity, fields, path }) => {
-          return { entity, fields, path: [...path, field.otherFieldName] };
-        });
+        return reverseReactiveHint(field.otherMetadata().cstr, subHint, field.otherFieldName).map(
+          ({ entity, fields, path }) => {
+            return { entity, fields, path: [...path, field.otherFieldName] };
+          },
+        );
       }
       case "primitive":
         primitives.push(key);

@@ -976,7 +976,10 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       (
         await followReverseHint(
           entities.filter(
-            (e) => e.isNewEntity || ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
+            (e) =>
+              e.isNewEntity ||
+              e.isDeletedEntity ||
+              ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
           ),
           rule.reversePath,
         )

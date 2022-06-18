@@ -982,14 +982,12 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
           rule.reversePath,
         )
       ).forEach((entity) => {
-        const todo = getTodo(todos, entity);
-        if (
-          !todo.inserts.includes(entity) &&
-          !todo.updates.includes(entity) &&
-          !todo.validates.includes(entity) &&
-          !entity.isDeletedEntity
-        ) {
-          todo.validates.push(entity);
+        const { inserts, updates, validates } = getTodo(todos, entity);
+        if (!inserts.includes(entity) && !updates.includes(entity) && !entity.isDeletedEntity) {
+          if (!validates.has(entity)) {
+            validates.set(entity, []);
+          }
+          validates.get(entity)!.push(rule.rule);
         }
       });
     });
@@ -1023,13 +1021,26 @@ async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<voi
 }
 
 async function validate(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap((todo) => {
-    const rules = todo.metadata.config.__data.rules;
-    return [...todo.inserts, ...todo.updates, ...todo.validates]
+  const p = Object.values(todos).flatMap(({ metadata, inserts, updates, validates }) => {
+    const { rules } = metadata.config.__data;
+    // Run rules against explicitly mutated entities
+    const a = [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
-        return rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
+        return rules
+          .filter(({ fields }) => {
+            const changedFields = (entity as any).changes.fields;
+            return fields === undefined || fields.some((f) => changedFields.includes(f));
+          })
+          .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
       });
+    // Run rules against unchanged-but-reacting entities
+    const b = [...validates.entries()]
+      .filter(([e]) => !e.isDeletedEntity)
+      .flatMap(([entity, fns]) => {
+        return fns.flatMap(async (fn) => coerceError(entity, await fn(entity)));
+      });
+    return a.concat(b);
   });
   const errors = (await Promise.all(p)).flat();
   if (errors.length > 0) {
@@ -1049,7 +1060,7 @@ async function runHook(
   ctx: unknown,
   hook: EntityHook,
   todos: Record<string, Todo>,
-  keys: ("inserts" | "deletes" | "updates" | "validates")[],
+  keys: ("inserts" | "deletes" | "updates")[],
 ): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     const hookFns = todo.metadata.config.__data.hooks[hook];

@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn } from "./index";
 import { convertToLoadHint } from "./reactiveHints";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { ValidationRule } from "./rules";
+import { ValidationRule, ValidationRuleInternal } from "./rules";
 import { MaybePromise } from "./utils";
 
 export type EntityHook =
@@ -22,9 +22,12 @@ export class ConfigApi<T extends Entity, C> {
   addRule<H extends LoadHint<T>>(populate: H, rule: ValidationRule<Loaded<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+    // Keep the name for easy debugging/tracing later
+    const name = getCallerName();
     if (typeof ruleOrHint === "function") {
-      this.__data.rules.push(ruleOrHint);
+      this.__data.rules.push({ name, fn: ruleOrHint, hint: undefined, fields: undefined });
     } else {
+      // Create a wrapper around the user's function to populate
       const fn = async (entity: T) => {
         const loadHint = convertToLoadHint(getMetadata(entity), ruleOrHint);
         const loaded = await entity.em.populate(entity, loadHint);
@@ -32,11 +35,7 @@ export class ConfigApi<T extends Entity, C> {
         (loaded as any).entity = loaded;
         return maybeRule!(loaded);
       };
-      // Squirrel our hint away where configureMetadata can find it
-      (fn as any).hint = ruleOrHint;
-      // Keep the name for easy debugging/tracing later
-      (fn as any).ruleName = getCallerName();
-      this.__data.rules.push(fn);
+      this.__data.rules.push({ name, fn, hint: ruleOrHint, fields: [] });
     }
   }
 
@@ -129,7 +128,7 @@ interface ReactiveRule {
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
 export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
-  rules: ValidationRule<T>[] = [];
+  rules: ValidationRuleInternal<T>[] = [];
   /** The async derived fields for this entity type. */
   asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
   /** The hooks for this instance. */

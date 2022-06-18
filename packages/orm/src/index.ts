@@ -224,18 +224,24 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
-      if ((rule as any).hint) {
-        const reversals = reverseReactiveHint(meta.cstr, (rule as any).hint);
+      if (rule.hint) {
+        const reversals = reverseReactiveHint(meta.cstr, rule.hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
         reversals.forEach(({ entity, path, fields }) => {
-          getMetadata(entity).config.__data.reactiveRules.push({ fields, reversePath: path, rule });
+          if (entity === meta.cstr) {
+            // If the rule is reactive to specific fields on the root entity, flag those
+            rule.fields = fields;
+          } else {
+            getMetadata(entity).config.__data.reactiveRules.push({ fields, reversePath: path, rule: rule.fn });
+          }
         });
       }
-      if (isCannotBeUpdatedRule(rule) && rule.immutable) {
-        meta.fields[rule.field].immutable = true;
+      if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
+        meta.fields[rule.fn.field].immutable = true;
       }
     });
+
     // Look for reactive async derived values rules to reverse
     Object.entries(meta.config.__data.asyncDerivedFields).forEach(([, entry]) => {
       const hint = entry![0];

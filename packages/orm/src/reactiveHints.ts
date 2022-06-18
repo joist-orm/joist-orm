@@ -87,6 +87,7 @@ export function reverseReactiveHint<T extends Entity>(
         );
       }
       case "primitive":
+      case "enum":
         primitives.push(key);
         return [];
       default:
@@ -115,9 +116,10 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
           return [[key, convertToLoadHint(field.otherMetadata(), subHint)]];
         }
         case "primitive":
+        case "enum":
           return [];
         default:
-          throw new Error("Invalid hint");
+          throw new Error(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
       }
     }),
   ) as any;

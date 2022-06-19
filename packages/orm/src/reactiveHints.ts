@@ -2,12 +2,17 @@ import { Entity } from "./Entity";
 import { EntityConstructor, FieldsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Loadable, LoadHint } from "./loadHints";
-import { NormalizeHint, normalizeHint } from "./normalizeHints";
+import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import { Collection, LoadedCollection, LoadedReference, Reference } from "./relations";
 import { fail } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
-export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T>;
+export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T> & SuffixedFieldsOf<T>;
+
+/** The fields of `T` suffixed with `:ro` or `_ro`. */
+type SuffixedFieldsOf<T extends Entity> = {
+  [K in keyof FieldsOf<T> & string as `${K}${SuffixSeperator}ro`]: FieldsOf<T>[K];
+};
 
 /**
  * A reactive hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -67,11 +72,15 @@ export function reverseReactiveHint<T extends Entity>(
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
   const primitives: string[] = reactForOtherSide ? [reactForOtherSide] : [];
-  const subHints = Object.entries(normalizeHint(hint)).flatMap(([key, subHint]) => {
+  const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
+    const key = keyMaybeSuffix.replace(suffixRe, "");
+    const isReadOnly = !!keyMaybeSuffix.match(suffixRe);
     const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
     switch (field.kind) {
       case "m2o": {
-        primitives.push(field.fieldName);
+        if (!isReadOnly) {
+          primitives.push(field.fieldName);
+        }
         return reverseReactiveHint(field.otherMetadata().cstr, subHint).map(({ entity, fields, path }) => {
           return { entity, fields, path: [...path, field.otherFieldName] };
         });
@@ -88,7 +97,9 @@ export function reverseReactiveHint<T extends Entity>(
       }
       case "primitive":
       case "enum":
-        primitives.push(key);
+        if (!isReadOnly) {
+          primitives.push(key);
+        }
         return [];
       default:
         throw new Error("Invalid hint");
@@ -106,7 +117,8 @@ export function reverseReactiveHint<T extends Entity>(
 
 export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hint: ReactiveHint<T>): LoadHint<T> {
   return Object.fromEntries(
-    Object.entries(normalizeHint(hint)).flatMap(([key, subHint]) => {
+    Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
+      const key = keyMaybeSuffix.replace(suffixRe, "");
       const field = meta.fields[key] || fail(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
       switch (field.kind) {
         case "m2m":

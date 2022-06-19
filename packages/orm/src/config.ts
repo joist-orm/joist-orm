@@ -30,8 +30,6 @@ export class ConfigApi<T extends Entity, C> {
       const fn = async (entity: T) => {
         const loadHint = convertToLoadHint(getMetadata(entity), ruleOrHint);
         const loaded = await entity.em.populate(entity, loadHint);
-        // Give the rule a way to access the fully typed object
-        (loaded as any).entity = loaded;
         return maybeRule!(loaded);
       };
       this.__data.rules.push({ name, fn, hint: ruleOrHint, fields: [] });

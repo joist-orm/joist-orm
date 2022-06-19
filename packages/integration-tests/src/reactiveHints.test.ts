@@ -145,12 +145,42 @@ describe("reactiveHints", () => {
       const b6e: Reacted<Author, { books: {} }> = null!;
       console.log(b6e.books.get.length);
     }
-  });
 
-  // it("can type-check", () => {
-  //   // author hint that reruns on book review changes
-  //   const hint = {
-  //     "book:rx": { "reviews:rx": ["title:rx"] },
-  //   };
-  // });
+    function testingReadOnly() {
+      // just book 1 field
+      const b4: ReactiveHint<Book> = "title:ro";
+      const b4e: Reacted<Book, "title:ro"> = null!;
+      console.log(b4e.title);
+
+      type a = ["a:ro", "b"];
+      type b = a[number];
+      type c = d<a[number]>;
+      type d<t> = t extends `${infer key}:ro` ? key : t;
+
+      // just book 2 fields
+      const b5: ReactiveHint<Book> = ["title", "order:ro"];
+      const b5e: Reacted<Book, ["title", "order:ro"]> = null!;
+      console.log(b5e.order, b5e.title);
+
+      // book m2o to author and 1 field
+      const b1: ReactiveHint<Book> = { author: "firstName:ro" };
+
+      // book m2o to author and 2 fields
+      const b2: ReactiveHint<Book> = { author: ["firstName", "lastName:ro"] };
+      const b2e: Reacted<Book, { author: ["firstName", "lastName:ro"] }> = null!;
+      console.log(b2e.author.get.firstName, b2e.author.get.lastName);
+
+      // book m2o to author and nested hint to publisher
+      const b3: ReactiveHint<Book> = { author: { publisher: "name", firstName: {} } };
+      const b3e: Reacted<Book, { author: { publisher: "name"; firstName_ro: {} } }> = null!;
+      console.log(b3e.author.get.firstName, b3e.author.get.publisher.get!.name);
+    }
+  });
 });
+
+// it("can type-check", () => {
+//   // author hint that reruns on book review changes
+//   const hint = {
+//     "book:rx": { "reviews:rx": ["title:rx"] },
+//   };
+// });

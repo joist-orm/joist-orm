@@ -29,6 +29,8 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
       this.__orm.isNew = false;
     }
     em.register(metadata, this);
+    // This gives rules a way to access the fully typed object instead of their Reacted view
+    (this as any).entity = this;
   }
 
   get idUntagged(): string | undefined {

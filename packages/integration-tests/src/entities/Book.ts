@@ -16,7 +16,10 @@ config.addRule({ author: "firstName" }, (b) => {
 });
 
 // Another noop rule to make Book reactive on author.favoriteColors
-config.addRule({ author: "favoriteColors" }, (b) => {
+config.addRule({ author: ["favoriteColors", "firstName:ro"] }, (b) => {
+  if (b.author.get.favoriteColors.length > 2) {
+    return `${b.author.get.firstName} has too many colors`;
+  }
   b.entity.favoriteColorsRuleInvoked++;
 });
 

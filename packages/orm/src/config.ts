@@ -19,7 +19,6 @@ export class ConfigApi<T extends Entity, C> {
   __data = new ConfigData<T, C>();
 
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
-  addRule<H extends LoadHint<T>>(populate: H, rule: ValidationRule<Loaded<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
     // Keep the name for easy debugging/tracing later

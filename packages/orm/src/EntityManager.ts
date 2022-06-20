@@ -734,7 +734,10 @@ export class EntityManager<C = {}> {
           await recalcAsyncDerivedFields(this, todos);
 
           if (!skipValidation) {
-            await validate(todos);
+            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+            // `validateReactiveRules` next, the lambdas won't see invalid entities.
+            await validateSimpleRules(todos);
+            await validateReactiveRules(todos);
             await afterValidation(this.ctx, todos);
           }
 
@@ -1023,26 +1026,35 @@ async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<voi
   await Promise.all(entities.flatMap(getRelations).map((relation) => relation.cleanupOnEntityDeleted()));
 }
 
-async function validate(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap(({ metadata, inserts, updates, validates }) => {
+// Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
+// because even for reactive validations on mutated entities, we defer to addReactiveValidations
+// to mark only the rules that need to run.
+async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap(({ metadata, inserts, updates }) => {
     const { rules } = metadata.config.__data;
-    // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
-    // because even for reactive validations on mutated entities, we defer to addReactiveValidations
-    // to mark only the rules that need to run.
-    const a = [...inserts, ...updates]
+    return [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
         return rules
           .filter(({ fields }) => fields === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
       });
-    // Run rules against unchanged-but-reacting entities
-    const b = [...validates.entries()]
+  });
+  const errors = (await Promise.all(p)).flat();
+  if (errors.length > 0) {
+    throw new ValidationErrors(errors);
+  }
+}
+
+// Run rules against unchanged-but-reacting entities
+async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap(({ metadata, validates }) => {
+    const { rules } = metadata.config.__data;
+    return [...validates.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fns]) => {
         return [...fns.values()].flatMap(async (fn) => coerceError(entity, await fn(entity)));
       });
-    return a.concat(b);
   });
   const errors = (await Promise.all(p)).flat();
   if (errors.length > 0) {

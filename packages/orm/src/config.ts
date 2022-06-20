@@ -18,6 +18,17 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 export class ConfigApi<T extends Entity, C> {
   __data = new ConfigData<T, C>();
 
+  /**
+   * Adds a validation rule for this entity.
+   *
+   * If `hint` is passed, then the rule's lambda will be: 1) passed a view of the entity with only
+   * the fields included in `hint` marked as accessible, and 2) the rule will be called reactively any
+   * time any field in the `hint` changes.
+   *
+   * If lambdas want to access fields w/o having them marked for reactivity, the rule can either
+   * include the field as readonly with a `:ro` suffix, i.e. `firstName:ro`, or the lambda can
+   * access the `reacted.entity` property to get a full view of the entity's fields and methods.
+   */
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {

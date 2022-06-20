@@ -1,9 +1,10 @@
 import { Entity } from "./Entity";
 import { EntityConstructor, FieldsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { Loadable, LoadHint } from "./loadHints";
+import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
-import { Collection, LoadedCollection, LoadedReference, Reference } from "./relations";
+import { Collection, LoadedCollection, LoadedReference, OneToOneReference, Reference } from "./relations";
+import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { fail } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
@@ -32,12 +33,17 @@ export type NestedReactiveHint<T extends Entity> = {
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
 export type Reacted<T extends Entity, H> = Entity & {
-  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends Reference<any, infer U, infer N>
+  [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
+    ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+    : T[K] extends Reference<any, infer U, infer N>
     ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
     : T[K] extends Collection<any, infer U>
     ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
     : T[K];
-} & { entity: T };
+} & {
+  // Give validation rules a way to get back to the full entity if they really need it
+  entity: Loaded<T, H>;
+};
 
 /**
  * Given a load hint of "given an entity, load these N things", return an array

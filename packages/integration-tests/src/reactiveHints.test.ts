@@ -91,6 +91,14 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("skips read-only m2o parents", () => {
+    expect(reverseReactiveHint(Book, { author_ro: "firstName:ro" })).toEqual([]);
+  });
+
+  it("skips read-only o2m children and grand-children", () => {
+    expect(reverseReactiveHint(Author, { books_ro: "reviews:ro", firstName_ro: {} })).toEqual([]);
+  });
+
   describe("convertToLoadHint", () => {
     it("works with child o2o and primitive field names", () => {
       expect(convertToLoadHint(getMetadata(Author), { image: "fileName" })).toEqual({ image: {} });

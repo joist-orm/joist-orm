@@ -8,11 +8,15 @@ import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { fail } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
-export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T> & SuffixedFieldsOf<T>;
+export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T> & SuffixedFieldsOf<T> & SuffixedLoadable<T>;
 
 /** The fields of `T` suffixed with `:ro` or `_ro`. */
 type SuffixedFieldsOf<T extends Entity> = {
   [K in keyof FieldsOf<T> & string as `${K}${SuffixSeperator}ro`]: FieldsOf<T>[K];
+};
+
+type SuffixedLoadable<T extends Entity> = {
+  [K in keyof Loadable<T> & string as `${K}${SuffixSeperator}ro`]: Loadable<T>[K];
 };
 
 /**
@@ -95,11 +99,13 @@ export function reverseReactiveHint<T extends Entity>(
       case "o2m":
       case "o2o": {
         // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
-        return reverseReactiveHint(field.otherMetadata().cstr, subHint, field.otherFieldName).map(
-          ({ entity, fields, path }) => {
-            return { entity, fields, path: [...path, field.otherFieldName] };
-          },
-        );
+        return reverseReactiveHint(
+          field.otherMetadata().cstr,
+          subHint,
+          isReadOnly ? undefined : field.otherFieldName,
+        ).map(({ entity, fields, path }) => {
+          return { entity, fields, path: [...path, field.otherFieldName] };
+        });
       }
       case "primitive":
       case "enum":

@@ -15,10 +15,16 @@ describe("EntityManager.reactiveRules", () => {
     // Then only the firstName validation rule runs again
     expect(b.firstNameRuleInvoked).toBe(2);
     expect(b.favoriteColorsRuleInvoked).toBe(1);
-    // And when we change something else about the author
+    // And when we change the favorite color
     a.favoriteColors = [Color.Red];
     await em.flush();
     // Then only the favoriteColors rule runs
+    expect(b.firstNameRuleInvoked).toBe(2);
+    expect(b.firstNameRuleInvoked).toBe(2);
+    // And when we change something else
+    a.mentor.set(newAuthor(em));
+    await em.flush();
+    // Then neither rule ran
     expect(b.firstNameRuleInvoked).toBe(2);
     expect(b.firstNameRuleInvoked).toBe(2);
   });

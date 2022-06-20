@@ -149,10 +149,10 @@ export interface AuthorGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: EnumGraphQLFilter<Color>;
   favoriteShape?: EnumGraphQLFilter<FavoriteShape>;
-  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
-  currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
-  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
+  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
 }
 
 export interface AuthorOrder {

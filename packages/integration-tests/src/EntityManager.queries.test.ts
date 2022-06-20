@@ -544,6 +544,16 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
+  it("can findGql by foreign key is not null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const authors = await em.findGql(Author, { publisher: { ne: null } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
   it("can find with GQL filters but still use hash declaration", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

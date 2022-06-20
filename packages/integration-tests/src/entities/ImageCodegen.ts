@@ -91,9 +91,9 @@ export interface ImageGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: EnumGraphQLFilter<ImageType>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
-  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
 export interface ImageOrder {

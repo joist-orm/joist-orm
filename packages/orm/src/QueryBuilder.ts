@@ -155,7 +155,7 @@ export type ValueGraphQLFilter<V> =
 export type EnumGraphQLFilter<V> = V[] | null | undefined;
 
 /** A GraphQL version of EntityFilter. */
-export type EntityGraphQLFilter<T, I, F> = T | I | I[] | F | { ne: T | I } | null | undefined;
+export type EntityGraphQLFilter<T, I, F, N> = T | I | I[] | F | { ne: T | I | N } | null | undefined;
 
 const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "ilike", "in"] as const;
 export type Operator = typeof operators[number];

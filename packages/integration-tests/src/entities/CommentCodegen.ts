@@ -72,7 +72,7 @@ export interface CommentGraphQLFilter {
   text?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never>;
+  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
 export interface CommentOrder {

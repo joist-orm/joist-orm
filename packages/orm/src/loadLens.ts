@@ -120,7 +120,7 @@ function maybeGet(object: any, path: string): unknown {
   }
 }
 
-function collectPaths(fn: Function): string[] {
+export function collectPaths(fn: Function): string[] {
   const paths: string[] = [];
   // The proxy collects the path navigations that the user's `fn` lambda invokes.
   const proxy = new Proxy(
@@ -135,4 +135,14 @@ function collectPaths(fn: Function): string[] {
   // Invoke the lens function to record the navigation path on our proxy
   fn(proxy as any);
   return paths;
+}
+
+export function convertLensToLoadHint(fn: Function): object {
+  const paths = collectPaths(fn);
+  paths.reverse();
+  let hint = {};
+  while (paths.length > 0) {
+    hint = { [paths.shift()!]: hint };
+  }
+  return hint;
 }

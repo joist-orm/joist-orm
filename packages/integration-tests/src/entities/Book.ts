@@ -4,6 +4,7 @@ export class Book extends BookCodegen {
   rulesInvoked = 0;
   firstNameRuleInvoked = 0;
   favoriteColorsRuleInvoked = 0;
+  numberOfBooks2RuleInvoked = 0;
 }
 
 config.addRule((book) => {
@@ -21,6 +22,11 @@ config.addRule({ author: ["favoriteColors", "firstName:ro"] }, (b) => {
     return `${b.author.get.firstName} has too many colors`;
   }
   b.entity.favoriteColorsRuleInvoked++;
+});
+
+// Another noop rule to make Book reactive on author.numberOfBooks2, an async property
+config.addRule({ author: "numberOfBooks2" }, (b) => {
+  b.entity.numberOfBooks2RuleInvoked++;
 });
 
 config.cascadeDelete("reviews");

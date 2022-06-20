@@ -113,6 +113,49 @@ describe("reactiveHints", () => {
       { entity: BookReview, fields: ["book"], path: [] },
     ]);
   });
+
+  it("supports async properties", () => {
+    expect(reverseReactiveHint(Author, "numberOfBooks2")).toEqual([
+      { entity: Author, fields: [], path: [] },
+      { entity: Book, fields: ["author"], path: ["author"] },
+    ]);
+    // This is kind of a circular rule, so we get two reactions back:
+    expect(reverseReactiveHint(Book, { author: "numberOfBooks2" })).toEqual([
+      // When the book itself changes it author, rerun the rule "for it"
+      { entity: Book, fields: ["author"], path: [] },
+      // Also run the rule for all the author's other books
+      { entity: Book, fields: ["author"], path: ["author", "books"] },
+    ]);
+  });
+
+  it("supports hasOneDerived", () => {
+    // BookReview.publisher is a hasOneDerived
+    expect(reverseReactiveHint(BookReview, { publisher: "name" })).toEqual([
+      { entity: BookReview, fields: [], path: [] },
+      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: Book, fields: ["author"], path: ["reviews"] },
+      { entity: Author, fields: ["publisher"], path: ["books", "reviews"] },
+    ]);
+  });
+
+  it("supports hasOneThrough", () => {
+    // BookReview.author is a hasOneThrough
+    expect(reverseReactiveHint(BookReview, { author: "firstName" })).toEqual([
+      { entity: BookReview, fields: [], path: [] },
+      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: Book, fields: ["author"], path: ["reviews"] },
+    ]);
+  });
+
+  it("supports hasManyThrough", () => {
+    // BookReview.author is a hasManyThrough
+    expect(reverseReactiveHint(Author, { reviews: "rating" })).toEqual([
+      { entity: Author, fields: [], path: [] },
+      { entity: Book, fields: ["author"], path: ["author"] },
+      { entity: BookReview, fields: ["book"], path: ["book", "author"] },
+    ]);
+  });
+
   describe("convertToLoadHint", () => {
     it("works with child o2o and primitive field names", () => {
       expect(convertToLoadHint(getMetadata(Author), { image: "fileName" })).toEqual({ image: {} });

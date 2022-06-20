@@ -1,4 +1,4 @@
-import { Author, Book, Color, newAuthor, newBook } from "@src/entities";
+import { Author, Book, Color, newAuthor, newBook, newPublisher } from "@src/entities";
 import { getMetadata } from "joist-orm";
 
 describe("EntityManager.reactiveRules", () => {
@@ -59,6 +59,58 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.mentorRuleInvoked).toBe(2);
   });
 
+  describe("async properties", () => {
+    it.withCtx("runs rule on new grandchild", async ({ em }) => {
+      // Given a publisher that has two authors
+      const p = newPublisher(em, {
+        authors: [
+          // And each author has 6 books
+          { books: [{}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}] },
+        ],
+      });
+      await em.flush();
+      // When we add a 13th book to the 2nd author
+      newBook(em, { author: p.authors.get[1] });
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
+    });
+
+    it.withCtx("runs rule on added children", async ({ em }) => {
+      // Given a publisher that has two authors
+      const p = newPublisher(em, {
+        authors: [
+          // And each author has 6 books
+          { books: [{}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}] },
+        ],
+      });
+      await em.flush();
+      // When we add a 3rd author with a single book
+      newAuthor(em, { books: [{}] });
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
+    });
+
+    it.withCtx("runs rule on removed children", async ({ em }) => {
+      // Given a publisher that has three authors
+      const p = newPublisher(em, {
+        authors: [
+          // And two authors has 6+7 books
+          { books: [{}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+          // And the 3rd has just 1 book
+          { books: [{}] },
+        ],
+      });
+      await em.flush();
+      // When we remove the 3rd author with a single book
+      p.authors.get[2].publisher.set(undefined);
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
+    });
+  });
+
   it.withCtx("creates the right reactive rules", async ({ em }) => {
     expect(getMetadata(Author).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule
@@ -70,9 +122,9 @@ describe("EntityManager.reactiveRules", () => {
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
       { name: "Author.ts:135", fields: [], reversePath: [], rule: expect.any(Function) },
       // Book's noop author.firstName rule, only depends on firstName
-      { name: "Book.ts:14", fields: ["firstName"], reversePath: ["books"], rule: expect.any(Function) },
+      { name: "Book.ts:15", fields: ["firstName"], reversePath: ["books"], rule: expect.any(Function) },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
-      { name: "Book.ts:19", fields: ["favoriteColors"], reversePath: ["books"], rule: expect.any(Function) },
+      { name: "Book.ts:20", fields: ["favoriteColors"], reversePath: ["books"], rule: expect.any(Function) },
       { name: "Publisher.ts:42", fields: ["publisher"], reversePath: ["publisher"], rule: expect.any(Function) },
     ]);
 
@@ -82,9 +134,12 @@ describe("EntityManager.reactiveRules", () => {
       // Author's "cannot have 13 books" rule
       { name: "Author.ts:120", fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
       // Book's noop rule on author.firstName, if author changes
-      { name: "Book.ts:14", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+      { name: "Book.ts:15", fields: ["author"], reversePath: [], rule: expect.any(Function) },
       // Book's "too many colors" rule, if author changes
-      { name: "Book.ts:19", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+      { name: "Book.ts:20", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+      // Book's "numberOfBooks2" rule
+      { name: "Book.ts:28", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+      { name: "Book.ts:28", fields: ["author"], reversePath: ["author", "books"], rule: expect.any(Function) },
     ]);
   });
 });

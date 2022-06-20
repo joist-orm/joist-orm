@@ -75,7 +75,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     public otherFieldName: keyof U & string,
   ) {
     super();
-    this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {

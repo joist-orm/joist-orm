@@ -44,3 +44,11 @@ config.addRule("authors", (p) => {
     return "Cannot have 13 authors";
   }
 });
+
+// Example of reactive rule being fired by an async property
+config.addRule({ authors: "numberOfBooks2" }, (p) => {
+  const sum = p.authors.get.map((a) => (a.numberOfBooks2 as any).get).reduce((a, b) => a + b, 0);
+  if (sum === 13) {
+    return "A publisher cannot have 13 books";
+  }
+});

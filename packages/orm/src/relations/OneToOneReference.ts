@@ -92,7 +92,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     public otherColumnName: string,
   ) {
     super();
-    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.isCascadeDelete = getMetadata(entity)?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   get id(): IdOf<U> | undefined {

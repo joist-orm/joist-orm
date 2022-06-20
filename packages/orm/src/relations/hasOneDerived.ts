@@ -1,6 +1,5 @@
-import { Const, currentlyInstantiatingEntity } from "../";
+import { Const, currentlyInstantiatingEntity, Reacted, ReactiveHint } from "../";
 import { Entity } from "../Entity";
-import { Loaded, LoadHint } from "../loadHints";
 import { CustomReference } from "./CustomReference";
 import { Reference } from "./Reference";
 
@@ -15,14 +14,15 @@ export function hasOneDerived<
   T extends Entity,
   U extends Entity,
   N extends never | undefined,
-  V extends U | N,
-  H extends LoadHint<T>,
->(loadHint: Const<H>, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
+  H extends ReactiveHint<T>,
+>(hint: Const<H>, get: (entity: Reacted<T, H>) => Reacted<U, {}> | N): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
-  return new CustomReference<T, U, N>(entity, {
+  const reference = new CustomReference<T, U, N>(entity, {
     load: async (entity, opts) => {
-      await entity.em.populate(entity, { hint: loadHint, ...opts });
+      await entity.em.populate(entity as Entity, { hint, ...opts });
     },
-    get: () => get(entity as Loaded<T, H>),
+    get: () => get(entity as Reacted<T, H>) as U | N,
   });
+  (reference as any).hint = hint;
+  return reference;
 }

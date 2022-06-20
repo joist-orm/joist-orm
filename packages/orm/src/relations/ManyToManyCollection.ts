@@ -58,7 +58,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     public otherColumnName: string,
   ) {
     super();
-    this.isCascadeDelete = otherMeta.config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {

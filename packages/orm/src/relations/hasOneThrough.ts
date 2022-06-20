@@ -1,4 +1,13 @@
-import { currentlyInstantiatingEntity, CustomReference, Entity, getLens, Lens, loadLens, Reference } from "../index";
+import {
+  convertLensToLoadHint,
+  currentlyInstantiatingEntity,
+  CustomReference,
+  Entity,
+  getLens,
+  Lens,
+  loadLens,
+  Reference,
+} from "../index";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.
@@ -11,10 +20,12 @@ export function hasOneThrough<T extends Entity, U extends Entity, N extends neve
   lens: (lens: Lens<T>) => Lens<V>,
 ): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
-  return new CustomReference<T, U, N>(entity, {
+  const reference = new CustomReference<T, U, N>(entity, {
     load: async (entity, opts) => {
       await loadLens(entity, lens, opts);
     },
     get: () => getLens(entity, lens),
   });
+  (reference as any).hint = convertLensToLoadHint(lens);
+  return reference;
 }

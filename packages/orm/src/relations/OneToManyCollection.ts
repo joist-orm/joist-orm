@@ -48,7 +48,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     public otherColumnName: string,
   ) {
     super();
-    this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.isCascadeDelete = getMetadata(entity)?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   // opts is an internal parameter

@@ -111,14 +111,13 @@ export function reverseReactiveHint<T extends Entity>(
         throw new Error("Invalid hint");
     }
   });
-  if (primitives.length === 0) {
-    return subHints;
-  } else {
+  return [
     // If any of our primitives (or m2o fields) change, establish a reactive path
-    // from "here" (entityType) that is empty (path: []) but will have paths layer
-    // on by the previous callers
-    return [{ entity: entityType, fields: primitives, path: [] }, ...subHints];
-  }
+    // from "here" (entityType) that is initially empty (path: []) but will have
+    // paths layered on by the previous callers
+    ...(primitives.length > 0 ? [{ entity: entityType, fields: primitives, path: [] }] : []),
+    ...subHints,
+  ];
 }
 
 export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hint: ReactiveHint<T>): LoadHint<T> {

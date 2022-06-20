@@ -24,15 +24,18 @@ export class ConfigApi<T extends Entity, C> {
     // Keep the name for easy debugging/tracing later
     const name = getCallerName();
     if (typeof ruleOrHint === "function") {
-      this.__data.rules.push({ name, fn: ruleOrHint, hint: undefined, fields: undefined });
+      const fn = ruleOrHint;
+      this.__data.rules.push({ name, fn, hint: undefined, fields: undefined });
     } else {
+      const hint = ruleOrHint;
       // Create a wrapper around the user's function to populate
       const fn = async (entity: T) => {
-        const loadHint = convertToLoadHint(getMetadata(entity), ruleOrHint);
+        // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
+        const loadHint = convertToLoadHint(getMetadata(entity), hint);
         const loaded = await entity.em.populate(entity, loadHint);
         return maybeRule!(loaded);
       };
-      this.__data.rules.push({ name, fn, hint: ruleOrHint, fields: [] });
+      this.__data.rules.push({ name, fn, hint, fields: [] });
     }
   }
 

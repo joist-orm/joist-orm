@@ -25,7 +25,7 @@ export class ConfigApi<T extends Entity, C> {
     const name = getCallerName();
     if (typeof ruleOrHint === "function") {
       const fn = ruleOrHint;
-      this.__data.rules.push({ name, fn, hint: undefined, fields: undefined });
+      this.__data.rules.push({ name, fn, hint: undefined });
     } else {
       const hint = ruleOrHint;
       // Create a wrapper around the user's function to populate
@@ -35,7 +35,7 @@ export class ConfigApi<T extends Entity, C> {
         const loaded = await entity.em.populate(entity, loadHint);
         return maybeRule!(loaded);
       };
-      this.__data.rules.push({ name, fn, hint, fields: [] });
+      this.__data.rules.push({ name, fn, hint });
     }
   }
 

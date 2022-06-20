@@ -1,6 +1,5 @@
 import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
-import { LoadHint } from "./loadHints";
 import { ReactiveHint } from "./reactiveHints";
 import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 
@@ -17,8 +16,7 @@ export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<Valid
 /** Internal metadata for an async/reactive validation rule. */
 export type ValidationRuleInternal<T extends Entity> = {
   name: string;
-  hint: LoadHint<T> | ReactiveHint<T> | undefined;
-  fields: string[] | undefined;
+  hint: ReactiveHint<T> | undefined;
   fn: ValidationRule<T>;
 };
 

@@ -1036,7 +1036,7 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
         return rules
-          .filter(({ fields }) => fields === undefined)
+          .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
       });
   });
@@ -1049,7 +1049,6 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
 // Run rules against unchanged-but-reacting entities
 async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
   const p = Object.values(todos).flatMap(({ metadata, validates }) => {
-    const { rules } = metadata.config.__data;
     return [...validates.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fns]) => {

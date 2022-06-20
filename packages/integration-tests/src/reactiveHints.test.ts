@@ -109,7 +109,11 @@ describe("reactiveHints", () => {
     });
   });
 
-  describe("typings", () => {
+  describe("type checks", () => {
+    // These functions are just for testing the type checking of `ReactiveHint` and `Reacted`.
+    // We don't actually run them because they would NPE on the various `null!` values, but
+    // are still checking them in to provide coverage of the mapped types.
+
     function testLoads() {
       const b1: LoadHint<BookReview> = { book: { author: "publisher" } };
       const br: Loaded<BookReview, { book: { author: "publisher" } }> = null!;
@@ -152,11 +156,6 @@ describe("reactiveHints", () => {
       const b4e: Reacted<Book, "title:ro"> = null!;
       console.log(b4e.title);
 
-      type a = ["a:ro", "b"];
-      type b = a[number];
-      type c = d<a[number]>;
-      type d<t> = t extends `${infer key}:ro` ? key : t;
-
       // just book 2 fields
       const b5: ReactiveHint<Book> = ["title", "order:ro"];
       const b5e: Reacted<Book, ["title", "order:ro"]> = null!;
@@ -177,10 +176,3 @@ describe("reactiveHints", () => {
     }
   });
 });
-
-// it("can type-check", () => {
-//   // author hint that reruns on book review changes
-//   const hint = {
-//     "book:rx": { "reviews:rx": ["title:rx"] },
-//   };
-// });

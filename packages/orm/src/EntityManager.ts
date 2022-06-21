@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import { Knex } from "knex";
+import { util } from "prettier";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
@@ -35,6 +36,7 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, MaybePromise, toArray } from "./utils";
+import skip = util.skip;
 
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
@@ -325,18 +327,30 @@ export class EntityManager<C = {}> {
    *
    * @example
    * // This will duplicate the author and all their related book entities
-   * const duplicatedAuthorAndBooks = await em.clone(author, "books")
+   * const duplicatedAuthorAndBooks = await em.clone(author, { hint: "books" })
    *
    * @example
    * // This will duplicate the author, all their books, and the images for those books
-   * const duplicatedAuthorAndBooksAndImages = await em.clone(author, {books: "image"})
+   * const duplicatedAuthorAndBooksAndImages = await em.clone(author, { hint: { books: "image" } })
    */
-  public async clone<T extends Entity, H extends LoadHint<T>>(entity: T, hint?: H): Promise<Loaded<T, H>> {
+  public async clone<T extends Entity, H extends LoadHint<T>>(
+    entity: T,
+    opts?: { hint?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+  ): Promise<Loaded<T, H>>;
+  public async clone<T extends Entity, H extends LoadHint<T>>(
+    entities: readonly T[],
+    opts?: { hint?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+  ): Promise<Loaded<T, H>[]>;
+  public async clone<T extends Entity, H extends LoadHint<T>>(
+    entityOrArray: T | readonly T[],
+    opts?: { hint?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+  ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
+    const { hint = {}, skipIf, postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
     const todo: Entity[] = [];
 
-    // 1. Find all entities w/o mutating them yet
-    await crawl(todo, entity, hint || {});
+    // 1. Find all entities w/o mutating them yets
+    await crawl(todo, entityOrArray, hint, { skipIf });
 
     const now = new Date();
 
@@ -382,7 +396,15 @@ export class EntityManager<C = {}> {
       });
     });
 
-    return clones[0][1] as Loaded<T, H>;
+    if (postClone) {
+      await Promise.all(clones.map(([original, clone]) => postClone(original, clone)));
+    }
+
+    return Array.isArray(entityOrArray)
+      ? clones.map(([original, clone]) => clone as Loaded<T, H>)
+      : clones[0]
+      ? (clones[0][1] as Loaded<T, H>)
+      : fail("no entities were cloned given the provided options");
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
@@ -1131,29 +1153,38 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
 }
 
 /** Recursively crawls through `entity`, with the given populate `hint`, and adds anything found to `found`. */
-async function crawl<T extends Entity>(found: Entity[], entity: T, hint: LoadHint<T>): Promise<void> {
-  found.push(entity);
+async function crawl<T extends Entity>(
+  found: Entity[],
+  entityOrArray: T | readonly T[],
+  hint: LoadHint<T>,
+  opts?: { skipIf?: (entity: Entity) => boolean },
+): Promise<void> {
+  const { skipIf = () => false } = opts ?? {};
+  const entitiesToClone = (Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray]).filter((e) => !skipIf(e));
+  found.push(...entitiesToClone);
   await Promise.all(
-    (Object.entries(adaptHint(hint)) as [keyof RelationsIn<T> & string, LoadHint<any>][]).map(
-      async ([relationName, nested]) => {
-        const relation = entity[relationName];
-        if (relation instanceof OneToManyCollection) {
-          const relatedEntities = await relation.load();
-          await Promise.all(relatedEntities.map((entity) => crawl(found, entity, nested)));
-        } else if (relation instanceof OneToOneReferenceImpl) {
-          const related = await relation.load();
-          if (related) {
-            await crawl(found, related, nested);
+    entitiesToClone.flatMap((entity) =>
+      (Object.entries(adaptHint(hint)) as [keyof RelationsIn<T> & string, LoadHint<any>][]).map(
+        async ([relationName, nested]) => {
+          const relation = entity[relationName];
+          if (relation instanceof OneToManyCollection) {
+            const relatedEntities = await relation.load();
+            await crawl(found, relatedEntities, nested, opts);
+          } else if (relation instanceof OneToOneReferenceImpl) {
+            const related = await relation.load();
+            if (related) {
+              await crawl(found, related, nested, opts);
+            }
+          } else if (relation instanceof ManyToOneReferenceImpl) {
+            const related = await relation.load();
+            if (related) {
+              await crawl(found, related, nested, opts);
+            }
+          } else {
+            fail(`Uncloneable relation: ${relationName}`);
           }
-        } else if (relation instanceof ManyToOneReferenceImpl) {
-          const related = await relation.load();
-          if (related) {
-            await crawl(found, related, nested);
-          }
-        } else {
-          fail(`Uncloneable relation: ${relationName}`);
-        }
-      },
+        },
+      ),
     ),
   );
 }

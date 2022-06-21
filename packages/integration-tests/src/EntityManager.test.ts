@@ -9,21 +9,8 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
-import { EntityConstructor, EntityManager, Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import {
-  Author,
-  authorMeta,
-  Book,
-  Color,
-  Image,
-  ImageType,
-  newAuthor,
-  newBook,
-  newPublisher,
-  Publisher,
-  PublisherSize,
-  Tag,
-} from "./entities";
+import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { Author, authorMeta, Book, Color, newAuthor, Publisher, PublisherSize } from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1093,169 +1080,6 @@ describe("EntityManager", () => {
     expect(result).toEqual(a1);
   });
 
-  it("can clone entities", async () => {
-    const em = newEntityManager();
-
-    // Given an entity
-    const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
-    await em.flush();
-
-    // When we clone that entity
-    const a2 = await em.clone(a1);
-    await em.flush();
-
-    // Then we expect the cloned entity to have the same properties as the original
-    expect(a2.firstName).toEqual(a1.firstName);
-    expect(a2.publisher.idOrFail).toEqual(p1.id);
-    expect(a2.id).not.toEqual(a1.id);
-    expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
-    expect(p1.authors.get).toEqual([a1, a2]);
-  });
-
-  it("can clone entities and referenced entities", async () => {
-    const em = newEntityManager();
-
-    // Given an entity with a reference to another entity
-    const a1 = newAuthor(em, { firstName: "a1" });
-    const b1 = newBook(em, { title: "b1", author: a1 });
-    // And the author itself points to the book we'll clone
-    a1.currentDraftBook.set(b1);
-    await em.flush();
-
-    // When we clone that entity and its reference
-    const a2 = await em.clone(a1, "books");
-    await em.flush();
-
-    // Then we expect the cloned entity to have a cloned copy of the original's reference
-    expect(a2.books.get[0].title).toEqual(b1.title);
-    // But the book is a different book
-    const [b2] = a2.books.get;
-    expect(b2).not.toBe(b1);
-    // And a2 got updated to point to its cloned book
-    expect(a2.currentDraftBook.get).toBe(b2);
-  });
-
-  it("cannot clone many-to-many references", async () => {
-    const em = newEntityManager();
-
-    // Given an entity with a reference to another entity with a many-to-many reference
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
-    const t1 = new Tag(em, { name: "t1", books: [b1] });
-    await em.flush();
-
-    // When we clone that entity and its nested references, which include a many-to-many reference
-    const promise = em.clone(a1, { books: "tags" });
-
-    // Then we expect the cloning to fail
-    await expect(promise).rejects.toThrow("Uncloneable relation: tags");
-  });
-
-  it("can clone nested references", async () => {
-    const em = newEntityManager();
-
-    // Given an entity with a reference to another entity with a one-to-one
-    const a1 = new Author(em, { firstName: "a1" });
-    const b1 = new Book(em, { title: "b1", author: a1 });
-    const i1 = new Image(em, { fileName: "11", type: ImageType.BookImage, book: b1 });
-    await em.flush();
-
-    // When we clone that entity and its nested references
-    const a2 = await em.clone(a1, { books: "image" });
-    await em.flush();
-
-    // Then we expect the cloned entity to have cloned copies of all its nested references
-    const b2 = (await a2.books.load())[0];
-    const i2 = await b2.image.load();
-    expect(i2).toBeDefined();
-    expect(i2).not.toEqual(i1);
-    expect(i2?.fileName).toEqual(i1.fileName);
-    expect(i2?.type).toEqual(i1.type);
-    expect(await numberOf(em, Author, Book, Image)).toEqual([2, 2, 2]);
-  });
-
-  it("should only clone referenced entities when specified", async () => {
-    const em = newEntityManager();
-
-    // Given an entity with a reference to another entity
-    const a1 = new Author(em, { firstName: "a1", books: [newBook(em)] });
-    await em.flush();
-
-    // When we clone that entity and don't pass a populate hint for the reference
-    const a2 = await em.clone(a1);
-    await em.flush();
-
-    // Then we expect the cloned entity to have no references
-    expect(await a2.books.load()).toHaveLength(0);
-  });
-
-  it("can clone entities and report what has changed", async () => {
-    const em = newEntityManager();
-    // Given an entity
-    const p1 = newPublisher(em, { name: "p1" });
-    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
-    await em.flush();
-    // When we clone that entity
-    const a2 = await em.clone(a1);
-    // Then it is new
-    expect(a2.isNewEntity).toBe(true);
-    // And all the fields look changed
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "publisher",
-      "initials",
-      "numberOfBooks",
-    ]);
-    // And if we revert the publisher
-    a2.publisher.set(undefined);
-    // Then it is no longer changed
-    expect(a2.changes.publisher.hasChanged).toBe(false);
-    expect(a2.changes.publisher.hasUpdated).toBe(false);
-    expect(a2.changes.publisher.originalValue).toBe(undefined);
-  });
-
-  it("can clone entities and report what has changed w/undefined m2o", async () => {
-    await insertAuthor({ first_name: "a1" });
-    const em = newEntityManager();
-    // Given we load an existing entity
-    const a1 = await em.load(Author, "a:1");
-    // When we clone that entity
-    const a2 = await em.clone(a1);
-    // Then it is new
-    expect(a2.isNewEntity).toBe(true);
-    // And only the currently set fields look changed
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "initials",
-      "numberOfBooks",
-      "favoriteColors",
-    ]);
-    // And specifically the publisher is not changed
-    expect(a2.changes.publisher.hasChanged).toBe(false);
-    expect(a2.changes.publisher.hasUpdated).toBe(false);
-    expect(a2.changes.publisher.originalValue).toBe(undefined);
-  });
-
-  it("can clone polymorphic references", async () => {
-    const em = newEntityManager();
-    // Given an entity that is a polymorphic parent of two children
-    const a1 = newAuthor(em, { comments: [{}, {}] });
-    await em.flush();
-    // When we clone the entity
-    const a2 = await em.clone(a1, "comments");
-    await em.flush();
-    // Then we expect the cloned entity to have cloned copies of all its nested references
-    expect(a2.comments.get.length).toBe(2);
-    expect(a2.comments.get[0].id).toBe("comment:3");
-    expect(a2.comments.get[1].id).toBe("comment:4");
-    expect(a2.comments.get[0].parent.get).toBe(a2);
-  });
-
   it("can touch an entity to force it to be flushed", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
@@ -1437,13 +1261,4 @@ describe("EntityManager", () => {
 
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-async function numberOf(em: EntityManager, ...args: EntityConstructor<any>[]): Promise<number[]> {
-  return Promise.all(
-    args.map(async (ec) => {
-      const entities = await em.find(ec, {});
-      return entities.length;
-    }),
-  );
 }

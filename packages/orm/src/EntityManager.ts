@@ -1,7 +1,6 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import { Knex } from "knex";
-import { util } from "prettier";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
@@ -36,7 +35,6 @@ import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, MaybePromise, toArray } from "./utils";
-import skip = util.skip;
 
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;

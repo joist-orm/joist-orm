@@ -66,8 +66,8 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("Author:1 An author cannot have 13 books");
     // And assert against the rules for good measure
     expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
-      { name: "Author.ts:111", fields: ["author", "title"], reversePath: ["author"], rule: expect.any(Function) },
-      { name: "Author.ts:118", fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
+      { name: "Author.ts:112", fields: ["author", "title"], reversePath: ["author"], rule: expect.any(Function) },
+      { name: "Author.ts:119", fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
       { name: "Book.ts:14", fields: ["author"], reversePath: [], rule: expect.any(Function) },
       { name: "Book.ts:19", fields: ["author"], reversePath: [], rule: expect.any(Function) },
     ]);

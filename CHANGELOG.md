@@ -1,3 +1,10 @@
+# [1.16.0](https://github.com/stephenh/joist-ts/compare/v1.15.3...v1.16.0) (2022-06-21)
+
+
+### Features
+
+* em.findGql support passing { ne: null } to nullable foreign keys ([#354](https://github.com/stephenh/joist-ts/issues/354)) ([5f6ca50](https://github.com/stephenh/joist-ts/commit/5f6ca504528399d3fbb056e72f180bd588c6c5d5))
+
 ## [1.15.3](https://github.com/stephenh/joist-ts/compare/v1.15.2...v1.15.3) (2022-06-08)
 
 

@@ -975,27 +975,20 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
     return todo.metadata.config.__data.reactiveRules.map(async (rule) => {
+      const dirty = entities.filter(
+        (e) => e.isDeletedEntity || ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
+      );
       // Add the resulting "found" entities to the right todos to be validated
-      (
-        await followReverseHint(
-          entities.filter(
-            (e) =>
-              e.isNewEntity ||
-              e.isDeletedEntity ||
-              ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
-          ),
-          rule.reversePath,
-        )
-      ).forEach((entity) => {
-        const { validates } = getTodo(todos, entity);
-        // Even if the entity is in inserts/updates, we need to explicitly mark it for validation
-        if (!entity.isDeletedEntity) {
+      (await followReverseHint(dirty, rule.reversePath))
+        .filter((entity) => !entity.isDeletedEntity)
+        .forEach((entity) => {
+          const { validates } = getTodo(todos, entity);
+          // Even if the entity is in inserts/updates, we need to explicitly mark it for validation
           if (!validates.has(entity)) {
             validates.set(entity, new Set());
           }
           validates.get(entity)!.add(rule.rule);
-        }
-      });
+        });
     });
   });
   await Promise.all(p);

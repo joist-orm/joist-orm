@@ -79,8 +79,8 @@ export interface BookAdvanceGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   status?: EnumGraphQLFilter<AdvanceStatus>;
-  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>>;
+  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
 }
 
 export interface BookAdvanceOrder {

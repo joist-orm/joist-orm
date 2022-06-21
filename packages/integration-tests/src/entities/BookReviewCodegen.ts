@@ -79,8 +79,8 @@ export interface BookReviewGraphQLFilter {
   isPublic?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>>;
-  comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>>;
+  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
 export interface BookReviewOrder {

@@ -105,9 +105,9 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
-  currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
-  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
 }
 
 export interface BookOrder {

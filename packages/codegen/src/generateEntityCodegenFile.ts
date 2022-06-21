@@ -646,14 +646,16 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType }) => {
     return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${
+      otherEntity.type
+    }>, ${nullOrNever(notNull)}>;`;
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>>;`;
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never>;`;
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
   return [...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
 }

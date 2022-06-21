@@ -116,7 +116,7 @@ export interface PublisherGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: EnumGraphQLFilter<PublisherSize>;
   type?: EnumGraphQLFilter<PublisherType>;
-  tag?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>>;
+  tag?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface PublisherOrder {

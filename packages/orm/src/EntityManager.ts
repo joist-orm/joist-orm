@@ -317,7 +317,11 @@ export class EntityManager<C = {}> {
    * Utility to clone an entity and its nested relations, as determined by a populate hint
    *
    * @param entity - Any entity
-   * @param hint - A populate hint
+   * @param opts - Options to control the clone behaviour
+   *   @param deep - Populate hint of the nested tree of objects to clone
+   *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
+   *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
+   * @returns The `Loaded` cloned entity or fails if the clone could not be made
    *
    * @example
    * // This will duplicate the author
@@ -325,18 +329,65 @@ export class EntityManager<C = {}> {
    *
    * @example
    * // This will duplicate the author and all their related book entities
-   * const duplicatedAuthorAndBooks = await em.clone(author, "books")
+   * const duplicatedAuthorAndBooks = await em.clone(author, { deep: "books" })
    *
    * @example
    * // This will duplicate the author, all their books, and the images for those books
-   * const duplicatedAuthorAndBooksAndImages = await em.clone(author, {books: "image"})
+   * const duplicatedAuthorAndBooksAndImages = await em.clone(author, { deep: { books: "image" } })
+   *
+   * @example
+   * // This will duplicate the author, and rename
+   * const duplicatedAuthor = await em.clone(author, { postClone: (_original, clone) => clone.firstName = clone.firstName + " COPY" })
+   *
+   * @example
+   * // This will duplicate the author, but skip any book where the title includes `sea`
+   * const duplicatedAuthor = await em.clone(author, { skipIf: (original) => original.title?.includes("sea") })
    */
-  public async clone<T extends Entity, H extends LoadHint<T>>(entity: T, hint?: H): Promise<Loaded<T, H>> {
+  public async clone<T extends Entity, H extends LoadHint<T>>(
+    entity: T,
+    opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+  ): Promise<Loaded<T, H>>;
+
+  /**
+   * Utility to clone an entity and its nested relations, as determined by a populate hint
+   *
+   * @param entities - Any homogeneous list of entities
+   * @param opts - Options to control the clone behaviour
+   *   @param deep - Populate hint of the nested tree of objects to clone
+   *   @param skipIf - Predicate for determining if a specific entity should be skipped (and any entities beneath it
+   *   @param postClone - Function to be called for each original/clone entity for any post-processing needed
+   * @returns Array of `Loaded` cloned entities from the provided list or empty array if all are skipped
+   *
+   * @example
+   * // This will duplicate the author's books
+   * const duplicatedBooks = await em.clone(author.books.get)
+   *
+   * @example
+   * // This will duplicate the author's books, all their books, and the images for those books
+   * const duplicatedBooksAndImages = await em.clone(author.books.get, { deep: { books: "image" } })
+   *
+   * @example
+   * // This will duplicate the author's books, and assign them to a different author
+   * const duplicatedBooks = await em.clone(author.books.get, { postClone: (_original, clone) => clone.author.set(author2) })
+   *
+   * @example
+   * // This will duplicate the author's books, but skip any book where the title includes `sea`
+   * const duplicatedBooks = await em.clone(author.books.get, { skipIf: (original) => original.title.includes("sea") })
+   */
+  public async clone<T extends Entity, H extends LoadHint<T>>(
+    entities: readonly T[],
+    opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+  ): Promise<Loaded<T, H>[]>;
+  public async clone<T extends Entity, H extends LoadHint<T>>(
+    entityOrArray: T | readonly T[],
+    opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
+  ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
+    const { deep = {}, skipIf, postClone } = opts ?? {};
     // Keep a list that we can work against synchronously after doing the async find/crawl
     const todo: Entity[] = [];
 
-    // 1. Find all entities w/o mutating them yet
-    await crawl(todo, entity, hint || {});
+    // 1. Find all entities w/o mutating them yets
+    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf });
 
     const now = new Date();
 
@@ -382,7 +433,17 @@ export class EntityManager<C = {}> {
       });
     });
 
-    return clones[0][1] as Loaded<T, H>;
+    if (postClone) {
+      await Promise.all(clones.map(([original, clone]) => postClone(original, clone)));
+    }
+
+    return Array.isArray(entityOrArray)
+      ? entityOrArray
+          .filter((original) => entityToClone.has(original))
+          .map((original) => entityToClone.get(original) as Loaded<T, H>)
+      : clones[0]
+      ? (clones[0][1] as Loaded<T, H>)
+      : fail("no entities were cloned given the provided options");
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
@@ -1130,30 +1191,39 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   return current;
 }
 
-/** Recursively crawls through `entity`, with the given populate `hint`, and adds anything found to `found`. */
-async function crawl<T extends Entity>(found: Entity[], entity: T, hint: LoadHint<T>): Promise<void> {
-  found.push(entity);
+/** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */
+async function crawl<T extends Entity>(
+  found: Entity[],
+  entities: readonly T[],
+  deep: LoadHint<T>,
+  opts?: { skipIf?: (entity: Entity) => boolean },
+): Promise<void> {
+  const { skipIf = () => false } = opts ?? {};
+  const entitiesToClone = entities.filter((e) => !skipIf(e));
+  found.push(...entitiesToClone);
   await Promise.all(
-    (Object.entries(adaptHint(hint)) as [keyof RelationsIn<T> & string, LoadHint<any>][]).map(
-      async ([relationName, nested]) => {
-        const relation = entity[relationName];
-        if (relation instanceof OneToManyCollection) {
-          const relatedEntities = await relation.load();
-          await Promise.all(relatedEntities.map((entity) => crawl(found, entity, nested)));
-        } else if (relation instanceof OneToOneReferenceImpl) {
-          const related = await relation.load();
-          if (related) {
-            await crawl(found, related, nested);
+    entitiesToClone.flatMap((entity) =>
+      (Object.entries(adaptHint(deep)) as [keyof RelationsIn<T> & string, LoadHint<any>][]).map(
+        async ([relationName, nested]) => {
+          const relation = entity[relationName];
+          if (relation instanceof OneToManyCollection) {
+            const relatedEntities: readonly Entity[] = await relation.load();
+            await crawl(found, relatedEntities, nested, opts);
+          } else if (relation instanceof OneToOneReferenceImpl) {
+            const related: Entity | undefined = await relation.load();
+            if (related) {
+              await crawl(found, [related], nested, opts);
+            }
+          } else if (relation instanceof ManyToOneReferenceImpl) {
+            const related: Entity | undefined = await relation.load();
+            if (related) {
+              await crawl(found, [related], nested, opts);
+            }
+          } else {
+            fail(`Uncloneable relation: ${relationName}`);
           }
-        } else if (relation instanceof ManyToOneReferenceImpl) {
-          const related = await relation.load();
-          if (related) {
-            await crawl(found, related, nested);
-          }
-        } else {
-          fail(`Uncloneable relation: ${relationName}`);
-        }
-      },
+        },
+      ),
     ),
   );
 }

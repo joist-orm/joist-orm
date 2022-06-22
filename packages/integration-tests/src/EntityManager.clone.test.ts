@@ -3,7 +3,7 @@ import { EntityConstructor, EntityManager } from "joist-orm";
 import { Author, Book, Comment, Image, ImageType, newAuthor, newBook, newPublisher, Publisher, Tag } from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
-describe("EntityManager", () => {
+describe("EntityManager.clone", () => {
   it("can clone entities", async () => {
     const em = newEntityManager();
 
@@ -35,7 +35,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and its reference
-    const a2 = await em.clone(a1, { hint: "books" });
+    const a2 = await em.clone(a1, { deep: "books" });
     await em.flush();
 
     // Then we expect the cloned entity to have a cloned copy of the original's reference
@@ -57,7 +57,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and its nested references, which include a many-to-many reference
-    const promise = em.clone(a1, { hint: { books: "tags" } });
+    const promise = em.clone(a1, { deep: { books: "tags" } });
 
     // Then we expect the cloning to fail
     await expect(promise).rejects.toThrow("Uncloneable relation: tags");
@@ -73,7 +73,7 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When we clone that entity and its nested references
-    const a2 = await em.clone(a1, { hint: { books: "image" } });
+    const a2 = await em.clone(a1, { deep: { books: "image" } });
     await em.flush();
 
     // Then we expect the cloned entity to have cloned copies of all its nested references
@@ -158,7 +158,7 @@ describe("EntityManager", () => {
     const a1 = newAuthor(em, { comments: [{}, {}] });
     await em.flush();
     // When we clone the entity
-    const a2 = await em.clone(a1, { hint: "comments" });
+    const a2 = await em.clone(a1, { deep: "comments" });
     await em.flush();
     // Then we expect the cloned entity to have cloned copies of all its nested references
     expect(a2.comments.get.length).toBe(2);
@@ -181,8 +181,8 @@ describe("EntityManager", () => {
     await em.flush();
 
     // When I ask to clone just the books
-    const [b3, b4] = await em.clone(a1.books.get, {
-      hint: "comments",
+    const [b3, b4, ...others] = await em.clone(a1.books.get, {
+      deep: "comments",
     });
     await em.flush();
 
@@ -196,6 +196,29 @@ describe("EntityManager", () => {
     expect(b4).not.toEqual(b2);
     // And only one author exists, and comments were also cloned
     expect(await numberOf(em, Author, Book, Comment)).toEqual([1, 4, 4]);
+    // And that only the clones of the original entities are included in the result
+    expect(others).toHaveLength(0);
+  });
+
+  it("returns empty array when entire collection of entities is skipped", async () => {
+    const em = newEntityManager();
+
+    // Given an author with 2 books, both of which have comments
+    const a1 = newAuthor(em, {
+      books: [{}, {}],
+    });
+    await em.flush();
+
+    // When I ask to clone just the books, but skip them all
+    const clones = await em.clone(a1.books.get, { skipIf: () => true });
+    const result = await em.flush();
+
+    // Then I expect clones to be empty
+    expect(clones).toHaveLength(0);
+    // And nothing was saved
+    expect(result).toHaveLength(0);
+    // And only one author and 2 books exist
+    expect(await numberOf(em, Author, Book)).toEqual([1, 2]);
   });
 
   it("calls postClone for each cloned entity", async () => {
@@ -212,7 +235,7 @@ describe("EntityManager", () => {
     await em.flush();
     // When we clone the author
     const postClone = jest.fn();
-    await em.clone(a1, { hint: { books: "comments" }, postClone });
+    await em.clone(a1, { deep: { books: "comments" }, postClone });
     // Then I expect `postClone` was called once for each entity to be cloned
     expect(postClone).toHaveBeenCalledTimes(5);
   });
@@ -244,7 +267,7 @@ describe("EntityManager", () => {
 
       // When we clone the book, but ask to skip `b2`
       const a2 = await em.clone(a1, {
-        hint: { books: "comments" },
+        deep: { books: "comments" },
         // Skip B2, it is only Ok
         skipIf: (e) => e instanceof Book && e.title === "b2",
       });

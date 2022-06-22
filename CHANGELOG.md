@@ -1,3 +1,10 @@
+# [1.17.0](https://github.com/stephenh/joist-ts/compare/v1.16.0...v1.17.0) (2022-06-22)
+
+
+### Features
+
+* [SC-15953] em.clone enhancements ([#356](https://github.com/stephenh/joist-ts/issues/356)) ([bced783](https://github.com/stephenh/joist-ts/commit/bced783f5fd47f49bef4d391a0b64efc7ee6fc1f))
+
 # [1.16.0](https://github.com/stephenh/joist-ts/compare/v1.15.3...v1.16.0) (2022-06-21)
 
 

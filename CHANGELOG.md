@@ -1,3 +1,10 @@
+# [1.19.0](https://github.com/stephenh/joist-ts/compare/v1.18.0...v1.19.0) (2022-06-24)
+
+
+### Features
+
+* Skip reacting to immutable fields. ([#361](https://github.com/stephenh/joist-ts/issues/361)) ([6ffd966](https://github.com/stephenh/joist-ts/commit/6ffd9660cc77f81d36aea07b4a523d28d5b452d1))
+
 # [1.18.0](https://github.com/stephenh/joist-ts/compare/v1.17.0...v1.18.0) (2022-06-24)
 
 

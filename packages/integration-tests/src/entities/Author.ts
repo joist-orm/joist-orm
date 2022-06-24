@@ -131,7 +131,7 @@ config.addRule("mentor", (a) => {
 // Example of cannotBeUpdated
 config.addRule(cannotBeUpdated("age"));
 
-// Example of a rule against an immutaable field
+// Example of a rule against an immutable field
 config.addRule("age", (a) => {
   a.entity.ageRuleInvoked++;
 });

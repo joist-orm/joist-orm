@@ -1,3 +1,10 @@
+# [1.20.0](https://github.com/stephenh/joist-ts/compare/v1.19.0...v1.20.0) (2022-06-24)
+
+
+### Features
+
+* Convert async derived fields to field-level reactive hints. ([#362](https://github.com/stephenh/joist-ts/issues/362)) ([ec90745](https://github.com/stephenh/joist-ts/commit/ec90745c9581002ee71e3db341a3114275fd6252))
+
 # [1.19.0](https://github.com/stephenh/joist-ts/compare/v1.18.0...v1.19.0) (2022-06-24)
 
 

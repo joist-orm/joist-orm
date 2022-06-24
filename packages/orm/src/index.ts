@@ -218,10 +218,19 @@ const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
 
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
+  // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
     // Add each constructor into our tag -> constructor map for future lookups
     tagToConstructorMap.set(meta.tagName, meta.cstr);
+    meta.config.__data.rules.forEach((rule) => {
+      if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
+        meta.fields[rule.fn.field].immutable = true;
+      }
+    });
+  });
 
+  // Now hook up our reactivity
+  metas.forEach((meta) => {
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
       if (rule.hint) {
@@ -236,9 +245,6 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
             rule: rule.fn,
           });
         });
-      }
-      if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
-        meta.fields[rule.fn.field].immutable = true;
       }
     });
 

@@ -57,7 +57,12 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
     get(target, p: PropertyKey): FieldStatus<any> | ManyToOneFieldStatus<any> | (keyof OptsOf<T>)[] {
       if (p === "fields") {
         return (
-          entity.isNewEntity ? Object.keys(entity.__orm.data) : Object.keys(entity.__orm.originalData)
+          entity.isNewEntity
+            ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
+              Object.entries(entity.__orm.data)
+                .filter(([, value]) => value !== undefined)
+                .map(([key]) => key)
+            : Object.keys(entity.__orm.originalData)
         ) as (keyof OptsOf<T>)[];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);

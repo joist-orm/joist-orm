@@ -45,16 +45,16 @@ describe("EntityManager.reactiveRules", () => {
     expect(b.favoriteColorsRuleInvoked).toBe(1);
   });
 
-  it.withCtx("only runs rules on create for fields that are explicitly set", async ({ em }) => {
+  it.withCtx("runs all rules on create", async ({ em }) => {
     // Given an author that has no mentor
     const a = newAuthor(em);
     await em.flush();
-    // Then we did not run the mentor rule
-    expect(a.mentorRuleInvoked).toBe(0);
+    // Then we run the mentor rule
+    expect(a.mentorRuleInvoked).toBe(1);
     // And when we do set the mentor
     a.mentor.set(newAuthor(em));
     await em.flush();
-    // Then it does run
-    expect(a.mentorRuleInvoked).toBe(1);
+    // Then it runs again
+    expect(a.mentorRuleInvoked).toBe(2);
   });
 });

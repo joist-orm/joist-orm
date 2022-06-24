@@ -975,14 +975,15 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
     return todo.metadata.config.__data.reactiveRules.map(async (rule) => {
-      const dirty = entities.filter(
+      // Of all changed entities of this type, how many specifically trigger this rule?
+      const triggered = entities.filter(
         (e) =>
           e.isNewEntity ||
           e.isDeletedEntity ||
           ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
       );
-      // Add the resulting "found" entities to the right todos to be validated
-      (await followReverseHint(dirty, rule.reversePath))
+      // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
+      (await followReverseHint(triggered, rule.path))
         .filter((entity) => !entity.isDeletedEntity)
         .forEach((entity) => {
           const { validates } = getTodo(todos, entity);
@@ -990,7 +991,7 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
           if (!validates.has(entity)) {
             validates.set(entity, new Set());
           }
-          validates.get(entity)!.add(rule.rule);
+          validates.get(entity)!.add(rule.fn);
         });
     });
   });
@@ -1004,13 +1005,20 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
 async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates];
-    return todo.metadata.config.__data.reactiveDerivedValues.map(async (reverseHint) => {
-      (await followReverseHint(entities, reverseHint)).forEach((entity) => {
-        const todo = getTodo(todos, entity);
-        if (!todo.inserts.includes(entity) && !todo.updates.includes(entity) && !entity.isDeletedEntity) {
-          todo.updates.push(entity);
-        }
-      });
+    return todo.metadata.config.__data.reactiveDerivedValues.map(async (field) => {
+      // Of all changed entities of this type, how many specifically trigger this rule?
+      const triggered = entities.filter(
+        (e) => e.isNewEntity || ((e as any).changes as Changes<any>).fields.some((f) => field.fields.includes(f)),
+      );
+      (await followReverseHint(triggered, field.path))
+        .filter((entity) => !entity.isDeletedEntity)
+        .forEach((entity) => {
+          const { asyncFields } = getTodo(todos, entity);
+          if (!asyncFields.has(entity)) {
+            asyncFields.set(entity, new Set());
+          }
+          asyncFields.get(entity)!.add(field.fn);
+        });
     });
   });
   await Promise.all(p);
@@ -1044,7 +1052,7 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
 
 // Run rules against unchanged-but-reacting entities
 async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap(({ metadata, validates }) => {
+  const p = Object.values(todos).flatMap(({ validates }) => {
     return [...validates.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fns]) => {
@@ -1133,13 +1141,7 @@ export type Const<N> =
       [K in keyof N]: N[K] extends Narrowable ? N[K] | Const<N[K]> : never;
     };
 
-/**
- * Evaluates each derived field to see if it's value has changed.
- *
- * This is a) not at all reactive, b) only works for primitives, c) doesn't work
- * with async/promise-based logic, and d) doesn't support passing an app-specific
- * context, but it's a start.
- */
+/** Evaluates each (non-async) derived field to see if it's value has changed. */
 function recalcDerivedFields(todos: Record<string, Todo>) {
   const entities = Object.values(todos)
     .flatMap((todo) => [...todo.inserts, ...todo.updates])
@@ -1164,24 +1166,14 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
   }
 }
 
-/**
- * Calcs async derived fields for inserts and updates.
- *
- * We assume that `addReactiveAsyncDerivedValues` has already found any "reactive"
- * entities that need fields re-calced, and has already added them to `todos`.
- */
+/** Calcs async derived fields that have been triggered by a reactive hint. */
 async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).map(async (todo) => {
-    const { asyncDerivedFields } = todo.metadata.config.__data;
-    const changed = [...todo.inserts, ...todo.updates];
-    const p = Object.entries(asyncDerivedFields).map(async ([key, entry]) => {
-      if (entry) {
-        const [hint, fn] = entry;
-        await em.populate(changed, hint);
-        await Promise.all(changed.map((entity) => setField(entity, key as any, fn(entity))));
-      }
-    });
-    await Promise.all(p);
+  const p = Object.values(todos).flatMap(({ metadata, asyncFields }) => {
+    return [...asyncFields.entries()]
+      .filter(([e]) => !e.isDeletedEntity)
+      .flatMap(([entity, fns]) => {
+        return [...fns.values()].map((fn) => fn(entity));
+      });
   });
   await Promise.all(p);
 }

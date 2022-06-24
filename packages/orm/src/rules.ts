@@ -20,6 +20,13 @@ export type ValidationRuleInternal<T extends Entity> = {
   fn: ValidationRule<T>;
 };
 
+/** Internal metadata for an async derived field. */
+export type AsyncDerivedFieldInternal<T extends Entity> = {
+  name: string;
+  hint: ReactiveHint<T>;
+  fn: (entity: T) => Promise<void>;
+};
+
 /** A generic error which contains only a message field */
 export type GenericError = { message: string };
 

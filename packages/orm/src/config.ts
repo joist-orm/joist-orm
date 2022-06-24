@@ -1,8 +1,8 @@
 import { Entity } from "./Entity";
-import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn } from "./index";
+import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn, setField } from "./index";
 import { convertToLoadHint } from "./reactiveHints";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { ValidationRule, ValidationRuleInternal } from "./rules";
+import { AsyncDerivedFieldInternal, ValidationRule, ValidationRuleInternal } from "./rules";
 import { MaybePromise } from "./utils";
 
 export type EntityHook =
@@ -59,12 +59,17 @@ export class ConfigApi<T extends Entity, C> {
   }
 
   /** Registers `fn` as the lambda to provide the async value for `key`. */
-  setAsyncDerivedField<P extends keyof T, H extends LoadHint<T>>(
+  setAsyncDerivedField<P extends keyof T & string, H extends ReactiveHint<T>>(
     key: P,
-    populate: H,
-    fn: (entity: Loaded<T, H>) => T[P],
+    hint: H,
+    fn: (entity: Reacted<T, H>) => T[P],
   ): void {
-    this.__data.asyncDerivedFields[key] = [populate, fn as any];
+    const fn2 = async (entity: T): Promise<void> => {
+      await entity.em.populate([entity], convertToLoadHint(getMetadata(entity), hint));
+      const value = fn(entity as Reacted<T, H>);
+      setField(entity, key, value);
+    };
+    this.__data.asyncDerivedFields[key] = { name: key, hint, fn: fn2 };
   }
 
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
@@ -128,13 +133,26 @@ export class ConfigApi<T extends Entity, C> {
  * Stores a path back to a reactive rule.
  *
  * I.e. if `Book` has a `ruleFn` that reacts to `Author.title`, then `Author`'s config will have
- * a `ReactiveRule` with fields `["title"]`, reversePath `books`, and rule `ruleFn`.
+ * a `ReactiveRule` with fields `["title"]`, path `books`, and rule `ruleFn`.
  */
 interface ReactiveRule {
   name: string;
   fields: string[];
-  reversePath: string[];
-  rule: ValidationRule<any>;
+  path: string[];
+  fn: ValidationRule<any>;
+}
+
+/**
+ * Stores a path back to a reactive derived field.
+ *
+ * I.e. if `Book` has a `asyncField` that reacts to `Author.title`, then `Author`'s config will have
+ * a `ReactiveFields` with fields `["title"]`, path `books`, and rule `ruleFn`.
+ */
+interface ReactiveField {
+  name: string;
+  fields: string[];
+  path: string[];
+  fn: (entity: Entity) => Promise<void>;
 }
 
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
@@ -142,7 +160,7 @@ export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
   /** The async derived fields for this entity type. */
-  asyncDerivedFields: Partial<Record<keyof T, [LoadHint<T>, (entity: T) => any]>> = {};
+  asyncDerivedFields: Record<string, AsyncDerivedFieldInternal<T>> = {};
   /** The hooks for this instance. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
@@ -152,10 +170,10 @@ export class ConfigData<T extends Entity, C> {
     afterCommit: [],
     afterValidation: [],
   };
-  // An array of my X fields, via reverse path, trigger some target entity+fn
+  // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];
-  // Load-hint-ish structures that point back to instances that depend on us for derived values.
-  reactiveDerivedValues: string[][] = [];
+  // An array of the reactive fields that depend on this entity
+  reactiveDerivedValues: ReactiveField[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
 }
 

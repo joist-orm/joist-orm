@@ -14,7 +14,7 @@ export class BookReview extends BookReviewCodegen {
 }
 
 // Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
-bookReviewConfig.setAsyncDerivedField("isPublic", { book: "author" }, (review) => {
+bookReviewConfig.setAsyncDerivedField("isPublic", { book: { author: ["age", "graduated"] } }, (review) => {
   const author = review.book.get.author.get;
   return !!author.age && author.age >= 21 && !!author.graduated;
 });

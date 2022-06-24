@@ -2,7 +2,7 @@ import { Entity, EntityOrmField, isEntity } from "./Entity";
 import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import { reverseHint, reverseReactiveHint } from "./reactiveHints";
+import { reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { isCannotBeUpdatedRule } from "./rules";
@@ -35,7 +35,7 @@ export {
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
-export { Reactable, Reacted, ReactiveHint, reverseHint, reverseReactiveHint } from "./reactiveHints";
+export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
   cannotBeUpdated,
@@ -232,28 +232,22 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
   // Now hook up our reactivity
   metas.forEach((meta) => {
     // Look for reactive validation rules to reverse
-    meta.config.__data.rules.forEach((rule) => {
-      if (rule.hint) {
-        const reversals = reverseReactiveHint(meta.cstr, rule.hint);
+    meta.config.__data.rules.forEach(({ name, hint, fn }) => {
+      if (hint) {
+        const reversals = reverseReactiveHint(meta.cstr, hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
         reversals.forEach(({ entity, path, fields }) => {
-          getMetadata(entity).config.__data.reactiveRules.push({
-            name: rule.name,
-            fields,
-            reversePath: path,
-            rule: rule.fn,
-          });
+          getMetadata(entity).config.__data.reactiveRules.push({ name, fields, path, fn });
         });
       }
     });
 
     // Look for reactive async derived values rules to reverse
-    Object.entries(meta.config.__data.asyncDerivedFields).forEach(([, entry]) => {
-      const hint = entry![0];
-      const reversals = reverseHint(meta.cstr, hint);
-      reversals.forEach(({ entity, path }) => {
-        getMetadata(entity).config.__data.reactiveDerivedValues.push(path);
+    Object.values(meta.config.__data.asyncDerivedFields).forEach(({ name, hint, fn }) => {
+      const reversals = reverseReactiveHint(meta.cstr, hint);
+      reversals.forEach(({ entity, path, fields }) => {
+        getMetadata(entity).config.__data.reactiveDerivedValues.push({ name, path, fields, fn });
       });
     });
   });

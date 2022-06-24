@@ -231,11 +231,13 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks).toEqual(0);
+    expect(a1.numberOfBooksCalcInvoked).toBe(1);
     // When we add a book
     new Book(em, { title: "b1", author: a1 });
     // Then the author derived value is re-derived
     await em.flush();
     expect(a1.numberOfBooks).toEqual(1);
+    expect(a1.numberOfBooksCalcInvoked).toBe(2);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -247,11 +249,13 @@ describe("Author", () => {
     const b1 = new Book(em, { author: a1, title: "b1" });
     await em.flush();
     expect(a1.numberOfBooks).toEqual(1);
+    expect(a1.numberOfBooksCalcInvoked).toBe(1);
     // When we change the book
     b1.title = "b12";
     await em.flush();
     // Then the author derived value is didn't change
     expect(a1.numberOfBooks).toEqual(1);
+    expect(a1.numberOfBooksCalcInvoked).toBe(1);
   });
 
   it("has async derived values triggered on both old and new value", async () => {

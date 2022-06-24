@@ -10,6 +10,7 @@ export class Todo {
   updates: Entity[] = [];
   deletes: Entity[] = [];
   validates: Map<Entity, Set<Function>> = new Map();
+  asyncFields: Map<Entity, Set<Function>> = new Map();
   constructor(public metadata: EntityMetadata<any>) {}
 }
 

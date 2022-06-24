@@ -49,32 +49,6 @@ export type Reacted<T extends Entity, H> = Entity & {
   entity: Loaded<T, H>;
 };
 
-/**
- * Given a load hint of "given an entity, load these N things", return an array
- * of what those N things are, and reversed load hints to "come back" to the
- * original entity.
- *
- * For example given a hint of `publisher -> authors -> { books, comments }`,
- * return `[Book, [author, publisher]]` and `[Comment, [author, publisher]]`.
- */
-export function reverseHint<T extends Entity>(entityType: EntityConstructor<T>, hint: LoadHint<T>): ReactiveTarget[] {
-  const meta = getMetadata(entityType);
-  return Object.entries(normalizeHint(hint)).flatMap(([key, subHint]) => {
-    const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
-    if (field.kind !== "m2m" && field.kind !== "m2o" && field.kind !== "o2m" && field.kind !== "o2o") {
-      throw new Error("Invalid hint");
-    }
-    const otherMeta = field.otherMetadata();
-    const me = { entity: otherMeta.cstr, fields: [field.otherFieldName], path: [field.otherFieldName] };
-    return [
-      me,
-      ...reverseHint(otherMeta.cstr, subHint).map(({ entity, fields, path }) => {
-        return { entity, fields, path: [...path, field.otherFieldName] };
-      }),
-    ];
-  });
-}
-
 export function reverseReactiveHint<T extends Entity>(
   entityType: EntityConstructor<T>,
   hint: ReactiveHint<T>,

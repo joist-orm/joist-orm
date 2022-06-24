@@ -63,40 +63,34 @@ describe("reactiveHints", () => {
 
   it("can do child o2m with primitive field names", () => {
     expect(reverseReactiveHint(Author, { books: "title" })).toEqual([
-      {
-        entity: Book,
-        fields: ["author", "title"],
-        path: ["author"],
-      },
+      // Include the Author so that if no books are added, the rule still rules on create
+      { entity: Author, fields: [], path: [] },
+      { entity: Book, fields: ["author", "title"], path: ["author"] },
     ]);
   });
 
   it("can do child o2m with w/o any ", () => {
     expect(reverseReactiveHint(Author, "books")).toEqual([
-      {
-        entity: Book,
-        fields: ["author"],
-        path: ["author"],
-      },
+      { entity: Author, fields: [], path: [] },
+      { entity: Book, fields: ["author"], path: ["author"] },
     ]);
   });
 
   it("can do child o2o with primitive field names", () => {
     expect(reverseReactiveHint(Author, { image: "fileName" })).toEqual([
-      {
-        entity: Image,
-        fields: ["author", "fileName"],
-        path: ["author"],
-      },
+      { entity: Author, fields: [], path: [] },
+      { entity: Image, fields: ["author", "fileName"], path: ["author"] },
     ]);
   });
 
   it("skips read-only m2o parents", () => {
-    expect(reverseReactiveHint(Book, { author_ro: "firstName:ro" })).toEqual([]);
+    expect(reverseReactiveHint(Book, { author_ro: "firstName:ro" })).toEqual([{ entity: Book, fields: [], path: [] }]);
   });
 
   it("skips read-only o2m children and grand-children", () => {
-    expect(reverseReactiveHint(Author, { books_ro: "reviews:ro", firstName_ro: {} })).toEqual([]);
+    expect(reverseReactiveHint(Author, { books_ro: "reviews:ro", firstName_ro: {} })).toEqual([
+      { entity: Author, fields: [], path: [] },
+    ]);
   });
 
   describe("convertToLoadHint", () => {

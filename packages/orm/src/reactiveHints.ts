@@ -79,6 +79,7 @@ export function reverseReactiveHint<T extends Entity>(
   entityType: EntityConstructor<T>,
   hint: ReactiveHint<T>,
   reactForOtherSide?: string,
+  isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
   const primitives: string[] = reactForOtherSide ? [reactForOtherSide] : [];
@@ -91,9 +92,11 @@ export function reverseReactiveHint<T extends Entity>(
         if (!isReadOnly) {
           primitives.push(field.fieldName);
         }
-        return reverseReactiveHint(field.otherMetadata().cstr, subHint).map(({ entity, fields, path }) => {
-          return { entity, fields, path: [...path, field.otherFieldName] };
-        });
+        return reverseReactiveHint(field.otherMetadata().cstr, subHint, undefined, false).map(
+          ({ entity, fields, path }) => {
+            return { entity, fields, path: [...path, field.otherFieldName] };
+          },
+        );
       }
       case "m2m":
       case "o2m":
@@ -103,6 +106,7 @@ export function reverseReactiveHint<T extends Entity>(
           field.otherMetadata().cstr,
           subHint,
           isReadOnly ? undefined : field.otherFieldName,
+          false,
         ).map(({ entity, fields, path }) => {
           return { entity, fields, path: [...path, field.otherFieldName] };
         });
@@ -121,7 +125,7 @@ export function reverseReactiveHint<T extends Entity>(
     // If any of our primitives (or m2o fields) change, establish a reactive path
     // from "here" (entityType) that is initially empty (path: []) but will have
     // paths layered on by the previous callers
-    ...(primitives.length > 0 ? [{ entity: entityType, fields: primitives, path: [] }] : []),
+    ...(primitives.length > 0 || isFirst ? [{ entity: entityType, fields: primitives, path: [] }] : []),
     ...subHints,
   ];
 }

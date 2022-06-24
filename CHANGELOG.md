@@ -1,3 +1,10 @@
+# [1.18.0](https://github.com/stephenh/joist-ts/compare/v1.17.0...v1.18.0) (2022-06-24)
+
+
+### Features
+
+* Field-level validation rules ([#351](https://github.com/stephenh/joist-ts/issues/351)) ([08d3cc2](https://github.com/stephenh/joist-ts/commit/08d3cc2188f4d245df8ba2049fd96bbdf6f2d6e9))
+
 # [1.17.0](https://github.com/stephenh/joist-ts/compare/v1.16.0...v1.17.0) (2022-06-22)
 
 

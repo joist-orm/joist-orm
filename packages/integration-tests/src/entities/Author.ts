@@ -48,6 +48,7 @@ export class Author extends AuthorCodegen {
   public setGraduatedInFlush?: boolean;
   public mentorRuleInvoked = 0;
   public ageRuleInvoked = 0;
+  public numberOfBooksCalcInvoked = 0;
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
@@ -170,5 +171,6 @@ config.afterCommit((author) => {
 });
 
 config.setAsyncDerivedField("numberOfBooks", "books", (author) => {
+  author.entity.numberOfBooksCalcInvoked++;
   return author.books.get.length;
 });

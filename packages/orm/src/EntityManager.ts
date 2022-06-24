@@ -8,6 +8,7 @@ import { Driver } from "./drivers/driver";
 import { Entity, isEntity } from "./Entity";
 import {
   assertIdsAreTagged,
+  Changes,
   CustomCollection,
   CustomReference,
   DeepPartialOrNull,
@@ -30,7 +31,7 @@ import {
   ValidationErrors,
   ValidationRuleResult,
 } from "./index";
-import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loaded";
+import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
@@ -733,7 +734,10 @@ export class EntityManager<C = {}> {
           await recalcAsyncDerivedFields(this, todos);
 
           if (!skipValidation) {
-            await validate(todos);
+            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+            // `validateReactiveRules` next, the lambdas won't see invalid entities.
+            await validateSimpleRules(todos);
+            await validateReactiveRules(todos);
             await afterValidation(this.ctx, todos);
           }
 
@@ -970,19 +974,24 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    return todo.metadata.config.__data.reactiveRules.map(async (reverseHint) => {
+    return todo.metadata.config.__data.reactiveRules.map(async (rule) => {
+      const dirty = entities.filter(
+        (e) =>
+          e.isNewEntity ||
+          e.isDeletedEntity ||
+          ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
+      );
       // Add the resulting "found" entities to the right todos to be validated
-      (await followReverseHint(entities, reverseHint)).forEach((entity) => {
-        const todo = getTodo(todos, entity);
-        if (
-          !todo.inserts.includes(entity) &&
-          !todo.updates.includes(entity) &&
-          !todo.validates.includes(entity) &&
-          !entity.isDeletedEntity
-        ) {
-          todo.validates.push(entity);
-        }
-      });
+      (await followReverseHint(dirty, rule.reversePath))
+        .filter((entity) => !entity.isDeletedEntity)
+        .forEach((entity) => {
+          const { validates } = getTodo(todos, entity);
+          // Even if the entity is in inserts/updates, we need to explicitly mark it for validation
+          if (!validates.has(entity)) {
+            validates.set(entity, new Set());
+          }
+          validates.get(entity)!.add(rule.rule);
+        });
     });
   });
   await Promise.all(p);
@@ -1013,13 +1022,33 @@ async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<voi
   await Promise.all(entities.flatMap(getRelations).map((relation) => relation.cleanupOnEntityDeleted()));
 }
 
-async function validate(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap((todo) => {
-    const rules = todo.metadata.config.__data.rules;
-    return [...todo.inserts, ...todo.updates, ...todo.validates]
+// Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
+// because even for reactive validations on mutated entities, we defer to addReactiveValidations
+// to mark only the rules that need to run.
+async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap(({ metadata, inserts, updates }) => {
+    const { rules } = metadata.config.__data;
+    return [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
-        return rules.flatMap(async (rule) => coerceError(entity, await rule(entity)));
+        return rules
+          .filter((rule) => rule.hint === undefined)
+          .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
+      });
+  });
+  const errors = (await Promise.all(p)).flat();
+  if (errors.length > 0) {
+    throw new ValidationErrors(errors);
+  }
+}
+
+// Run rules against unchanged-but-reacting entities
+async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
+  const p = Object.values(todos).flatMap(({ metadata, validates }) => {
+    return [...validates.entries()]
+      .filter(([e]) => !e.isDeletedEntity)
+      .flatMap(([entity, fns]) => {
+        return [...fns.values()].flatMap(async (fn) => coerceError(entity, await fn(entity)));
       });
   });
   const errors = (await Promise.all(p)).flat();
@@ -1040,7 +1069,7 @@ async function runHook(
   ctx: unknown,
   hook: EntityHook,
   todos: Record<string, Todo>,
-  keys: ("inserts" | "deletes" | "updates" | "validates")[],
+  keys: ("inserts" | "deletes" | "updates")[],
 ): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
     const hookFns = todo.metadata.config.__data.hooks[hook];
@@ -1098,7 +1127,7 @@ function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): Val
 
 // See https://github.com/microsoft/TypeScript/issues/30680#issuecomment-752725353
 type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {} | [];
-type Const<N> =
+export type Const<N> =
   | N
   | {
       [K in keyof N]: N[K] extends Narrowable ? N[K] | Const<N[K]> : never;

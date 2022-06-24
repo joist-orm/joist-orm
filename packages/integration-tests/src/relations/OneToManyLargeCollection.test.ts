@@ -33,8 +33,7 @@ describe("OneToManyLargeCollection", () => {
   });
 
   it("cannot be a load hint", async () => {
-    // ...actually this does work, b/c Tag doesn't have any other loadable collections,
-    // so NestedLoadHint becomes {}, and turns out anything extends {}...
+    // @ts-expect-error
     const hint: LoadHint<Tag> = { publishers: {} };
   });
 

@@ -2,9 +2,9 @@ import { Entity, EntityOrmField, isEntity } from "./Entity";
 import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { reverseHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { reverseHint } from "./reverseHint";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -28,14 +28,15 @@ export {
   Loadable,
   Loaded,
   LoadHint,
+  MarkLoaded,
   New,
   RelationsIn,
-} from "./loaded";
+} from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
+export { Reactable, Reacted, ReactiveHint, reverseHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
-export * from "./reverseHint";
 export {
   cannotBeUpdated,
   GenericError,
@@ -223,24 +224,30 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach((rule) => {
-      if ((rule as any).hint) {
-        const reversals = reverseHint(meta.cstr, (rule as any).hint);
+      if (rule.hint) {
+        const reversals = reverseReactiveHint(meta.cstr, rule.hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
-        reversals.forEach(([otherEntity, reverseHint]) => {
-          getMetadata(otherEntity).config.__data.reactiveRules.push(reverseHint);
+        reversals.forEach(({ entity, path, fields }) => {
+          getMetadata(entity).config.__data.reactiveRules.push({
+            name: rule.name,
+            fields,
+            reversePath: path,
+            rule: rule.fn,
+          });
         });
       }
-      if (isCannotBeUpdatedRule(rule) && rule.immutable) {
-        meta.fields[rule.field].immutable = true;
+      if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
+        meta.fields[rule.fn.field].immutable = true;
       }
     });
+
     // Look for reactive async derived values rules to reverse
     Object.entries(meta.config.__data.asyncDerivedFields).forEach(([, entry]) => {
       const hint = entry![0];
       const reversals = reverseHint(meta.cstr, hint);
-      reversals.forEach(([otherEntity, reverseHint]) => {
-        getMetadata(otherEntity).config.__data.reactiveDerivedValues.push(reverseHint);
+      reversals.forEach(({ entity, path }) => {
+        getMetadata(entity).config.__data.reactiveDerivedValues.push(path);
       });
     });
   });

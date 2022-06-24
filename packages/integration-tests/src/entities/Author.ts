@@ -46,6 +46,7 @@ export class Author extends AuthorCodegen {
   public afterCommitIdIsSet = false;
   public afterCommitIsNewEntity = false;
   public setGraduatedInFlush?: boolean;
+  public mentorRuleInvoked = 0;
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
@@ -108,17 +109,22 @@ config.addRule((a) => {
 });
 
 // Example of reactive rule being fired on Book change
-config.addRule("books", async (a) => {
+config.addRule({ books: ["title"], firstName: {} }, async (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {
     return "A book title cannot be the author's firstName";
   }
 });
 
 // Example of reactive rule being fired on Book insertion/deletion
-config.addRule("books", async (a) => {
+config.addRule("books", (a) => {
   if (a.books.get.length === 13) {
     return "An author cannot have 13 books";
   }
+});
+
+// Example of rule that won't get run unless field is set
+config.addRule("mentor", (a) => {
+  a.entity.mentorRuleInvoked++;
 });
 
 // Example of cannotBeUpdated

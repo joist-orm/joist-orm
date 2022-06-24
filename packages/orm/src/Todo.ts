@@ -5,12 +5,12 @@ import { ManyToManyCollection } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 
 /** A group of insert/update/delete operations for a given entity. */
-export interface Todo {
-  metadata: EntityMetadata<any>;
-  inserts: Entity[];
-  updates: Entity[];
-  deletes: Entity[];
-  validates: Entity[];
+export class Todo {
+  inserts: Entity[] = [];
+  updates: Entity[] = [];
+  deletes: Entity[] = [];
+  validates: Map<Entity, Set<Function>> = new Map();
+  constructor(public metadata: EntityMetadata<any>) {}
 }
 
 /**
@@ -35,13 +35,7 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
 
 /** getOrSets a `Todo` for `entity` in `todos`. */
 export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
-  const meta = getMetadata(entity);
-  let todo = todos[meta.type];
-  if (!todo) {
-    todo = { metadata: entity.__orm.metadata, inserts: [], updates: [], deletes: [], validates: [] };
-    todos[meta.type] = todo;
-  }
-  return todo;
+  return (todos[getMetadata(entity).type] ??= new Todo(entity.__orm.metadata));
 }
 
 export interface JoinRowTodo {

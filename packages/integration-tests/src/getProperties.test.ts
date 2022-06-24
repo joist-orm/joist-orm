@@ -4,6 +4,7 @@ import { getProperties } from "joist-orm";
 describe("getProperties", () => {
   it("should work", () => {
     expect(getProperties(bookMeta)).toEqual([
+      "entity",
       "advances",
       "reviews",
       "comments",
@@ -12,6 +13,8 @@ describe("getProperties", () => {
       "image",
       "tags",
       "rulesInvoked",
+      "firstNameRuleInvoked",
+      "favoriteColorsRuleInvoked",
     ]);
   });
 

@@ -1,5 +1,6 @@
 import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
+import { ReactiveHint } from "./reactiveHints";
 import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
 
 /**
@@ -9,8 +10,15 @@ import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
  */
 export type ValidationRuleResult<E extends GenericError> = string | E | E[] | undefined;
 
-/** Entity validation errors; if `entity` is invalid, throw a `ValidationError`. */
+/** An entity validation rule. */
 export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult<any>>;
+
+/** Internal metadata for an async/reactive validation rule. */
+export type ValidationRuleInternal<T extends Entity> = {
+  name: string;
+  hint: ReactiveHint<T> | undefined;
+  fn: ValidationRule<T>;
+};
 
 /** A generic error which contains only a message field */
 export type GenericError = { message: string };

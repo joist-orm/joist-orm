@@ -42,6 +42,10 @@ export interface LoadedReference<T extends Entity, U extends Entity, N extends n
   get: U | N;
 
   getWithDeleted: U | N;
+
+  // We keep isSet in LoadedReference, instead of Reference, b/c o2o extends and it cannot
+  // implement isSet until it's loaded.
+  isSet: boolean;
 }
 
 /** Type guard utility for determining if an entity field is a Reference. */

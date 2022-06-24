@@ -1,6 +1,6 @@
-import { currentlyInstantiatingEntity } from "../";
+import { Const, currentlyInstantiatingEntity } from "../";
 import { Entity } from "../Entity";
-import { Loaded, LoadHint } from "../loaded";
+import { Loaded, LoadHint } from "../loadHints";
 import { CustomReference } from "./CustomReference";
 import { Reference } from "./Reference";
 
@@ -17,7 +17,7 @@ export function hasOneDerived<
   N extends never | undefined,
   V extends U | N,
   H extends LoadHint<T>,
->(loadHint: H, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
+>(loadHint: Const<H>, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
     load: async (entity, opts) => {

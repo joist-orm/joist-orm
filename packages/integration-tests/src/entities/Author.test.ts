@@ -64,6 +64,13 @@ describe("Author", () => {
     const b1 = new Book(em, { title: "b1", author: a1 });
     // Then the Author validation rule fails
     await expect(em.flush()).rejects.toThrow("Author:1 An author cannot have 13 books");
+    // And assert against the rules for good measure
+    expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
+      { name: "Author.ts:112", fields: ["author", "title"], reversePath: ["author"], rule: expect.any(Function) },
+      { name: "Author.ts:119", fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
+      { name: "Book.ts:14", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+      { name: "Book.ts:19", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+    ]);
   });
 
   it("can have reactive validation fired on deleted child", async () => {
@@ -89,24 +96,17 @@ describe("Author", () => {
     await em.flush();
   });
 
-  it("can have reactive rules that fire twice", async () => {
+  it("does not fire reactive rules twice", async () => {
     // Given we have an existing author
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a = await em.load(Author, "a:1");
     // And we later make a book
     const b = em.create(Book, { title: "b", author: a });
-    // When we flush, it will cause:
-    // - An initial loop with pendingEntities=[Book]
-    // - Author.numberOfBooks will change
-    // - A second loop with pendingEntities=[Author]
-    // - During the second loop, b/c Book is reactive on Author,
-    //   it could need to run again b/c something about Author could be different
-    //   (and rules don't have side-effects so invoking them twice shouldn't cause
-    //   any additional loops).
     await em.flush();
-    // Then book was validated twice
-    expect(b.rulesInvoked).toEqual(2);
+    // Then book is only validated once
+    expect(b.rulesInvoked).toEqual(1);
+    expect(b.firstNameRuleInvoked).toEqual(1);
   });
 
   it("delete does not blow up due to reactive validation rules", async () => {

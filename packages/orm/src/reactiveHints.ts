@@ -85,8 +85,8 @@ export function reverseReactiveHint<T extends Entity>(
   const primitives: string[] = reactForOtherSide ? [reactForOtherSide] : [];
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
-    const isReadOnly = !!keyMaybeSuffix.match(suffixRe);
     const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
+    const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || field.immutable;
     switch (field.kind) {
       case "m2o": {
         if (!isReadOnly) {

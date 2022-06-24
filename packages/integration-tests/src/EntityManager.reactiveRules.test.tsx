@@ -1,4 +1,5 @@
-import { Color, newAuthor, newBook } from "@src/entities";
+import { Author, Book, Color, newAuthor, newBook } from "@src/entities";
+import { getMetadata } from "joist-orm";
 
 describe("EntityManager.reactiveRules", () => {
   it.withCtx("runs m2o reactive rules", async ({ em }) => {
@@ -56,5 +57,34 @@ describe("EntityManager.reactiveRules", () => {
     await em.flush();
     // Then it runs again
     expect(a.mentorRuleInvoked).toBe(2);
+  });
+
+  it.withCtx("creates the right reactive rules", async ({ em }) => {
+    expect(getMetadata(Author).config.__data.reactiveRules).toEqual([
+      // Author's firstName/book.title validation rule
+      { name: "Author.ts:113", fields: ["firstName"], reversePath: [], rule: expect.any(Function) },
+      // Author's "cannot have 13 books" rules
+      { name: "Author.ts:120", fields: [], reversePath: [], rule: expect.any(Function) },
+      // Author's noop mentor rule
+      { name: "Author.ts:127", fields: ["mentor"], reversePath: [], rule: expect.any(Function) },
+      // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
+      { name: "Author.ts:135", fields: [], reversePath: [], rule: expect.any(Function) },
+      // Book's noop author.firstName rule, only depends on firstName
+      { name: "Book.ts:14", fields: ["firstName"], reversePath: ["books"], rule: expect.any(Function) },
+      // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
+      { name: "Book.ts:19", fields: ["favoriteColors"], reversePath: ["books"], rule: expect.any(Function) },
+      { name: "Publisher.ts:42", fields: ["publisher"], reversePath: ["publisher"], rule: expect.any(Function) },
+    ]);
+
+    expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
+      // Author's firstName/book.title validation rule
+      { name: "Author.ts:113", fields: ["author", "title"], reversePath: ["author"], rule: expect.any(Function) },
+      // Author's "cannot have 13 books" rule
+      { name: "Author.ts:120", fields: ["author"], reversePath: ["author"], rule: expect.any(Function) },
+      // Book's noop rule on author.firstName, if author changes
+      { name: "Book.ts:14", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+      // Book's "too many colors" rule, if author changes
+      { name: "Book.ts:19", fields: ["author"], reversePath: [], rule: expect.any(Function) },
+    ]);
   });
 });

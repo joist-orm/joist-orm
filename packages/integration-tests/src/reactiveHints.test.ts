@@ -69,7 +69,7 @@ describe("reactiveHints", () => {
     ]);
   });
 
-  it("can do child o2m with w/o any ", () => {
+  it("can do child o2m with w/o any fields", () => {
     expect(reverseReactiveHint(Author, "books")).toEqual([
       { entity: Author, fields: [], path: [] },
       { entity: Book, fields: ["author"], path: ["author"] },
@@ -93,6 +93,26 @@ describe("reactiveHints", () => {
     ]);
   });
 
+  it("can do read-only string hint", () => {
+    // expect(reverseHint(Author, "books:ro")).toEqual([{ entity: Book, fields: ["author"], path: ["author"] }]);
+    expect(reverseReactiveHint(Author, "publisher:ro")).toEqual([{ entity: Author, fields: [], path: [] }]);
+  });
+
+  it("can do array of read-only string hints", () => {
+    expect(reverseReactiveHint(Author, ["firstName:ro", "publisher:ro"])).toEqual([
+      { entity: Author, fields: [], path: [] },
+    ]);
+  });
+
+  it("can do hash of read-only hints", () => {
+    // TODO Enforce that `name` must be `name:ro`
+    expect(reverseReactiveHint(Author, { publisher_ro: "name:ro" })).toEqual([
+      { entity: Author, fields: [], path: [] },
+    ]);
+    expect(reverseReactiveHint(BookReview, { book: "author:ro" })).toEqual([
+      { entity: BookReview, fields: ["book"], path: [] },
+    ]);
+  });
   describe("convertToLoadHint", () => {
     it("works with child o2o and primitive field names", () => {
       expect(convertToLoadHint(getMetadata(Author), { image: "fileName" })).toEqual({ image: {} });

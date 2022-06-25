@@ -55,7 +55,7 @@ export interface BookFilter {
 export interface BookGraphQLFilter {
   id?: ValueGraphQLFilter<BookId>;
   title?: ValueGraphQLFilter<string>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
 }
 
 export interface BookOrder {

@@ -59,7 +59,7 @@ export interface BookGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
 }
 
 export interface BookOrder {

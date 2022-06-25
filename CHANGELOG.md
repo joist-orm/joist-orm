@@ -1,3 +1,11 @@
+## [1.21.1](https://github.com/stephenh/joist-ts/compare/v1.21.0...v1.21.1) (2022-06-25)
+
+
+### Bug Fixes
+
+* Bump knexjs. ([70b65a3](https://github.com/stephenh/joist-ts/commit/70b65a33e114ebe9d299f9ecf15a1dfe510d75f7))
+* Bump pg, fix knexjs error. ([3c9bf16](https://github.com/stephenh/joist-ts/commit/3c9bf16384fa0ad5e48f0f5952bd5d2e1fb0a12b))
+
 # [1.21.0](https://github.com/stephenh/joist-ts/compare/v1.20.0...v1.21.0) (2022-06-25)
 
 

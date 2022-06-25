@@ -12089,7 +12089,7 @@ __metadata:
     is-plain-object: ^5.0.0
     jest: ^28.1.1
     joist-utils: "workspace:*"
-    knex: ^1.0.7
+    knex: ^2.1.0
     pg: ^8.7.1
     pg-structure: ^7.13.0
     pluralize: ^8.0.0
@@ -12186,7 +12186,7 @@ __metadata:
     is-plain-object: ^5.0.0
     jest: ^28.1.1
     joist-utils: "workspace:*"
-    knex: ^1.0.7
+    knex: ^2.1.0
     object-hash: ^2.2.0
     pg: ^8.7.1
     prettier: ^2.7.1
@@ -12512,9 +12512,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"knex@npm:^1.0.7":
-  version: 1.0.7
-  resolution: "knex@npm:1.0.7"
+"knex@npm:^2.1.0":
+  version: 2.1.0
+  resolution: "knex@npm:2.1.0"
   dependencies:
     colorette: 2.0.16
     commander: ^9.1.0
@@ -12531,8 +12531,6 @@ __metadata:
     tarn: ^3.0.2
     tildify: 2.0.0
   peerDependenciesMeta:
-    "@vscode/sqlite3":
-      optional: true
     better-sqlite3:
       optional: true
     mysql:
@@ -12543,11 +12541,13 @@ __metadata:
       optional: true
     pg-native:
       optional: true
+    sqlite3:
+      optional: true
     tedious:
       optional: true
   bin:
     knex: bin/cli.js
-  checksum: 57608a3a6813cb66da6f5a078016338166c53ab2cbaab66e81492352023db88fc158e4ad6bbd2156cd9d7c9cac14a4b1e581dd8232b4f9bab2285ea6f1efc5cf
+  checksum: 60ff38de9135cba3ec3daef37e2b7f4fe07a03636da3c2eaed0072a1dbc96a1dca6698ad8645c0c3501b3a8cb6d3da29409cdcb7513c21083041cfecc2ae3e2e
   languageName: node
   linkType: hard
 

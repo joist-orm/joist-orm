@@ -19,7 +19,7 @@
     "@types/pluralize": "0.0.29",
     "joist-utils": "workspace:*",
     "node-pg-migrate": "^5.10.0",
-    "pg": "^8.7.1",
+    "pg": "^8.7.3",
     "pg-structure": "^7.13.0",
     "pluralize": "^8.0.0"
   },

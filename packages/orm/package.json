@@ -25,7 +25,7 @@
     "joist-utils": "workspace:*",
     "knex": "^2.1.0",
     "object-hash": "^2.2.0",
-    "pg": "^8.7.1"
+    "pg": "^8.7.3"
   },
   "devDependencies": {
     "@swc/core": "^1.2.192",

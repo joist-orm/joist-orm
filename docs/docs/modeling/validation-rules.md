@@ -2,7 +2,7 @@
 title: Validation Rules
 ---
 
-Entities can have validation rules added that will be run during `EntityManager.flush()`:
+Entities can have validation rules that are run during `EntityManager.flush()`:
 
 ```typescript
 import { authorConfig as config } from "./entities"
@@ -39,7 +39,7 @@ If you would like to skip validation rules, you can pass `skipValidation: true` 
 
 Joist's API of calling `config.addRule` is non-traditional in that validation rules "live outside the entity", i.e. they are not inside a `validate()` method on the `Author` class.
 
-This setup is on purpose, because in the next section, it allows Joist to use reactive validation hints to discover when rules should run (i.e. when `Book.title` changes, re-run this specific `Author` validation rule), even if main entity (`Author`) hasn't been loaded from the database yet.
+This setup is intentional, because in the next section, it allows Joist to use reactive validation hints to discover when rules should run (i.e. when `Book.title` changes, re-run this specific `Author` validation rule), even if main entity (`Author`) hasn't been loaded from the database yet (or potentially the `Author` class has not even been instantiated yet).
 
 See [Issues 198](https://github.com/stephenh/joist-ts/issues/198) for tracking ideas around this.
 
@@ -67,10 +67,10 @@ If your database has five entities:
 - `Author:1 firstName=a1`
 - `Author:2 firstName=a2`
 - `Book:1 title=b1 author=Author:1`
-- `Book:2 title=b2 author=Author:2`
-- `Book:3 title=b3 author=Author:1`
+- `Book:2 title=b2 author=Author:1`
+- `Book:3 title=b3 author=Author:2`
 
-Anytime `Book#1` or `Book#2` have their `title` changed, Joist will automatically load `Author:1` and re-run the validation rule.
+Anytime `Book:1` or `Book:2` have their `title` changed, Joist will automatically load `Author:1` and re-run the validation rule.
 
 To ensure validation rules only access fields that their hint declares, the lambda is passed a special `Reacted<Author, { books: "title", firstName: {}}` mapped type that only allows access to the `title` and `firstName` fields.
 
@@ -111,7 +111,7 @@ config.addRule(["books", "firstName:ro"], (a) => {
 
 ### Required Fields
 
-Joist's `joist-codegen` step automatically adds required rules to any column with a not null constraint.
+Joist's `joist-codegen` automatically adds required rules to any column with a not null constraint.
 
 For example, in the `AuthorCodegen.ts` base class, `joist-codegen` automatically adds the lines:
 

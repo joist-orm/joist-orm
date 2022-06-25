@@ -1,3 +1,10 @@
+# [1.21.0](https://github.com/stephenh/joist-ts/compare/v1.20.0...v1.21.0) (2022-06-25)
+
+
+### Features
+
+* Recalc all async derived fields on touch. ([#363](https://github.com/stephenh/joist-ts/issues/363)) ([2c726e5](https://github.com/stephenh/joist-ts/commit/2c726e515342703cdb4de87b8ce388c01c1d9e19))
+
 # [1.20.0](https://github.com/stephenh/joist-ts/compare/v1.19.0...v1.20.0) (2022-06-24)
 
 

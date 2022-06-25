@@ -253,9 +253,25 @@ describe("Author", () => {
     // When we change the book
     b1.title = "b12";
     await em.flush();
-    // Then the author derived value is didn't change
+    // Then the author derived value didn't change
     expect(a1.numberOfBooks).toEqual(1);
     expect(a1.numberOfBooksCalcInvoked).toBe(1);
+  });
+
+  it("can force async derived values to recalc on touch", async () => {
+    const em = newEntityManager();
+    // Given an author with a book
+    const a1 = newAuthor(em, { firstName: "a1" });
+    await em.flush();
+    expect(a1.numberOfBooks).toEqual(0);
+    expect(a1.numberOfBooksCalcInvoked).toBe(1);
+    // When we touch the author
+    em.touch(a1);
+    await em.flush();
+    // Then the author derived value didn't change
+    expect(a1.numberOfBooks).toEqual(0);
+    // But it was called again
+    expect(a1.numberOfBooksCalcInvoked).toBe(2);
   });
 
   it("has async derived values triggered on both old and new value", async () => {

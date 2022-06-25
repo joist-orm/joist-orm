@@ -29,6 +29,15 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
       } else {
         todo.updates.push(entity);
       }
+      // Force recalc all async fields if the user called em.touch
+      if (entity.__orm.isTouched) {
+        const { asyncFields } = todo;
+        if (!asyncFields.has(entity)) {
+          asyncFields.set(entity, new Set());
+        }
+        const set = asyncFields.get(entity)!;
+        Object.values(getMetadata(entity).config.__data.asyncDerivedFields).forEach(({ fn }) => set.add(fn));
+      }
     }
   }
   return todos;

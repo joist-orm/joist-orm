@@ -3,7 +3,7 @@ title: Great Tests
 sidebar_position: 4
 ---
 
-Joist focuses not just on great production code & business logic, but also on great testing of that business logic, by facilitating tests that are:
+Joist focuses not just on great production code & business logic, but also on enabling great test coverage of your business logic, by facilitating tests that are:
 
 1. Isolated,
 2. Succinct, and
@@ -11,7 +11,7 @@ Joist focuses not just on great production code & business logic, but also on gr
 
 ## Isolated Tests
 
-Isolation is an important tenant of great tests, because generally any sort of "shared fixtures", "shared environment", etc. that couples automated tests to an ever-growing, ever-changing shared test data eventually becomes very confusing to debug and very brittle to change.
+Isolation is an important tenant of great tests, because any sort of "shared fixtures" or "shared environments" that couple automated tests to an ever-growing, ever-changing shared test data set eventually becomes very confusing to debug and very brittle to change.
 
 With Joist, each unit test starts out with a clean database, and so is concerned only with the minimum amount of data it needs for its boundary case.
 
@@ -50,6 +50,12 @@ Where the `flush_database` stored procured:
 3. Resets sequences to restart from 1
 4. Is only created in local testing environments, not production
 
+:::info
+
+The `flush_database` stored procedure is created while running `npm run joist-codegen`, both because its body is generated based on your current schema (similar to the other `joist-codegen` output), and also because `joist-codegen` is generally only ran against a local development environment, which avoids having this stored procedure ever exist in production.
+
+:::
+
 ## Succinct Tests
 
 Given each test starts with a clean database, Joist provides factories to easily create test data, so that the benefit of "a clean database" is not negated by lots of boilerplate code to re-create test data.
@@ -73,14 +79,14 @@ If either the `Author` or `Book` had other required fields, the `newAuthor` and 
 
 See the [factories](../testing/test-factories.md) for more information on custom flags.
 
-## Fast Enough Tests
+## Fast Tests
 
 Slow tests can kill productivity and dis-incentivize testing in general, so Joist tries to make tests as fast as possible.
 
 Joist does not have a specific approach/feature that enables fast tests, other than:
 
-- The `flush_database` stored procedure makes db resets a single database call instead of `N` calls (i.e. 1 per table in your schema)
-- Using build-time code generation means Joist does not need to scan the schema at runtime/boot time.
+- The `flush_database` stored procedure makes db resets a single database call instead of `N` calls (i.e. 1 `DELETE` per table in your schema)
+- Joist's use of build-time code generation means it does not need to scan the schema at runtime/boot time.
 
 In small projects, you can generally expect:
 

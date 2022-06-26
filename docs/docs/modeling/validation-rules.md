@@ -1,5 +1,6 @@
 ---
 title: Validation Rules
+sidebar_position: 1
 ---
 
 Entities can have validation rules that are run during `EntityManager.flush()`:

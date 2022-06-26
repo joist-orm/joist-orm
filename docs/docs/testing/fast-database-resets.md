@@ -1,6 +1,6 @@
 ---
 title: Fast Database Resets
-sidebar_position: 2
+sidebar_position: 1
 ---
 
 To reset the database between each unit test, Joist generates a `flush_database` stored procedure that will delete all rows/reset the sequence ids:

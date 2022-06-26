@@ -89,7 +89,7 @@ After that, all of Joist's updates are made only to the separate `AuthorCodegen.
 
 This makes `Author.ts` a safe space to add any custom business logic you might need, separate from the boilerplate of the various getters, setters, and relations that are isolated into "codegen" base class, and always overwritten.
 
-See [Lifecycle Hooks](../modeling/lifecycle-hooks.md) and [Derived Fields](../modeling/derived-fields.md) for examples of how to add business logic.
+See [Lifecycle Hooks](../features/lifecycle-hooks.md) and [Derived Fields](../modeling/derived-fields.md) for examples of how to add business logic.
 
 ### Declarative Customizations (TODO)
 

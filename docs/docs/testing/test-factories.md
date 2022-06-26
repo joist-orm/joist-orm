@@ -1,6 +1,6 @@
 ---
 title: Test Factories
-sidebar_position: 2
+sidebar_position: 1
 ---
 
 Joist generates customizable factories for easily creating test data.

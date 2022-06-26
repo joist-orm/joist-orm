@@ -1,5 +1,5 @@
 ---
-title: Entity Matcher
+title: Custom Matchers
 sidebar_position: 4
 ---
 

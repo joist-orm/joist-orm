@@ -1,11 +1,27 @@
 ---
-title: Nullable Columns
+title: Fields
 sidebar_position: 1
 ---
 
-Joist's domain objects automatically model `null` and `not null` columns appropriately.
+Fields are the primitive columns in your domain model, so all of the (non-foreign key) `int`, `varchar`, `datetime`, etc. columns.
 
-I.e. for a table like:
+For these columns, Joist automatically adds getters & setters to your domain model, i.e. an `authors.first_name` column will have getters & setters added to `AuthorCodegen.ts`:
+
+```ts
+class AuthorCodegen {
+  get firstName(): string {
+    return this.__orm.data["firstName"];
+  }
+
+  set firstName(firstName: string) {
+    setField(this, "firstName", firstName);
+  }
+}
+```
+
+## Optional vs Required
+
+Joist's fields model `null` and `not null` appropriately, e.g. for a table like:
 
 ```
                      Table "public.authors"
@@ -82,5 +98,22 @@ Note that, when using `setPartial` we have caused our `Author.firstName: string`
 
 See [Partial Update APIs](/docs/querying/partial-update-apis) for more details.
 
+## Protected Fields
+
+You can mark a field as protected in `joist-codegen.json`, which will make the setter `protected`, so that only your entity's internal business logic can call it.
+
+The getter will still be public.
+
+```json
+{
+  "entities": {
+    "Author": {
+      "fields": {
+        "wasEverPopular": { "protected": true }
+      }
+    }
+  }
+}
+```
 
 

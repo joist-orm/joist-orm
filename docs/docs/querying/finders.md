@@ -5,21 +5,36 @@ sidebar_position: 1
 
 Joist's `EntityManager` has several methods for easily finding/loading entities.
 
-As a disclaimer, Joist does not yet have a full-blown query builder API that can support arbitrary SQL.
+:::info
 
-The existing `EntityManager` methods of `find`, `findAll`, and `load` support basic cases of finding an entity by conditions on its table itself, or by `INNER JOIN`s into "parent" tables (many-to-ones), but for anything else (querying into "child tables" one-to-manys, many-to-manys), the best practice is to use an existing query builder, likely Knex since that is what Joist currently uses under the hood.
+As a disclaimer, Joist does not yet have a full-blown query builder API that can support arbitrary SQL. It's primary focus is providing a robust framework to your implement core domain model (validation rules, hooks, and core one-to-many, many-to-one, etc. relations), and defers complex querying to a dedicated query library.
 
-As a general rule of thumb, take a look at the unit tests in the [Joist repo](https://github.com/stephenh/joist-ts/blob/main/packages/integration-tests/src/EntityManager.test.ts).
+That said, `EntityManager` has several methods (`find`, `findAll`, etc., documented below) that support common cases of finding entities by simple conditions and many-to-one joins, but for anything more complicated (one-to-many joins, many-to-many joins, or aggregates), for now the best practice is to use a dedicated query builder like Knex.
+
+Currently, we suggest using Knex, because it's what Joist also uses internally.
+
+:::
+
+:::tip
+
+Since these docs are still work-in-progress, you can also scan the unit tests in the [Joist repo](https://github.com/stephenh/joist-ts/blob/main/packages/integration-tests/src/EntityManager.test.ts) for examples of queries.
+
+:::
 
 ### `#load`
-Load an instance of a given entity and id
+
+Load an instance of a given entity and id.
+
+This will return the existing `Author:1` instance if it's already been loaded from the database.
 
 ```ts
 const em = newEntityManager();
 const a = await em.load(Author, "a:1");
 ```
+
 ### `#loadAll`
-Load a instances of a given entity and ids
+
+Load multiple instances of a given entity and ids, and fails if any id does not exist.
 
 ```ts
 const em = newEntityManager();
@@ -27,7 +42,8 @@ const a = await em.loadAll(Author, ["a:1", "a:2"]);
 ```
 
 ### `#loadAllIfExists`
-Load a instances of a given entity and ids if exists in cache
+
+Load multiple instances of a given entity and ids, and ignores ids that don't exist.
 
 ```ts
 const em = newEntityManager();
@@ -35,7 +51,8 @@ const a = await em.loadAllIfExists(Author, ["a:1", "a:2"]);
 ```
 
 ### `#loadFromQuery`
-Load a instance of a given entity and Knex QueryBuilder
+
+Load multiple instances of a given entity from a Knex QueryBuilder.
 
 ```ts
 const em = newEntityManager();

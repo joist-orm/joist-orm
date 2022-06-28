@@ -49,6 +49,7 @@ export class Author extends AuthorCodegen {
   public mentorRuleInvoked = 0;
   public ageRuleInvoked = 0;
   public numberOfBooksCalcInvoked = 0;
+  public graduatedRuleInvoked = 0;
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
@@ -127,6 +128,11 @@ config.addRule("books", (a) => {
 // Example of rule that is always run even if the field is not set
 config.addRule("mentor", (a) => {
   a.entity.mentorRuleInvoked++;
+});
+
+// Example of rule that is run when set-via-hook field runs
+config.addRule("graduated", (a) => {
+  a.entity.graduatedRuleInvoked++;
 });
 
 // Example of cannotBeUpdated

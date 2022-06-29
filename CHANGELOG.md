@@ -1,3 +1,10 @@
+## [1.21.2](https://github.com/stephenh/joist-ts/compare/v1.21.1...v1.21.2) (2022-06-29)
+
+
+### Bug Fixes
+
+* Fix async derived fields not triggering from hook changes. ([#364](https://github.com/stephenh/joist-ts/issues/364)) ([bfb049e](https://github.com/stephenh/joist-ts/commit/bfb049e52a3a0437506c74b46736baf9c03771ee))
+
 ## [1.21.1](https://github.com/stephenh/joist-ts/compare/v1.21.0...v1.21.1) (2022-06-25)
 
 

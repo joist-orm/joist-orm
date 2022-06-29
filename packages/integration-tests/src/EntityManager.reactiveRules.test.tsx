@@ -59,16 +59,34 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.mentorRuleInvoked).toBe(2);
   });
 
+  it.withCtx("runs rule triggered by a hook", async ({ em }) => {
+    // Given an author
+    const a = newAuthor(em);
+    await em.flush();
+    // And the rule runs b/c all rules run on create
+    expect(a.graduatedRuleInvoked).toBe(1);
+    // When we change something about the author
+    a.mentor.set(newAuthor(em));
+    // And also tell the hook to change graduated
+    a.setGraduatedInFlush = true;
+    await em.flush();
+    // Then the validation rule (or async derived field) that depends on
+    // `Author.graduated` runs again
+    expect(a.graduatedRuleInvoked).toBe(2);
+  });
+
   it.withCtx("creates the right reactive rules", async ({ em }) => {
     expect(getMetadata(Author).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule
-      { name: "Author.ts:114", fields: ["firstName"], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:115", fields: ["firstName"], path: [], fn: expect.any(Function) },
       // Author's "cannot have 13 books" rules
-      { name: "Author.ts:121", fields: [], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:122", fields: [], path: [], fn: expect.any(Function) },
       // Author's noop mentor rule
-      { name: "Author.ts:128", fields: ["mentor"], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:129", fields: ["mentor"], path: [], fn: expect.any(Function) },
+      // Author's graduated rule that runs on hook changes
+      { name: "Author.ts:134", fields: ["graduated"], path: [], fn: expect.any(Function) },
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
-      { name: "Author.ts:136", fields: [], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:142", fields: [], path: [], fn: expect.any(Function) },
       // Book's noop author.firstName rule, only depends on firstName
       { name: "Book.ts:14", fields: ["firstName"], path: ["books"], fn: expect.any(Function) },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
@@ -78,9 +96,9 @@ describe("EntityManager.reactiveRules", () => {
 
     expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule
-      { name: "Author.ts:114", fields: ["author", "title"], path: ["author"], fn: expect.any(Function) },
+      { name: "Author.ts:115", fields: ["author", "title"], path: ["author"], fn: expect.any(Function) },
       // Author's "cannot have 13 books" rule
-      { name: "Author.ts:121", fields: ["author"], path: ["author"], fn: expect.any(Function) },
+      { name: "Author.ts:122", fields: ["author"], path: ["author"], fn: expect.any(Function) },
       // Book's noop rule on author.firstName, if author changes
       { name: "Book.ts:14", fields: ["author"], path: [], fn: expect.any(Function) },
       // Book's "too many colors" rule, if author changes

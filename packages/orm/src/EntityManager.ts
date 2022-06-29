@@ -711,19 +711,11 @@ export class EntityManager<C = {}> {
 
     try {
       while (pendingEntities.length > 0) {
+        // Run hooks in a series of loops until things "settle down"
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
           const todos = createTodos(pendingEntities);
 
-          // Add objects to todos that have reactive hooks.
-          // Note that, if we're on the 2nd loop, we might actually re-add entities that were already-validated
-          // and already-flushed on the 1st loop, if those entities happen to be marked as derived from the
-          // current loop's entities. In theory this is a good thing, b/c the current loop's entities have
-          // been changed since/during the 1st loop, so we want the derived validation rules + derived values
-          // to run again to see the latest & greatest data.
-          await addReactiveAsyncDerivedValues(todos);
-          await addReactiveValidations(todos);
-
-          // run our hooks
+          // Run our hooks
           await beforeDelete(this.ctx, todos);
           // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
           await cleanupDeletedRelations(todos);
@@ -731,15 +723,18 @@ export class EntityManager<C = {}> {
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           recalcDerivedFields(todos);
-          await recalcAsyncDerivedFields(this, todos);
 
-          if (!skipValidation) {
-            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-            // `validateReactiveRules` next, the lambdas won't see invalid entities.
-            await validateSimpleRules(todos);
-            await validateReactiveRules(todos);
-            await afterValidation(this.ctx, todos);
-          }
+          // After hooks have run, and potentially updated fields, see if
+          // any async derived values depend on changed fields.
+          //
+          // Note that we defer validation until our run-hooks loop is complete,
+          // so that if a hook creates an entity, we don't invoke reactive validation
+          // rules at this point, until we give the entity a chance to run its own hooks
+          // as part of the next loop.
+          await addReactiveAsyncDerivedValues(todos);
+          // We include this inside the loop, b/c if we change values on a reacted,
+          // not-yet-mutated entity, we'll want to loop around and run its hooks
+          await recalcAsyncDerivedFields(this, todos);
 
           entitiesToFlush.push(...pendingEntities);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
@@ -748,6 +743,16 @@ export class EntityManager<C = {}> {
       }
 
       const entityTodos = createTodos(entitiesToFlush);
+
+      if (!skipValidation) {
+        await addReactiveValidations(entityTodos);
+        // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+        // `validateReactiveRules` next, the lambdas won't see invalid entities.
+        await validateSimpleRules(entityTodos);
+        await validateReactiveRules(entityTodos);
+        await afterValidation(this.ctx, entityTodos);
+      }
+
       const joinRowTodos = combineJoinRows(this.__data.joinRows);
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {

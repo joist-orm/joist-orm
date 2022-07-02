@@ -91,8 +91,6 @@ export type EnumField = Field & {
   columnDefault: number | boolean | string | null;
   enumName: string;
   enumType: Import;
-  enumDetailType: Import;
-  enumDetailsType: Import;
   enumRows: EnumRow[];
   notNull: boolean;
   isArray: boolean;
@@ -205,7 +203,7 @@ export class EntityDbMetadata {
     this.pgEnums = [
       ...table.columns
         .filter((c) => isPgEnum(c))
-        .map((column) => newPgEnumField(config, this.entity, column, table))
+        .map((column) => newPgEnumField(config, this.entity, column))
         .filter((f) => !f.ignore),
     ];
 
@@ -336,8 +334,6 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
   const fieldName = enumFieldName(column.name);
   const enumName = tableToEntityName(config, r.targetTable);
   const enumType = imp(`${enumName}@./entities`);
-  const enumDetailType = imp(`${plural(enumName)}@./entities`);
-  const enumDetailsType = imp(`${enumName}Details@./entities`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
@@ -347,8 +343,6 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     columnDefault: column.default,
     enumName,
     enumType,
-    enumDetailType,
-    enumDetailsType,
     notNull,
     ignore,
     enumRows: enums[r.targetTable.name].rows,
@@ -363,8 +357,6 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   const enumTable = column.comment!.replace("enum=", "");
   const enumName = (enums[enumTable] || fail(`Could not find enum ${enumTable}`)).name;
   const enumType = imp(`${enumName}@./entities`);
-  const enumDetailType = imp(`${plural(enumName)}@./entities`);
-  const enumDetailsType = imp(`${enumName}Details@./entities`);
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   return {
@@ -374,8 +366,6 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     columnDefault: column.default,
     enumName,
     enumType,
-    enumDetailType,
-    enumDetailsType,
     notNull,
     ignore,
     enumRows: enums[enumTable].rows,
@@ -383,7 +373,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   };
 }
 
-function newPgEnumField(config: Config, entity: Entity, column: Column, table: Table): PgEnumField {
+function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumField {
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
   const enumName = pascalCase(column.type.name);
@@ -455,12 +445,12 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   const fieldName = relationName(
     config,
     entity,
-    camelCase(plural(targetForeignKey.columns[0].name.replace(/\_id|Id$/, ""))),
+    camelCase(plural(targetForeignKey.columns[0].name.replace(/_id|Id$/, ""))),
   );
   const otherFieldName = relationName(
     config,
     otherEntity,
-    camelCase(plural(foreignKey.columns[0].name.replace(/\_id|Id$/, ""))),
+    camelCase(plural(foreignKey.columns[0].name.replace(/_id|Id$/, ""))),
   );
   return {
     kind: "m2m",
@@ -528,7 +518,7 @@ export function oneToOneName(
   } else {
     // If there is a m2o, assume we might conflict, and use the column name to at least be unique
     // Start with `book` from `images.book_id` or `current_draft_book` from `authors.current_draft_book_id`
-    let fieldName = r.foreignKey.columns[0].name.replace(/\_id|Id$/, "");
+    let fieldName = r.foreignKey.columns[0].name.replace(/_id|Id$/, "");
     // Suffix the new type that we're pointing to, to `current_draft_book_author`
     fieldName = `${fieldName}_${keyEntity.name}`;
     // And drop the `book`, to `current_draft__author`
@@ -541,12 +531,12 @@ export function oneToOneName(
 
 export function referenceName(config: Config, entity: Entity, r: M2ORelation | O2MRelation): string {
   const column = r.foreignKey.columns[0];
-  const fieldName = polymorphicFieldName(config, r) ?? camelCase(column.name.replace(/\_id|Id$/, ""));
+  const fieldName = polymorphicFieldName(config, r) ?? camelCase(column.name.replace(/_id|Id$/, ""));
   return relationName(config, entity, fieldName);
 }
 
 function enumFieldName(columnName: string) {
-  return camelCase(columnName.replace(/\_id|Id$/, ""));
+  return camelCase(columnName.replace(/_id|Id$/, ""));
 }
 
 function primitiveFieldName(columnName: string) {
@@ -570,7 +560,7 @@ export function collectionName(
   // If `books.foo_author_id` and `books.bar_author_id` both exist
   if (sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
     // Use `fooAuthorBooks`, `barAuthorBooks`
-    fieldName = `${r.foreignKey.columns[0].name.replace(/\_id|Id$/, "")}_${fieldName}`;
+    fieldName = `${r.foreignKey.columns[0].name.replace(/_id|Id$/, "")}_${fieldName}`;
   }
   // If we've guessed `Book.bookReviews` based on `book_reviews.book_id` --> `bookReviews`, strip the `Book` prefix
   if (fieldName.length > singleEntity.name.length) {

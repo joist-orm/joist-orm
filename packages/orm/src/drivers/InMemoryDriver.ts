@@ -294,7 +294,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
         case "enum":
           let fn = (a: any) => a;
           if (field.kind === "enum") {
-            fn = (v) => (field.enumDetailType as any).getByCode(v).id;
+            fn = (v) => (field.enumType as any).getByCode(v).id;
           } else if (field.kind === "primaryKey") {
             fn = (v) => keyToNumber(meta, v as any);
           }

@@ -1,68 +1,67 @@
 import { pascalCase } from "change-case";
-import pluralize from "pluralize";
-import { code, Code } from "ts-poet";
+import { code, Code, joinCode } from "ts-poet";
 import { Config } from "./config";
 import { EnumTableData } from "./index";
 
 export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
   const { rows, extraPrimitives } = enumData;
-  const detailsName = `${enumName}Details`;
-  const detailsDefinition = [
-    "id: number;",
-    `code: ${enumName};`,
-    "name: string;",
-    ...extraPrimitives.map((primitive) => {
+
+  // Make the `public readonly static Blue = new Color(...)` declarations
+  const singletonFields = rows.map((row) => {
+    const params = [
+      row.id,
+      `"${row.code}"`,
+      `"${row.name}"`,
+      ...extraPrimitives.map((p) => JSON.stringify((row as any)[p.columnName])),
+    ];
+    return code`public readonly static ${pascalCase(row.code)} = new ${enumName}(${params.join(", ")})`;
+  });
+
+  const cstrFieldParams = [
+    "public id: number",
+    "public code: string",
+    "public name: string",
+    ...extraPrimitives.map(({ fieldName, fieldType, columnName }) => {
       // If the extra primitive values are all unique, then allow the type be only that set of values. Otherwise, use `fieldType`
-      const allValues = rows.map((r) => r[primitive.columnName]);
+      const allValues = rows.map((r) => r[columnName]);
       const uniqueValues = new Set(allValues);
       if (uniqueValues.size === allValues.length) {
-        return `${primitive.fieldName}: ${
-          primitive.fieldType === "string" ? `"${allValues.join('" | "')}"` : allValues.join(" | ")
-        };`;
+        return `public ${fieldName}: ${
+          fieldType === "string" ? `"${allValues.join('" | "')}"` : allValues.join(" | ")
+        }`;
       }
-      return `${primitive.fieldName}: ${primitive.fieldType};`;
+      return `public ${fieldName}: ${fieldType}`;
     }),
-  ].join(" ");
+  ];
+
+  // Add isLarge/isBlue/etc. accessors
+  const accessors = rows.map((row) => {
+    return code`
+      public get is${pascalCase(row.code)}(): boolean {
+        return this === ${enumName}.${pascalCase(row.code)};
+      }
+    `;
+  });
+
   return code`
-    export enum ${enumName} {
-      ${rows.map((row) => `${pascalCase(row.code)} = '${row.code}'`).join(",\n")}
+    export class ${enumName} {
+      ${joinCode(singletonFields, { on: ";" })}
+      
+      public static findByCode(code: string): ${enumName} | undefined {
+        return ${enumName}.getValues().find((d) => d.code === code);
+      }
+
+      public static findById(id: number): ${enumName} | undefined {
+        return ${enumName}.getValues().find((d) => d.id === id);
+      }
+
+      public static getValues(): ReadonlyArray<${enumName}> {
+        return [${rows.map((row) => `${enumName}.${pascalCase(row.code)}`).join(", ")}];
+      }
+      
+      private constructor(${cstrFieldParams.join(", ")}) {}
+      
+      ${joinCode(accessors, { on: "\n\n" })}
     }
-
-    export type ${detailsName} = {${detailsDefinition}};
-
-    const details: Record<${enumName}, ${detailsName}> = {
-      ${rows
-        .map((row) => {
-          const code = pascalCase(row.code);
-          const safeName = row.name.replace(/(["'])/g, "\\$1");
-          const extras = extraPrimitives
-            .map((p) => `${p.fieldName}: ${JSON.stringify((row as any)[p.columnName])}`)
-            .join(", ");
-          return `[${enumName}.${code}]: { id: ${row.id}, code: ${enumName}.${code}, name: '${safeName}', ${extras} }`;
-        })
-        .join(",")}
-    };
-
-    export const ${pluralize(enumName)} = {
-      getByCode(code: ${enumName}): ${detailsName} {
-        return details[code];
-      },
-
-      findByCode(code: string): ${detailsName} | undefined {
-        return details[code as ${enumName}];
-      },
-
-      findById(id: number): ${detailsName} | undefined {
-        return Object.values(details).find(d => d.id === id);
-      },
-
-      getValues(): ReadonlyArray<${enumName}> {
-        return Object.values(${enumName});
-      },
-
-      getDetails(): ReadonlyArray<${detailsName}> {
-        return Object.values(details);
-      },
-    };
   `;
 }

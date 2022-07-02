@@ -3,6 +3,7 @@ import {
   Entity,
   EntityManager,
   EntityOrmField,
+  EnumArrayFieldSerde,
   fail,
   getMetadata,
   isEntity,
@@ -110,8 +111,13 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
           switch (f.kind) {
             case "primaryKey":
             case "primitive":
-            case "enum":
               return [[f.fieldName, (this as any)[f.fieldName] || null]];
+            case "enum":
+              if (f.serde instanceof EnumArrayFieldSerde) {
+                return [[f.fieldName, ((this as any)[f.fieldName] || []).map((e: any) => e.code)]];
+              } else {
+                return [[f.fieldName, (this as any)[f.fieldName]?.code || null]];
+              }
             case "m2o":
               // Don't recurse into new entities b/c the point is to stay shallow
               const value = (this as any)[f.fieldName].current();

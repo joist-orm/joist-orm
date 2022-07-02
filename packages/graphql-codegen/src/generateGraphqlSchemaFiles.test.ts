@@ -414,8 +414,6 @@ function newEntityMetadata(name: string, opts: Partial<EntityDbMetadata> = {}): 
 function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): EnumField {
   const enumName = opts.enumName || "Color";
   const enumType = imp(`${enumName}@./entities`);
-  const enumDetailType = imp(`${plural(enumName)}@./entities`);
-  const enumDetailsType = imp(`${enumName}Details@./entities`);
   return {
     kind: "enum",
     fieldName,
@@ -423,8 +421,6 @@ function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): EnumFie
     columnDefault: null,
     enumName,
     enumType,
-    enumDetailType,
-    enumDetailsType,
     notNull: true,
     enumRows: [],
     isArray: false,

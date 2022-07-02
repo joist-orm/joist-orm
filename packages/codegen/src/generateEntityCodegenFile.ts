@@ -124,16 +124,11 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   meta.enums
     .filter((e) => !e.isArray)
     .forEach((e) => {
-      const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows } = e;
+      const { fieldName, enumType, notNull, enumRows } = e;
       const maybeOptional = notNull ? "" : " | undefined";
-      const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
       const getter = code`
         get ${fieldName}(): ${enumType}${maybeOptional} {
           return this.__orm.data["${fieldName}"];
-        }
-
-        get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
-          return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
         }
      `;
       const setter = code`
@@ -162,14 +157,10 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   meta.enums
     .filter((e) => e.isArray)
     .forEach((e) => {
-      const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
+      const { fieldName, enumType, enumRows } = e;
       const getter = code`
         get ${fieldName}(): ${enumType}[] {
           return this.__orm.data["${fieldName}"] || [];
-        }
-
-        get ${fieldName}Details(): ${enumDetailsType}[] {
-          return this.${fieldName}.map(code => ${enumDetailType}.getByCode(code));
         }
      `;
       const setter = code`

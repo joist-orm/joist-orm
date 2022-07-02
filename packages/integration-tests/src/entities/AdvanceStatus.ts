@@ -1,35 +1,31 @@
-export enum AdvanceStatus {
-  Pending = "PENDING",
-  Signed = "SIGNED",
-  Paid = "PAID",
+export class AdvanceStatus {
+  public static readonly Pending = new AdvanceStatus(1, "PENDING", "Pending");
+  public static readonly Signed = new AdvanceStatus(2, "SIGNED", "Signed");
+  public static readonly Paid = new AdvanceStatus(3, "PAID", "Paid");
+
+  public static findByCode(code: string): AdvanceStatus | undefined {
+    return AdvanceStatus.getValues().find((d) => d.code === code);
+  }
+
+  public static findById(id: number): AdvanceStatus | undefined {
+    return AdvanceStatus.getValues().find((d) => d.id === id);
+  }
+
+  public static getValues(): ReadonlyArray<AdvanceStatus> {
+    return [AdvanceStatus.Pending, AdvanceStatus.Signed, AdvanceStatus.Paid];
+  }
+
+  private constructor(public id: number, public code: string, public name: string) {}
+
+  public get isPending(): boolean {
+    return this === AdvanceStatus.Pending;
+  }
+
+  public get isSigned(): boolean {
+    return this === AdvanceStatus.Signed;
+  }
+
+  public get isPaid(): boolean {
+    return this === AdvanceStatus.Paid;
+  }
 }
-
-export type AdvanceStatusDetails = { id: number; code: AdvanceStatus; name: string };
-
-const details: Record<AdvanceStatus, AdvanceStatusDetails> = {
-  [AdvanceStatus.Pending]: { id: 1, code: AdvanceStatus.Pending, name: "Pending" },
-  [AdvanceStatus.Signed]: { id: 2, code: AdvanceStatus.Signed, name: "Signed" },
-  [AdvanceStatus.Paid]: { id: 3, code: AdvanceStatus.Paid, name: "Paid" },
-};
-
-export const AdvanceStatuses = {
-  getByCode(code: AdvanceStatus): AdvanceStatusDetails {
-    return details[code];
-  },
-
-  findByCode(code: string): AdvanceStatusDetails | undefined {
-    return details[code as AdvanceStatus];
-  },
-
-  findById(id: number): AdvanceStatusDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
-  },
-
-  getValues(): ReadonlyArray<AdvanceStatus> {
-    return Object.values(AdvanceStatus);
-  },
-
-  getDetails(): ReadonlyArray<AdvanceStatusDetails> {
-    return Object.values(details);
-  },
-};

@@ -46,8 +46,6 @@ import {
   bookMeta,
   BookOrder,
   Color,
-  ColorDetails,
-  Colors,
   Comment,
   CommentId,
   commentMeta,
@@ -322,10 +320,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   get favoriteColors(): Color[] {
     return this.__orm.data["favoriteColors"] || [];
-  }
-
-  get favoriteColorsDetails(): ColorDetails[] {
-    return this.favoriteColors.map((code) => Colors.getByCode(code));
   }
 
   set favoriteColors(favoriteColors: Color[]) {

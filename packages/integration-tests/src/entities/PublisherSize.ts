@@ -1,33 +1,26 @@
-export enum PublisherSize {
-  Small = "SMALL",
-  Large = "LARGE",
+export class PublisherSize {
+  public static readonly Small = new PublisherSize(1, "SMALL", "Small");
+  public static readonly Large = new PublisherSize(2, "LARGE", "Large");
+
+  public static findByCode(code: string): PublisherSize | undefined {
+    return PublisherSize.getValues().find((d) => d.code === code);
+  }
+
+  public static findById(id: number): PublisherSize | undefined {
+    return PublisherSize.getValues().find((d) => d.id === id);
+  }
+
+  public static getValues(): ReadonlyArray<PublisherSize> {
+    return [PublisherSize.Small, PublisherSize.Large];
+  }
+
+  private constructor(public id: number, public code: string, public name: string) {}
+
+  public get isSmall(): boolean {
+    return this === PublisherSize.Small;
+  }
+
+  public get isLarge(): boolean {
+    return this === PublisherSize.Large;
+  }
 }
-
-export type PublisherSizeDetails = { id: number; code: PublisherSize; name: string };
-
-const details: Record<PublisherSize, PublisherSizeDetails> = {
-  [PublisherSize.Small]: { id: 1, code: PublisherSize.Small, name: "Small" },
-  [PublisherSize.Large]: { id: 2, code: PublisherSize.Large, name: "Large" },
-};
-
-export const PublisherSizes = {
-  getByCode(code: PublisherSize): PublisherSizeDetails {
-    return details[code];
-  },
-
-  findByCode(code: string): PublisherSizeDetails | undefined {
-    return details[code as PublisherSize];
-  },
-
-  findById(id: number): PublisherSizeDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
-  },
-
-  getValues(): ReadonlyArray<PublisherSize> {
-    return Object.values(PublisherSize);
-  },
-
-  getDetails(): ReadonlyArray<PublisherSizeDetails> {
-    return Object.values(details);
-  },
-};

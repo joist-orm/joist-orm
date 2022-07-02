@@ -159,15 +159,15 @@ export class EnumFieldSerde implements FieldSerde {
   constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
+    data[this.fieldName] = this.enumObject.findById(row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return this.enumObject.findByCode(data[this.fieldName])?.id;
+    return data[this.fieldName]?.id;
   }
 
   mapToDb(value: any) {
-    return this.enumObject.findByCode(value)?.id;
+    return value?.id;
   }
 }
 
@@ -179,15 +179,15 @@ export class EnumArrayFieldSerde implements FieldSerde {
   constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
+    data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id)) || [];
   }
 
   dbValue(data: any) {
-    return data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
+    return data[this.fieldName]?.map((code: any) => code.id) || [];
   }
 
   mapToDb(value: any) {
-    return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
+    return !value ? [] : value.map((code: any) => code.id);
   }
 }
 

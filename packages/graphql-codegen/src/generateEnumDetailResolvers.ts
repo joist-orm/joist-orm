@@ -1,6 +1,5 @@
 import { camelCase } from "change-case";
 import { CodeGenFile, EnumMetadata } from "joist-codegen";
-import pluralize from "pluralize";
 import { code, imp } from "ts-poet";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
@@ -8,14 +7,13 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodeGenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   const resolvers = Object.values(enums).map(({ name, extraPrimitives }) => {
-    const type = imp(`${pluralize(name)}@src/entities`);
     return code`
       ${name}Detail: {
-        code: (root) => root,
-        name: (root) => ${type}.getByCode(root).name,
+        code: (root) => root.code,
+        name: (root) => root.name,
         ${extraPrimitives
           .map((p) => camelCase(p.columnName))
-          .map((fieldName) => code`${fieldName}: (root) => ${type}.getByCode(root).${fieldName},`)}
+          .map((fieldName) => code`${fieldName}: (root) => root.${fieldName},`)}
       },
     `;
   });

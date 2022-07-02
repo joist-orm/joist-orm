@@ -915,7 +915,7 @@ describe("EntityManager", () => {
     const a1 = await em.load(Author, "1");
     a1.publisher.set(em.create(Publisher, { name: "p1" }));
     await em.flush();
-    expect(a1.toJSON()).toEqual({
+    expect(a1.toJSON()).toStrictEqual({
       id: "a:1",
       address: null,
       age: null,
@@ -933,6 +933,24 @@ describe("EntityManager", () => {
       publisher: "p:1",
       updatedAt: expect.anything(),
       wasEverPopular: null,
+    });
+  });
+
+  it("has a simple toJSON for enums", async () => {
+    await insertPublisher({ name: "p1", size_id: 1 });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    expect(p1.toJSON()).toStrictEqual({
+      id: "p:1",
+      name: "p1",
+      size: "SMALL",
+      tag: null,
+      type: "BIG",
+      longitude: null,
+      latitude: null,
+      hugeNumber: null,
+      createdAt: expect.anything(),
+      updatedAt: expect.anything(),
     });
   });
 
@@ -1099,7 +1117,6 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     expect(author.favoriteColors).toEqual([]);
-    expect(author.favoriteColorsDetails).toEqual([]);
   });
 
   it("can load a populated enum array", async () => {

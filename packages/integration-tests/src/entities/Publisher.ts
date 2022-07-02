@@ -1,5 +1,5 @@
 import { Collection, CustomCollection, getEm, Loaded } from "joist-orm";
-import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig as config } from "./entities";
+import { Image, ImageType, PublisherCodegen, publisherConfig as config } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
@@ -19,7 +19,7 @@ export class Publisher extends PublisherCodegen {
           [...loaded.images.get],
         )
         .filter((imageOrUndefined) => imageOrUndefined !== undefined)
-        .sort((a, b) => ImageTypes.findByCode(a.type)!.sortOrder - ImageTypes.findByCode(b.type)!.sortOrder);
+        .sort((a, b) => a.type.sortOrder - b.type.sortOrder);
     },
     add: (entity, value) => {
       const allImages = (entity as Loaded<Publisher, "allImages">).allImages;
@@ -42,5 +42,11 @@ export class Publisher extends PublisherCodegen {
 config.addRule("authors", (p) => {
   if (p.authors.get.length === 13) {
     return "Cannot have 13 authors";
+  }
+});
+
+// Example of using an enum is accessor in a rule
+config.addRule("size", (p) => {
+  if (p.size?.isLarge) {
   }
 });

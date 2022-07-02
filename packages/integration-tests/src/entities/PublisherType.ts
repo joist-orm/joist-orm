@@ -1,33 +1,26 @@
-export enum PublisherType {
-  Small = "SMALL",
-  Big = "BIG",
+export class PublisherType {
+  public static readonly Small = new PublisherType(1, "SMALL", "Small");
+  public static readonly Big = new PublisherType(2, "BIG", "Big");
+
+  public static findByCode(code: string): PublisherType | undefined {
+    return PublisherType.getValues().find((d) => d.code === code);
+  }
+
+  public static findById(id: number): PublisherType | undefined {
+    return PublisherType.getValues().find((d) => d.id === id);
+  }
+
+  public static getValues(): ReadonlyArray<PublisherType> {
+    return [PublisherType.Small, PublisherType.Big];
+  }
+
+  private constructor(public id: number, public code: string, public name: string) {}
+
+  public get isSmall(): boolean {
+    return this === PublisherType.Small;
+  }
+
+  public get isBig(): boolean {
+    return this === PublisherType.Big;
+  }
 }
-
-export type PublisherTypeDetails = { id: number; code: PublisherType; name: string };
-
-const details: Record<PublisherType, PublisherTypeDetails> = {
-  [PublisherType.Small]: { id: 1, code: PublisherType.Small, name: "Small" },
-  [PublisherType.Big]: { id: 2, code: PublisherType.Big, name: "Big" },
-};
-
-export const PublisherTypes = {
-  getByCode(code: PublisherType): PublisherTypeDetails {
-    return details[code];
-  },
-
-  findByCode(code: string): PublisherTypeDetails | undefined {
-    return details[code as PublisherType];
-  },
-
-  findById(id: number): PublisherTypeDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
-  },
-
-  getValues(): ReadonlyArray<PublisherType> {
-    return Object.values(PublisherType);
-  },
-
-  getDetails(): ReadonlyArray<PublisherTypeDetails> {
-    return Object.values(details);
-  },
-};

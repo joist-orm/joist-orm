@@ -48,11 +48,7 @@ import {
   Publisher,
   publisherMeta,
   PublisherSize,
-  PublisherSizeDetails,
-  PublisherSizes,
   PublisherType,
-  PublisherTypeDetails,
-  PublisherTypes,
   Tag,
   TagId,
   tagMeta,
@@ -234,10 +230,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["size"];
   }
 
-  get sizeDetails(): PublisherSizeDetails | undefined {
-    return this.size ? PublisherSizes.getByCode(this.size) : undefined;
-  }
-
   set size(size: PublisherSize | undefined) {
     setField(this, "size", size);
   }
@@ -252,10 +244,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
 
   get type(): PublisherType {
     return this.__orm.data["type"];
-  }
-
-  get typeDetails(): PublisherTypeDetails {
-    return PublisherTypes.getByCode(this.type);
   }
 
   set type(type: PublisherType) {

@@ -1,63 +1,45 @@
-export enum ImageType {
-  BookImage = "BOOK_IMAGE",
-  AuthorImage = "AUTHOR_IMAGE",
-  PublisherImage = "PUBLISHER_IMAGE",
+export class ImageType {
+  public static readonly BookImage = new ImageType(1, "BOOK_IMAGE", "Book Image", 100, true, "book_image");
+  public static readonly AuthorImage = new ImageType(2, "AUTHOR_IMAGE", "Author Image", 200, true, "author_image");
+  public static readonly PublisherImage = new ImageType(
+    3,
+    "PUBLISHER_IMAGE",
+    "Publisher Image",
+    300,
+    true,
+    "publisher_image",
+  );
+
+  public static findByCode(code: string): ImageType | undefined {
+    return ImageType.getValues().find((d) => d.code === code);
+  }
+
+  public static findById(id: number): ImageType | undefined {
+    return ImageType.getValues().find((d) => d.id === id);
+  }
+
+  public static getValues(): ReadonlyArray<ImageType> {
+    return [ImageType.BookImage, ImageType.AuthorImage, ImageType.PublisherImage];
+  }
+
+  private constructor(
+    public id: number,
+    public code: string,
+    public name: string,
+    public sortOrder: 100 | 200 | 300,
+    public visible: boolean,
+    public nickname: "book_image" | "author_image" | "publisher_image",
+  ) {}
+
+  public get isBookImage(): boolean {
+    return this === ImageType.BookImage;
+  }
+
+  public get isAuthorImage(): boolean {
+    return this === ImageType.AuthorImage;
+  }
+
+  public get isPublisherImage(): boolean {
+    return this === ImageType.PublisherImage;
+  }
 }
-
-export type ImageTypeDetails = {
-  id: number;
-  code: ImageType;
-  name: string;
-  sortOrder: 100 | 200 | 300;
-  visible: boolean;
-  nickname: "book_image" | "author_image" | "publisher_image";
-};
-
-const details: Record<ImageType, ImageTypeDetails> = {
-  [ImageType.BookImage]: {
-    id: 1,
-    code: ImageType.BookImage,
-    name: "Book Image",
-    sortOrder: 100,
-    visible: true,
-    nickname: "book_image",
-  },
-  [ImageType.AuthorImage]: {
-    id: 2,
-    code: ImageType.AuthorImage,
-    name: "Author Image",
-    sortOrder: 200,
-    visible: true,
-    nickname: "author_image",
-  },
-  [ImageType.PublisherImage]: {
-    id: 3,
-    code: ImageType.PublisherImage,
-    name: "Publisher Image",
-    sortOrder: 300,
-    visible: true,
-    nickname: "publisher_image",
-  },
-};
-
-export const ImageTypes = {
-  getByCode(code: ImageType): ImageTypeDetails {
-    return details[code];
-  },
-
-  findByCode(code: string): ImageTypeDetails | undefined {
-    return details[code as ImageType];
-  },
-
-  findById(id: number): ImageTypeDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
-  },
-
-  getValues(): ReadonlyArray<ImageType> {
-    return Object.values(ImageType);
-  },
-
-  getDetails(): ReadonlyArray<ImageTypeDetails> {
-    return Object.values(details);
-  },
-};

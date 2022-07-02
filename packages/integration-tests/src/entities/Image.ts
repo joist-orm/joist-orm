@@ -19,10 +19,10 @@ export class Image extends ImageCodegen {
 
   private get ownerRef() {
     return {
-      [ImageType.AuthorImage]: this.author,
-      [ImageType.BookImage]: this.book,
-      [ImageType.PublisherImage]: this.publisher,
-    }[this.type];
+      [ImageType.AuthorImage.code]: this.author,
+      [ImageType.BookImage.code]: this.book,
+      [ImageType.PublisherImage.code]: this.publisher,
+    }[this.type.code];
   }
 }
 

@@ -1,7 +1,23 @@
-export class ImageType {
-  public static readonly BookImage = new ImageType(1, "BOOK_IMAGE", "Book Image", 100, true, "book_image");
-  public static readonly AuthorImage = new ImageType(2, "AUTHOR_IMAGE", "Author Image", 200, true, "author_image");
-  public static readonly PublisherImage = new ImageType(
+type ImageTypeCodes = "BOOK_IMAGE" | "AUTHOR_IMAGE" | "PUBLISHER_IMAGE";
+
+export class ImageType<C extends ImageTypeCodes = ImageTypeCodes> {
+  public static readonly BookImage = new ImageType<"BOOK_IMAGE">(
+    1,
+    "BOOK_IMAGE",
+    "Book Image",
+    100,
+    true,
+    "book_image",
+  );
+  public static readonly AuthorImage = new ImageType<"AUTHOR_IMAGE">(
+    2,
+    "AUTHOR_IMAGE",
+    "Author Image",
+    200,
+    true,
+    "author_image",
+  );
+  public static readonly PublisherImage = new ImageType<"PUBLISHER_IMAGE">(
     3,
     "PUBLISHER_IMAGE",
     "Publisher Image",
@@ -24,7 +40,7 @@ export class ImageType {
 
   private constructor(
     public id: number,
-    public code: string,
+    public code: C,
     public name: string,
     public sortOrder: 100 | 200 | 300,
     public visible: boolean,

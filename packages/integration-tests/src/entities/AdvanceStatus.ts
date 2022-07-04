@@ -1,7 +1,9 @@
-export class AdvanceStatus {
-  public static readonly Pending = new AdvanceStatus(1, "PENDING", "Pending");
-  public static readonly Signed = new AdvanceStatus(2, "SIGNED", "Signed");
-  public static readonly Paid = new AdvanceStatus(3, "PAID", "Paid");
+type AdvanceStatusCodes = "PENDING" | "SIGNED" | "PAID";
+
+export class AdvanceStatus<C extends AdvanceStatusCodes = AdvanceStatusCodes> {
+  public static readonly Pending = new AdvanceStatus<"PENDING">(1, "PENDING", "Pending");
+  public static readonly Signed = new AdvanceStatus<"SIGNED">(2, "SIGNED", "Signed");
+  public static readonly Paid = new AdvanceStatus<"PAID">(3, "PAID", "Paid");
 
   public static findByCode(code: string): AdvanceStatus | undefined {
     return AdvanceStatus.getValues().find((d) => d.code === code);
@@ -15,7 +17,7 @@ export class AdvanceStatus {
     return [AdvanceStatus.Pending, AdvanceStatus.Signed, AdvanceStatus.Paid];
   }
 
-  private constructor(public id: number, public code: string, public name: string) {}
+  private constructor(public id: number, public code: C, public name: string) {}
 
   public get isPending(): boolean {
     return this === AdvanceStatus.Pending;

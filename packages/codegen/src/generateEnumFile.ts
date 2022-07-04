@@ -14,12 +14,12 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
       `"${row.name}"`,
       ...extraPrimitives.map((p) => JSON.stringify((row as any)[p.columnName])),
     ];
-    return code`public readonly static ${pascalCase(row.code)} = new ${enumName}(${params.join(", ")})`;
+    return code`public readonly static ${pascalCase(row.code)} = new ${enumName}<"${row.code}">(${params.join(", ")})`;
   });
 
   const cstrFieldParams = [
     "public id: number",
-    "public code: string",
+    "public code: C",
     "public name: string",
     ...extraPrimitives.map(({ fieldName, fieldType, columnName }) => {
       // If the extra primitive values are all unique, then allow the type be only that set of values. Otherwise, use `fieldType`
@@ -43,8 +43,12 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
     `;
   });
 
+  const codeUnion = rows.map((r) => `"${r.code}"`).join(" | ");
+
   return code`
-    export class ${enumName} {
+    type ${enumName}Codes = ${codeUnion};
+    
+    export class ${enumName}<C extends ${enumName}Codes = ${enumName}Codes> {
       ${joinCode(singletonFields, { on: ";" })}
       
       public static findByCode(code: string): ${enumName} | undefined {

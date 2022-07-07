@@ -1,3 +1,10 @@
+# [1.22.0](https://github.com/stephenh/joist-ts/compare/v1.21.2...v1.22.0) (2022-07-07)
+
+
+### Features
+
+* add support for querying ranges of values using between or gte/lte ([#366](https://github.com/stephenh/joist-ts/issues/366)) ([14b0fa0](https://github.com/stephenh/joist-ts/commit/14b0fa09b1405f6c37c2f77ea13df778453a55fc))
+
 ## [1.21.2](https://github.com/stephenh/joist-ts/compare/v1.21.1...v1.21.2) (2022-06-29)
 
 

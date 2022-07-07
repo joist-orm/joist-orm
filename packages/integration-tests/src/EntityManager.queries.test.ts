@@ -402,15 +402,47 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = newEntityManager();
     const authors = await em.find(Author, { age: { gt: 1 } });
-    expect(authors.length).toEqual(1);
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a2");
   });
 
-  it("can find by greater than or equal two", async () => {
+  it("can find by greater than or equal to", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = newEntityManager();
-    const authors = await em.find(Author, { age: { gte: 1 } });
-    expect(authors.length).toEqual(2);
+    const authors = await em.find(Author, { age: { gte: 2 } });
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find by less than", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { age: { lt: 2 } });
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("can find by less than or equal to", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { age: { lte: 1 } });
+    expect(authors).toHaveLength(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("can find by less than or equal to and greater than or equal to simultaneously", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    await insertAuthor({ first_name: "a3", age: 3 });
+    await insertAuthor({ first_name: "a4", age: 4 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { age: { gte: 2, lte: 3 } });
+    expect(authors).toHaveLength(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a3");
   });
 
   it("can find by not equal", async () => {

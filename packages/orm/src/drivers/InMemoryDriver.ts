@@ -277,6 +277,7 @@ const ops = {
   lte: (a: number, b: number) => a <= b,
   like: (a: any, b: any) => new RegExp(b.replace("%", ".*")).test(a),
   ilike: (a: any, b: any) => new RegExp(b.replace("%", ".*"), "i").test(a),
+  between: (a: number, b: number[]) => a >= b[0] && a <= b[1],
 };
 
 function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any, where: unknown): boolean {
@@ -312,6 +313,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
             case "lte":
             case "like":
             case "ilike":
+            case "between":
               const a = currentValue;
               const b = fn(filter.value);
               const op = ops[filter.kind];

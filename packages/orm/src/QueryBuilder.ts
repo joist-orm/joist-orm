@@ -29,7 +29,8 @@ export type ValueFilter<V, N> =
   | { lt: V }
   | { lte: V }
   | { like: V }
-  | { ilike: V };
+  | { ilike: V }
+  | { gte: V; lte: V };
 
 /**
  * An ADT version of `ValueFilter`.
@@ -46,7 +47,8 @@ export type ParsedValueFilter<V> =
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
   | { kind: "ilike"; value: V }
-  | { kind: "pass" };
+  | { kind: "pass" }
+  | { kind: "between"; value: [V, V] };
 
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
   if (filter === null) {
@@ -57,35 +59,34 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     return { kind: "in", value: filter };
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
-    if (keys.length === 2) {
-      // Probe for `findGql` op & value
-      const op = filter["op"];
-      const value = filter["value"];
-      if (op === undefined && value === undefined) {
-        throw new Error(`ValueFilter only supports a single field being set ${filter}`);
+    if (keys.length === 0) {
+      return { kind: "pass" };
+    } else if (keys.length === 1) {
+      const key = keys[0];
+      switch (key) {
+        case "eq":
+          return { kind: "eq", value: filter[key] ?? null };
+        case "ne":
+          return { kind: "ne", value: filter[key] ?? null };
+        case "in":
+          return { kind: "in", value: filter[key] };
+        case "gt":
+        case "gte":
+        case "lt":
+        case "lte":
+        case "like":
+        case "ilike":
+          return { kind: key, value: filter[key] };
       }
+    } else if (keys.length === 2 && "op" in filter && "value" in filter) {
+      // Probe for `findGql` op & value
+      const { op, value } = filter;
       return { kind: op, value: value ?? null };
+    } else if (keys.length === 2 && "gte" in filter && "lte" in filter) {
+      const { gte, lte } = filter;
+      return { kind: "between", value: [gte, lte] };
     }
-    if (keys.length !== 1) {
-      throw new Error(`ValueFilter only supports a single field being set ${filter}`);
-    }
-    const key = keys[0];
-    switch (key) {
-      case "eq":
-        return { kind: "eq", value: filter[key] ?? null };
-      case "ne":
-        return { kind: "ne", value: filter[key] ?? null };
-      case "in":
-        return { kind: "in", value: filter[key] };
-      case "gt":
-      case "gte":
-      case "lt":
-      case "lte":
-      case "like":
-      case "ilike":
-        return { kind: key, value: filter[key] };
-    }
-    throw new Error("unsupported");
+    throw new Error("unsupported value filter");
   } else {
     // This is a primitive like a string, number
     return { kind: "eq", value: filter ?? null };
@@ -146,6 +147,7 @@ export type ValueGraphQLFilter<V> =
       lte?: V | null;
       like?: V | null;
       ilike?: V | null;
+      between?: V[] | null;
     }
   | { op: Operator; value: Primitive }
   | V
@@ -157,9 +159,9 @@ export type EnumGraphQLFilter<V> = V[] | null | undefined;
 /** A GraphQL version of EntityFilter. */
 export type EntityGraphQLFilter<T, I, F, N> = T | I | I[] | F | { ne: T | I | N } | null | undefined;
 
-const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "ilike", "in"] as const;
+const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "ilike", "in", "between"] as const;
 export type Operator = typeof operators[number];
-const opToFn: Record<Operator, string> = {
+const opToFn: Record<Exclude<Operator, "in" | "between">, string> = {
   eq: "=",
   gt: ">",
   gte: ">=",
@@ -168,7 +170,6 @@ const opToFn: Record<Operator, string> = {
   lte: "<=",
   like: "LIKE",
   ilike: "ILIKE",
-  in: "...",
 };
 
 export type FilterAndSettings<T> = {
@@ -411,8 +412,10 @@ function addForeignKeyClause(
 function addPrimitiveClause(query: Knex.QueryBuilder, alias: string, column: Column, clause: any): Knex.QueryBuilder {
   if (clause && typeof clause === "object" && operators.find((op) => Object.keys(clause).includes(op))) {
     // I.e. `{ primitiveField: { gt: value } }`
-    const op = Object.keys(clause)[0] as Operator;
-    return addPrimitiveOperator(query, alias, column, op, (clause as any)[op]);
+    return Object.entries(clause).reduce(
+      (query, [op, value]) => addPrimitiveOperator(query, alias, column, op as Operator, value),
+      query,
+    );
   } else if (clause && typeof clause === "object" && "op" in clause) {
     // I.e. { primitiveField: { op: "gt", value: 1 } }`
     return addPrimitiveOperator(query, alias, column, clause.op, clause.value);
@@ -448,21 +451,25 @@ function addPrimitiveOperator(
   op: Operator,
   value: any,
 ): Knex.QueryBuilder {
+  const columnName = `${alias}.${column.columnName}`;
   if (value === null || value === undefined) {
     if (op === "ne") {
-      return query.whereNotNull(`${alias}.${column.columnName}`);
+      return query.whereNotNull(columnName);
     } else if (op === "eq") {
-      return query.whereNull(`${alias}.${column.columnName}`);
+      return query.whereNull(columnName);
     } else {
       throw new Error("Only ne is supported when the value is undefined or null");
     }
   } else if (op === "in") {
     return query.whereIn(
-      `${alias}.${column.columnName}`,
+      columnName,
       (value as Array<any>).map((v) => column.mapToDb(v)),
     );
+  } else if (op === "between") {
+    const values = (value as any[]).map((v) => column.mapToDb(v));
+    return query.where(columnName, ">=", values[0]).where(columnName, "<=", values[1]);
   } else {
-    const fn = opToFn[op] || fail(`Invalid operator ${op}`);
-    return query.where(`${alias}.${column.columnName}`, fn, column.mapToDb(value));
+    const fn = opToFn[op] ?? fail(`Invalid operator ${op}`);
+    return query.where(columnName, fn, column.mapToDb(value));
   }
 }

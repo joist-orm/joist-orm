@@ -487,13 +487,13 @@ export class EntityManager<C = {}> {
   }
 
   /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
-  public async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
+  public async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
   public async loadAll<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    ids: string[],
+    ids: readonly string[],
     populate: Const<H>,
   ): Promise<Loaded<T, H>[]>;
-  async loadAll<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
+  async loadAll<T extends Entity>(type: EntityConstructor<T>, _ids: readonly string[], hint?: any): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
@@ -515,13 +515,17 @@ export class EntityManager<C = {}> {
    * Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. Ignores
    * IDs that are not found.
    */
-  public async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, ids: string[]): Promise<T[]>;
+  public async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
   public async loadAllIfExists<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
-    ids: string[],
+    ids: readonly string[],
     populate: Const<H>,
   ): Promise<Loaded<T, H>[]>;
-  async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, _ids: string[], hint?: any): Promise<T[]> {
+  async loadAllIfExists<T extends Entity>(
+    type: EntityConstructor<T>,
+    _ids: readonly string[],
+    hint?: any,
+  ): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = (

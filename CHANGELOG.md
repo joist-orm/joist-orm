@@ -1,3 +1,10 @@
+## [1.22.1](https://github.com/stephenh/joist-ts/compare/v1.22.0...v1.22.1) (2022-07-08)
+
+
+### Bug Fixes
+
+* Add readonly to id arrays. ([#367](https://github.com/stephenh/joist-ts/issues/367)) ([a58dc8f](https://github.com/stephenh/joist-ts/commit/a58dc8fd56ffc668edbb6f1821e764384f109d34))
+
 # [1.22.0](https://github.com/stephenh/joist-ts/compare/v1.21.2...v1.22.0) (2022-07-07)
 
 

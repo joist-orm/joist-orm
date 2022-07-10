@@ -49,6 +49,7 @@ With Joist, the above code can be rewritten (code golf-d) as:
 const author = await em.load(Author, "a:1", { books: "reviews" });
 // Do something with each book _and_ its reviews ... with no awaits!
 author.books.get.map((book) => {
+  // The `.get` method is available here only b/c we passed "reviews" to em.load
   const reviews = book.reviews.get;
 });
 ```

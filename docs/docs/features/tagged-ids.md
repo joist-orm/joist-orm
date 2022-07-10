@@ -13,9 +13,9 @@ const a = await em.findOneOrFail(Author, { firstName: "first" });
 console.log(a.id);
 ```
 
-Even though in the database the `authors.id` column is still an auto-increment integer and, for this Author, the database value really is `1`.
+In the database, the `authors.id` column is still an auto-increment integer and really the int value of `1` for this row, Joist has just stringified and `a:` prefixed the value.
 
-### Rationale
+## Rationale
 
 There are a few reasons for this feature:
 
@@ -23,7 +23,7 @@ There are a few reasons for this feature:
 - Easier debugging
 - Convenient for GraphQL integration
 
-#### Avoiding "Wrong Id" Bugs
+### Avoiding "Wrong Id" Bugs
 
 Knowing the entity type for each id eliminates a class of bugs where ids are passed incorrectly across entity types.
 
@@ -42,11 +42,11 @@ Note that, within backend code, Joist's entities also use strongly-typed ids (i.
 
 So tagged ids extends "typed ids"-style protection to API calls, i.e. if a client calls the API for "author `a:1`" and then makes a subsequent API call that accidentally uses `a:1` as a book id, Joist will throw a runtime error that it expected a `b:...` prefixed id.
 
-#### Easier Debugging
+### Easier Debugging
 
 It makes debugging easier because seeing ids like `a:1` in the logs, you immediately know which entity that was for, without having to also prefix your logging statements with `authorId=${...}`, or when the `id` is in JSON payloads.
 
-#### Convenient for GraphQL Integration
+### Convenient for GraphQL Integration
 
 In GraphQL, there is a dedicated `ID` type for id fields. It is not required to use, i.e. you can have `id: Integer!` in a GraphQL schema, but the `ID` type is encouraged/more idiomatic because it is opaque, meaning it hides the `id`'s implementation details from the client.
 
@@ -67,7 +67,7 @@ Are applicable to any system, so ideally you could apply the "id is a string" ap
 
 That said, if you have an existing `number`-based API that you can't change, Joist provides `deTagId`, `deTagIds`, and `tagId` methods to convert to/from tagged ids to the actual number value.
 
-### Running SQL Queries
+## Running SQL Queries
 
 When writing raw SQL queries, you can get the numeric value using `deTagId`
 
@@ -80,7 +80,7 @@ Note that `deTagId` accepts the `Book` entity as its 1st parameter because it st
 
 If you need to detag a value without knowing the entity type, you can use `unsafeDeTagIds`.
 
-### Tag Assignment
+## Tag Assignment
 
 For the tag names, when you add a new table, Joist guesses a tag name to use by abbreviating the table name, i.e. `book_reviews` is `br` or `foo_bar_zazzes` is `fbz`.
 
@@ -90,7 +90,7 @@ The guessed tag name is then stored `joist-codegen.json`, where you can easily c
 
 However, once you have a given tagged id deployed in production, you should probably never change it (i.e. change the `bookReview` tag to `bkr`), because even though Joist internally would immediately start using the new tag value (after the change is deployed), if any other external systems have copies of your ids (like you've stored `bookReview:1` in an external/3rd party system), those externally-stored ids will now be incorrect, and Joist will be unload to load them.
 
-### Untagged Id Fallback
+## Untagged Id Fallback
 
 If you do happen to given Joist untagged ids, it will still work, for example:
 
@@ -99,3 +99,19 @@ const id = "1";
 // This will work, the `a:` prefix is not strictly required
 const a = await em.load(Author, id);
 ```
+
+## Disabling Tagged Ids
+
+If you're migrating an existing system to Joist, or just don't want to use tagged ids (although you should try them and see!), you can disable them in the `joist-codegen.json` file by setting the `idType`:
+
+```json
+{
+  "idType": "untagged-string"
+}
+```
+
+This will change the return value of `Author.id` from `"a:1"` to just `"1"`.
+
+Note the value is still a string; we've not added support for returning numbers yet, see [#368](https://github.com/stephenh/joist-ts/issues/368).
+
+

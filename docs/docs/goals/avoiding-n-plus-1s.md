@@ -3,11 +3,13 @@ title: Avoiding N+1s
 sidebar_position: 2
 ---
 
-Joist is built on top of Facebook's [dataloader](https://github.com/graphql/dataloader) library, which allows it fundamentally avoid N+1s in a systematic way that almost always "just works".
+Joist is built on top of Facebook's [dataloader](https://github.com/graphql/dataloader) library, which avoids N+1s in a fundamental, systematic way that almost always "just works".
 
-## Background
+This solid foundation comes Joist's roots as an ORM for GraphQL environments, which are particularly prone to N+1s (see section below), but is a boon to any system (REST, grpc, etc.) working with relational data. 
 
-The term "N+1" is what happens for code that looks like:
+## N+1s: Lazy Loading in a Loop
+
+As a short explanation, the term "N+1" is what _can_ happen for code that looks like:
 
 ```typescript
 // Get an author and their books
@@ -15,37 +17,72 @@ const author = await em.load(Author, "a:1");
 const books = await author.books.load();
 
 // Do something with each book
-await Proimse.all(books.map(async (book) => {
-  // Load this book's reviews
+await Promise.all(books.map(async (book) => {
+  // Now I want each book's reviews... in Joist this does _not_ N+1
   const reviews = await book.reviews.load();
 }));
 ```
 
-The risk is that if each invocation of `book.reviews.load()` causes a `SELECT * FROM book_reviews WHERE book_id = 1`, then `SELECT * FROM book_reviews WHERE book_id = 2`, then `... WHERE book_id = 3`, etc., then if we have `N` books, we will make `N` SQL queries (one for each book id).
+Without Joist (or a similar Dataloader-ish approach), the risk is each `book.reviews.load()` causes its own `SELECT * FROM book_reviews WHERE book_id = ...`. I.e. the 1st loop calls `SELECT ... WHERE book_id = 1`, the 2nd loop calls `SELECT ... WHERE book_id = 2`, etc., such that if we have `N` books, we will make `N` SQL queries, one for each book id.
 
 If we count the initial `SELECT * FROM books WHERE author_id = 1` query as `1`, this means we've made `N + 1` queries to process each of the author's books, hence the term N+1.
 
-## Common/Tedious Pitfall
+However, with Joist the above code will issue only **three queries**:
 
-N+1s have fundamentally plagued ORMs, not just in Node/TypeScript but basically all programming languages & ORMs, because at the end of the day the ORM approach of modeling "foreign keys as collections" (i.e. `book.reviews` "looks like an in-memory collection", but _actually_ requires an expensive I/O call to load) clashes with the usual (in-memory) semantics that "collections are cheap to access", **leading to a leaky abstraction**.
+```sql
+-- first em.load
+SELECT * FROM authors WHERE id = 1;
+-- author.books.load()
+SELECT * FROM books WHERE author_id = 1;
+-- All of the book.reviews.load() combined into 1 query
+SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ...);
+```
 
-Unfortunately, writing `for` loops, like above, that access a collection is a common and natural pattern for programmers to use, and typically is perfectly safe to do; however, and ORMs risk breaking this assumption.
+## Type-Safe Preloading
 
-In ORM like ActiveRecord, N+1s happen by default, and the programmer needs to tell ActiveRecord ahead of time which collections to preload, i.e. in Ruby:
+While the 1st snippet shows that Joist avoids N+1s in `async` / `Promise.all`-heavy code, Joist also supports populate hints, which not only **preload the data** but also **change the types to allow non-async access**. 
+
+With Joist, the above code can be written as:
+
+```typescript
+// Get an author and their books _and_ the books' reviews
+const author = await em.load(Author, "a:1", { books: "reviews" });
+// Do something with each book _and_ its reviews ... with no awaits!
+author.books.get.map((book) => {
+  const reviews = book.reviews.get;
+});
+```
+
+See [Type-Safe Relations](./type-safe-relations.md) for more information about this feature, however we point it out here because while populate hints are great for writing non-async code & avoiding N+1s (other ORMs like ActiveRecord use them), in Joist **populate hints are supported but _not required_ to avoid N+1s**.
+
+This is key, because in a sufficiently large/complex codebase, it can be **extremely hard to know ahead of time** exactly the right populate hint(s) that an endpoint should use to preload its data in an N+1 safe manner.
+
+With Joist, you don't have to worry anymore: if you use populate hints, that's great, you won't have N+1s. But if you end up with business logic (helper methods, validation rules, etc.) being called in an `async` loop, **it will still be fine**, and not N+1, because in Joist both populate hints & "old-school" `async/await` access are built on top of the same Dataloader-based, N+1-safe core.
+
+## Longer Background
+
+### Common/Tedious Pitfall
+
+N+1s have fundamentally plagued ORMs, not just in Node/TypeScript but many/all languages, because the defacto ORM approach of modeling "relations as fields on an object" (i.e. collections like `author1.getBooks` or references like `book1.getAuthor`) is a white lie because (unless preloaded) they are not "for free" in-memory accesses, but instead _actually_ expensive I/O calls, **leading to a leaky abstraction**.
+
+Unfortunately, writing `for` loops over objects, and accessing that object's fields, is an extremely common pattern, and typically is perfectly safe (cheap) to do; however, ORMs that historically "hide" the expensive I/O call break this assumption.
+
+For example, in Rails ActiveRecord, N+1s happen by default, and the programmer needs to tell ActiveRecord ahead of time which collections to preload:
 
 ```ruby
 author = Author.find_by_id("1");
 # The `include(:reviews)` means reviews are fetched before the `for` loop
 books = Book.find({ author_id: author.id }).include(:reviews)
 books.each do |book|
-  # Now access the collection, and it's already in-memory
+  # Now access the collection, and it's already in-memory.
+  # Without `include(:reviews)` this would still work but _silently N+1_
   reviews = book.reviews.length;
 end
 ```
 
-This resolves the performance issue, but relies on programmer's knowing what data will be accessed in loops ahead of time. This is possible, but as a codebase grows and codepaths become more complicated, it can become a tedious game of whack-a-mole, as the default behavior is inherently not performant. 
+This `include(:reviews)` resolves the performance issue, but relies on the programmer knowing what data will be accessed in loops ahead of time. This is possible, but as a codebase grows it becomes a tedious game of whack-a-mole, as the default behavior is inherently unsafe. 
 
-## Saved By the Event Loop
+### Saved By the Event Loop
 
 Joist is able to avoid N+1s **without preload hints** by leveraging Facebook's [dataloader](https://github.com/graphql/dataloader) library to automatically batch multiple `load` operations into single SQL statements.
 
@@ -90,7 +127,9 @@ It is a little esoteric, but dataloader implements this by automatically managin
 
 ## N+1-Safe GraphQL Resolvers
 
-This auto-batching will work for any `em.load` calls that happening synchronously within a tick of the event loop, which means they can either be laid out simply, like in our example `books.map` example, or happen across seemingly-disparate method calls.
+Joist's auto-batching works for any `em.load` calls (or lazy-load calls `author.books.load()`, etc.) that happen synchronously within a tick of the event loop.
+
+This means that auto-batching works for either "simple/obvious" cases like calling `book.reviews.load()` in `books.map(book => ...)` lambda, or **disparately across separate methods** that are still invoked (essentially) simultaneously, which is exactly what happens with GraphQL resolvers.
 
 For example, let's say a GraphQL client has issued a query like:
 
@@ -130,30 +169,6 @@ But this example shows how dataloader's "batch anything that happens within a si
 
 :::
 
-## Preloading Is Still Allowed
-
-Granted, while we used this `async` / `Promise.all`-heavy example for illustrating how N+1 prevention works:
-
-```typescript
-const author = await em.load(Author, "a:1");
-const books = await author.books.load();
-await Proimse.all(books.map(async (book) => {
-  const reviews = await book.reviews.load();
-}));
-```
-
-Joist _also_ supports preloading, which dramatically tidies up the code:
-
-```typescript
-const author = await em.load(Author, "a:1", { books: "reviews" });
-author.books.get.map((book) => {
-  const reviews = book.reviews.get;
-});
-```
-
-See the next [Type-Safe Relations](./type-safe-relations.md) page for more information about that feature, but nonetheless the important point is that, in a sufficiently complex codebase, it's **extremely hard to know ahead of time** what data the business logic will or will not need.
-
-But with Joist's N+1 avoidance, the performance profile of using preload hints (i.e. in small, hand-crafted code) or not using preload hints (i.e. in complex, heavily decomposed code) is **exactly the same**.
 
 ## Where It Doesn't Work
 

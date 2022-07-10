@@ -42,7 +42,7 @@ SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ...);
 
 While the 1st snippet shows that Joist avoids N+1s in `async` / `Promise.all`-heavy code, Joist also supports populate hints, which not only **preload the data** but also **change the types to allow non-async access**. 
 
-With Joist, the above code can be written as:
+With Joist, the above code can be rewritten (code golf-d) as:
 
 ```typescript
 // Get an author and their books _and_ the books' reviews
@@ -52,6 +52,8 @@ author.books.get.map((book) => {
   const reviews = book.reviews.get;
 });
 ```
+
+And it has exactly the same runtime semantics as the previous `async/await`-based code: the **same three queries** are issued for both "with populate hints" and "without populate hints" code.
 
 See [Type-Safe Relations](./type-safe-relations.md) for more information about this feature, however we point it out here because while populate hints are great for writing non-async code & avoiding N+1s (other ORMs like ActiveRecord use them), in Joist **populate hints are supported but _not required_ to avoid N+1s**.
 

@@ -5,12 +5,13 @@ sidebar_position: 1
 
 Joist's `EntityManager` acts as a [Unit of Work](https://www.martinfowler.com/eaaCatalog/unitOfWork.html), which caches the entities that are currently loaded/being mutated for each request.
 
-This means that entities must be loaded from the `EntityManager`, i.e. via `em.load(Author, 1)`, and not from methods on `Author`, i.e. like an ActiveRecord `Author.find_by_id(1)`, but there are four main reasons for this:
+This means that entities must be loaded from the `EntityManager`, i.e. via `em.load(Author, 1)`, and not from methods on `Author`, i.e. like an ActiveRecord `Author.find_by_id(1)`, but there are several reasons for this:
 
 1. Per-request entity caching
 2. Data consistency
 3. Automatically batching updates
 4. Automatically using transactions 
+5. Hooks and derived values
 
 ## Per-Request Entity Caching
 
@@ -39,7 +40,7 @@ Granted, in simple endpoints with no abstractions or complicated business logic,
 
 An additional upshot of entity caching (which focuses on avoiding reloads) is data consistency.
 
-Specifically, because there is "only one instance" of an entity/row, any changes we've made to the entity are defacto by seen the rest of the endpoint's code.
+Specifically, because there is "only one instance" of an entity/row, any changes we've made to the entity are defacto seen by the rest of the endpoint's code.
 
 Without this Unit-of-Work/`EntityManager` pattern, it's possible for code to have "out of date" versions of an entity.
 
@@ -89,6 +90,18 @@ end
 And because it is opt-in, most endpoints forget/do not bother doing this.
 
 However, transactions are so fundamental to the pleasantness of Postgres and relational databases, that Joist's assertion is that **transactions should always be used by default**, and not just opt-in.
+
+## Hooks and Derived Values
+
+Joist's goal is not to be "just a query builder", but to facilitate building a rich domain model.
+
+Part of a rich domain model is having [lifecycle hooks](./lifecycle-hooks) (`beforeFlush`, `afterCreate`) and [reactive derived values](../modeling/derived-fields.md), but of which allow enforcing invariants/business rules on entities other than the primary entity being changed.
+
+For example, adding a `Book` might recalc the `Author.numberOfBooks` derived value.
+
+Or adding a `Book` might schedule a job to index its content in a background job/lambda.
+
+For these use cases, the behavior that happens during `em.flush` is not "just" `author1.save`, or `book2.update`, but more holistically evaluating the entities that have changed and decided what, if any, reactive/derived behavior should also update to maintain the system's business invariants.
 
 ## Note: Not a Shared/Distributed Cache
 

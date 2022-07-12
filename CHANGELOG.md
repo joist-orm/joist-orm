@@ -1,3 +1,10 @@
+## [1.22.2](https://github.com/stephenh/joist-ts/compare/v1.22.1...v1.22.2) (2022-07-12)
+
+
+### Bug Fixes
+
+* Fail better when fields are out-of-date. ([#370](https://github.com/stephenh/joist-ts/issues/370)) ([499903f](https://github.com/stephenh/joist-ts/commit/499903fab672dd06329e7b5e20f029d08883ed66))
+
 ## [1.22.1](https://github.com/stephenh/joist-ts/compare/v1.22.0...v1.22.1) (2022-07-08)
 
 

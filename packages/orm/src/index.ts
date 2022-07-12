@@ -224,7 +224,11 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     tagToConstructorMap.set(meta.tagName, meta.cstr);
     meta.config.__data.rules.forEach((rule) => {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
-        meta.fields[rule.fn.field].immutable = true;
+        const field = meta.fields[rule.fn.field];
+        if (!field) {
+          throw new Error(`Missing field '${rule.fn.field}' for cannotBeUpdated at ${rule.name}`);
+        }
+        field.immutable = true;
       }
     });
   });

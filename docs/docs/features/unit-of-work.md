@@ -95,13 +95,13 @@ However, transactions are so fundamental to the pleasantness of Postgres and rel
 
 Joist's goal is not to be "just a query builder", but to facilitate building a rich domain model.
 
-Part of a rich domain model is having [lifecycle hooks](./lifecycle-hooks) (`beforeFlush`, `afterCreate`) and [reactive derived values](../modeling/derived-fields.md), but of which allow enforcing invariants/business rules on entities other than the primary entity being changed.
+Part of a rich domain model is having [lifecycle hooks](./lifecycle-hooks) (`beforeFlush`, `afterCreate`) and [reactive derived values](../modeling/derived-fields.md), both of which allow enforcing invariants/business rules on entities other than the primary entity being changed.
 
 For example, adding a `Book` might recalc the `Author.numberOfBooks` derived value.
 
 Or adding a `Book` might schedule a job to index its content in a background job/lambda.
 
-For these use cases, the behavior that happens during `em.flush` is not "just" `author1.save`, or `book2.update`, but more holistically evaluating the entities that have changed and decided what, if any, reactive/derived behavior should also update to maintain the system's business invariants.
+For these use cases, the behavior that happens during `em.flush` is not "just" `author1.save`, or `book2.update`, but more holistically evaluating the entities that have changed and deciding what, if any, reactive/derived behavior should also update to maintain the system's business invariants.
 
 ## Note: Not a Shared/Distributed Cache
 

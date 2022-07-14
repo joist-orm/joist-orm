@@ -230,16 +230,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["updatedAt"];
   }
 
-  get size(): PublisherSize | undefined {
-    return this.__orm.data["size"];
+  get size(): PublisherSizeDetails | undefined {
+    return PublisherSizes.findByCode(this.__orm.data["size"]);
   }
 
-  get sizeDetails(): PublisherSizeDetails | undefined {
-    return this.size ? PublisherSizes.getByCode(this.size) : undefined;
-  }
-
-  set size(size: PublisherSize | undefined) {
-    setField(this, "size", size);
+  set size(size: PublisherSizeDetails | undefined) {
+    setField(this, "size", size?.code);
   }
 
   get isSizeSmall(): boolean {
@@ -250,16 +246,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["size"] === PublisherSize.Large;
   }
 
-  get type(): PublisherType {
-    return this.__orm.data["type"];
+  get type(): PublisherTypeDetails {
+    return PublisherTypes.findByCode(this.__orm.data["type"])!;
   }
 
-  get typeDetails(): PublisherTypeDetails {
-    return PublisherTypes.getByCode(this.type);
-  }
-
-  set type(type: PublisherType) {
-    setField(this, "type", type);
+  set type(type: PublisherTypeDetails) {
+    setField(this, "type", type?.code);
   }
 
   get isTypeSmall(): boolean {

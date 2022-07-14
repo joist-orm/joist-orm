@@ -6,6 +6,7 @@ import { EnumTableData } from "./index";
 
 export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
   const { rows, extraPrimitives } = enumData;
+
   const detailsName = `${enumName}Details`;
   const detailsDefinition = [
     "id: number;",
@@ -22,13 +23,17 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
       }
       return `${primitive.fieldName}: ${primitive.fieldType};`;
     }),
+    // Add `isApproved` / etc. accessors
+    ...rows.map((row) => `is${pascalCase(row.code)}: boolean;`),
   ].join(" ");
   return code`
     export enum ${enumName} {
       ${rows.map((row) => `${pascalCase(row.code)} = '${row.code}'`).join(",\n")}
     }
 
-    export type ${detailsName} = {${detailsDefinition}};
+    export type ${detailsName} = {
+      ${detailsDefinition}
+    };
 
     const details: Record<${enumName}, ${detailsName}> = {
       ${rows
@@ -38,12 +43,30 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
           const extras = extraPrimitives
             .map((p) => `${p.fieldName}: ${JSON.stringify((row as any)[p.columnName])}`)
             .join(", ");
-          return `[${enumName}.${code}]: { id: ${row.id}, code: ${enumName}.${code}, name: '${safeName}', ${extras} }`;
+          const accessors = rows
+            .map((otherRow) => {
+              return `is${pascalCase(otherRow.code)}: ${row === otherRow}`;
+            })
+            .join(", ");
+          return `[${enumName}.${code}]: {
+             id: ${row.id},
+             code: ${enumName}.${code},
+             name: '${safeName}',
+             ${accessors},
+             ${extras}
+          }`;
         })
         .join(",")}
     };
 
     export const ${pluralize(enumName)} = {
+      ${rows
+        .map((row) => {
+          const code = pascalCase(row.code);
+          return `${code}: details[${enumName}.${code}],`;
+        })
+        .join("\n")}
+      
       getByCode(code: ${enumName}): ${detailsName} {
         return details[code];
       },

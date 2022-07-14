@@ -1,5 +1,5 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
-import { newAuthor, newBook, newPublisher } from "@src/entities";
+import { AdvanceStatus, newAuthor, newBook, newBookAdvance, newPublisher } from "@src/entities";
 import { newEntityManager } from "./setupDbTests";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
@@ -10,6 +10,13 @@ describe("toMatchEntity", () => {
     const p1 = newPublisher(em);
     await em.flush();
     await expect(p1).toMatchEntity({ name: "Publisher 1" });
+  });
+
+  it("can match enum fields", async () => {
+    const em = newEntityManager();
+    const ba = newBookAdvance(em, { status: AdvanceStatus.Pending });
+    await em.flush();
+    await expect(ba).toMatchEntity({ status: AdvanceStatus.Pending });
   });
 
   it("can match references", async () => {

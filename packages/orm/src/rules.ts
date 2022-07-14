@@ -45,7 +45,9 @@ export class ValidationErrors extends Error {
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
 export function newRequiredRule<T extends Entity>(key: keyof T & string): ValidationRule<T> {
-  return (entity) => (entity.__orm.data[key] === undefined ? `${key} is required` : undefined);
+  return (entity) => {
+    return entity.__orm.data[key] === undefined ? `${key} is required` : undefined;
+  };
 }
 
 /**

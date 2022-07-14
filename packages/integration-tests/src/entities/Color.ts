@@ -4,15 +4,47 @@ export enum Color {
   Blue = "BLUE",
 }
 
-export type ColorDetails = { id: number; code: Color; name: string };
+export type ColorDetails = {
+  id: number;
+  code: Color;
+  name: string;
+  isRed: boolean;
+  isGreen: boolean;
+  isBlue: boolean;
+};
 
 const details: Record<Color, ColorDetails> = {
-  [Color.Red]: { id: 1, code: Color.Red, name: "Red" },
-  [Color.Green]: { id: 2, code: Color.Green, name: "Green" },
-  [Color.Blue]: { id: 3, code: Color.Blue, name: "Blue" },
+  [Color.Red]: {
+    id: 1,
+    code: Color.Red,
+    name: "Red",
+    isRed: true,
+    isGreen: false,
+    isBlue: false,
+  },
+  [Color.Green]: {
+    id: 2,
+    code: Color.Green,
+    name: "Green",
+    isRed: false,
+    isGreen: true,
+    isBlue: false,
+  },
+  [Color.Blue]: {
+    id: 3,
+    code: Color.Blue,
+    name: "Blue",
+    isRed: false,
+    isGreen: false,
+    isBlue: true,
+  },
 };
 
 export const Colors = {
+  Red: details[Color.Red],
+  Green: details[Color.Green],
+  Blue: details[Color.Blue],
+
   getByCode(code: Color): ColorDetails {
     return details[code];
   },

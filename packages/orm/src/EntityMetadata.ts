@@ -66,7 +66,11 @@ export type EnumField = {
   fieldName: string;
   fieldIdName: undefined;
   required: boolean;
-  enumDetailType: { getValues(): ReadonlyArray<unknown> };
+  enumDetailType: {
+    getValues(): ReadonlyArray<unknown>;
+    getDetails(): ReadonlyArray<unknown>;
+    getByCode(code: string): unknown;
+  };
   serde: FieldSerde;
   immutable: boolean;
 };

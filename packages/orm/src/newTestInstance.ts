@@ -106,7 +106,10 @@ export function newTestInstance<T extends Entity>(
         }
       } else if (field.kind === "enum" && field.required) {
         const codegenDefault = (cstr as any).defaultValues[field.fieldName];
-        return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
+        return [
+          fieldName,
+          codegenDefault ? field.enumDetailType.getByCode(codegenDefault) : field.enumDetailType.getDetails()[0],
+        ];
       }
       return [];
     })
@@ -323,12 +326,15 @@ export function defaultValue<T>(): T {
  * ```typescript
  * export function newAuthor(em: Entity, opts: FactoryOpts<Author>) {
  *   return newTestInstance(em, Author, {
- *     // publisher is not technically required, but make one
+ *     // publisher is not technically required, but make one unless an "obvious default"
+ *     // instance already exists (either a `use` or one-and-only-one instance in the EM)
  *     publisher: maybeNew<Publisher>({}),
  *     ...opts,
  *   });
  * }
  * ```
+ *
+ * Vs. just doing `publisher: {}` which _always_ creates a new entity.
  */
 export function maybeNew<T extends Entity>(opts?: ActualFactoryOpts<T>): FactoryEntityOpt<T> {
   // Return a marker that resolveFactoryOpt will look for

@@ -199,7 +199,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
       const m2o = this.getOtherRelation(other);
-      if (maybeResolveReferenceToId(m2o.current()) === this.entity.id) {
+      if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.entity.id) {
         // TODO What if other.otherFieldName is required/not-null?
         m2o.set(undefined);
       }

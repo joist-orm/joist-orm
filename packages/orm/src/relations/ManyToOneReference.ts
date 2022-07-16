@@ -153,7 +153,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   // Internal method used by OneToManyCollection
   setImpl(other: U | IdOf<U> | N): void {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    if (sameEntity(other, this.otherMeta, this.current())) {
+    if (sameEntity(other, this.otherMeta, this.current({ withDeleted: true }))) {
       return;
     }
 

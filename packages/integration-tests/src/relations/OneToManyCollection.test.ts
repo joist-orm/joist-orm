@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
-import { Author, Book, newAuthor, newBook, Publisher } from "../entities";
+import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToManyCollection", () => {
@@ -180,6 +180,21 @@ describe("OneToManyCollection", () => {
     await em.flush();
     // Then it's removed from the Publisher.authors collection
     expect(p1.authors.get.length).toEqual(0);
+  });
+
+  it("removes deleted entities from other foreign key", async () => {
+    // Given an publisher with an author
+    const em = newEntityManager();
+    // And the publisher and authors are loaded
+    const p1 = newPublisher(em, { authors: [{}] });
+    const a1 = p1.authors.get[0];
+    await em.flush();
+    expect(p1.authors.get.length).toEqual(1);
+    // When we delete the publisher
+    em.delete(p1);
+    await em.flush();
+    // Then the author.publisher is cleared
+    expect(a1.publisher.isSet).toEqual(false);
   });
 
   it("respects deleted entities before the collection loaded", async () => {

@@ -1,3 +1,10 @@
+## [1.22.3](https://github.com/stephenh/joist-ts/compare/v1.22.2...v1.22.3) (2022-07-18)
+
+
+### Bug Fixes
+
+* Correct clearing of o2m/m2o fks when entity data references the entity instead of ids ([#373](https://github.com/stephenh/joist-ts/issues/373)) ([a1f26bd](https://github.com/stephenh/joist-ts/commit/a1f26bd5eb0a1947bd36307ff6117ba25b3b06b5))
+
 ## [1.22.2](https://github.com/stephenh/joist-ts/compare/v1.22.1...v1.22.2) (2022-07-12)
 
 

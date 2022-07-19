@@ -4,6 +4,7 @@ export class Book extends BookCodegen {
   rulesInvoked = 0;
   firstNameRuleInvoked = 0;
   favoriteColorsRuleInvoked = 0;
+  reviewsRuleInvoked = 0;
 }
 
 config.addRule((book) => {
@@ -21,6 +22,11 @@ config.addRule({ author: ["favoriteColors", "firstName:ro"] }, (b) => {
     return `${b.author.get.firstName} has too many colors`;
   }
   b.entity.favoriteColorsRuleInvoked++;
+});
+
+// Example of a rule on reviews, where the BookReview.book is cannotBeUpdated
+config.addRule("reviews", (b) => {
+  b.entity.reviewsRuleInvoked++;
 });
 
 config.cascadeDelete("reviews");

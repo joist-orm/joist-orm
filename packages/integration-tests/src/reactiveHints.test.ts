@@ -16,7 +16,7 @@ describe("reactiveHints", () => {
 
   it("can do grand-parent primitive field names", () => {
     expect(reverseReactiveHint(BookReview, { book: { author: ["firstName", "lastName"] } })).toEqual([
-      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: BookReview, fields: [], path: [] },
       { entity: Book, fields: ["author"], path: ["reviews"] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
@@ -24,7 +24,7 @@ describe("reactiveHints", () => {
 
   it("can do parent and grand-parent primitive field names", () => {
     expect(reverseReactiveHint(BookReview, { book: { title: {}, author: ["firstName", "lastName"] } })).toEqual([
-      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: BookReview, fields: [], path: [] },
       { entity: Book, fields: ["title", "author"], path: ["reviews"] },
       { entity: Author, fields: ["firstName", "lastName"], path: ["books", "reviews"] },
     ]);
@@ -79,7 +79,7 @@ describe("reactiveHints", () => {
       { entity: Author, fields: [], path: [] },
     ]);
     expect(reverseReactiveHint(BookReview, { book: "author:ro" })).toEqual([
-      { entity: BookReview, fields: ["book"], path: [] },
+      { entity: BookReview, fields: [], path: [] },
     ]);
   });
   describe("convertToLoadHint", () => {

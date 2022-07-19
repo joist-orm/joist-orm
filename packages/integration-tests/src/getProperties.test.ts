@@ -15,6 +15,7 @@ describe("getProperties", () => {
       "rulesInvoked",
       "firstNameRuleInvoked",
       "favoriteColorsRuleInvoked",
+      "reviewsRuleInvoked",
     ]);
   });
 

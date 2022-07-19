@@ -1,4 +1,4 @@
-import { Author, Book, Color, newAuthor, newBook } from "@src/entities";
+import { Author, Book, BookReview, Color, newAuthor, newBook, newBookReview } from "@src/entities";
 import { getMetadata } from "joist-orm";
 
 describe("EntityManager.reactiveRules", () => {
@@ -75,6 +75,24 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.graduatedRuleInvoked).toBe(2);
   });
 
+  it.withCtx("runs rule on parent of an immutable field", async ({ em }) => {
+    // Given a book
+    const b = newBook(em);
+    await em.flush();
+    // And the rule runs on initial create
+    expect(b.reviewsRuleInvoked).toBe(1);
+    // When we add a new review
+    const br = newBookReview(em, { book: b });
+    await em.flush();
+    // Then the rule runs again
+    expect(b.reviewsRuleInvoked).toBe(2);
+    // And when we delete the review
+    em.delete(br);
+    await em.flush();
+    // Then the rule runs again
+    expect(b.reviewsRuleInvoked).toBe(3);
+  });
+
   it.withCtx("creates the right reactive rules", async ({ em }) => {
     expect(getMetadata(Author).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule
@@ -88,9 +106,9 @@ describe("EntityManager.reactiveRules", () => {
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
       { name: "Author.ts:142", fields: [], path: [], fn: expect.any(Function) },
       // Book's noop author.firstName rule, only depends on firstName
-      { name: "Book.ts:14", fields: ["firstName"], path: ["books"], fn: expect.any(Function) },
+      { name: "Book.ts:15", fields: ["firstName"], path: ["books"], fn: expect.any(Function) },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
-      { name: "Book.ts:19", fields: ["favoriteColors"], path: ["books"], fn: expect.any(Function) },
+      { name: "Book.ts:20", fields: ["favoriteColors"], path: ["books"], fn: expect.any(Function) },
       { name: "Publisher.ts:42", fields: ["publisher"], path: ["publisher"], fn: expect.any(Function) },
     ]);
 
@@ -100,9 +118,16 @@ describe("EntityManager.reactiveRules", () => {
       // Author's "cannot have 13 books" rule
       { name: "Author.ts:122", fields: ["author"], path: ["author"], fn: expect.any(Function) },
       // Book's noop rule on author.firstName, if author changes
-      { name: "Book.ts:14", fields: ["author"], path: [], fn: expect.any(Function) },
+      { name: "Book.ts:15", fields: ["author"], path: [], fn: expect.any(Function) },
       // Book's "too many colors" rule, if author changes
-      { name: "Book.ts:19", fields: ["author"], path: [], fn: expect.any(Function) },
+      { name: "Book.ts:20", fields: ["author"], path: [], fn: expect.any(Function) },
+      // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
+      { name: "Book.ts:28", fields: [], path: [], fn: expect.any(Function) },
+    ]);
+
+    expect(getMetadata(BookReview).config.__data.reactiveRules).toEqual([
+      // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
+      { name: "Book.ts:28", fields: [], path: ["book"], fn: expect.any(Function) },
     ]);
   });
 

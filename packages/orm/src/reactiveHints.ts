@@ -52,11 +52,11 @@ export type Reacted<T extends Entity, H> = Entity & {
 export function reverseReactiveHint<T extends Entity>(
   entityType: EntityConstructor<T>,
   hint: ReactiveHint<T>,
-  reactForOtherSide?: string,
+  reactForOtherSide?: string | boolean,
   isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
-  const primitives: string[] = reactForOtherSide ? [reactForOtherSide] : [];
+  const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
@@ -75,11 +75,16 @@ export function reverseReactiveHint<T extends Entity>(
       case "m2m":
       case "o2m":
       case "o2o": {
+        const isOtherReadOnly = field.otherMetadata().fields[field.otherFieldName].immutable;
         // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
         return reverseReactiveHint(
           field.otherMetadata().cstr,
           subHint,
-          isReadOnly ? undefined : field.otherFieldName,
+          // For o2m/o2o/m2m, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
+          // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
+          // don't need to "react to the field changing" (which can't happen for immutable fields), but
+          // we do need to react to children being created/deleted.
+          isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
           false,
         ).map(({ entity, fields, path }) => {
           return { entity, fields, path: [...path, field.otherFieldName] };
@@ -99,7 +104,9 @@ export function reverseReactiveHint<T extends Entity>(
     // If any of our primitives (or m2o fields) change, establish a reactive path
     // from "here" (entityType) that is initially empty (path: []) but will have
     // paths layered on by the previous callers
-    ...(primitives.length > 0 || isFirst ? [{ entity: entityType, fields: primitives, path: [] }] : []),
+    ...(primitives.length > 0 || isFirst || reactForOtherSide === true
+      ? [{ entity: entityType, fields: primitives, path: [] }]
+      : []),
     ...subHints,
   ];
 }

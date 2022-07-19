@@ -1,3 +1,10 @@
+## [1.22.4](https://github.com/stephenh/joist-ts/compare/v1.22.3...v1.22.4) (2022-07-19)
+
+
+### Bug Fixes
+
+* Check the other side's readonly for o2m/o2o reactive hints. ([#374](https://github.com/stephenh/joist-ts/issues/374)) ([61ccb3f](https://github.com/stephenh/joist-ts/commit/61ccb3fc833195b27a1c9a176caeac3b2e0b9f06))
+
 ## [1.22.3](https://github.com/stephenh/joist-ts/compare/v1.22.2...v1.22.3) (2022-07-18)
 
 

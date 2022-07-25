@@ -1,3 +1,10 @@
+## [1.22.5](https://github.com/stephenh/joist-ts/compare/v1.22.4...v1.22.5) (2022-07-25)
+
+
+### Bug Fixes
+
+* Fix src import. ([#377](https://github.com/stephenh/joist-ts/issues/377)) ([ad35d0c](https://github.com/stephenh/joist-ts/commit/ad35d0cd8a92a0ce7a2f50e28940eaab18e1f21b))
+
 ## [1.22.4](https://github.com/stephenh/joist-ts/compare/v1.22.3...v1.22.4) (2022-07-19)
 
 

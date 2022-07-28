@@ -1013,11 +1013,14 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
  */
 async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
-    const entities = [...todo.inserts, ...todo.updates];
+    const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     return todo.metadata.config.__data.reactiveDerivedValues.map(async (field) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
-        (e) => e.isNewEntity || ((e as any).changes as Changes<any>).fields.some((f) => field.fields.includes(f)),
+        (e) =>
+          e.isNewEntity ||
+          e.isDeletedEntity ||
+          ((e as any).changes as Changes<any>).fields.some((f) => field.fields.includes(f)),
       );
       (await followReverseHint(triggered, field.path))
         .filter((entity) => !entity.isDeletedEntity)

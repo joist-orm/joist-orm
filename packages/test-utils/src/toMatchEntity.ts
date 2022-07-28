@@ -24,7 +24,7 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
   const queue: [any, any, any][] = [[actual, expected, clean]];
   while (queue.length > 0) {
     const [actual, expected, clean] = queue.pop()!;
-    const keys = Object.keys(expected);
+    const keys = expected ? Object.keys(expected) : ["id"];
     for (const key of keys) {
       const value = actual[key];
       if (value && (isReference(value) || isCollection(value))) {

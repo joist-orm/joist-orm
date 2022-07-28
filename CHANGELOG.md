@@ -1,3 +1,10 @@
+## [1.22.6](https://github.com/stephenh/joist-ts/compare/v1.22.5...v1.22.6) (2022-07-28)
+
+
+### Bug Fixes
+
+* Deleted entities should trigger async derived fields. ([#383](https://github.com/stephenh/joist-ts/issues/383)) ([95acdd0](https://github.com/stephenh/joist-ts/commit/95acdd00e3987136e5886a32e915bb8ad517b7ae))
+
 ## [1.22.5](https://github.com/stephenh/joist-ts/compare/v1.22.4...v1.22.5) (2022-07-25)
 
 

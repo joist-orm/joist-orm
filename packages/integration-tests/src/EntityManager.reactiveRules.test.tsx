@@ -131,6 +131,20 @@ describe("EntityManager.reactiveRules", () => {
     ]);
   });
 
+  it.withCtx("runs async derived on delete", async ({ em }) => {
+    // Given an entity with an async derived field
+    const a = newAuthor(em);
+    const b = newBook(em, { author: a });
+    await em.flush();
+    expect(a.numberOfBooks).toBe(1);
+    // When the associated entity is deleted
+    await em.delete(b);
+    await em.flush();
+    // Then it is properly recalculated
+    expect(a.books.get.length).toBe(0);
+    expect(a.numberOfBooks).toBe(0);
+  });
+
   it.withCtx("creates the right reactive derived values", async ({ em }) => {
     expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([
       { name: "numberOfBooks", fields: ["author"], path: ["author"], fn: expect.any(Function) },

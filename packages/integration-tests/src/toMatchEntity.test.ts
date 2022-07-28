@@ -46,6 +46,27 @@ expect(received).toMatchObject(expected)
 `);
   });
 
+  it("can fail match reference with undefined", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    const a2 = newAuthor(em);
+    const b1 = newBook(em, { author: a1 });
+    await em.flush();
+    await expect(expect(b1).toMatchEntity({ author: undefined })).rejects.toThrowErrorMatchingInlineSnapshot(`
+expect(received).toMatchObject(expected)
+
+- Expected  - 1
++ Received  + 3
+
+  Object {
+-   "author": undefined,
++   "author": Object {
++     "id": "a:1",
++   },
+  }
+`);
+  });
+
   it("can match collections", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });

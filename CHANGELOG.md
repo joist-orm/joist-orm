@@ -1,3 +1,10 @@
+## [1.22.7](https://github.com/stephenh/joist-ts/compare/v1.22.6...v1.22.7) (2022-07-28)
+
+
+### Bug Fixes
+
+* Fix toMatchEntity when expected value is undefined. ([#384](https://github.com/stephenh/joist-ts/issues/384)) ([ab3cbee](https://github.com/stephenh/joist-ts/commit/ab3cbee26416e9745cb9b77e7ef1437ab15e4f1d))
+
 ## [1.22.6](https://github.com/stephenh/joist-ts/compare/v1.22.5...v1.22.6) (2022-07-28)
 
 

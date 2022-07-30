@@ -1,6 +1,6 @@
 ---
 title: Schema Assumptions
-sidebar_position: 3
+sidebar_position: 1
 ---
 
 Joist makes several assumptions about your database schema, as described below.

@@ -49,6 +49,12 @@ This is a project-wide setting and cannot be changed on an entity-by-entity basi
 
 Also note that this `idType` setting controls the _codegen output_, but Joist will still look at the database type of the each individual entity's `id` column to determine if the SQL values are actually numbers (i.e. auto increment integers) or other types like UUIDs.
 
+:::info
+
+Even if you use `untagged-string`s, currently Joist still manages ids internally as tagged, and so you'll still see a per-entity `tag` established in the `joist-codegen.json` file, but the tag will be stripped by the `id` getters.
+
+:::
+
 :::caution
 
 Joist currently does not support typing `id` properties as `number`. This is doable, it's just not been something we've needed. See [this issue](https://github.com/stephenh/joist-ts/issues/368).

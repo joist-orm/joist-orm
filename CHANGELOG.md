@@ -1,3 +1,10 @@
+# [1.24.0](https://github.com/stephenh/joist-ts/compare/v1.23.0...v1.24.0) (2022-08-07)
+
+
+### Features
+
+* Add databaseUrl to joist-codegen ([#389](https://github.com/stephenh/joist-ts/issues/389)) ([e22081c](https://github.com/stephenh/joist-ts/commit/e22081c8ac923995f656bae8e8c54648f8baf05c)), closes [#382](https://github.com/stephenh/joist-ts/issues/382)
+
 # [1.23.0](https://github.com/stephenh/joist-ts/compare/v1.22.7...v1.23.0) (2022-08-07)
 
 

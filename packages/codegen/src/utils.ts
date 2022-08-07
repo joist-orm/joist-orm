@@ -29,7 +29,7 @@ export function isEntityTable(config: Config, t: Table): boolean {
     }
   }
 
-  return idMatch && (hasCreatedAt || createdAtConf.optional) && (hasUpdatedAt || updatedAtConf.optional);
+  return idMatch && (hasCreatedAt || !createdAtConf.required) && (hasUpdatedAt || !updatedAtConf.required);
 }
 
 export function isEnumTable(config: Config, t: Table): boolean {

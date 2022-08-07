@@ -10,7 +10,7 @@
   "entitiesDirectory": "./src/entities",
   "ignoredTables": ["pgmigrations"],
   "timestampColumns": {
-    "createdAt": { "names": ["created_at", "createdAt"], "optional": true },
-    "updatedAt": { "names": ["updated_at", "updatedAt"], "optional": true }
+    "createdAt": { "names": ["created_at", "createdAt"], "required": false },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
   }
 }

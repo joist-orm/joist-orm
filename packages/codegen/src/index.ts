@@ -52,6 +52,7 @@ if (require.main === module) {
   (async function () {
     const config = await loadConfig();
 
+    maybeSetDatabaseUrl(config);
     const pgConfig = newPgConnectionConfig();
     // Assume other schemas are things like cyan audit / graphile-worker, that we don't want entity for
     const db = await pgStructure(pgConfig, { includeSchemas: "public" });
@@ -98,4 +99,10 @@ export async function contentToString(
     return content;
   }
   return await content.toStringWithImports({ path: fileName, prettierOverrides });
+}
+
+function maybeSetDatabaseUrl(config: Config): void {
+  if (!process.env.DATABASE_URL && config.databaseUrl) {
+    process.env.DATABASE_URL = config.databaseUrl;
+  }
 }

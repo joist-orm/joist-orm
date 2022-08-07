@@ -19,7 +19,7 @@ jobs:
         description: Node version to run tests under (set by matrix build config)
         type: string
     machine:
-      image: ubuntu-2004:202104-01
+      image: ubuntu-2204:2022.04.1
     steps:
       - checkout
       - node/install:
@@ -31,27 +31,17 @@ jobs:
           name: Start Postgres database
           command: |
             cd packages/integration-tests
-            docker-compose build db
-            docker-compose up db-wait
+            docker compose build db
+            docker compose up db-wait
       - run:
-          name: Run migrations & codegen
-          command: |
-            cd packages/integration-tests
-            ./run.sh ../migration-utils/build/index.js
-            ./run.sh ../codegen/build/index.js
-            cd ../tests/schema-misc
-            yarn migrate
-            ./run.sh ../../codegen/build/index.js
-            cd ../uuid-ids
-            ./run.sh ../../migration-utils/build/index.js
-            ./run.sh ../../codegen/build/index.js
-            cd ../untagged-ids
-            ./run.sh ../../migration-utils/build/index.js
-            ./run.sh ../../codegen/build/index.js
+          name: Run migrations
+          command: yarn migrate
+      - run:
+          name: Run codegen
+          command: yarn codegen
       - run:
           name: Run tests
-          command: |
-            yarn test
+          command: yarn test
       - store_test_results:
           path: ./artifacts
       - when:

@@ -31,7 +31,12 @@ export interface TimestampConfig {
 }
 
 export interface Config {
+  /** The _build-time_ database URL for reading database metadata. */
+  databaseUrl?: string;
+
+  /** Your application's request-level `Context` type. */
   contextType?: string;
+
   /**
    * Allows the user to specify the `updated_at` / `created_at` column names to look up, and if they're optional.
    *

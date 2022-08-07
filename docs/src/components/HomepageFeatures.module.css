@@ -5,6 +5,10 @@
   width: 100%;
 }
 
+.container {
+  width: 50em;
+}
+
 .featureSvg {
   height: 200px;
   width: 200px;

@@ -1,14 +1,10 @@
-/**
- * Copyright (c) Facebook, Inc. and its affiliates.
- *
- * This source code is licensed under the MIT license found in the
- * LICENSE file in the root directory of this source tree.
- */
 import clsx from "clsx";
 import React from "react";
 // @ts-expect-error
 import Goals from "../../docs/goals/overview.md";
 import styles from "./HomepageFeatures.module.css";
+// @ts-expect-error
+import Md from "./HomepageFeatures.md";
 
 type FeatureItem = {
   title: string;
@@ -48,9 +44,12 @@ function Feature({ title, description }: FeatureItem) {
 export default function HomepageFeatures(): JSX.Element {
   return (
     <section className={styles.features}>
-      <div className="container">
-        <div className="row">
+      <div className={styles.container + " container"}>
+        <div className="markdown">
           <Goals />
+        </div>
+        <div className="markdown">
+          <Md />
         </div>
       </div>
     </section>

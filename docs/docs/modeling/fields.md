@@ -8,6 +8,7 @@ Fields are the primitive columns in your domain model, so all of the (non-foreig
 For these columns, Joist automatically adds getters & setters to your domain model, i.e. an `authors.first_name` column will have getters & setters added to `AuthorCodegen.ts`:
 
 ```ts
+// This code is auto-generated
 class AuthorCodegen {
   get firstName(): string {
     return this.__orm.data["firstName"];

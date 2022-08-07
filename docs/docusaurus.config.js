@@ -38,6 +38,10 @@ const config = {
         // logo: { alt: "My Site Logo", src: "img/logo.svg" },
         items: [
           { type: "doc", docId: "getting-started/installation", position: "left", label: "Getting Started" },
+          { type: "doc", docId: "goals/overview", position: "left", label: "Goals" },
+          { type: "doc", docId: "modeling/fields", position: "left", label: "Domain Modeling" },
+          { type: "doc", docId: "features/unit-of-work", position: "left", label: "Features" },
+          { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
           { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
           { href: "https://joist-ts.slack.com/ssb/redirect", label: "Slack", position: "right" },
         ],
@@ -54,7 +58,10 @@ const config = {
           },
           {
             title: "Community",
-            items: [{ label: "GitHub Discussions", href: "https://github.com/stephenh/joist-ts/discussions" }],
+            items: [
+              { label: "GitHub Discussions", href: "https://github.com/stephenh/joist-ts/discussions" },
+              { label: "Slack", href: "https://joist-ts.slack.com/ssb/redirect" },
+            ],
           },
         ],
         copyright: `Copyright © ${new Date().getFullYear()}`,

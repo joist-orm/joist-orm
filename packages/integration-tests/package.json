@@ -13,8 +13,8 @@
     "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "./run.sh ../codegen",
-    "docker:up": "docker-compose up -d db",
-    "docker:reset": "docker-compose exec db ./reset.sh"
+    "docker:up": "docker compose up -d db",
+    "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
     "joist-orm": "workspace:*"

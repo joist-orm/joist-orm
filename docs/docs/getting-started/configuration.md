@@ -22,6 +22,7 @@ A short, minimalistic example is:
 ```json
 {
   "contextType": "Context@src/context",
+  "databaseUrl": "postgres://db:user@localhost:5432/your_schema",
   "entities": {
     "Author": { "tag": "a" }
   },
@@ -30,6 +31,12 @@ A short, minimalistic example is:
 ```
 
 Each of the supported keys are described below.
+
+### `databaseUrl`
+
+This is the _build-time_ connection information for your database, e.g. it is only used when running `npm run joist-codegen`, and won't be used for either your unit tests or production code, because it's assumed to have a hard-coded/local-only host/port/etc.
+
+If this is not set, `npm run joist-codegen` will also look for a `DATABASE_URL` environment variable.
 
 ### `idType`
 

@@ -27,7 +27,7 @@ export interface TimestampConfig {
   /** The names to check for this timestamp, i.e. `created_at` `created`, etc. */
   names: string[];
   /** Whether this timestamp column is required to consider a table an entity, defaults to `false`. */
-  optional?: boolean;
+  required?: boolean;
 }
 
 export interface Config {
@@ -146,12 +146,12 @@ export function getTimestampConfig(config: Config): {
   return {
     createdAtConf: {
       names: ["created_at", "createdAt"],
-      optional: true,
+      required: false,
       ...config?.timestampColumns?.createdAt,
     },
     updatedAtConf: {
       names: ["updated_at", "updatedAt"],
-      optional: true,
+      required: false,
       ...config?.timestampColumns?.updatedAt,
     },
   };

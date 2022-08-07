@@ -131,11 +131,11 @@ For example the following config looks for _only_ `updated_at` and `created_at` 
   "timestampFields": {
     "updatedAt": {
       "names": ["updated_at"],
-      "optional": false
+      "required": true
     },
     "createdAt": {
       "names": ["created_at"],
-      "optional": false
+      "required": true
     }
   }
 }
@@ -148,11 +148,11 @@ The default configuration is basically:
   "timestampFields": {
     "updatedAt": {
       "names": ["updated_at", "updatedAt"],
-      "optional": true
+      "required": false
     },
     "createdAt": {
       "names": ["created_at", "createdAt"],
-      "optional": true
+      "required": false
     }
   }
 }

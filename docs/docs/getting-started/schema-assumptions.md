@@ -29,8 +29,8 @@ In `joist-codegen.json`, you can configure the names of the `timestampColumns`, 
 ```json
 {
   "timestampColumns": {
-    "createdAt": { "names": ["created_at", "createdAt"], "optional": true },
-    "updatedAt": { "names": ["updated_at", "updatedAt"], "optional": true }
+    "createdAt": { "names": ["created_at", "createdAt"], "required": false },
+    "updatedAt": { "names": ["updated_at", "updatedAt"], "required": false }
   }
 }
 ```
@@ -40,8 +40,8 @@ For example, if you want to strictly require `created_at` and `updated_at` on al
 ```json
 {
   "timestampColumns": {
-    "createdAt": { "names": ["created_at"], "optional": false },
-    "updatedAt": { "names": ["updated_at"], "optional": false }
+    "createdAt": { "names": ["created_at"], "required": true },
+    "updatedAt": { "names": ["updated_at"], "required": true }
   }
 }
 ```

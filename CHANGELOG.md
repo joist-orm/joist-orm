@@ -1,3 +1,10 @@
+# [1.23.0](https://github.com/stephenh/joist-ts/compare/v1.22.7...v1.23.0) (2022-08-07)
+
+
+### Features
+
+* Rename TimestampConfig.optional to required. ([#387](https://github.com/stephenh/joist-ts/issues/387)) ([d7a52d9](https://github.com/stephenh/joist-ts/commit/d7a52d9fe9c77f34463da1beb5ab38eb970678d4))
+
 ## [1.22.7](https://github.com/stephenh/joist-ts/compare/v1.22.6...v1.22.7) (2022-07-28)
 
 

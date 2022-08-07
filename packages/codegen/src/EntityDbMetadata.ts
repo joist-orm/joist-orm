@@ -15,8 +15,16 @@ import {
   relationName,
   superstructConfig,
 } from "./config";
-import { EnumMetadata, EnumRow } from "./index";
+import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
 import { fail, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
+
+/** All the entities + enums in our database. */
+export interface DbMetadata {
+  entityTables: Table[];
+  entities: EntityDbMetadata[];
+  enums: EnumMetadata;
+  pgEnums: PgEnumMetadata;
+}
 
 /** Codegen-time metadata about a given domain entity. */
 export type Entity = {

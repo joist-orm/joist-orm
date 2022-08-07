@@ -1,7 +1,7 @@
 import { pascalCase } from "change-case";
 import { code, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
-import { CodeGenFile } from "./index";
+import { CodeGenFile } from "./generate";
 import { DeepNew, FactoryOpts, newTestInstance } from "./symbols";
 
 const EntityManager = imp("t:EntityManager@./entities");

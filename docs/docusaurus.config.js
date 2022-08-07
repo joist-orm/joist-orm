@@ -39,6 +39,7 @@ const config = {
         items: [
           { type: "doc", docId: "getting-started/installation", position: "left", label: "Getting Started" },
           { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
+          { href: "https://joist-ts.slack.com/ssb/redirect", label: "Slack", position: "right" },
         ],
       },
       footer: {

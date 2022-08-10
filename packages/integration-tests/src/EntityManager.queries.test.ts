@@ -198,6 +198,17 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
   });
 
+  it("can find by foreign key is entity list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const publisher = await em.load(Publisher, "p:1");
+    const authors = await em.find(Author, { publisher: [publisher] });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
   it("can find by foreign key is tagged flavor", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });

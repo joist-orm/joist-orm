@@ -94,7 +94,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
-export type EntityFilter<T, I, F, N> = T | I | I[] | F | N | { ne: T | I | N };
+export type EntityFilter<T, I, F, N> = T | T[] | I | I[] | F | N | { ne: T | I | N };
 
 export type ParsedEntityFilter =
   | { kind: "eq"; id: number | null }

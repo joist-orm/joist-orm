@@ -150,16 +150,12 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["updatedAt"];
   }
 
-  get status(): AdvanceStatus {
-    return this.__orm.data["status"];
+  get status(): AdvanceStatusDetails {
+    return AdvanceStatuses.findByCode(this.__orm.data["status"])!;
   }
 
-  get statusDetails(): AdvanceStatusDetails {
-    return AdvanceStatuses.getByCode(this.status);
-  }
-
-  set status(status: AdvanceStatus) {
-    setField(this, "status", status);
+  set status(status: AdvanceStatusDetails) {
+    setField(this, "status", status?.code);
   }
 
   get isPending(): boolean {

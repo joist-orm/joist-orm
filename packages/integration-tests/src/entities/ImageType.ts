@@ -11,6 +11,9 @@ export type ImageTypeDetails = {
   sortOrder: 100 | 200 | 300;
   visible: boolean;
   nickname: "book_image" | "author_image" | "publisher_image";
+  isBookImage: boolean;
+  isAuthorImage: boolean;
+  isPublisherImage: boolean;
 };
 
 const details: Record<ImageType, ImageTypeDetails> = {
@@ -18,6 +21,9 @@ const details: Record<ImageType, ImageTypeDetails> = {
     id: 1,
     code: ImageType.BookImage,
     name: "Book Image",
+    isBookImage: true,
+    isAuthorImage: false,
+    isPublisherImage: false,
     sortOrder: 100,
     visible: true,
     nickname: "book_image",
@@ -26,6 +32,9 @@ const details: Record<ImageType, ImageTypeDetails> = {
     id: 2,
     code: ImageType.AuthorImage,
     name: "Author Image",
+    isBookImage: false,
+    isAuthorImage: true,
+    isPublisherImage: false,
     sortOrder: 200,
     visible: true,
     nickname: "author_image",
@@ -34,6 +43,9 @@ const details: Record<ImageType, ImageTypeDetails> = {
     id: 3,
     code: ImageType.PublisherImage,
     name: "Publisher Image",
+    isBookImage: false,
+    isAuthorImage: false,
+    isPublisherImage: true,
     sortOrder: 300,
     visible: true,
     nickname: "publisher_image",
@@ -41,6 +53,10 @@ const details: Record<ImageType, ImageTypeDetails> = {
 };
 
 export const ImageTypes = {
+  BookImage: details[ImageType.BookImage],
+  AuthorImage: details[ImageType.AuthorImage],
+  PublisherImage: details[ImageType.PublisherImage],
+
   getByCode(code: ImageType): ImageTypeDetails {
     return details[code];
   },

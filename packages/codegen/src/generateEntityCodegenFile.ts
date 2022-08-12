@@ -126,19 +126,17 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     .forEach((e) => {
       const { fieldName, enumType, enumDetailType, enumDetailsType, notNull, enumRows } = e;
       const maybeOptional = notNull ? "" : " | undefined";
-      const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
+      // We avoid using `|| fail()` because during em.create, setOpts calls all getters, and
+      // expects them to return `undefined` if the field is not set.
+      const maybeBang = notNull ? code`!` : "";
       const getter = code`
-        get ${fieldName}(): ${enumType}${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
-        }
-
-        get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
-          return ${notNull ? getByCode : code`this.${fieldName} ? ${getByCode} : undefined`};
+        get ${fieldName}(): ${enumDetailsType}${maybeOptional} {
+          return ${enumDetailType}.findByCode(this.__orm.data["${fieldName}"])${maybeBang};
         }
      `;
       const setter = code`
-        set ${fieldName}(${fieldName}: ${enumType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${fieldName});
+        set ${fieldName}(${fieldName}: ${enumDetailsType}${maybeOptional}) {
+          ${setField}(this, "${fieldName}", ${fieldName}?.code);
         }
       `;
 

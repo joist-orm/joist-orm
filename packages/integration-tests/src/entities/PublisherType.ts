@@ -3,14 +3,35 @@ export enum PublisherType {
   Big = "BIG",
 }
 
-export type PublisherTypeDetails = { id: number; code: PublisherType; name: string };
+export type PublisherTypeDetails = {
+  id: number;
+  code: PublisherType;
+  name: string;
+  isSmall: boolean;
+  isBig: boolean;
+};
 
 const details: Record<PublisherType, PublisherTypeDetails> = {
-  [PublisherType.Small]: { id: 1, code: PublisherType.Small, name: "Small" },
-  [PublisherType.Big]: { id: 2, code: PublisherType.Big, name: "Big" },
+  [PublisherType.Small]: {
+    id: 1,
+    code: PublisherType.Small,
+    name: "Small",
+    isSmall: true,
+    isBig: false,
+  },
+  [PublisherType.Big]: {
+    id: 2,
+    code: PublisherType.Big,
+    name: "Big",
+    isSmall: false,
+    isBig: true,
+  },
 };
 
 export const PublisherTypes = {
+  Small: details[PublisherType.Small],
+  Big: details[PublisherType.Big],
+
   getByCode(code: PublisherType): PublisherTypeDetails {
     return details[code];
   },

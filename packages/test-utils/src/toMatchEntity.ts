@@ -66,6 +66,9 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
             clean[key] = maybeTestId(em, loaded);
           }
         }
+      } else if (isEnumDetails(value)) {
+        clean[key] = value?.code;
+        expected[key] = expected[key]?.code;
       } else {
         // Otherwise assume it's regular data. Probably need to handle getters/promises?
         clean[key] = value;
@@ -75,6 +78,10 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
 
   // @ts-ignore
   return matchers.toMatchObject.call(this, clean, expected);
+}
+
+function isEnumDetails(value: any): boolean {
+  return value && typeof value === "object" && "code" in value && "name" in value;
 }
 
 function maybeTestId(em: EntityManager, maybeEntity: any): any {
@@ -102,5 +109,7 @@ export type MatchedEntity<T> = {
     ? MatchedEntity<U> | U
     : T[K] extends Collection<any, infer U>
     ? Array<MatchedEntity<U> | U>
+    : T[K] extends { code: infer C; name: string }
+    ? T[K] | C
     : T[K];
 };

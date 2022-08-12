@@ -170,16 +170,12 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data["updatedAt"];
   }
 
-  get type(): ImageType {
-    return this.__orm.data["type"];
+  get type(): ImageTypeDetails {
+    return ImageTypes.findByCode(this.__orm.data["type"])!;
   }
 
-  get typeDetails(): ImageTypeDetails {
-    return ImageTypes.getByCode(this.type);
-  }
-
-  set type(type: ImageType) {
-    setField(this, "type", type);
+  set type(type: ImageTypeDetails) {
+    setField(this, "type", type?.code);
   }
 
   get isBookImage(): boolean {

@@ -22,7 +22,7 @@ export class Image extends ImageCodegen {
       [ImageType.AuthorImage]: this.author,
       [ImageType.BookImage]: this.book,
       [ImageType.PublisherImage]: this.publisher,
-    }[this.type];
+    }[this.type.code];
   }
 }
 

@@ -717,17 +717,16 @@ export class EntityManager<C = {}> {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
-          // We don't filterUnsavedDeletedEntities b/c we want to
-          // clear them from any references/collections they might be in.
-          let todos = createTodos(pendingEntities, false);
+          let todos = createTodos(pendingEntities);
 
           // Run our hooks
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);
-          // Recalc todos in case one of ^ hooks did an em.dlete
-          todos = createTodos(pendingEntities, false);
+          // Recalc todos in case one of ^ hooks did an em.delete
+          todos = createTodos(pendingEntities);
           await beforeDelete(this.ctx, todos);
+
           // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
           await cleanupDeletedRelations(todos);
 
@@ -751,7 +750,7 @@ export class EntityManager<C = {}> {
         });
       }
 
-      const entityTodos = createTodos(entitiesToFlush, true);
+      const entityTodos = createTodos(entitiesToFlush);
 
       if (!skipValidation) {
         await addReactiveValidations(entityTodos);

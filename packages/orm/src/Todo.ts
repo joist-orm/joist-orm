@@ -17,13 +17,15 @@ export class Todo {
 /**
  * Scans `entities` for new/updated entities and arranges them per-type in entity order.
  */
-export function createTodos(entities: Entity[], filterUnsavedDeletedEntities: boolean): Record<string, Todo> {
+export function createTodos(entities: Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
     if (entity.isPendingFlush) {
       const todo = getTodo(todos, entity);
       if (entity.isPendingDelete) {
-        if (!entity.isNewEntity || !filterUnsavedDeletedEntities) {
+        // Skip entities that were created and them immediately `em.delete`-d; granted this is
+        // probably rare, but we shouldn't run hooks or have the driver try and delete these.
+        if (!entity.isNewEntity) {
           todo.deletes.push(entity);
         }
       } else if (entity.isNewEntity) {

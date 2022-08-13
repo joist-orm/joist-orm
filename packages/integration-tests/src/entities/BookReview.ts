@@ -16,7 +16,7 @@ export class BookReview extends BookReviewCodegen {
 // Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
 config.setAsyncDerivedField("isPublic", { book: { author: ["age", "graduated"] } }, (review) => {
   const author = review.book.get.author.get;
-  return !!author.age && author.age >= 21 && !!author.graduated;
+  return !!author && !!author.age && author.age >= 21 && !!author.graduated;
 });
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)

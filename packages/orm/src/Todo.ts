@@ -17,13 +17,15 @@ export class Todo {
 /**
  * Scans `entities` for new/updated entities and arranges them per-type in entity order.
  */
-export function createTodos(entities: Entity[]): Record<string, Todo> {
+export function createTodos(entities: Entity[], filterUnsavedDeletedEntities: boolean): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
     if (entity.isPendingFlush) {
       const todo = getTodo(todos, entity);
       if (entity.isPendingDelete) {
-        todo.deletes.push(entity);
+        if (!entity.isNewEntity || !filterUnsavedDeletedEntities) {
+          todo.deletes.push(entity);
+        }
       } else if (entity.isNewEntity) {
         todo.inserts.push(entity);
       } else {

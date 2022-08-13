@@ -96,15 +96,15 @@ describe("EntityManager.reactiveRules", () => {
   it.withCtx("creates the right reactive rules", async ({ em }) => {
     expect(getMetadata(Author).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule
-      { name: "Author.ts:115", fields: ["firstName"], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:116", fields: ["firstName"], path: [], fn: expect.any(Function) },
       // Author's "cannot have 13 books" rules
-      { name: "Author.ts:122", fields: [], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:123", fields: [], path: [], fn: expect.any(Function) },
       // Author's noop mentor rule
-      { name: "Author.ts:129", fields: ["mentor"], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:130", fields: ["mentor"], path: [], fn: expect.any(Function) },
       // Author's graduated rule that runs on hook changes
-      { name: "Author.ts:134", fields: ["graduated"], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:135", fields: ["graduated"], path: [], fn: expect.any(Function) },
       // Author's immutable age rule (w/o age listed b/c it is immutable, but still needs to fire on create)
-      { name: "Author.ts:142", fields: [], path: [], fn: expect.any(Function) },
+      { name: "Author.ts:143", fields: [], path: [], fn: expect.any(Function) },
       // Book's noop author.firstName rule, only depends on firstName
       { name: "Book.ts:15", fields: ["firstName"], path: ["books"], fn: expect.any(Function) },
       // Book's "too many colors" rule, only depends on favoriteColors, not firstName:ro
@@ -114,9 +114,9 @@ describe("EntityManager.reactiveRules", () => {
 
     expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule
-      { name: "Author.ts:115", fields: ["author", "title"], path: ["author"], fn: expect.any(Function) },
+      { name: "Author.ts:116", fields: ["author", "title"], path: ["author"], fn: expect.any(Function) },
       // Author's "cannot have 13 books" rule
-      { name: "Author.ts:122", fields: ["author"], path: ["author"], fn: expect.any(Function) },
+      { name: "Author.ts:123", fields: ["author"], path: ["author"], fn: expect.any(Function) },
       // Book's noop rule on author.firstName, if author changes
       { name: "Book.ts:15", fields: ["author"], path: [], fn: expect.any(Function) },
       // Book's "too many colors" rule, if author changes

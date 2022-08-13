@@ -717,15 +717,20 @@ export class EntityManager<C = {}> {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
-          const todos = createTodos(pendingEntities);
+          // We don't filterUnsavedDeletedEntities b/c we want to
+          // clear them from any references/collections they might be in.
+          let todos = createTodos(pendingEntities, false);
 
           // Run our hooks
+          await beforeCreate(this.ctx, todos);
+          await beforeUpdate(this.ctx, todos);
+          await beforeFlush(this.ctx, todos);
+          // Recalc todos in case one of ^ hooks did an em.dlete
+          todos = createTodos(pendingEntities, false);
           await beforeDelete(this.ctx, todos);
           // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
           await cleanupDeletedRelations(todos);
-          await beforeFlush(this.ctx, todos);
-          await beforeCreate(this.ctx, todos);
-          await beforeUpdate(this.ctx, todos);
+
           recalcDerivedFields(todos);
 
           // After hooks have run, and potentially updated fields, see if
@@ -746,7 +751,7 @@ export class EntityManager<C = {}> {
         });
       }
 
-      const entityTodos = createTodos(entitiesToFlush);
+      const entityTodos = createTodos(entitiesToFlush, true);
 
       if (!skipValidation) {
         await addReactiveValidations(entityTodos);
@@ -760,7 +765,7 @@ export class EntityManager<C = {}> {
       const joinRowTodos = combineJoinRows(this.__data.joinRows);
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
-        // The driver will handle  the right thing if we're already in an existing transaction.
+        // The driver will handle the right thing if we're already in an existing transaction.
         // We also purposefully don't pass an isolation level b/c if we're only doing
         // INSERTs and UPDATEs, then we don't really care about overlapping SELECT-then-INSERT
         // serialization anomalies. (Although should we? Maybe we should run the flush hooks

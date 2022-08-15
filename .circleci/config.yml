@@ -48,7 +48,7 @@ jobs:
           condition:
             and:
               - equal: [main, << pipeline.git.branch >>]
-              - equal: ["lts/fermium", << parameters.node-version >>]
+              - equal: ["18.7.0", << parameters.node-version >>]
           steps:
             - run:
                 name: Release

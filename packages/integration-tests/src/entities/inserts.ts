@@ -104,3 +104,7 @@ export function countOfBookToTags() {
 export function countOfAuthors() {
   return testDriver.count("authors");
 }
+
+export function countOfBookReviews() {
+  return testDriver.count("book_reviews");
+}

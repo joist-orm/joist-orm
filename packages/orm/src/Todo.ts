@@ -23,7 +23,11 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
     if (entity.isPendingFlush) {
       const todo = getTodo(todos, entity);
       if (entity.isPendingDelete) {
-        todo.deletes.push(entity);
+        // Skip entities that were created and them immediately `em.delete`-d; granted this is
+        // probably rare, but we shouldn't run hooks or have the driver try and delete these.
+        if (!entity.isNewEntity) {
+          todo.deletes.push(entity);
+        }
       } else if (entity.isNewEntity) {
         todo.inserts.push(entity);
       } else {

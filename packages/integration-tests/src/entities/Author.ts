@@ -50,6 +50,7 @@ export class Author extends AuthorCodegen {
   public ageRuleInvoked = 0;
   public numberOfBooksCalcInvoked = 0;
   public graduatedRuleInvoked = 0;
+  public deleteDuringFlush = false;
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
@@ -145,11 +146,23 @@ config.addRule("age", (a) => {
 
 config.cascadeDelete("books");
 
+// Example accessing ctx from beforeFlush
 config.beforeFlush(async (author, ctx) => {
   await ctx.makeApiCall("Author.beforeFlush");
+});
+
+// Example setting a field during flush
+config.beforeFlush(async (author, ctx) => {
   author.beforeFlushRan = true;
   if (author.setGraduatedInFlush) {
     author.graduated = new Date();
+  }
+});
+
+// Example deleting during a flush
+config.beforeFlush(async (author, { em }) => {
+  if (author.deleteDuringFlush) {
+    em.delete(author);
   }
 });
 

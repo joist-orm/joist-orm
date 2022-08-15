@@ -1,4 +1,7 @@
 import {
+  countOfAuthors,
+  countOfBookReviews,
+  countOfBooks,
   del,
   insertAuthor,
   insertBook,
@@ -1256,6 +1259,36 @@ describe("EntityManager", () => {
     it("handles both undefined", async () => {
       expect(sameEntity(undefined, authorMeta, undefined)).toEqual(true);
     });
+  });
+
+  it("can delete entities from a hook", async () => {
+    // Given an author with a book + reviews
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { books: [{ reviews: [{}] }] });
+    await em.flush();
+    // When we delete the author from a beforeFlush hook
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, a1.idOrFail);
+    a2.deleteDuringFlush = true;
+    em2.touch(a2);
+    await em2.flush();
+    // Then the entities were deleted
+    expect(await countOfAuthors()).toBe(0);
+    expect(await countOfBooks()).toBe(0);
+    expect(await countOfBookReviews()).toBe(0);
+  });
+
+  it("can new delete entities from a hook", async () => {
+    // Given an author with a book + reviews
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { books: [{ reviews: [{}] }] });
+    // When we delete the author before its even been saved
+    a1.deleteDuringFlush = true;
+    await em.flush();
+    // Then the entities were not saved
+    expect(await countOfAuthors()).toBe(0);
+    expect(await countOfBooks()).toBe(0);
+    expect(await countOfBookReviews()).toBe(0);
   });
 });
 

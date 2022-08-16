@@ -1,3 +1,10 @@
+## [1.24.2](https://github.com/stephenh/joist-ts/compare/v1.24.1...v1.24.2) (2022-08-16)
+
+
+### Bug Fixes
+
+* **release:** Include test-utils. ([6c2b564](https://github.com/stephenh/joist-ts/commit/6c2b564ffa3a0f960cd24b6f384b330ed49696b7))
+
 ## [1.24.1](https://github.com/stephenh/joist-ts/compare/v1.24.0...v1.24.1) (2022-08-16)
 
 

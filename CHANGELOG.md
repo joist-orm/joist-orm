@@ -1,3 +1,12 @@
+## [1.24.1](https://github.com/stephenh/joist-ts/compare/v1.24.0...v1.24.1) (2022-08-16)
+
+
+### Bug Fixes
+
+* Fix em.deletes in beforeFlush. ([#394](https://github.com/stephenh/joist-ts/issues/394)) ([85652c6](https://github.com/stephenh/joist-ts/commit/85652c6ada6da6d1f019ba5c5b335cd7522b75a4)), closes [#393](https://github.com/stephenh/joist-ts/issues/393)
+* Fix filtering on an entity list for IN. ([#391](https://github.com/stephenh/joist-ts/issues/391)) ([07b86af](https://github.com/stephenh/joist-ts/commit/07b86af5d43a6f9f657f6da7c7c9e91a6018f769))
+* Fix release step. ([f4e09f9](https://github.com/stephenh/joist-ts/commit/f4e09f99eb0d735074b14d5336c78df47072c06b))
+
 # [1.24.0](https://github.com/stephenh/joist-ts/compare/v1.23.0...v1.24.0) (2022-08-07)
 
 

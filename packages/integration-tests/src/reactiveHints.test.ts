@@ -165,5 +165,24 @@ describe("reactiveHints", () => {
       const b3e: Reacted<Book, { author: { publisher: "name"; firstName_ro: {} } }> = null!;
       console.log(b3e.author.get.firstName, b3e.author.get.publisher.get!.name);
     }
+
+    function passLoadedToReacted() {
+      // Given a function that wants a Reacted subview of Author
+      function calcAuthor(author: Reacted<Author, { firstName: {}; books: "title" }>): void {}
+      // When we have a Loaded author
+      const a1: Loaded<Author, "books"> = null!;
+      // Then we can call it
+      calcAuthor(a1);
+    }
+
+    function cannotPassPartiallyLoadedToReacted() {
+      // Given a function that wants a Reacted subview of Author
+      function calcAuthor(author: Reacted<Author, { firstName: {}; books: "title" }>): void {}
+      // When we have a Loaded author, but books is not loaded
+      const a1: Loaded<Author, "publisher"> = null!;
+      // Then we cannot call it
+      // @ts-expect-error
+      calcAuthor(a1);
+    }
   });
 });

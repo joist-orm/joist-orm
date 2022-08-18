@@ -1,3 +1,10 @@
+# [1.25.0](https://github.com/stephenh/joist-ts/compare/v1.24.2...v1.25.0) (2022-08-18)
+
+
+### Features
+
+* Allow passing Loaded to functions that accept Reacted. ([#395](https://github.com/stephenh/joist-ts/issues/395)) ([6d1013f](https://github.com/stephenh/joist-ts/commit/6d1013f62f3b224066c7acd19ed9be74fe543e92))
+
 ## [1.24.2](https://github.com/stephenh/joist-ts/compare/v1.24.1...v1.24.2) (2022-08-16)
 
 

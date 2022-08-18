@@ -20,6 +20,10 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   abstract id: string | undefined;
   abstract idTagged: string | undefined;
   readonly __orm: EntityOrmField;
+  // This gives rules a way to access the fully typed object instead of their Reacted view.
+  // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
+  // that sufficiently overlaps.
+  readonly entity: this;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
     this.__orm = { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false };
@@ -29,8 +33,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
       this.__orm.isNew = false;
     }
     em.register(metadata, this);
-    // This gives rules a way to access the fully typed object instead of their Reacted view
-    (this as any).entity = this;
+    this.entity = this;
   }
 
   get idUntagged(): string | undefined {

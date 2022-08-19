@@ -13,7 +13,17 @@ import {
   update,
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, authorMeta, Book, Color, newAuthor, Publisher, PublisherSize } from "./entities";
+import {
+  Author,
+  authorMeta,
+  Book,
+  Color,
+  newAuthor,
+  newBook,
+  newPublisher,
+  Publisher,
+  PublisherSize,
+} from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1289,6 +1299,18 @@ describe("EntityManager", () => {
     expect(await countOfAuthors()).toBe(0);
     expect(await countOfBooks()).toBe(0);
     expect(await countOfBookReviews()).toBe(0);
+  });
+
+  it("can load via lens", async () => {
+    // Given two books with the same publisher
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const b1 = newBook(em, { author: { publisher: p } });
+    const b2 = newBook(em, { author: { publisher: p } });
+    // When we use loadLens to find publishers
+    const publishers = await em.loadLens([b1, b2], (b) => b.author.publisher);
+    // Then we got the publisher back
+    expect(publishers).toEqual([p]);
   });
 });
 

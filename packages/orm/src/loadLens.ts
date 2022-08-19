@@ -50,7 +50,7 @@ export type Lens<T, R = T> = {
 // subclass itself, so we use the codegen hammer in our subclass to force the right Lens type
 // in a .load stub that just calls us for the implementation.
 export async function loadLens<T, U, V>(
-  start: T,
+  start: T | T[],
   fn: (lens: Lens<T>) => Lens<U, V>,
   opts: { forceReload?: boolean } = {},
 ): Promise<V> {

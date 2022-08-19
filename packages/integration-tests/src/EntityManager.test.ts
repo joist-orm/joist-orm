@@ -13,7 +13,17 @@ import {
   update,
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, authorMeta, Book, Color, newAuthor, Publisher, PublisherSize } from "./entities";
+import {
+  Author,
+  authorMeta,
+  Book,
+  Color,
+  newAuthor,
+  newBook,
+  newPublisher,
+  Publisher,
+  PublisherSize,
+} from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -679,7 +689,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => p1.authors.add(a1)).toThrow(
-      "Cannot set 'publisher' on Author#1 during a flush outside of a entity hook or from afterCommit",
+      /Cannot set 'publisher' on Author[:#]1 during a flush outside of a entity hook or from afterCommit/,
     );
     await flushPromise;
   });
@@ -1289,6 +1299,34 @@ describe("EntityManager", () => {
     expect(await countOfAuthors()).toBe(0);
     expect(await countOfBooks()).toBe(0);
     expect(await countOfBookReviews()).toBe(0);
+  });
+
+  it("can load via lens", async () => {
+    // Given two books with the same publisher
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const b1 = newBook(em, { author: { publisher: p } });
+    const b2 = newBook(em, { author: { publisher: p } });
+    const b3 = newBook(em, { author: {} });
+    // When we use loadLens to find publishers
+    const publishers = await em.loadLens([b1, b2], (b) => b.author.publisher);
+    // Then we got the publisher back
+    expect(publishers).toEqual([p]);
+  });
+
+  it("can load via lens and populate", async () => {
+    // Given two books with the same publisher
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    // And we use `as Book` to get rid of DeepLoaded to ensure the `authors.get` is added by loadLens itself
+    const b1 = newBook(em, { author: { publisher: p } }) as Book;
+    const b2 = newBook(em, { author: { publisher: p } }) as Book;
+    // When we use loadLens to find publishers
+    const publishers = await em.loadLens([b1, b2], (b) => b.author.publisher, "authors");
+    // Then we got the publisher back
+    expect(publishers).toEqual([p]);
+    // And we can get the authors
+    expect(publishers[0].authors.get.length).toBe(2);
   });
 });
 

@@ -689,7 +689,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => p1.authors.add(a1)).toThrow(
-      "Cannot set 'publisher' on Author#1 during a flush outside of a entity hook or from afterCommit",
+      /Cannot set 'publisher' on Author[:#]1 during a flush outside of a entity hook or from afterCommit/,
     );
     await flushPromise;
   });
@@ -1305,9 +1305,9 @@ describe("EntityManager", () => {
     // Given two books with the same publisher
     const em = newEntityManager();
     const p = newPublisher(em);
-    const b1 = newBook(em, { author: { publisher: p } }) as Book;
-    const b2 = newBook(em, { author: { publisher: p } }) as Book;
-    const b3 = newBook(em, { author: {} }) as Book;
+    const b1 = newBook(em, { author: { publisher: p } });
+    const b2 = newBook(em, { author: { publisher: p } });
+    const b3 = newBook(em, { author: {} });
     // When we use loadLens to find publishers
     const publishers = await em.loadLens([b1, b2], (b) => b.author.publisher);
     // Then we got the publisher back
@@ -1318,6 +1318,7 @@ describe("EntityManager", () => {
     // Given two books with the same publisher
     const em = newEntityManager();
     const p = newPublisher(em);
+    // And we use `as Book` to get rid of DeepLoaded to ensure the `authors.get` is added by loadLens itself
     const b1 = newBook(em, { author: { publisher: p } }) as Book;
     const b2 = newBook(em, { author: { publisher: p } }) as Book;
     // When we use loadLens to find publishers
@@ -1325,7 +1326,7 @@ describe("EntityManager", () => {
     // Then we got the publisher back
     expect(publishers).toEqual([p]);
     // And we can get the authors
-    expect(publishers[0].authors.get.length).toBe(1);
+    expect(publishers[0].authors.get.length).toBe(2);
   });
 });
 

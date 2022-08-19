@@ -1,3 +1,10 @@
+# [1.26.0](https://github.com/stephenh/joist-ts/compare/v1.25.0...v1.26.0) (2022-08-19)
+
+
+### Features
+
+* Add EntityManager.loadLens. ([#396](https://github.com/stephenh/joist-ts/issues/396)) ([bd9e62c](https://github.com/stephenh/joist-ts/commit/bd9e62cb0145267dbf97b3d0f649aef5dc8aa36d))
+
 # [1.25.0](https://github.com/stephenh/joist-ts/compare/v1.24.2...v1.25.0) (2022-08-18)
 
 

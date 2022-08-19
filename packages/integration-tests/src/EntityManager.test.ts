@@ -1305,12 +1305,27 @@ describe("EntityManager", () => {
     // Given two books with the same publisher
     const em = newEntityManager();
     const p = newPublisher(em);
-    const b1 = newBook(em, { author: { publisher: p } });
-    const b2 = newBook(em, { author: { publisher: p } });
+    const b1 = newBook(em, { author: { publisher: p } }) as Book;
+    const b2 = newBook(em, { author: { publisher: p } }) as Book;
+    const b3 = newBook(em, { author: {} }) as Book;
     // When we use loadLens to find publishers
     const publishers = await em.loadLens([b1, b2], (b) => b.author.publisher);
     // Then we got the publisher back
     expect(publishers).toEqual([p]);
+  });
+
+  it("can load via lens and populate", async () => {
+    // Given two books with the same publisher
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const b1 = newBook(em, { author: { publisher: p } }) as Book;
+    const b2 = newBook(em, { author: { publisher: p } }) as Book;
+    // When we use loadLens to find publishers
+    const publishers = await em.loadLens([b1, b2], (b) => b.author.publisher, "authors");
+    // Then we got the publisher back
+    expect(publishers).toEqual([p]);
+    // And we can get the authors
+    expect(publishers[0].authors.get.length).toBe(1);
   });
 });
 

@@ -549,8 +549,22 @@ export class EntityManager<C = {}> {
    * Results are unique, i.e. if doing `em.loadLens([b1, b2], b => b.author.publisher)` point to the
    * same `Publisher`, it will only be returned as a single value.
    */
-  public async loadLens<T extends Entity, U, V>(entities: T[], fn: (lens: Lens<T>) => Lens<U, V>): Promise<V> {
-    return loadLens(entities, fn);
+  public async loadLens<T extends Entity, U, V>(entities: T[], fn: (lens: Lens<T>) => Lens<U, V>): Promise<U[]>;
+  public async loadLens<T extends Entity, U extends Entity, V, H extends LoadHint<U>>(
+    entities: T[],
+    fn: (lens: Lens<T>) => Lens<U, V>,
+    populate: Const<H>,
+  ): Promise<Loaded<U, H>[]>;
+  public async loadLens<T extends Entity, U, V>(
+    entities: T[],
+    fn: (lens: Lens<T>) => Lens<U, V>,
+    populate?: any,
+  ): Promise<V> {
+    const result = await loadLens(entities, fn);
+    if (populate) {
+      await this.populate(result as any as Entity[], populate);
+    }
+    return result;
   }
 
   /** Loads entities from a knex QueryBuilder. */

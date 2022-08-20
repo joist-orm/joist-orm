@@ -4,6 +4,7 @@ import {
   BooleanGraphQLFilter,
   Changes,
   ConfigApi,
+  DerivedAsyncProperty,
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
@@ -151,12 +152,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
     setField(this, "rating", rating);
   }
 
-  get isPublic(): boolean {
-    if (!("isPublic" in this.__orm.data)) {
-      throw new Error("isPublic has not been derived yet");
-    }
-    return this.__orm.data["isPublic"];
-  }
+  abstract readonly isPublic: DerivedAsyncProperty<BookReview, boolean>;
 
   get createdAt(): Date {
     return this.__orm.data["createdAt"];

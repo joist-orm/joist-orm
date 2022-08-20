@@ -65,3 +65,4 @@ export const FactoryOpts = imp("FactoryOpts@joist-orm");
 export const SSAssert = imp("assert@superstruct");
 export const EntityConstructor = imp("EntityConstructor@joist-orm");
 export const deTagId = imp("deTagId@joist-orm");
+export const DerivedAsyncProperty = imp("DerivedAsyncProperty@joist-orm");

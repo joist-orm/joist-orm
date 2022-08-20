@@ -9,6 +9,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  DerivedAsyncProperty,
   deTagId,
   Entity,
   EntityConstructor,
@@ -67,12 +68,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     let getter: Code;
     if (p.derived === "async") {
       getter = code`
-        get ${fieldName}(): ${fieldType}${maybeOptional} {
-          if (!("${fieldName}" in this.__orm.data)) {
-            throw new Error("${fieldName} has not been derived yet");
-          }
-          return this.__orm.data["${fieldName}"];
-        }
+        abstract readonly ${fieldName}: ${DerivedAsyncProperty}<${entity.name}, ${p.fieldType}>;
      `;
     } else if (p.derived === "sync") {
       getter = code`

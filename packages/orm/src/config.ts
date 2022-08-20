@@ -1,8 +1,8 @@
 import { Entity } from "./Entity";
-import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn, setField } from "./index";
+import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn } from "./index";
 import { convertToLoadHint } from "./reactiveHints";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { AsyncDerivedFieldInternal, ValidationRule, ValidationRuleInternal } from "./rules";
+import { ValidationRule, ValidationRuleInternal } from "./rules";
 import { MaybePromise } from "./utils";
 
 export type EntityHook =
@@ -56,20 +56,6 @@ export class ConfigApi<T extends Entity, C> {
       const relation = entity[relationship] as any as AbstractRelationImpl<any>;
       relation.maybeCascadeDelete();
     });
-  }
-
-  /** Registers `fn` as the lambda to provide the async value for `key`. */
-  setAsyncDerivedField<P extends keyof T & string, H extends ReactiveHint<T>>(
-    key: P,
-    hint: H,
-    fn: (entity: Reacted<T, H>) => T[P],
-  ): void {
-    const fn2 = async (entity: T): Promise<void> => {
-      await entity.em.populate([entity], convertToLoadHint(getMetadata(entity), hint));
-      const value = fn(entity as Reacted<T, H>);
-      setField(entity, key, value);
-    };
-    this.__data.asyncDerivedFields[key] = { name: key, hint, fn: fn2 };
   }
 
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
@@ -146,21 +132,18 @@ interface ReactiveRule {
  * Stores a path back to a reactive derived field.
  *
  * I.e. if `Book` has a `asyncField` that reacts to `Author.title`, then `Author`'s config will have
- * a `ReactiveFields` with fields `["title"]`, path `books`, and rule `ruleFn`.
+ * a `ReactiveFields` with fields `["title"]`, path `books`, and name `title`.
  */
 interface ReactiveField {
   name: string;
   fields: string[];
   path: string[];
-  fn: (entity: Entity) => Promise<void>;
 }
 
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */
 export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
-  /** The async derived fields for this entity type. */
-  asyncDerivedFields: Record<string, AsyncDerivedFieldInternal<T>> = {};
   /** The hooks for this instance. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],

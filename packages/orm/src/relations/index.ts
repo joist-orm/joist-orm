@@ -8,6 +8,7 @@ export {
   isLoadedAsyncProperty,
   LoadedProperty,
 } from "./hasAsyncProperty";
+export { DerivedAsyncProperty, hasDerivedAsyncProperty, isDerivedAsyncProperty } from "./hasDerivedAsyncProperty";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";

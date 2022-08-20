@@ -67,6 +67,7 @@ export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T
         .populate(entity, convertToLoadHint(getMetadata(entity), loadHint as ReactiveHint<T>))
         .then((loaded) => {
           this.loaded = true;
+          // Go through `this.get` so that `setField` is called to set our latest value
           return this.get;
         }));
     }
@@ -77,6 +78,8 @@ export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T
     const { entity, fn } = this;
     if (this.loaded) {
       const newValue = fn(entity as Reacted<T, H>);
+      // It's cheap to set this every time we're called, i.e. even if it's not the
+      // official "being called during em.flush" update.
       setField(entity, this.fieldName, newValue);
       return newValue;
     } else {

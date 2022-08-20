@@ -63,7 +63,7 @@ export class Author {
 
 This getter will be automatically called by Joist during any `INSERT` or `UPDATE` of `Author`, to determine the latest value.
 
-Because of this, synchronous persisted derived fields should be cheap to calculate. 
+Because of this, synchronous persisted derived fields should be cheap to calculate.
 
 ## Asynchronous, Unpersisted Fields
 
@@ -101,12 +101,18 @@ For async, persisted fields, there will be a column in the database to hold the 
 }
 ```
 
-And then configure it via a call to the `config` API:
+And then implement it in the `Author` domain model:
 
 ```typescript
-authorConfig.setAsyncDerivedField("numberOfBooks", "books", (author) => {
-  return author.books.get.length;
-});
+import { DerivedAsyncProperty, hasDerivedAsyncProperty } from "joist-orm";
+
+class Author extends AuthorCodegen {
+  readonly numberOfBooks: DerivedAsyncProperty<Author, number> = hasDerivedAsyncProperty(
+    "numberOfBooks",
+    "books",
+    (author) => author.books.get.length,
+  );
+}
 ```
 
 Joist will call this lambda:
@@ -121,4 +127,3 @@ For example, in this scenario:
 const a1 = await em.load(Author, "a:1");
 const a2 = await em.load(Author, "a:2");
 ```
-

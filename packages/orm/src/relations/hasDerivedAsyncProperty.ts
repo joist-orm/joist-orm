@@ -21,6 +21,7 @@ const I = Symbol();
  */
 export interface DerivedAsyncProperty<T extends Entity, V> {
   isLoaded: boolean;
+  isSet: boolean;
 
   /** Calculates the latest derived value. */
   load(): Promise<V>;
@@ -82,13 +83,15 @@ export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T
       // official "being called during em.flush" update.
       setField(entity, this.fieldName, newValue);
       return newValue;
+    } else if (this.isSet) {
+      return entity.__orm.data[this.fieldName];
     } else {
-      if (this.fieldName in entity.__orm.data) {
-        return entity.__orm.data[this.fieldName];
-      } else {
-        throw new Error(`${this.fieldName} has not been derived yet`);
-      }
+      throw new Error(`${this.fieldName} has not been derived yet`);
     }
+  }
+
+  get isSet() {
+    return this.fieldName in this.entity.__orm.data;
   }
 
   get isLoaded() {

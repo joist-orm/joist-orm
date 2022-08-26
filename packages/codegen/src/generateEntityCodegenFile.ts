@@ -9,7 +9,6 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  PersistedAsyncProperty,
   deTagId,
   Entity,
   EntityConstructor,
@@ -42,6 +41,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PersistedAsyncProperty,
   PolymorphicReference,
   setField,
   setOpts,
@@ -68,7 +68,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     let getter: Code;
     if (p.derived === "async") {
       getter = code`
-        abstract readonly ${fieldName}: ${PersistedAsyncProperty}<${entity.name}, ${p.fieldType}>;
+        abstract readonly ${fieldName}: ${PersistedAsyncProperty}<${entity.name}, ${p.fieldType}${maybeOptional}>;
      `;
     } else if (p.derived === "sync") {
       getter = code`

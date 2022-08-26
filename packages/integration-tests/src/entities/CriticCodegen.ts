@@ -87,12 +87,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
 
-  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(
-    criticColumnMeta,
-    "criticColumn",
-    "critic",
-    "critic_id",
-  );
+  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(criticColumnMeta, "criticColumn", "critic", "critic_id");
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, CriticCodegen.defaultValues, opts);

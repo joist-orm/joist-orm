@@ -113,17 +113,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   };
 
-  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(
-    bookMeta,
-    "book",
-    "advances",
-  );
+  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
 
-  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(
-    publisherMeta,
-    "publisher",
-    "bookAdvances",
-  );
+  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(publisherMeta, "publisher", "bookAdvances");
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);

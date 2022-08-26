@@ -128,9 +128,7 @@ bookConfig.addRule(newRequiredRule("updatedAt"));
 bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
-  static defaultValues: object = {
-    order: 1,
-  };
+  static defaultValues: object = { order: 1 };
 
   readonly __orm!: EntityOrmField & {
     filterType: BookFilter;
@@ -142,55 +140,19 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(
-    bookAdvanceMeta,
-    "advances",
-    "book",
-    "book_id",
-  );
+  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
 
-  readonly reviews: Collection<Book, BookReview> = hasMany(
-    bookReviewMeta,
-    "reviews",
-    "book",
-    "book_id",
-  );
+  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
 
-  readonly comments: Collection<Book, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_book_id",
-  );
+  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(
-    authorMeta,
-    "author",
-    "books",
-  );
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
-  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
-    authorMeta,
-    "currentDraftAuthor",
-    "currentDraftBook",
-    "current_draft_book_id",
-  );
+  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(authorMeta, "currentDraftAuthor", "currentDraftBook", "current_draft_book_id");
 
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(
-    imageMeta,
-    "image",
-    "book",
-    "book_id",
-  );
+  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
 
-  readonly tags: Collection<Book, Tag> = hasManyToMany(
-    "books_to_tags",
-    "tags",
-    "book_id",
-    tagMeta,
-    "books",
-    "tag_id",
-  );
+  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);

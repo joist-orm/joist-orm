@@ -140,9 +140,7 @@ publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
 
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
-  static defaultValues: object = {
-    type: PublisherType.Big,
-  };
+  static defaultValues: object = { type: PublisherType.Big };
 
   readonly __orm!: EntityOrmField & {
     filterType: PublisherFilter;
@@ -154,39 +152,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
 
-  readonly authors: Collection<Publisher, Author> = hasMany(
-    authorMeta,
-    "authors",
-    "publisher",
-    "publisher_id",
-  );
+  readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
-    bookAdvanceMeta,
-    "bookAdvances",
-    "publisher",
-    "publisher_id",
-  );
+  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(bookAdvanceMeta, "bookAdvances", "publisher", "publisher_id");
 
-  readonly comments: Collection<Publisher, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_publisher_id",
-  );
+  readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
 
-  readonly images: Collection<Publisher, Image> = hasMany(
-    imageMeta,
-    "images",
-    "publisher",
-    "publisher_id",
-  );
+  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
 
-  readonly tag: ManyToOneReference<Publisher, Tag, undefined> = hasOne(
-    tagMeta,
-    "tag",
-    "publishers",
-  );
+  readonly tag: ManyToOneReference<Publisher, Tag, undefined> = hasOne(tagMeta, "tag", "publishers");
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta, PublisherCodegen.defaultValues, opts);

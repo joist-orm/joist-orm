@@ -84,30 +84,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newTag>[1];
   };
 
-  readonly publishers: LargeCollection<Tag, Publisher> = hasLargeMany(
-    publisherMeta,
-    "publishers",
-    "tag",
-    "tag_id",
-  );
+  readonly publishers: LargeCollection<Tag, Publisher> = hasLargeMany(publisherMeta, "publishers", "tag", "tag_id");
 
-  readonly books: Collection<Tag, Book> = hasManyToMany(
-    "books_to_tags",
-    "books",
-    "tag_id",
-    bookMeta,
-    "tags",
-    "book_id",
-  );
+  readonly books: Collection<Tag, Book> = hasManyToMany("books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id");
 
-  readonly authors: LargeCollection<Tag, Author> = hasLargeManyToMany(
-    "authors_to_tags",
-    "authors",
-    "tag_id",
-    authorMeta,
-    "tags",
-    "author_id",
-  );
+  readonly authors: LargeCollection<Tag, Author> = hasLargeManyToMany("authors_to_tags", "authors", "tag_id", authorMeta, "tags", "author_id");
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta, TagCodegen.defaultValues, opts);

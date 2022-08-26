@@ -97,9 +97,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newComment>[1];
   };
 
-  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic(
-    "parent",
-  );
+  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, commentMeta, CommentCodegen.defaultValues, opts);

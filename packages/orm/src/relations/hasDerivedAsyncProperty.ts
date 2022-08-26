@@ -29,6 +29,15 @@ export interface DerivedAsyncProperty<T extends Entity, V> {
   /** If loaded, returns the latest derived value, or if unload returns the previously-calculated value. */
   get: V;
 
+  /**
+   * Returns the as-of-last-flush previously-calculated value.
+   *
+   * This is useful if you have to purposefully avoid using the lambda to calc the latest value,
+   * i.e. if you're in a test and want to watch a calculated value change from some dummy value
+   * to the new derived value.
+   * */
+  getFieldValue: V;
+
   [I]?: T;
 }
 
@@ -88,6 +97,10 @@ export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
     }
+  }
+
+  get getFieldValue(): V {
+    return this.entity.__orm.data[this.fieldName];
   }
 
   get isSet() {

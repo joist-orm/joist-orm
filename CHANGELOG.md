@@ -1,3 +1,10 @@
+## [1.28.1](https://github.com/stephenh/joist-ts/compare/v1.28.0...v1.28.1) (2022-08-26)
+
+
+### Bug Fixes
+
+* Re-codegen w/dprint. ([#400](https://github.com/stephenh/joist-ts/issues/400)) ([9f824ab](https://github.com/stephenh/joist-ts/commit/9f824abf1ada878051c0101088ccb6482e95c4d0))
+
 # [1.28.0](https://github.com/stephenh/joist-ts/compare/v1.27.1...v1.28.0) (2022-08-26)
 
 

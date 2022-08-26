@@ -104,10 +104,10 @@ For async, persisted fields, there will be a column in the database to hold the 
 And then implement it in the `Author` domain model:
 
 ```typescript
-import { DerivedAsyncProperty, hasDerivedAsyncProperty } from "joist-orm";
+import { PersistedAsyncProperty, hasPersistedAsyncProperty } from "joist-orm";
 
 class Author extends AuthorCodegen {
-  readonly numberOfBooks: DerivedAsyncProperty<Author, number> = hasDerivedAsyncProperty(
+  readonly numberOfBooks: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfBooks",
     "books",
     (author) => author.books.get.length,

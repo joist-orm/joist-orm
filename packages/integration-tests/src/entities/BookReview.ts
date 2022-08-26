@@ -1,9 +1,9 @@
 import {
   cannotBeUpdated,
-  DerivedAsyncProperty,
-  hasDerivedAsyncProperty,
   hasOneDerived,
   hasOneThrough,
+  hasPersistedAsyncProperty,
+  PersistedAsyncProperty,
   Reference,
 } from "joist-orm";
 import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
@@ -20,7 +20,7 @@ export class BookReview extends BookReviewCodegen {
   );
 
   // Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
-  readonly isPublic: DerivedAsyncProperty<BookReview, boolean> = hasDerivedAsyncProperty(
+  readonly isPublic: PersistedAsyncProperty<BookReview, boolean> = hasPersistedAsyncProperty(
     "isPublic",
     { book: { author: ["age", "graduated"] } },
     (review) => {

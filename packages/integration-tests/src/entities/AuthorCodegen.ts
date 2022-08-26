@@ -5,7 +5,6 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  DerivedAsyncProperty,
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
@@ -30,6 +29,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PersistedAsyncProperty,
   setField,
   setOpts,
   ValueFilter,
@@ -263,7 +263,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   abstract get initials(): string;
 
-  abstract readonly numberOfBooks: DerivedAsyncProperty<Author, number>;
+  abstract readonly numberOfBooks: PersistedAsyncProperty<Author, number>;
 
   get isPopular(): boolean | undefined {
     return this.__orm.data["isPopular"];

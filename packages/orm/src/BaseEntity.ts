@@ -116,7 +116,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
               return [[f.fieldName, (this as any)[f.fieldName] || null]];
             case "primitive":
               if (f.derived === "async") {
-                // Use the raw value instead of the DerivedAsyncProperty
+                // Use the raw value instead of the PersistedAsyncProperty
                 return [[f.fieldName, (this as any).__orm.data[f.fieldName] || null]];
               } else {
                 return [[f.fieldName, (this as any)[f.fieldName] || null]];

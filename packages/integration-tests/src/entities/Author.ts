@@ -2,13 +2,13 @@ import {
   AsyncProperty,
   cannotBeUpdated,
   Collection,
-  DerivedAsyncProperty,
   getEm,
   hasAsyncProperty,
-  hasDerivedAsyncProperty,
   hasManyDerived,
   hasManyThrough,
+  hasPersistedAsyncProperty,
   Loaded,
+  PersistedAsyncProperty,
 } from "joist-orm";
 import { AuthorCodegen, authorConfig as config, Book, BookReview } from "./entities";
 
@@ -88,7 +88,7 @@ export class Author extends AuthorCodegen {
   }
 
   /** Example of a derived async property that can be calculated via a populate hint. */
-  readonly numberOfBooks: DerivedAsyncProperty<Author, number> = hasDerivedAsyncProperty(
+  readonly numberOfBooks: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfBooks",
     "books",
     (a) => {

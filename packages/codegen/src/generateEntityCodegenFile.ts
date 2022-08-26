@@ -9,7 +9,7 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  DerivedAsyncProperty,
+  PersistedAsyncProperty,
   deTagId,
   Entity,
   EntityConstructor,
@@ -68,7 +68,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
     let getter: Code;
     if (p.derived === "async") {
       getter = code`
-        abstract readonly ${fieldName}: ${DerivedAsyncProperty}<${entity.name}, ${p.fieldType}>;
+        abstract readonly ${fieldName}: ${PersistedAsyncProperty}<${entity.name}, ${p.fieldType}>;
      `;
     } else if (p.derived === "sync") {
       getter = code`

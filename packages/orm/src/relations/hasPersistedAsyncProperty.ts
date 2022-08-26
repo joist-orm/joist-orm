@@ -7,7 +7,7 @@ import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
 const I = Symbol();
 
 /**
- * A `DerivedAsyncProperty` is a value that is derived from other entities/values,
+ * A `PersistedAsyncProperty` is a value that is derived from other entities/values,
  * similar to an `AsyncProperty`, but it is also persisted in the database.
  *
  * This allows callers (or SQL queries) to access the value without first calling
@@ -19,7 +19,7 @@ const I = Symbol();
  * that you can observe the latest & greatest value w/o waiting for `em.flush` to
  * re-calc the value while persisting to the database.
  */
-export interface DerivedAsyncProperty<T extends Entity, V> {
+export interface PersistedAsyncProperty<T extends Entity, V> {
   isLoaded: boolean;
   isSet: boolean;
 
@@ -49,17 +49,17 @@ export interface DerivedAsyncProperty<T extends Entity, V> {
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasDerivedAsyncProperty<T extends Entity, H extends ReactiveHint<T>, V>(
+export function hasPersistedAsyncProperty<T extends Entity, H extends ReactiveHint<T>, V>(
   fieldName: keyof T & string,
   hint: Const<H>,
   fn: (entity: Reacted<T, H>) => V,
-): DerivedAsyncProperty<T, V> {
+): PersistedAsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
-  return new DerivedAsyncPropertyImpl(entity, fieldName, hint, fn);
+  return new PersistedAsyncPropertyImpl(entity, fieldName, hint, fn);
 }
 
-export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T>, V>
-  implements DerivedAsyncProperty<T, V>
+export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T>, V>
+  implements PersistedAsyncProperty<T, V>
 {
   private loaded = false;
   private loadPromise: any;
@@ -113,11 +113,13 @@ export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isDerivedAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is DerivedAsyncProperty<any, any> {
-  return maybeAsyncProperty instanceof DerivedAsyncPropertyImpl;
+export function isPersistedAsyncProperty(
+  maybeAsyncProperty: any,
+): maybeAsyncProperty is PersistedAsyncProperty<any, any> {
+  return maybeAsyncProperty instanceof PersistedAsyncPropertyImpl;
 }
 
 /** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is DerivedAsyncProperty<any, any> {
-  return isDerivedAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
+export function isLoadedAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is PersistedAsyncProperty<any, any> {
+  return isPersistedAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
 }

@@ -6,7 +6,7 @@ import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { DerivedAsyncPropertyImpl } from "./relations/hasDerivedAsyncProperty";
+import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -253,7 +253,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     Object.values(meta.fields)
       .filter((f) => f.kind === "primitive" && f.derived === "async")
       .forEach((field) => {
-        const asyncProperty = getFakeInstance(meta)[field.fieldName] as DerivedAsyncPropertyImpl<any, any, any>;
+        const asyncProperty = getFakeInstance(meta)[field.fieldName] as PersistedAsyncPropertyImpl<any, any, any>;
         const reversals = reverseReactiveHint(meta.cstr, asyncProperty.loadHint);
         reversals.forEach(({ entity, path, fields }) => {
           getMetadata(entity).config.__data.reactiveDerivedValues.push({ name: field.fieldName, path, fields });

@@ -1,14 +1,7 @@
 import { camelCase } from "change-case";
 import { EntityDbMetadata } from "joist-codegen";
 import { groupBy } from "joist-utils";
-import {
-  GqlField,
-  GqlUnion,
-  isJsonbColumn,
-  mapTypescriptTypeToGraphQLType,
-  SupportedTypescriptTypes,
-  upsertIntoFile,
-} from "./graphqlUtils";
+import { GqlField, GqlUnion, mapTypescriptTypeToGraphQLType, upsertIntoFile } from "./graphqlUtils";
 import { loadHistory, writeHistory } from "./history";
 import { Fs } from "./utils";
 
@@ -21,7 +14,7 @@ import { Fs } from "./utils";
  * without this stomping over their changes.
  */
 export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetadata[]): Promise<void> {
-  // Generate all of the "ideal" fields based solely on the domain model
+  // Generate the "ideal" fields based solely on the domain model
   const fields = [
     ...createSaveMutation(entities),
     ...createEntityFields(entities),
@@ -87,16 +80,12 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
 
     const id: GqlField = { ...common, fieldName: "id", fieldType: "ID!" };
 
-    const primitives = e.primitives
-      // jsonb columns have to be hand-mapped for now
-      .filter((p) => !isJsonbColumn(p))
-      .map(({ fieldName, fieldType: tsType, notNull }) => {
-        const fieldType = `${mapTypescriptTypeToGraphQLType(
-          fieldName,
-          tsType as SupportedTypescriptTypes,
-        )}${maybeRequired(notNull)}`;
-        return { ...common, fieldName, fieldType };
-      });
+    const primitives = e.primitives.flatMap(({ fieldName, fieldType: tsType, notNull }) => {
+      const gqlType = mapTypescriptTypeToGraphQLType(fieldName, tsType);
+      if (!gqlType) return [];
+      const fieldType = `${gqlType}${maybeRequired(notNull)}`;
+      return [{ ...common, fieldName, fieldType }];
+    });
 
     const enums = e.enums.map(({ fieldName, enumType, notNull, isArray }) => {
       const fieldType = isArray ? `[${enumType.symbol}!]!` : `${enumType.symbol}Detail${maybeRequired(notNull)}`;
@@ -164,10 +153,11 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
 
     const primitives = e.primitives
       .filter((f) => f.derived === false)
-      .filter((p) => !isJsonbColumn(p))
-      .map(({ fieldName, fieldType: tsType }) => {
-        const fieldType = `${mapTypescriptTypeToGraphQLType(fieldName, tsType as SupportedTypescriptTypes)}`;
-        return { ...common, fieldName, fieldType };
+      .flatMap(({ fieldName, fieldType: tsType }) => {
+        const gqlType = mapTypescriptTypeToGraphQLType(fieldName, tsType);
+        if (!gqlType) return [];
+        const fieldType = `${gqlType}`;
+        return [{ ...common, fieldName, fieldType }];
       });
 
     const enums = e.enums.map(({ fieldName, enumType, isArray }) => {

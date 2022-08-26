@@ -1,3 +1,10 @@
+## [1.28.4](https://github.com/stephenh/joist-ts/compare/v1.28.3...v1.28.4) (2022-08-26)
+
+
+### Bug Fixes
+
+* Use dprint preferSingleLine. ([#403](https://github.com/stephenh/joist-ts/issues/403)) ([b4fa2e6](https://github.com/stephenh/joist-ts/commit/b4fa2e6ade1cea568a8b87a09e33c59d53a9a87b))
+
 ## [1.28.3](https://github.com/stephenh/joist-ts/compare/v1.28.2...v1.28.3) (2022-08-26)
 
 

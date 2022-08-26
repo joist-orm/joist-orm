@@ -26,15 +26,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import {
-  Critic,
-  CriticColumn,
-  criticColumnMeta,
-  CriticId,
-  criticMeta,
-  CriticOrder,
-  newCriticColumn,
-} from "./entities";
+import { Critic, CriticColumn, criticColumnMeta, CriticId, criticMeta, CriticOrder, newCriticColumn } from "./entities";
 import type { EntityManager } from "./entities";
 import { Context } from "src/context";
 
@@ -67,12 +59,7 @@ export interface CriticColumnGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  critic?: EntityGraphQLFilter<
-    Critic,
-    CriticId,
-    GraphQLFilterOf<Critic>,
-    never
-  >;
+  critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, never>;
 }
 
 export interface CriticColumnOrder {
@@ -151,9 +138,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
   }
 
   setPartial(opts: PartialOrNull<CriticColumnOpts>): void {
-    setOpts(this as any as CriticColumn, opts as OptsOf<CriticColumn>, {
-      partial: true,
-    });
+    setOpts(this as any as CriticColumn, opts as OptsOf<CriticColumn>, { partial: true });
   }
 
   get changes(): Changes<CriticColumn> {
@@ -164,30 +149,15 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
     return loadLens(this as any as CriticColumn, fn);
   }
 
-  populate<H extends LoadHint<CriticColumn>>(
-    hint: H,
-  ): Promise<Loaded<CriticColumn, H>>;
-  populate<H extends LoadHint<CriticColumn>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<CriticColumn, H>>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    hint: H,
-    fn: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<CriticColumn>, V>(
-    hintOrOpts: any,
-    fn?: (cc: Loaded<CriticColumn, H>) => V,
-  ): Promise<Loaded<CriticColumn, H> | V> {
+  populate<H extends LoadHint<CriticColumn>>(hint: H): Promise<Loaded<CriticColumn, H>>;
+  populate<H extends LoadHint<CriticColumn>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<CriticColumn, H>>;
+  populate<H extends LoadHint<CriticColumn>, V>(hint: H, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
+  populate<H extends LoadHint<CriticColumn>, V>(opts: { hint: H; forceReload?: boolean }, fn: (cc: Loaded<CriticColumn, H>) => V): Promise<V>;
+  populate<H extends LoadHint<CriticColumn>, V>(hintOrOpts: any, fn?: (cc: Loaded<CriticColumn, H>) => V): Promise<Loaded<CriticColumn, H> | V> {
     return this.em.populate(this as any as CriticColumn, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<CriticColumn>>(
-    hint: H,
-  ): this is Loaded<CriticColumn, H> {
+  isLoaded<H extends LoadHint<CriticColumn>>(hint: H): this is Loaded<CriticColumn, H> {
     return isLoaded(this as any as CriticColumn, hint);
   }
 }

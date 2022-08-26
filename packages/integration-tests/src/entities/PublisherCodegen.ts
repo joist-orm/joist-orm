@@ -294,9 +294,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
-    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, {
-      partial: true,
-    });
+    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
   }
 
   get changes(): Changes<Publisher> {
@@ -307,30 +305,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return loadLens(this as any as Publisher, fn);
   }
 
-  populate<H extends LoadHint<Publisher>>(
-    hint: H,
-  ): Promise<Loaded<Publisher, H>>;
-  populate<H extends LoadHint<Publisher>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<Publisher, H>>;
-  populate<H extends LoadHint<Publisher>, V>(
-    hint: H,
-    fn: (p: Loaded<Publisher, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<Publisher, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<Publisher, H>) => V,
-  ): Promise<Loaded<Publisher, H> | V> {
+  populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
+  populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
+  populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(hintOrOpts: any, fn?: (p: Loaded<Publisher, H>) => V): Promise<Loaded<Publisher, H> | V> {
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<Publisher>>(
-    hint: H,
-  ): this is Loaded<Publisher, H> {
+  isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
     return isLoaded(this as any as Publisher, hint);
   }
 }

@@ -31,18 +31,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import {
-  Book,
-  BookId,
-  bookMeta,
-  BookOrder,
-  BookReview,
-  bookReviewMeta,
-  Comment,
-  CommentId,
-  commentMeta,
-  newBookReview,
-} from "./entities";
+import { Book, BookId, bookMeta, BookOrder, BookReview, bookReviewMeta, Comment, CommentId, commentMeta, newBookReview } from "./entities";
 import type { EntityManager } from "./entities";
 import { Context } from "src/context";
 
@@ -71,12 +60,7 @@ export interface BookReviewFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
-  comment?: EntityFilter<
-    Comment,
-    CommentId,
-    FilterOf<Comment>,
-    null | undefined
-  >;
+  comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface BookReviewGraphQLFilter {
@@ -86,12 +70,7 @@ export interface BookReviewGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
-  comment?: EntityGraphQLFilter<
-    Comment,
-    CommentId,
-    GraphQLFilterOf<Comment>,
-    null | undefined
-  >;
+  comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
 export interface BookReviewOrder {
@@ -181,9 +160,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   }
 
   setPartial(opts: PartialOrNull<BookReviewOpts>): void {
-    setOpts(this as any as BookReview, opts as OptsOf<BookReview>, {
-      partial: true,
-    });
+    setOpts(this as any as BookReview, opts as OptsOf<BookReview>, { partial: true });
   }
 
   get changes(): Changes<BookReview> {
@@ -194,30 +171,15 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
     return loadLens(this as any as BookReview, fn);
   }
 
-  populate<H extends LoadHint<BookReview>>(
-    hint: H,
-  ): Promise<Loaded<BookReview, H>>;
-  populate<H extends LoadHint<BookReview>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<BookReview, H>>;
-  populate<H extends LoadHint<BookReview>, V>(
-    hint: H,
-    fn: (br: Loaded<BookReview, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (br: Loaded<BookReview, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(
-    hintOrOpts: any,
-    fn?: (br: Loaded<BookReview, H>) => V,
-  ): Promise<Loaded<BookReview, H> | V> {
+  populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
+  populate<H extends LoadHint<BookReview>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookReview, H>>;
+  populate<H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookReview>, V>(opts: { hint: H; forceReload?: boolean }, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookReview>, V>(hintOrOpts: any, fn?: (br: Loaded<BookReview, H>) => V): Promise<Loaded<BookReview, H> | V> {
     return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<BookReview>>(
-    hint: H,
-  ): this is Loaded<BookReview, H> {
+  isLoaded<H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {
     return isLoaded(this as any as BookReview, hint);
   }
 }

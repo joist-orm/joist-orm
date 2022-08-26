@@ -27,15 +27,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import {
-  Author,
-  AuthorId,
-  authorMeta,
-  AuthorOrder,
-  Book,
-  bookMeta,
-  newBook,
-} from "./entities";
+import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, newBook } from "./entities";
 import type { EntityManager } from "./entities";
 import { Context } from "src/context";
 
@@ -68,12 +60,7 @@ export interface BookGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  author?: EntityGraphQLFilter<
-    Author,
-    AuthorId,
-    GraphQLFilterOf<Author>,
-    never
-  >;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
 }
 
 export interface BookOrder {
@@ -164,21 +151,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
-  populate<H extends LoadHint<Book>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<Book, H>>;
-  populate<H extends LoadHint<Book>, V>(
-    hint: H,
-    fn: (b: Loaded<Book, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (b: Loaded<Book, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(
-    hintOrOpts: any,
-    fn?: (b: Loaded<Book, H>) => V,
-  ): Promise<Loaded<Book, H> | V> {
+  populate<H extends LoadHint<Book>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Book, H>>;
+  populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(opts: { hint: H; forceReload?: boolean }, fn: (b: Loaded<Book, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(hintOrOpts: any, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
     return this.em.populate(this as any as Book, hintOrOpts, fn);
   }
 

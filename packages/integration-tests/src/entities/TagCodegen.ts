@@ -25,18 +25,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import {
-  Author,
-  authorMeta,
-  Book,
-  BookId,
-  bookMeta,
-  newTag,
-  Publisher,
-  publisherMeta,
-  Tag,
-  tagMeta,
-} from "./entities";
+import { Author, authorMeta, Book, BookId, bookMeta, newTag, Publisher, publisherMeta, Tag, tagMeta } from "./entities";
 import type { EntityManager } from "./entities";
 import { Context } from "src/context";
 
@@ -174,21 +163,10 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;
-  populate<H extends LoadHint<Tag>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<Tag, H>>;
-  populate<H extends LoadHint<Tag>, V>(
-    hint: H,
-    fn: (t: Loaded<Tag, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Tag>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (t: Loaded<Tag, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Tag>, V>(
-    hintOrOpts: any,
-    fn?: (t: Loaded<Tag, H>) => V,
-  ): Promise<Loaded<Tag, H> | V> {
+  populate<H extends LoadHint<Tag>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Tag, H>>;
+  populate<H extends LoadHint<Tag>, V>(hint: H, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Tag>, V>(opts: { hint: H; forceReload?: boolean }, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Tag>, V>(hintOrOpts: any, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
     return this.em.populate(this as any as Tag, hintOrOpts, fn);
   }
 

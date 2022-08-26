@@ -27,31 +27,18 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import {
-  Author,
-  Book,
-  BookReview,
-  Comment,
-  commentMeta,
-  newComment,
-  Publisher,
-} from "./entities";
+import { Author, Book, BookReview, Comment, commentMeta, newComment, Publisher } from "./entities";
 import type { EntityManager } from "./entities";
 import { Context } from "src/context";
 
 export type CommentId = Flavor<string, "Comment">;
 
 export type CommentParent = Author | Book | BookReview | Publisher;
-export function getCommentParentConstructors(): EntityConstructor<
-  CommentParent
->[] {
+export function getCommentParentConstructors(): EntityConstructor<CommentParent>[] {
   return [Author, Book, BookReview, Publisher];
 }
-export function isCommentParent(
-  maybeEntity: Entity | undefined | null,
-): maybeEntity is CommentParent {
-  return maybeEntity !== undefined && maybeEntity !== null &&
-    getCommentParentConstructors().some((type) => maybeEntity instanceof type);
+export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEntity is CommentParent {
+  return maybeEntity !== undefined && maybeEntity !== null && getCommentParentConstructors().some((type) => maybeEntity instanceof type);
 }
 
 export interface CommentFields {
@@ -73,12 +60,7 @@ export interface CommentFilter {
   text?: ValueFilter<string, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  parent?: EntityFilter<
-    CommentParent,
-    IdOf<CommentParent>,
-    never,
-    null | undefined
-  >;
+  parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
 export interface CommentGraphQLFilter {
@@ -86,12 +68,7 @@ export interface CommentGraphQLFilter {
   text?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  parent?: EntityGraphQLFilter<
-    CommentParent,
-    IdOf<CommentParent>,
-    never,
-    null | undefined
-  >;
+  parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
 export interface CommentOrder {
@@ -120,10 +97,9 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newComment>[1];
   };
 
-  readonly parent: PolymorphicReference<Comment, CommentParent, never> =
-    hasOnePolymorphic(
-      "parent",
-    );
+  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic(
+    "parent",
+  );
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, commentMeta, CommentCodegen.defaultValues, opts);
@@ -179,21 +155,10 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;
-  populate<H extends LoadHint<Comment>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<Comment, H>>;
-  populate<H extends LoadHint<Comment>, V>(
-    hint: H,
-    fn: (comment: Loaded<Comment, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (comment: Loaded<Comment, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Comment>, V>(
-    hintOrOpts: any,
-    fn?: (comment: Loaded<Comment, H>) => V,
-  ): Promise<Loaded<Comment, H> | V> {
+  populate<H extends LoadHint<Comment>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Comment, H>>;
+  populate<H extends LoadHint<Comment>, V>(hint: H, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Comment>, V>(opts: { hint: H; forceReload?: boolean }, fn: (comment: Loaded<Comment, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Comment>, V>(hintOrOpts: any, fn?: (comment: Loaded<Comment, H>) => V): Promise<Loaded<Comment, H> | V> {
     return this.em.populate(this as any as Comment, hintOrOpts, fn);
   }
 

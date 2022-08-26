@@ -95,12 +95,7 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
-  currentDraftAuthor?: EntityFilter<
-    Author,
-    AuthorId,
-    FilterOf<Author>,
-    null | undefined
-  >;
+  currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
@@ -110,24 +105,9 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  author?: EntityGraphQLFilter<
-    Author,
-    AuthorId,
-    GraphQLFilterOf<Author>,
-    never
-  >;
-  currentDraftAuthor?: EntityGraphQLFilter<
-    Author,
-    AuthorId,
-    GraphQLFilterOf<Author>,
-    null | undefined
-  >;
-  image?: EntityGraphQLFilter<
-    Image,
-    ImageId,
-    GraphQLFilterOf<Image>,
-    null | undefined
-  >;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
 }
 
 export interface BookOrder {
@@ -274,21 +254,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
-  populate<H extends LoadHint<Book>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<Book, H>>;
-  populate<H extends LoadHint<Book>, V>(
-    hint: H,
-    fn: (b: Loaded<Book, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (b: Loaded<Book, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(
-    hintOrOpts: any,
-    fn?: (b: Loaded<Book, H>) => V,
-  ): Promise<Loaded<Book, H> | V> {
+  populate<H extends LoadHint<Book>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Book, H>>;
+  populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(opts: { hint: H; forceReload?: boolean }, fn: (b: Loaded<Book, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(hintOrOpts: any, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
     return this.em.populate(this as any as Book, hintOrOpts, fn);
   }
 

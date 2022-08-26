@@ -26,15 +26,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import {
-  Artist,
-  ArtistId,
-  artistMeta,
-  ArtistOrder,
-  newPainting,
-  Painting,
-  paintingMeta,
-} from "./entities";
+import { Artist, ArtistId, artistMeta, ArtistOrder, newPainting, Painting, paintingMeta } from "./entities";
 import type { EntityManager } from "./entities";
 import { Context } from "src/context";
 
@@ -67,12 +59,7 @@ export interface PaintingGraphQLFilter {
   title?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  artist?: EntityGraphQLFilter<
-    Artist,
-    ArtistId,
-    GraphQLFilterOf<Artist>,
-    never
-  >;
+  artist?: EntityGraphQLFilter<Artist, ArtistId, GraphQLFilterOf<Artist>, never>;
 }
 
 export interface PaintingOrder {
@@ -151,9 +138,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
   }
 
   setPartial(opts: PartialOrNull<PaintingOpts>): void {
-    setOpts(this as any as Painting, opts as OptsOf<Painting>, {
-      partial: true,
-    });
+    setOpts(this as any as Painting, opts as OptsOf<Painting>, { partial: true });
   }
 
   get changes(): Changes<Painting> {
@@ -165,21 +150,10 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Painting>>(hint: H): Promise<Loaded<Painting, H>>;
-  populate<H extends LoadHint<Painting>>(
-    opts: { hint: H; forceReload?: boolean },
-  ): Promise<Loaded<Painting, H>>;
-  populate<H extends LoadHint<Painting>, V>(
-    hint: H,
-    fn: (p: Loaded<Painting, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Painting>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<Painting, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Painting>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<Painting, H>) => V,
-  ): Promise<Loaded<Painting, H> | V> {
+  populate<H extends LoadHint<Painting>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Painting, H>>;
+  populate<H extends LoadHint<Painting>, V>(hint: H, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Painting>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<Painting, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Painting>, V>(hintOrOpts: any, fn?: (p: Loaded<Painting, H>) => V): Promise<Loaded<Painting, H> | V> {
     return this.em.populate(this as any as Painting, hintOrOpts, fn);
   }
 

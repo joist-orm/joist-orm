@@ -20,9 +20,9 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import { AuthorStat, authorStatMeta, newAuthorStat } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 
@@ -50,7 +50,8 @@ export interface AuthorStatOpts {
   doublePrecision: number;
 }
 
-export interface AuthorStatIdsOpts {}
+export interface AuthorStatIdsOpts {
+}
 
 export interface AuthorStatFilter {
   id?: ValueFilter<AuthorStatId, never>;
@@ -244,14 +245,8 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<AuthorStat>>(hint: H): Promise<Loaded<AuthorStat, H>>;
   populate<H extends LoadHint<AuthorStat>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<AuthorStat, H>>;
   populate<H extends LoadHint<AuthorStat>, V>(hint: H, fn: (as: Loaded<AuthorStat, H>) => V): Promise<V>;
-  populate<H extends LoadHint<AuthorStat>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (as: Loaded<AuthorStat, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<AuthorStat>, V>(
-    hintOrOpts: any,
-    fn?: (as: Loaded<AuthorStat, H>) => V,
-  ): Promise<Loaded<AuthorStat, H> | V> {
+  populate<H extends LoadHint<AuthorStat>, V>(opts: { hint: H; forceReload?: boolean }, fn: (as: Loaded<AuthorStat, H>) => V): Promise<V>;
+  populate<H extends LoadHint<AuthorStat>, V>(hintOrOpts: any, fn?: (as: Loaded<AuthorStat, H>) => V): Promise<Loaded<AuthorStat, H> | V> {
     return this.em.populate(this as any as AuthorStat, hintOrOpts, fn);
   }
 

@@ -27,8 +27,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   AdvanceStatus,
   AdvanceStatusDetails,
@@ -45,6 +43,8 @@ import {
   publisherMeta,
   PublisherOrder,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
@@ -115,11 +115,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
 
   readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
 
-  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(
-    publisherMeta,
-    "publisher",
-    "bookAdvances",
-  );
+  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(publisherMeta, "publisher", "bookAdvances");
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);
@@ -193,14 +189,8 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>>;
   populate<H extends LoadHint<BookAdvance>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookAdvance, H>>;
   populate<H extends LoadHint<BookAdvance>, V>(hint: H, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
-  populate<H extends LoadHint<BookAdvance>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (ba: Loaded<BookAdvance, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<BookAdvance>, V>(
-    hintOrOpts: any,
-    fn?: (ba: Loaded<BookAdvance, H>) => V,
-  ): Promise<Loaded<BookAdvance, H> | V> {
+  populate<H extends LoadHint<BookAdvance>, V>(opts: { hint: H; forceReload?: boolean }, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookAdvance>, V>(hintOrOpts: any, fn?: (ba: Loaded<BookAdvance, H>) => V): Promise<Loaded<BookAdvance, H> | V> {
     return this.em.populate(this as any as BookAdvance, hintOrOpts, fn);
   }
 

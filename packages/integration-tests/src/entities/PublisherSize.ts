@@ -3,7 +3,11 @@ export enum PublisherSize {
   Large = "LARGE",
 }
 
-export type PublisherSizeDetails = { id: number; code: PublisherSize; name: string };
+export type PublisherSizeDetails = {
+  id: number;
+  code: PublisherSize;
+  name: string;
+};
 
 const details: Record<PublisherSize, PublisherSizeDetails> = {
   [PublisherSize.Small]: { id: 1, code: PublisherSize.Small, name: "Small" },

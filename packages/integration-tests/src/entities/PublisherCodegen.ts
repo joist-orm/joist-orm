@@ -29,8 +29,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -58,6 +56,8 @@ import {
   tagMeta,
   TagOrder,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -140,9 +140,7 @@ publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
 
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
-  static defaultValues: object = {
-    type: PublisherType.Big,
-  };
+  static defaultValues: object = { type: PublisherType.Big };
 
   readonly __orm!: EntityOrmField & {
     filterType: PublisherFilter;
@@ -156,12 +154,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
 
   readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
-    bookAdvanceMeta,
-    "bookAdvances",
-    "publisher",
-    "publisher_id",
-  );
+  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(bookAdvanceMeta, "bookAdvances", "publisher", "publisher_id");
 
   readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
 
@@ -289,14 +282,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (p: Loaded<Publisher, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(
-    hintOrOpts: any,
-    fn?: (p: Loaded<Publisher, H>) => V,
-  ): Promise<Loaded<Publisher, H> | V> {
+  populate<H extends LoadHint<Publisher>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(hintOrOpts: any, fn?: (p: Loaded<Publisher, H>) => V): Promise<Loaded<Publisher, H> | V> {
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 

@@ -26,9 +26,9 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, newBook } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type BookId = Flavor<string, "Book">;
 
@@ -132,10 +132,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
   populate<H extends LoadHint<Book>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Book, H>>;
   populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (b: Loaded<Book, H>) => V,
-  ): Promise<V>;
+  populate<H extends LoadHint<Book>, V>(opts: { hint: H; forceReload?: boolean }, fn: (b: Loaded<Book, H>) => V): Promise<V>;
   populate<H extends LoadHint<Book>, V>(hintOrOpts: any, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
     return this.em.populate(this as any as Book, hintOrOpts, fn);
   }

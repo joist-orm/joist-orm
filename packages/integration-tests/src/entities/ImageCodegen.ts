@@ -27,8 +27,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -49,6 +47,8 @@ import {
   publisherMeta,
   PublisherOrder,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type ImageId = Flavor<string, "Image">;
 
@@ -213,14 +213,8 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>>;
   populate<H extends LoadHint<Image>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Image, H>>;
   populate<H extends LoadHint<Image>, V>(hint: H, fn: (i: Loaded<Image, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Image>, V>(
-    opts: { hint: H; forceReload?: boolean },
-    fn: (i: Loaded<Image, H>) => V,
-  ): Promise<V>;
-  populate<H extends LoadHint<Image>, V>(
-    hintOrOpts: any,
-    fn?: (i: Loaded<Image, H>) => V,
-  ): Promise<Loaded<Image, H> | V> {
+  populate<H extends LoadHint<Image>, V>(opts: { hint: H; forceReload?: boolean }, fn: (i: Loaded<Image, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Image>, V>(hintOrOpts: any, fn?: (i: Loaded<Image, H>) => V): Promise<Loaded<Image, H> | V> {
     return this.em.populate(this as any as Image, hintOrOpts, fn);
   }
 

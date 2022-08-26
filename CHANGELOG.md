@@ -1,3 +1,10 @@
+# [1.27.0](https://github.com/stephenh/joist-ts/compare/v1.26.0...v1.27.0) (2022-08-26)
+
+
+### Features
+
+* Add PersistedAsyncProperty for derived async fields. ([#397](https://github.com/stephenh/joist-ts/issues/397)) ([61e11d5](https://github.com/stephenh/joist-ts/commit/61e11d514a8ed4d9cf94e0c5a9097a3e1d5ae679))
+
 # [1.26.0](https://github.com/stephenh/joist-ts/compare/v1.25.0...v1.26.0) (2022-08-19)
 
 

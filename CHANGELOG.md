@@ -1,3 +1,10 @@
+## [1.27.1](https://github.com/stephenh/joist-ts/compare/v1.27.0...v1.27.1) (2022-08-26)
+
+
+### Bug Fixes
+
+* Allow nullable persisted fields. ([#398](https://github.com/stephenh/joist-ts/issues/398)) ([ed8604d](https://github.com/stephenh/joist-ts/commit/ed8604db536ea3d2f6a68e23ada0efc37a5fa364))
+
 # [1.27.0](https://github.com/stephenh/joist-ts/compare/v1.26.0...v1.27.0) (2022-08-26)
 
 

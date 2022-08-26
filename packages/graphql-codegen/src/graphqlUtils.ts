@@ -10,7 +10,7 @@ import {
 import { PrimitiveField } from "joist-codegen";
 import { PrimitiveTypescriptType } from "joist-codegen/build/EntityDbMetadata";
 import { groupBy } from "joist-utils";
-import prettier, { resolveConfig } from "prettier";
+import prettier, { Options, resolveConfig } from "prettier";
 import { Import } from "ts-poet";
 import { Fs } from "./utils";
 
@@ -54,8 +54,10 @@ export async function upsertIntoFile(fs: Fs, file: string, fields: GqlEntry[]): 
   await fs.save(file, formatted);
 }
 
+let prettierPromise: Promise<Options | null>;
+
 export async function formatGraphQL(content: string): Promise<string> {
-  const prettierConfig = await resolveConfig("./");
+  const prettierConfig = await (prettierPromise ??= resolveConfig("./"));
   return prettier.format(content, { parser: "graphql", ...prettierConfig });
 }
 
@@ -180,11 +182,14 @@ function mergeDocs(existingDoc: DocumentNode, newDocs: [string, DocumentNode][])
   });
 }
 
-export type GraphQLType = "Boolean" | "String" | "Int" | "Date" | "DateTime";
+export type GraphQLType = "Boolean" | "String" | "Int" | "Date" | "DateTime" | string;
 
 export type SupportedTypescriptTypes = Exclude<PrimitiveTypescriptType, "Object" | Import>;
 
-export function mapTypescriptTypeToGraphQLType(fieldName: string, type: SupportedTypescriptTypes): GraphQLType {
+export function mapTypescriptTypeToGraphQLType(
+  fieldName: string,
+  type: PrimitiveTypescriptType | Import,
+): GraphQLType | undefined {
   switch (type) {
     case "string":
       return "String";
@@ -201,6 +206,10 @@ export function mapTypescriptTypeToGraphQLType(fieldName: string, type: Supporte
         return "Date";
       }
     default:
+      // If this is a fancy import like a superstruct/something, we can't guess what it will be in GraphQL
+      if (type instanceof Import) {
+        return undefined;
+      }
       return type;
   }
 }

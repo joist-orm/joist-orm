@@ -1059,7 +1059,7 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
           if (!asyncFields.has(entity)) {
             asyncFields.set(entity, new Set());
           }
-          asyncFields.get(entity)!.add(field.fn);
+          asyncFields.get(entity)!.add(field.name);
         });
     });
   });
@@ -1213,8 +1213,8 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
   const p = Object.values(todos).flatMap(({ metadata, asyncFields }) => {
     return [...asyncFields.entries()]
       .filter(([e]) => !e.isDeletedEntity)
-      .flatMap(([entity, fns]) => {
-        return [...fns.values()].map((fn) => fn(entity));
+      .flatMap(([entity, fields]) => {
+        return [...fields.values()].map((fieldName) => (entity as any)[fieldName].load());
       });
   });
   await Promise.all(p);

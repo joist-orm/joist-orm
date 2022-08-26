@@ -29,6 +29,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PersistedAsyncProperty,
   setField,
   setOpts,
   ValueFilter,
@@ -262,12 +263,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   abstract get initials(): string;
 
-  get numberOfBooks(): number {
-    if (!("numberOfBooks" in this.__orm.data)) {
-      throw new Error("numberOfBooks has not been derived yet");
-    }
-    return this.__orm.data["numberOfBooks"];
-  }
+  abstract readonly numberOfBooks: PersistedAsyncProperty<Author, number>;
 
   get isPopular(): boolean | undefined {
     return this.__orm.data["isPopular"];

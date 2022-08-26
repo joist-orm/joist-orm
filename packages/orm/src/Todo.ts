@@ -10,7 +10,7 @@ export class Todo {
   updates: Entity[] = [];
   deletes: Entity[] = [];
   validates: Map<Entity, Set<Function>> = new Map();
-  asyncFields: Map<Entity, Set<Function>> = new Map();
+  asyncFields: Map<Entity, Set<string>> = new Map();
   constructor(public metadata: EntityMetadata<any>) {}
 }
 
@@ -40,7 +40,9 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
           asyncFields.set(entity, new Set());
         }
         const set = asyncFields.get(entity)!;
-        Object.values(getMetadata(entity).config.__data.asyncDerivedFields).forEach(({ fn }) => set.add(fn));
+        Object.values(todo.metadata.fields)
+          .filter((f) => f.kind === "primitive" && f.derived === "async")
+          .forEach((field) => set.add(field.fieldName));
       }
     }
   }

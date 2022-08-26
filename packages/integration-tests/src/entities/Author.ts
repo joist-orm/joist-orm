@@ -6,7 +6,9 @@ import {
   hasAsyncProperty,
   hasManyDerived,
   hasManyThrough,
+  hasPersistedAsyncProperty,
   Loaded,
+  PersistedAsyncProperty,
 } from "joist-orm";
 import { AuthorCodegen, authorConfig as config, Book, BookReview } from "./entities";
 
@@ -85,6 +87,16 @@ export class Author extends AuthorCodegen {
     return (await this.books.load()).length > 0;
   }
 
+  /** Example of a derived async property that can be calculated via a populate hint. */
+  readonly numberOfBooks: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+    "numberOfBooks",
+    "books",
+    (a) => {
+      a.entity.numberOfBooksCalcInvoked++;
+      return a.books.get.length;
+    },
+  );
+
   /** Example of an async property that can be loaded via a populate hint. */
   readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
     return a.books.get.length;
@@ -152,7 +164,7 @@ config.beforeFlush(async (author, ctx) => {
 });
 
 // Example setting a field during flush
-config.beforeFlush(async (author, ctx) => {
+config.beforeFlush(async (author) => {
   author.beforeFlushRan = true;
   if (author.setGraduatedInFlush) {
     author.graduated = new Date();
@@ -187,9 +199,4 @@ config.afterCommit((author) => {
   author.afterCommitRan = true;
   author.afterCommitIdIsSet = author.id !== undefined;
   author.afterCommitIsNewEntity = author.isNewEntity;
-});
-
-config.setAsyncDerivedField("numberOfBooks", "books", (author) => {
-  author.entity.numberOfBooksCalcInvoked++;
-  return author.books.get.length;
 });

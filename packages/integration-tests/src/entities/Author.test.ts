@@ -220,7 +220,7 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "b1", author: a1 });
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(1);
+    expect(a1.numberOfBooks.get).toEqual(1);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -230,14 +230,14 @@ describe("Author", () => {
     // Given an author with initially no books
     const a1 = new Author(em, { firstName: "a1" });
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(0);
-    expect(a1.numberOfBooksCalcInvoked).toBe(1);
+    expect(a1.numberOfBooks.get).toEqual(0);
+    expect(a1.numberOfBooksCalcInvoked).toBe(2);
     // When we add a book
     new Book(em, { title: "b1", author: a1 });
     // Then the author derived value is re-derived
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(1);
-    expect(a1.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.numberOfBooksCalcInvoked).toBe(4);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -248,14 +248,15 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     const b1 = new Book(em, { author: a1, title: "b1" });
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(1);
-    expect(a1.numberOfBooksCalcInvoked).toBe(1);
+    expect(a1.numberOfBooks.get).toEqual(1);
+    // And we calc'd it once during flush, and again in the ^ get
+    expect(a1.numberOfBooksCalcInvoked).toBe(2);
     // When we change the book
     b1.title = "b12";
     await em.flush();
     // Then the author derived value didn't change
-    expect(a1.numberOfBooks).toEqual(1);
-    expect(a1.numberOfBooksCalcInvoked).toBe(1);
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.numberOfBooksCalcInvoked).toBe(3);
   });
 
   it("can force async derived values to recalc on touch", async () => {
@@ -263,15 +264,15 @@ describe("Author", () => {
     // Given an author with a book
     const a1 = newAuthor(em, { firstName: "a1" });
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(0);
-    expect(a1.numberOfBooksCalcInvoked).toBe(1);
+    expect(a1.numberOfBooks.get).toEqual(0);
+    expect(a1.numberOfBooksCalcInvoked).toBe(2);
     // When we touch the author
     em.touch(a1);
     await em.flush();
     // Then the author derived value didn't change
-    expect(a1.numberOfBooks).toEqual(0);
+    expect(a1.numberOfBooks.get).toEqual(0);
     // But it was called again
-    expect(a1.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.numberOfBooksCalcInvoked).toBe(4);
   });
 
   it("has async derived values triggered on both old and new value", async () => {
@@ -282,14 +283,14 @@ describe("Author", () => {
     //  And a book that is originally associated with a1
     const b1 = new Book(em, { title: "b1", author: a1 });
     await em.flush();
-    expect(a1.numberOfBooks).toEqual(1);
-    expect(a2.numberOfBooks).toEqual(0);
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a2.numberOfBooks.get).toEqual(0);
     // When we move the book to a2
     b1.author.set(a2);
     await em.flush();
     // Then both derived values got updated
-    expect(a1.numberOfBooks).toEqual(0);
-    expect(a2.numberOfBooks).toEqual(1);
+    expect(a1.numberOfBooks.get).toEqual(0);
+    expect(a2.numberOfBooks.get).toEqual(1);
   });
 
   it("has async derived values triggered on both lazy-loaded old and new value", async () => {
@@ -308,19 +309,10 @@ describe("Author", () => {
     expect(rows[1]).toMatchObject({ id: 2, number_of_books: 1 });
   });
 
-  it("cannot set async derived value", async () => {
-    const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    expect(() => {
-      // @ts-expect-error
-      a1.numberOfBooks = 1;
-    }).toThrow("Cannot set property numberOfBooks");
-  });
-
   it("cannot access async derived value before flush", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
-    expect(() => a1.numberOfBooks).toThrow("numberOfBooks has not been derived yet");
+    expect(() => a1.numberOfBooks.get).toThrow("numberOfBooks has not been derived yet");
   });
 
   it("can derive async fields across multiple hops", async () => {

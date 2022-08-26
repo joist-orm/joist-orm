@@ -12,17 +12,25 @@ const em = EM;
  * instantiate a throw-away instance to observe the side-effect of what fields it has.
  */
 export function getProperties<T extends Entity>(meta: EntityMetadata<T>): string[] {
-  return [
-    ...Object.getOwnPropertyNames(meta.cstr.prototype),
-    ...Object.keys(
-      new meta.cstr(
-        {
-          register: (metadata: any, entity: any) => {
-            em.currentlyInstantiatingEntity = entity;
-          },
-        } as any,
-        {},
-      ),
-    ),
-  ].filter((key) => key !== "constructor" && !key.startsWith("__"));
+  return [...Object.getOwnPropertyNames(meta.cstr.prototype), ...Object.keys(getFakeInstance(meta))].filter(
+    (key) => key !== "constructor" && !key.startsWith("__"),
+  );
+}
+
+const fakeInstances: Record<string, Entity> = {};
+
+/**
+ * Returns a fake instance of `meta` so that user-defined `CustomReference` and `AsyncProperty`s can
+ * be inspected on boot.
+ */
+export function getFakeInstance<T extends Entity>(meta: EntityMetadata<T>): T {
+  return (fakeInstances[meta.cstr.name] ??= new meta.cstr(
+    {
+      register: (metadata: any, entity: any) => {
+        em.currentlyInstantiatingEntity = entity;
+        entity.__orm = { metadata: meta, data: {} };
+      },
+    } as any,
+    {},
+  )) as T;
 }

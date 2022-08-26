@@ -1,4 +1,11 @@
-import { cannotBeUpdated, hasOneDerived, hasOneThrough, Reference } from "joist-orm";
+import {
+  cannotBeUpdated,
+  hasOneDerived,
+  hasOneThrough,
+  hasPersistedAsyncProperty,
+  PersistedAsyncProperty,
+  Reference,
+} from "joist-orm";
 import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
 
 export class BookReview extends BookReviewCodegen {
@@ -11,13 +18,17 @@ export class BookReview extends BookReviewCodegen {
     { book: { author: "publisher" } },
     (review) => review.book.get.author.get.publisher.get,
   );
-}
 
-// Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
-config.setAsyncDerivedField("isPublic", { book: { author: ["age", "graduated"] } }, (review) => {
-  const author = review.book.get.author.get;
-  return !!author.age && author.age >= 21 && !!author.graduated;
-});
+  // Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
+  readonly isPublic: PersistedAsyncProperty<BookReview, boolean> = hasPersistedAsyncProperty(
+    "isPublic",
+    { book: { author: ["age", "graduated"] } },
+    (review) => {
+      const author = review.book.get.author.get;
+      return !!author.age && author.age >= 21 && !!author.graduated;
+    },
+  );
+}
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)
 config.addRule(cannotBeUpdated("book"));

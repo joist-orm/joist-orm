@@ -1,10 +1,12 @@
 import { Entity, EntityOrmField, isEntity } from "./Entity";
 import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -248,12 +250,15 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     });
 
     // Look for reactive async derived values rules to reverse
-    Object.values(meta.config.__data.asyncDerivedFields).forEach(({ name, hint, fn }) => {
-      const reversals = reverseReactiveHint(meta.cstr, hint);
-      reversals.forEach(({ entity, path, fields }) => {
-        getMetadata(entity).config.__data.reactiveDerivedValues.push({ name, path, fields, fn });
+    Object.values(meta.fields)
+      .filter((f) => f.kind === "primitive" && f.derived === "async")
+      .forEach((field) => {
+        const asyncProperty = getFakeInstance(meta)[field.fieldName] as PersistedAsyncPropertyImpl<any, any, any>;
+        const reversals = reverseReactiveHint(meta.cstr, asyncProperty.loadHint);
+        reversals.forEach(({ entity, path, fields }) => {
+          getMetadata(entity).config.__data.reactiveDerivedValues.push({ name: field.fieldName, path, fields });
+        });
       });
-    });
   });
 }
 

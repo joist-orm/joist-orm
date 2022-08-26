@@ -1,3 +1,10 @@
+# [1.28.0](https://github.com/stephenh/joist-ts/compare/v1.27.1...v1.28.0) (2022-08-26)
+
+
+### Features
+
+* Bump ts-poet for dprint. ([#399](https://github.com/stephenh/joist-ts/issues/399)) ([2c24cf8](https://github.com/stephenh/joist-ts/commit/2c24cf8d87a51e9beb77827368c4be40de759fb9))
+
 ## [1.27.1](https://github.com/stephenh/joist-ts/compare/v1.27.0...v1.27.1) (2022-08-26)
 
 

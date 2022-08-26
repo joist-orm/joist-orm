@@ -39,6 +39,7 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
         await contentToString(file.contents, file.name, {
           // For some reason dprint wraps lines "before it should" w/o this set
           preferSingleLine: true,
+          // Given these are generated files, nudge up the lineWidth for better readability
           lineWidth: 200,
           ...file.dprintOverrides,
         }),

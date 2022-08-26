@@ -79,7 +79,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       ${configureMetadata}(allMetadata);
     `,
     overwrite: true,
-    dprintOverrides: { lineWidth: 500 },
+    dprintOverrides: { lineWidth: 400 },
   };
 
   const enumsTables = Object.values(enums)

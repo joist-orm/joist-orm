@@ -34,7 +34,15 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
     // We might be writing to a non-entities directory i.e. for the graphql plugin, so check this for each file
     await fs.mkdir(dirname(path), { recursive: true });
     if (file.overwrite) {
-      await fs.writeFile(path, await contentToString(file.contents, file.name, file.dprintOverrides));
+      await fs.writeFile(
+        path,
+        await contentToString(file.contents, file.name, {
+          // For some reason dprint wraps lines "before it should" w/o this set
+          preferSingleLine: true,
+          lineWidth: 200,
+          ...file.dprintOverrides,
+        }),
+      );
     } else {
       const exists = await trueIfResolved(fs.access(path));
       if (!exists) {

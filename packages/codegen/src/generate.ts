@@ -30,7 +30,6 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         {
           name: `${entityName}Codegen.ts`,
           contents: generateEntityCodegenFile(config, meta),
-          dprintOverrides: { lineWidth: 200, preferSingleLine: true },
           overwrite: true,
         },
         { name: `${entityName}.ts`, contents: generateInitialEntityFile(meta), overwrite: false },

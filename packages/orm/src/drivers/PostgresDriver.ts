@@ -10,13 +10,13 @@ import {
   entityLimit,
   EntityManager,
   EntityMetadata,
-  EnumArrayFieldSerde,
   FilterAndSettings,
   getMetadata,
   hasSerde,
   keyToNumber,
   maybeResolveReferenceToId,
   OneToManyCollection,
+  PrimitiveField,
   tagIds,
 } from "../index";
 import { ManyToManyCollection, OneToOneReferenceImpl } from "../relations";
@@ -383,7 +383,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const { updatedAt } = meta.timestampFields;
   if (!updatedAt) throw new Error("This batchUpdate expects updatedAt");
-  // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
+  // Get the unique set of fields that are changed across all the entities (of this type) we want to bulk update
   const changedFields = new Set<string>(["id", updatedAt]);
   entities.forEach((entity) => {
     Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
@@ -400,61 +400,29 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde);
   const columns = fields.flatMap((f) => f.serde.columns);
+  const updatedAtField = (meta.fields[updatedAt] as PrimitiveField).serde.columns[0].columnName;
 
-  // We need to handle array columns different because the "unnest" approach fundamentally
-  // won't work b/c we can't use it to send "a list of lists".
-  let sql: string;
-  let bindings: any[];
-  if (fields.some((f) => f.serde instanceof EnumArrayFieldSerde)) {
-    // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
-    // and bindings is each individual value.
-    bindings = entities.flatMap((entity) => [
-      ...columns.map((c) => c.dbValue(entity.__orm.data) ?? null),
-      entity.__orm.originalData[updatedAt],
-    ]);
-    sql = `
+  // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
+  // and bindings is each individual value.
+  const bindings = entities.flatMap((entity) => [
+    ...columns.map((c) => c.dbValue(entity.__orm.data) ?? null),
+    entity.__orm.originalData[updatedAt],
+  ]);
+  const sql = `
       UPDATE "${meta.tableName}"
       SET ${columns
         .filter((c) => c.columnName !== "id")
         .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
       FROM (
-        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamp)`).join(",")}
+        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamptz)`).join(",")}
       ) AS data(${columns.map((c) => c.columnName).join(",")},original_updated_at)
       WHERE
         "${meta.tableName}".id = data.id
-        AND date_trunc('milliseconds', "${meta.tableName}".updated_at) = data.original_updated_at
+        AND date_trunc('milliseconds', "${meta.tableName}".${updatedAtField}) = data.original_updated_at
       RETURNING "${meta.tableName}".id
    `;
-  } else {
-    // Issue 1 UPDATE statement with bindings having an array for each column's new values
-    bindings = columns.map(() => []);
-    // Add 1 more column for original_updated_at
-    const originalUpdatedAt: Date[] = [];
-    bindings.push(originalUpdatedAt);
-    for (const entity of entities) {
-      columns.forEach((c, i) => {
-        bindings[i].push(c.dbValue(entity.__orm.data) ?? null);
-      });
-      originalUpdatedAt.push(entity.__orm.originalData[updatedAt]);
-    }
-    sql = `
-      UPDATE "${meta.tableName}"
-      SET ${columns
-        .filter((c) => c.columnName !== "id")
-        .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
-        .join(", ")}
-      FROM (
-        SELECT
-          ${columns.map((c) => `unnest(?::${c.dbType}[]) as "${c.columnName}"`).join(", ")},
-          unnest(?::timestamptz[]) as original_updated_at
-      ) as data
-      WHERE
-        "${meta.tableName}".id = data.id
-        AND date_trunc('milliseconds', "${meta.tableName}".updated_at) = data.original_updated_at
-      RETURNING "${meta.tableName}".id
-     `;
-  }
+
   const result = await knex.raw(cleanSql(sql), bindings);
   if (result.rows.length !== entities.length) {
     const updated = new Set(result.rows.map((r: any) => r.id));

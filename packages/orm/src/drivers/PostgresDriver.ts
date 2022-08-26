@@ -415,9 +415,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
         .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
       FROM (
-        VALUES ${entities
-          .map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamp without time zone)`)
-          .join(",")}
+        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamptz)`).join(",")}
       ) AS data(${columns.map((c) => c.columnName).join(",")},original_updated_at)
       WHERE
         "${meta.tableName}".id = data.id

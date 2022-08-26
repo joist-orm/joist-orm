@@ -1,3 +1,10 @@
+## [1.28.3](https://github.com/stephenh/joist-ts/compare/v1.28.2...v1.28.3) (2022-08-26)
+
+
+### Bug Fixes
+
+* Remove unnest approach to avoid txn conflicts. ([#402](https://github.com/stephenh/joist-ts/issues/402)) ([e0a775c](https://github.com/stephenh/joist-ts/commit/e0a775c16770cc28d35df85ab84228293b4d489b))
+
 ## [1.28.2](https://github.com/stephenh/joist-ts/compare/v1.28.1...v1.28.2) (2022-08-26)
 
 

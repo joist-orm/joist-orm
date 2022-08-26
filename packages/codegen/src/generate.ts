@@ -1,4 +1,4 @@
-import { Options } from "prettier";
+import dprint from "dprint-node";
 import { Code, code, def, imp } from "ts-poet";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
@@ -11,11 +11,13 @@ import { Config, DbMetadata } from "./index";
 import { configureMetadata, JoistEntityManager } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
+export type DPrintOptions = Exclude<Parameters<typeof dprint.format>[2], undefined>;
+
 export interface CodeGenFile {
   name: string;
   contents: Code | string;
   overwrite: boolean;
-  prettierOverrides?: Options;
+  dprintOverrides?: DPrintOptions;
 }
 
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
@@ -77,7 +79,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       ${configureMetadata}(allMetadata);
     `,
     overwrite: true,
-    prettierOverrides: { printWidth: 500 },
+    dprintOverrides: { lineWidth: 500 },
   };
 
   const enumsTables = Object.values(enums)

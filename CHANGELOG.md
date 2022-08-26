@@ -1,3 +1,10 @@
+## [1.28.2](https://github.com/stephenh/joist-ts/compare/v1.28.1...v1.28.2) (2022-08-26)
+
+
+### Bug Fixes
+
+* Slightly change how we guess GraphQL types. ([#401](https://github.com/stephenh/joist-ts/issues/401)) ([6edffb9](https://github.com/stephenh/joist-ts/commit/6edffb96af94b0f3bce2216a83271aedc3c4ffb5))
+
 ## [1.28.1](https://github.com/stephenh/joist-ts/compare/v1.28.0...v1.28.1) (2022-08-26)
 
 

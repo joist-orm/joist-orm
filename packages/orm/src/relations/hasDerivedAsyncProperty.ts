@@ -36,7 +36,7 @@ export interface DerivedAsyncProperty<T extends Entity, V> {
    * i.e. if you're in a test and want to watch a calculated value change from some dummy value
    * to the new derived value.
    * */
-  getFieldValue: V;
+  fieldValue: V;
 
   [I]?: T;
 }
@@ -99,7 +99,7 @@ export class DerivedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T
     }
   }
 
-  get getFieldValue(): V {
+  get fieldValue(): V {
     return this.entity.__orm.data[this.fieldName];
   }
 

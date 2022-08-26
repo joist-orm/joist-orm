@@ -4,18 +4,10 @@ export enum AdvanceStatus {
   Paid = "PAID",
 }
 
-export type AdvanceStatusDetails = {
-  id: number;
-  code: AdvanceStatus;
-  name: string;
-};
+export type AdvanceStatusDetails = { id: number; code: AdvanceStatus; name: string };
 
 const details: Record<AdvanceStatus, AdvanceStatusDetails> = {
-  [AdvanceStatus.Pending]: {
-    id: 1,
-    code: AdvanceStatus.Pending,
-    name: "Pending",
-  },
+  [AdvanceStatus.Pending]: { id: 1, code: AdvanceStatus.Pending, name: "Pending" },
   [AdvanceStatus.Signed]: { id: 2, code: AdvanceStatus.Signed, name: "Signed" },
   [AdvanceStatus.Paid]: { id: 3, code: AdvanceStatus.Paid, name: "Paid" },
 };

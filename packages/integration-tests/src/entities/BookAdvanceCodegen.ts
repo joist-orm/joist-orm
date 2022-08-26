@@ -27,8 +27,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   AdvanceStatus,
   AdvanceStatusDetails,
@@ -45,6 +43,8 @@ import {
   publisherMeta,
   PublisherOrder,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
@@ -80,7 +80,12 @@ export interface BookAdvanceGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   status?: EnumGraphQLFilter<AdvanceStatus>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
+  publisher?: EntityGraphQLFilter<
+    Publisher,
+    PublisherId,
+    GraphQLFilterOf<Publisher>,
+    never
+  >;
 }
 
 export interface BookAdvanceOrder {
@@ -113,13 +118,18 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   };
 
-  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
-
-  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(
-    publisherMeta,
-    "publisher",
-    "bookAdvances",
+  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(
+    bookMeta,
+    "book",
+    "advances",
   );
+
+  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> =
+    hasOne(
+      publisherMeta,
+      "publisher",
+      "bookAdvances",
+    );
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);
@@ -179,7 +189,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   }
 
   setPartial(opts: PartialOrNull<BookAdvanceOpts>): void {
-    setOpts(this as any as BookAdvance, opts as OptsOf<BookAdvance>, { partial: true });
+    setOpts(this as any as BookAdvance, opts as OptsOf<BookAdvance>, {
+      partial: true,
+    });
   }
 
   get changes(): Changes<BookAdvance> {
@@ -190,9 +202,16 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     return loadLens(this as any as BookAdvance, fn);
   }
 
-  populate<H extends LoadHint<BookAdvance>>(hint: H): Promise<Loaded<BookAdvance, H>>;
-  populate<H extends LoadHint<BookAdvance>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookAdvance, H>>;
-  populate<H extends LoadHint<BookAdvance>, V>(hint: H, fn: (ba: Loaded<BookAdvance, H>) => V): Promise<V>;
+  populate<H extends LoadHint<BookAdvance>>(
+    hint: H,
+  ): Promise<Loaded<BookAdvance, H>>;
+  populate<H extends LoadHint<BookAdvance>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<BookAdvance, H>>;
+  populate<H extends LoadHint<BookAdvance>, V>(
+    hint: H,
+    fn: (ba: Loaded<BookAdvance, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<BookAdvance>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (ba: Loaded<BookAdvance, H>) => V,
@@ -204,7 +223,9 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     return this.em.populate(this as any as BookAdvance, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<BookAdvance>>(hint: H): this is Loaded<BookAdvance, H> {
+  isLoaded<H extends LoadHint<BookAdvance>>(
+    hint: H,
+  ): this is Loaded<BookAdvance, H> {
     return isLoaded(this as any as BookAdvance, hint);
   }
 }

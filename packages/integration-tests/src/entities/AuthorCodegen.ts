@@ -35,10 +35,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import { Address, address } from "src/entities/types";
-import { assert } from "superstruct";
-import type { EntityManager } from "./entities";
 import {
   Author,
   authorMeta,
@@ -65,6 +61,10 @@ import {
   TagId,
   tagMeta,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
+import { Address, address } from "src/entities/types";
+import { assert } from "superstruct";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -130,8 +130,18 @@ export interface AuthorFilter {
   favoriteColors?: ValueFilter<Color[], null | undefined>;
   favoriteShape?: ValueFilter<FavoriteShape, null | undefined>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  currentDraftBook?: EntityFilter<
+    Book,
+    BookId,
+    FilterOf<Book>,
+    null | undefined
+  >;
+  publisher?: EntityFilter<
+    Publisher,
+    PublisherId,
+    FilterOf<Publisher>,
+    null | undefined
+  >;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
@@ -150,10 +160,30 @@ export interface AuthorGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: EnumGraphQLFilter<Color>;
   favoriteShape?: EnumGraphQLFilter<FavoriteShape>;
-  mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
-  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
+  mentor?: EntityGraphQLFilter<
+    Author,
+    AuthorId,
+    GraphQLFilterOf<Author>,
+    null | undefined
+  >;
+  currentDraftBook?: EntityGraphQLFilter<
+    Book,
+    BookId,
+    GraphQLFilterOf<Book>,
+    null | undefined
+  >;
+  publisher?: EntityGraphQLFilter<
+    Publisher,
+    PublisherId,
+    GraphQLFilterOf<Publisher>,
+    null | undefined
+  >;
+  image?: EntityGraphQLFilter<
+    Image,
+    ImageId,
+    GraphQLFilterOf<Image>,
+    null | undefined
+  >;
 }
 
 export interface AuthorOrder {
@@ -197,23 +227,52 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
-
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
-
-  readonly comments: Collection<Author, Comment> = hasMany(commentMeta, "comments", "parent", "parent_author_id");
-
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
-
-  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
-    bookMeta,
-    "currentDraftBook",
-    "currentDraftAuthor",
+  readonly authors: Collection<Author, Author> = hasMany(
+    authorMeta,
+    "authors",
+    "mentor",
+    "mentor_id",
   );
 
-  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
+  readonly books: Collection<Author, Book> = hasMany(
+    bookMeta,
+    "books",
+    "author",
+    "author_id",
+  );
 
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
+  readonly comments: Collection<Author, Comment> = hasMany(
+    commentMeta,
+    "comments",
+    "parent",
+    "parent_author_id",
+  );
+
+  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(
+    authorMeta,
+    "mentor",
+    "authors",
+  );
+
+  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> =
+    hasOne(
+      bookMeta,
+      "currentDraftBook",
+      "currentDraftAuthor",
+    );
+
+  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(
+    publisherMeta,
+    "publisher",
+    "authors",
+  );
+
+  readonly image: OneToOneReference<Author, Image> = hasOneToOne(
+    imageMeta,
+    "image",
+    "author",
+    "author_id",
+  );
 
   readonly tags: Collection<Author, Tag> = hasManyToMany(
     "authors_to_tags",
@@ -377,8 +436,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
-  populate<H extends LoadHint<Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Author, H>>;
-  populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Author>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Author, H>>;
+  populate<H extends LoadHint<Author>, V>(
+    hint: H,
+    fn: (a: Loaded<Author, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Author>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (a: Loaded<Author, H>) => V,

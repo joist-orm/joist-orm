@@ -29,8 +29,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -58,6 +56,8 @@ import {
   tagMeta,
   TagOrder,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -154,7 +154,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
 
-  readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
+  readonly authors: Collection<Publisher, Author> = hasMany(
+    authorMeta,
+    "authors",
+    "publisher",
+    "publisher_id",
+  );
 
   readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
     bookAdvanceMeta,
@@ -163,11 +168,25 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "publisher_id",
   );
 
-  readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
+  readonly comments: Collection<Publisher, Comment> = hasMany(
+    commentMeta,
+    "comments",
+    "parent",
+    "parent_publisher_id",
+  );
 
-  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
+  readonly images: Collection<Publisher, Image> = hasMany(
+    imageMeta,
+    "images",
+    "publisher",
+    "publisher_id",
+  );
 
-  readonly tag: ManyToOneReference<Publisher, Tag, undefined> = hasOne(tagMeta, "tag", "publishers");
+  readonly tag: ManyToOneReference<Publisher, Tag, undefined> = hasOne(
+    tagMeta,
+    "tag",
+    "publishers",
+  );
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     super(em, publisherMeta, PublisherCodegen.defaultValues, opts);
@@ -275,7 +294,9 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
-    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
+    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, {
+      partial: true,
+    });
   }
 
   get changes(): Changes<Publisher> {
@@ -286,9 +307,16 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return loadLens(this as any as Publisher, fn);
   }
 
-  populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
-  populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
-  populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Publisher>>(
+    hint: H,
+  ): Promise<Loaded<Publisher, H>>;
+  populate<H extends LoadHint<Publisher>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Publisher, H>>;
+  populate<H extends LoadHint<Publisher>, V>(
+    hint: H,
+    fn: (p: Loaded<Publisher, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Publisher>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (p: Loaded<Publisher, H>) => V,
@@ -300,7 +328,9 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 
-  isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
+  isLoaded<H extends LoadHint<Publisher>>(
+    hint: H,
+  ): this is Loaded<Publisher, H> {
     return isLoaded(this as any as Publisher, hint);
   }
 }

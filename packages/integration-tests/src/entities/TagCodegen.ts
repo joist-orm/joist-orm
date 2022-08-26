@@ -25,9 +25,20 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import {
+  Author,
+  authorMeta,
+  Book,
+  BookId,
+  bookMeta,
+  newTag,
+  Publisher,
+  publisherMeta,
+  Tag,
+  tagMeta,
+} from "./entities";
 import type { EntityManager } from "./entities";
-import { Author, authorMeta, Book, BookId, bookMeta, newTag, Publisher, publisherMeta, Tag, tagMeta } from "./entities";
+import { Context } from "src/context";
 
 export type TagId = Flavor<string, "Tag">;
 
@@ -84,7 +95,12 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newTag>[1];
   };
 
-  readonly publishers: LargeCollection<Tag, Publisher> = hasLargeMany(publisherMeta, "publishers", "tag", "tag_id");
+  readonly publishers: LargeCollection<Tag, Publisher> = hasLargeMany(
+    publisherMeta,
+    "publishers",
+    "tag",
+    "tag_id",
+  );
 
   readonly books: Collection<Tag, Book> = hasManyToMany(
     "books_to_tags",
@@ -158,13 +174,21 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;
-  populate<H extends LoadHint<Tag>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Tag, H>>;
-  populate<H extends LoadHint<Tag>, V>(hint: H, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Tag>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Tag, H>>;
+  populate<H extends LoadHint<Tag>, V>(
+    hint: H,
+    fn: (t: Loaded<Tag, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Tag>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (t: Loaded<Tag, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Tag>, V>(hintOrOpts: any, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
+  populate<H extends LoadHint<Tag>, V>(
+    hintOrOpts: any,
+    fn?: (t: Loaded<Tag, H>) => V,
+  ): Promise<Loaded<Tag, H> | V> {
     return this.em.populate(this as any as Tag, hintOrOpts, fn);
   }
 

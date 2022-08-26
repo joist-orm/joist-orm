@@ -31,8 +31,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -57,6 +55,8 @@ import {
   TagId,
   tagMeta,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type BookId = Flavor<string, "Book">;
 
@@ -95,7 +95,12 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
-  currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  currentDraftAuthor?: EntityFilter<
+    Author,
+    AuthorId,
+    FilterOf<Author>,
+    null | undefined
+  >;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
@@ -105,9 +110,24 @@ export interface BookGraphQLFilter {
   order?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
-  currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
+  author?: EntityGraphQLFilter<
+    Author,
+    AuthorId,
+    GraphQLFilterOf<Author>,
+    never
+  >;
+  currentDraftAuthor?: EntityGraphQLFilter<
+    Author,
+    AuthorId,
+    GraphQLFilterOf<Author>,
+    null | undefined
+  >;
+  image?: EntityGraphQLFilter<
+    Image,
+    ImageId,
+    GraphQLFilterOf<Image>,
+    null | undefined
+  >;
 }
 
 export interface BookOrder {
@@ -142,13 +162,32 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
+  readonly advances: Collection<Book, BookAdvance> = hasMany(
+    bookAdvanceMeta,
+    "advances",
+    "book",
+    "book_id",
+  );
 
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
+  readonly reviews: Collection<Book, BookReview> = hasMany(
+    bookReviewMeta,
+    "reviews",
+    "book",
+    "book_id",
+  );
 
-  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
+  readonly comments: Collection<Book, Comment> = hasMany(
+    commentMeta,
+    "comments",
+    "parent",
+    "parent_book_id",
+  );
 
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
+  readonly author: ManyToOneReference<Book, Author, never> = hasOne(
+    authorMeta,
+    "author",
+    "books",
+  );
 
   readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
     authorMeta,
@@ -157,9 +196,21 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     "current_draft_book_id",
   );
 
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
+  readonly image: OneToOneReference<Book, Image> = hasOneToOne(
+    imageMeta,
+    "image",
+    "book",
+    "book_id",
+  );
 
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
+  readonly tags: Collection<Book, Tag> = hasManyToMany(
+    "books_to_tags",
+    "tags",
+    "book_id",
+    tagMeta,
+    "books",
+    "tag_id",
+  );
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
@@ -223,13 +274,21 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;
-  populate<H extends LoadHint<Book>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Book, H>>;
-  populate<H extends LoadHint<Book>, V>(hint: H, fn: (b: Loaded<Book, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Book>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Book, H>>;
+  populate<H extends LoadHint<Book>, V>(
+    hint: H,
+    fn: (b: Loaded<Book, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Book>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (b: Loaded<Book, H>) => V,
   ): Promise<V>;
-  populate<H extends LoadHint<Book>, V>(hintOrOpts: any, fn?: (b: Loaded<Book, H>) => V): Promise<Loaded<Book, H> | V> {
+  populate<H extends LoadHint<Book>, V>(
+    hintOrOpts: any,
+    fn?: (b: Loaded<Book, H>) => V,
+  ): Promise<Loaded<Book, H> | V> {
     return this.em.populate(this as any as Book, hintOrOpts, fn);
   }
 

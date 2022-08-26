@@ -1,5 +1,11 @@
-import { AdvanceStatuses, Colors, ImageTypes, PublisherSizes, PublisherTypes } from "src/entities";
 import { Resolvers } from "src/generated/graphql-types";
+import {
+  AdvanceStatuses,
+  Colors,
+  ImageTypes,
+  PublisherSizes,
+  PublisherTypes,
+} from "src/entities";
 
 type EnumDetails =
   | "AdvanceStatusDetail"

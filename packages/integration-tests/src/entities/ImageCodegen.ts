@@ -27,8 +27,6 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -49,6 +47,8 @@ import {
   publisherMeta,
   PublisherOrder,
 } from "./entities";
+import type { EntityManager } from "./entities";
+import { Context } from "src/context";
 
 export type ImageId = Flavor<string, "Image">;
 
@@ -82,7 +82,12 @@ export interface ImageFilter {
   type?: ValueFilter<ImageType, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  publisher?: EntityFilter<
+    Publisher,
+    PublisherId,
+    FilterOf<Publisher>,
+    null | undefined
+  >;
 }
 
 export interface ImageGraphQLFilter {
@@ -91,9 +96,24 @@ export interface ImageGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: EnumGraphQLFilter<ImageType>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  author?: EntityGraphQLFilter<
+    Author,
+    AuthorId,
+    GraphQLFilterOf<Author>,
+    null | undefined
+  >;
+  book?: EntityGraphQLFilter<
+    Book,
+    BookId,
+    GraphQLFilterOf<Book>,
+    null | undefined
+  >;
+  publisher?: EntityGraphQLFilter<
+    Publisher,
+    PublisherId,
+    GraphQLFilterOf<Publisher>,
+    null | undefined
+  >;
 }
 
 export interface ImageOrder {
@@ -127,11 +147,23 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newImage>[1];
   };
 
-  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
+  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(
+    authorMeta,
+    "author",
+    "image",
+  );
 
-  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
+  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne(
+    bookMeta,
+    "book",
+    "image",
+  );
 
-  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
+  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(
+    publisherMeta,
+    "publisher",
+    "images",
+  );
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, ImageCodegen.defaultValues, opts);
@@ -211,8 +243,13 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>>;
-  populate<H extends LoadHint<Image>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Image, H>>;
-  populate<H extends LoadHint<Image>, V>(hint: H, fn: (i: Loaded<Image, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Image>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Image, H>>;
+  populate<H extends LoadHint<Image>, V>(
+    hint: H,
+    fn: (i: Loaded<Image, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Image>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (i: Loaded<Image, H>) => V,

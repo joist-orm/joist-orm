@@ -22,9 +22,16 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
-import { Context } from "src/context";
+import {
+  Author,
+  authorMeta,
+  Book,
+  BookId,
+  bookMeta,
+  newAuthor,
+} from "./entities";
 import type { EntityManager } from "./entities";
-import { Author, authorMeta, Book, BookId, bookMeta, newAuthor } from "./entities";
+import { Context } from "src/context";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -86,7 +93,12 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
+  readonly books: Collection<Author, Book> = hasMany(
+    bookMeta,
+    "books",
+    "author",
+    "author_id",
+  );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
@@ -150,8 +162,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
-  populate<H extends LoadHint<Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Author, H>>;
-  populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Author>>(
+    opts: { hint: H; forceReload?: boolean },
+  ): Promise<Loaded<Author, H>>;
+  populate<H extends LoadHint<Author>, V>(
+    hint: H,
+    fn: (a: Loaded<Author, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Author>, V>(
     opts: { hint: H; forceReload?: boolean },
     fn: (a: Loaded<Author, H>) => V,

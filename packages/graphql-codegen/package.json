@@ -23,7 +23,7 @@
     "joist-codegen": "workspace:*",
     "joist-utils": "workspace:*",
     "pluralize": "^8.0.0",
-    "ts-poet": "^4.15.0"
+    "ts-poet": "^5.0.1"
   },
   "devDependencies": {
     "@swc/core": "^1.2.220",

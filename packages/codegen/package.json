@@ -24,7 +24,8 @@
     "pg": "^8.7.3",
     "pg-structure": "^7.13.0",
     "pluralize": "^8.0.0",
-    "ts-poet": "^4.15.0"
+    "prettier": "^2.7.1",
+    "ts-poet": "^5.0.1"
   },
   "devDependencies": {
     "@swc/jest": "^0.2.22",

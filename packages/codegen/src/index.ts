@@ -3,12 +3,11 @@ import { newPgConnectionConfig } from "joist-utils";
 import { dirname } from "path";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
-import { Options } from "prettier";
 import { Code } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
 import { DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
-import { generateFiles } from "./generate";
+import { DPrintOptions, generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
 import { isEntityTable, mapSimpleDbTypeToTypescriptType, trueIfResolved } from "./utils";
@@ -35,11 +34,11 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
     // We might be writing to a non-entities directory i.e. for the graphql plugin, so check this for each file
     await fs.mkdir(dirname(path), { recursive: true });
     if (file.overwrite) {
-      await fs.writeFile(path, await contentToString(file.contents, file.name, file.prettierOverrides));
+      await fs.writeFile(path, await contentToString(file.contents, file.name, file.dprintOverrides));
     } else {
       const exists = await trueIfResolved(fs.access(path));
       if (!exists) {
-        await fs.writeFile(path, await contentToString(file.contents, file.name, file.prettierOverrides));
+        await fs.writeFile(path, await contentToString(file.contents, file.name, file.dprintOverrides));
       }
     }
   }
@@ -93,12 +92,12 @@ if (require.main === module) {
 export async function contentToString(
   content: Code | string,
   fileName: string,
-  prettierOverrides: Options = {},
+  dprintOptions: DPrintOptions = {},
 ): Promise<string> {
   if (typeof content === "string") {
     return content;
   }
-  return await content.toStringWithImports({ path: fileName, prettierOverrides });
+  return await content.toStringWithImports({ path: fileName, dprintOptions });
 }
 
 function maybeSetDatabaseUrl(config: Config): void {

@@ -135,6 +135,7 @@ export async function loadConfig(): Promise<Config> {
  * such that no changes to the config show up as noops to the scm.
  */
 export async function writeConfig(config: Config): Promise<void> {
+  // Still using prettier due to https://github.com/devongovett/dprint-node/issues/132
   const prettierConfig = await resolveConfig("./");
   const sorted = sortKeys(config);
   delete sorted.__tableToEntityName;

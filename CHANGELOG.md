@@ -1,3 +1,10 @@
+## [1.28.7](https://github.com/stephenh/joist-ts/compare/v1.28.6...v1.28.7) (2022-08-27)
+
+
+### Bug Fixes
+
+* Bump ts-poet to use @dprint/typescript directly. ([#408](https://github.com/stephenh/joist-ts/issues/408)) ([a52bb70](https://github.com/stephenh/joist-ts/commit/a52bb70666caed305597f2c37e113c8bebda3da2))
+
 ## [1.28.6](https://github.com/stephenh/joist-ts/compare/v1.28.5...v1.28.6) (2022-08-27)
 
 

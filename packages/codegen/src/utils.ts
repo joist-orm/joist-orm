@@ -40,17 +40,31 @@ export function isEnumTable(config: Config, t: Table): boolean {
   return ["id", "code", "name"].every((c) => columnNames.includes(c)) && !isEntityTable(config, t);
 }
 
+// Oddly enough isJoinTable showed up as a hot spot, so cache its calculation.
+const joinTables: Map<string, boolean> = new Map();
+
 export function isJoinTable(config: Config, t: Table): boolean {
   if (isIgnored(config, t)) {
     return false;
   }
-  const { columns } = t;
-  const hasOnePk = columns.filter((c) => c.isPrimaryKey).length === 1;
-  const hasTwoFks = columns.filter((c) => c.isForeignKey).length === 2;
-  const hasThreeColumns = columns.length === 3;
-  const hasFourColumnsOneIsCreatedAt =
-    columns.length === 4 && columns.filter((c) => c.name === "created_at").length === 1;
-  return hasOnePk && hasTwoFks && (hasThreeColumns || hasFourColumnsOneIsCreatedAt);
+  return getOrElse(joinTables, t.name, () => {
+    const { columns } = t;
+    const hasOnePk = columns.filter((c) => c.isPrimaryKey).length === 1;
+    const hasTwoFks = columns.filter((c) => c.isForeignKey).length === 2;
+    const hasThreeColumns = columns.length === 3;
+    const hasFourColumnsOneIsCreatedAt =
+      columns.length === 4 && columns.filter((c) => c.name === "created_at").length === 1;
+    return hasOnePk && hasTwoFks && (hasThreeColumns || hasFourColumnsOneIsCreatedAt);
+  });
+}
+
+function getOrElse<K, V>(map: Map<K, V>, key: K, fn: () => V): V {
+  let value = map.get(key);
+  if (value === undefined) {
+    value = fn();
+    map.set(key, value);
+  }
+  return value;
 }
 
 /** Converts `projects` to `Project`. */

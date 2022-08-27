@@ -21,6 +21,7 @@ export {
   OneToManyField,
   OneToOneField,
   PrimitiveField,
+  PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
 export { CodeGenFile } from "./generate";
 export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";

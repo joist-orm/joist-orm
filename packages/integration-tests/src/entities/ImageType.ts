@@ -22,7 +22,7 @@ export const ImageTypes = {
   },
 
   findById(id: number): ImageTypeDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
+    return Object.values(details).find(d => d.id === id);
   },
 
   getValues(): ReadonlyArray<ImageType> {

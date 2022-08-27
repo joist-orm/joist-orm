@@ -31,6 +31,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
+import { Context } from "src/context";
 import {
   Author,
   AuthorId,
@@ -56,7 +57,6 @@ import {
   tagMeta,
 } from "./entities";
 import type { EntityManager } from "./entities";
-import { Context } from "src/context";
 
 export type BookId = Flavor<string, "Book">;
 

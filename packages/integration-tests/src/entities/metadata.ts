@@ -1,5 +1,6 @@
 import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde } from "joist-orm";
 import { Context } from "src/context";
+import { address } from "src/entities/types";
 import {
   AdvanceStatuses,
   Author,
@@ -40,7 +41,6 @@ import {
   Tag,
   tagConfig,
 } from "./entities";
-import { address } from "src/entities/types";
 
 export class EntityManager extends EntityManager1<Context> {}
 

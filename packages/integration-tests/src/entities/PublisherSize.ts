@@ -20,7 +20,7 @@ export const PublisherSizes = {
   },
 
   findById(id: number): PublisherSizeDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
+    return Object.values(details).find(d => d.id === id);
   },
 
   getValues(): ReadonlyArray<PublisherSize> {

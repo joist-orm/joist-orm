@@ -22,7 +22,7 @@ export const AdvanceStatuses = {
   },
 
   findById(id: number): AdvanceStatusDetails | undefined {
-    return Object.values(details).find((d) => d.id === id);
+    return Object.values(details).find(d => d.id === id);
   },
 
   getValues(): ReadonlyArray<AdvanceStatus> {

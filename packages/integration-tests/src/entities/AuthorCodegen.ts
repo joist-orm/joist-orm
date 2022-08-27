@@ -35,6 +35,9 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
+import { Context } from "src/context";
+import { Address, address } from "src/entities/types";
+import { assert } from "superstruct";
 import {
   Author,
   authorMeta,
@@ -62,9 +65,6 @@ import {
   tagMeta,
 } from "./entities";
 import type { EntityManager } from "./entities";
-import { Context } from "src/context";
-import { Address, address } from "src/entities/types";
-import { assert } from "superstruct";
 
 export type AuthorId = Flavor<string, "Author">;
 
@@ -310,7 +310,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   get favoriteColorsDetails(): ColorDetails[] {
-    return this.favoriteColors.map((code) => Colors.getByCode(code));
+    return this.favoriteColors.map(code => Colors.getByCode(code));
   }
 
   set favoriteColors(favoriteColors: Color[]) {

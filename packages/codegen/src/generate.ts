@@ -26,11 +26,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .map((meta) => {
       const entityName = meta.entity.name;
       return [
-        {
-          name: `${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(config, meta),
-          overwrite: true,
-        },
+        { name: `${entityName}Codegen.ts`, contents: generateEntityCodegenFile(config, meta), overwrite: true },
         { name: `${entityName}.ts`, contents: generateInitialEntityFile(meta), overwrite: false },
       ];
     })

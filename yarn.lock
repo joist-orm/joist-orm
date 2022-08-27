@@ -4193,6 +4193,20 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@dprint/formatter@npm:^0.2.0":
+  version: 0.2.0
+  resolution: "@dprint/formatter@npm:0.2.0"
+  checksum: 83507fc3b8f9bff1d8c7e4ca98876e339d84b0138706fbae63374c84eada091259d74a521cde8168829ac848b7a140e021c5de9662944f07063153b80b8b818d
+  languageName: node
+  linkType: hard
+
+"@dprint/json@npm:^0.15.5":
+  version: 0.15.5
+  resolution: "@dprint/json@npm:0.15.5"
+  checksum: e59cda7f9a427d9fd86e3ade06a493ed2cb1e1f1c39c8d0976a4b15a65b98721124ecf19ada1f13315c270dbc20bad35333d3ad48dd1c4ad1ebf00e5abdbdb93
+  languageName: node
+  linkType: hard
+
 "@gar/promisify@npm:^1.1.3":
   version: 1.1.3
   resolution: "@gar/promisify@npm:1.1.3"
@@ -6223,6 +6237,13 @@ __metadata:
   version: 2.3.2
   resolution: "@types/prettier@npm:2.3.2"
   checksum: c4313e16650811f47b07a0fa7ac0742e966f61283a7292eb667fd4626d760bf3b7d896be3eaabb3354ad45fdbe3a340299b018dd3bcce1ff753d030a8cd2479c
+  languageName: node
+  linkType: hard
+
+"@types/prettier@npm:^2.7.0":
+  version: 2.7.0
+  resolution: "@types/prettier@npm:2.7.0"
+  checksum: bf5d0c7c1270909b39399539ac106d20ddaa85fe92eb1d59922dc99159604b4f8d5e41b0045fb29c8011585cf5bca2350b7441ef3d9816c08bd0e10ebd4b31d4
   languageName: node
   linkType: hard
 
@@ -12213,6 +12234,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-codegen@workspace:packages/codegen"
   dependencies:
+    "@dprint/formatter": ^0.2.0
+    "@dprint/json": ^0.15.5
     "@swc/jest": ^0.2.22
     "@types/jest": ^28.1.6
     "@types/node": ^18.6.3
@@ -12238,10 +12261,13 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "joist-graphql-codegen@workspace:packages/graphql-codegen"
   dependencies:
+    "@dprint/formatter": ^0.2.0
+    "@dprint/json": ^0.15.5
     "@swc/core": ^1.2.220
     "@swc/jest": ^0.2.22
     "@types/jest": ^28.1.6
     "@types/node": ^18.6.3
+    "@types/prettier": ^2.7.0
     change-case: ^4.1.2
     graphql: ^16.6.0
     is-plain-object: ^5.0.0
@@ -12274,7 +12300,7 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     prettier: ^2.7.1
-    prettier-plugin-organize-imports: ^3.0.0
+    prettier-plugin-organize-imports: ^3.1.0
     superstruct: ^0.15.5
     ts-node: ^10.9.1
     tsconfig-paths: ^4.0.0
@@ -15456,6 +15482,20 @@ __metadata:
     prettier: ">=2.0"
     typescript: ">=2.9"
   checksum: 6ff49f5532b9c33e0574c9dc10ba9fd990801efb207b640126a0c136dbcb673d2ca131fd5ffd0007a56c2c08d80c0a4b11a179ac5ca86e54445f18df5188c6ca
+  languageName: node
+  linkType: hard
+
+"prettier-plugin-organize-imports@npm:^3.1.0":
+  version: 3.1.0
+  resolution: "prettier-plugin-organize-imports@npm:3.1.0"
+  peerDependencies:
+    "@volar/vue-typescript": ">=0.39.0"
+    prettier: ">=2.0"
+    typescript: ">=2.9"
+  peerDependenciesMeta:
+    "@volar/vue-typescript":
+      optional: true
+  checksum: 3b22bf4ec44dd64a4b2e3d958633276c290590c49df440ea9f5b66182925d83979f4f42319ed788d5b5b0ef6d262559f888145c40fc95f29064dcd13f325a3a4
   languageName: node
   linkType: hard
 

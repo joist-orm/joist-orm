@@ -7,8 +7,7 @@ import {
   UnionTypeDefinitionNode,
   visit,
 } from "graphql";
-import { PrimitiveField } from "joist-codegen";
-import { PrimitiveTypescriptType } from "joist-codegen/build/EntityDbMetadata";
+import { PrimitiveField, PrimitiveTypescriptType } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import prettier, { Options, resolveConfig } from "prettier";
 import { Import } from "ts-poet";
@@ -58,7 +57,13 @@ let prettierPromise: Promise<Options | null>;
 
 export async function formatGraphQL(content: string): Promise<string> {
   const prettierConfig = await (prettierPromise ??= resolveConfig("./"));
-  return prettier.format(content, { parser: "graphql", ...prettierConfig });
+  return prettier.format(content, {
+    parser: "graphql",
+    ...prettierConfig,
+    // Don't load prettier-plugin-organize-imports just for GQL formatting
+    pluginSearchDirs: false,
+    plugins: [],
+  });
 }
 
 /**

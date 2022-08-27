@@ -1,7 +1,10 @@
+import { createFromBuffer } from "@dprint/formatter";
+import { getBuffer } from "@dprint/json";
 import { Entity } from "EntityDbMetadata";
 import { promises as fs } from "fs";
-import prettier, { resolveConfig } from "prettier";
 import { fail, sortKeys, trueIfResolved } from "./utils";
+
+const jsonFormatter = createFromBuffer(getBuffer());
 
 export interface FieldConfig {
   derived?: "sync" | "async";
@@ -135,12 +138,10 @@ export async function loadConfig(): Promise<Config> {
  * such that no changes to the config show up as noops to the scm.
  */
 export async function writeConfig(config: Config): Promise<void> {
-  // Still using prettier due to https://github.com/devongovett/dprint-node/issues/132
-  const prettierConfig = await resolveConfig("./");
   const sorted = sortKeys(config);
   delete sorted.__tableToEntityName;
   const input = JSON.stringify(sorted);
-  const content = prettier.format(input.trim(), { parser: "json", ...prettierConfig });
+  const content = jsonFormatter.formatText("test.json", input);
   await fs.writeFile(configPath, content);
 }
 

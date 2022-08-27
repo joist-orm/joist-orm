@@ -32,7 +32,7 @@
     "joist-migration-utils": "workspace:*",
     "joist-test-utils": "workspace:*",
     "prettier": "^2.7.1",
-    "prettier-plugin-organize-imports": "^3.0.0",
+    "prettier-plugin-organize-imports": "^3.1.0",
     "superstruct": "^0.15.5",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "^4.0.0",

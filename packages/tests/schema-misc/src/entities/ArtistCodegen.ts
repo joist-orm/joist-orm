@@ -22,9 +22,9 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
+import { Context } from "src/context";
 import { Artist, artistMeta, newArtist, Painting, PaintingId, paintingMeta } from "./entities";
 import type { EntityManager } from "./entities";
-import { Context } from "src/context";
 
 export type ArtistId = Flavor<string, "Artist">;
 

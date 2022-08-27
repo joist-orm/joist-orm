@@ -20,9 +20,9 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
+import { Context } from "src/context";
 import { AuthorStat, authorStatMeta, newAuthorStat } from "./entities";
 import type { EntityManager } from "./entities";
-import { Context } from "src/context";
 
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 

@@ -4207,6 +4207,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@dprint/typescript@npm:^0.71.2":
+  version: 0.71.2
+  resolution: "@dprint/typescript@npm:0.71.2"
+  checksum: c0ffe4bbf3d000e84d7339830d2e4ffbb9386227f62ade6b692e15401bebf188e9833e10d3b5d6625e807d7db02054b746e478acc686227d9c1ea878391ec707
+  languageName: node
+  linkType: hard
+
 "@gar/promisify@npm:^1.1.3":
   version: 1.1.3
   resolution: "@gar/promisify@npm:1.1.3"
@@ -9114,15 +9121,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"detect-libc@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "detect-libc@npm:1.0.3"
-  bin:
-    detect-libc: ./bin/detect-libc.js
-  checksum: daaaed925ffa7889bd91d56e9624e6c8033911bb60f3a50a74a87500680652969dbaab9526d1e200a4c94acf80fc862a22131841145a0a8482d60a99c24f4a3e
-  languageName: node
-  linkType: hard
-
 "detect-newline@npm:^3.0.0":
   version: 3.1.0
   resolution: "detect-newline@npm:3.1.0"
@@ -9354,15 +9352,6 @@ __metadata:
   version: 8.2.0
   resolution: "dotenv@npm:8.2.0"
   checksum: ad4c8e0df3e24b4811c8e93377d048a10a9b213dcd9f062483b4a2d3168f08f10ec9c618c23f5639060d230ccdb174c08761479e9baa29610aa978e1ee66df76
-  languageName: node
-  linkType: hard
-
-"dprint-node@npm:^1.0.7":
-  version: 1.0.7
-  resolution: "dprint-node@npm:1.0.7"
-  dependencies:
-    detect-libc: ^1.0.3
-  checksum: cd29f8e2b7de334273b4f53d24072718139635408b015963bcc80829cc785a84591462585b5b569791c8b1420c5672bec7499bda70d7298c58c8a3f43796e659
   languageName: node
   linkType: hard
 
@@ -12251,7 +12240,7 @@ __metadata:
     prettier: ^2.7.1
     prettier-plugin-organize-imports: ^3.0.0
     ts-node-dev: ^2.0.0
-    ts-poet: ^5.0.1
+    ts-poet: ^5.1.0
     tsconfig-paths: ^4.0.0
     typescript: ^4.7.4
   languageName: unknown
@@ -12277,7 +12266,7 @@ __metadata:
     pluralize: ^8.0.0
     prettier: ^2.7.1
     prettier-plugin-organize-imports: ^3.0.0
-    ts-poet: ^5.0.1
+    ts-poet: ^5.1.0
     tsconfig-paths: ^4.0.0
     typescript: ^4.7.4
   languageName: unknown
@@ -18135,12 +18124,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^5.0.1":
-  version: 5.0.1
-  resolution: "ts-poet@npm:5.0.1"
+"ts-poet@npm:^5.1.0":
+  version: 5.1.0
+  resolution: "ts-poet@npm:5.1.0"
   dependencies:
-    dprint-node: ^1.0.7
-  checksum: 3bbb8e2a1bd593714aca02b75950bdabba555e2b0e278ff7fb86d53d17508fa84fe914d0e98ea14b1648386a06ec3f66b0fb4c61f3ec64c11d059edf3715cf0f
+    "@dprint/formatter": ^0.2.0
+    "@dprint/typescript": ^0.71.2
+  checksum: a8bbcede4f9c879068fda11b0881fc610e51f5050be6abff6bf5e3924c9e6c816123c5dc2169799daf4c16638b3dbd23e531ab652df9b2d839873ec7a86b0024
   languageName: node
   linkType: hard
 

@@ -26,9 +26,9 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
+import { Context } from "src/context";
 import { Critic, CriticColumn, CriticColumnId, criticColumnMeta, criticMeta, newCritic } from "./entities";
 import type { EntityManager } from "./entities";
-import { Context } from "src/context";
 
 export type CriticId = Flavor<string, "Critic">;
 

@@ -1,4 +1,3 @@
-import dprint from "dprint-node";
 import { Code, code, def, imp } from "ts-poet";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
@@ -11,7 +10,7 @@ import { Config, DbMetadata } from "./index";
 import { configureMetadata, JoistEntityManager } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
-export type DPrintOptions = Exclude<Parameters<typeof dprint.format>[2], undefined>;
+export type DPrintOptions = Record<string, unknown>;
 
 export interface CodeGenFile {
   name: string;
@@ -90,6 +89,9 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     name: "./entities.ts",
     contents: generateEntitiesFile(config, entities, enumsTables, Object.values(pgEnums)),
     overwrite: true,
+    // For some reason `deno: true` turns off organize imports, which we don't want
+    // because this is our order-sensitive barrel file.
+    dprintOverrides: { deno: true },
   };
 
   const factoriesFiles: CodeGenFile[] = generateFactoriesFiles(entities);

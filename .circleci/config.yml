@@ -30,7 +30,6 @@ jobs:
       - run:
           name: Start Postgres database
           command: |
-            cd packages/integration-tests
             docker compose build db
             docker compose up db-wait
       - run:

@@ -408,6 +408,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     ...columns.map((c) => c.dbValue(entity.__orm.data) ?? null),
     entity.__orm.originalData[updatedAt],
   ]);
+
   const sql = `
       UPDATE "${meta.tableName}"
       SET ${columns
@@ -416,7 +417,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
         .join(", ")}
       FROM (
         VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamptz)`).join(",")}
-      ) AS data(${columns.map((c) => c.columnName).join(",")},original_updated_at)
+      ) AS data (${columns.map((c) => `"${c.columnName}"`).join(", ")}, original_updated_at)
       WHERE
         "${meta.tableName}".id = data.id
         AND date_trunc('milliseconds', "${meta.tableName}".${updatedAtField}) = data.original_updated_at
@@ -460,8 +461,8 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
       .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
       .join(", ")}
     FROM (
-        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")})`).join(",")}
-        ) AS data(${columns.map((c) => c.columnName).join(",")})
+        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")})`).join(", ")}
+        ) AS data (${columns.map((c) => `"${c.columnName}"`).join(", ")})
     WHERE
         "${meta.tableName}".id = data.id
         RETURNING "${meta.tableName}".id

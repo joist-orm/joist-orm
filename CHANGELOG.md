@@ -1,3 +1,10 @@
+## [1.28.5](https://github.com/stephenh/joist-ts/compare/v1.28.4...v1.28.5) (2022-08-27)
+
+
+### Bug Fixes
+
+* Fix quoting column names like 'order'. ([#404](https://github.com/stephenh/joist-ts/issues/404)) ([f235bec](https://github.com/stephenh/joist-ts/commit/f235becd70ac72ae2529a6123413976d4ce072ab))
+
 ## [1.28.4](https://github.com/stephenh/joist-ts/compare/v1.28.3...v1.28.4) (2022-08-26)
 
 

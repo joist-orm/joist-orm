@@ -1,3 +1,10 @@
+## [1.28.8](https://github.com/stephenh/joist-ts/compare/v1.28.7...v1.28.8) (2022-08-27)
+
+
+### Bug Fixes
+
+* Bump ts-poet for more prettier-ish. ([#409](https://github.com/stephenh/joist-ts/issues/409)) ([52c9d30](https://github.com/stephenh/joist-ts/commit/52c9d3002fc6c2c29fcc7116135535778c07f9a6))
+
 ## [1.28.7](https://github.com/stephenh/joist-ts/compare/v1.28.6...v1.28.7) (2022-08-27)
 
 

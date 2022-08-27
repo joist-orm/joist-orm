@@ -20,6 +20,7 @@ jobs:
         type: string
     machine:
       image: ubuntu-2204:2022.04.1
+    resource_class: large
     steps:
       - checkout
       - node/install:

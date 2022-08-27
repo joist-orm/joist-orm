@@ -1,3 +1,10 @@
+## [1.28.6](https://github.com/stephenh/joist-ts/compare/v1.28.5...v1.28.6) (2022-08-27)
+
+
+### Bug Fixes
+
+* Use @dprint/json for config and history files. ([#407](https://github.com/stephenh/joist-ts/issues/407)) ([72ef834](https://github.com/stephenh/joist-ts/commit/72ef83494f950a950b52e5db0d4a5644123ef198))
+
 ## [1.28.5](https://github.com/stephenh/joist-ts/compare/v1.28.4...v1.28.5) (2022-08-27)
 
 

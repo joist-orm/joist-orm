@@ -85,9 +85,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     name: "./entities.ts",
     contents: generateEntitiesFile(config, entities, enumsTables, Object.values(pgEnums)),
     overwrite: true,
-    // For some reason `deno: true` turns off organize imports, which we don't want
-    // because this is our order-sensitive barrel file.
-    dprintOverrides: { deno: true },
+    dprintOverrides: { "module.sortExportDeclarations": "maintain" },
   };
 
   const factoriesFiles: CodeGenFile[] = generateFactoriesFiles(entities);

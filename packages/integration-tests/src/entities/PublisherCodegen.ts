@@ -154,7 +154,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
 
   readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(bookAdvanceMeta, "bookAdvances", "publisher", "publisher_id");
+  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
+    bookAdvanceMeta,
+    "bookAdvances",
+    "publisher",
+    "publisher_id",
+  );
 
   readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
 
@@ -282,8 +287,14 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(opts: { hint: H; forceReload?: boolean }, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Publisher>, V>(hintOrOpts: any, fn?: (p: Loaded<Publisher, H>) => V): Promise<Loaded<Publisher, H> | V> {
+  populate<H extends LoadHint<Publisher>, V>(
+    opts: { hint: H; forceReload?: boolean },
+    fn: (p: Loaded<Publisher, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<Publisher>, V>(
+    hintOrOpts: any,
+    fn?: (p: Loaded<Publisher, H>) => V,
+  ): Promise<Loaded<Publisher, H> | V> {
     return this.em.populate(this as any as Publisher, hintOrOpts, fn);
   }
 

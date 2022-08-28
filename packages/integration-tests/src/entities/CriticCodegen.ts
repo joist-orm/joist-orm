@@ -87,7 +87,12 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
 
-  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(criticColumnMeta, "criticColumn", "critic", "critic_id");
+  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(
+    criticColumnMeta,
+    "criticColumn",
+    "critic",
+    "critic_id",
+  );
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, CriticCodegen.defaultValues, opts);
@@ -145,8 +150,14 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>>;
   populate<H extends LoadHint<Critic>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Critic, H>>;
   populate<H extends LoadHint<Critic>, V>(hint: H, fn: (c: Loaded<Critic, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Critic>, V>(opts: { hint: H; forceReload?: boolean }, fn: (c: Loaded<Critic, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Critic>, V>(hintOrOpts: any, fn?: (c: Loaded<Critic, H>) => V): Promise<Loaded<Critic, H> | V> {
+  populate<H extends LoadHint<Critic>, V>(
+    opts: { hint: H; forceReload?: boolean },
+    fn: (c: Loaded<Critic, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<Critic>, V>(
+    hintOrOpts: any,
+    fn?: (c: Loaded<Critic, H>) => V,
+  ): Promise<Loaded<Critic, H> | V> {
     return this.em.populate(this as any as Critic, hintOrOpts, fn);
   }
 

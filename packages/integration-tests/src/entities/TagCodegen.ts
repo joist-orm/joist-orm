@@ -86,9 +86,23 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
 
   readonly publishers: LargeCollection<Tag, Publisher> = hasLargeMany(publisherMeta, "publishers", "tag", "tag_id");
 
-  readonly books: Collection<Tag, Book> = hasManyToMany("books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id");
+  readonly books: Collection<Tag, Book> = hasManyToMany(
+    "books_to_tags",
+    "books",
+    "tag_id",
+    bookMeta,
+    "tags",
+    "book_id",
+  );
 
-  readonly authors: LargeCollection<Tag, Author> = hasLargeManyToMany("authors_to_tags", "authors", "tag_id", authorMeta, "tags", "author_id");
+  readonly authors: LargeCollection<Tag, Author> = hasLargeManyToMany(
+    "authors_to_tags",
+    "authors",
+    "tag_id",
+    authorMeta,
+    "tags",
+    "author_id",
+  );
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta, TagCodegen.defaultValues, opts);
@@ -146,7 +160,10 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;
   populate<H extends LoadHint<Tag>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Tag, H>>;
   populate<H extends LoadHint<Tag>, V>(hint: H, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Tag>, V>(opts: { hint: H; forceReload?: boolean }, fn: (t: Loaded<Tag, H>) => V): Promise<V>;
+  populate<H extends LoadHint<Tag>, V>(
+    opts: { hint: H; forceReload?: boolean },
+    fn: (t: Loaded<Tag, H>) => V,
+  ): Promise<V>;
   populate<H extends LoadHint<Tag>, V>(hintOrOpts: any, fn?: (t: Loaded<Tag, H>) => V): Promise<Loaded<Tag, H> | V> {
     return this.em.populate(this as any as Tag, hintOrOpts, fn);
   }

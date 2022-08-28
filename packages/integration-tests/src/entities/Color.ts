@@ -22,7 +22,7 @@ export const Colors = {
   },
 
   findById(id: number): ColorDetails | undefined {
-    return Object.values(details).find(d => d.id === id);
+    return Object.values(details).find((d) => d.id === id);
   },
 
   getValues(): ReadonlyArray<Color> {

@@ -32,7 +32,18 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Book, BookId, bookMeta, BookOrder, BookReview, bookReviewMeta, Comment, CommentId, commentMeta, newBookReview } from "./entities";
+import {
+  Book,
+  BookId,
+  bookMeta,
+  BookOrder,
+  BookReview,
+  bookReviewMeta,
+  Comment,
+  CommentId,
+  commentMeta,
+  newBookReview,
+} from "./entities";
 import type { EntityManager } from "./entities";
 
 export type BookReviewId = Flavor<string, "BookReview">;
@@ -105,7 +116,12 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
 
   readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
 
-  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(commentMeta, "comment", "parent", "parent_book_review_id");
+  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(
+    commentMeta,
+    "comment",
+    "parent",
+    "parent_book_review_id",
+  );
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, BookReviewCodegen.defaultValues, opts);
@@ -165,8 +181,14 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<BookReview>>(hint: H): Promise<Loaded<BookReview, H>>;
   populate<H extends LoadHint<BookReview>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<BookReview, H>>;
   populate<H extends LoadHint<BookReview>, V>(hint: H, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(opts: { hint: H; forceReload?: boolean }, fn: (br: Loaded<BookReview, H>) => V): Promise<V>;
-  populate<H extends LoadHint<BookReview>, V>(hintOrOpts: any, fn?: (br: Loaded<BookReview, H>) => V): Promise<Loaded<BookReview, H> | V> {
+  populate<H extends LoadHint<BookReview>, V>(
+    opts: { hint: H; forceReload?: boolean },
+    fn: (br: Loaded<BookReview, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<BookReview>, V>(
+    hintOrOpts: any,
+    fn?: (br: Loaded<BookReview, H>) => V,
+  ): Promise<Loaded<BookReview, H> | V> {
     return this.em.populate(this as any as BookReview, hintOrOpts, fn);
   }
 

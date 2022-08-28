@@ -205,13 +205,24 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 
-  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(bookMeta, "currentDraftBook", "currentDraftAuthor");
+  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
+    bookMeta,
+    "currentDraftBook",
+    "currentDraftAuthor",
+  );
 
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
   readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
 
-  readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "tags", "author_id", tagMeta, "authors", "tag_id");
+  readonly tags: Collection<Author, Tag> = hasManyToMany(
+    "authors_to_tags",
+    "tags",
+    "author_id",
+    tagMeta,
+    "authors",
+    "tag_id",
+  );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
@@ -310,7 +321,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   get favoriteColorsDetails(): ColorDetails[] {
-    return this.favoriteColors.map(code => Colors.getByCode(code));
+    return this.favoriteColors.map((code) => Colors.getByCode(code));
   }
 
   set favoriteColors(favoriteColors: Color[]) {
@@ -368,8 +379,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
   populate<H extends LoadHint<Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Author, H>>;
   populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Author>, V>(opts: { hint: H; forceReload?: boolean }, fn: (a: Loaded<Author, H>) => V): Promise<V>;
-  populate<H extends LoadHint<Author>, V>(hintOrOpts: any, fn?: (a: Loaded<Author, H>) => V): Promise<Loaded<Author, H> | V> {
+  populate<H extends LoadHint<Author>, V>(
+    opts: { hint: H; forceReload?: boolean },
+    fn: (a: Loaded<Author, H>) => V,
+  ): Promise<V>;
+  populate<H extends LoadHint<Author>, V>(
+    hintOrOpts: any,
+    fn?: (a: Loaded<Author, H>) => V,
+  ): Promise<Loaded<Author, H> | V> {
     return this.em.populate(this as any as Author, hintOrOpts, fn);
   }
 

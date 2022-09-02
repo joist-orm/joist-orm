@@ -1,16 +1,14 @@
-import { promises as fs } from "fs";
 import { newPgConnectionConfig } from "joist-utils";
-import { dirname } from "path";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
-import { Code } from "ts-poet";
+import { saveFiles } from "ts-poet";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
 import { DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
-import { DPrintOptions, generateFiles } from "./generate";
+import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
-import { isEntityTable, mapSimpleDbTypeToTypescriptType, trueIfResolved } from "./utils";
+import { isEntityTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 
 export {
   DbMetadata,
@@ -23,26 +21,17 @@ export {
   PrimitiveField,
   PrimitiveTypescriptType,
 } from "./EntityDbMetadata";
-export { CodeGenFile } from "./generate";
 export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
 export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };
 
 /** Uses entities and enums from the `db` schema and saves them into our entities directory. */
 export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): Promise<void> {
   const files = await generateFiles(config, dbMeta);
-  for await (const file of files) {
-    const path = `${config.entitiesDirectory}/${file.name}`;
-    // We might be writing to a non-entities directory i.e. for the graphql plugin, so check this for each file
-    await fs.mkdir(dirname(path), { recursive: true });
-    if (file.overwrite) {
-      await fs.writeFile(path, await contentToString(file.contents, file.name, file.dprintOverrides));
-    } else {
-      const exists = await trueIfResolved(fs.access(path));
-      if (!exists) {
-        await fs.writeFile(path, await contentToString(file.contents, file.name, file.dprintOverrides));
-      }
-    }
-  }
+  await saveFiles({
+    toolName: "joist-codegen",
+    directory: config.entitiesDirectory,
+    files,
+  });
 }
 
 if (require.main === module) {
@@ -88,17 +77,6 @@ if (require.main === module) {
     console.error(err);
     process.exit(1);
   });
-}
-
-export async function contentToString(
-  content: Code | string,
-  fileName: string,
-  dprintOptions: DPrintOptions = {},
-): Promise<string> {
-  if (typeof content === "string") {
-    return content;
-  }
-  return await content.toStringWithImports({ path: fileName, dprintOptions });
 }
 
 function maybeSetDatabaseUrl(config: Config): void {

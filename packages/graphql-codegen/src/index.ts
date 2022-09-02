@@ -1,5 +1,5 @@
-import { CodeGenFile, Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
-import { Code } from "ts-poet";
+import { Config, EntityDbMetadata, EnumMetadata } from "joist-codegen";
+import { CodegenFile } from "ts-poet";
 import { generateEnumDetailResolvers } from "./generateEnumDetailResolvers";
 import { generateEnumsGraphql } from "./generateEnumsGraphql";
 import { generateGraphqlCodegen } from "./generateGraphqlCodegen";
@@ -9,7 +9,7 @@ import { generateSaveResolvers } from "./generateSaveResolvers";
 import { loadHistory, writeHistory } from "./history";
 import { Fs, newFsImpl } from "./utils";
 
-export async function run(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): Promise<CodeGenFile[]> {
+export async function run(config: Config, entities: EntityDbMetadata[], enums: EnumMetadata): Promise<CodegenFile[]> {
   const fs = newFsImpl("./schema");
 
   // We upsert directly into schema files so we don't use the usual `CodeGenFile[]` return type;
@@ -31,25 +31,27 @@ export async function run(config: Config, entities: EntityDbMetadata[], enums: E
 }
 
 /** Conditionally outputs files only once, so we don't re-spam unwanted/unneeded files. */
-async function writeOnce(config: Config, fs: Fs, files: CodeGenFile[]) {
+async function writeOnce(config: Config, fs: Fs, files: CodegenFile[]) {
   // We sneak a `files` entry into the history map, which is usually `type -> fields[]`
   const history = await loadHistory(fs);
   const filesHistory = (history["files"] = history["files"] || []);
-  for (const file of files) {
-    if (!filesHistory.includes(file.name)) {
-      // Even if it's not in the history, make sure it doesn't already exist on disk
-      if (!(await fs.exists(file.name))) {
-        await fs.save(file.name, await contentToString(file.contents, file.name));
+  await Promise.all(
+    files.map(async (file) => {
+      if (!filesHistory.includes(file.name)) {
+        // Even if it's not in the history, make sure it doesn't already exist on disk
+        if (!(await fs.exists(file.name))) {
+          await fs.save(file.name, contentToString(file));
+        }
+        filesHistory.push(file.name);
       }
-      filesHistory.push(file.name);
-    }
-  }
+    }),
+  );
   await writeHistory(fs, history);
 }
 
-export async function contentToString(content: Code | string, fileName: string): Promise<string> {
-  if (typeof content === "string") {
-    return content;
+function contentToString(file: CodegenFile): string {
+  if (typeof file.contents === "string") {
+    return file.contents;
   }
-  return await content.toStringWithImports({ path: fileName });
+  return file.contents.toString({ path: file.name });
 }

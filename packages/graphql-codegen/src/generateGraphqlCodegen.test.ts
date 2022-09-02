@@ -7,7 +7,7 @@ describe("generateGraphqlCodegen", () => {
     const entities: EntityDbMetadata[] = [];
     const enums: EnumMetadata = {};
     const file = generateGraphqlCodegen(entities, enums);
-    expect(await (file.contents as Code).toStringWithImports()).toMatchInlineSnapshot(`
+    expect((file.contents as Code).toString()).toMatchInlineSnapshot(`
       "const mappers = {};
 
       const enumValues = {};

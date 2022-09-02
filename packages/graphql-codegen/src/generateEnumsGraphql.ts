@@ -1,9 +1,10 @@
 import { camelCase } from "change-case";
-import { CodeGenFile, EnumMetadata } from "joist-codegen";
+import { EnumMetadata } from "joist-codegen";
+import { CodegenFile } from "ts-poet";
 import { formatGraphQL, isJsonbColumn, mapTypescriptTypeToGraphQLType, SupportedTypescriptTypes } from "./graphqlUtils";
 
 /** Generates a `schema/enums.graphql` with GQL enums that match all of our domain enums. */
-export async function generateEnumsGraphql(enums: EnumMetadata): Promise<CodeGenFile> {
+export async function generateEnumsGraphql(enums: EnumMetadata): Promise<CodegenFile> {
   const contents = Object.values(enums)
     .map(({ name, rows, extraPrimitives }) => {
       const enumDecl = `enum ${name} { ${rows.map((r) => r.code).join(" ")} }`;

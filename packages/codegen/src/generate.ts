@@ -1,4 +1,4 @@
-import { Code, code, def, imp } from "ts-poet";
+import { code, CodegenFile, def, imp } from "ts-poet";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
 import { generateEnumFile } from "./generateEnumFile";
@@ -12,21 +12,19 @@ import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;
 
-export interface CodeGenFile {
-  name: string;
-  contents: Code | string;
-  overwrite: boolean;
-  dprintOverrides?: DPrintOptions;
-}
-
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
-export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodeGenFile[]> {
+export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const { entities, enums, pgEnums } = dbMeta;
   const entityFiles = entities
     .map((meta) => {
       const entityName = meta.entity.name;
       return [
-        { name: `${entityName}Codegen.ts`, contents: generateEntityCodegenFile(config, meta), overwrite: true },
+        {
+          name: `${entityName}Codegen.ts`,
+          contents: generateEntityCodegenFile(config, meta),
+          overwrite: true,
+          hash: true,
+        },
         { name: `${entityName}.ts`, contents: generateInitialEntityFile(meta), overwrite: false },
       ];
     })
@@ -40,6 +38,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
           name: `${enumName}.ts`,
           contents: generateEnumFile(config, enumData, enumName),
           overwrite: true,
+          hash: true,
         },
       ];
     })
@@ -51,6 +50,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
           name: `${enumData.name}.ts`,
           contents: generatePgEnumFile(config, enumData),
           overwrite: true,
+          hash: true,
         },
       ];
     })
@@ -59,7 +59,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const BaseEntity = imp("BaseEntity@joist-orm");
 
-  const metadataFile: CodeGenFile = {
+  const metadataFile: CodegenFile = {
     name: "./metadata.ts",
     contents: code`
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
@@ -74,23 +74,24 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       ${configureMetadata}(allMetadata);
     `,
     overwrite: true,
-    dprintOverrides: { lineWidth: 400 },
+    hash: true,
+    toStringOpts: { dprintOptions: { lineWidth: 400 } },
   };
 
   const enumsTables = Object.values(enums)
     .map(({ table }) => table)
     .sort((a, b) => a.name.localeCompare(b.name));
 
-  const entitiesFile: CodeGenFile = {
+  const entitiesFile: CodegenFile = {
     name: "./entities.ts",
     contents: generateEntitiesFile(config, entities, enumsTables, Object.values(pgEnums)),
     overwrite: true,
-    dprintOverrides: { "module.sortExportDeclarations": "maintain" },
+    toStringOpts: { dprintOptions: { "module.sortExportDeclarations": "maintain" } },
   };
 
-  const factoriesFiles: CodeGenFile[] = generateFactoriesFiles(entities);
+  const factoriesFiles: CodegenFile[] = generateFactoriesFiles(entities);
 
-  const indexFile: CodeGenFile = {
+  const indexFile: CodegenFile = {
     name: "./index.ts",
     contents: code`export * from "./entities"`,
     overwrite: false,
@@ -98,7 +99,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   // Look for modules to require and call the exported `.run(EntityDbMetadata[], Table[])` method
 
-  const pluginFiles: CodeGenFile[] = (
+  const pluginFiles: CodegenFile[] = (
     await Promise.all(
       config.codegenPlugins.map((p) => {
         const plugin = require(p);

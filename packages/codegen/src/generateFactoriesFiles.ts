@@ -1,12 +1,11 @@
 import { pascalCase } from "change-case";
-import { code, imp } from "ts-poet";
+import { code, CodegenFile, imp } from "ts-poet";
 import { EntityDbMetadata } from "./EntityDbMetadata";
-import { CodeGenFile } from "./generate";
 import { DeepNew, FactoryOpts, newTestInstance } from "./symbols";
 
 const EntityManager = imp("t:EntityManager@./entities");
 
-export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodeGenFile[] {
+export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFile[] {
   // One-time create an Author.factories.ts for each entity
   const entityFiles = entities.map(({ entity }) => {
     const name = pascalCase(entity.name);
@@ -25,6 +24,7 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodeGenFil
     name: "./factories.ts",
     contents: code`${entities.map(({ entity }) => code`export * from "./${entity.name}.factories";`)}`,
     overwrite: true,
+    hash: true,
   };
 
   return [...entityFiles, factoriesFile];

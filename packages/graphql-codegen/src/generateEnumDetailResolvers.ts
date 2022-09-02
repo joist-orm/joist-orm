@@ -1,10 +1,10 @@
 import { camelCase } from "change-case";
-import { CodeGenFile, EnumMetadata } from "joist-codegen";
+import { EnumMetadata } from "joist-codegen";
 import pluralize from "pluralize";
-import { code, imp } from "ts-poet";
+import { code, CodegenFile, imp } from "ts-poet";
 
 /** Generates a `src/resolvers/enumResolvers.ts` with a resolver for each of our domain's "enum detail" types. */
-export function generateEnumDetailResolvers(enums: EnumMetadata): CodeGenFile {
+export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
   const enumNames = Object.values(enums).map(({ name }) => name);
 
   const resolvers = Object.values(enums).map(({ name, extraPrimitives }) => {
@@ -30,5 +30,5 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodeGenFile {
     };
   `;
 
-  return { name: "../resolvers/enumResolvers.ts", overwrite: true, contents };
+  return { name: "../resolvers/enumResolvers.ts", overwrite: true, hash: true, contents };
 }

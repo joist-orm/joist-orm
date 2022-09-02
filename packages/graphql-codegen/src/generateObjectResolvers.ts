@@ -1,6 +1,6 @@
 import { camelCase, sentenceCase } from "change-case";
-import { CodeGenFile, Config, EntityDbMetadata } from "joist-codegen";
-import { code, imp } from "ts-poet";
+import { Config, EntityDbMetadata } from "joist-codegen";
+import { code, CodegenFile, imp } from "ts-poet";
 
 const getMetadata = imp("getMetadata@joist-orm");
 const entityResolver = imp("entityResolver@src/resolvers/entityResolver");
@@ -17,7 +17,7 @@ const makeRunResolver = imp("makeRunResolver@src/resolvers/testUtils");
  *
  * [1]: https://github.com/homebound-team/graphql-typescript-resolver-scaffolding
  */
-export function generateObjectResolvers(config: Config, entities: EntityDbMetadata[]): CodeGenFile[] {
+export function generateObjectResolvers(config: Config, entities: EntityDbMetadata[]): CodegenFile[] {
   const resolvers = entities.map((e) => {
     const camelName = camelCase(e.name);
     const type = imp(`${e.name}@src/entities`);

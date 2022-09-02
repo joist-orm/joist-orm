@@ -1,3 +1,10 @@
+# [1.29.0](https://github.com/stephenh/joist-ts/compare/v1.28.8...v1.29.0) (2022-09-02)
+
+
+### Features
+
+* Use ts-poet saveFiles for conditional formatting. ([#411](https://github.com/stephenh/joist-ts/issues/411)) ([652af21](https://github.com/stephenh/joist-ts/commit/652af21509ca3a99159f7087ef26a1783625697e))
+
 ## [1.28.8](https://github.com/stephenh/joist-ts/compare/v1.28.7...v1.28.8) (2022-08-27)
 
 

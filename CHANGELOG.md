@@ -1,3 +1,10 @@
+## [1.29.1](https://github.com/stephenh/joist-ts/compare/v1.29.0...v1.29.1) (2022-09-03)
+
+
+### Bug Fixes
+
+* Don't include jsonb fields in GraphQL scaffolding. ([#412](https://github.com/stephenh/joist-ts/issues/412)) ([c291345](https://github.com/stephenh/joist-ts/commit/c291345123b5b09e425b3a1c8ab05c3ac04a4522))
+
 # [1.29.0](https://github.com/stephenh/joist-ts/compare/v1.28.8...v1.29.0) (2022-09-02)
 
 

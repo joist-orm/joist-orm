@@ -215,7 +215,10 @@ export function mapTypescriptTypeToGraphQLType(
       if (type instanceof Import) {
         return undefined;
       }
-      return type;
+      // Anything else like `jsonb` (which shows up as `Object`) is also unlikely to be a valid
+      // GraphQL type, and doing things like `someField: Object` w/o predefined scalar types will
+      // cause GraphQL parsing errors.
+      return undefined;
   }
 }
 

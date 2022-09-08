@@ -2,7 +2,7 @@ import { Author, Book, BookReview, Color, newAuthor, newBook, newBookReview, new
 import { getMetadata } from "joist-orm";
 
 const sm = expect.stringMatching;
-jest.setTimeout(100000000);
+
 describe("EntityManager.reactiveRules", () => {
   it.withCtx("runs m2o reactive rules", async ({ em }) => {
     // Given a Book with a rule on its m2o author.firstName

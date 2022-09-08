@@ -932,6 +932,7 @@ describe("EntityManager", () => {
       id: "a:1",
       address: null,
       age: null,
+      bookComments: null,
       createdAt: expect.anything(),
       currentDraftBook: null,
       favoriteColors: [],

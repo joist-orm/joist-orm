@@ -1,5 +1,6 @@
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, isId, OptsOf } from "./EntityManager";
+import { getConstructorFromTaggedId } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -79,7 +80,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
           if (isEntity(originalValue)) {
             return Promise.resolve(originalValue);
           } else if (isId(originalValue)) {
-            return entity.em.load((entity as any)[p].otherMeta.cstr, originalValue);
+            return entity.em.load(getConstructorFromTaggedId(originalValue), originalValue);
           } else {
             return Promise.resolve();
           }

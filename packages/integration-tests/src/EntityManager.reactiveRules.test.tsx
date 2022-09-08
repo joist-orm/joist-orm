@@ -1,8 +1,8 @@
-import { Author, Book, BookReview, Color, newAuthor, newBook, newBookReview } from "@src/entities";
+import { Author, Book, BookReview, Color, newAuthor, newBook, newBookReview, newPublisher } from "@src/entities";
 import { getMetadata } from "joist-orm";
 
 const sm = expect.stringMatching;
-
+jest.setTimeout(100000000);
 describe("EntityManager.reactiveRules", () => {
   it.withCtx("runs m2o reactive rules", async ({ em }) => {
     // Given a Book with a rule on its m2o author.firstName
@@ -150,7 +150,38 @@ describe("EntityManager.reactiveRules", () => {
   it.withCtx("creates the right reactive derived values", async () => {
     expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([
       { name: "numberOfBooks", fields: ["author"], path: ["author"] },
+      { name: "bookComments", fields: ["author"], path: ["author"] },
       { name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);
+  });
+
+  it.withCtx("invokes the reactive derived value the expected number of times", async ({ em }) => {
+    // Given an author with books that have comments
+    const a = newAuthor(em, {
+      books: [{ comments: [{ text: "B1C1" }, { text: "B1C2" }] }, { comments: [{ text: "B2C1" }, { text: "B2C2" }] }],
+    });
+    // When I flush
+    await em.flush();
+    // Then I expect that the bookComments has been calc'd
+    expect(a.bookCommentsCalcInvoked).toEqual(1);
+    expect(a.bookComments.fieldValue).toEqual("B1C1, B1C2, B2C1, B2C2");
+    // And when a publisher with a comment is created
+    const p = newPublisher(em, { authors: [a], comments: [{}, {}] });
+    await em.flush();
+    // Then bookComments is not recalc'd
+    expect(a.bookCommentsCalcInvoked).toEqual(1);
+    // And when one of the authors book comments is touched
+    const [commentB1C1] = a.books.get[0].comments.get;
+    commentB1C1.text = "B1C1 - Updated";
+    await em.flush();
+    // Then I expect that bookComments was recalc'd
+    expect(a.bookCommentsCalcInvoked).toEqual(2);
+    expect(a.bookComments.fieldValue).toEqual("B1C1 - Updated, B1C2, B2C1, B2C2");
+    // And when I move the comment to be on a publisher instead
+    commentB1C1.parent.set(p);
+    await em.flush();
+    // Then I expect that the bookComments is recalc'd
+    expect(a.bookCommentsCalcInvoked).toEqual(3);
+    expect(a.bookComments.fieldValue).toEqual("B1C2, B2C1, B2C2");
   });
 });

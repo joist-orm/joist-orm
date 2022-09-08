@@ -56,6 +56,8 @@ export function up(b: MigrationBuilder): void {
     initials: { type: "varchar(255)", notNull: true },
     // for testing async derived values
     number_of_books: { type: "integer", notNull: true },
+    // for testing async derived value via a polymorphic reference
+    book_comments: { type: "text", notNull: false },
     // for testing nullable booleans
     is_popular: { type: "boolean", notNull: false },
     // for testing integers

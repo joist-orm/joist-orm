@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, Image } from "@src/entities";
+import { Author, Book, BookReview, Comment, Image } from "@src/entities";
 import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, reverseReactiveHint } from "joist-orm";
 import { convertToLoadHint } from "joist-orm/build/src/reactiveHints";
 
@@ -49,6 +49,14 @@ describe("reactiveHints", () => {
     expect(reverseReactiveHint(Author, { image: "fileName" })).toEqual([
       { entity: Author, fields: [], path: [] },
       { entity: Image, fields: ["author", "fileName"], path: ["author"] },
+    ]);
+  });
+
+  it("can do via polymorphic reference", () => {
+    expect(reverseReactiveHint(Author, { books: { comments: "text" } })).toEqual([
+      { entity: Author, fields: [], path: [] },
+      { entity: Book, fields: ["author"], path: ["author"] },
+      { entity: Comment, fields: ["parent", "text"], path: ["parent@Book", "author"] },
     ]);
   });
 

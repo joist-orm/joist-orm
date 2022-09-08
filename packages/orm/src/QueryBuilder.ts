@@ -304,6 +304,9 @@ export function buildQuery<T extends Entity>(
       } else {
         const serde = (meta.fields[key] ?? fail(`${key} not found`)).serde!;
         // TODO Currently hardcoded to single-column support; poly is handled above this
+        if (!serde) {
+          console.log({ serde, key });
+        }
         const column = serde.columns[0];
         query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
         // This is not a foreign key column, so it'll have the primitive filters/order bys

@@ -1,3 +1,10 @@
+# [1.30.0](https://github.com/stephenh/joist-ts/compare/v1.29.1...v1.30.0) (2022-09-08)
+
+
+### Features
+
+* Enhanced support for reversing polymorphic references and reacting to changes through them ([#414](https://github.com/stephenh/joist-ts/issues/414)) ([c653344](https://github.com/stephenh/joist-ts/commit/c653344441c942f2dca70298db7bd3ae2ae119e2))
+
 ## [1.29.1](https://github.com/stephenh/joist-ts/compare/v1.29.0...v1.29.1) (2022-09-03)
 
 

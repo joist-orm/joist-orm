@@ -20,6 +20,7 @@ type Author {
   tags: [Tag!]!
   currentDraftBook: Book
   author: Image
+  bookComments: String
 }
 
 input SaveAuthorInput {

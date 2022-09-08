@@ -76,6 +76,10 @@ export function reverseReactiveHint<T extends Entity>(
       case "o2m":
       case "o2o": {
         const isOtherReadOnly = field.otherMetadata().fields[field.otherFieldName].immutable;
+        const otherFieldName =
+          field.otherMetadata().fields[field.otherFieldName].kind === "poly"
+            ? `${field.otherFieldName}@${meta.type}`
+            : field.otherFieldName;
         // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
         return reverseReactiveHint(
           field.otherMetadata().cstr,
@@ -87,7 +91,7 @@ export function reverseReactiveHint<T extends Entity>(
           isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
           false,
         ).map(({ entity, fields, path }) => {
-          return { entity, fields, path: [...path, field.otherFieldName] };
+          return { entity, fields, path: [...path, otherFieldName] };
         });
       }
       case "primitive":

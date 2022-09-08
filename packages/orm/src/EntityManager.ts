@@ -1231,18 +1231,27 @@ async function followReverseHint(entities: Entity[], reverseHint: string[]): Pro
   const paths = [...reverseHint];
   // And "walk backwards" through the reverse hint
   while (paths.length) {
-    const fieldName = paths.shift()!;
+    const path = paths.shift()!;
+    const [fieldName, viaPolyType] = path.split("@");
     // The path might touch either a reference or a collection
     const entitiesOrLists = await Promise.all(
       current.flatMap((c: any) => {
-        const currentValuePromise = c[fieldName].load();
+        async function maybeLoadedPoly(loadPromise: Promise<Entity>) {
+          if (viaPolyType) {
+            const loaded: Entity = await loadPromise;
+            return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
+          }
+          return loadPromise;
+        }
+        const currentValuePromise = maybeLoadedPoly(c[fieldName].load());
         // If we're going from Book.author back to Author to re-validate the Author.books collection,
         // see if Book.author has changed, so we can re-validate both the old author's books and the
         // new author's books.
-        const isReference = getMetadata(c).fields[fieldName]?.kind === "m2o";
+        const fieldKind = getMetadata(c).fields[fieldName]?.kind;
+        const isReference = fieldKind === "m2o" || fieldKind === "poly";
         const changed = c.changes[fieldName] as FieldStatus<any>;
         if (isReference && changed.hasUpdated && changed.originalValue) {
-          return [currentValuePromise, (changed as ManyToOneFieldStatus<any>).originalEntity];
+          return [currentValuePromise, maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity)];
         }
         return [currentValuePromise];
       }),

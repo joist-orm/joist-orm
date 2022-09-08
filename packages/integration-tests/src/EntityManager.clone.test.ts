@@ -119,6 +119,7 @@ describe("EntityManager.clone", () => {
       "publisher",
       "initials",
       "numberOfBooks",
+      "bookComments",
     ]);
     // And if we revert the publisher
     a2.publisher.set(undefined);
@@ -126,7 +127,14 @@ describe("EntityManager.clone", () => {
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
     expect(a2.changes.publisher.originalValue).toBe(undefined);
-    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "initials", "numberOfBooks"]);
+    expect(a2.changes.fields).toEqual([
+      "createdAt",
+      "updatedAt",
+      "firstName",
+      "initials",
+      "numberOfBooks",
+      "bookComments",
+    ]);
   });
 
   it("can clone entities and report what has changed w/undefined m2o", async () => {

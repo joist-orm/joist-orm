@@ -51,6 +51,7 @@ export class Author extends AuthorCodegen {
   public mentorRuleInvoked = 0;
   public ageRuleInvoked = 0;
   public numberOfBooksCalcInvoked = 0;
+  public bookCommentsCalcInvoked = 0;
   public graduatedRuleInvoked = 0;
   public deleteDuringFlush = false;
 
@@ -94,6 +95,19 @@ export class Author extends AuthorCodegen {
     (a) => {
       a.entity.numberOfBooksCalcInvoked++;
       return a.books.get.length;
+    },
+  );
+
+  /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
+  readonly bookComments: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+    "bookComments",
+    { books: { comments: "text" } },
+    (a) => {
+      a.entity.bookCommentsCalcInvoked++;
+      return a.books.get
+        .flatMap((b) => b.comments.get)
+        .map((c) => c.text)
+        .join(", ");
     },
   );
 

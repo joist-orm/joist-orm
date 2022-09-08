@@ -4,6 +4,7 @@
     "age",
     "author",
     "authors",
+    "bookComments",
     "books",
     "comments",
     "createdAt",

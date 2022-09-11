@@ -1,4 +1,5 @@
 import { Author, Book, BookReview, Color, newAuthor, newBook, newBookReview, newPublisher } from "@src/entities";
+import { newEntityManager } from "@src/setupDbTests";
 import { getMetadata } from "joist-orm";
 
 const sm = expect.stringMatching;
@@ -183,5 +184,16 @@ describe("EntityManager.reactiveRules", () => {
     // Then I expect that the bookComments is recalc'd
     expect(a.bookCommentsCalcInvoked).toEqual(3);
     expect(a.bookComments.fieldValue).toEqual("B1C2, B2C1, B2C2");
+  });
+
+  it.withCtx("updates derived fields that are foreign keys", async ({ em }) => {
+    const a = newAuthor(em);
+    const b1 = newBook(em, { author: a });
+    await em.flush();
+    expect(a.favoriteBook.get).toBe(b1);
+
+    const em2 = newEntityManager();
+    const a_ = await em2.load(Author, a.idOrFail);
+    expect(a_.favoriteBook.get).toBe("b:1");
   });
 });

@@ -52,6 +52,7 @@ export class Author extends AuthorCodegen {
   public ageRuleInvoked = 0;
   public numberOfBooksCalcInvoked = 0;
   public bookCommentsCalcInvoked = 0;
+  public favoriteBookCalcInvoked = 0;
   public graduatedRuleInvoked = 0;
   public deleteDuringFlush = false;
 
@@ -108,6 +109,17 @@ export class Author extends AuthorCodegen {
         .flatMap((b) => b.comments.get)
         .map((c) => c.text)
         .join(", ");
+    },
+  );
+
+  /** Example of a derived async property that is a foreign key. */
+  readonly favoriteBook: PersistedAsyncProperty<Author, Book | undefined> = hasPersistedAsyncProperty(
+    "favoriteBook",
+    "books",
+    (a) => {
+      a.entity.favoriteBookCalcInvoked++;
+      // Their favorite book is their latest
+      return a.books.get[a.books.get.length - 1].entity;
     },
   );
 

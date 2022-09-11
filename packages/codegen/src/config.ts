@@ -76,8 +76,6 @@ export const defaultConfig: Config = {
   __tableToEntityName: {},
 };
 
-export const ormMaintainedFields = ["createdAt", "updatedAt"];
-
 export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.derived === "sync";
 }

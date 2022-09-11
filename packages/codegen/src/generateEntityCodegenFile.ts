@@ -223,9 +223,15 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
   // Add ManyToOne entities
   const m2o = meta.manyToOnes.map((m2o) => {
-    const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
-    const maybeOptional = notNull ? "never" : "undefined";
-    return code`
+    const { fieldName, otherEntity, otherFieldName, notNull, derived } = m2o;
+    if (derived === "async") {
+      const maybeOptional = notNull ? "" : "| undefined";
+      return code`
+        abstract readonly ${fieldName}: ${PersistedAsyncProperty}<${entity.name}, ${otherEntity.type}${maybeOptional}>;
+     `;
+    } else {
+      const maybeOptional = notNull ? "never" : "undefined";
+      return code`
       readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(
           ${otherEntity.metaType},
@@ -233,6 +239,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
           "${otherFieldName}",
         );
     `;
+    }
   });
 
   // Add OneToMany

@@ -101,6 +101,11 @@ export function up(b: MigrationBuilder): void {
     current_draft_book_id: foreignKey("books", { notNull: false, unique: true }),
   });
 
+  // For derived fks
+  addColumns(b, "authors", {
+    favorite_book_id: foreignKey("books", { notNull: false }),
+  });
+
   createEntityTable(b, "book_advances", {
     // for testing required enums
     status_id: foreignKey("advance_status", { notNull: true }),

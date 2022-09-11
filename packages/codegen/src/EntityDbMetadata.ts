@@ -10,7 +10,6 @@ import {
   isFieldIgnored,
   isLargeCollection,
   isProtected,
-  ormMaintainedFields,
   RelationConfig,
   relationName,
   superstructConfig,
@@ -124,6 +123,7 @@ export type ManyToOneField = Field & {
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
+  derived: "async" | false;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -319,19 +319,33 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     rawFieldType: fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
-    derived: fieldDerived(config, entity, fieldName),
+    derived: fieldDerived(config, entity, columnName, fieldName),
     protected: isProtected(config, entity, fieldName),
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     superstruct: fieldType === "Object" && superstruct ? Import.from(superstruct) : undefined,
   };
 }
 
-function fieldDerived(config: Config, entity: Entity, fieldName: string): PrimitiveField["derived"] {
-  if (ormMaintainedFields.includes(fieldName)) {
+function fieldDerived(
+  config: Config,
+  entity: Entity,
+  columnName: string,
+  fieldName: string,
+): PrimitiveField["derived"] {
+  const { updatedAtConf, createdAtConf } = getTimestampConfig(config);
+  if (updatedAtConf.names.includes(columnName) || createdAtConf.names.includes(columnName)) {
     return "orm";
   } else if (isDerived(config, entity, fieldName)) {
     return "sync";
   } else if (isAsyncDerived(config, entity, fieldName)) {
+    return "async";
+  } else {
+    return false;
+  }
+}
+
+function fkFieldDerived(config: Config, entity: Entity, fieldName: string): ManyToOneField["derived"] {
+  if (isAsyncDerived(config, entity, fieldName)) {
     return "async";
   } else {
     return false;
@@ -421,7 +435,8 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
-  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
+  const derived = fkFieldDerived(config, entity, fieldName);
+  return { kind: "m2o", fieldName, derived, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

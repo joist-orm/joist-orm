@@ -251,7 +251,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
     // Look for reactive async derived values rules to reverse
     Object.values(meta.fields)
-      .filter((f) => f.kind === "primitive" && f.derived === "async")
+      .filter((f) => (f.kind === "primitive" && f.derived === "async") || (f.kind === "m2o" && f.derived == "async"))
       .forEach((field) => {
         const asyncProperty = getFakeInstance(meta)[field.fieldName] as PersistedAsyncPropertyImpl<any, any, any>;
         const reversals = reverseReactiveHint(meta.cstr, asyncProperty.loadHint);

@@ -192,7 +192,9 @@ export class EntityDbMetadata {
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
-    this.idDbType = table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ?? fail();
+    this.idDbType =
+      table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ??
+      fail(`No primary key found for ${table.name}`);
 
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)

@@ -188,9 +188,11 @@ describe("EntityManager.populate", () => {
       }
     }
     await em1.flush();
+    em1.printPopulates();
 
     const em2 = newEntityManager();
     const publishers = await em2.find(Publisher, {});
     await em2.populate(publishers, { authors: { books: { author: "publisher" } } });
+    em2.printPopulates();
   });
 });

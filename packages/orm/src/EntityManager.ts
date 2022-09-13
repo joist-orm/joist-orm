@@ -39,6 +39,8 @@ import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, MaybePromise, toArray } from "./utils";
 
+let emId = 0;
+
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
 
@@ -130,6 +132,7 @@ export class EntityManager<C = {}> {
     beforeTransaction: [],
     afterTransaction: [],
   };
+  private myId = emId++;
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C, driver: Driver);
@@ -587,6 +590,9 @@ export class EntityManager<C = {}> {
     return entities;
   }
 
+  populateCount = 0;
+  populates: Record<string, number> = {};
+
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>, V = Loaded<T, H>>(
     entity: T,
@@ -615,6 +621,15 @@ export class EntityManager<C = {}> {
     const { hint, ...opts } =
       // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
+
+    this.populateCount++;
+    const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hint)}`;
+    this.populates[key] = (this.populates[key] ?? 0) + 1;
+    if (this.populateCount % 10_000 === 0) {
+      console.log(this.populateCount, this.myId);
+      console.log(this.populates);
+    }
+
     const promises = list
       .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
       .flatMap((entity) => {

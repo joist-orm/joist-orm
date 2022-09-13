@@ -612,7 +612,7 @@ export class EntityManager<C = {}> {
     entities: ReadonlyArray<T>,
     opts: { hint: Const<H>; forceReload?: boolean },
   ): Promise<Loaded<T, H>[]>;
-  async populate<T extends Entity, H extends LoadHint<T>, V>(
+  populate<T extends Entity, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
     hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
@@ -643,17 +643,25 @@ export class EntityManager<C = {}> {
         } else if (Array.isArray(hint)) {
           return (hint as string[]).map((key) => (entity as any)[key].load(opts));
         } else if (typeof hint === "object") {
-          return Object.entries(hint as object).map(async ([key, nestedHint]) => {
+          return Object.entries(hint as object).map(([key, nestedHint]) => {
             const relation = (entity as any)[key];
-            const result = await relation.load(opts);
-            return this.populate(result, { hint: nestedHint, ...opts });
+            return relation.load(opts).then((result: any) => {
+              if (
+                Object.keys(nestedHint).length > 0 &&
+                ((result instanceof Array && result.length > 0) || result !== undefined)
+              ) {
+                return this.populate(result, { hint: nestedHint, ...opts });
+              }
+              return result;
+            });
           });
         } else {
           throw new Error(`Unexpected hint ${hint}`);
         }
       });
-    await Promise.all(promises);
-    return !fn ? (entityOrList as any) : fn(entityOrList as any);
+
+    // Purposefully use `then` instead of `async` as an optimization
+    return Promise.all(promises).then(() => (!fn ? (entityOrList as any) : fn(entityOrList as any)));
   }
 
   /**

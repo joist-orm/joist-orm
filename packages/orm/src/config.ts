@@ -40,11 +40,13 @@ export class ConfigApi<T extends Entity, C> {
     } else {
       const hint = ruleOrHint;
       // Create a wrapper around the user's function to populate
-      const fn = async (entity: T) => {
+      const fn = (entity: T) => {
         // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
         const loadHint = convertToLoadHint(getMetadata(entity), hint);
-        const loaded = await entity.em.populate(entity, loadHint);
-        return maybeRule!(loaded);
+        if (Object.keys(loadHint).length > 0) {
+          return entity.em.populate(entity, loadHint).then((loaded) => maybeRule!(loaded));
+        }
+        return maybeRule!(entity);
       };
       this.__data.rules.push({ name, fn, hint });
     }

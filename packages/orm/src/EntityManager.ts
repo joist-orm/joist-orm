@@ -39,8 +39,6 @@ import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { fail, getOrSet, MaybePromise, toArray } from "./utils";
 
-let emId = 0;
-
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
 
@@ -133,7 +131,6 @@ export class EntityManager<C = {}> {
     beforeTransaction: [],
     afterTransaction: [],
   };
-  private myId = emId++;
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C, driver: Driver);
@@ -591,14 +588,6 @@ export class EntityManager<C = {}> {
     return entities;
   }
 
-  populateCount = 0;
-  populates: Record<string, number> = {};
-
-  public printPopulates(): void {
-    console.log(this.populateCount, this.myId);
-    console.log(this.populates);
-  }
-
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>, V = Loaded<T, H>>(
     entity: T,
@@ -630,6 +619,7 @@ export class EntityManager<C = {}> {
 
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
+    // But since it's a public API, we should just early exit.
     if (list.length === 0) {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
@@ -641,12 +631,6 @@ export class EntityManager<C = {}> {
       this.populateLoaders,
       key,
       new DataLoader((list) => {
-        this.populateCount++;
-        this.populates[key] = (this.populates[key] ?? 0) + 1;
-        if (this.populateCount % 10_000 === 0) {
-          this.printPopulates();
-        }
-
         const promises = list
           .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
           .flatMap((entity) => {

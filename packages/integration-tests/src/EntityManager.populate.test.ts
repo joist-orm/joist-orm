@@ -171,12 +171,11 @@ describe("EntityManager.populate", () => {
     expect(result).toEqual(["a1", 0]);
   });
 
-  jest.setTimeout(1_000_000);
+  // jest.setTimeout(1_000_000);
 
-  it.only("can be huge", async () => {
+  it.skip("can be huge", async () => {
     const em1 = newEntityManager();
     setEntityLimit(100_000);
-
     // Create 10,000 entities
     for (let i = 0; i < 10; i++) {
       const p = newPublisher(em1);
@@ -188,11 +187,9 @@ describe("EntityManager.populate", () => {
       }
     }
     await em1.flush();
-    em1.printPopulates();
-
+    // Now call a single populate
     const em2 = newEntityManager();
     const publishers = await em2.find(Publisher, {});
     await em2.populate(publishers, { authors: { books: { author: "publisher" } } });
-    em2.printPopulates();
   });
 });

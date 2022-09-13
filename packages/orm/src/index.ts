@@ -65,13 +65,13 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   if (em.isFlushing) {
     const { flushSecret } = currentFlushSecret.getStore() || {};
     if (flushSecret === undefined) {
-      // throw new Error(
-      //   `Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook or from afterCommit`,
-      // );
+      throw new Error(
+        `Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook or from afterCommit`,
+      );
     }
-    // if (flushSecret !== em["flushSecret"]) {
-    //   throw new Error(`Attempting to reuse a hook context outside its flush loop`);
-    // }
+    if (flushSecret !== em["flushSecret"]) {
+      throw new Error(`Attempting to reuse a hook context outside its flush loop`);
+    }
   }
 
   const { data, originalData } = entity.__orm;

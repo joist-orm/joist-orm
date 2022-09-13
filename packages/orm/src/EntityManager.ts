@@ -625,7 +625,7 @@ export class EntityManager<C = {}> {
     }
 
     // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
-    // to a single promise to avoid making more and more promises with each level of load hint.
+    // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
     const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hint)}`;
     const loader = getOrSet(
       this.populateLoaders,
@@ -660,7 +660,6 @@ export class EntityManager<C = {}> {
               throw new Error(`Unexpected hint ${hint}`);
             }
           });
-
         return Promise.all(promises);
       }),
     );

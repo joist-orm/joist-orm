@@ -1,3 +1,10 @@
+## [1.30.1](https://github.com/stephenh/joist-ts/compare/v1.30.0...v1.30.1) (2022-09-14)
+
+
+### Bug Fixes
+
+* Fix populate performance ([#417](https://github.com/stephenh/joist-ts/issues/417)) ([249e437](https://github.com/stephenh/joist-ts/commit/249e437d0fbc36398346ba77ea8e13c68ff02931))
+
 # [1.30.0](https://github.com/stephenh/joist-ts/compare/v1.29.1...v1.30.0) (2022-09-08)
 
 

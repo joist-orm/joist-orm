@@ -81,8 +81,8 @@ export function partition<T>(array: ReadonlyArray<T>, f: (el: T) => boolean): [T
 }
 
 // Utility function to wrap an object or value in an array, unless it's already an array
-export function toArray<T>(maybeArray: T | T[]): T[] {
-  return Array.isArray(maybeArray) ? maybeArray : [maybeArray];
+export function toArray<T>(maybeArray: T | T[] | undefined): T[] {
+  return Array.isArray(maybeArray) ? maybeArray : maybeArray === undefined ? [] : [maybeArray];
 }
 
 // Utility type to strip off null and defined and infer only T.

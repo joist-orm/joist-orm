@@ -24,6 +24,22 @@ describe("EntityManager.clone", () => {
     expect(p1.authors.get).toEqual([a1, a2]);
   });
 
+  it("can clone m2os and maintain loaded", async () => {
+    // Given an entity created in 1 UoW
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { name: "p1" });
+    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    await em.flush();
+
+    // When we clone it in a 2nd UoW
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, a1.idOrFail);
+    const a3 = await em2.clone(a2);
+
+    // Then the a3.publisher loaded state is correct
+    expect(a3.publisher.isLoaded).toBe(false);
+  });
+
   it("can clone entities and referenced entities", async () => {
     const em = newEntityManager();
 
@@ -112,29 +128,14 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And all the fields look changed
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "publisher",
-      "initials",
-      "numberOfBooks",
-      "bookComments",
-    ]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "publisher"]);
     // And if we revert the publisher
     a2.publisher.set(undefined);
     // Then it is no longer changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
     expect(a2.changes.publisher.originalValue).toBe(undefined);
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "initials",
-      "numberOfBooks",
-      "bookComments",
-    ]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
   });
 
   it("can clone entities and report what has changed w/undefined m2o", async () => {
@@ -147,14 +148,7 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And only the currently set fields look changed
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "initials",
-      "numberOfBooks",
-      "favoriteColors",
-    ]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "favoriteColors"]);
     // And specifically the publisher is not changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);

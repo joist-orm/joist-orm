@@ -15,6 +15,7 @@ export interface Relation<T extends Entity, U extends Entity> {
   // And https://github.com/microsoft/TypeScript/issues/47213
   [RelationT]: T;
   [RelationU]: U;
+  isLoaded: boolean;
 }
 
 /** Type guard utility for determining if an entity field is a Relation. */

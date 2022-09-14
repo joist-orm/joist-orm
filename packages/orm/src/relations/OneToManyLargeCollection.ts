@@ -92,6 +92,8 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
     return (other as U)[this.otherFieldName] as any;
   }
 
+  isLoaded = false;
+
   [RelationT]: T = null!;
   [RelationU]: U = null!;
 }

@@ -26,5 +26,5 @@ export function findDataLoader<T extends Entity>(
 const replacer = (v: any) => (isEntity(v) ? v.id : v);
 
 export function whereFilterHash(where: FilterAndSettings<any>): string {
-  return hash(where, { replacer });
+  return hash(where, { replacer, algorithm: "md5" });
 }

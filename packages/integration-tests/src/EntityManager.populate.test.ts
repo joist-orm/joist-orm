@@ -1,5 +1,6 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
-import { Author, Book, Publisher } from "./entities";
+import { setEntityLimit } from "joist-orm";
+import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.populate", () => {
@@ -168,5 +169,28 @@ describe("EntityManager.populate", () => {
       book.tags.get.length,
     ]);
     expect(result).toEqual(["a1", 0]);
+  });
+
+  it.skip("can be huge", async () => {
+    jest.setTimeout(1_000_000);
+    setEntityLimit(100_000);
+    const em1 = newEntityManager();
+    // Create 10,000 entities
+    for (let i = 0; i < 10; i++) {
+      const p = newPublisher(em1);
+      for (let j = 0; j < 10; j++) {
+        const a = newAuthor(em1, { publisher: p });
+        for (let k = 0; k < 100; k++) {
+          newBook(em1, { author: a });
+        }
+      }
+    }
+    await em1.flush();
+    // console.log({ em1: em1.populates });
+    // Now call a single populate
+    const em2 = newEntityManager();
+    const publishers = await em2.find(Publisher, {});
+    await em2.populate(publishers, { authors: { books: { author: "publisher" } } });
+    // console.log({ em2: em2.populates });
   });
 });

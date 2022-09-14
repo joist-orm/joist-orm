@@ -626,7 +626,7 @@ export class EntityManager<C = {}> {
 
     // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
     // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
-    const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hint)}`;
+    const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hint)}-${opts.forceReload}`;
     const loader = getOrSet(
       this.populateLoaders,
       key,
@@ -664,10 +664,10 @@ export class EntityManager<C = {}> {
             });
           return Promise.all(promises);
         },
-        // We disable caching b/c we're only using dataloader to fan-in across `.load` calls, and
-        // don't want to skip calling `.load` and not literally cache values (and which also breaks
-        // opts.forceReload).
-        { cache: false },
+        // We disable caching if `forceReload` is enabled to ensure we re-touch any previously-loaded
+        // collections; otherwise using `cache: false` all the time does reduce the effectiveness of
+        // the fan-in and results in duplicate populate calls.
+        { cache: !opts.forceReload },
       ),
     );
 

@@ -630,43 +630,53 @@ export class EntityManager<C = {}> {
     const loader = getOrSet(
       this.populateLoaders,
       key,
-      new DataLoader((list) => {
-        const promises = list
-          .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
-          .flatMap((entity) => {
-            // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
-            // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
-            // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per
-            // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
-            // in).
-            if (typeof hint === "string") {
-              return (entity as any)[hint].load(opts);
-            } else if (Array.isArray(hint)) {
-              return (hint as string[]).map((key) => (entity as any)[key].load(opts));
-            } else if (typeof hint === "object") {
-              return Object.entries(hint as object).map(([key, nestedHint]) => {
-                const relation = (entity as any)[key];
-                return relation.load(opts).then((result: any) => {
-                  if (
-                    Object.keys(nestedHint).length > 0 &&
-                    ((result instanceof Array && result.length > 0) || result !== undefined)
-                  ) {
-                    return this.populate(result, { hint: nestedHint, ...opts });
-                  }
-                  return result;
+      new DataLoader(
+        (list) => {
+          // this.populates[key] = (this.populates[key] ?? 0) + 1;
+          const promises = list
+            .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
+            .flatMap((entity) => {
+              // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
+              // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
+              // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per
+              // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
+              // in).
+              if (typeof hint === "string") {
+                return (entity as any)[hint].load(opts);
+              } else if (Array.isArray(hint)) {
+                return (hint as string[]).map((key) => (entity as any)[key].load(opts));
+              } else if (typeof hint === "object") {
+                return Object.entries(hint as object).map(([key, nestedHint]) => {
+                  const relation = (entity as any)[key];
+                  return relation.load(opts).then((result: any) => {
+                    if (
+                      Object.keys(nestedHint).length > 0 &&
+                      ((result instanceof Array && result.length > 0) || result !== undefined)
+                    ) {
+                      return this.populate(result, { hint: nestedHint, ...opts });
+                    }
+                    return result;
+                  });
                 });
-              });
-            } else {
-              throw new Error(`Unexpected hint ${hint}`);
-            }
-          });
-        return Promise.all(promises);
-      }),
+              } else {
+                throw new Error(`Unexpected hint ${hint}`);
+              }
+            });
+          return Promise.all(promises);
+        },
+        // We disable caching b/c we're only using dataloader to fan-in across `.load` calls, and
+        // don't want to skip calling `.load` and not literally cache values (and which also breaks
+        // opts.forceReload).
+        { cache: false },
+      ),
     );
 
     // Purposefully use `then` instead of `async` as an optimization
     return loader.loadMany(list).then(() => (!fn ? (entityOrList as any) : fn(entityOrList as any)));
   }
+
+  // For debugging EntityManager.populate.test.ts's "can be huge"
+  // populates: Record<string, number> = {};
 
   /**
    * Executes `fn` with a transaction, and automatically calls `flush`/`commit` at the end.

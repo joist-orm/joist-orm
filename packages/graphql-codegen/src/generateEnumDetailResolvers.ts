@@ -23,7 +23,7 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
   const Resolvers = imp("Resolvers@src/generated/graphql-types");
 
   const contents = code`
-    type EnumDetails = ${enumNames.map((n) => `"${n}Detail"`).join(" | ")};
+    type EnumDetails = ${enumNames.length === 0 ? "never" : enumNames.map((n) => `"${n}Detail"`).join(" | ")};
 
     export const enumResolvers: Pick<${Resolvers}, EnumDetails> = {
       ${resolvers}

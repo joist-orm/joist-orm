@@ -1,3 +1,10 @@
+## [1.30.2](https://github.com/stephenh/joist-ts/compare/v1.30.1...v1.30.2) (2022-09-18)
+
+
+### Bug Fixes
+
+* Fix enums resolver w/no enums. ([#419](https://github.com/stephenh/joist-ts/issues/419)) ([eb34845](https://github.com/stephenh/joist-ts/commit/eb34845cc4522918daf049d1725d1c635a9af57c))
+
 ## [1.30.1](https://github.com/stephenh/joist-ts/compare/v1.30.0...v1.30.1) (2022-09-14)
 
 

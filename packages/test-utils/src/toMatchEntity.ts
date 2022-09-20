@@ -2,10 +2,12 @@ import CustomMatcherResult = jest.CustomMatcherResult;
 // @ts-ignore
 import matchers from "expect/build/matchers";
 import {
+  AsyncProperty,
   Collection,
   Entity,
   EntityManager,
   getMetadata,
+  isAsyncProperty,
   isCollection,
   isEntity,
   isReference,
@@ -27,7 +29,7 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
     const keys = expected ? Object.keys(expected) : ["id"];
     for (const key of keys) {
       const value = actual[key];
-      if (value && (isReference(value) || isCollection(value))) {
+      if (value && (isReference(value) || isCollection(value) || isAsyncProperty(value))) {
         // If something has a `.load` it could be a Reference.load or a Collection.load, either way lazy load it
         const loaded = await value.load();
         if (loaded instanceof Array) {
@@ -102,5 +104,7 @@ export type MatchedEntity<T> = {
     ? MatchedEntity<U> | U
     : T[K] extends Collection<any, infer U>
     ? Array<MatchedEntity<U> | U>
+    : T[K] extends AsyncProperty<any, infer V>
+    ? V
     : T[K];
 };

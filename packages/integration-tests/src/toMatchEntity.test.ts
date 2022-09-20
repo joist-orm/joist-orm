@@ -19,6 +19,13 @@ describe("toMatchEntity", () => {
     await expect(b1).toMatchEntity({ author: { firstName: "a1" } });
   });
 
+  it("can match async properties", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { books: [{}, {}] });
+    await em.flush();
+    await expect(a1).toMatchEntity({ numberOfBooks2: 2 });
+  });
+
   it("can match reference with entity directly", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);

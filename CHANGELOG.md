@@ -1,3 +1,10 @@
+# [1.32.0](https://github.com/stephenh/joist-ts/compare/v1.31.0...v1.32.0) (2022-09-21)
+
+
+### Features
+
+* Add ability to pass options when creating a many-to-many table ([#421](https://github.com/stephenh/joist-ts/issues/421)) ([fba7b4a](https://github.com/stephenh/joist-ts/commit/fba7b4ae8862def2a0c316de27d9494402edc4ee))
+
 # [1.31.0](https://github.com/stephenh/joist-ts/compare/v1.30.2...v1.31.0) (2022-09-20)
 
 

@@ -97,7 +97,13 @@ export function newTestInstance<T extends Entity>(
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
         // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
         const existing = getObviousDefault(em, field.otherMetadata(), opts);
-        if (existing) {
+        // If this is a m2o pointing to an o2o, i.e. that as a unique constraint, make sure the
+        // existing entity we found isn't already claimed
+        const isUniqueAndAlreadyUsed =
+          existing &&
+          isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
+          existing[field.otherFieldName].isSet;
+        if (existing && !isUniqueAndAlreadyUsed) {
           return [fieldName, existing];
         }
         // Otherwise, only make a new entity only if the field is required

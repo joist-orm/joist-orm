@@ -1,3 +1,10 @@
+## [1.32.1](https://github.com/stephenh/joist-ts/compare/v1.32.0...v1.32.1) (2022-09-21)
+
+
+### Bug Fixes
+
+* Support PersistedAsyncProperties in toMatchEntity. ([#422](https://github.com/stephenh/joist-ts/issues/422)) ([f781ed7](https://github.com/stephenh/joist-ts/commit/f781ed731da4d8da5fd0f0721468f427d90c2aca))
+
 # [1.32.0](https://github.com/stephenh/joist-ts/compare/v1.31.0...v1.32.0) (2022-09-21)
 
 

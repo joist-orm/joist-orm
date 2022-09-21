@@ -10,6 +10,7 @@ import {
   isAsyncProperty,
   isCollection,
   isEntity,
+  isPersistedAsyncProperty,
   isReference,
   Reference,
 } from "joist-orm";
@@ -29,7 +30,10 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
     const keys = expected ? Object.keys(expected) : ["id"];
     for (const key of keys) {
       const value = actual[key];
-      if (value && (isReference(value) || isCollection(value) || isAsyncProperty(value))) {
+      if (
+        value &&
+        (isReference(value) || isCollection(value) || isAsyncProperty(value) || isPersistedAsyncProperty(value))
+      ) {
         // If something has a `.load` it could be a Reference.load or a Collection.load, either way lazy load it
         const loaded = await value.load();
         if (loaded instanceof Array) {

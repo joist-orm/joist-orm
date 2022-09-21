@@ -1,6 +1,7 @@
 /** Creates an entity table with our conventions. */
 import { ColumnDefinitions, MigrationBuilder, PgLiteral } from "node-pg-migrate";
-import { ColumnDefinition } from "node-pg-migrate/dist/operations/tablesTypes";
+import { DropOptions } from "node-pg-migrate/dist/operations/generalTypes";
+import { ColumnDefinition, TableOptions } from "node-pg-migrate/dist/operations/tablesTypes";
 import { singular } from "pluralize";
 
 export function createEntityTable(b: MigrationBuilder, tableName: string, columns: ColumnDefinitions): void {
@@ -108,16 +109,26 @@ export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition,
   };
 }
 
-export function createManyToManyTable(b: MigrationBuilder, tableName: string, table1: string, table2: string) {
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  table1: string,
+  table2: string,
+  options?: TableOptions & DropOptions,
+) {
   const column1 = `${singular(table1)}_id`;
   const column2 = `${singular(table2)}_id`;
-  b.createTable(tableName, {
-    id: "id",
-    [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE" }),
-    [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE" }),
-    created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
-  });
-  b.createIndex(tableName, [column1, column2], { unique: true });
+  b.createTable(
+    tableName,
+    {
+      id: "id",
+      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE" }),
+      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE" }),
+      created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
+    },
+    options,
+  );
+  b.createIndex(tableName, [column1, column2], { unique: true, ifNotExists: options?.ifNotExists });
 }
 
 /** Adds columns + auto-indexes any foreign keys. */

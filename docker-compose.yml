@@ -7,10 +7,6 @@ services:
       dockerfile: db.dockerfile
     ports:
       - 5435:5432
-    command:
-      - "postgres"
-      - "-c"
-      - "fsync=off"
 
   db-wait:
     image: jwilder/dockerize

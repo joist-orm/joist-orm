@@ -1,7 +1,9 @@
-FROM postgres:10.7
+FROM postgres:14.0
 ARG APP_DBNAME=joist
 ARG APP_USERNAME=joist
 ARG APP_PASSWORD=local
+
+ENV POSTGRES_PASSWORD=admin
 
 # Create the init.sh file. This file is only ran once; if you need to re-run it, use `docker-compose rm db`.
 RUN echo "#!/bin/bash" > /init.sh && \
@@ -44,3 +46,5 @@ RUN echo "#!/bin/bash" > /console.sh && \
   echo "set -e" >> /console.sh && \
   echo "psql -v ON_ERROR_STOP=1 --username ${APP_USERNAME} --dbname ${APP_DBNAME}" >> /console.sh && \
   chmod u+x /console.sh
+
+CMD ["postgres", "-c", "fsync=off"]

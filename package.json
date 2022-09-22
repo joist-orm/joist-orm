@@ -14,6 +14,7 @@
     "docs",
     "packages/codegen",
     "packages/graphql-codegen",
+    "packages/graphql-resolver-utils",
     "packages/integration-tests",
     "packages/migration-utils",
     "packages/orm",

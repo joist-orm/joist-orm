@@ -1,6 +1,6 @@
 import { newImage } from "src/entities";
 import { imageResolvers } from "src/resolvers/objects/image/imageResolvers";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("imageResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,4 +13,4 @@ describe("imageResolvers", () => {
   });
 });
 
-const runImage = makeRunResolverKeys(imageResolvers);
+const runImage = makeRunObjectFields(imageResolvers);

@@ -66,7 +66,7 @@ export type SaveCriticInput = {};
 export type MutationResolvers = {
   saveAuthor(root: any, args: any, ctx: Context, info: any): any;
   saveAuthorStat(root: any, args: any, ctx: Context, info: any): any;
-  saveBook(root: any, args: any, ctx: Context, info: any): any;
+  saveBook(root: any, args: { input: SaveBookInput }, ctx: Context, info: any): any;
   saveBookAdvance(root: any, args: any, ctx: Context, info: any): any;
   saveBookReview(root: any, args: any, ctx: Context, info: any): any;
   saveComment(root: any, args: any, ctx: Context, info: any): any;

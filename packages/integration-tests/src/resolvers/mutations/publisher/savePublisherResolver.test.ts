@@ -1,7 +1,5 @@
-import { Context } from "src/context";
-import { SavePublisherInput } from "src/generated/graphql-types";
 import { savePublisher } from "src/resolvers/mutations/publisher/savePublisherResolver";
-import { run } from "src/resolvers/testUtils";
+import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("savePublisher", () => {
@@ -12,8 +10,4 @@ describe("savePublisher", () => {
   });
 });
 
-async function runSavePublisher(ctx: Context, inputFn: () => SavePublisherInput) {
-  return await run(ctx, async (ctx) => {
-    return savePublisher.savePublisher({}, { input: inputFn() }, ctx, undefined!);
-  });
-}
+const runSavePublisher = makeRunInputMutation(savePublisher);

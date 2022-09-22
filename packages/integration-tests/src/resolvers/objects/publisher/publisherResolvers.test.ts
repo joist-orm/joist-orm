@@ -1,6 +1,6 @@
 import { newPublisher } from "src/entities";
 import { publisherResolvers } from "src/resolvers/objects/publisher/publisherResolvers";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("publisherResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,4 +13,4 @@ describe("publisherResolvers", () => {
   });
 });
 
-const runPublisher = makeRunResolverKeys(publisherResolvers);
+const runPublisher = makeRunObjectFields(publisherResolvers);

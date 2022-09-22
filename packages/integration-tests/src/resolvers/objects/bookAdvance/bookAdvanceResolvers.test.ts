@@ -1,6 +1,6 @@
 import { newBookAdvance } from "src/entities";
 import { bookAdvanceResolvers } from "src/resolvers/objects/bookAdvance/bookAdvanceResolvers";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("bookAdvanceResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,4 +13,4 @@ describe("bookAdvanceResolvers", () => {
   });
 });
 
-const runBookAdvance = makeRunResolverKeys(bookAdvanceResolvers);
+const runBookAdvance = makeRunObjectFields(bookAdvanceResolvers);

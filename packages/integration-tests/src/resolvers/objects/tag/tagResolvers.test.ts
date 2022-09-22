@@ -1,6 +1,6 @@
 import { newTag } from "src/entities";
 import { tagResolvers } from "src/resolvers/objects/tag/tagResolvers";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("tagResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,4 +13,4 @@ describe("tagResolvers", () => {
   });
 });
 
-const runTag = makeRunResolverKeys(tagResolvers);
+const runTag = makeRunObjectFields(tagResolvers);

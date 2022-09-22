@@ -1,7 +1,5 @@
-import { Context } from "src/context";
-import { SaveTagInput } from "src/generated/graphql-types";
 import { saveTag } from "src/resolvers/mutations/tag/saveTagResolver";
-import { run } from "src/resolvers/testUtils";
+import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveTag", () => {
@@ -12,8 +10,4 @@ describe("saveTag", () => {
   });
 });
 
-async function runSaveTag(ctx: Context, inputFn: () => SaveTagInput) {
-  return await run(ctx, async (ctx) => {
-    return saveTag.saveTag({}, { input: inputFn() }, ctx, undefined!);
-  });
-}
+const runSaveTag = makeRunInputMutation(saveTag);

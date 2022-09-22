@@ -1,6 +1,6 @@
 import { newAuthorStat } from "src/entities";
 import { authorStatResolvers } from "src/resolvers/objects/authorStat/authorStatResolvers";
-import { makeRunResolver, makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObject, makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("authorStatResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,5 +13,5 @@ describe("authorStatResolvers", () => {
   });
 });
 
-const runAuthorStatKeys = makeRunResolverKeys(authorStatResolvers);
-const runAuthorStat = makeRunResolver(authorStatResolvers);
+const runAuthorStatKeys = makeRunObjectFields(authorStatResolvers);
+const runAuthorStat = makeRunObject(authorStatResolvers);

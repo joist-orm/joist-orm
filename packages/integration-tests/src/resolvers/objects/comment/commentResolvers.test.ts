@@ -1,6 +1,6 @@
 import { newComment } from "src/entities";
 import { commentResolvers } from "src/resolvers/objects/comment/commentResolvers";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("commentResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,4 +13,4 @@ describe("commentResolvers", () => {
   });
 });
 
-const runComment = makeRunResolverKeys(commentResolvers);
+const runComment = makeRunObjectFields(commentResolvers);

@@ -1,3 +1,10 @@
+## [1.32.2](https://github.com/stephenh/joist-ts/compare/v1.32.1...v1.32.2) (2022-09-22)
+
+
+### Bug Fixes
+
+* Do not reuse entities that have unique constraints. ([#424](https://github.com/stephenh/joist-ts/issues/424)) ([bc098e2](https://github.com/stephenh/joist-ts/commit/bc098e2feb2f7dfa2d4f1e37cf6f099698ad8304))
+
 ## [1.32.1](https://github.com/stephenh/joist-ts/compare/v1.32.0...v1.32.1) (2022-09-21)
 
 

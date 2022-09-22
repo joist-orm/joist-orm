@@ -102,6 +102,7 @@ export function newTestInstance<T extends Entity>(
         const isUniqueAndAlreadyUsed =
           existing &&
           isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
+          existing[field.otherFieldName].isLoaded &&
           existing[field.otherFieldName].isSet;
         if (existing && !isUniqueAndAlreadyUsed) {
           return [fieldName, existing];

@@ -299,9 +299,13 @@ describe("EntityManager.factories", () => {
     const a = newAuthor(em);
     expect(a.image.get).toBeUndefined();
     // When we create an entity that has a m2o to author
-    const i = newImage(em);
+    const i1 = newImage(em);
     // Then the m2o reused the existing entity
-    expect(i.author.get).toEqual(a);
+    expect(i1.author.get).toEqual(a);
+    // But if we make a _2nd_ image
+    const i2 = newImage(em);
+    // Then we don't use the same author b/c of the unique constraint
+    expect(i2.author.get).toBeUndefined();
   });
 
   it("can create m2m", async () => {

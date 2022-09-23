@@ -1,3 +1,10 @@
+# [1.33.0](https://github.com/stephenh/joist-ts/compare/v1.32.2...v1.33.0) (2022-09-23)
+
+
+### Features
+
+* Extract graphql-resolver-utils. ([#425](https://github.com/stephenh/joist-ts/issues/425)) ([f5686e1](https://github.com/stephenh/joist-ts/commit/f5686e1a6c85a9abcde8df273eb94b0608bab1ce))
+
 ## [1.32.2](https://github.com/stephenh/joist-ts/compare/v1.32.1...v1.32.2) (2022-09-22)
 
 

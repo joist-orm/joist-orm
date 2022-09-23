@@ -28,7 +28,7 @@ type GraphQLPrimitive = string | Date | boolean | number | null | undefined;
  * every field to a potential resolver, and then will let the `EntityResolvers` type-check effectively
  * do the union of "what's defined on the ORM type vs. what's defined on the GraphQL type".
  */
-type EntityResolver<T extends Entity> = {
+export type EntityResolver<T extends Entity> = {
   [P in keyof T]: P extends "id"
     ? Resolver<T, Record<string, any>, IdOf<T>>
     : T[P] extends GraphQLPrimitive | GraphQLPrimitive[]

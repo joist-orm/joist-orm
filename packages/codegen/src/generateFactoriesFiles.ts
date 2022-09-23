@@ -10,6 +10,7 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFil
   const entityFiles = entities.map(({ entity }) => {
     const name = pascalCase(entity.name);
     const contents = code`
+      /** @ignore */
       export function new${name}(
         em: ${EntityManager},
         opts: ${FactoryOpts}<${entity.type}> = {},

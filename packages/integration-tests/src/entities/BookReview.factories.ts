@@ -1,6 +1,8 @@
-import { DeepNew, EntityManager, FactoryOpts, newTestInstance } from "joist-orm";
+import { DeepNew, FactoryOpts, newTestInstance } from "joist-orm";
 import { BookReview } from "./entities";
+import type { EntityManager } from "./entities";
 
-export function newBookReview(em: EntityManager, opts?: FactoryOpts<BookReview>): DeepNew<BookReview> {
+/** @ignore */
+export function newBookReview(em: EntityManager, opts: FactoryOpts<BookReview> = {}): DeepNew<BookReview> {
   return newTestInstance(em, BookReview, opts);
 }

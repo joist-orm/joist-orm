@@ -145,6 +145,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       const accessors = enumRows.map(
         (row) => code`
+          /** @ignore */
           get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
             return this.__orm.data["${fieldName}"] === ${enumType}.${pascalCase(row.code)};
           }
@@ -181,6 +182,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
 
       const accessors = enumRows.map(
         (row) => code`
+          /** @ignore */
           get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
             return this.${fieldName}.includes(${enumType}.${pascalCase(row.code)});
           }
@@ -331,32 +333,39 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       : code`return this.idTagged;`;
 
   return code`
+    /** @ignore */
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
     ${generatePolymorphicTypes(meta)}
     
+    /** @ignore */
     export interface ${entityName}Fields {
       ${generateFieldsType(config, meta)}
     }
 
+    /** @ignore */
     export interface ${entityName}Opts {
       ${generateOptsFields(config, meta)}
     }
 
+    /** @ignore */
     export interface ${entityName}IdsOpts {
       ${generateOptIdsFields(config, meta)}
     }
 
+    /** @ignore */
     export interface ${entityName}Filter {
       id?: ${ValueFilter}<${entityName}Id, never>;
       ${generateFilterFields(meta)}
     }
 
+    /** @ignore */
     export interface ${entityName}GraphQLFilter {
       id?: ${ValueGraphQLFilter}<${entityName}Id>;
       ${generateGraphQLFilterFields(meta)}
     }
 
+    /** @ignore */
     export interface ${entityName}Order {
       id?: ${OrderBy};
       ${generateOrderFields(meta)}

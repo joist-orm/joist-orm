@@ -1,6 +1,8 @@
-import { DeepNew, EntityManager, FactoryOpts, newTestInstance } from "joist-orm";
+import { DeepNew, FactoryOpts, newTestInstance } from "joist-orm";
 import { Image } from "./entities";
+import type { EntityManager } from "./entities";
 
-export function newImage(em: EntityManager, opts?: FactoryOpts<Image>): DeepNew<Image> {
+/** @ignore */
+export function newImage(em: EntityManager, opts: FactoryOpts<Image> = {}): DeepNew<Image> {
   return newTestInstance(em, Image, opts);
 }

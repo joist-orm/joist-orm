@@ -1,3 +1,10 @@
+## [1.33.1](https://github.com/stephenh/joist-ts/compare/v1.33.0...v1.33.1) (2022-09-23)
+
+
+### Bug Fixes
+
+* Add makeRun to allow custom newContext functions. ([#427](https://github.com/stephenh/joist-ts/issues/427)) ([4dd3739](https://github.com/stephenh/joist-ts/commit/4dd373909faf13b2395287f0c6fa955850699083))
+
 # [1.33.0](https://github.com/stephenh/joist-ts/compare/v1.32.2...v1.33.0) (2022-09-23)
 
 

@@ -418,6 +418,13 @@ describe("EntityManager.factories", () => {
       expect(await ft1.parent.load()).toBeInstanceOf(Author);
     });
 
+    it("creates a new entity if needed without an opt passed", async () => {
+      const em = newEntityManager();
+      const ft1 = newTestInstance(em, Comment, {});
+      expect(ft1.parent.isSet).toBeTruthy();
+      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+    });
+
     it("creates a new entity when configured not to search for books as a possible default", async () => {
       const em = newEntityManager();
       const b1 = newBook(em);

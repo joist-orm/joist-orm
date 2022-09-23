@@ -8,6 +8,10 @@
     "directory": "packages/graphql-resolver-utils"
   },
   "main": "build/index.js",
+  "exports": {
+    ".": "./build/index.js",
+    "./tests": "./build/tests.js"
+  },
   "types": "build/index.d.ts",
   "scripts": {
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"

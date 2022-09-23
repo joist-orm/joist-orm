@@ -22,6 +22,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   Object.values(fields).forEach((code) => code.asOneline());
 
   return code`
+    /** @ignore */
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",

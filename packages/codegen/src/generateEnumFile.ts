@@ -28,6 +28,7 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
       ${rows.map((row) => `${pascalCase(row.code)} = '${row.code}'`).join(",\n")}
     }
 
+    /** @ignore */
     export type ${detailsName} = {${detailsDefinition}};
 
     const details: Record<${enumName}, ${detailsName}> = {
@@ -43,6 +44,7 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
         .join(",")}
     };
 
+    /** @ignore */
     export const ${pluralize(enumName)} = {
       getByCode(code: ${enumName}): ${detailsName} {
         return details[code];

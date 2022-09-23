@@ -371,6 +371,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ${generateOrderFields(meta)}
     }
 
+    /** @ignore */
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(meta, configName)}
@@ -380,6 +381,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
         ${defaultValues}
       };
 
+      /** @ignore */
       readonly __orm!: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;

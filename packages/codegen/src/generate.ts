@@ -62,14 +62,17 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const metadataFile: CodegenFile = {
     name: "./metadata.ts",
     contents: code`
+      /** @ignore */
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
 
+      /** @ignore */
       export function getEm(e: ${BaseEntity}): EntityManager {
         return e.em as EntityManager;
       }
 
       ${entities.map((meta) => generateMetadataFile(config, dbMeta, meta))}
 
+      /** @ignore */
       export const allMetadata = [${entities.map((meta) => meta.entity.metaName).join(", ")}];
       ${configureMetadata}(allMetadata);
     `,

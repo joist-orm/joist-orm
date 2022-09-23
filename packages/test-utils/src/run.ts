@@ -4,7 +4,7 @@ import { Context } from "./context";
 type MaybePromise<T> = T | Promise<T>;
 
 /** Runs the `fn` in a dedicated / non-test Unit of Work . */
-export async function run<T>(ctx: Context, fn: (ctx: Context) => MaybePromise<T>): Promise<T> {
+export async function run<C extends Context, T>(ctx: C, fn: (ctx: C) => MaybePromise<T>): Promise<T> {
   const { em } = ctx;
   // Ensure any test data we've setup is flushed
   await em.flush();
@@ -15,10 +15,10 @@ export async function run<T>(ctx: Context, fn: (ctx: Context) => MaybePromise<T>
 }
 
 /** Runs the `fn` in a dedicated / non-test Unit of Work for each value in `values */
-export async function runEach<T, U>(
-  ctx: Context,
+export async function runEach<C extends Context, T, U>(
+  ctx: C,
   valuesFn: () => U[],
-  fn: (ctx: Context, value: U) => MaybePromise<T>,
+  fn: (ctx: C, value: U) => MaybePromise<T>,
 ): Promise<T[]> {
   const { em } = ctx;
   // Ensure any test data we've setup is flushed
@@ -30,7 +30,7 @@ export async function runEach<T, U>(
 }
 
 /** Runs the `fn` in a dedicated / non-test Unit of Work. */
-async function runWithNewCtx<T>(ctx: Context, fn: (ctx: Context) => MaybePromise<T>): Promise<T> {
+async function runWithNewCtx<C extends Context, T>(ctx: C, fn: (ctx: C) => MaybePromise<T>): Promise<T> {
   const { em } = ctx;
   const newCtx = { ...ctx };
   const newEm = new EntityManager(newCtx, em.driver);

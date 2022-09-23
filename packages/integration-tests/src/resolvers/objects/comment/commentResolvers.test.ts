@@ -6,10 +6,10 @@ describe("commentResolvers", () => {
   it.withCtx("can return", async (ctx) => {
     const { em } = ctx;
     // Given a Comment
-    const comment = newComment(em);
+    const comment = newComment(em, { text: "foo" });
     // Then we can query it
-    const result = await runComment(ctx, comment, []);
-    expect(result).toMatchObject({});
+    const result = await runComment(ctx, comment, ["comment"]);
+    expect(result.comment).toBe("foo");
   });
 });
 

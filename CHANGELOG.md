@@ -1,3 +1,10 @@
+## [1.33.2](https://github.com/stephenh/joist-ts/compare/v1.33.1...v1.33.2) (2022-09-23)
+
+
+### Bug Fixes
+
+* Fix export import. ([#428](https://github.com/stephenh/joist-ts/issues/428)) ([15150bd](https://github.com/stephenh/joist-ts/commit/15150bd0668d61c3640659c2ba00f114006d5022))
+
 ## [1.33.1](https://github.com/stephenh/joist-ts/compare/v1.33.0...v1.33.1) (2022-09-23)
 
 

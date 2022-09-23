@@ -10,7 +10,11 @@ module.exports = {
     "default",
     [
       "jest-junit",
-      { outputDirectory: "../../artifacts", outputName: "junit-graphql-codegen.xml", usePathForSuiteName: "true" },
+      {
+        outputDirectory: "../../artifacts",
+        outputName: "junit-graphql-resolver-utils.xml",
+        usePathForSuiteName: "true",
+      },
     ],
   ],
 };

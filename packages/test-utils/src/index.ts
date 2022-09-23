@@ -1,5 +1,5 @@
 import { MatchedEntity } from "./toMatchEntity";
-export { run, runEach } from "./run";
+export { makeRun, makeRunEach, run, runEach } from "./run";
 export { toMatchEntity } from "./toMatchEntity";
 
 declare global {

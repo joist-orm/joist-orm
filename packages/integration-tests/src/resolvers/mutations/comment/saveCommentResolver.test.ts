@@ -1,7 +1,5 @@
-import { Context } from "src/context";
-import { SaveCommentInput } from "src/generated/graphql-types";
 import { saveComment } from "src/resolvers/mutations/comment/saveCommentResolver";
-import { run } from "src/resolvers/testUtils";
+import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveComment", () => {
@@ -12,8 +10,4 @@ describe("saveComment", () => {
   });
 });
 
-async function runSaveComment(ctx: Context, inputFn: () => SaveCommentInput) {
-  return await run(ctx, async (ctx) => {
-    return saveComment.saveComment({}, { input: inputFn() }, ctx, undefined!);
-  });
-}
+const runSaveComment = makeRunInputMutation(saveComment);

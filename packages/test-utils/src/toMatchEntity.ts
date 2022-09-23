@@ -102,6 +102,9 @@ function getTestId(em: EntityManager, entity: Entity): string {
  *
  * I.e. so that you can `toMatchEntity({ otherEntity: { name: "foo" } })` even though
  * `otherEntity` is technically a joist `Reference` or `Collection`.
+ *
+ * We allow `| null` so that `toMatchEntity` can work against optional fields
+ * that are returned from GraphQL object resolvers.
  */
 export type MatchedEntity<T> = {
   [K in keyof T]?: T[K] extends Reference<any, infer U, any>
@@ -110,5 +113,5 @@ export type MatchedEntity<T> = {
     ? Array<MatchedEntity<U> | U>
     : T[K] extends AsyncProperty<any, infer V>
     ? V
-    : T[K];
+    : T[K] | null;
 };

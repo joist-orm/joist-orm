@@ -3,7 +3,7 @@ import { Config, EntityDbMetadata } from "joist-codegen";
 import { code, CodegenFile, imp } from "ts-poet";
 
 const getMetadata = imp("getMetadata@joist-orm");
-const entityResolver = imp("entityResolver@src/resolvers/entityResolver");
+const entityResolver = imp("entityResolver@src/resolvers/utils");
 const makeRunResolverKeys = imp("makeRunResolverKeys@src/resolvers/testUtils");
 const makeRunResolver = imp("makeRunResolver@src/resolvers/testUtils");
 
@@ -50,7 +50,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
           const ${tagName} = ${factory}(em);
           // Then we can query it
           const result = await run${name}Keys(ctx, ${tagName}, [${keys}]);
-          expect(${tagName}).toMatchObject(result);
+          await expect(${tagName}).toMatchEntity(result);
         });
       });
 

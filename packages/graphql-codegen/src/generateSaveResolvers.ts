@@ -3,7 +3,7 @@ import { Config, EntityDbMetadata } from "joist-codegen";
 import { code, CodegenFile, imp } from "ts-poet";
 
 const context = imp("Context@src/context");
-const saveEntity = imp("saveEntity@src/resolvers/mutations/utils");
+const saveEntity = imp("saveEntity@src/resolvers/utils");
 const mutationResolvers = imp("MutationResolvers@src/generated/graphql-types");
 const run = imp("run@src/resolvers/testUtils");
 
@@ -41,8 +41,6 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
     const tagName = config.entities[name].tag || "entity";
 
     const contents = code`
-      import "src/setupDbTests";
-
       describe("save${name}", () => {
         it.withCtx("can create", async (ctx) => {
           const { em } = ctx;

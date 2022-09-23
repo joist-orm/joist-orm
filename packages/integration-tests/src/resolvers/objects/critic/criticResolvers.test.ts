@@ -1,6 +1,6 @@
 import { newCritic } from "src/entities";
 import { criticResolvers } from "src/resolvers/objects/critic/criticResolvers";
-import { makeRunResolverKeys } from "src/resolvers/testUtils";
+import { makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("criticResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -13,4 +13,4 @@ describe("criticResolvers", () => {
   });
 });
 
-const runCritic = makeRunResolverKeys(criticResolvers);
+const runCritic = makeRunObjectFields(criticResolvers);

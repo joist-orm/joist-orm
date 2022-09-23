@@ -1,7 +1,5 @@
-import { Context } from "src/context";
-import { SaveImageInput } from "src/generated/graphql-types";
 import { saveImage } from "src/resolvers/mutations/image/saveImageResolver";
-import { run } from "src/resolvers/testUtils";
+import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveImage", () => {
@@ -12,8 +10,4 @@ describe("saveImage", () => {
   });
 });
 
-async function runSaveImage(ctx: Context, inputFn: () => SaveImageInput) {
-  return await run(ctx, async (ctx) => {
-    return saveImage.saveImage({}, { input: inputFn() }, ctx, undefined!);
-  });
-}
+const runSaveImage = makeRunInputMutation(saveImage);

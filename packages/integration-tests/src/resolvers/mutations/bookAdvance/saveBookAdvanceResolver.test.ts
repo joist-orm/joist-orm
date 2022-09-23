@@ -1,7 +1,5 @@
-import { Context } from "src/context";
-import { SaveBookAdvanceInput } from "src/generated/graphql-types";
 import { saveBookAdvance } from "src/resolvers/mutations/bookAdvance/saveBookAdvanceResolver";
-import { run } from "src/resolvers/testUtils";
+import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveBookAdvance", () => {
@@ -12,8 +10,4 @@ describe("saveBookAdvance", () => {
   });
 });
 
-async function runSaveBookAdvance(ctx: Context, inputFn: () => SaveBookAdvanceInput) {
-  return await run(ctx, async (ctx) => {
-    return saveBookAdvance.saveBookAdvance({}, { input: inputFn() }, ctx, undefined!);
-  });
-}
+const runSaveBookAdvance = makeRunInputMutation(saveBookAdvance);

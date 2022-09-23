@@ -114,6 +114,8 @@ export function newTestInstance<T extends Entity>(
       } else if (field.kind === "enum" && field.required) {
         const codegenDefault = (cstr as any).defaultValues[field.fieldName];
         return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
+      } else if (field.kind === "poly" && field.required) {
+        return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
       }
       return [];
     })

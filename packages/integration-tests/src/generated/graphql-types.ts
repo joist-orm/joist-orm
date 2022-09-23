@@ -19,37 +19,38 @@ import {
   Tag,
 } from "@src/entities";
 
-export type Resolver<R, A, T> = (root: R, args: A, ctx: Context, info: any) => T | Promise<T>;
+export type MaybePromise<T> = T | Promise<T>;
+export type Resolver<R, A, T> = (root: R, args: A, ctx: Context, info: any) => MaybePromise<T>;
 
 export type AuthorResolvers = {
-  firstName(root: Author): Promise<string>;
+  firstName: Resolver<Author, any, string>;
 };
 export type AuthorStatResolvers = {
-  smallint(root: AuthorStat): Promise<number>;
+  smallint: Resolver<AuthorStat, any, number>;
 };
 export type BookResolvers = {
-  title(root: Book): Promise<string>;
+  title: Resolver<Book, any, string>;
 };
 export type BookAdvanceResolvers = {
-  status(root: BookAdvance): Promise<AdvanceStatus>;
+  status: Resolver<BookAdvance, any, AdvanceStatus>;
 };
 export type BookReviewResolvers = {
-  rating(root: BookReview): Promise<number>;
+  rating: Resolver<BookReview, any, number>;
 };
 export type CommentResolvers = {
-  comment(root: Comment): Promise<string>;
+  comment: Resolver<Comment, any, string | undefined | null>;
 };
 export type ImageResolvers = {
-  fileName(root: Image): Promise<string>;
+  fileName: Resolver<Image, any, string>;
 };
 export type PublisherResolvers = {
-  name(root: Publisher): Promise<string>;
+  name: Resolver<Publisher, any, string>;
 };
 export type TagResolvers = {
-  name(root: Tag): Promise<string>;
+  name: Resolver<Tag, any, string>;
 };
 export type CriticResolvers = {
-  name(root: Critic): Promise<string>;
+  name: Resolver<Critic, any, string>;
 };
 
 export type SaveAuthorInput = {};
@@ -66,7 +67,7 @@ export type SaveCriticInput = {};
 export type MutationResolvers = {
   saveAuthor(root: any, args: any, ctx: Context, info: any): any;
   saveAuthorStat(root: any, args: any, ctx: Context, info: any): any;
-  saveBook(root: any, args: any, ctx: Context, info: any): any;
+  saveBook(root: any, args: { input: SaveBookInput }, ctx: Context, info: any): any;
   saveBookAdvance(root: any, args: any, ctx: Context, info: any): any;
   saveBookReview(root: any, args: any, ctx: Context, info: any): any;
   saveComment(root: any, args: any, ctx: Context, info: any): any;

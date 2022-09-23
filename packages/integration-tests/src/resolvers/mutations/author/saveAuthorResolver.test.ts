@@ -1,7 +1,5 @@
-import { Context } from "src/context";
-import { SaveAuthorInput } from "src/generated/graphql-types";
 import { saveAuthor } from "src/resolvers/mutations/author/saveAuthorResolver";
-import { run } from "src/resolvers/testUtils";
+import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
 describe("saveAuthor", () => {
@@ -12,8 +10,4 @@ describe("saveAuthor", () => {
   });
 });
 
-async function runSaveAuthor(ctx: Context, inputFn: () => SaveAuthorInput) {
-  return await run(ctx, async (ctx) => {
-    return saveAuthor.saveAuthor({}, { input: inputFn() }, ctx, undefined!);
-  });
-}
+const runSaveAuthor = makeRunInputMutation(saveAuthor);

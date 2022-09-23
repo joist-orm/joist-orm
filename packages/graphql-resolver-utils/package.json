@@ -1,0 +1,34 @@
+{
+  "name": "joist-graphql-resolver-utils",
+  "version": "1.32.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stephenh/joist-ts.git",
+    "directory": "packages/graphql-resolver-utils"
+  },
+  "main": "build/index.js",
+  "types": "build/index.d.ts",
+  "scripts": {
+    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+  },
+  "files": [
+    "build"
+  ],
+  "dependencies": {
+    "graphql": "^16.6.0",
+    "joist-orm": "workspace:*",
+    "joist-test-utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.2.220",
+    "@swc/jest": "^0.2.22",
+    "@types/jest": "^28.1.6",
+    "@types/node": "^18.6.3",
+    "jest": "^28.1.3",
+    "prettier": "^2.7.1",
+    "prettier-plugin-organize-imports": "^3.0.0",
+    "tsconfig-paths": "^4.0.0",
+    "typescript": "^4.7.4"
+  }
+}

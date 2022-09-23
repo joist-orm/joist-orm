@@ -15,7 +15,13 @@ set_version() {
   sed -i.bak "s/${pattern}/\"version\": \"${version}\"/" "${file}"
 }
 
-for dir in . ./packages/codegen ./packages/graphql-codegen ./packages/migration-utils ./packages/orm ./packages/utils ./packages/test-utils
+for dir in . ./packages/codegen \
+  ./packages/graphql-codegen \
+  ./packages/graphql-resolver-utils \
+  ./packages/migration-utils \
+  ./packages/orm \
+  ./packages/utils \
+  ./packages/test-utils
 do
   set_version $dir
 done

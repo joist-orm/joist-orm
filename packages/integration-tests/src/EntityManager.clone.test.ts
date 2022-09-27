@@ -160,7 +160,7 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And only the currently set fields look changed
-    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "favoriteColors"]);
     // And specifically the publisher is not changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);

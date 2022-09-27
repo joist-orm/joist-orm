@@ -1,6 +1,18 @@
 import { insertAuthor } from "@src/entities/inserts";
 import { EntityConstructor, EntityManager } from "joist-orm";
-import { Author, Book, Comment, Image, ImageType, newAuthor, newBook, newPublisher, Publisher, Tag } from "./entities";
+import {
+  Author,
+  Book,
+  Comment,
+  Image,
+  ImageType,
+  newAuthor,
+  newBook,
+  newComment,
+  newPublisher,
+  Publisher,
+  Tag,
+} from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.clone", () => {
@@ -148,7 +160,7 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And only the currently set fields look changed
-    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "favoriteColors"]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
     // And specifically the publisher is not changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
@@ -168,6 +180,20 @@ describe("EntityManager.clone", () => {
     expect(a2.comments.get[0].id).toBe("comment:3");
     expect(a2.comments.get[1].id).toBe("comment:4");
     expect(a2.comments.get[0].parent.get).toBe(a2);
+  });
+
+  it("can clone polymorphic references directly", async () => {
+    const em = newEntityManager();
+    // Given an entity with a polymorphic parent
+    const c1 = newComment(em, { parent: {} });
+    expect(c1.parent.get).toBeInstanceOf(Author);
+    await em.flush();
+    // When we clone it in a new UoW
+    const em2 = newEntityManager();
+    const c2 = await em2.load(Comment, c1.idOrFail);
+    const c3 = await em2.clone(c2);
+    // Then the parent can be loaded
+    expect(await c3.parent.load()).toBeInstanceOf(Author);
   });
 
   it("can clone a collection of entities", async () => {

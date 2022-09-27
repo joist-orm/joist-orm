@@ -38,7 +38,7 @@ import { normalizeHint } from "./normalizeHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
-import { fail, getOrSet, MaybePromise, toArray } from "./utils";
+import { assertNever, fail, getOrSet, MaybePromise, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
@@ -398,16 +398,36 @@ export class EntityManager<C = {}> {
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
-      const { id, ...copy } = entity.__orm.data;
       // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
       // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
       // by `em.register`).
       const meta = getMetadata(entity);
-      Object.values(meta.fields).forEach((f) => {
-        if (f.kind === "primitive" && (f.derived !== false || f.protected)) {
-          delete copy[f.fieldName];
-        }
-      });
+      const copy = Object.fromEntries(
+        Object.values(meta.fields)
+          .map((f) => {
+            switch (f.kind) {
+              case "primitive":
+                if (!f.derived && !f.protected) {
+                  return [f.fieldName, entity.__orm.data[f.fieldName]];
+                } else {
+                  return undefined;
+                }
+              case "m2o":
+              case "poly":
+              case "enum":
+                return [f.fieldName, entity.__orm.data[f.fieldName]];
+              case "primaryKey":
+              case "o2m":
+              case "m2m":
+              case "o2o":
+              case "lo2m":
+                return undefined;
+              default:
+                assertNever(f);
+            }
+          })
+          .filter(isDefined),
+      );
 
       // Call `new` just like the user would do
       const clone = new meta.cstr(this, copy);
@@ -423,7 +443,7 @@ export class EntityManager<C = {}> {
         if (value instanceof ManyToOneReferenceImpl || value instanceof PolymorphicReferenceImpl) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = clone.__orm.data[fieldName];
-          const existing = this.entities.find((e) => sameEntity(e, getMetadata(e), existingIdOrEntity));
+          const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
           if (existing) {
@@ -1005,12 +1025,8 @@ export function isKey(k: any): k is string {
   return typeof k === "string";
 }
 
-/** Compares `a` to `b`, where `b` might be an id. B/c ids can overlap, we need to know `b`'s metadata type. */
-export function sameEntity(
-  a: Entity | string | undefined,
-  meta: EntityMetadata<any>,
-  b: Entity | string | undefined,
-): boolean {
+/** Compares `a` to `b`, where `b` might be an id. */
+export function sameEntity(a: Entity | string | undefined, b: Entity | string | undefined): boolean {
   if (a === b) {
     return true;
   }
@@ -1021,8 +1037,8 @@ export function sameEntity(
   if ((isEntity(a) && a.isNewEntity) || (isEntity(b) && b.isNewEntity)) {
     return a === b;
   }
-  const aId = isEntity(a) && getMetadata(a) === meta ? a.id : a;
-  const bId = isEntity(b) && getMetadata(b) === meta ? b.id : b;
+  const aId = isEntity(a) ? a.idTagged : a;
+  const bId = isEntity(b) ? b.idTagged : b;
   return aId === bId;
 }
 
@@ -1343,4 +1359,8 @@ function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadH
   } else {
     return {};
   }
+}
+
+export function isDefined<T extends any>(param: T | undefined | null): param is T {
+  return param !== null && param !== undefined;
 }

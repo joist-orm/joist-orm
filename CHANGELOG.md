@@ -1,3 +1,10 @@
+## [1.33.3](https://github.com/stephenh/joist-ts/compare/v1.33.2...v1.33.3) (2022-09-27)
+
+
+### Bug Fixes
+
+* Fix EntityManager.populate not checking loadMany ([#418](https://github.com/stephenh/joist-ts/issues/418)) ([8c299f7](https://github.com/stephenh/joist-ts/commit/8c299f7a80d570bc35b4e821b0c187a2501563dd))
+
 ## [1.33.2](https://github.com/stephenh/joist-ts/compare/v1.33.1...v1.33.2) (2022-09-23)
 
 

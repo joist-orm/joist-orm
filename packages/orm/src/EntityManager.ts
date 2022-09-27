@@ -399,18 +399,17 @@ export class EntityManager<C = {}> {
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
       const { id, ...copy } = entity.__orm.data;
-      // Delete any keys that are undefined, b/c we're making a new entity, and Joist's infra
-      // doesn't expect `isNewEntity` entity to have `__orm.data` keys set to undefined
-      Object.entries(copy)
-        .filter(([, value]) => value === undefined)
-        .forEach(([key]) => delete copy[key]);
-
+      // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
+      // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
+      // by `em.register`).
       const meta = getMetadata(entity);
       Object.values(meta.fields).forEach((f) => {
-        if (f.kind === "primitive" && f.derived !== false) {
+        if (f.kind === "primitive" && (f.derived !== false || f.protected)) {
           delete copy[f.fieldName];
         }
       });
+
+      // Call `new` just like the user would do
       const clone = new meta.cstr(this, copy);
 
       return [entity, clone] as const;

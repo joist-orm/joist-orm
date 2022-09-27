@@ -284,6 +284,19 @@ describe("EntityManager.clone", () => {
       expect(await numberOf(em, Author, Book, Comment)).toEqual([2, 3, 3]);
     });
   });
+
+  it("can protected fields", async () => {
+    // Given an entity created and set a protected field
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1", isPopular: true });
+    expect(a1.wasEverPopular).toBe(true);
+    // When we clone it
+    const a2 = await em.clone(a1);
+    // Then the clone got the same value (...although that is b/c for this test,
+    // it went through the same codepath, and didn't actually copy the value)
+    expect(a2.wasEverPopular).toBe(true);
+    await em.flush();
+  });
 });
 
 async function numberOf(em: EntityManager, ...args: EntityConstructor<any>[]): Promise<number[]> {

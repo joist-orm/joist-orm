@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "../Entity";
-import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
+import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
 import { getMetadata, PolymorphicFieldComponent } from "../EntityMetadata";
 import {
   deTagId,
@@ -61,7 +61,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   extends AbstractRelationImpl<U>
   implements PolymorphicReference<T, U, N>
 {
-  private loaded!: U | N;
+  private loaded: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   private field: PolymorphicField;
@@ -90,7 +90,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
       this.loaded = (await this.entity.em.load(getConstructorFromTaggedId(current), current)) as any as U;
     }
     this._isLoaded = true;
-    return this.filterDeleted(this.loaded, opts);
+    return this.filterDeleted(this.loaded!, opts);
   }
 
   set(other: U | N): void {
@@ -118,7 +118,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
       this._isLoaded = true;
     }
 
-    return this.filterDeleted(this.loaded, opts);
+    return this.filterDeleted(this.loaded!, opts);
   }
 
   get getWithDeleted(): U | N {
@@ -154,8 +154,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   initializeForNewEntity(): void {
-    // Our codegened Opts type will ensure our field is initialized if necessary/notNull
-    this._isLoaded = true;
+    // Usually our codegened opts ensures that polys are only initialized with entities,
+    // but em.clone currently passes in strings
+    if (this.current() === undefined) {
+      this._isLoaded = true;
+    }
   }
 
   maybeCascadeDelete(): void {
@@ -183,12 +186,19 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   // Internal method used by PolymorphicReference
-  setImpl(other: U | N): void {
-    if (other?.isNewEntity ? other === this.loaded : this.id === other?.id) {
+  setImpl(other: U | IdOf<U> | N): void {
+    if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
 
-    if (other !== undefined && !this.field.components.some((c) => other instanceof c.otherMetadata().cstr)) {
+    if (
+      other !== undefined &&
+      !this.field.components.some(
+        (c) =>
+          other instanceof c.otherMetadata().cstr ||
+          (typeof other === "string" && getConstructorFromTaggedId(other) === c.otherMetadata().cstr),
+      )
+    ) {
       fail(`${other} cannot be set as '${this.field.fieldName}' on ${this.entity}`);
     }
 
@@ -198,12 +208,15 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     ensureNotDeleted(this.entity, { ignore: "pending" });
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName, other?.id ?? other);
-    if (!changed) {
-      return;
+    const changed = setField(this.entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);
+
+    if (typeof other === "string") {
+      this.loaded = undefined;
+      this._isLoaded = false;
+    } else {
+      this.loaded = other;
+      this._isLoaded = true;
     }
-    this.loaded = other;
-    this._isLoaded = true;
 
     // If had an existing value, remove us from its collection
     if (previousLoaded) {
@@ -214,7 +227,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
         prevRelation.set(undefined as any);
       }
     }
-    if (other !== undefined) {
+    if (other !== undefined && isEntity(other)) {
       const newRelation = this.getOtherRelation(other);
       if (newRelation instanceof OneToManyCollection) {
         newRelation.add(this.entity);

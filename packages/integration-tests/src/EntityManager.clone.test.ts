@@ -1,6 +1,18 @@
 import { insertAuthor } from "@src/entities/inserts";
 import { EntityConstructor, EntityManager } from "joist-orm";
-import { Author, Book, Comment, Image, ImageType, newAuthor, newBook, newPublisher, Publisher, Tag } from "./entities";
+import {
+  Author,
+  Book,
+  Comment,
+  Image,
+  ImageType,
+  newAuthor,
+  newBook,
+  newComment,
+  newPublisher,
+  Publisher,
+  Tag,
+} from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.clone", () => {
@@ -22,6 +34,22 @@ describe("EntityManager.clone", () => {
     expect(a2.id).not.toEqual(a1.id);
     expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
     expect(p1.authors.get).toEqual([a1, a2]);
+  });
+
+  it("can clone m2os and maintain loaded", async () => {
+    // Given an entity created in 1 UoW
+    const em = newEntityManager();
+    const p1 = newPublisher(em, { name: "p1" });
+    const a1 = new Author(em, { firstName: "a1", publisher: p1 });
+    await em.flush();
+
+    // When we clone it in a 2nd UoW
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, a1.idOrFail);
+    const a3 = await em2.clone(a2);
+
+    // Then the a3.publisher loaded state is correct
+    expect(a3.publisher.isLoaded).toBe(false);
   });
 
   it("can clone entities and referenced entities", async () => {
@@ -112,29 +140,14 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And all the fields look changed
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "publisher",
-      "initials",
-      "numberOfBooks",
-      "bookComments",
-    ]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "publisher"]);
     // And if we revert the publisher
     a2.publisher.set(undefined);
     // Then it is no longer changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
     expect(a2.changes.publisher.originalValue).toBe(undefined);
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "initials",
-      "numberOfBooks",
-      "bookComments",
-    ]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
   });
 
   it("can clone entities and report what has changed w/undefined m2o", async () => {
@@ -147,14 +160,7 @@ describe("EntityManager.clone", () => {
     // Then it is new
     expect(a2.isNewEntity).toBe(true);
     // And only the currently set fields look changed
-    expect(a2.changes.fields).toEqual([
-      "createdAt",
-      "updatedAt",
-      "firstName",
-      "initials",
-      "numberOfBooks",
-      "favoriteColors",
-    ]);
+    expect(a2.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "favoriteColors"]);
     // And specifically the publisher is not changed
     expect(a2.changes.publisher.hasChanged).toBe(false);
     expect(a2.changes.publisher.hasUpdated).toBe(false);
@@ -174,6 +180,20 @@ describe("EntityManager.clone", () => {
     expect(a2.comments.get[0].id).toBe("comment:3");
     expect(a2.comments.get[1].id).toBe("comment:4");
     expect(a2.comments.get[0].parent.get).toBe(a2);
+  });
+
+  it("can clone polymorphic references directly", async () => {
+    const em = newEntityManager();
+    // Given an entity with a polymorphic parent
+    const c1 = newComment(em, { parent: {} });
+    expect(c1.parent.get).toBeInstanceOf(Author);
+    await em.flush();
+    // When we clone it in a new UoW
+    const em2 = newEntityManager();
+    const c2 = await em2.load(Comment, c1.idOrFail);
+    const c3 = await em2.clone(c2);
+    // Then the parent can be loaded
+    expect(await c3.parent.load()).toBeInstanceOf(Author);
   });
 
   it("can clone a collection of entities", async () => {
@@ -289,6 +309,19 @@ describe("EntityManager.clone", () => {
       // And only one comment entity was cloned
       expect(await numberOf(em, Author, Book, Comment)).toEqual([2, 3, 3]);
     });
+  });
+
+  it("can protected fields", async () => {
+    // Given an entity created and set a protected field
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1", isPopular: true });
+    expect(a1.wasEverPopular).toBe(true);
+    // When we clone it
+    const a2 = await em.clone(a1);
+    // Then the clone got the same value (...although that is b/c for this test,
+    // it went through the same codepath, and didn't actually copy the value)
+    expect(a2.wasEverPopular).toBe(true);
+    await em.flush();
   });
 });
 

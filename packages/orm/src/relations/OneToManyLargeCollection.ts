@@ -58,7 +58,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.entity, this.meta, this.getOtherRelation(other).current());
+    return sameEntity(this.entity, this.getOtherRelation(other).current());
   }
 
   add(other: U): void {
@@ -91,6 +91,8 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   private getOtherRelation(other: U): ManyToOneReferenceImpl<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
+
+  isLoaded = false;
 
   [RelationT]: T = null!;
   [RelationU]: U = null!;

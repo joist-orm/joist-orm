@@ -118,6 +118,8 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     return `ManyToManyLargeCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
+  isLoaded = false;
+
   [RelationT]: T = null!;
   [RelationU]: U = null!;
 }

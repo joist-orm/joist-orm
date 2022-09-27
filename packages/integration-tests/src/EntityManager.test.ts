@@ -1240,10 +1240,10 @@ describe("EntityManager", () => {
       const em = newEntityManager();
       const a1 = newAuthor(em);
       const a2 = newAuthor(em);
-      expect(sameEntity(a1, authorMeta, a1)).toEqual(true);
-      expect(sameEntity(a1, authorMeta, a2)).toEqual(false);
-      expect(sameEntity(a1, authorMeta, undefined)).toEqual(false);
-      expect(sameEntity(undefined, authorMeta, a1)).toEqual(false);
+      expect(sameEntity(a1, a1)).toEqual(true);
+      expect(sameEntity(a1, a2)).toEqual(false);
+      expect(sameEntity(a1, undefined)).toEqual(false);
+      expect(sameEntity(undefined, a1)).toEqual(false);
     });
 
     it("handles mixed new/existing entities", async () => {
@@ -1251,9 +1251,9 @@ describe("EntityManager", () => {
       const a1 = newAuthor(em);
       await em.flush();
       const a2 = newAuthor(em);
-      expect(sameEntity(a1, authorMeta, a1)).toEqual(true);
-      expect(sameEntity(a1, authorMeta, a2)).toEqual(false);
-      expect(sameEntity(a2, authorMeta, a1)).toEqual(false);
+      expect(sameEntity(a1, a1)).toEqual(true);
+      expect(sameEntity(a1, a2)).toEqual(false);
+      expect(sameEntity(a2, a1)).toEqual(false);
     });
 
     it("handles existing entities", async () => {
@@ -1261,14 +1261,14 @@ describe("EntityManager", () => {
       const a1 = newAuthor(em);
       const a2 = newAuthor(em);
       await em.flush();
-      expect(sameEntity(a1, authorMeta, a1)).toEqual(true);
-      expect(sameEntity(a1, authorMeta, a2)).toEqual(false);
-      expect(sameEntity(a1, authorMeta, undefined)).toEqual(false);
-      expect(sameEntity(undefined, authorMeta, a1)).toEqual(false);
+      expect(sameEntity(a1, a1)).toEqual(true);
+      expect(sameEntity(a1, a2)).toEqual(false);
+      expect(sameEntity(a1, undefined)).toEqual(false);
+      expect(sameEntity(undefined, a1)).toEqual(false);
     });
 
     it("handles both undefined", async () => {
-      expect(sameEntity(undefined, authorMeta, undefined)).toEqual(true);
+      expect(sameEntity(undefined, undefined)).toEqual(true);
     });
   });
 

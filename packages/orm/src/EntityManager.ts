@@ -34,10 +34,11 @@ import {
   ValidationRuleResult,
 } from "./index";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { normalizeHint } from "./normalizeHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
-import { fail, getOrSet, MaybePromise, toArray } from "./utils";
+import { assertNever, fail, getOrSet, MaybePromise, toArray } from "./utils";
 
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
@@ -397,23 +398,40 @@ export class EntityManager<C = {}> {
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
-      const { id, ...copy } = entity.__orm.data;
-      // Delete any keys that are undefined, b/c we're making a new entity, and Joist's infra
-      // doesn't expect `isNewEntity` entity to have `__orm.data` keys set to undefined
-      Object.entries(copy)
-        .filter(([, value]) => value === undefined)
-        .forEach(([key]) => delete copy[key]);
+      // Use meta.fields to see which fields are derived (i.e. createdAt, updatedAt, initials)
+      // that only have getters, and so we shouldn't set (createdAt/updatedAt will be initialized
+      // by `em.register`).
       const meta = getMetadata(entity);
-      const clone = new meta.cstr(this, {} as any);
-      clone.__orm.data = copy;
-      const { updatedAt, createdAt } = meta.timestampFields;
-      if (createdAt) {
-        copy[createdAt] = now;
-      }
-      if (updatedAt) {
-        copy[updatedAt] = now;
-      }
-      clone.__orm.originalData = Object.fromEntries(Object.keys(copy).map((key) => [key, undefined]));
+      const copy = Object.fromEntries(
+        Object.values(meta.fields)
+          .map((f) => {
+            switch (f.kind) {
+              case "primitive":
+                if (!f.derived && !f.protected) {
+                  return [f.fieldName, entity.__orm.data[f.fieldName]];
+                } else {
+                  return undefined;
+                }
+              case "m2o":
+              case "poly":
+              case "enum":
+                return [f.fieldName, entity.__orm.data[f.fieldName]];
+              case "primaryKey":
+              case "o2m":
+              case "m2m":
+              case "o2o":
+              case "lo2m":
+                return undefined;
+              default:
+                assertNever(f);
+            }
+          })
+          .filter(isDefined),
+      );
+
+      // Call `new` just like the user would do
+      const clone = new meta.cstr(this, copy);
+
       return [entity, clone] as const;
     });
     const entityToClone = new Map(clones);
@@ -425,7 +443,7 @@ export class EntityManager<C = {}> {
         if (value instanceof ManyToOneReferenceImpl || value instanceof PolymorphicReferenceImpl) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = clone.__orm.data[fieldName];
-          const existing = this.entities.find((e) => sameEntity(e, getMetadata(e), existingIdOrEntity));
+          const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
           if (existing) {
@@ -612,58 +630,50 @@ export class EntityManager<C = {}> {
     hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
-    const list = toArray(entityOrList);
-    const { hint, ...opts } =
+    const { hint: hintOpt, ...opts } =
       // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
     // But since it's a public API, we should just early exit.
+    const list = toArray(entityOrList).filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity));
     if (list.length === 0) {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
     // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
     // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
-    const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hint)}-${opts.forceReload}`;
+    const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hintOpt)}-${opts.forceReload}`;
     const loader = getOrSet(
       this.populateLoaders,
       key,
       new DataLoader(
         (list) => {
-          // this.populates[key] = (this.populates[key] ?? 0) + 1;
-          const promises = list
-            .filter((e) => e !== undefined && (e.isPendingDelete || !e.isDeletedEntity))
-            .flatMap((entity) => {
-              // This implementation is pretty simple b/c we just loop over the hint (which is a key / array of keys /
-              // hash of keys) and call `.load()` on the corresponding o2m/m2o/m2m reference/collection object. This
-              // will kick in the dataloader auto-batching and end up being smartly populated (granted via 1 query per
-              // entity type per "level" of resolution, instead of 1 single giant SQL query that inner joins everything
-              // in).
-              if (typeof hint === "string") {
-                return (entity as any)[hint].load(opts);
-              } else if (Array.isArray(hint)) {
-                return (hint as string[]).map((key) => (entity as any)[key].load(opts));
-              } else if (typeof hint === "object") {
-                return Object.entries(hint as object).map(([key, nestedHint]) => {
-                  const relation = (entity as any)[key];
-                  return relation.load(opts).then((result: any) => {
-                    if (
-                      Object.keys(nestedHint).length > 0 &&
-                      ((result instanceof Array && result.length > 0) || result !== undefined)
-                    ) {
-                      return this.populate(result, { hint: nestedHint, ...opts });
-                    }
-                    return result;
-                  });
-                });
-              } else {
-                throw new Error(`Unexpected hint ${hint}`);
-              }
+          const hints = Object.entries(normalizeHint(hintOpt as any));
+
+          // One breadth-width pass to ensure each relation is loaded
+          const loadPromises = list.flatMap((entity) => {
+            return hints.map(([key]) => {
+              const relation = (entity as any)[key];
+              return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
             });
-          return Promise.all(promises);
+          });
+
+          // 2nd breadth-width pass to do nested load hints
+          return Promise.all(loadPromises).then(() => {
+            const nestedLoadPromises = hints.map(([key, nestedHint]) => {
+              if (Object.keys(nestedHint).length === 0) return;
+              // Unique for good measure?...
+              const results = [...new Set(list.map((entity) => toArray(entity[key].get)).flat())];
+              if (results.length === 0) return;
+              return this.populate(results, { hint: nestedHint, ...opts });
+            });
+            // After the nested hints are done, echo back the original now-loaded list
+            return Promise.all(nestedLoadPromises).then(() => list);
+          });
         },
+
         // We disable caching if `forceReload` is enabled to ensure we re-touch any previously-loaded
         // collections; otherwise using `cache: false` all the time does reduce the effectiveness of
         // the fan-in and results in duplicate populate calls.
@@ -671,8 +681,11 @@ export class EntityManager<C = {}> {
       ),
     );
 
-    // Purposefully use `then` instead of `async` as an optimization
-    return loader.loadMany(list).then(() => (!fn ? (entityOrList as any) : fn(entityOrList as any)));
+    // Purposefully use `then` instead of `async` as an optimization; avoid using loader.loadMany so
+    // that we don't have to check its allSettled-style `Array<V | Error>` return value for errors.
+    return Promise.all(list.map((entity) => loader.load(entity))).then(() =>
+      fn ? fn(entityOrList as any) : (entityOrList as any),
+    );
   }
 
   // For debugging EntityManager.populate.test.ts's "can be huge"
@@ -1012,12 +1025,8 @@ export function isKey(k: any): k is string {
   return typeof k === "string";
 }
 
-/** Compares `a` to `b`, where `b` might be an id. B/c ids can overlap, we need to know `b`'s metadata type. */
-export function sameEntity(
-  a: Entity | string | undefined,
-  meta: EntityMetadata<any>,
-  b: Entity | string | undefined,
-): boolean {
+/** Compares `a` to `b`, where `b` might be an id. */
+export function sameEntity(a: Entity | string | undefined, b: Entity | string | undefined): boolean {
   if (a === b) {
     return true;
   }
@@ -1028,8 +1037,8 @@ export function sameEntity(
   if ((isEntity(a) && a.isNewEntity) || (isEntity(b) && b.isNewEntity)) {
     return a === b;
   }
-  const aId = isEntity(a) && getMetadata(a) === meta ? a.id : a;
-  const bId = isEntity(b) && getMetadata(b) === meta ? b.id : b;
+  const aId = isEntity(a) ? a.idTagged : a;
+  const bId = isEntity(b) ? b.idTagged : b;
   return aId === bId;
 }
 
@@ -1350,4 +1359,8 @@ function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadH
   } else {
     return {};
   }
+}
+
+export function isDefined<T extends any>(param: T | undefined | null): param is T {
+  return param !== null && param !== undefined;
 }

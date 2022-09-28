@@ -649,7 +649,10 @@ export class EntityManager<C = {}> {
       this.populateLoaders,
       key,
       new DataLoader(
-        (list) => {
+        (batch) => {
+          // Because we're using `{ cache: false }`, we could have dups in the list, so unique
+          const list = [...new Set(batch)];
+
           const hints = Object.entries(normalizeHint(hintOpt as any));
 
           // One breadth-width pass to ensure each relation is loaded
@@ -665,19 +668,24 @@ export class EntityManager<C = {}> {
             const nestedLoadPromises = hints.map(([key, nestedHint]) => {
               if (Object.keys(nestedHint).length === 0) return;
               // Unique for good measure?...
-              const results = [...new Set(list.map((entity) => toArray(entity[key].get)).flat())];
-              if (results.length === 0) return;
-              return this.populate(results, { hint: nestedHint, ...opts });
+              const children = [...new Set(list.map((entity) => toArray(entity[key].get)).flat())];
+              if (children.length === 0) return;
+              return this.populate(children, { hint: nestedHint, ...opts });
             });
             // After the nested hints are done, echo back the original now-loaded list
-            return Promise.all(nestedLoadPromises).then(() => list);
+            return Promise.all(nestedLoadPromises).then(() => batch);
           });
         },
 
-        // We disable caching if `forceReload` is enabled to ensure we re-touch any previously-loaded
-        // collections; otherwise using `cache: false` all the time does reduce the effectiveness of
-        // the fan-in and results in duplicate populate calls.
-        { cache: !opts.forceReload },
+        // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
+        // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely
+        // skip it b/c author's relations may have been changed/mutated to different not-yet-loaded
+        // entities.
+        //
+        // Even though having `{ cache: false }` looks weird here, i.e. why use dataloader at all?, it
+        // still helps us fan-in resolvers callers that are happening ~simultaneously into the same
+        // effort.
+        { cache: false },
       ),
     );
 

@@ -193,4 +193,25 @@ describe("EntityManager.populate", () => {
     await em2.populate(publishers, { authors: { books: { author: "publisher" } } });
     // console.log({ em2: em2.populates });
   });
+
+  it("can re-populate nested keys after changes", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    // Given we populate w/one author+book
+    const p1 = await em.load(Publisher, "p:1");
+    const loaded = await p1.populate({ authors: "books" });
+    expect(loaded.authors.get[0].books.get.length).toBe(1);
+    // When we also add author2 to the same publisher
+    const a2 = await em.load(Author, "a:2");
+    p1.authors.add(a2);
+    // And we call populate again
+    await p1.populate({ authors: "books" });
+    // Then a2.books was loaded
+    expect(loaded.authors.get[1].books.get.length).toBe(1);
+  });
 });

@@ -1,3 +1,10 @@
+## [1.33.4](https://github.com/stephenh/joist-ts/compare/v1.33.3...v1.33.4) (2022-09-28)
+
+
+### Bug Fixes
+
+* Always populate to handle mutations in the graph. ([#429](https://github.com/stephenh/joist-ts/issues/429)) ([6faa7ac](https://github.com/stephenh/joist-ts/commit/6faa7ac2a4af567f53ea838e9338baaa895c331d))
+
 ## [1.33.3](https://github.com/stephenh/joist-ts/compare/v1.33.2...v1.33.3) (2022-09-27)
 
 

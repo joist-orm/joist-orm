@@ -1,3 +1,10 @@
+## [1.33.5](https://github.com/stephenh/joist-ts/compare/v1.33.4...v1.33.5) (2022-09-30)
+
+
+### Bug Fixes
+
+* Fix PersistedAsyncProperties in DeepNew. ([#430](https://github.com/stephenh/joist-ts/issues/430)) ([4aa9bd9](https://github.com/stephenh/joist-ts/commit/4aa9bd99022ec5ee8ab59c519513121f3a38aab2)), closes [#371](https://github.com/stephenh/joist-ts/issues/371)
+
 ## [1.33.4](https://github.com/stephenh/joist-ts/compare/v1.33.3...v1.33.4) (2022-09-28)
 
 

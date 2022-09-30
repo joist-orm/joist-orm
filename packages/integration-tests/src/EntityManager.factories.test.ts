@@ -488,6 +488,15 @@ describe("EntityManager.factories", () => {
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
   });
 
+  it("has loaded async properties", async () => {
+    const em = newEntityManager();
+    // Given an author with a book and a review
+    const a = newAuthor(em, { books: [{}] });
+    // Then the async property is already preloaded
+    expect(a.numberOfBooks.get).toBe(1);
+    expect(a.numberOfBooks2.get).toBe(1);
+  });
+
   it("refreshes newly created entities", async () => {
     const em = newEntityManager();
     // Given an author with a book and a review

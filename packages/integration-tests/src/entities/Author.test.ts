@@ -2,7 +2,7 @@ import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities
 import { defaultValue, getMetadata } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
-import { Author, Book, BookId, BookReview, newAuthor, newPublisher, Publisher } from "../entities";
+import { Author, Book, BookId, BookReview, newAuthor, newBookReview, newPublisher, Publisher } from "../entities";
 import { makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
@@ -310,9 +310,10 @@ describe("Author", () => {
   });
 
   it("cannot access async derived value before flush", async () => {
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
     const em = newEntityManager();
-    const a1 = new Author(em, { firstName: "a1" });
-    expect(() => a1.numberOfBooks.get).toThrow("numberOfBooks has not been derived yet");
+    const br1 = newBookReview(em, { book: { author: "a:1" } });
+    expect(() => br1.isPublic.get).toThrow("isPublic has not been derived yet");
   });
 
   it("can derive async fields across multiple hops", async () => {

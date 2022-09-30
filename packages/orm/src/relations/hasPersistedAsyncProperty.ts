@@ -1,7 +1,7 @@
 import { Entity } from "../Entity";
 import { Const, currentlyInstantiatingEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { setField } from "../index";
+import { isLoaded, setField } from "../index";
 import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
 
 const I = Symbol();
@@ -86,7 +86,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
 
   get get(): V {
     const { entity, fn } = this;
-    if (this.loaded) {
+    if (this.loaded || (!this.isSet && isLoaded(entity, this.loadHint as any))) {
       const newValue = fn(entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update.

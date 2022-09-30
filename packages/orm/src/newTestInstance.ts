@@ -15,7 +15,7 @@ import {
 } from "./EntityMetadata";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
-import { assertNever, fail } from "./utils";
+import { assertNever } from "./utils";
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -177,17 +177,15 @@ function resolveFactoryOpt<T extends Entity>(
   field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
   opt: FactoryEntityOpt<T> | undefined,
   maybeEntity: T | undefined,
-): T {
+): T | IdOf<T> {
   const { meta, otherFieldName } = metaFromFieldAndOpt(field, opt);
   // const meta = field.kind === "poly" ? field.components[0].otherMetadata() : field.otherMetadata();
   // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
   if (isEntity(opt)) {
     return opt;
   } else if (isId(opt)) {
-    return (
-      (em.entities.find((e) => e.idTagged === opt || getTestId(em, e) === opt) as T) ||
-      fail(`Did not find tagged id ${opt}`)
-    );
+    // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
+    return (em.entities.find((e) => e.idTagged === opt || getTestId(em, e) === opt) as T) || opt;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory
     return meta.factory(em, opt);

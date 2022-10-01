@@ -82,7 +82,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
   // and on an instance of the domain object itself to get
   // non-prototype properties like CustomReferences
   const ignoredKeys = Object.keys(ormResolvers);
-  const customProperties = getProperties(entityMetadata).filter((n) => !ignoredKeys.includes(n));
+  const customProperties = Object.keys(getProperties(entityMetadata)).filter((n) => !ignoredKeys.includes(n));
   const customResolvers = customProperties.map((key) => [
     key,
     (entity: T) => {

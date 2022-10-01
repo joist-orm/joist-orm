@@ -4,7 +4,15 @@ import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
-import { Collection, LoadedCollection, LoadedReference, OneToOneReference, Reference } from "./relations";
+import {
+  AsyncProperty,
+  Collection,
+  LoadedCollection,
+  LoadedProperty,
+  LoadedReference,
+  OneToOneReference,
+  Reference,
+} from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { fail } from "./utils";
 
@@ -44,6 +52,8 @@ export type Reacted<T extends Entity, H> = Entity & {
     ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
     : T[K] extends Collection<any, infer U>
     ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+    : T[K] extends AsyncProperty<any, infer V>
+    ? LoadedProperty<any, V>
     : T[K];
 } & {
   // Give validation rules a way to get back to the full entity if they really need it

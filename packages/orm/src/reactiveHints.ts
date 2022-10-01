@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import { EntityConstructor, FieldsOf } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
 import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
 import { Collection, LoadedCollection, LoadedReference, OneToOneReference, Reference } from "./relations";
@@ -59,49 +60,59 @@ export function reverseReactiveHint<T extends Entity>(
   const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
-    const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
-    const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || field.immutable;
-    switch (field.kind) {
-      case "m2o": {
-        if (!isReadOnly) {
-          primitives.push(field.fieldName);
+    // const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
+    const field = meta.fields[key];
+    const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
+    if (field) {
+      switch (field.kind) {
+        case "m2o": {
+          if (!isReadOnly) {
+            primitives.push(field.fieldName);
+          }
+          return reverseReactiveHint(field.otherMetadata().cstr, subHint, undefined, false).map(
+            ({ entity, fields, path }) => {
+              return { entity, fields, path: [...path, field.otherFieldName] };
+            },
+          );
         }
-        return reverseReactiveHint(field.otherMetadata().cstr, subHint, undefined, false).map(
-          ({ entity, fields, path }) => {
-            return { entity, fields, path: [...path, field.otherFieldName] };
-          },
-        );
-      }
-      case "m2m":
-      case "o2m":
-      case "o2o": {
-        const isOtherReadOnly = field.otherMetadata().fields[field.otherFieldName].immutable;
-        const otherFieldName =
-          field.otherMetadata().fields[field.otherFieldName].kind === "poly"
-            ? `${field.otherFieldName}@${meta.type}`
-            : field.otherFieldName;
-        // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
-        return reverseReactiveHint(
-          field.otherMetadata().cstr,
-          subHint,
-          // For o2m/o2o/m2m, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
-          // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
-          // don't need to "react to the field changing" (which can't happen for immutable fields), but
-          // we do need to react to children being created/deleted.
-          isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
-          false,
-        ).map(({ entity, fields, path }) => {
-          return { entity, fields, path: [...path, otherFieldName] };
-        });
-      }
-      case "primitive":
-      case "enum":
-        if (!isReadOnly) {
-          primitives.push(key);
+        case "m2m":
+        case "o2m":
+        case "o2o": {
+          const isOtherReadOnly = field.otherMetadata().fields[field.otherFieldName].immutable;
+          const otherFieldName =
+            field.otherMetadata().fields[field.otherFieldName].kind === "poly"
+              ? `${field.otherFieldName}@${meta.type}`
+              : field.otherFieldName;
+          // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
+          return reverseReactiveHint(
+            field.otherMetadata().cstr,
+            subHint,
+            // For o2m/o2o/m2m, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
+            // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
+            // don't need to "react to the field changing" (which can't happen for immutable fields), but
+            // we do need to react to children being created/deleted.
+            isReadOnly ? undefined : isOtherReadOnly ? true : field.otherFieldName,
+            false,
+          ).map(({ entity, fields, path }) => {
+            return { entity, fields, path: [...path, otherFieldName] };
+          });
         }
-        return [];
-      default:
-        throw new Error("Invalid hint");
+        case "primitive":
+        case "enum":
+          if (!isReadOnly) {
+            primitives.push(key);
+          }
+          return [];
+        default:
+          throw new Error("Invalid hint");
+      }
+    } else {
+      const p = getProperties(meta)[key];
+      if (p && p.hint) {
+        return reverseReactiveHint(meta.cstr, p.hint, undefined, false);
+      } else {
+        fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
+      }
     }
   });
   return [
@@ -119,19 +130,28 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
   return Object.fromEntries(
     Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
       const key = keyMaybeSuffix.replace(suffixRe, "");
-      const field = meta.fields[key] || fail(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
-      switch (field.kind) {
-        case "m2m":
-        case "m2o":
-        case "o2m":
-        case "o2o": {
-          return [[key, convertToLoadHint(field.otherMetadata(), subHint)]];
+      const field = meta.fields[key];
+      if (field) {
+        switch (field.kind) {
+          case "m2m":
+          case "m2o":
+          case "o2m":
+          case "o2o": {
+            return [[key, convertToLoadHint(field.otherMetadata(), subHint)]];
+          }
+          case "primitive":
+          case "enum":
+            return [];
+          default:
+            throw new Error(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
         }
-        case "primitive":
-        case "enum":
-          return [];
-        default:
-          throw new Error(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
+      } else {
+        const p = getProperties(meta)[key];
+        if (p && p.hint) {
+          return Object.entries(convertToLoadHint(meta, p.hint));
+        } else {
+          fail(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
+        }
       }
     }),
   ) as any;

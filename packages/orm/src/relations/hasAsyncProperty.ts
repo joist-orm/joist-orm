@@ -33,12 +33,12 @@ export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
 export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
   private loaded = false;
   private loadPromise: any;
-  constructor(private entity: T, private loadHint: Const<H>, private fn: (entity: Loaded<T, H>) => V) {}
+  constructor(private entity: T, private hint: Const<H>, private fn: (entity: Loaded<T, H>) => V) {}
 
   load(): Promise<V> {
-    const { entity, loadHint, fn } = this;
+    const { entity, hint, fn } = this;
     if (!this.loaded) {
-      return (this.loadPromise ??= entity.em.populate(entity, loadHint).then((loaded) => {
+      return (this.loadPromise ??= entity.em.populate(entity, hint).then((loaded) => {
         this.loaded = true;
         return fn(loaded);
       }));

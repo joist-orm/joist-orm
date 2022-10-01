@@ -33,7 +33,7 @@ export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
 export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
   private loaded = false;
   private loadPromise: any;
-  constructor(private entity: T, private hint: Const<H>, private fn: (entity: Loaded<T, H>) => V) {}
+  constructor(private entity: T, public hint: Const<H>, private fn: (entity: Loaded<T, H>) => V) {}
 
   load(): Promise<V> {
     const { entity, hint, fn } = this;

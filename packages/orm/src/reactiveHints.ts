@@ -13,6 +13,7 @@ import {
   OneToOneReference,
   Reference,
 } from "./relations";
+import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
 import { fail } from "./utils";
 
@@ -118,7 +119,7 @@ export function reverseReactiveHint<T extends Entity>(
       }
     } else {
       const p = getProperties(meta)[key];
-      if (p && p.hint) {
+      if (p instanceof AsyncPropertyImpl) {
         return reverseReactiveHint(meta.cstr, p.hint, undefined, false);
       } else {
         fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);

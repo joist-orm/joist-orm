@@ -113,8 +113,15 @@ describe("EntityManager.reactiveRules", () => {
       { name: sm(/Book.ts:\d+/), fields: ["favoriteColors"], path: ["books"], fn: expect.any(Function) },
       // Publisher's "cannot have 13 authors" rule
       { name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn: expect.any(Function) },
-      // Publisher's numberOfBooks2 rule
+      // Publisher's numberOfBooks2 "cannot have 13 books" rule
       { name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn: expect.any(Function) },
+      // Publisher's numberOfBooks "cannot have 15 books" rule
+      {
+        name: sm(/Publisher.ts:\d+/),
+        fields: ["publisher", "numberOfBooks"],
+        path: ["publisher"],
+        fn: expect.any(Function),
+      },
     ]);
 
     expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
@@ -131,7 +138,7 @@ describe("EntityManager.reactiveRules", () => {
       // Book's "numberOfBooks2" rule (this book + other books)
       { name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn: expect.any(Function) },
       { name: sm(/Book.ts:\d+/), fields: ["author"], path: ["author", "books"], fn: expect.any(Function) },
-      // Publisher's "numberOfBooks2" rule
+      // Publisher's numberOfBooks2 "cannot have 13 books" rule
       { name: sm(/Publisher.ts:\d+/), fields: ["author"], path: ["author", "publisher"], fn: expect.any(Function) },
     ]);
 
@@ -242,6 +249,58 @@ describe("EntityManager.reactiveRules", () => {
       p.authors.get[2].publisher.set(undefined);
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
+    });
+  });
+
+  describe("persisted async properties", () => {
+    it.withCtx("runs rule on new grandchild", async ({ em }) => {
+      // Given a publisher that has two authors
+      const p = newPublisher(em, {
+        authors: [
+          // And each author has 7 books
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+        ],
+      });
+      await em.flush();
+      // When we add a 15th book to the 2nd author
+      newBook(em, { author: p.authors.get[1] });
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 15 books");
+    });
+
+    it.withCtx("runs rule on added children", async ({ em }) => {
+      // Given a publisher that has two authors
+      const p = newPublisher(em, {
+        authors: [
+          // And each author has 7 books
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+        ],
+      });
+      await em.flush();
+      // When we add a 3rd author with a single book
+      newAuthor(em, { books: [{}] });
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 15 books");
+    });
+
+    it.withCtx("runs rule on removed children", async ({ em }) => {
+      // Given a publisher that has three authors
+      const p = newPublisher(em, {
+        authors: [
+          // And two authors has 7+8 books (15)
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}, {}, {}] },
+          // And the 3rd has just 1 book (a 16th book)
+          { books: [{}] },
+        ],
+      });
+      await em.flush();
+      // When we remove the 3rd author with a single book
+      p.authors.get[2].publisher.set(undefined);
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 15 books");
     });
   });
 });

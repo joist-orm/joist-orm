@@ -71,7 +71,6 @@ export function reverseReactiveHint<T extends Entity>(
   const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
-    // const field = meta.fields[key] || fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
     const field = meta.fields[key];
     const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
     if (field) {
@@ -115,14 +114,14 @@ export function reverseReactiveHint<T extends Entity>(
           }
           return [];
         default:
-          throw new Error("Invalid hint");
+          throw new Error(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
       }
     } else {
       const p = getProperties(meta)[key];
       if (p instanceof AsyncPropertyImpl) {
         return reverseReactiveHint(meta.cstr, p.hint, undefined, false);
       } else {
-        fail(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
+        throw new Error(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
       }
     }
   });

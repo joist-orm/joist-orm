@@ -120,6 +120,7 @@ export class EntityManager<C = {}> {
   private _entityIndex: Map<string, Entity> = new Map();
   private flushSecret: number = 0;
   private _isFlushing: boolean = false;
+  private _isValidating: boolean = false;
   // TODO Make these private
   public loadLoaders: LoaderCache = {};
   public findLoaders: LoaderCache = {};
@@ -837,11 +838,16 @@ export class EntityManager<C = {}> {
       const entityTodos = createTodos(entitiesToFlush);
 
       if (!skipValidation) {
-        await addReactiveValidations(entityTodos);
-        // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-        // `validateReactiveRules` next, the lambdas won't see invalid entities.
-        await validateSimpleRules(entityTodos);
-        await validateReactiveRules(entityTodos);
+        try {
+          this._isValidating = true;
+          await addReactiveValidations(entityTodos);
+          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+          // `validateReactiveRules` next, the lambdas won't see invalid entities.
+          await validateSimpleRules(entityTodos);
+          await validateReactiveRules(entityTodos);
+        } finally {
+          this._isValidating = false;
+        }
         await afterValidation(this.ctx, entityTodos);
       }
 

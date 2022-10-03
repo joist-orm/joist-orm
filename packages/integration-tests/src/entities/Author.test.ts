@@ -606,4 +606,22 @@ describe("Author", () => {
       expect(m.fields["age"].immutable).toBe(true);
     });
   });
+
+  it("can access deleted children", async () => {
+    // Given an author and two books
+    await insertAuthor({ first_name: "a1", number_of_books: 2 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1", { books: "author" });
+    // When we delete the 2nd book
+    const b2 = a.books.get[1];
+    em.delete(b2);
+    // Then we can still access both books via getWithDeleted
+    expect(a.books.getWithDeleted.length).toBe(2);
+    // And b2 still knows that author is/was its parent
+    expect(b2.author.get).toBe(a);
+    // Even though its deleted
+    expect(b2.isPendingDelete).toBe(true);
+  });
 });

@@ -89,8 +89,12 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
     if (this.loaded || (!this.isSet && isLoaded(entity, this.loadHint as any))) {
       const newValue = fn(entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
-      // official "being called during em.flush" update.
-      setField(entity, this.fieldName, newValue);
+      // official "being called during em.flush" update (...unless we're accessing it
+      // during the validate phase of `em.flush`, then skip it to avoid tripping up
+      // the "cannot change entities during flush" logic.)
+      if (!(entity.em as any)._isValidating) {
+        setField(entity, this.fieldName, newValue);
+      }
       return newValue;
     } else if (this.isSet) {
       return entity.__orm.data[this.fieldName];

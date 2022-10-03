@@ -1,6 +1,5 @@
 import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "@src/entities";
 import {
-  BaseEntity,
   CustomCollection,
   CustomReference,
   getProperties,
@@ -24,6 +23,7 @@ describe("getProperties", () => {
       firstNameRuleInvoked: 0,
       reviewsRuleInvoked: 0,
       rulesInvoked: 0,
+      numberOfBooks2RuleInvoked: 0,
     });
   });
 

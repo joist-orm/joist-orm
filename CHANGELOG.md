@@ -1,3 +1,10 @@
+# [1.34.0](https://github.com/stephenh/joist-ts/compare/v1.33.5...v1.34.0) (2022-10-03)
+
+
+### Features
+
+* Support async properties in reactive hints. ([#432](https://github.com/stephenh/joist-ts/issues/432)) ([57fd515](https://github.com/stephenh/joist-ts/commit/57fd5158839895bdc9178d1a57f9a8b6e1a58944))
+
 ## [1.33.5](https://github.com/stephenh/joist-ts/compare/v1.33.4...v1.33.5) (2022-09-30)
 
 

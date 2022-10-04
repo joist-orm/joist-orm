@@ -186,6 +186,7 @@ export function setOpts<T extends Entity>(
             toSet.push(e);
           }
         });
+
         current.set(toSet);
       } else {
         current.set(value);

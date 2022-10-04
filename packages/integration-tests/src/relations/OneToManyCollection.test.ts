@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
 import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
@@ -233,6 +233,28 @@ describe("OneToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ publisher_id: null }));
     expect(rows[1]).toEqual(expect.objectContaining({ publisher_id: 1 }));
     expect(rows[2]).toEqual(expect.objectContaining({ publisher_id: 1 }));
+  });
+
+  it("can set and deleted owned children", async () => {
+    // Given a book with two reviews
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "b:1", "reviews");
+    const [r1, r2] = b1.reviews.get;
+    // When we set b1.reviews to be only r2
+    b1.reviews.set([r2]);
+    // Then get shows only r1
+    expect(b1.reviews.get.length).toBe(1);
+    // And getWithDeleted still shows both b1 and b2
+    expect(b1.reviews.getWithDeleted.length).toBe(2);
+    // And r1 is marked for deletion
+    expect(r1.isPendingDelete).toBe(true);
+    await em.flush();
+    const rows = await select("book_reviews");
+    expect(rows.length).toEqual(1);
   });
 
   it("does not duplicate items", async () => {

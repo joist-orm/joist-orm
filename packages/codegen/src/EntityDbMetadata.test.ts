@@ -2,7 +2,7 @@ import { defaultConfig } from "./config";
 import { collectionName, makeEntity, oneToOneName } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
-const relationDummy: any = { targetTable: { m2oRelations: [] } };
+const relationDummy: any = { type: "m2o", sourceTable: { m2oRelations: [] } };
 const configDummy: any = { relationNameOverrides: {}, entities: [] };
 const author = makeEntity("Author");
 const book = makeEntity("Book");
@@ -38,6 +38,13 @@ describe("EntityDbMetadata", () => {
     it("drops the book prefix from book reviews", () => {
       // For `book_reviews.book_id` create `Book.reviews`
       expect(collectionName(configDummy, book, bookReview, relationDummy).fieldName).toEqual("reviews");
+    });
+
+    it("does not drop the entity mid-name", () => {
+      // For `markets.trade_partner_market_contacts` create `tradePartnerMarketContracts`
+      const market = makeEntity("Market");
+      const tpmc = makeEntity("TradePartnerMarketContact");
+      expect(collectionName(configDummy, market, tpmc, relationDummy).fieldName).toEqual("tradePartnerMarketContacts");
     });
   });
 

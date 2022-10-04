@@ -235,6 +235,27 @@ describe("OneToManyCollection", () => {
     expect(rows[2]).toEqual(expect.objectContaining({ publisher_id: 1 }));
   });
 
+  it("can set and deleted owned children", async () => {
+    // Given an author has two books
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1", "books");
+    const [b1, b2] = a1.books.get;
+    // When we set a1.books to be only b2
+    a1.books.set([b2]);
+    // Then get shows only b1
+    await expect(a1).toMatchEntity({ books: [b2] });
+    // And getWithDeleted still shows both b1 and b2
+    expect(a1.books.getWithDeleted.length).toBe(2);
+    // And b1 is marked for deletion
+    expect(b1.isPendingDelete).toBe(true);
+    await em.flush();
+    const rows = await select("books");
+    expect(rows.length).toEqual(1);
+  });
+
   it("does not duplicate items", async () => {
     // Given the publisher p1 already has an author a1
     await insertPublisher({ name: "p1" });

@@ -114,6 +114,14 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
+
+    // If we're changing `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
+    if (this.isCascadeDelete) {
+      const implicitlyDeleted = this.loaded.filter((e) => !values.includes(e));
+      implicitlyDeleted.forEach((e) => this.entity.em.delete(e));
+      values.push(...implicitlyDeleted);
+    }
+
     // Make a copy for safe iteration
     const loaded = [...this.loaded];
     // Remove old values

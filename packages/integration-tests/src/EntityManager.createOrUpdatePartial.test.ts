@@ -181,7 +181,15 @@ describe("EntityManager.createOrUpdatePartial", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     const em = newEntityManager();
-    await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:1", delete: true }, { id: "b:2" }] });
+    const a1 = await await em.createOrUpdatePartial(Author, {
+      id: "a:1",
+      books: [{ id: "b:1", delete: true }, { id: "b:2" }],
+    });
+    const loaded = await em.populate(a1, "books");
+    // get shows only b1
+    expect(loaded.books.get.length).toBe(1);
+    // getWithDeleted still shows both b1 and b2
+    expect(loaded.books.getWithDeleted.length).toBe(2);
     await em.flush();
     const rows = await select("books");
     expect(rows.length).toEqual(1);

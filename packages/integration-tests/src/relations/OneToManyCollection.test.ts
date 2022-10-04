@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
 import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
@@ -236,23 +236,24 @@ describe("OneToManyCollection", () => {
   });
 
   it("can set and deleted owned children", async () => {
-    // Given an author has two books
+    // Given a book with two reviews
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertBookReview({ book_id: 1, rating: 5 });
     const em = newEntityManager();
-    const a1 = await em.load(Author, "a:1", "books");
-    const [b1, b2] = a1.books.get;
-    // When we set a1.books to be only b2
-    a1.books.set([b2]);
-    // Then get shows only b1
-    await expect(a1).toMatchEntity({ books: [b2] });
+    const b1 = await em.load(Book, "b:1", "reviews");
+    const [r1, r2] = b1.reviews.get;
+    // When we set b1.reviews to be only r2
+    b1.reviews.set([r2]);
+    // Then get shows only r1
+    expect(b1.reviews.get.length).toBe(1);
     // And getWithDeleted still shows both b1 and b2
-    expect(a1.books.getWithDeleted.length).toBe(2);
-    // And b1 is marked for deletion
-    expect(b1.isPendingDelete).toBe(true);
+    expect(b1.reviews.getWithDeleted.length).toBe(2);
+    // And r1 is marked for deletion
+    expect(r1.isPendingDelete).toBe(true);
     await em.flush();
-    const rows = await select("books");
+    const rows = await select("book_reviews");
     expect(rows.length).toEqual(1);
   });
 

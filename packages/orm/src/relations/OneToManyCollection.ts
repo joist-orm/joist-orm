@@ -119,6 +119,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.isCascadeDelete) {
       const implicitlyDeleted = this.loaded.filter((e) => !values.includes(e));
       implicitlyDeleted.forEach((e) => this.entity.em.delete(e));
+      // Keep the implicitlyDeleted values for `getWithDeleted` to return
       values.push(...implicitlyDeleted);
     }
 

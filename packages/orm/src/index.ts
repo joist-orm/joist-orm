@@ -187,14 +187,6 @@ export function setOpts<T extends Entity>(
           }
         });
 
-        // If we're changes `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
-        // if ((current as any).isCascadeDelete) {
-        //   const existing = (current as any).get as Entity[];
-        //   const implicitlyDeleted = existing.filter((e) => !toSet.includes(e));
-        //   implicitlyDeleted.forEach((e) => entity.em.delete(e));
-        //   toSet.push(...implicitlyDeleted);
-        // }
-
         current.set(toSet);
       } else {
         current.set(value);

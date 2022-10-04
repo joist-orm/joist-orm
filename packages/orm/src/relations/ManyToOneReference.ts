@@ -66,8 +66,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
-  // Used by setOpts to handle implicit deletion
-  readonly isCascadeDelete: boolean;
+  private readonly isCascadeDelete: boolean;
 
   constructor(
     private entity: T,

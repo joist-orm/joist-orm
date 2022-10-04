@@ -177,7 +177,9 @@ export function setOpts<T extends Entity>(
         const toSet: any[] = [];
         values.forEach((e) => {
           if (allowDelete && e.delete === true) {
+            // Delete the entity, but still include it in `toSet` so that `a1.books.getWithDeleted` will still see it.
             entity.em.delete(e);
+            toSet.push(e);
           } else if (allowRemove && e.remove === true) {
             // Just leave out of `toSet`
           } else {

@@ -5,6 +5,7 @@ import {
   countOfTags,
   insertAuthor,
   insertBook,
+  insertBookReview,
   insertBookToTag,
   insertTag,
   select,
@@ -198,19 +199,20 @@ describe("EntityManager.createOrUpdatePartial", () => {
   it("collections can delete children w/o delete flag if they are owned", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    await insertBookReview({ book_id: 1, rating: 5 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, {
-      id: "a:1",
-      books: [{ id: "b:2" }],
+    const b1 = await em.createOrUpdatePartial(Book, {
+      id: "b:1",
+      reviews: [{ id: "br:2" }],
     });
-    const loaded = await em.populate(a1, "books");
-    // get shows only b1
-    expect(loaded.books.get.length).toBe(1);
+    const loaded = await em.populate(b1, "reviews");
+    // get shows only br1
+    expect(loaded.reviews.get.length).toBe(1);
     // getWithDeleted still shows both b1 and b2
-    expect(loaded.books.getWithDeleted.length).toBe(2);
+    expect(loaded.reviews.getWithDeleted.length).toBe(2);
     await em.flush();
-    const rows = await select("books");
+    const rows = await select("book_reviews");
     expect(rows.length).toEqual(1);
   });
 

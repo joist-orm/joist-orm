@@ -1,3 +1,10 @@
+## [1.34.2](https://github.com/stephenh/joist-ts/compare/v1.34.1...v1.34.2) (2022-10-04)
+
+
+### Bug Fixes
+
+* Keep deleted children createOrUpdatePartial. ([#434](https://github.com/stephenh/joist-ts/issues/434)) ([b7a0f29](https://github.com/stephenh/joist-ts/commit/b7a0f29e9aa5b5f1fd3c2cd855fb8271099de39a))
+
 ## [1.34.1](https://github.com/stephenh/joist-ts/compare/v1.34.0...v1.34.1) (2022-10-04)
 
 

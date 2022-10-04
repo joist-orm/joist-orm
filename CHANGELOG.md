@@ -1,3 +1,10 @@
+## [1.34.1](https://github.com/stephenh/joist-ts/compare/v1.34.0...v1.34.1) (2022-10-04)
+
+
+### Bug Fixes
+
+* Don't drop mid-string entity names. ([#433](https://github.com/stephenh/joist-ts/issues/433)) ([e17ade8](https://github.com/stephenh/joist-ts/commit/e17ade8ba66d07adf3b3b6b710c7706186224ec4))
+
 # [1.34.0](https://github.com/stephenh/joist-ts/compare/v1.33.5...v1.34.0) (2022-10-03)
 
 

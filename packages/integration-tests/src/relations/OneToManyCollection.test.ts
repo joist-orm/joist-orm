@@ -244,7 +244,7 @@ describe("OneToManyCollection", () => {
     const a1 = await em.load(Author, "a:1", "books");
     const [b1, b2] = a1.books.get;
     // When we set a1.books to be only b2
-    a1.books.set([b2]);
+    a1.books.set([b2], { deleteOrphans: true });
     // Then get shows only b1
     await expect(a1).toMatchEntity({ books: [b2] });
     // And getWithDeleted still shows both b1 and b2

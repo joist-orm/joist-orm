@@ -112,14 +112,14 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
 export function setOpts<T extends Entity>(
   entity: T,
   values: Partial<OptsOf<T>> | string | undefined,
-  opts?: { calledFromConstructor?: boolean; partial?: boolean },
+  opts: { calledFromConstructor?: boolean; partial?: boolean; deleteOrphans?: boolean } = {},
 ): void {
   // If `values` is a string (i.e. the id), this instance is being hydrated from a database row, so skip all this.
   // If `values` is undefined, we're being called by `createPartial` that will do its own opt handling.
   if (values === undefined || typeof values === "string") {
     return;
   }
-  const { calledFromConstructor, partial } = opts || {};
+  const { calledFromConstructor, partial, deleteOrphans = false } = opts;
   const meta = getMetadata(entity);
 
   Object.entries(values as {}).forEach(([key, _value]) => {
@@ -187,7 +187,7 @@ export function setOpts<T extends Entity>(
           }
         });
 
-        current.set(toSet);
+        (current as any).set(toSet, { deleteOrphans });
       } else {
         current.set(value);
       }

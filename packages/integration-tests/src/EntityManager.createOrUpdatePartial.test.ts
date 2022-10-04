@@ -200,10 +200,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, {
-      id: "a:1",
-      books: [{ id: "b:2" }],
-    });
+    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", books: [{ id: "b:2" }] }, { deleteOrphans: true });
     const loaded = await em.populate(a1, "books");
     // get shows only b1
     expect(loaded.books.get.length).toBe(1);

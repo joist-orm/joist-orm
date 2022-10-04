@@ -28,7 +28,7 @@ export interface LoadedCollection<T extends Entity, U extends Entity> extends Co
 
   getWithDeleted: ReadonlyArray<U>;
 
-  set(values: U[]): void;
+  set(values: U[], opts?: { deleteOrphans?: boolean }): void;
 
   removeAll(): void;
 }

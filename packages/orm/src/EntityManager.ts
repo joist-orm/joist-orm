@@ -304,19 +304,23 @@ export class EntityManager<C = {}> {
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createPartial<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+  public createPartial<T extends Entity>(type: EntityConstructor<T>, values: PartialOrNull<OptsOf<T>>): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
     // `calledFromConstructor` because this is _basically_ like calling `new`.
     const entity = new type(this, undefined!);
     // Could remove the `as OptsOf<T>` by adding a method overload on `partial: true`
-    setOpts(entity, opts as OptsOf<T>, { partial: true, calledFromConstructor: true });
+    setOpts(entity, values as OptsOf<T>, { partial: true, calledFromConstructor: true });
     return entity;
   }
 
-  /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createOrUpdatePartial<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
-    return createOrUpdatePartial(this, type, opts);
+  /** Creates a new `type` but with `values` that are nullable, to accept partial-update-style input. */
+  public createOrUpdatePartial<T extends Entity>(
+    type: EntityConstructor<T>,
+    values: DeepPartialOrNull<T>,
+    opts: { deleteOrphans?: boolean } = {},
+  ): Promise<T> {
+    return createOrUpdatePartial(this, type, values, opts);
   }
 
   /**

@@ -1,7 +1,7 @@
 import { Entity, isEntity } from "./Entity";
 import { EntityConstructor, EntityManager, IdOf, isKey, OptIdsOf, OptsOf } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { getConstructorFromTaggedId, PartialOrNull } from "./index";
+import { getConstructorFromTaggedId, PartialOrNull, setOpts } from "./index";
 import { NullOrDefinedOr } from "./utils";
 
 /**
@@ -43,9 +43,11 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
 export async function createOrUpdatePartial<T extends Entity>(
   em: EntityManager,
   constructor: EntityConstructor<T>,
-  opts: DeepPartialOrNull<T>,
+  values: DeepPartialOrNull<T>,
+  opts: { deleteOrphans?: boolean } = {},
 ): Promise<T> {
-  const { id, ...others } = opts as any;
+  const { id, ...others } = values as any;
+  const { deleteOrphans } = opts;
   const meta = getMetadata(constructor);
   const isNew = id === null || id === undefined;
   const collectionsToLoad: string[] = [];
@@ -91,22 +93,22 @@ export async function createOrUpdatePartial<T extends Entity>(
         let currentValue: any;
         if (isNew) {
           // The parent is brand new so the child is defacto brand new as well
-          currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+          currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value, opts);
         } else {
           // The parent exists, see if it has an existing child we can update
           const parentEntity = await em.load(constructor, id, [name] as any);
           currentValue = (parentEntity as any)[name].get;
           if (currentValue) {
-            await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: currentValue.id, ...value });
+            await createOrUpdatePartial(em, field.otherMetadata().cstr, { id: currentValue.id, ...value }, opts);
           } else {
             // If it doesn't, go ahead and create a new one
-            currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value);
+            currentValue = await createOrUpdatePartial(em, field.otherMetadata().cstr, value, opts);
           }
         }
         return [name, currentValue];
       } else {
         // This is a many-to-one partial into a new entity
-        const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+        const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any, opts);
         return [name, entity];
       }
     } else if (field.kind === "o2m" || field.kind === "m2m") {
@@ -139,7 +141,7 @@ export async function createOrUpdatePartial<T extends Entity>(
               if (deleteMarker !== undefined) delete value.delete;
               if (removeMarker !== undefined) delete value.remove;
               if (opMarker !== undefined) delete value.op;
-              const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any);
+              const entity = await createOrUpdatePartial(em, field.otherMetadata().cstr, value as any, opts);
               // Put the markers back for setOpts to find
               if (deleteMarker === true) entity.delete = true;
               if (removeMarker === true) entity.remove = true;
@@ -155,7 +157,9 @@ export async function createOrUpdatePartial<T extends Entity>(
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
 
   if (isNew) {
-    return em.createPartial(constructor, _opts);
+    const entity = new constructor(em, undefined!);
+    setOpts(entity, _opts, { partial: true, calledFromConstructor: true, deleteOrphans });
+    return entity;
   } else {
     const entity = await em.load(constructor, id);
     // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.
@@ -164,7 +168,7 @@ export async function createOrUpdatePartial<T extends Entity>(
     // Musing: Maybe this should happen implicitly, like if a LineItem.parent is set to null, that
     // LineItem knows to just `em.delete` itself? Instead of relying on hints from GraphQL mutations.
     await Promise.all(collectionsToLoad.map((fieldName) => (entity as any)[fieldName].load()));
-    entity.setPartial(_opts);
+    setOpts(entity, _opts, { partial: true, deleteOrphans });
     return entity;
   }
 }

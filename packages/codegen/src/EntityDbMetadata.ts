@@ -462,6 +462,7 @@ function newOneToOne(config: Config, entity: Entity, r: O2MRelation): OneToOneFi
 function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): ManyToManyField {
   const { foreignKey, targetForeignKey, targetTable } = r;
   const otherEntity = makeEntity(tableToEntityName(config, targetTable));
+  // For foo_to_bar.some_foo_id use the `some_foo_id` column i.e. `someFoos`
   const fieldName = relationName(
     config,
     entity,
@@ -526,7 +527,6 @@ export function oneToOneName(
   // For `comments.parent_book_review_id`, we would just use `BookReview.comment` as the name
   // For `authors.draft_current_book_id`, we would just use `Book.author` as the name
   // For `project_items.current_selection_id`, we would use `HomeownerSelection.currentProjectItem`
-  const keyTable = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
   const refTable = r instanceof M2ORelation ? r.targetTable : r.sourceTable;
   // Does the ref table have any m2o pointing table at the key table?
   const found = refTable.m2oRelations.find((s) => tableToEntityName(config, s.targetTable) === keyEntity.name);
@@ -575,16 +575,16 @@ export function collectionName(
   // I.e. if the m2o is `books.author_id`, use `Author.books` as the collection name (we pluralize a few lines down).
   let fieldName = collectionEntity.name;
   // Check if we have multiple FKs from collectionEntity --> singleEntity and prefix with FK name if so
-  const sourceTable = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
-  const targetTable = r instanceof M2ORelation ? r.targetTable : r.sourceTable;
+  const sourceTable = r.type === "m2o" ? r.sourceTable : r.targetTable;
+  const targetTable = r.type === "m2o" ? r.targetTable : r.sourceTable;
   // If `books.foo_author_id` and `books.bar_author_id` both exist
   if (sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
     // Use `fooAuthorBooks`, `barAuthorBooks`
     fieldName = `${r.foreignKey.columns[0].name.replace(/\_id|Id$/, "")}_${fieldName}`;
   }
   // If we've guessed `Book.bookReviews` based on `book_reviews.book_id` --> `bookReviews`, strip the `Book` prefix
-  if (fieldName.length > singleEntity.name.length) {
-    fieldName = fieldName.replace(singleEntity.name, "");
+  if (fieldName.length > singleEntity.name.length && fieldName.startsWith(singleEntity.name)) {
+    fieldName = fieldName.substring(singleEntity.name.length);
   }
 
   // camelize the name

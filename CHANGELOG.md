@@ -1,3 +1,10 @@
+# [1.35.0](https://github.com/stephenh/joist-ts/compare/v1.34.2...v1.35.0) (2022-10-04)
+
+
+### Features
+
+* Calling o2m.set(values) deletes owned children ([#435](https://github.com/stephenh/joist-ts/issues/435)) ([bd1f0b3](https://github.com/stephenh/joist-ts/commit/bd1f0b344843c2c094317207bc04806992562fa2))
+
 ## [1.34.2](https://github.com/stephenh/joist-ts/compare/v1.34.1...v1.34.2) (2022-10-04)
 
 

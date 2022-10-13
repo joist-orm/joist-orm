@@ -44,7 +44,7 @@ As a third option, `toMatchEntity` provides a `toMatchObject`-style API so that 
 const a1 = newAuthor(em);
 // Invoke something that adds books with reviews
 await addBooksAndReviews(a1);
-await expect(a1).toMatchEntity({
+expect(a1).toMatchEntity({
   books: [
     {
       title: "b1",

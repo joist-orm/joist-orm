@@ -1,6 +1,7 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
 // @ts-ignore
 import matchers from "expect/build/matchers";
+import { isPlainObject } from "is-plain-object";
 import {
   AsyncProperty,
   Collection,
@@ -15,66 +16,67 @@ import {
   Reference,
 } from "joist-orm";
 
-export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Promise<CustomMatcherResult> {
+export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): CustomMatcherResult {
   // Because the `actual` entity has lots of __orm, Reference, Collection, etc cruft in it,
   // we make a simplified copy of it, where we use the keys in `expected` to pull out/eval a
   // subset of the complex keys in an entity to be "dumb data" versions of themselves.
-  const clean = {};
-  const { em } = actual;
+  const clean = Array.isArray(expected) ? [] : {};
 
   // Because we might assert again `expect(entity).toMatchEntity({ children: [{ name: "p1" }])`, we keep
   // a queue of entities/copies to make, and work through it as we recurse through the expected/actual pair.
   const queue: [any, any, any][] = [[actual, expected, clean]];
   while (queue.length > 0) {
     const [actual, expected, clean] = queue.pop()!;
-    const keys = expected ? Object.keys(expected) : ["id"];
-    for (const key of keys) {
-      const value = actual[key];
+    for (const key of Object.keys(expected)) {
+      let actualValue = actual[key];
+      const expectedValue = expected?.[key];
+
+      // We assume the test is asserting already-loaded / DeepNew entities, so just call .get
       if (
-        value &&
-        (isReference(value) || isCollection(value) || isAsyncProperty(value) || isPersistedAsyncProperty(value))
+        isReference(actualValue) ||
+        isCollection(actualValue) ||
+        isAsyncProperty(actualValue) ||
+        isPersistedAsyncProperty(actualValue)
       ) {
-        // If something has a `.load` it could be a Reference.load or a Collection.load, either way lazy load it
-        const loaded = await value.load();
-        if (loaded instanceof Array) {
-          const actualList = loaded;
-          const expectedList = expected[key];
-          const cleanList = [];
-          // Do a hacky zip of each actual/expected pair
-          for (let i = 0; i < Math.max(actualList.length, expectedList.length); i++) {
-            const actualI = actualList[i];
-            const expectedI = expectedList[i];
-            // If actual is a list of entities (and expected is not), make a copy of each
-            // so that we can recurse into their `{ title: ... }` properties.
-            if (isEntity(actualI) && !isEntity(expectedI) && expectedI) {
-              const cleanI = {};
-              queue.push([actualI, expectedI, cleanI]);
-              cleanList.push(cleanI);
-            } else {
-              // Given we're stopping here, make sure neither side is an entity
-              if (i < expectedList.length) {
-                expectedList[i] = maybeTestId(em, expectedI);
-              }
-              if (i < actualList.length) {
-                cleanList.push(maybeTestId(em, actualI));
-              }
+        actualValue = (actualValue as any).get;
+      }
+
+      if (actualValue instanceof Array) {
+        const actualList = actualValue;
+        const expectedList = expectedValue;
+        const cleanList = [];
+        // Do a hacky zip of each actual/expected pair
+        for (let i = 0; i < Math.max(actualList.length, expectedList.length); i++) {
+          const actualI = actualList[i];
+          const expectedI = expectedList[i];
+          // If actual is a list of entities (and expected is not), make a copy of each
+          // so that we can recurse into their `{ title: ... }` properties.
+          if (isEntity(actualI) && isPlainObject(expectedI)) {
+            const cleanI = Array.isArray(expectedI) ? [] : {};
+            queue.push([actualI, expectedI, cleanI]);
+            cleanList.push(cleanI);
+          } else {
+            // Given we're stopping here, make sure neither side is an entity
+            if (i < expectedList.length) {
+              expectedList[i] = maybeTestId(expectedI);
+            }
+            if (i < actualList.length) {
+              cleanList.push(maybeTestId(actualI));
             }
           }
-          clean[key] = cleanList;
-        } else {
-          // If the `.load` result wasn't a list, assume it's an entity that we'll copy
-          if (isEntity(loaded) && !isEntity(expected[key])) {
-            const loadedClean = {};
-            queue.push([loaded, expected[key], loadedClean]);
-            clean[key] = loadedClean;
-          } else {
-            expected[key] = maybeTestId(em, expected[key]);
-            clean[key] = maybeTestId(em, loaded);
-          }
         }
+        clean[key] = cleanList;
+      } else if (isPlainObject(expectedValue)) {
+        // We have an expected value that the user wants to fuzzy match against, so recurse
+        // to pick out a subset of clean values (i.e. not the connection pool) to assert against.
+        const cleanValue = Array.isArray(expectedValue) ? [] : {};
+        queue.push([actualValue, expectedValue, cleanValue]);
+        clean[key] = cleanValue;
       } else {
-        // Otherwise assume it's regular data. Probably need to handle getters/promises?
-        clean[key] = value;
+        // We've hit a non-list/non-object literal expected value, so clean both
+        // expected+clean keys to make sure they're not entities, and stop recursion.
+        expected[key] = maybeTestId(expectedValue);
+        clean[key] = maybeTestId(actualValue);
       }
     }
   }
@@ -83,8 +85,8 @@ export async function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T
   return matchers.toMatchObject.call(this, clean, expected);
 }
 
-function maybeTestId(em: EntityManager, maybeEntity: any): any {
-  return isEntity(maybeEntity) ? getTestId(em, maybeEntity) : maybeEntity;
+function maybeTestId(maybeEntity: any): any {
+  return isEntity(maybeEntity) ? getTestId(maybeEntity.em, maybeEntity) : maybeEntity;
 }
 
 /** Returns either the persisted id or `tag#<offset-in-EntityManager>`. */
@@ -113,15 +115,12 @@ export type MatchedEntity<T> = {
     ? Array<MatchedEntity<U> | U>
     : T[K] extends AsyncProperty<any, infer V>
     ? V
-    : T[K] extends Entity
-    ? MatchedEntity<T[K]>
     : T[K] extends Entity | null | undefined
-    ? MatchedEntity<T[K]> | null | undefined
+    ? MatchedEntity<T[K]> | T[K] | null | undefined
     : T[K] extends ReadonlyArray<infer U | undefined>
-    ? readonly (MatchedEntity<U> | undefined)[]
-    : T[K] extends ReadonlyArray<infer U>
-    ? MatchedEntity<readonly U[]>
+    ? readonly (MatchedEntity<U> | U | undefined)[]
     : T[K] extends ReadonlyArray<infer U> | null
-    ? readonly (MatchedEntity<U> | null)[]
-    : T[K] | null;
+    ? readonly (MatchedEntity<U> | U | null)[]
+    : // We recurse similar to a DeepPartial
+      MatchedEntity<T[K]> | null;
 };

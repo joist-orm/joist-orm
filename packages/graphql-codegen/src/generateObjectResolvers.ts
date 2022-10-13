@@ -50,7 +50,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
           const ${tagName} = ${factory}(em);
           // Then we can query it
           const result = await run${name}Keys(ctx, ${tagName}, [${keys}]);
-          await expect(${tagName}).toMatchEntity(result);
+          expect(${tagName}).toMatchEntity(result);
         });
       });
 

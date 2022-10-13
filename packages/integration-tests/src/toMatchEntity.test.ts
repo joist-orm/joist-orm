@@ -194,12 +194,16 @@ expect(received).toMatchObject(expected)
     const p1 = newPublisher(em, { name: "p1" });
     await expect({
       publisher: p1,
+      publisher2: p1 as Publisher | null,
       publishers: [p1],
       publishers2: [p1] as readonly Publisher[],
+      publishers3: [p1] as readonly Publisher[] | null,
     }).toMatchEntity({
       publisher: { name: "p1" },
+      publisher2: { name: "p1" },
       publishers: [{ name: "p1" }],
       publishers2: [{ name: "p1" }],
+      publishers3: [{ name: "p1" }],
     });
   });
 });

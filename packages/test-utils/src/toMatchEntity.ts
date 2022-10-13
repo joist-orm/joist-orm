@@ -115,7 +115,11 @@ export type MatchedEntity<T> = {
     ? V
     : T[K] extends Entity
     ? MatchedEntity<T[K]>
+    : T[K] extends Entity | null
+    ? MatchedEntity<T[K] | null>
     : T[K] extends ReadonlyArray<infer U>
     ? MatchedEntity<readonly U[]>
+    : T[K] extends ReadonlyArray<infer U> | null
+    ? MatchedEntity<readonly U[] | null>
     : T[K] | null;
 };

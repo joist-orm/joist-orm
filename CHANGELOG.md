@@ -1,3 +1,10 @@
+## [1.35.3](https://github.com/stephenh/joist-ts/compare/v1.35.2...v1.35.3) (2022-10-13)
+
+
+### Bug Fixes
+
+* Fix toMatchEntity against undefined. ([#439](https://github.com/stephenh/joist-ts/issues/439)) ([969700b](https://github.com/stephenh/joist-ts/commit/969700b39557e1fc5fc4039171d6c418924923dd))
+
 ## [1.35.2](https://github.com/stephenh/joist-ts/compare/v1.35.1...v1.35.2) (2022-10-13)
 
 

@@ -1,3 +1,10 @@
+## [1.35.1](https://github.com/stephenh/joist-ts/compare/v1.35.0...v1.35.1) (2022-10-13)
+
+
+### Bug Fixes
+
+* Fix multiple em.flushes in tests with frozen time. ([#437](https://github.com/stephenh/joist-ts/issues/437)) ([5508439](https://github.com/stephenh/joist-ts/commit/5508439cb064c6399d7dbd394083d4a354f9c565))
+
 # [1.35.0](https://github.com/stephenh/joist-ts/compare/v1.34.2...v1.35.0) (2022-10-04)
 
 

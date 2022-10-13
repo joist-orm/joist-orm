@@ -195,15 +195,21 @@ expect(received).toMatchObject(expected)
     await expect({
       publisher: p1,
       publisher2: p1 as Publisher | null,
+      publisher3: p1 as Publisher | null | undefined,
       publishers: [p1],
       publishers2: [p1] as readonly Publisher[],
       publishers3: [p1] as readonly Publisher[] | null,
+      publishers4: [p1] as ReadonlyArray<Publisher | undefined>,
+      publishers5: [p1] as ReadonlyArray<Publisher | undefined | null>,
     }).toMatchEntity({
       publisher: { name: "p1" },
       publisher2: { name: "p1" },
+      publisher3: { name: "p1" },
       publishers: [{ name: "p1" }],
       publishers2: [{ name: "p1" }],
       publishers3: [{ name: "p1" }],
+      publishers4: [{ name: "p1" }],
+      publishers5: [{ name: "p1" }],
     });
   });
 });

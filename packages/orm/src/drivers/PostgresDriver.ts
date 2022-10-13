@@ -30,6 +30,8 @@ export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
 }
 
+let lastNow = new Date();
+
 /**
  * Implements the `Driver` interface for Postgres.
  *
@@ -276,7 +278,7 @@ export class PostgresDriver implements Driver {
 
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
-    const now = new Date();
+    const now = getNow();
     await this.idAssigner.assignNewIds(knex, todos);
     for await (const todo of Object.values(todos)) {
       if (todo) {
@@ -490,4 +492,18 @@ function ensureUnderLimit(rows: unknown[]): unknown[] {
     throw new Error(`Query returned more than ${entityLimit} rows`);
   }
   return rows;
+}
+
+function getNow(): Date {
+  let now = new Date();
+  // If we detect time has not progressed (or went backwards), we're probably in test that
+  // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
+  // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
+  // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
+  // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
+  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
+    now = new Date(lastNow.getTime() + 1);
+  }
+  lastNow = now;
+  return now;
 }

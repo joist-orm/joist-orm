@@ -1,3 +1,10 @@
+## [1.35.2](https://github.com/stephenh/joist-ts/compare/v1.35.1...v1.35.2) (2022-10-13)
+
+
+### Bug Fixes
+
+* Allow toMatchEntity to work on object literals. ([#438](https://github.com/stephenh/joist-ts/issues/438)) ([571fb65](https://github.com/stephenh/joist-ts/commit/571fb659f6095466a27c69adfc1347056f8c100e))
+
 ## [1.35.1](https://github.com/stephenh/joist-ts/compare/v1.35.0...v1.35.1) (2022-10-13)
 
 

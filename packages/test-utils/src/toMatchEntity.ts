@@ -113,5 +113,9 @@ export type MatchedEntity<T> = {
     ? Array<MatchedEntity<U> | U>
     : T[K] extends AsyncProperty<any, infer V>
     ? V
+    : T[K] extends Entity
+    ? MatchedEntity<T[K]>
+    : T[K] extends ReadonlyArray<infer U>
+    ? MatchedEntity<readonly U[]>
     : T[K] | null;
 };

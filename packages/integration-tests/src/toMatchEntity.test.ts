@@ -1,5 +1,5 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
-import { newAuthor, newBook, newPublisher, Publisher } from "@src/entities";
+import { newBook, newAuthor, Author } from "@src/entities";
 import { newEntityManager } from "./setupDbTests";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
@@ -7,30 +7,30 @@ expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 describe("toMatchEntity", () => {
   it("can match primitive fields", async () => {
     const em = newEntityManager();
-    const p1 = newPublisher(em);
+    const p1 = newAuthor(em, { firstName: "Author 1" });
     await em.flush();
-    await expect(p1).toMatchEntity({ name: "Publisher 1" });
+    expect(p1).toMatchEntity({ firstName: "Author 1" });
   });
 
   it("can match references", async () => {
     const em = newEntityManager();
     const b1 = newBook(em);
     await em.flush();
-    await expect(b1).toMatchEntity({ author: { firstName: "a1" } });
+    expect(b1).toMatchEntity({ author: { firstName: "a1" } });
   });
 
   it("can match async properties", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
-    await expect(a1).toMatchEntity({ numberOfBooks2: 2 });
+    expect(a1).toMatchEntity({ numberOfBooks2: 2 });
   });
 
   it("can match persisted async properties", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
-    await expect(a1).toMatchEntity({ numberOfBooks: 2 });
+    expect(a1).toMatchEntity({ numberOfBooks: 2 });
   });
 
   it("can match reference with entity directly", async () => {
@@ -38,7 +38,7 @@ describe("toMatchEntity", () => {
     const a1 = newAuthor(em);
     const b1 = newBook(em, { author: a1 });
     await em.flush();
-    await expect(b1).toMatchEntity({ author: a1 });
+    expect(b1).toMatchEntity({ author: a1 });
   });
 
   it("can fail match reference with wrong entity", async () => {
@@ -47,7 +47,7 @@ describe("toMatchEntity", () => {
     const a2 = newAuthor(em);
     const b1 = newBook(em, { author: a1 });
     await em.flush();
-    await expect(expect(b1).toMatchEntity({ author: a2 })).rejects.toThrowErrorMatchingInlineSnapshot(`
+    expect(() => expect(b1).toMatchEntity({ author: a2 })).toThrowErrorMatchingInlineSnapshot(`
 expect(received).toMatchObject(expected)
 
 - Expected  - 1
@@ -66,17 +66,15 @@ expect(received).toMatchObject(expected)
     const a2 = newAuthor(em);
     const b1 = newBook(em, { author: a1 });
     await em.flush();
-    await expect(expect(b1).toMatchEntity({ author: undefined })).rejects.toThrowErrorMatchingInlineSnapshot(`
+    expect(() => expect(b1).toMatchEntity({ author: undefined })).toThrowErrorMatchingInlineSnapshot(`
 expect(received).toMatchObject(expected)
 
 - Expected  - 1
-+ Received  + 3
++ Received  + 1
 
   Object {
 -   "author": undefined,
-+   "author": Object {
-+     "id": "a:1",
-+   },
++   "author": "a:1",
   }
 `);
   });
@@ -85,7 +83,7 @@ expect(received).toMatchObject(expected)
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{}, {}] });
     await em.flush();
-    await expect(a1).toMatchEntity({
+    expect(a1).toMatchEntity({
       books: [{ title: "title" }, { title: "title" }],
     });
   });
@@ -95,7 +93,7 @@ expect(received).toMatchObject(expected)
     const a1 = newAuthor(em, { books: [{}, {}] });
     const b1 = a1.books.get[0];
     await em.flush();
-    await expect(a1).toMatchEntity({
+    expect(a1).toMatchEntity({
       books: [b1, { title: "title" }],
     });
   });
@@ -107,7 +105,7 @@ expect(received).toMatchObject(expected)
     const b2 = a1.books.get[1];
     await em.flush();
     // Then it fails if we assert against only one
-    await expect(expect(a1).toMatchEntity({ books: [b2] })).rejects.toThrowErrorMatchingInlineSnapshot(`
+    expect(() => expect(a1).toMatchEntity({ books: [b2] })).toThrowErrorMatchingInlineSnapshot(`
 expect(received).toMatchObject(expected)
 
 - Expected  - 0
@@ -131,7 +129,7 @@ expect(received).toMatchObject(expected)
     const b2 = newBook(em, { author: {} });
     await em.flush();
     // Then it fails if we include the extra book
-    await expect(expect(a1).toMatchEntity({ books: [b1, b2] })).rejects.toThrowErrorMatchingInlineSnapshot(`
+    expect(() => expect(a1).toMatchEntity({ books: [b1, b2] })).toThrowErrorMatchingInlineSnapshot(`
 expect(received).toMatchObject(expected)
 
 - Expected  - 1
@@ -153,7 +151,7 @@ expect(received).toMatchObject(expected)
     const b2 = a1.books.get[1];
     // And we don't flush
     // Then it fails if we assert against only one
-    await expect(expect(a1).toMatchEntity({ books: [b2] })).rejects.toThrowErrorMatchingInlineSnapshot(`
+    expect(() => expect(a1).toMatchEntity({ books: [b2] })).toThrowErrorMatchingInlineSnapshot(`
 expect(received).toMatchObject(expected)
 
 - Expected  - 0
@@ -170,46 +168,91 @@ expect(received).toMatchObject(expected)
 
   it("is strongly typed", async () => {
     const em = newEntityManager();
-    const p1 = newPublisher(em);
+    const p1 = newAuthor(em);
     // @ts-expect-error
-    await expect(expect(p1).toMatchEntity({ name2: "name" })).rejects.toThrow();
+    expect(() => expect(p1).toMatchEntity({ firstName2: "name" })).toThrow();
   });
 
   it("is strongly typed within collections", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     // @ts-expect-error
-    await expect(expect(a1).toMatchEntity({ books: [{ title2: "name" }] })).rejects.toThrow();
+    expect(() => expect(a1).toMatchEntity({ books: [{ title2: "firstName" }] })).toThrow();
   });
 
   it("is strongly typed within references", async () => {
     const em = newEntityManager();
     const b1 = newBook(em);
     // @ts-expect-error
-    await expect(expect(b1).toMatchEntity({ author: { firstName2: "name" } })).rejects.toThrow();
+    expect(() => expect(b1).toMatchEntity({ author: { firstfirstName2: "name" } })).toThrow();
   });
 
   it("can match object literals", async () => {
     const em = newEntityManager();
-    const p1 = newPublisher(em, { name: "p1" });
-    await expect({
-      publisher: p1,
-      publisher2: p1 as Publisher | null,
-      publisher3: p1 as Publisher | null | undefined,
-      publishers: [p1],
-      publishers2: [p1] as readonly Publisher[],
-      publishers3: [p1] as readonly Publisher[] | null,
-      publishers4: [p1] as ReadonlyArray<Publisher | undefined>,
-      publishers5: [p1] as ReadonlyArray<Publisher | undefined | null>,
-    }).toMatchEntity({
-      publisher: { name: "p1" },
-      publisher2: { name: "p1" },
-      publisher3: { name: "p1" },
-      publishers: [{ name: "p1" }],
-      publishers2: [{ name: "p1" }],
-      publishers3: [{ name: "p1" }],
-      publishers4: [{ name: "p1" }],
-      publishers5: [{ name: "p1" }],
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const res = {
+      author: a1,
+      author2: a1 as Author | null,
+      author3: a1 as Author | null | undefined,
+      author4: a1,
+      authors: [a1],
+      authors2: [a1] as readonly Author[],
+      authors3: [a1] as readonly Author[] | null,
+      authors4: [a1] as ReadonlyArray<Author | undefined>,
+      authors5: [a1] as ReadonlyArray<Author | undefined | null>,
+      authors6: [a1] as ReadonlyArray<Author | undefined | null>,
+    };
+    expect(res).toMatchEntity({
+      author: { firstName: "a1" },
+      author2: { firstName: "a1" },
+      author3: { firstName: "a1" },
+      author4: {},
+      authors: [{ firstName: "a1" }],
+      authors2: [{ firstName: "a1" }],
+      authors3: [{ firstName: "a1" }],
+      authors4: [{ firstName: "a1" }],
+      authors5: [{ firstName: "a1" }],
+      authors6: [{}],
     });
+    expect(res).toMatchEntity({
+      author: a1,
+      author2: a1,
+      author3: a1,
+      author4: {},
+      authors: [a1],
+      authors2: [a1],
+      authors3: [a1],
+      authors4: [a1],
+      authors5: [a1],
+      authors6: [a1],
+    });
+  });
+
+  it("can match partial object literals", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const res = {
+      author1: a1,
+      author2: a1,
+      authors1: { author1: a1, author2: a1 },
+      authors2: [{ author1: a1, author2: a1 }],
+    };
+    expect(res).toMatchEntity({
+      author1: { firstName: "a1" },
+      authors1: { author1: { firstName: "a1" } },
+      authors2: [{ author1: { firstName: "a1" } }],
+    });
+    expect(res).toMatchEntity({
+      author1: a1,
+      authors1: { author1: a1 },
+      authors2: [{ author1: a1 }],
+    });
+  });
+
+  it("can match arrays", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const res = [{ author1: a1 }];
+    expect(res).toMatchEntity([{ author1: a1 }]);
   });
 });

@@ -10,6 +10,9 @@
   "files": [
     "build"
   ],
+  "dependencies": {
+    "is-plain-object": "^5.0.0"
+  },
   "devDependencies": {
     "@swc/core": "^1.2.220",
     "@swc/jest": "^0.2.22",

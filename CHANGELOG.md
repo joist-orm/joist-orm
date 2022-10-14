@@ -1,3 +1,10 @@
+# [1.36.0](https://github.com/stephenh/joist-ts/compare/v1.35.3...v1.36.0) (2022-10-14)
+
+
+### Features
+
+* Make toMatchEntity sync. ([#440](https://github.com/stephenh/joist-ts/issues/440)) ([4d082dd](https://github.com/stephenh/joist-ts/commit/4d082dd1686aeed8df2ab194d014aa4b9e2fdb84)), closes [#267](https://github.com/stephenh/joist-ts/issues/267)
+
 ## [1.35.3](https://github.com/stephenh/joist-ts/compare/v1.35.2...v1.35.3) (2022-10-13)
 
 

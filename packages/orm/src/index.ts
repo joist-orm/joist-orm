@@ -257,10 +257,15 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
       .filter((f) => f.kind === "primitive" && f.derived === "async")
       .forEach((field) => {
         const asyncProperty = getFakeInstance(meta)[field.fieldName] as PersistedAsyncPropertyImpl<any, any, any>;
-        const reversals = reverseReactiveHint(meta.cstr, asyncProperty.loadHint);
-        reversals.forEach(({ entity, path, fields }) => {
-          getMetadata(entity).config.__data.reactiveDerivedValues.push({ name: field.fieldName, path, fields });
-        });
+        // We might have an async property configured in joist-codegen.json that has not yet
+        // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
+        // if we don't actually have a property/loadHint available.
+        if (asyncProperty.loadHint) {
+          const reversals = reverseReactiveHint(meta.cstr, asyncProperty.loadHint);
+          reversals.forEach(({ entity, path, fields }) => {
+            getMetadata(entity).config.__data.reactiveDerivedValues.push({ name: field.fieldName, path, fields });
+          });
+        }
       });
   });
 }

@@ -1,3 +1,10 @@
+## [1.36.1](https://github.com/stephenh/joist-ts/compare/v1.36.0...v1.36.1) (2022-10-17)
+
+
+### Bug Fixes
+
+* Avoid errors when async properties are wip. ([#442](https://github.com/stephenh/joist-ts/issues/442)) ([344dcaf](https://github.com/stephenh/joist-ts/commit/344dcaf955eb1cf3af4964bedaf9e0ae1c972dcc))
+
 # [1.36.0](https://github.com/stephenh/joist-ts/compare/v1.35.3...v1.36.0) (2022-10-14)
 
 

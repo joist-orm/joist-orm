@@ -63,30 +63,31 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
 {
   private loaded = false;
   private loadPromise: any;
+  private loadHint: any;
   constructor(
     private entity: T,
     public fieldName: keyof T & string,
-    public loadHint: Const<H>,
+    public reactiveHint: Const<H>,
     private fn: (entity: Reacted<T, H>) => V,
-  ) {}
+  ) {
+    this.loadHint = convertToLoadHint(getMetadata(entity), reactiveHint as any);
+  }
 
   load(): Promise<V> {
-    const { entity, loadHint, fn } = this;
+    const { entity, loadHint } = this;
     if (!this.loaded) {
-      return (this.loadPromise ??= entity.em
-        .populate(entity, convertToLoadHint(getMetadata(entity), loadHint as ReactiveHint<T>))
-        .then((loaded) => {
-          this.loaded = true;
-          // Go through `this.get` so that `setField` is called to set our latest value
-          return this.get;
-        }));
+      return (this.loadPromise ??= entity.em.populate(entity, loadHint).then(() => {
+        this.loaded = true;
+        // Go through `this.get` so that `setField` is called to set our latest value
+        return this.get;
+      }));
     }
     return Promise.resolve(this.get);
   }
 
   get get(): V {
     const { entity, fn } = this;
-    if (this.loaded || (!this.isSet && isLoaded(entity, this.loadHint as any))) {
+    if (this.loaded || (!this.isSet && isLoaded(entity, this.loadHint))) {
       const newValue = fn(entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it

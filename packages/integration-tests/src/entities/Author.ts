@@ -91,7 +91,9 @@ export class Author extends AuthorCodegen {
   /** Example of a derived async property that can be calculated via a populate hint. */
   readonly numberOfBooks: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfBooks",
-    "books",
+    // Include firstName to ensure `.get` uses the load hint (and not the full reactive hint)
+    // when evaluating whether to eval our lambda during pre-flush calls.
+    ["books", "firstName"],
     (a) => {
       a.entity.numberOfBooksCalcInvoked++;
       return a.books.get.length;

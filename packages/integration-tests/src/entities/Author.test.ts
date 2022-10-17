@@ -225,6 +225,12 @@ describe("Author", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
+  it("can access async derived values if loaded", async () => {
+    const em = newEntityManager();
+    const a1 = new Author(em, { firstName: "a1" });
+    expect(a1.numberOfBooks.get).toEqual(0);
+  });
+
   it("has async derived values automatically recalced", async () => {
     const em = newEntityManager();
     // Given an author with initially no books

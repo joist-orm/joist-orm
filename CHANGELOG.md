@@ -1,3 +1,10 @@
+## [1.36.2](https://github.com/stephenh/joist-ts/compare/v1.36.1...v1.36.2) (2022-10-17)
+
+
+### Bug Fixes
+
+* Fix calling isLoaded with the wrong hint. ([#443](https://github.com/stephenh/joist-ts/issues/443)) ([38cf101](https://github.com/stephenh/joist-ts/commit/38cf101c6d6864cee523cbc18c0aaf05e529afec))
+
 ## [1.36.1](https://github.com/stephenh/joist-ts/compare/v1.36.0...v1.36.1) (2022-10-17)
 
 

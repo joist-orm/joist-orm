@@ -165,7 +165,9 @@ export class ConfigData<T extends Entity, C> {
 function getCallerName(): string {
   const err = getErrorObject();
   // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)
-  const line = err.stack!.split("\n")[4];
+  // (Make sure to drop lines that don't start with 'at' b/c the stack format can differ
+  // slightly i.e. if running via tsx/using a node loader (probably?)
+  const line = err.stack!.split("\n").filter((line) => line.includes(" at "))[3];
   const parts = line.split("/");
   // Get the last part, which will be the file name, i.e. Activity.ts:86:8
   return parts[parts.length - 1].replace(/:\d+\)?$/, "");

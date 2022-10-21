@@ -1,3 +1,10 @@
+## [1.36.3](https://github.com/stephenh/joist-ts/compare/v1.36.2...v1.36.3) (2022-10-21)
+
+
+### Bug Fixes
+
+* Fix getCallerName when running via tsx. ([#444](https://github.com/stephenh/joist-ts/issues/444)) ([6aeb2e9](https://github.com/stephenh/joist-ts/commit/6aeb2e963af32ba2ac4de9dc3e9505b30dcceb6f))
+
 ## [1.36.2](https://github.com/stephenh/joist-ts/compare/v1.36.1...v1.36.2) (2022-10-17)
 
 

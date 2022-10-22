@@ -7,7 +7,7 @@ import { ResolverArgs, ResolverResult } from "./makeRunObject";
  *
  * Following our `query / foo` conventions, `resolver` will have a single `fooResolver.foo` method.
  */
-export function makeRunQuery<T>(resolver: T): RunQueryMethod<T> {
+export function makeRunQuery<T extends object>(resolver: T): RunQueryMethod<T> {
   return (ctx, args) =>
     run(ctx, async (ctx) => {
       const key = Object.keys(resolver)[0];

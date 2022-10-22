@@ -7,7 +7,7 @@ import { ResolverResult } from "./makeRunObject";
  *
  * Following our `mutation / foo` conventions, `resolver` will have a single `fooResolver.foo` method.
  */
-export function makeRunInputMutation<T>(resolver: T): RunInputMutationMethod<T> {
+export function makeRunInputMutation<T extends object>(resolver: T): RunInputMutationMethod<T> {
   return (ctx, args) =>
     run(ctx, async (ctx) => {
       const key = Object.keys(resolver)[0];

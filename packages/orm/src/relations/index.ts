@@ -8,11 +8,15 @@ export {
   isLoadedAsyncProperty,
   LoadedProperty,
 } from "./hasAsyncProperty";
-export { PersistedAsyncProperty, hasPersistedAsyncProperty, isPersistedAsyncProperty } from "./hasPersistedAsyncProperty";
 export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";
 export { hasOneThrough } from "./hasOneThrough";
+export {
+  hasPersistedAsyncProperty,
+  isPersistedAsyncProperty,
+  PersistedAsyncProperty,
+} from "./hasPersistedAsyncProperty";
 export { LargeCollection } from "./LargeCollection";
 export { hasManyToMany, ManyToManyCollection } from "./ManyToManyCollection";
 export { hasLargeManyToMany, ManyToManyLargeCollection } from "./ManyToManyLargeCollection";

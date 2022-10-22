@@ -1,5 +1,5 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
-import { newBook, newAuthor, Author } from "@src/entities";
+import { Author, newAuthor, newBook } from "@src/entities";
 import { newEntityManager } from "./setupDbTests";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);

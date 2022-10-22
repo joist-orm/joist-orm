@@ -110,7 +110,7 @@ export interface FlushOptions {
   skipValidation?: boolean;
 }
 
-export class EntityManager<C = {}> {
+export class EntityManager<C = unknown> {
   public readonly ctx: C;
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;

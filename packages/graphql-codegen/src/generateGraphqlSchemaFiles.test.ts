@@ -69,19 +69,19 @@ describe("generateGraphqlSchemaFiles", () => {
     `);
     // And saved it in the history
     expect(JSON.parse((await fs.load(".history.json")) || "")).toMatchInlineSnapshot(`
-      Object {
-        "Author": Array [
+      {
+        "Author": [
           "firstName",
           "id",
         ],
-        "Mutation": Array [
+        "Mutation": [
           "saveAuthor",
         ],
-        "SaveAuthorInput": Array [
+        "SaveAuthorInput": [
           "firstName",
           "id",
         ],
-        "SaveAuthorResult": Array [
+        "SaveAuthorResult": [
           "author",
         ],
       }
@@ -183,9 +183,9 @@ describe("generateGraphqlSchemaFiles", () => {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then we added the new field
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-      "\\" The author. \\"
+      "" The author. "
       type Author {
-        \\" The id. \\"
+        " The id. "
         id: ID!
         firstName: String!
       }
@@ -264,29 +264,29 @@ describe("generateGraphqlSchemaFiles", () => {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input has both both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-"extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-}
+      "extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
 
-type Author {
-  id: ID!
-  firstName: String!
-  createdAt: DateTime!
-  startDate: Date!
-}
+      type Author {
+        id: ID!
+        firstName: String!
+        createdAt: DateTime!
+        startDate: Date!
+      }
 
-input SaveAuthorInput {
-  id: ID
-  firstName: String
-  createdAt: DateTime
-  startDate: Date
-}
+      input SaveAuthorInput {
+        id: ID
+        firstName: String
+        createdAt: DateTime
+        startDate: Date
+      }
 
-type SaveAuthorResult {
-  author: Author!
-}
-"
-`);
+      type SaveAuthorResult {
+        author: Author!
+      }
+      "
+    `);
   });
 
   it("adds enum details", async () => {
@@ -302,25 +302,25 @@ type SaveAuthorResult {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input has both both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-"extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-}
+      "extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
 
-type Author {
-  id: ID!
-  color: ColorDetail!
-}
+      type Author {
+        id: ID!
+        color: ColorDetail!
+      }
 
-input SaveAuthorInput {
-  id: ID
-  color: Color
-}
+      input SaveAuthorInput {
+        id: ID
+        color: Color
+      }
 
-type SaveAuthorResult {
-  author: Author!
-}
-"
-`);
+      type SaveAuthorResult {
+        author: Author!
+      }
+      "
+    `);
   });
 
   it("can enum array types", async () => {
@@ -336,24 +336,24 @@ type SaveAuthorResult {
     await generateGraphqlSchemaFiles(fs, entities);
     // Then the input has both both types of fields as appropriate
     expect(await fs.load("author.graphql")).toMatchInlineSnapshot(`
-"extend type Mutation {
-  saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
-}
+      "extend type Mutation {
+        saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
+      }
 
-type Author {
-  id: ID!
-  color: [Color!]!
-}
+      type Author {
+        id: ID!
+        color: [Color!]!
+      }
 
-input SaveAuthorInput {
-  id: ID
-  color: [Color!]
-}
+      input SaveAuthorInput {
+        id: ID
+        color: [Color!]
+      }
 
-type SaveAuthorResult {
-  author: Author!
-}
-"
-`);
+      type SaveAuthorResult {
+        author: Author!
+      }
+      "
+    `);
   });
 });

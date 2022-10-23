@@ -773,6 +773,12 @@ export class EntityManager<C = {}> {
     getRelations(deletedEntity).forEach((relation) => relation.maybeCascadeDelete());
   }
 
+  async assignNewIds() {
+    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.id);
+    let todos = createTodos(pendingEntities);
+    return this.driver.assignNewIds(this, todos);
+  }
+
   /**
    * Flushes the SQL for any changed entities to the database.
    *

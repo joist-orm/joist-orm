@@ -68,6 +68,8 @@ export interface Driver {
     isolationLevel?: "serializable",
   ): Promise<T>;
 
+  assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
+
   flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 
   flushJoinTables(em: EntityManager, joinRows: Record<string, JoinRowTodo>): Promise<void>;

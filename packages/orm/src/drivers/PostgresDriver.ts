@@ -276,6 +276,11 @@ export class PostgresDriver implements Driver {
     });
   }
 
+  async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+    const knex = this.getMaybeInTxnKnex(em);
+    return this.idAssigner.assignNewIds(knex, todos);
+  }
+
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
     const now = getNow();

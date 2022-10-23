@@ -20,7 +20,9 @@ export class SequenceIdAssigner implements IdAssigner {
       if (todo.inserts.length > 0) {
         const meta = todo.inserts[0].__orm.metadata;
         const sequenceName = `${meta.tableName}_id_seq`;
-        const sql = `select nextval('${sequenceName}') from generate_series(1, ${todo.inserts.length})`;
+        const sql = `select nextval('${sequenceName}') from generate_series(1, ${
+          todo.inserts.filter((e) => e.id === undefined).length
+        })`;
         seqStatements.push(sql);
       }
     });
@@ -30,7 +32,7 @@ export class SequenceIdAssigner implements IdAssigner {
       const result = await knex.raw(sql);
       let i = 0;
       Object.values(todos).forEach((todo) => {
-        for (const insert of todo.inserts) {
+        for (const insert of todo.inserts.filter((e) => e.id === undefined)) {
           insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
         }
       });

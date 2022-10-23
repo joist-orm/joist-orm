@@ -1,3 +1,10 @@
+## [1.37.1](https://github.com/stephenh/joist-ts/compare/v1.37.0...v1.37.1) (2022-10-23)
+
+
+### Bug Fixes
+
+* Ensure that sameEntity works even if an ID has been assigned to a new entity ([#457](https://github.com/stephenh/joist-ts/issues/457)) ([8b20b04](https://github.com/stephenh/joist-ts/commit/8b20b04102e02f067c020e8edeacfccb8b7f9592))
+
 # [1.37.0](https://github.com/stephenh/joist-ts/compare/v1.36.3...v1.37.0) (2022-10-23)
 
 

@@ -72,17 +72,23 @@ export class InMemoryDriver implements Driver {
     });
   }
 
+  async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+    // do our version of assign ids
+    Object.entries(todos).forEach(([_, todo]) => {
+      todo.inserts
+        .filter((e) => e.id === undefined)
+        .forEach((i) => {
+          const id = this.nextId(todo.metadata.tableName);
+          i.__orm.data["id"] = keyToString(todo.metadata, id);
+          this.rowsOfTable(todo.metadata.tableName)[id] = {};
+        });
+    });
+  }
+
   async flushEntities(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const updatedAt = new Date();
 
-    // do our version of assign ids
-    Object.entries(todos).forEach(([_, todo]) => {
-      todo.inserts.forEach((i) => {
-        const id = this.nextId(todo.metadata.tableName);
-        i.__orm.data["id"] = keyToString(todo.metadata, id);
-        this.rowsOfTable(todo.metadata.tableName)[id] = {};
-      });
-    });
+    await this.assignNewIds(em, todos);
 
     Object.entries(todos).forEach(([_, todo]) => {
       // Because our assign id step effectively inserts the row, we can handle

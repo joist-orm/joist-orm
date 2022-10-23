@@ -1,3 +1,10 @@
+# [1.37.0](https://github.com/stephenh/joist-ts/compare/v1.36.3...v1.37.0) (2022-10-23)
+
+
+### Features
+
+* Add EntityManager.assignNewIds capability ([#452](https://github.com/stephenh/joist-ts/issues/452)) ([4cd7362](https://github.com/stephenh/joist-ts/commit/4cd7362f7caa98e26fc09b50f9ba03401e5b774b))
+
 ## [1.36.3](https://github.com/stephenh/joist-ts/compare/v1.36.2...v1.36.3) (2022-10-21)
 
 

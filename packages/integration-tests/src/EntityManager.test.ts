@@ -13,17 +13,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import {
-  Author,
-  authorMeta,
-  Book,
-  Color,
-  newAuthor,
-  newBook,
-  newPublisher,
-  Publisher,
-  PublisherSize,
-} from "./entities";
+import { Author, Book, Color, newAuthor, newBook, newPublisher, Publisher, PublisherSize } from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {

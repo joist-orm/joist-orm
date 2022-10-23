@@ -1246,6 +1246,18 @@ describe("EntityManager", () => {
       expect(sameEntity(a2, a1)).toEqual(false);
     });
 
+    it("handles new entity which has id assigned", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em);
+
+      expect(sameEntity(a1, a1)).toEqual(true);
+      await em.assignNewIds();
+
+      expect(sameEntity(a1, a1)).toEqual(true);
+      expect(sameEntity(a1, a1.idOrFail)).toEqual(true);
+      expect(sameEntity(a1.idOrFail, a1)).toEqual(true);
+    });
+
     it("handles existing entities", async () => {
       const em = newEntityManager();
       const a1 = newAuthor(em);

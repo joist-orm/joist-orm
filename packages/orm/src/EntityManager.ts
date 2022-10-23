@@ -1053,10 +1053,11 @@ export function sameEntity(a: Entity | string | undefined, b: Entity | string | 
   if (a === undefined || b === undefined) {
     return a === undefined && b === undefined;
   }
-  // If either entity is new, then neither can be a persisted id
-  if ((isEntity(a) && a.isNewEntity) || (isEntity(b) && b.isNewEntity)) {
+  // If both are entities, return if they are the same reference
+  if (isEntity(a) && isEntity(b)) {
     return a === b;
   }
+  // Otherwise check by ID
   const aId = isEntity(a) ? a.idTagged : a;
   const bId = isEntity(b) ? b.idTagged : b;
   return aId === bId;

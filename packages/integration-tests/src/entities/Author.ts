@@ -95,6 +95,7 @@ export class Author extends AuthorCodegen {
     // when evaluating whether to eval our lambda during pre-flush calls.
     ["books", "firstName"],
     (a) => {
+      const b = a.entity;
       a.entity.numberOfBooksCalcInvoked++;
       return a.books.get.length;
     },

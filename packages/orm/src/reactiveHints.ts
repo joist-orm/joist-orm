@@ -46,19 +46,25 @@ export type NestedReactiveHint<T extends Entity> = {
 };
 
 /** Given an entity `T` that is being reacted with hint `H`, mark only the `H` attributes visible & populated. */
-export type Reacted<T extends Entity, H> = Entity & {
+export type Reacted<T extends Entity, H extends ReactiveHint<T>> = Entity & {
   [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
-    ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+    ? NormalizeHint<T, H>[K] extends ReactiveHint<U>
+      ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+      : LoadedOneToOneReference<T, Entity & Reacted<U, {}>>
     : T[K] extends Reference<any, infer U, infer N>
-    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+    ? NormalizeHint<T, H>[K] extends ReactiveHint<U>
+      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+      : LoadedReference<T, Entity & Reacted<U, {}>, N>
     : T[K] extends Collection<any, infer U>
-    ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+    ? NormalizeHint<T, H>[K] extends ReactiveHint<U>
+      ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+      : LoadedCollection<T, Entity & Reacted<U, {}>>
     : T[K] extends AsyncProperty<any, infer V>
     ? LoadedProperty<any, V>
     : T[K];
 } & {
   // Give validation rules a way to get back to the full entity if they really need it
-  entity: Loaded<T, H>;
+  entity: NormalizeHint<T, H> extends LoadHint<T> ? Loaded<T, NormalizeHint<T, H>> : T;
 };
 
 export function reverseReactiveHint<T extends Entity>(

@@ -18,24 +18,40 @@ const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
 
 /** Marks a given `T[K]` field as the loaded/synchronous version of the collection. */
-export type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, H>>
-  : P extends Reference<T, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, H>, N>
-  : P extends Collection<T, infer U>
-  ? LoadedCollection<T, Loaded<U, H>>
-  : P extends AsyncProperty<T, infer V>
+export type MarkLoaded<T extends Entity, H extends LoadHint<T>, K extends keyof T> = K extends keyof H
+  ? T[K] extends OneToOneReference<T, infer U>
+    ? H[K] extends LoadHint<U>
+      ? LoadedOneToOneReference<T, Loaded<U, H[K]>>
+      : LoadedOneToOneReference<T, U>
+    : T[K] extends Reference<T, infer U, infer N>
+    ? H[K] extends LoadHint<U>
+      ? LoadedReference<T, Loaded<U, H[K]>, N>
+      : LoadedReference<T, U, N>
+    : T[K] extends Collection<T, infer U>
+    ? H[K] extends LoadHint<U>
+      ? LoadedCollection<T, Loaded<U, H[K]>>
+      : LoadedCollection<T, U>
+    : T[K] extends AsyncProperty<T, infer V>
+    ? LoadedProperty<T, V>
+    : unknown
+  : T[K] extends OneToOneReference<T, infer U>
+  ? LoadedOneToOneReference<T, U>
+  : T[K] extends Reference<T, infer U, infer N>
+  ? LoadedReference<T, U, N>
+  : T[K] extends Collection<T, infer U>
+  ? LoadedCollection<T, U>
+  : T[K] extends AsyncProperty<T, infer V>
   ? LoadedProperty<T, V>
   : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
-type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<T, infer U>
+type MarkDeepLoaded<T extends Entity, K extends keyof T> = T[K] extends OneToOneReference<T, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends Reference<T, infer U, infer N>
+  : T[K] extends Reference<T, infer U, infer N>
   ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
-  : P extends Collection<T, infer U>
+  : T[K] extends Collection<T, infer U>
   ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends AsyncProperty<T, infer V>
+  : T[K] extends AsyncProperty<T, infer V>
   ? LoadedProperty<T, V>
   : unknown;
 
@@ -84,7 +100,7 @@ export type New<T extends Entity, O extends OptsOf<T> = OptsOf<T>> = T & {
   // custom relations are not marked loaded, b/c they will very likely require a `.load`
   // to work. However, we have some tests that currently expect `author.image.get` to work
   // on a new author, so keeping the `MarkLoaded` behavior for now.
-  [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, T[K]>;
+  [K in keyof T]: K extends keyof O ? MaybeUseOptsType<T, O, K> : MarkLoaded<T, {}, K>;
 };
 
 /**
@@ -142,11 +158,13 @@ export type NestedLoadHint<T extends Entity> = {
   [K in keyof Loadable<T>]?: Loadable<T>[K] extends infer U extends Entity ? LoadHint<U> : {};
 };
 
-/** Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated. */
-export type Loaded<T extends Entity, H> = T & {
-  [K in keyof T & keyof NormalizeHint<T, H>]: H extends DeepLoadHint<T>
-    ? MarkDeepLoaded<T, T[K]>
-    : MarkLoaded<T, T[K], NormalizeHint<T, H>[K]>;
+/**
+ * Given an entity `T` that is being populated with hints `H`, marks the `H` attributes as populated.
+ *
+ * (We used to constrain `H` to `extends LoadHint<T>`, but we want `Reacted.entity` to be typed as
+ * `Loaded<T, H>` and the Reacted's `H` is a `ReactiveHint` that */
+export type Loaded<T extends Entity, H extends LoadHint<T>> = T & {
+  [K in keyof T & keyof NormalizeHint<T, H>]: H extends DeepLoadHint<T> ? MarkDeepLoaded<T, K> : MarkLoaded<T, H, K>;
 };
 
 /** Recursively checks if the relations from a load hint are loaded on an entity. */

@@ -95,7 +95,7 @@ export type DeepNew<T extends Entity> = Loaded<T, DeepLoadHint<T>>;
 
 /** Detects whether an entity is newly created, and so we can treat all the relations as loaded. */
 export function isNew<T extends Entity>(e: T): e is New<T> {
-  return e.idTagged === undefined;
+  return e.isNewEntity;
 }
 
 /**

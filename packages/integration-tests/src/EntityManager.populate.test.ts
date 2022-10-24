@@ -214,4 +214,17 @@ describe("EntityManager.populate", () => {
     // Then a2.books was loaded
     expect(loaded.authors.get[1].books.get.length).toBe(1);
   });
+
+  it("foo", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    const b = await em.load(Book, "b:1");
+    const a2 = await em.load(Author, "a:2");
+    b.author.set(a2);
+    const a = await b.author.load();
+    expect(a).toBe(a2);
+  });
 });

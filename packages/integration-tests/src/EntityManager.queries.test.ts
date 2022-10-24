@@ -286,6 +286,20 @@ describe("EntityManager.queries", () => {
     expect(books[0].title).toEqual("b1");
   });
 
+  it("can find through a o2o filter being set", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertImage({ book_id: 1, file_name: "1", type_id: 1 });
+    await insertImage({ author_id: 2, file_name: "2", type_id: 2 });
+
+    const em = newEntityManager();
+    const books = await em.find(Book, { image: { ne: null } });
+    expect(books.length).toEqual(1);
+    expect(books[0].title).toEqual("b1");
+  });
+
   it("can find by foreign key using only an id", async () => {
     await insertAuthor({ id: 3, first_name: "a1" });
     await insertAuthor({ id: 4, first_name: "a2" });

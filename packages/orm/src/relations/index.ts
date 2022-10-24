@@ -1,4 +1,7 @@
+// organize-imports-ignore
+export { isRelation, Relation } from "./Relation";
 export { Collection, isCollection, isLoadedCollection, LoadedCollection } from "./Collection";
+export { isLoadedReference, isReference, LoadedReference, Reference } from "./Reference";
 export { CustomCollection } from "./CustomCollection";
 export { CustomReference } from "./CustomReference";
 export {
@@ -36,5 +39,3 @@ export {
   PolymorphicReference,
   PolymorphicReferenceImpl,
 } from "./PolymorphicReference";
-export { isLoadedReference, isReference, LoadedReference, Reference } from "./Reference";
-export { isRelation, Relation } from "./Relation";

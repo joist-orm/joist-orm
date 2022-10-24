@@ -96,39 +96,68 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 // For filtering by a foreign key T, i.e. either joining/recursing into with FilterQuery<T>, or matching it is null/not null/etc.
 export type EntityFilter<T, I, F, N> = T | T[] | I | I[] | F | N | { ne: T | I | N };
 
-export type ParsedEntityFilter =
-  | { kind: "eq"; id: number | null }
-  | { kind: "ne"; id: number | null }
-  | { kind: "in"; ids: number[] }
-  | { kind: "join"; subFilter: any };
+export type ParsedEntityFilter = ParsedValueFilter<number> | { kind: "join"; subFilter: any };
 
 export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): ParsedEntityFilter {
   if (filter === null || filter === undefined) {
-    return { kind: "eq", id: null };
+    return { kind: "eq", value: null };
   } else if (typeof filter === "string" || typeof filter === "number") {
-    return { kind: "eq", id: keyToNumber(meta, filter) };
+    return { kind: "eq", value: keyToNumber(meta, filter) };
   } else if (Array.isArray(filter)) {
-    return { kind: "in", ids: filter.map((id: string | number) => keyToNumber(meta, id)) };
+    return {
+      kind: "in",
+      value: filter.map((each: string | number | Entity) => keyToNumber(meta, isEntity(each) ? each.idOrFail : each)),
+    };
   } else if (isEntity(filter)) {
-    return { kind: "eq", id: keyToNumber(meta, filter.id || -1) };
+    return { kind: "eq", value: keyToNumber(meta, filter.id || -1) };
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
     if (keys.length === 1 && keys[0] === "ne") {
       const value = filter["ne"];
       if (value === null || value === undefined) {
-        return { kind: "ne", id: null };
+        return { kind: "ne", value: null };
       } else if (typeof value === "string" || typeof value === "number") {
-        return { kind: "ne", id: keyToNumber(meta, value) };
+        return { kind: "ne", value: keyToNumber(meta, value) };
       } else if (isEntity(value)) {
-        return { kind: "ne", id: keyToNumber(meta, value.id || -1) };
+        return { kind: "ne", value: keyToNumber(meta, value.id || -1) };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
     }
-    return { kind: "join", subFilter: filter };
+    return { kind: "join", subFilter: parseFilter(meta, filter) };
   } else {
     throw new Error(`Unrecognized filter ${filter}`);
   }
+}
+
+/**
+ * The result of parsing an `em.find` expression for a given type.
+ *
+ * This is a record of `fieldName: valueFilter | entityFilter`, i.e. `{ firstName: { kind: "eq", value: "name" } }`.
+ */
+export type ParsedFilter<T extends Entity> = Record<keyof T, ParsedValueFilter<any> | ParsedEntityFilter>;
+
+/**
+ * Parses our generally ergonomic `FilterOf` format into an ADT version that easier to process.
+ */
+export function parseFilter<T extends Entity>(meta: EntityMetadata<T>, where: Record<string, any>): ParsedFilter<T> {
+  return Object.fromEntries(
+    Object.entries(where).map(([fieldName, value]) => {
+      const field = meta.fields[fieldName] || fail(`Field ${fieldName} does not exist on ${meta.tableName}`);
+      switch (field.kind) {
+        case "primaryKey":
+        case "primitive":
+        case "enum":
+          return [fieldName, parseValueFilter(value as ValueFilter<any, any>)];
+        case "m2o":
+        case "o2o":
+          const otherMeta = field.otherMetadata();
+          return [fieldName, parseEntityFilter(otherMeta, value)];
+        default:
+          throw new Error("Unsupported");
+      }
+    }),
+  );
 }
 
 export type BooleanGraphQLFilter = true | false | null;
@@ -267,7 +296,7 @@ export function buildQuery<T extends Entity>(
         const otherAlias = getAlias(otherMeta.tableName);
         const otherColumn = otherMeta.fields[field.otherFieldName]!;
 
-        query = query.leftJoin(
+        query = query.join(
           `${otherMeta.tableName} AS ${otherAlias}`,
           `${otherAlias}.${otherColumn.serde!.columns[0].columnName}`,
           `${alias}.id`,

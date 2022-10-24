@@ -1,15 +1,3 @@
-import { Entity, EntityOrmField, isEntity } from "./Entity";
-import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { getFakeInstance } from "./getProperties";
-import { maybeResolveReferenceToId, tagFromId } from "./keys";
-import { reverseReactiveHint } from "./reactiveHints";
-import { Reference } from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import { isCannotBeUpdatedRule } from "./rules";
-import { fail } from "./utils";
-
 export { newPgConnectionConfig } from "joist-utils";
 export { BaseEntity } from "./BaseEntity";
 export * from "./changes";
@@ -50,6 +38,17 @@ export {
 } from "./rules";
 export * from "./serde";
 export { asNew, fail } from "./utils";
+import { Entity, EntityOrmField, isEntity } from "./Entity";
+import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { getFakeInstance } from "./getProperties";
+import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { reverseReactiveHint } from "./reactiveHints";
+import { Reference } from "./relations";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
+import { isCannotBeUpdatedRule } from "./rules";
+import { fail } from "./utils";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

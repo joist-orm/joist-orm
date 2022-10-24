@@ -1,3 +1,10 @@
+## [1.37.2](https://github.com/stephenh/joist-ts/compare/v1.37.1...v1.37.2) (2022-10-24)
+
+
+### Bug Fixes
+
+* loadHints.isNew was checking for idTagged===undefined ([#458](https://github.com/stephenh/joist-ts/issues/458)) ([3d1fd96](https://github.com/stephenh/joist-ts/commit/3d1fd96a4b3416d435d48abae29925bf237a8625))
+
 ## [1.37.1](https://github.com/stephenh/joist-ts/compare/v1.37.0...v1.37.1) (2022-10-23)
 
 

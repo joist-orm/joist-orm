@@ -1,3 +1,10 @@
+## [1.37.3](https://github.com/stephenh/joist-ts/compare/v1.37.2...v1.37.3) (2022-10-26)
+
+
+### Bug Fixes
+
+* Remove some unneeded lines. ([#459](https://github.com/stephenh/joist-ts/issues/459)) ([25bd3d9](https://github.com/stephenh/joist-ts/commit/25bd3d9cb3c181f77a3dd7f6df7c658eddb4756e))
+
 ## [1.37.2](https://github.com/stephenh/joist-ts/compare/v1.37.1...v1.37.2) (2022-10-24)
 
 

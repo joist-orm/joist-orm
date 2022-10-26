@@ -99,12 +99,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   private doGet(): U[] {
     ensureNotDeleted(this.entity, { ignore: "pending" });
     if (this.loaded === undefined) {
-      if (this.entity.id === undefined) {
-        return this.addedBeforeLoaded;
-      } else {
-        // This should only be callable in the type system if we've already resolved this to an instance
-        throw new Error("get was called when not preloaded");
-      }
+      // This should only be callable in the type system if we've already resolved this to an instance
+      throw new Error("get was called when not preloaded");
     }
     return this.loaded;
   }

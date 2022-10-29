@@ -102,6 +102,13 @@ export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V
   return current!;
 }
 
+/** Returns whether a lens is loaded; primarily for deeply loaded instances in tests. */
+export function isLensLoaded<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): boolean {
+  // This is pretty hacky, but we just call `get` and assume it will blow up with "not loaded" errors.
+  getLens(start, fn);
+  return true;
+}
+
 function maybeGet(object: any, path: string): unknown {
   if (object === undefined || object === null) {
     return undefined;

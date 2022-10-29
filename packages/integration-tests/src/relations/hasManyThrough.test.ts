@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
-import { Author, BookReview } from "../entities";
+import { Author, BookReview, newAuthor } from "../entities";
 import { newEntityManager } from "../setupDbTests";
 
 describe("hasManyThrough", () => {
@@ -35,5 +35,17 @@ describe("hasManyThrough", () => {
     expect(author.reviews.get).toHaveLength(1);
     em.create(BookReview, { rating: 4, book });
     expect(author.reviews.get).toHaveLength(2);
+  });
+
+  it("in tests can be called before and after flush", async () => {
+    const em = newEntityManager();
+    // Given a new deeply loaded test entity
+    const author = newAuthor(em);
+    // Then we can call `.get` even though we've not explicitly populated the collection
+    expect(author.reviews.get).toHaveLength(0);
+    // And after flushing (i.e. the entity is no longer new)
+    await em.flush();
+    // Then it still works
+    expect(author.reviews.get).toHaveLength(0);
   });
 });

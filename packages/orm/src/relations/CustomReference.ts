@@ -11,6 +11,8 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
   load: (entity: T, opts: { forceReload?: boolean }) => Promise<void>;
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
+  /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
+  isLoaded?: () => boolean;
 };
 
 /**
@@ -90,13 +92,13 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isSet(): boolean {
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     const { get } = this.opts;
     return get(this.entity) !== undefined;
   }
 
   set(value: U): void {
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     const { set } = this.opts;
     if (set === undefined) {
       throw new Error(`'set' not implemented on ${this}`);
@@ -123,7 +125,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     return this.filterDeleted(this.opts.get(this.entity), opts);
   }
 
@@ -131,14 +133,15 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
   }
 
+  private ensureNewOrLoaded() {
+    // This should only be callable in the type system if we've already resolved this to an instance
+    if (this.isLoaded || (this.opts.isLoaded && this.opts.isLoaded())) {
+      return;
+    }
+    fail(`${this.entity}.${this.fieldName} was not loaded`);
+  }
+
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
-}
-
-function ensureNewOrLoaded(reference: CustomReference<any, any, any>) {
-  if (!(reference.isLoaded || reference.entity.isNewEntity)) {
-    // This should only be callable in the type system if we've already resolved this to an instance
-    throw new Error(`${reference.entity}.${reference.fieldName} was not loaded`);
-  }
 }

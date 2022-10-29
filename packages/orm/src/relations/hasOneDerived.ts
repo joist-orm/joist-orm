@@ -1,4 +1,4 @@
-import { Const, currentlyInstantiatingEntity } from "../";
+import { Const, currentlyInstantiatingEntity, isLoaded } from "../";
 import { Entity } from "../Entity";
 import { Loaded, LoadHint } from "../loadHints";
 import { CustomReference } from "./CustomReference";
@@ -22,5 +22,6 @@ export function hasOneDerived<
   return new CustomReference<T, U, N>(entity, {
     load: (entity, opts) => entity.em.populate(entity, { hint: loadHint, ...opts }),
     get: () => get(entity as Loaded<T, H>),
+    isLoaded: () => isLoaded(entity, loadHint as LoadHint<T>),
   });
 }

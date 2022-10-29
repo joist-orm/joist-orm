@@ -13,6 +13,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   find?: (entity: T, id: IdOf<U>) => U | undefined;
   add?: (entity: T, other: U) => void;
   remove?: (entity: T, other: U) => void;
+  /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded?: () => boolean;
 };
 
@@ -25,7 +26,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
  * caller uses dataloader to be batch friendly.
  *
  * This `CustomCollection` API is fairly low-level; users should more likely prefer higher-level
- * abstractions like `hasManyThrough`, which are built on `CustomCollection.
+ * abstractions like `hasManyThrough`, which are built on `CustomCollection`.
  */
 export class CustomCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
@@ -151,10 +152,11 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   private ensureNewOrLoaded() {
-    if (!this.isLoaded && !this.opts.isLoaded) {
-      // This should only be callable in the type system if we've already resolved this to an instance
-      fail(`${this.entity}.${this.fieldName} was not loaded`);
+    // This should only be callable in the type system if we've already resolved this to an instance
+    if (this.isLoaded || (this.opts.isLoaded && this.opts.isLoaded())) {
+      return;
     }
+    fail(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   [RelationT]: T = null!;

@@ -6,11 +6,13 @@ import {
   hasAsyncProperty,
   hasManyDerived,
   hasManyThrough,
+  hasOneDerived,
   hasPersistedAsyncProperty,
   Loaded,
   PersistedAsyncProperty,
+  Reference,
 } from "joist-orm";
-import { AuthorCodegen, authorConfig as config, Book, BookReview } from "./entities";
+import { AuthorCodegen, authorConfig as config, Book, BookReview, Comment } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -40,6 +42,10 @@ export class Author extends AuthorCodegen {
         loaded.reviews.get.forEach((r) => getEm(author).delete(r));
       },
     },
+  );
+  readonly latestComment: Reference<Author, Comment, undefined> = hasOneDerived(
+    { publisher: "comments", comments: {} },
+    (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
 
   public beforeFlushRan = false;

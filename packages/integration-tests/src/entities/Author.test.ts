@@ -630,4 +630,14 @@ describe("Author", () => {
     // Even though its deleted
     expect(b2.isPendingDelete).toBe(true);
   });
+
+  it("isLoaded returns correctly when a field is nullable", async () => {
+    // Given an author without a publisher that has two comments
+    const em = newEntityManager();
+    const a = newAuthor(em, { publisher: null, comments: [{}, {}] });
+    // When we ask for latestComment
+    const comment = a.latestComment.get;
+    // Then it should succeed
+    expect(comment).toEqual(a.comments.get[0]);
+  });
 });

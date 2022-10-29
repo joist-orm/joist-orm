@@ -1,3 +1,10 @@
+## [1.37.4](https://github.com/stephenh/joist-ts/compare/v1.37.3...v1.37.4) (2022-10-29)
+
+
+### Bug Fixes
+
+* Fix accessing hasManyThroughs in tests. ([#460](https://github.com/stephenh/joist-ts/issues/460)) ([ae78236](https://github.com/stephenh/joist-ts/commit/ae7823694436dd3651ce959ed911a7b7f8ae2f79))
+
 ## [1.37.3](https://github.com/stephenh/joist-ts/compare/v1.37.2...v1.37.3) (2022-10-26)
 
 

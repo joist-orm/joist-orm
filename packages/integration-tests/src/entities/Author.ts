@@ -14,30 +14,33 @@ import { AuthorCodegen, authorConfig as config, Book, BookReview } from "./entit
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
-  readonly reviewedBooks: Collection<Author, Book> = hasManyDerived({ books: "reviews" } as const, {
-    get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
-    // set / add / remove callbacks are totally contrived to test that they work
-    set: (author, values) => {
-      values.forEach((book) => {
-        this.reviewedBooks.add(book);
-      });
-      author.books.get.filter((book) => !values.includes(book)).forEach((book) => author.reviewedBooks.remove(book));
-    },
-    // needs a Loaded<Book, "reviews"> or will throw
-    add: (author, book) => {
-      const loaded = book as Loaded<Book, "reviews">;
-      author.books.add(book);
+  readonly reviewedBooks: Collection<Author, Book> = hasManyDerived(
+    { books: "reviews" },
+    {
+      get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
+      // set / add / remove callbacks are totally contrived to test that they work
+      set: (author, values) => {
+        values.forEach((book) => {
+          this.reviewedBooks.add(book);
+        });
+        author.books.get.filter((book) => !values.includes(book)).forEach((book) => author.reviewedBooks.remove(book));
+      },
+      // needs a Loaded<Book, "reviews"> or will throw
+      add: (author, book) => {
+        const loaded = book as Loaded<Book, "reviews">;
+        author.books.add(book);
 
-      if (loaded.reviews.get.length === 0) {
-        author.em.create(BookReview, { rating: 5, book });
-      }
+        if (loaded.reviews.get.length === 0) {
+          author.em.create(BookReview, { rating: 5, book });
+        }
+      },
+      // needs a Loaded<Book, "reviews"> or will throw
+      remove: (author, book) => {
+        const loaded = book as Loaded<Book, "reviews">;
+        loaded.reviews.get.forEach((r) => getEm(author).delete(r));
+      },
     },
-    // needs a Loaded<Book, "reviews"> or will throw
-    remove: (author, book) => {
-      const loaded = book as Loaded<Book, "reviews">;
-      loaded.reviews.get.forEach((r) => getEm(author).delete(r));
-    },
-  });
+  );
 
   public beforeFlushRan = false;
   public beforeCreateRan = false;

@@ -13,6 +13,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   find?: (entity: T, id: IdOf<U>) => U | undefined;
   add?: (entity: T, other: U) => void;
   remove?: (entity: T, other: U) => void;
+  isLoaded?: () => boolean;
 };
 
 /**
@@ -75,7 +76,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   set(values: U[]): void {
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     const { set, add, remove } = this.opts;
     if (set !== undefined) {
       set(this.entity, values);
@@ -109,7 +110,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   add(other: U): void {
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     const { add } = this.opts;
     if (add === undefined) {
       fail(`'add' not implemented on ${this}`);
@@ -118,7 +119,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   remove(other: U): void {
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     const { remove } = this.opts;
     if (remove === undefined) {
       fail(`'add' not implemented on ${this}`);
@@ -141,7 +142,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   private doGet(opts?: { withDeleted?: boolean }): readonly U[] {
     ensureNotDeleted(this.entity, { ignore: "pending" });
-    ensureNewOrLoaded(this);
+    this.ensureNewOrLoaded();
     return this.filterDeleted(this.opts.get(this.entity), opts);
   }
 
@@ -149,13 +150,13 @@ export class CustomCollection<T extends Entity, U extends Entity>
     return entities.filter((entity) => opts?.withDeleted === true || !entity.isDeletedEntity);
   }
 
+  private ensureNewOrLoaded() {
+    if (!this.isLoaded && !this.opts.isLoaded) {
+      // This should only be callable in the type system if we've already resolved this to an instance
+      fail(`${this.entity}.${this.fieldName} was not loaded`);
+    }
+  }
+
   [RelationT]: T = null!;
   [RelationU]: U = null!;
-}
-
-function ensureNewOrLoaded(reference: CustomCollection<any, any>) {
-  if (!(reference.isLoaded || reference.entity.isNewEntity)) {
-    // This should only be callable in the type system if we've already resolved this to an instance
-    fail(`${reference.entity}.${reference.fieldName} was not loaded`);
-  }
 }

@@ -1,3 +1,10 @@
+## [1.37.5](https://github.com/stephenh/joist-ts/compare/v1.37.4...v1.37.5) (2022-10-29)
+
+
+### Bug Fixes
+
+* Fix hasOneThrough in tests. ([#461](https://github.com/stephenh/joist-ts/issues/461)) ([0cb9a49](https://github.com/stephenh/joist-ts/commit/0cb9a49403267bec5f7cde1f003b2e30821a014c))
+
 ## [1.37.4](https://github.com/stephenh/joist-ts/compare/v1.37.3...v1.37.4) (2022-10-29)
 
 

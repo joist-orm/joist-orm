@@ -1,4 +1,4 @@
-import { Collection, currentlyInstantiatingEntity } from "../";
+import { Collection, currentlyInstantiatingEntity, isLoaded } from "../";
 import { Entity } from "../Entity";
 import { Loaded, LoadHint } from "../loadHints";
 import { CustomCollection } from "./CustomCollection";
@@ -32,6 +32,7 @@ export function hasManyDerived<T extends Entity, U extends Entity, H extends Loa
         return entity.em.populate(entity, { hint: loadHint, ...opts });
       }
     },
+    isLoaded: () => isLoaded(entity, loadHint),
     ...(rest as any),
   });
 }

@@ -1,4 +1,13 @@
-import { currentlyInstantiatingEntity, CustomReference, Entity, getLens, Lens, loadLens, Reference } from "../index";
+import {
+  currentlyInstantiatingEntity,
+  CustomReference,
+  Entity,
+  getLens,
+  isLensLoaded,
+  Lens,
+  loadLens,
+  Reference,
+} from "../index";
 
 /**
  * Creates a CustomReference that will walk across references in the object graph.
@@ -16,5 +25,6 @@ export function hasOneThrough<T extends Entity, U extends Entity, N extends neve
       await loadLens(entity, lens, opts);
     },
     get: () => getLens(entity, lens),
+    isLoaded: () => isLensLoaded(entity, lens),
   });
 }

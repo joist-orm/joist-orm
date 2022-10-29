@@ -1,4 +1,4 @@
-import { Author, BookReview } from "@src/entities";
+import { Author, BookReview, newBookReview } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 
@@ -36,5 +36,17 @@ describe("hasOneThrough", () => {
     expect(review.author.get.firstName).toEqual("a1");
     review.book.get.author.set(a2);
     expect(review.author.get.firstName).toEqual("a2");
+  });
+
+  it("in tests can be called before and after flush", async () => {
+    const em = newEntityManager();
+    // Given a new deeply loaded test entity
+    const br = newBookReview(em);
+    // Then we can call `.get` even though we've not explicitly populated the collection
+    expect(br.author.get).toBeDefined();
+    // And after flushing (i.e. the entity is no longer new)
+    await em.flush();
+    // Then it still works
+    expect(br.author.get).toBeDefined();
   });
 });

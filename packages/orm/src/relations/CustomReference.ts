@@ -98,7 +98,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   set(value: U): void {
-    this.ensureNewOrLoaded();
+    // We allow setting CustomReferences on new entities w/o being loaded
+    if (!this.entity.isNewEntity) {
+      this.ensureNewOrLoaded();
+    }
     const { set } = this.opts;
     if (set === undefined) {
       throw new Error(`'set' not implemented on ${this}`);

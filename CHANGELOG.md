@@ -1,3 +1,10 @@
+## [1.37.6](https://github.com/stephenh/joist-ts/compare/v1.37.5...v1.37.6) (2022-10-30)
+
+
+### Bug Fixes
+
+* Issue where isLoaded does not correctly handle nullable loaded references ([#462](https://github.com/stephenh/joist-ts/issues/462)) ([6bb105e](https://github.com/stephenh/joist-ts/commit/6bb105ec7189a5e6b034e3151275c4c9e7b7da91))
+
 ## [1.37.5](https://github.com/stephenh/joist-ts/compare/v1.37.4...v1.37.5) (2022-10-29)
 
 

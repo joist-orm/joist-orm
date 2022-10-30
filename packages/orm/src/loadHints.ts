@@ -162,7 +162,9 @@ export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hin
         const result = relation.get;
         return Array.isArray(result)
           ? result.every((entity) => isLoaded(entity, nestedHint))
-          : isLoaded(result, nestedHint);
+          : result
+          ? isLoaded(result, nestedHint)
+          : true;
       } else {
         return false;
       }

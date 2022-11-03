@@ -112,7 +112,6 @@ export class InMemoryDriver implements Driver {
         this.onQuery();
         const id = deTagId(todo.metadata, d.idOrFail);
         delete this.rowsOfTable(todo.metadata.tableName)[id];
-        d.__orm.deleted = "deleted";
       });
     });
   }

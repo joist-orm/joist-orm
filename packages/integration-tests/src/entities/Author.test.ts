@@ -206,6 +206,7 @@ describe("Author", () => {
     em.delete(a1);
     await em.flush();
     expect(a1.beforeDeleteRan).toBeTruthy();
+    expect(a1.afterCommitIsDeletedEntity).toBeTruthy();
   });
 
   it("can access the context in hooks", async () => {

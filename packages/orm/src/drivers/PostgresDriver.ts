@@ -484,7 +484,6 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       "id",
       entities.map((e) => keyToNumber(meta, e.idTagged!).toString()),
     );
-  entities.forEach((entity) => (entity.__orm.deleted = "deleted"));
 }
 
 /** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */

@@ -56,6 +56,7 @@ export class Author extends AuthorCodegen {
   public afterCommitRan = false;
   public afterCommitIdIsSet = false;
   public afterCommitIsNewEntity = false;
+  public afterCommitIsDeletedEntity = false;
   public setGraduatedInFlush?: boolean;
   public mentorRuleInvoked = 0;
   public ageRuleInvoked = 0;
@@ -224,4 +225,5 @@ config.afterCommit((author) => {
   author.afterCommitRan = true;
   author.afterCommitIdIsSet = author.id !== undefined;
   author.afterCommitIsNewEntity = author.isNewEntity;
+  author.afterCommitIsDeletedEntity = author.isDeletedEntity;
 });

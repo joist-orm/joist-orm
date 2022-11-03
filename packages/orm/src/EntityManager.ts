@@ -879,6 +879,9 @@ export class EntityManager<C = unknown> {
             this._entityIndex.set(e.idTagged!, e);
             e.__orm.isNew = false;
           });
+          todo.deletes.forEach((e) => {
+            e.__orm.deleted = "deleted";
+          });
           [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
             e.__orm.originalData = {};
             e.__orm.isTouched = false;
@@ -1229,7 +1232,7 @@ function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unk
 }
 
 function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "afterCommit", todos, ["inserts", "updates"]);
+  return runHook(ctx, "afterCommit", todos, ["inserts", "updates", "deletes"]);
 }
 
 function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {

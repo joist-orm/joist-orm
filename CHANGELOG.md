@@ -1,3 +1,10 @@
+## [1.37.7](https://github.com/stephenh/joist-ts/compare/v1.37.6...v1.37.7) (2022-11-03)
+
+
+### Bug Fixes
+
+* Fix isDeletedEntity in afterCommit hooks. ([#463](https://github.com/stephenh/joist-ts/issues/463)) ([81abe98](https://github.com/stephenh/joist-ts/commit/81abe9840bfddf6d9be459b3d8e49226c44ab9db))
+
 ## [1.37.6](https://github.com/stephenh/joist-ts/compare/v1.37.5...v1.37.6) (2022-10-30)
 
 

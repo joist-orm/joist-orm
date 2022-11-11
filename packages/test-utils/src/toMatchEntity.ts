@@ -27,7 +27,13 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
   const queue: [any, any, any][] = [[actual, expected, clean]];
   while (queue.length > 0) {
     const [actual, expected, clean] = queue.pop()!;
-    for (const key of Object.keys(expected)) {
+
+    // If our top-level toMatchEntity was passed an array, make sure we compare all entries
+    // in both arrays, basically like the zip down below.
+    const keys =
+      actual instanceof Array ? [...Array(Math.max(actual.length, expected.length)).keys()] : Object.keys(expected);
+
+    for (const key of keys) {
       let actualValue = actual[key];
       const expectedValue = expected?.[key];
 
@@ -75,8 +81,8 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
       } else {
         // We've hit a non-list/non-object literal expected value, so clean both
         // expected+clean keys to make sure they're not entities, and stop recursion.
-        expected[key] = maybeTestId(expectedValue);
-        clean[key] = maybeTestId(actualValue);
+        if (key in expected) expected[key] = maybeTestId(expectedValue);
+        if (key in actual) clean[key] = maybeTestId(actualValue);
       }
     }
   }

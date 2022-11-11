@@ -48,16 +48,16 @@ describe("toMatchEntity", () => {
     const b1 = newBook(em, { author: a1 });
     await em.flush();
     expect(() => expect(b1).toMatchEntity({ author: a2 })).toThrowErrorMatchingInlineSnapshot(`
-expect(received).toMatchObject(expected)
+      expect(received).toMatchObject(expected)
 
-- Expected  - 1
-+ Received  + 1
+      - Expected  - 1
+      + Received  + 1
 
-  Object {
--   "author": "a:2",
-+   "author": "a:1",
-  }
-`);
+        Object {
+      -   "author": "a:2",
+      +   "author": "a:1",
+        }
+    `);
   });
 
   it("can fail match reference with undefined", async () => {
@@ -67,16 +67,16 @@ expect(received).toMatchObject(expected)
     const b1 = newBook(em, { author: a1 });
     await em.flush();
     expect(() => expect(b1).toMatchEntity({ author: undefined })).toThrowErrorMatchingInlineSnapshot(`
-expect(received).toMatchObject(expected)
+      expect(received).toMatchObject(expected)
 
-- Expected  - 1
-+ Received  + 1
+      - Expected  - 1
+      + Received  + 1
 
-  Object {
--   "author": undefined,
-+   "author": "a:1",
-  }
-`);
+        Object {
+      -   "author": undefined,
+      +   "author": "a:1",
+        }
+    `);
   });
 
   it("can match collections", async () => {
@@ -106,18 +106,18 @@ expect(received).toMatchObject(expected)
     await em.flush();
     // Then it fails if we assert against only one
     expect(() => expect(a1).toMatchEntity({ books: [b2] })).toThrowErrorMatchingInlineSnapshot(`
-expect(received).toMatchObject(expected)
+      expect(received).toMatchObject(expected)
 
-- Expected  - 0
-+ Received  + 1
+      - Expected  - 0
+      + Received  + 1
 
-  Object {
-    "books": Array [
-+     "b:1",
-      "b:2",
-    ],
-  }
-`);
+        Object {
+          "books": Array [
+      +     "b:1",
+            "b:2",
+          ],
+        }
+    `);
   });
 
   it("can fail with extra entity in collection", async () => {
@@ -130,18 +130,18 @@ expect(received).toMatchObject(expected)
     await em.flush();
     // Then it fails if we include the extra book
     expect(() => expect(a1).toMatchEntity({ books: [b1, b2] })).toThrowErrorMatchingInlineSnapshot(`
-expect(received).toMatchObject(expected)
+      expect(received).toMatchObject(expected)
 
-- Expected  - 1
-+ Received  + 0
+      - Expected  - 1
+      + Received  + 0
 
-  Object {
-    "books": Array [
-      "b:1",
--     "b:2",
-    ],
-  }
-`);
+        Object {
+          "books": Array [
+            "b:1",
+      -     "b:2",
+          ],
+        }
+    `);
   });
 
   it("can fail with missing new entity in collection", async () => {
@@ -152,18 +152,18 @@ expect(received).toMatchObject(expected)
     // And we don't flush
     // Then it fails if we assert against only one
     expect(() => expect(a1).toMatchEntity({ books: [b2] })).toThrowErrorMatchingInlineSnapshot(`
-expect(received).toMatchObject(expected)
+      expect(received).toMatchObject(expected)
 
-- Expected  - 0
-+ Received  + 1
+      - Expected  - 0
+      + Received  + 1
 
-  Object {
-    "books": Array [
-+     "b#1",
-      "b#2",
-    ],
-  }
-`);
+        Object {
+          "books": Array [
+      +     "b#1",
+            "b#2",
+          ],
+        }
+    `);
   });
 
   it("is strongly typed", async () => {
@@ -252,7 +252,43 @@ expect(received).toMatchObject(expected)
   it("can match arrays", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { firstName: "a1" });
+    const a2 = newAuthor(em, { firstName: "a1" });
     const res = [{ author1: a1 }];
     expect(res).toMatchEntity([{ author1: a1 }]);
+    expect([a1, a2]).toMatchEntity([a1, a2]);
+    expect(() => expect([a1, a2]).toMatchEntity([a2, a1])).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 1
+      + Received  + 1
+
+        Array [
+      -   "a#2",
+          "a#1",
+      +   "a#2",
+        ]
+    `);
+    expect(() => expect([a1, a2]).toMatchEntity([a1])).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 0
+      + Received  + 1
+
+        Array [
+          "a#1",
+      +   "a#2",
+        ]
+    `);
+    expect(() => expect([a1]).toMatchEntity([a1, a2])).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 1
+      + Received  + 0
+
+        Array [
+          "a#1",
+      -   "a#2",
+        ]
+    `);
   });
 });

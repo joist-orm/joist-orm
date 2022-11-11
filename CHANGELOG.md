@@ -1,3 +1,10 @@
+## [1.37.8](https://github.com/stephenh/joist-ts/compare/v1.37.7...v1.37.8) (2022-11-11)
+
+
+### Bug Fixes
+
+* Fix passing different length arrays to toMatchEntity. ([#465](https://github.com/stephenh/joist-ts/issues/465)) ([1daa131](https://github.com/stephenh/joist-ts/commit/1daa131ed5fa1920df246f646652e63bb2dd5cc5))
+
 ## [1.37.7](https://github.com/stephenh/joist-ts/compare/v1.37.6...v1.37.7) (2022-11-03)
 
 

@@ -62,31 +62,35 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   extends AbstractRelationImpl<U>
   implements ManyToOneReference<T, U, N>
 {
+  readonly #entity: T;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
   private readonly isCascadeDelete: boolean;
+  readonly #otherMeta: EntityMetadata<U>;
 
   constructor(
-    private entity: T,
-    public otherMeta: EntityMetadata<U>,
+    entity: T,
+    otherMeta: EntityMetadata<U>,
     private fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
   ) {
     super();
+    this.#entity = entity;
+    this.#otherMeta = otherMeta;
     this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (this._isLoaded && this.loaded && !opts.forceReload) {
       return this.loaded;
     }
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = (await this.entity.em.load(this.otherMeta.cstr, current)) as any as U;
+      this.loaded = (await this.#entity.em.load(this.#otherMeta.cstr, current)) as any as U;
     } else {
       this.loaded = current;
     }
@@ -107,13 +111,13 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
     if (!this._isLoaded) {
       const existing = this.maybeFindEntity();
       if (existing === undefined) {
-        throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+        throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
       }
       this.loaded = existing;
       this._isLoaded = true;
@@ -131,20 +135,20 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get id(): IdOf<U> | N {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
   }
 
   set id(id: IdOf<U> | N) {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
 
     const previous = this.maybeFindEntity();
-    const changed = setField(this.entity, this.fieldName, id);
+    const changed = setField(this.#entity, this.fieldName, id);
     if (!changed) {
       return;
     }
 
-    this.loaded = id ? this.entity.em.getEntity(id) : undefined;
+    this.loaded = id ? this.#entity.em.getEntity(id) : undefined;
     this._isLoaded = !!this.loaded;
     this.maybeRemove(previous);
     this.maybeAdd(this.maybeFindEntity());
@@ -152,14 +156,14 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | IdOf<U> | N): void {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);
+    setField(this.#entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;
@@ -173,12 +177,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     return (this.id as IdOf<U> | undefined) || fail("Reference is unset or assigned to a new entity");
   }
 
   get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.otherMeta, [this.id])[0];
+    return this.id && deTagIds(this.#otherMeta, [this.id])[0];
   }
 
   get idUntaggedOrFail(): string {
@@ -203,7 +207,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
       if (current !== undefined && typeof current !== "string") {
-        this.entity.em.delete(current as U);
+        this.#entity.em.delete(current as U);
       }
     }
   }
@@ -213,16 +217,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (current !== undefined) {
       const o2m = this.getOtherRelation(current);
       if (o2m instanceof OneToManyCollection) {
-        o2m.remove(this.entity, { requireLoaded: false });
+        o2m.remove(this.#entity, { requireLoaded: false });
       } else if (o2m instanceof OneToManyLargeCollection) {
-        o2m.remove(this.entity);
+        o2m.remove(this.#entity);
       } else if (o2m instanceof OneToOneReferenceImpl) {
         o2m.set(undefined as any);
       } else {
         throw new Error(`Unhandled ${o2m}`);
       }
     }
-    setField(this.entity, this.fieldName, undefined);
+    setField(this.#entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = true;
   }
@@ -231,9 +235,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (other) {
       const prevRelation = this.getOtherRelation(other);
       if (prevRelation instanceof OneToManyCollection) {
-        prevRelation.removeIfLoaded(this.entity);
+        prevRelation.removeIfLoaded(this.#entity);
       } else if (prevRelation instanceof OneToManyLargeCollection) {
-        prevRelation.remove(this.entity);
+        prevRelation.remove(this.#entity);
       } else {
         prevRelation.set(undefined as any, { percolating: true });
       }
@@ -244,26 +248,32 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (other) {
       const newRelation = this.getOtherRelation(other);
       if (newRelation instanceof OneToManyCollection) {
-        newRelation.add(this.entity);
+        newRelation.add(this.#entity);
       } else if (newRelation instanceof OneToManyLargeCollection) {
-        newRelation.add(this.entity);
+        newRelation.add(this.#entity);
       } else {
-        newRelation.set(this.entity, { percolating: true });
+        newRelation.set(this.#entity, { percolating: true });
       }
     }
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | string | N {
-    const current = this.entity.__orm.data[this.fieldName];
+    const current = this.#entity.__orm.data[this.fieldName];
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }
     return current;
   }
 
+  public get otherMeta(): EntityMetadata<U> {
+    return this.#otherMeta;
+  }
+
   public toString(): string {
-    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+    return `ManyToOneReference(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
+      this.#otherMeta.type
+    }, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
@@ -283,7 +293,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
    */
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
-    return this.loaded ?? (this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined);
+    return this.loaded ?? (this.id !== undefined ? this.#entity.em.getEntity(this.id) : undefined);
   }
 
   [RelationT]: T = null!;

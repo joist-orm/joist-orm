@@ -82,16 +82,18 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
+  readonly #otherMeta: EntityMetadata<U>;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
     public entity: T,
-    public otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata<U>,
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
     super();
+    this.#otherMeta = otherMeta;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
@@ -107,7 +109,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.otherMeta, [this.id])[0];
+    return this.id && deTagIds(this.#otherMeta, [this.id])[0];
   }
 
   get idUntaggedOrFail(): string {
@@ -161,6 +163,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   get get(): U | undefined {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
+  }
+
+  get otherMeta(): EntityMetadata<U> {
+    return this.#otherMeta;
   }
 
   private doGet(): U | undefined {

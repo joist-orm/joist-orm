@@ -38,16 +38,18 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   // longer be us, so it will effectively not show up in our post-load `loaded` array.
   private addedBeforeLoaded: U[] = [];
   private isCascadeDelete: boolean;
+  #otherMeta: EntityMetadata<U>;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
     public entity: T,
-    public otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata<U>,
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
     super();
+    this.#otherMeta = otherMeta;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
@@ -112,7 +114,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     }
 
     // If we're changing `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
-    const otherCannotChange = this.otherMeta.fields[this.otherFieldName].immutable;
+    const otherCannotChange = this.#otherMeta.fields[this.otherFieldName].immutable;
     if (this.isCascadeDelete && otherCannotChange) {
       const implicitlyDeleted = this.loaded.filter((e) => !values.includes(e));
       implicitlyDeleted.forEach((e) => this.entity.em.delete(e));
@@ -233,8 +235,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return getMetadata(this.entity);
   }
 
+  public get otherMeta(): EntityMetadata<U> {
+    return this.#otherMeta;
+  }
+
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.#otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {

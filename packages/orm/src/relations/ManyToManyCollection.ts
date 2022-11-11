@@ -42,6 +42,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   private addedBeforeLoaded: U[] = [];
   private removedBeforeLoaded: U[] = [];
   private isCascadeDelete: boolean;
+  readonly #otherMeta: EntityMetadata<U>;
 
   constructor(
     public joinTableName: string,
@@ -53,11 +54,12 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     public entity: T,
     public fieldName: keyof T & string,
     public columnName: string,
-    public otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata<U>,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
     super();
+    this.#otherMeta = otherMeta;
     this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
@@ -272,8 +274,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return getMetadata(this.entity);
   }
 
+  public get otherMeta(): EntityMetadata<U> {
+    return this.#otherMeta;
+  }
+
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${
+      this.#otherMeta.type
+    }, otherFieldName: ${this.otherFieldName})`;
   }
 
   [RelationT]: T = null!;

@@ -1,3 +1,10 @@
+## [1.37.9](https://github.com/stephenh/joist-ts/compare/v1.37.8...v1.37.9) (2022-11-12)
+
+
+### Bug Fixes
+
+* Make metadata inaccessible via Object.keys enumeration. ([#466](https://github.com/stephenh/joist-ts/issues/466)) ([6ca81c0](https://github.com/stephenh/joist-ts/commit/6ca81c098dc3a3106a1e1bb2965c72b6532d55d3))
+
 ## [1.37.8](https://github.com/stephenh/joist-ts/compare/v1.37.7...v1.37.8) (2022-11-11)
 
 

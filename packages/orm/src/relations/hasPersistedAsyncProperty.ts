@@ -61,22 +61,24 @@ export function hasPersistedAsyncProperty<T extends Entity, H extends ReactiveHi
 export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T>, V>
   implements PersistedAsyncProperty<T, V>
 {
+  readonly #entity: T;
   private loaded = false;
   private loadPromise: any;
   private loadHint: any;
   constructor(
-    private entity: T,
+    entity: T,
     public fieldName: keyof T & string,
     public reactiveHint: Const<H>,
     private fn: (entity: Reacted<T, H>) => V,
   ) {
+    this.#entity = entity;
     this.loadHint = convertToLoadHint(getMetadata(entity), reactiveHint as any);
   }
 
   load(): Promise<V> {
-    const { entity, loadHint } = this;
+    const { loadHint } = this;
     if (!this.loaded) {
-      return (this.loadPromise ??= entity.em.populate(entity, loadHint).then(() => {
+      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then(() => {
         this.loaded = true;
         // Go through `this.get` so that `setField` is called to set our latest value
         return this.get;
@@ -86,30 +88,30 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   }
 
   get get(): V {
-    const { entity, fn } = this;
-    if (this.loaded || (!this.isSet && isLoaded(entity, this.loadHint))) {
-      const newValue = fn(entity as Reacted<T, H>);
+    const { fn } = this;
+    if (this.loaded || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {
+      const newValue = fn(this.#entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
-      if (!(entity.em as any)._isValidating) {
-        setField(entity, this.fieldName, newValue);
+      if (!(this.#entity.em as any)._isValidating) {
+        setField(this.#entity, this.fieldName, newValue);
       }
       return newValue;
     } else if (this.isSet) {
-      return entity.__orm.data[this.fieldName];
+      return this.#entity.__orm.data[this.fieldName];
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
     }
   }
 
   get fieldValue(): V {
-    return this.entity.__orm.data[this.fieldName];
+    return this.#entity.__orm.data[this.fieldName];
   }
 
   get isSet() {
-    return this.fieldName in this.entity.__orm.data;
+    return this.fieldName in this.#entity.__orm.data;
   }
 
   get isLoaded() {

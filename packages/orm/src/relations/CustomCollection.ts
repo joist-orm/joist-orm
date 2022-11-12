@@ -32,13 +32,15 @@ export class CustomCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
   implements Collection<T, U>
 {
+  readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the values can become stale; we want to each `.get` call to repeatedly evaluate the latest values.
   private loadPromise: Promise<any> | undefined;
   private _isLoaded = false;
 
-  constructor(public entity: T, private opts: CustomCollectionOpts<T, U>) {
+  constructor(entity: T, private opts: CustomCollectionOpts<T, U>) {
     super();
+    this.#entity = entity;
   }
 
   get get(): readonly U[] {
@@ -54,10 +56,10 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        this.loadPromise = this.opts.load(this.entity, opts);
+        this.loadPromise = this.opts.load(this.#entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
         this._isLoaded = true;
@@ -80,7 +82,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
     this.ensureNewOrLoaded();
     const { set, add, remove } = this.opts;
     if (set !== undefined) {
-      set(this.entity, values);
+      set(this.#entity, values);
     } else if (add !== undefined && remove !== undefined) {
       const current = this.get;
       current.filter((value) => !values.includes(value)).forEach((value) => this.remove(value));
@@ -102,7 +104,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
     if (find === undefined) {
       return this.doGet().find((other) => other.id === id);
     } else {
-      return find(this.entity, id);
+      return find(this.#entity, id);
     }
   }
 
@@ -116,7 +118,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
     if (add === undefined) {
       fail(`'add' not implemented on ${this}`);
     }
-    add(this.entity, other);
+    add(this.#entity, other);
   }
 
   remove(other: U): void {
@@ -125,7 +127,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
     if (remove === undefined) {
       fail(`'add' not implemented on ${this}`);
     }
-    remove(this.entity, other);
+    remove(this.#entity, other);
   }
 
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
@@ -134,17 +136,17 @@ export class CustomCollection<T extends Entity, U extends Entity>
 
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {
-    return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+    return Object.entries(this.#entity).filter((e) => e[1] === this)[0][0];
   }
 
   toString(): string {
-    return `CustomCollection(entity: ${this.entity}, fieldName: ${this.fieldName})`;
+    return `CustomCollection(entity: ${this.#entity}, fieldName: ${this.fieldName})`;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): readonly U[] {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     this.ensureNewOrLoaded();
-    return this.filterDeleted(this.opts.get(this.entity), opts);
+    return this.filterDeleted(this.opts.get(this.#entity), opts);
   }
 
   private filterDeleted(entities: readonly U[], opts?: { withDeleted?: boolean }): readonly U[] {
@@ -156,7 +158,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
     if (this.isLoaded || (this.opts.isLoaded && this.opts.isLoaded())) {
       return;
     }
-    fail(`${this.entity}.${this.fieldName} was not loaded`);
+    fail(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
   [RelationT]: T = null!;

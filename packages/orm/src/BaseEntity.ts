@@ -23,20 +23,24 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
   // that sufficiently overlaps.
-  readonly entity: this;
+  readonly entity!: this;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
     Object.defineProperty(this, "__orm", {
       value: { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false },
       enumerable: false,
-    })
+    });
+    Object.defineProperty(this, "entity", {
+      value: this,
+      enumerable: false,
+      writable: false,
+    });
     // Ensure we have at least id set so the `EntityManager.register` works
     if (typeof opts === "string") {
       this.__orm.data["id"] = opts;
       this.__orm.isNew = false;
     }
     em.register(metadata, this);
-    this.entity = this;
   }
 
   get idUntagged(): string | undefined {

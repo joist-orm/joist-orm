@@ -17,10 +17,7 @@ describe("Entity", () => {
         "afterValidationRan": false,
         "ageRuleInvoked": 0,
         "authors": {
-          "addedBeforeLoaded": [],
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "authors",
-          "isCascadeDelete": false,
           "otherColumnName": "mentor_id",
           "otherFieldName": "mentor",
           "undefined": null,
@@ -30,7 +27,6 @@ describe("Entity", () => {
         "beforeFlushRan": false,
         "beforeUpdateRan": false,
         "bookComments": {
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "bookComments",
           "fn": {},
           "loadHint": {
@@ -47,19 +43,13 @@ describe("Entity", () => {
         },
         "bookCommentsCalcInvoked": 0,
         "books": {
-          "addedBeforeLoaded": [],
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "books",
-          "isCascadeDelete": true,
           "otherColumnName": "author_id",
           "otherFieldName": "author",
           "undefined": null,
         },
         "comments": {
-          "addedBeforeLoaded": [],
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "comments",
-          "isCascadeDelete": false,
           "otherColumnName": "parent_author_id",
           "otherFieldName": "parent",
           "undefined": null,
@@ -72,11 +62,9 @@ describe("Entity", () => {
           "undefined": null,
         },
         "deleteDuringFlush": false,
-        "entity": "[Circular reference found] Truncated by IDE",
         "graduatedRuleInvoked": 0,
         "image": {
           "_isLoaded": false,
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "image",
           "isCascadeDelete": true,
           "otherColumnName": "author_id",
@@ -85,7 +73,6 @@ describe("Entity", () => {
         },
         "latestComment": {
           "_isLoaded": false,
-          "entity": "[Circular reference found] Truncated by IDE",
           "opts": {
             "get": {},
             "isLoaded": {},
@@ -102,7 +89,6 @@ describe("Entity", () => {
         },
         "mentorRuleInvoked": 0,
         "numberOfBooks": {
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "numberOfBooks",
           "fn": {},
           "loadHint": {
@@ -115,7 +101,6 @@ describe("Entity", () => {
           ],
         },
         "numberOfBooks2": {
-          "entity": "[Circular reference found] Truncated by IDE",
           "fn": {},
           "hint": "books",
           "loaded": false,
@@ -130,7 +115,6 @@ describe("Entity", () => {
         },
         "reviewedBooks": {
           "_isLoaded": false,
-          "entity": "[Circular reference found] Truncated by IDE",
           "opts": {
             "add": {},
             "get": {},
@@ -142,7 +126,6 @@ describe("Entity", () => {
         },
         "reviews": {
           "_isLoaded": false,
-          "entity": "[Circular reference found] Truncated by IDE",
           "opts": {
             "get": {},
             "isLoaded": {},
@@ -152,7 +135,6 @@ describe("Entity", () => {
         "tags": {
           "addedBeforeLoaded": [],
           "columnName": "author_id",
-          "entity": "[Circular reference found] Truncated by IDE",
           "fieldName": "tags",
           "isCascadeDelete": false,
           "joinTableName": "authors_to_tags",

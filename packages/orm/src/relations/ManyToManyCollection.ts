@@ -38,6 +38,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
   implements Collection<T, U>
 {
+  readonly #entity: T;
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] = [];
   private removedBeforeLoaded: U[] = [];
@@ -51,7 +52,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     // columnName = book_id, what we use as the `where book_id = us` to find our join table rows
     // otherFieldName = books, how tags points to us
     // otherColumnName = tag_id, how the other side finds its join table rows
-    public entity: T,
+    entity: T,
     public fieldName: keyof T & string,
     public columnName: string,
     otherMeta: EntityMetadata<U>,
@@ -59,6 +60,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     public otherColumnName: string,
   ) {
     super();
+    this.#entity = entity;
     this.#otherMeta = otherMeta;
     this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
@@ -68,17 +70,17 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (this.loaded === undefined || opts.forceReload) {
-      const key = `${this.columnName}=${this.entity.id}`;
-      this.loaded = await manyToManyDataLoader(this.entity.em, this).load(key);
+      const key = `${this.columnName}=${this.#entity.id}`;
+      this.loaded = await manyToManyDataLoader(this.#entity.em, this).load(key);
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (this.loaded !== undefined) {
       return this.loaded.find((u) => u.id === id);
     } else {
@@ -87,14 +89,14 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         return added;
       }
       // Make a cacheable tuple to look up this specific m2m row
-      const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
-      const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
-      return includes ? this.entity.em.load(id) : undefined;
+      const key = `${this.columnName}=${this.#entity.id},${this.otherColumnName}=${id}`;
+      const includes = await manyToManyFindDataLoader(this.#entity.em, this).load(key);
+      return includes ? this.#entity.em.load(id) : undefined;
     }
   }
 
   async includes(other: U): Promise<boolean> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (this.loaded !== undefined) {
       return this.loaded.includes(other);
     } else {
@@ -104,13 +106,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         return false;
       }
       // Make a cacheable tuple to look up this specific m2m row
-      const key = `${this.columnName}=${this.entity.idOrFail},${this.otherColumnName}=${other.idOrFail}`;
-      return manyToManyFindDataLoader(this.entity.em, this).load(key);
+      const key = `${this.columnName}=${this.#entity.idOrFail},${this.otherColumnName}=${other.idOrFail}`;
+      return manyToManyFindDataLoader(this.#entity.em, this).load(key);
     }
   }
 
   add(other: U, percolated = false): void {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.#entity);
 
     if (this.loaded !== undefined) {
       if (this.loaded.includes(other)) {
@@ -128,20 +130,20 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       const joinRow: JoinRow = {
         id: undefined,
         m2m: this,
-        [this.columnName]: this.entity,
+        [this.columnName]: this.#entity,
         [this.otherColumnName]: other,
       };
-      getOrSet(this.entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
-      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.entity, true);
+      getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
+      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.#entity, true);
     }
   }
 
   remove(other: U, percolated = false): void {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
 
     if (!percolated) {
-      const joinRows = getOrSet(this.entity.em.__data.joinRows, this.joinTableName, []);
-      const row = joinRows.find((r) => r[this.columnName] === this.entity && r[this.otherColumnName] === other);
+      const joinRows = getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []);
+      const row = joinRows.find((r) => r[this.columnName] === this.#entity && r[this.otherColumnName] === other);
       if (row) {
         row.deleted = true;
       } else {
@@ -149,13 +151,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
           // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
           id: -1,
           m2m: this,
-          [this.columnName]: this.entity,
+          [this.columnName]: this.#entity,
           [this.otherColumnName]: other,
           deleted: true,
         };
-        getOrSet(this.entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
+        getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
       }
-      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
+      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.#entity, true);
     }
 
     if (this.loaded !== undefined) {
@@ -173,7 +175,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   private doGet(): U[] {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.#entity);
     if (this.loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not loaded");
@@ -190,7 +192,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   set(values: U[]): void {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.#entity);
     if (this.loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
@@ -210,7 +212,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   removeAll(): void {
-    ensureNotDeleted(this.entity);
+    ensureNotDeleted(this.#entity);
     if (this.loaded === undefined) {
       throw new Error("removeAll was called when not loaded");
     }
@@ -235,7 +237,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   maybeCascadeDelete() {
     if (this.isCascadeDelete) {
-      this.current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
+      this.current({ withDeleted: true }).forEach((e) => this.#entity.em.delete(e));
     }
   }
 
@@ -243,7 +245,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;
-      m2m.remove(this.entity);
+      m2m.remove(this.#entity);
     });
     this.loaded = [];
   }
@@ -254,9 +256,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       // this.addedBeforeLoaded = [];
       this.removedBeforeLoaded.forEach((e) => {
         remove(this.loaded!, e);
-        const { em } = this.entity;
+        const { em } = this.#entity;
         const row = em.__data.joinRows[this.joinTableName].find(
-          (r) => r[this.columnName] === this.entity && r[this.otherColumnName] === e,
+          (r) => r[this.columnName] === this.#entity && r[this.otherColumnName] === e,
         );
         if (row) {
           row.deleted = true;
@@ -270,8 +272,12 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return this.filterDeleted(this.loaded || this.addedBeforeLoaded, opts);
   }
 
+  public get entity(): T {
+    return this.#entity;
+  }
+
   public get meta(): EntityMetadata<T> {
-    return getMetadata(this.entity);
+    return getMetadata(this.#entity);
   }
 
   public get otherMeta(): EntityMetadata<U> {
@@ -279,7 +285,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${
+    return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
       this.#otherMeta.type
     }, otherFieldName: ${this.otherFieldName})`;
   }

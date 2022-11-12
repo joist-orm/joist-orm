@@ -82,17 +82,19 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
+  readonly #entity: T;
   readonly #otherMeta: EntityMetadata<U>;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
-    public entity: T,
+    entity: T,
     otherMeta: EntityMetadata<U>,
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
     super();
+    this.#entity = entity;
     this.#otherMeta = otherMeta;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
@@ -101,11 +103,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     if (this._isLoaded) {
       return this.loaded?.id as IdOf<U> | undefined;
     }
-    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
   get idOrFail(): IdOf<U> {
-    return this.id || fail(`${this.entity}.${this.fieldName} has no id yet`);
+    return this.id || fail(`${this.#entity}.${this.fieldName} has no id yet`);
   }
 
   get idUntagged(): string | undefined {
@@ -120,15 +122,15 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     if (this._isLoaded) {
       return this.loaded !== undefined;
     }
-    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
+    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (!this._isLoaded || opts.forceReload) {
-      if (!this.entity.isNewEntity) {
-        this.loaded = await oneToOneDataLoader(this.entity.em, this).load(this.entity.idTaggedOrFail);
+      if (!this.#entity.isNewEntity) {
+        this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTaggedOrFail);
       }
       this._isLoaded = true;
     }
@@ -136,7 +138,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   set(other: U, opts: { percolating?: boolean } = {}): void {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (other === this.loaded) {
       return;
     }
@@ -149,7 +151,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     this._isLoaded = true;
     // This will no-op and mark other dirty if necessary
     if (other && !opts.percolating) {
-      this.getOtherRelation(other).set(this.entity);
+      this.getOtherRelation(other).set(this.#entity);
     }
   }
 
@@ -161,6 +163,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     return this.filterDeleted(this.doGet(), { withDeleted: true });
   }
 
+  get entity(): T {
+    return this.#entity;
+  }
+
   get get(): U | undefined {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
@@ -170,7 +176,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private doGet(): U | undefined {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (!this._isLoaded) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not preloaded");
@@ -190,7 +196,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete && this.loaded) {
-      this.entity.em.delete(this.loaded);
+      this.#entity.em.delete(this.loaded);
     }
   }
 
@@ -205,7 +211,9 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `OneToOneReference(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
+      this.otherMeta.type
+    }, otherFieldName: ${this.otherFieldName})`;
   }
 
   private filterDeleted(entity: U | undefined, opts?: { withDeleted?: boolean }): U | undefined {

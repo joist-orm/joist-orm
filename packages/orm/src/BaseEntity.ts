@@ -19,21 +19,28 @@ import {
 export abstract class BaseEntity<EM extends EntityManager = EntityManager> implements Entity {
   abstract id: string | undefined;
   abstract idTagged: string | undefined;
-  readonly __orm: EntityOrmField;
+  readonly __orm!: EntityOrmField;
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
   // that sufficiently overlaps.
-  readonly entity: this;
+  readonly entity!: this;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
-    this.__orm = { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false };
+    Object.defineProperty(this, "__orm", {
+      value: { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false },
+      enumerable: false,
+    });
+    Object.defineProperty(this, "entity", {
+      value: this,
+      enumerable: false,
+      writable: false,
+    });
     // Ensure we have at least id set so the `EntityManager.register` works
     if (typeof opts === "string") {
       this.__orm.data["id"] = opts;
       this.__orm.isNew = false;
     }
     em.register(metadata, this);
-    this.entity = this;
   }
 
   get idUntagged(): string | undefined {

@@ -46,7 +46,8 @@ export function getFakeInstance<T extends Entity>(meta: EntityMetadata<T>): T {
     {
       register: (metadata: any, entity: any) => {
         em.currentlyInstantiatingEntity = entity;
-        entity.__orm = { metadata: meta, data: {} };
+        entity.__orm.metadata = meta;
+        entity.__orm.data = {};
       },
     } as any,
     {},

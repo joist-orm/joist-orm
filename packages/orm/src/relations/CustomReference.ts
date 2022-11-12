@@ -30,13 +30,15 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   extends AbstractRelationImpl<U>
   implements Reference<T, U, N>
 {
+  readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<void> | undefined;
   private _isLoaded = false;
 
-  constructor(public entity: T, private opts: CustomReferenceOpts<T, U, N>) {
+  constructor(entity: T, private opts: CustomReferenceOpts<T, U, N>) {
     super();
+    this.#entity = entity;
   }
 
   get get(): U | N {
@@ -52,10 +54,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
-        this.loadPromise = this.opts.load(this.entity, opts);
+        this.loadPromise = this.opts.load(this.#entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
         this._isLoaded = true;
@@ -94,19 +96,19 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   get isSet(): boolean {
     this.ensureNewOrLoaded();
     const { get } = this.opts;
-    return get(this.entity) !== undefined;
+    return get(this.#entity) !== undefined;
   }
 
   set(value: U): void {
     // We allow setting CustomReferences on new entities w/o being loaded
-    if (!this.entity.isNewEntity) {
+    if (!this.#entity.isNewEntity) {
       this.ensureNewOrLoaded();
     }
     const { set } = this.opts;
     if (set === undefined) {
       throw new Error(`'set' not implemented on ${this}`);
     }
-    set(this.entity, value);
+    set(this.#entity, value);
   }
 
   setFromOpts(value: U): void {
@@ -119,17 +121,17 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {
-    return Object.entries(this.entity).filter((e) => e[1] === this)[0][0];
+    return Object.entries(this.#entity).filter((e) => e[1] === this)[0][0];
   }
 
   toString(): string {
-    return `CustomReference(entity: ${this.entity}, fieldName: ${this.fieldName})`;
+    return `CustomReference(entity: ${this.#entity}, fieldName: ${this.fieldName})`;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, { ignore: "pending" });
     this.ensureNewOrLoaded();
-    return this.filterDeleted(this.opts.get(this.entity), opts);
+    return this.filterDeleted(this.opts.get(this.#entity), opts);
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
@@ -141,7 +143,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     if (this.isLoaded || (this.opts.isLoaded && this.opts.isLoaded())) {
       return;
     }
-    fail(`${this.entity}.${this.fieldName} was not loaded`);
+    fail(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
   [RelationT]: T = null!;

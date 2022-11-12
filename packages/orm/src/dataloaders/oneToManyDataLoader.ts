@@ -18,7 +18,6 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);
 
-      const { em } = collection.entity;
       const rows = await em.driver.loadOneToMany(em, collection, keys);
 
       const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));

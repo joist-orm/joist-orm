@@ -19,7 +19,7 @@ export interface Entity {
   idTaggedOrFail: string;
   idOrFail: string;
   /** Joist internal metadata, should be considered a private implementation detail. */
-  __orm: EntityOrmField;
+  readonly __orm: EntityOrmField;
   readonly em: EntityManager<any>;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;

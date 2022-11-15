@@ -1,3 +1,10 @@
+## [1.37.10](https://github.com/stephenh/joist-ts/compare/v1.37.9...v1.37.10) (2022-11-15)
+
+
+### Bug Fixes
+
+* Corrctly handle partial unique indexes ([#469](https://github.com/stephenh/joist-ts/issues/469)) ([4f7d2ee](https://github.com/stephenh/joist-ts/commit/4f7d2ee4c35c86b2aa9badf88636ddcb62843278))
+
 ## [1.37.9](https://github.com/stephenh/joist-ts/compare/v1.37.8...v1.37.9) (2022-11-12)
 
 

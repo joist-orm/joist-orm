@@ -24,7 +24,6 @@ After checkout:
 
 - Run `yarn install`
 - Run `yarn build`
-- `cd packages/integration-tests`
 - Run `make db` to boot up a Docker postgres instance w/the integration test schema.
 - Run `yarn test` to run the tests.
 - Prior to committing your changes, run `yarn workspaces run format`

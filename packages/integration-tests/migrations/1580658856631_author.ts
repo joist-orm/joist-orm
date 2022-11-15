@@ -82,6 +82,10 @@ export function up(b: MigrationBuilder): void {
     address: { type: "jsonb", notNull: false },
   });
 
+  // A publisher can only have one author named `Jim`, but still have other authors
+  // Verifies that partial unique indexes do not result in o2o collections
+  b.createIndex("authors", ["publisher_id"], { unique: true, where: "first_name = 'Jim'" });
+
   // for testing required enums
   createEnumTable(b, "advance_status", [
     ["PENDING", "Pending"],

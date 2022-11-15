@@ -1,5 +1,5 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
-import { Column, EnumType, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
+import { Column, EnumType, Index, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
 import {
@@ -284,8 +284,12 @@ function isOneToOneRelation(r: O2MRelation) {
   const otherColumn = r.foreignKey.columns[0];
   // r.foreignKey.index is the index on _us_ (i.e. our Book primary key), so look up indexes in the target table
   const indexes = r.targetTable.columns.find((c) => c.name == otherColumn.name)?.uniqueIndexes || [];
-  // If the column is the only column in an unique index, it's a one-to-one
-  return indexes.find((i) => i.columns.length === 1) !== undefined;
+  return indexes.find(isOneToOneIndex) !== undefined;
+}
+
+// If the unique index has only one column and is NOT a partial index, it's a one-to-one
+function isOneToOneIndex(i: Index) {
+  return i.columns.length === 1 && !i.isPartial;
 }
 
 function polymorphicRelations(config: Config, table: Table) {
@@ -417,7 +421,7 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const dbType = r.foreignKey.columns[0].type.shortName!;
   const fieldName = referenceName(config, entity, r);
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
-  const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
+  const isOneToOne = column.uniqueIndexes.find(isOneToOneIndex) !== undefined;
   const otherFieldName = isOneToOne
     ? oneToOneName(config, otherEntity, entity, r)
     : collectionName(config, otherEntity, entity, r).fieldName;
@@ -508,7 +512,7 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const otherEntity = makeEntity(tableToEntityName(config, r.targetTable));
-  const isOneToOne = column.uniqueIndexes.find((i) => i.columns.length === 1) !== undefined;
+  const isOneToOne = column.uniqueIndexes.find(isOneToOneIndex) !== undefined;
   const otherFieldName = isOneToOne
     ? oneToOneName(config, otherEntity, entity, r)
     : collectionName(config, otherEntity, entity, r).fieldName;

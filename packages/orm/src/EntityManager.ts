@@ -1248,7 +1248,7 @@ function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): Val
 }
 
 // See https://github.com/microsoft/TypeScript/issues/30680#issuecomment-752725353
-type Narrowable = string | number | boolean | symbol | object | undefined | void | null | {} | [];
+type Narrowable = string | number | boolean | symbol | object | undefined | {} | [];
 export type Const<N> =
   | N
   | {

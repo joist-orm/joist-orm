@@ -1,3 +1,10 @@
+# [1.38.0](https://github.com/stephenh/joist-ts/compare/v1.37.10...v1.38.0) (2022-11-17)
+
+
+### Features
+
+* Bump typescript. ([#471](https://github.com/stephenh/joist-ts/issues/471)) ([942dbef](https://github.com/stephenh/joist-ts/commit/942dbef0173bf0756f46528af48e2d4a4802f4a8))
+
 ## [1.37.10](https://github.com/stephenh/joist-ts/compare/v1.37.9...v1.37.10) (2022-11-15)
 
 

@@ -75,6 +75,17 @@ describe("EntityManager.clone", () => {
     expect(a2.currentDraftBook.get).toBe(b2);
   });
 
+  it("can clone entities and referenced entities that are undefined", async () => {
+    const em = newEntityManager();
+    // Given an entity with a reference (publisher) that is not set
+    const a1 = newAuthor(em, { firstName: "a1" });
+    await em.flush();
+    // When we clone that entity and its reference
+    const a2 = await em.clone(a1, { deep: "publisher" });
+    await em.flush();
+    expect(a2).toMatchEntity({ publisher: undefined });
+  });
+
   it("cannot clone many-to-many references", async () => {
     const em = newEntityManager();
 

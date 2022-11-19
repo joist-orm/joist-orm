@@ -50,6 +50,7 @@ export {
 } from "./rules";
 export * from "./serde";
 export { asNew, fail } from "./utils";
+export { withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

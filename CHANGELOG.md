@@ -1,3 +1,10 @@
+## [1.39.1](https://github.com/stephenh/joist-ts/compare/v1.39.0...v1.39.1) (2022-11-19)
+
+
+### Bug Fixes
+
+* Forgot to export withLoaded. ([63820bf](https://github.com/stephenh/joist-ts/commit/63820bf06b5657ca030883d507f02c5d884de850))
+
 # [1.39.0](https://github.com/stephenh/joist-ts/compare/v1.38.0...v1.39.0) (2022-11-19)
 
 

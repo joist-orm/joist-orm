@@ -1,3 +1,10 @@
+# [1.39.0](https://github.com/stephenh/joist-ts/compare/v1.38.0...v1.39.0) (2022-11-19)
+
+
+### Features
+
+* Upstream withLoaded utility. ([#472](https://github.com/stephenh/joist-ts/issues/472)) ([d4cddec](https://github.com/stephenh/joist-ts/commit/d4cddec0d4812678388a084c80a60511fe78fba0))
+
 # [1.38.0](https://github.com/stephenh/joist-ts/compare/v1.37.10...v1.38.0) (2022-11-17)
 
 

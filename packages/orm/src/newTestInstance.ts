@@ -7,7 +7,6 @@ import {
   IdOf,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  isId,
 } from "./EntityManager";
 import {
   EntityMetadata,
@@ -249,9 +248,6 @@ function resolveFactoryOpt<T extends Entity>(
   // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
   if (isEntity(opt)) {
     return opt as T;
-  } else if (isId(opt)) {
-    // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
-    return (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory
     return meta.factory(em, opt);
@@ -567,10 +563,7 @@ type DefinedOr<T> = T | undefined | null;
 type DeepPartialOpts<T extends Entity> = AllowRelationsOrPartials<OptsOf<T>>;
 
 /** What a factory can accept for a given entity. */
-export type FactoryEntityOpt<T extends Entity> =
-  | T
-  | IdOf<T>
-  | (ActualFactoryOpts<T> & { useFactoryDefaults?: boolean | "none" });
+export type FactoryEntityOpt<T extends Entity> = T | (ActualFactoryOpts<T> & { useFactoryDefaults?: boolean | "none" });
 
 type AllowRelationsOrPartials<T> = {
   [P in keyof T]?: T[P] extends DefinedOr<infer U>

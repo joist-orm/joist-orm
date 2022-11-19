@@ -40,7 +40,7 @@ describe("EntityManager.factories", () => {
     expect(em.numberOfEntities).toEqual(1);
   });
 
-  it("can create a child and a required parent implicity", async () => {
+  it("can create a child and a required parent implicitly", async () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
     const b1 = newBook(em);
@@ -253,18 +253,12 @@ describe("EntityManager.factories", () => {
     newBook(em, { tags: [new Date()] });
   });
 
-  it("can use tagged ids as shortcuts", async () => {
+  it("can no longer use tagged ids as shortcuts", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
+    // @ts-expect-error
     const b1 = newBook(em, { author: "a:1" });
     expect(b1.author.get).toEqual(a1);
-  });
-
-  it("can use tagged ids as shortcuts in list", async () => {
-    const em = newEntityManager();
-    const a1 = newAuthor(em);
-    const p1 = newPublisher(em, { authors: ["a:1"] });
-    expect(p1.authors.get).toEqual([a1]);
   });
 
   it("can omit default values for non-required primitive fields", async () => {

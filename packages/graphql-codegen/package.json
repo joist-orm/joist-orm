@@ -27,7 +27,7 @@
     "joist-utils": "workspace:*",
     "pluralize": "^8.0.0",
     "prettier": "^2.7.1",
-    "ts-poet": "^6.1.0"
+    "ts-poet": "^6.3.0"
   },
   "devDependencies": {
     "@swc/core": "^1.3.10",

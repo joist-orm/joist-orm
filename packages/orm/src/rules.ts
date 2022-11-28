@@ -87,3 +87,104 @@ function errorMessage(errors: ValidationError[]): string {
     return `Validation errors (${errors.length}): ${message}`;
   }
 }
+
+/**
+ * Creates a validation rule that a field value cannot be smaller than a
+ * certain value.
+ *
+ * @param field The field to validate
+ * @param minValue The inclusive minimum value. e.g 0 range is [0, Infinity]
+ *
+ * @example
+ * // Age cannot be smaller than 0
+ * config.addRule(minValueRule("age", 0));
+ */
+export function minValueRule<T extends Entity, K extends keyof T & string>(
+  field: K,
+  minValue: number,
+): ValidationRule<T> {
+  return (entity) => {
+    const value = entity[field];
+
+    // Ignore undefined and null values
+    if (value === undefined || value === null) return undefined;
+
+    // Show an error when the value type is not a number
+    if (typeof value !== "number") {
+      return `${field} must be a number`;
+    }
+
+    // Show an error when the value is smaller than the minimum value
+    if (value < minValue) {
+      return `${field} must be greater than or equal to ${minValue}`;
+    }
+
+    return undefined;
+  };
+}
+
+/**
+ * Creates a validation rule that a field value cannot be greater than a
+ * certain value.
+ *
+ * @param field The field to validate
+ * @param maxValue The include maximum value. e.g 10 range is [-Infinity, 10]
+ *
+ * @example
+ * // Age cannot be greater than 150
+ * config.addRule(maxValueRule("age", 150));
+ */
+export function maxValueRule<T extends Entity, K extends keyof T & string>(
+  field: K,
+  maxValue: number,
+): ValidationRule<T> {
+  return (entity) => {
+    const value = entity[field];
+
+    // Ignore undefined and null values
+    if (value === undefined || value === null) return undefined;
+
+    // Show an error when the value type is not a number
+    if (typeof value !== "number") {
+      return `${field} must be a number`;
+    }
+
+    // Show an error when the value is smaller than the minimum value
+    if (value > maxValue) {
+      return `${field} must be smaller than or equal to ${maxValue}`;
+    }
+
+    return undefined;
+  };
+}
+
+/**
+ * Creates a validation rule that a field value must be within a range of
+ * certain values
+ *
+ * @param field The field to validate
+ * @param minValue The inclusive minimum value. e.g  0 [0,   Infinity]
+ * @param maxValue The include maximum value.   e.g 10 [-Infinity, 10]
+ *
+ * @example
+ * // Age must be between 0 and 150
+ * config.addRule(rangeValueRule("age", 0, 150));
+ */
+export function rangeValueRule<T extends Entity, K extends keyof T & string>(
+  field: K,
+  minValue: number,
+  maxValue: number,
+): ValidationRule<T> {
+  return (entity) => {
+    const value = entity[field];
+
+    // Ignore undefined and null values
+    if (value === undefined || value === null) return undefined;
+
+    // Check min and max value rules
+    const minValueResult = minValueRule<T, K>(field, minValue);
+    const maxValueResult = maxValueRule<T, K>(field, maxValue);
+
+    return minValueResult || maxValueResult;
+  };
+}

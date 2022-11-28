@@ -12,6 +12,7 @@ import {
   PersistedAsyncProperty,
   Reference,
 } from "joist-orm";
+import { rangeValueRule } from "joist-orm/src/rules";
 import { AuthorCodegen, authorConfig as config, Book, BookReview, Comment } from "./entities";
 
 export class Author extends AuthorCodegen {
@@ -181,6 +182,9 @@ config.addRule(cannotBeUpdated("age"));
 config.addRule("age", (a) => {
   a.entity.ageRuleInvoked++;
 });
+
+// Example of a numeric range value
+config.addRule(rangeValueRule("age", 0, 150));
 
 config.cascadeDelete("books");
 

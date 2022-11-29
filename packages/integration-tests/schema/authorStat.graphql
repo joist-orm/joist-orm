@@ -12,6 +12,7 @@ type AuthorStat {
   createdAt: DateTime!
   updatedAt: DateTime!
   doublePrecision: Int!
+  integerNull: Int
 }
 
 extend type Mutation {
@@ -30,6 +31,7 @@ input SaveAuthorStatInput {
   bigserial: Int
   doubleOrecision: Int
   doublePrecision: Int
+  integerNull: Int
 }
 
 type SaveAuthorStatResult {

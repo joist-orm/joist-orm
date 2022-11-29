@@ -42,7 +42,10 @@ export * from "./relations";
 export {
   cannotBeUpdated,
   GenericError,
+  maxValueRule,
+  minValueRule,
   newRequiredRule,
+  rangeValueRule,
   ValidationError,
   ValidationErrors,
   ValidationRule,

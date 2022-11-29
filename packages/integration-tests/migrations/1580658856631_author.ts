@@ -176,6 +176,8 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "author_stats", {
     smallint: { type: "smallint", notNull: true },
     integer: { type: "integer", notNull: true },
+    // Nullable integer
+    integer_null: { type: "integer", notNull: false },
     bigint: { type: "bigint", notNull: true },
     decimal: { type: "decimal", notNull: true },
     real: { type: "real", notNull: true },

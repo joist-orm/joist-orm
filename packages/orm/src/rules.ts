@@ -185,6 +185,6 @@ export function rangeValueRule<T extends Entity, K extends keyof T & string>(
     const minValueResult = minValueRule<T, K>(field, minValue);
     const maxValueResult = maxValueRule<T, K>(field, maxValue);
 
-    return minValueResult || maxValueResult;
+    return minValueResult ?? maxValueResult;
   };
 }

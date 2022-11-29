@@ -614,20 +614,6 @@ describe("Author", () => {
     });
   });
 
-  describe("rangeValueRule", () => {
-    it("can be used to validate a min value", async () => {
-      await insertAuthor({ first_name: "a1", age: -1 });
-      const em = newEntityManager();
-      await expect(em.flush()).rejects.toThrow("Author:1 age cannot be smaller than 0");
-    });
-
-    it("can be used to validate a max value", async () => {
-      await insertAuthor({ first_name: "a1", age: 200 });
-      const em = newEntityManager();
-      await expect(em.flush()).rejects.toThrow("Author:1 age cannot be greater than 150");
-    });
-  });
-
   it("can access deleted children", async () => {
     // Given an author and two books
     await insertAuthor({ first_name: "a1", number_of_books: 2 });

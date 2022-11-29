@@ -176,16 +176,13 @@ export function rangeValueRule<T extends Entity, K extends keyof T & string>(
   maxValue: number,
 ): ValidationRule<T> {
   return (entity) => {
-    const value = entity[field];
+    // Check min and max value rules
+    const minValueResult = minValueRule<T, K>(field, minValue);
+    const maxValueResult = maxValueRule<T, K>(field, maxValue);
 
-    // Ignore undefined and null values
-    if (value !== undefined && value !== null) {
-      // Check min and max value rules
-      const minValueResult = minValueRule<T, K>(field, minValue);
-      const maxValueResult = maxValueRule<T, K>(field, maxValue);
-
-      if (minValueResult) return minValueResult;
-      if (maxValueResult) return maxValueResult;
-    }
+    // Return any errors or nothing
+    if (minValueResult) return minValueResult;
+    if (maxValueResult) return maxValueResult;
+    return;
   };
 }

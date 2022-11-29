@@ -7,11 +7,11 @@ describe("AuthorStat", () => {
       const em = newEntityManager();
 
       // Given a new AuthorStat with an integer value of -1
-      const as = newAuthorStat(em, { nullableInteger: -1 });
+      newAuthorStat(em, { nullableInteger: -1 });
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow(
-        "Validation errors (2): AuthorStat#1 nullableInteger must be greater than or equal to 0",
+        "Validation error: AuthorStat#1 nullableInteger must be greater than or equal to 0",
       );
     });
 
@@ -19,7 +19,7 @@ describe("AuthorStat", () => {
       const em = newEntityManager();
 
       // Given a new AuthorStat with an integer value of -1
-      const as = newAuthorStat(em, { nullableInteger: null });
+      newAuthorStat(em, { nullableInteger: null });
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).resolves.toBeTruthy();
@@ -35,7 +35,7 @@ describe("AuthorStat", () => {
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow(
-        "Validation errors (2): AuthorStat#1 nullableInteger must be smaller than or equal to 100",
+        "Validation error: AuthorStat#1 nullableInteger must be smaller than or equal to 100",
       );
     });
   });
@@ -49,14 +49,14 @@ describe("AuthorStat", () => {
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow(
-        "Validation errors (2): AuthorStat#1 nullableInteger must be greater than or equal to 0",
+        "Validation error: AuthorStat#1 nullableInteger must be greater than or equal to 0",
       );
 
       as.nullableInteger = 101;
       // When flushing
       // Then expect an error to be thrown
       await expect(em.flush()).rejects.toThrow(
-        "Validation errors (2): AuthorStat#1 nullableInteger must be smaller than or equal to 100",
+        "Validation error: AuthorStat#1 nullableInteger must be smaller than or equal to 100",
       );
     });
 

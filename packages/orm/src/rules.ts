@@ -107,17 +107,19 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
     const value = entity[field];
 
     // Ignore undefined and null values
-    if (value !== undefined && value !== null) {
-      // Show an error when the value type is not a number
-      if (typeof value !== "number") {
-        return `${field} must be a number`;
-      }
+    if (value === undefined || value === null) return;
 
-      // Show an error when the value is smaller than the minimum value
-      if (value < minValue) {
-        return `${field} must be greater than or equal to ${minValue}`;
-      }
+    // Show an error when the value type is not a number
+    if (typeof value !== "number") {
+      return `${field} must be a number`;
     }
+
+    // Show an error when the value is smaller than the minimum value
+    if (value < minValue) {
+      return `${field} must be greater than or equal to ${minValue}`;
+    }
+
+    return;
   };
 }
 
@@ -140,17 +142,19 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
     const value = entity[field];
 
     // Ignore undefined and null values
-    if (value !== undefined && value !== null) {
-      // Show an error when the value type is not a number
-      if (typeof value !== "number") {
-        return `${field} must be a number`;
-      }
+    if (value === undefined || value === null) return;
 
-      // Show an error when the value is smaller than the minimum value
-      if (value > maxValue) {
-        return `${field} must be smaller than or equal to ${maxValue}`;
-      }
+    // Show an error when the value type is not a number
+    if (typeof value !== "number") {
+      return `${field} must be a number`;
     }
+
+    // Show an error when the value is smaller than the minimum value
+    if (value > maxValue) {
+      return `${field} must be smaller than or equal to ${maxValue}`;
+    }
+
+    return;
   };
 }
 

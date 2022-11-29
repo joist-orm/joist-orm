@@ -107,19 +107,17 @@ export function minValueRule<T extends Entity, K extends keyof T & string>(
     const value = entity[field];
 
     // Ignore undefined and null values
-    if (value === undefined || value === null) return undefined;
+    if (value !== undefined && value !== null) {
+      // Show an error when the value type is not a number
+      if (typeof value !== "number") {
+        return `${field} must be a number`;
+      }
 
-    // Show an error when the value type is not a number
-    if (typeof value !== "number") {
-      return `${field} must be a number`;
+      // Show an error when the value is smaller than the minimum value
+      if (value < minValue) {
+        return `${field} must be greater than or equal to ${minValue}`;
+      }
     }
-
-    // Show an error when the value is smaller than the minimum value
-    if (value < minValue) {
-      return `${field} must be greater than or equal to ${minValue}`;
-    }
-
-    return undefined;
   };
 }
 
@@ -142,19 +140,17 @@ export function maxValueRule<T extends Entity, K extends keyof T & string>(
     const value = entity[field];
 
     // Ignore undefined and null values
-    if (value === undefined || value === null) return undefined;
+    if (value !== undefined && value !== null) {
+      // Show an error when the value type is not a number
+      if (typeof value !== "number") {
+        return `${field} must be a number`;
+      }
 
-    // Show an error when the value type is not a number
-    if (typeof value !== "number") {
-      return `${field} must be a number`;
+      // Show an error when the value is smaller than the minimum value
+      if (value > maxValue) {
+        return `${field} must be smaller than or equal to ${maxValue}`;
+      }
     }
-
-    // Show an error when the value is smaller than the minimum value
-    if (value > maxValue) {
-      return `${field} must be smaller than or equal to ${maxValue}`;
-    }
-
-    return undefined;
   };
 }
 
@@ -179,12 +175,13 @@ export function rangeValueRule<T extends Entity, K extends keyof T & string>(
     const value = entity[field];
 
     // Ignore undefined and null values
-    if (value === undefined || value === null) return undefined;
+    if (value !== undefined && value !== null) {
+      // Check min and max value rules
+      const minValueResult = minValueRule<T, K>(field, minValue);
+      const maxValueResult = maxValueRule<T, K>(field, maxValue);
 
-    // Check min and max value rules
-    const minValueResult = minValueRule<T, K>(field, minValue);
-    const maxValueResult = maxValueRule<T, K>(field, maxValue);
-
-    return minValueResult ?? maxValueResult;
+      if (minValueResult) return minValueResult;
+      if (maxValueResult) return maxValueResult;
+    }
   };
 }

@@ -1,3 +1,10 @@
+# [1.40.0](https://github.com/stephenh/joist-ts/compare/v1.39.2...v1.40.0) (2022-11-29)
+
+
+### Features
+
+* Add minValueRule, maxValueRule and rangeValueRule ([#474](https://github.com/stephenh/joist-ts/issues/474)) ([3788191](https://github.com/stephenh/joist-ts/commit/37881915ae0085c5c7e22e3ebdf15a31f8c192bd))
+
 ## [1.39.2](https://github.com/stephenh/joist-ts/compare/v1.39.1...v1.39.2) (2022-11-27)
 
 

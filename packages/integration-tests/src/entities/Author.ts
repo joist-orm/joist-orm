@@ -1,5 +1,6 @@
 import {
   AsyncProperty,
+  cannotBeUpdated,
   Collection,
   getEm,
   hasAsyncProperty,
@@ -172,6 +173,9 @@ config.addRule("mentor", (a) => {
 config.addRule("graduated", (a) => {
   a.entity.graduatedRuleInvoked++;
 });
+
+// Example of cannotBeUpdated
+config.addRule(cannotBeUpdated("age"));
 
 // Example of a rule against an immutable field
 config.addRule("age", (a) => {

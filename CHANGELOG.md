@@ -1,3 +1,10 @@
+# [1.41.0](https://github.com/stephenh/joist-ts/compare/v1.40.0...v1.41.0) (2022-12-06)
+
+
+### Features
+
+* Rename joist-codegen.json to joist-config.json. ([#475](https://github.com/stephenh/joist-ts/issues/475)) ([37ba4bb](https://github.com/stephenh/joist-ts/commit/37ba4bb6495d922bfba1164f96a776db2cd470e8))
+
 # [1.40.0](https://github.com/stephenh/joist-ts/compare/v1.39.2...v1.40.0) (2022-11-29)
 
 

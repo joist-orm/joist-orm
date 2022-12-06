@@ -35,7 +35,7 @@ Where:
 - `address` is a structure that defines the schema/shape of the data to store
 - `Address` is the TypeScript type system that Superstruct will derive for us
 
-Then tell Joist to use this `Address` type for the `Author.address` field in `joist-codegen.json`:
+Then tell Joist to use this `Address` type for the `Author.address` field in `joist-config.json`:
 
 ```json
 {

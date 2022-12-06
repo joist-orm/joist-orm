@@ -24,7 +24,7 @@ Joist will work with column names that are camelCase or snake_case.
 
 Entity tables can optionally have `created_at` and `updated_at` columns, which when present Joist will auto-manage the setting of `created_at` when creating entities, and updating `updated_at` when updating entities.
 
-In `joist-codegen.json`, you can configure the names of the `timestampColumns`, which defaults to:
+In `joist-config.json`, you can configure the names of the `timestampColumns`, which defaults to:
 
 ```json
 {

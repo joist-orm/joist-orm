@@ -36,7 +36,7 @@ export class Author {
 
 ## Synchronous, Persisted Fields
 
-For synchronous, persisted fields, there will be a column in the database to hold the value, i.e. `authors.initials`, which you can mark as `sync` in `joist-codegen.json`:
+For synchronous, persisted fields, there will be a column in the database to hold the value, i.e. `authors.initials`, which you can mark as `sync` in `joist-config.json`:
 
 ```json
 {
@@ -87,7 +87,7 @@ console.log(a.numberOfBooks.get);
 
 ## Asynchronous, Persisted Fields
 
-For async, persisted fields, there will be a column in the database to hold the value, i.e. `authors.number_of_books`, which you can mark as `async` in `joist-codegen.json`:
+For async, persisted fields, there will be a column in the database to hold the value, i.e. `authors.number_of_books`, which you can mark as `async` in `joist-config.json`:
 
 ```json
 {

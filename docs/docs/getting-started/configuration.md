@@ -15,7 +15,7 @@ You should be able to get started without any Codegen config, and only some mini
 
 ## Codegen Configuration
 
-The codegen configuration is controlled by a `./joist-codegen.json` file, that `npm run joist-codegen` will look for and automatically run.
+The codegen configuration is controlled by a `./joist-config.json` file, that `npm run joist-codegen` will look for and automatically run.
 
 A short, minimalistic example is:
 
@@ -58,7 +58,7 @@ Also note that this `idType` setting controls the _codegen output_, but Joist wi
 
 :::info
 
-Even if you use `untagged-string`s, currently Joist still manages ids internally as tagged, and so you'll still see a per-entity `tag` established in the `joist-codegen.json` file, but the tag will be stripped by the `id` getters.
+Even if you use `untagged-string`s, currently Joist still manages ids internally as tagged, and so you'll still see a per-entity `tag` established in the `joist-config.json` file, but the tag will be stripped by the `id` getters.
 
 :::
 
@@ -196,7 +196,7 @@ export interface EntityConfig {
 
 #### `tag`
 
-This controls the tag that Joist uses for each entity. By default, Joist will guess a tag by abbreviating a table name `books_reviews` as the tag `br` and automatically save it in `joist-codegen.json`. If you'd like a different value, you're free to change it.
+This controls the tag that Joist uses for each entity. By default, Joist will guess a tag by abbreviating a table name `books_reviews` as the tag `br` and automatically save it in `joist-config.json`. If you'd like a different value, you're free to change it.
 
 ```json
 {

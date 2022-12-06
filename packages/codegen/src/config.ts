@@ -118,7 +118,7 @@ export function relationName(config: Config, entity: Entity, relationName: strin
   return config.entities?.[entity.name]?.relations?.[relationName]?.name ?? relationName;
 }
 
-const configPath = "./joist-codegen.json";
+const configPath = "./joist-config.json";
 export async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
@@ -132,7 +132,7 @@ export async function loadConfig(): Promise<Config> {
 }
 
 /**
- * Writes the potentially-updated config entry back to `joist-codegen.json`.
+ * Writes the potentially-updated config entry back to `joist-config.json`.
  *
  * We format the output with prettier so it should both a) look nice and b) be deterministic,
  * such that no changes to the config show up as noops to the scm.

@@ -84,9 +84,9 @@ If you need to detag a value without knowing the entity type, you can use `unsaf
 
 For the tag names, when you add a new table, Joist guesses a tag name to use by abbreviating the table name, i.e. `book_reviews` is `br` or `foo_bar_zazzes` is `fbz`.
 
-If there is a collision, i.e. the `br` abbreviation is already taken by an existing table in `joist-codegen.json`, then Joist will use the full entity name, i.e. `bookReview`.
+If there is a collision, i.e. the `br` abbreviation is already taken by an existing table in `joist-config.json`, then Joist will use the full entity name, i.e. `bookReview`.
 
-The guessed tag name is then stored `joist-codegen.json`, where you can easily change it if Joist initially guesses wrong.
+The guessed tag name is then stored `joist-config.json`, where you can easily change it if Joist initially guesses wrong.
 
 However, once you have a given tagged id deployed in production, you should probably never change it (i.e. change the `bookReview` tag to `bkr`), because even though Joist internally would immediately start using the new tag value (after the change is deployed), if any other external systems have copies of your ids (like you've stored `bookReview:1` in an external/3rd party system), those externally-stored ids will now be incorrect, and Joist will be unload to load them.
 
@@ -102,7 +102,7 @@ const a = await em.load(Author, id);
 
 ## Disabling Tagged Ids
 
-If you're migrating an existing system to Joist, or just don't want to use tagged ids (although you should try them and see!), you can disable them in the `joist-codegen.json` file by setting the `idType`:
+If you're migrating an existing system to Joist, or just don't want to use tagged ids (although you should try them and see!), you can disable them in the `joist-config.json` file by setting the `idType`:
 
 ```json
 {

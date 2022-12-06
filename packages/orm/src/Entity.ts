@@ -11,7 +11,7 @@ export interface Entity {
   /**
    * The entity's primary key, or undefined if it's new.
    *
-   * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-codegen.json`.
+   * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-config.json`.
    */
   id: string | undefined;
   /** The entity id that is always tagged, regardless of the idType config. */

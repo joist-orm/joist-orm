@@ -110,7 +110,7 @@ To use polymorphic references, there are two steps:
 
 1. Create the multiple physical foreign keys in your schema, all with a similar `publisher_*_id` naming convention.  
 
-2. In `joist-codegen.json`, add a new `publisher` relation that is marked as `polymorphic`:
+2. In `joist-config.json`, add a new `publisher` relation that is marked as `polymorphic`:
 
    ```json
    {

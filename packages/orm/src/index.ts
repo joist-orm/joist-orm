@@ -263,7 +263,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         const asyncProperty = getFakeInstance(meta)[field.fieldName] as
           | PersistedAsyncPropertyImpl<any, any, any>
           | undefined;
-        // We might have an async property configured in joist-codegen.json that has not yet
+        // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
         if (asyncProperty?.reactiveHint) {

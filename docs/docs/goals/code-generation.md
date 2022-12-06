@@ -93,13 +93,13 @@ If you do need to customize how a column is mapped, Joist _should_ (these are no
 
 1. Declare a schema-wide rule based on the column's type and/or naming convention
 
-   In the `joist-codegen.json` config file, define all `timestampz` columns should be mapped as type `MyCustomDateTime`.
+   In the `joist-config.json` config file, define all `timestampz` columns should be mapped as type `MyCustomDateTime`.
 
    This would be preferable to per-column configuration/annotations because you could declare the rule once, and have it apply to all applicable columns in your schema.
 
 2. Declare a specific user type for a column.
 
-   In the `joist-codegen.json` config file, define the column's specific user type.
+   In the `joist-config.json` config file, define the column's specific user type.
 
 ## Pros/Cons
 

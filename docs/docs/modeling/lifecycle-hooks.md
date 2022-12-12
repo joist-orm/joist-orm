@@ -3,7 +3,7 @@ title: Lifecycle Hooks
 sidebar_position: 4
 ---
 
-Joist supports hooks that can run business logic at varies stages in an entity's lifecycle, for example to implement business logic like "when an author is updated, always do x/y/z".
+Joist supports hooks that can run business logic at varies stages in an entity's lifecycle, for example to implement business logic like "when an `Author` entity is updated, always do x/y/z".
 
 ### Setup
 
@@ -91,4 +91,18 @@ Similarly, hooks can set required fields before the missing values trigger valid
 
 Validation rules are only ran once per `em.flush`, and only after all hooks, and all transitively-ran hooks, have finished.
 
+:::info
+
+The term "transitively-ran" hooks describes the scenario of:
+
+* An endpoint/user code creates 5 new `Author` entities and calls `em.flush`
+* `em.flush` "runs hooks" (`beforeCreate` and `beforeFlush`) for all 5 new `Author`s entities
+* Each `Author`'s `beforeCreate` hook creates a new draft `Book` entity
+* `em.flush` notices the newly-created `Book` entities, and so "runs hooks again", but only against the 5 `Book` entities
+
+So, this process is transitive as mutating the initial set of entities may cause, via custom logic in hooks, a subsequent set of entities to be mutated, which themselves might cause an additional set of entities to be mutated, until the process "settles".
+
+Note that because `em.flush` marks which entities have had hooks ran, and will not invoke hooks twice on a given entity, this process is guaranteed to finish, i.e. there is not a risk of infinite loops between hooks.
+
+:::
 

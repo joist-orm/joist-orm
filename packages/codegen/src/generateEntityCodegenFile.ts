@@ -330,6 +330,14 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       ? code`return ${deTagId}(${metadata}, this.idTagged);`
       : code`return this.idTagged;`;
 
+  const maybeIsSoftDeleted = meta.deletedAt
+    ? code`
+    get isSoftDeletedEntity(): boolean {
+      return this.__orm.data.${meta.deletedAt.fieldName} !== undefined;
+    }
+  `
+    : "";
+
   return code`
     export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
 
@@ -416,6 +424,8 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       get changes(): ${Changes}<${entityName}> {
         return ${newChangesProxy}(this as any as ${entityName});
       }
+
+      ${maybeIsSoftDeleted}
 
       load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
         return ${loadLens}(this as any as ${entityName}, fn);

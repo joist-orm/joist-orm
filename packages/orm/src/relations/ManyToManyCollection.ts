@@ -69,12 +69,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
     return opts?.withDeleted === true
       ? [...entities]
-      : entities.filter(
-          (e) =>
-            !e.isDeletedEntity &&
-            (this.#otherMeta.timestampFields.deletedAt === undefined ||
-              !(e as any)[this.#otherMeta.timestampFields.deletedAt]),
-        );
+      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {

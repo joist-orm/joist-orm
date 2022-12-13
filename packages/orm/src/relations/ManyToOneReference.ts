@@ -278,12 +278,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    if (
-      entity &&
-      (!opts || !opts.withDeleted) &&
-      (entity.isDeletedEntity ||
-        (this.#otherMeta.timestampFields.deletedAt && (entity as any)[this.#otherMeta.timestampFields.deletedAt]))
-    ) {
+    if (entity && (!opts || !opts.withDeleted) && (entity.isDeletedEntity || (entity as any).isSoftDeletedEntity)) {
       return undefined!;
     }
     return entity;

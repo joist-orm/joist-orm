@@ -80,6 +80,7 @@ export function up(b: MigrationBuilder): void {
     mentor_id: foreignKey("authors", { notNull: false }),
     // for testing jsbon columns
     address: { type: "jsonb", notNull: false },
+    deleted_at: { type: "timestamptz", notNull: false },
   });
 
   // A publisher can only have one author named `Jim`, but still have other authors
@@ -98,6 +99,7 @@ export function up(b: MigrationBuilder): void {
     author_id: foreignKey("authors", { notNull: true }),
     // for testing columns that are keywords (and testing default values)
     order: { type: "integer", notNull: true, default: 1 },
+    deleted_at: { type: "timestamptz", notNull: false },
   });
 
   // For testing o2o and m2o w/overlapping names in Book.author

@@ -15,7 +15,7 @@ import {
 import { q } from "./utils";
 
 export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
-  const { entity, createdAt, updatedAt } = meta;
+  const { entity, createdAt, updatedAt, deletedAt } = meta;
 
   const fields = generateFields(config, meta);
 
@@ -29,7 +29,11 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
       fields: ${fields},
-      timestampFields: { createdAt: ${q(createdAt?.fieldName)}, updatedAt: ${q(updatedAt?.fieldName)} },
+      timestampFields: {
+        createdAt: ${q(createdAt?.fieldName)},
+        updatedAt: ${q(updatedAt?.fieldName)},
+        deletedAt: ${q(deletedAt?.fieldName)},
+      },
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
     };

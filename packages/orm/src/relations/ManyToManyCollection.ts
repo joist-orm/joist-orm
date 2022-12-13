@@ -65,8 +65,16 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
+  /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
+    return opts?.withDeleted === true
+      ? [...entities]
+      : entities.filter(
+          (e) =>
+            !e.isDeletedEntity &&
+            (this.#otherMeta.timestampFields.deletedAt === undefined ||
+              !(e as any)[this.#otherMeta.timestampFields.deletedAt]),
+        );
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {

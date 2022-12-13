@@ -103,7 +103,11 @@ export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
-export type TimestampFields = { updatedAt: string | undefined; createdAt: string | undefined };
+export type TimestampFields = {
+  updatedAt: string | undefined;
+  createdAt: string | undefined;
+  deletedAt: string | undefined;
+};
 
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */

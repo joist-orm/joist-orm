@@ -52,6 +52,7 @@ export interface Config {
   timestampColumns?: {
     createdAt?: TimestampConfig;
     updatedAt?: TimestampConfig;
+    deletedAt?: TimestampConfig;
   };
   /**
    * By default, we create a `flush_database` function for super fast testing.
@@ -149,6 +150,7 @@ export async function writeConfig(config: Config): Promise<void> {
 export function getTimestampConfig(config: Config): {
   updatedAtConf: Required<TimestampConfig>;
   createdAtConf: Required<TimestampConfig>;
+  deletedAtConf: Required<TimestampConfig>;
 } {
   return {
     createdAtConf: {
@@ -160,6 +162,11 @@ export function getTimestampConfig(config: Config): {
       names: ["updated_at", "updatedAt"],
       required: false,
       ...config?.timestampColumns?.updatedAt,
+    },
+    deletedAtConf: {
+      names: ["deleted_at", "deletedAt"],
+      required: false,
+      ...config?.timestampColumns?.deletedAt,
     },
   };
 }

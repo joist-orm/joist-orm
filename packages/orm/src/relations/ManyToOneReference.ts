@@ -276,8 +276,17 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     }, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 
+  /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    return opts?.withDeleted === true || entity === undefined || !entity.isDeletedEntity ? entity : (undefined as N);
+    if (
+      entity &&
+      (!opts || !opts.withDeleted) &&
+      (entity.isDeletedEntity ||
+        (this.#otherMeta.timestampFields.deletedAt && (entity as any)[this.#otherMeta.timestampFields.deletedAt]))
+    ) {
+      return undefined!;
+    }
+    return entity;
   }
 
   /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */

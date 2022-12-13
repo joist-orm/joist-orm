@@ -33,11 +33,12 @@ export function insertAuthor(row: {
   address?: object;
   graduated?: any;
   updated_at?: any;
+  deleted_at?: any;
 }) {
   return testDriver.insert("authors", { initials: row.first_name[0], number_of_books: 0, ...row });
 }
 
-export function insertBook(row: { id?: number; title: string; author_id: number | null }) {
+export function insertBook(row: { id?: number; title: string; author_id: number | null; deleted_at?: Date }) {
   return testDriver.insert("books", row);
 }
 

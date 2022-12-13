@@ -21,6 +21,7 @@ type Author {
   currentDraftBook: Book
   author: Image
   bookComments: String
+  deletedAt: DateTime
 }
 
 input SaveAuthorInput {
@@ -40,6 +41,7 @@ input SaveAuthorInput {
   favoriteColors: [Color!]
   favoriteShape: FavoriteShape
   currentDraftBookId: ID
+  deletedAt: DateTime
 }
 
 type SaveAuthorResult {

@@ -31,15 +31,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
   implements Collection<T, U>
 {
-  #entity: T;
+  readonly #entity: T;
   private loaded: U[] | undefined;
   // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
   // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
   // groups the hydrated rows by their _current parent m2o field value_, which for a removed child will no
   // longer be us, so it will effectively not show up in our post-load `loaded` array.
   #addedBeforeLoaded: U[] = [];
-  #isCascadeDelete: boolean;
-  #otherMeta: EntityMetadata<U>;
+  readonly #isCascadeDelete: boolean;
+  readonly #otherMeta: EntityMetadata<U>;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -251,8 +251,16 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     }, otherFieldName: ${this.otherFieldName})`;
   }
 
+  /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true ? [...entities] : entities.filter((e) => !e.isDeletedEntity);
+    return opts?.withDeleted === true
+      ? [...entities]
+      : entities.filter(
+          (e) =>
+            !e.isDeletedEntity &&
+            (this.#otherMeta.timestampFields.deletedAt === undefined ||
+              !(e as any)[this.#otherMeta.timestampFields.deletedAt]),
+        );
   }
 
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */

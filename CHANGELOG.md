@@ -1,3 +1,10 @@
+## [1.42.2](https://github.com/stephenh/joist-ts/compare/v1.42.1...v1.42.2) (2022-12-14)
+
+
+### Bug Fixes
+
+* Update toMatchEntity to include soft-deleted entities. ([#480](https://github.com/stephenh/joist-ts/issues/480)) ([8fafe4f](https://github.com/stephenh/joist-ts/commit/8fafe4fd51f3270c54de911e59f43c4714d6b69d))
+
 ## [1.42.1](https://github.com/stephenh/joist-ts/compare/v1.42.0...v1.42.1) (2022-12-14)
 
 

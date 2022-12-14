@@ -28,7 +28,7 @@ Note that currently Joist assumes that `deleted_at` columns are timestamps, but 
 
 ### Behavior
 
-When rows are soft-deleted, Joist will still fetch them from the database, but any accessors will, by default, filter them out of the results.
+When rows are soft-deleted, Joist will still fetch them from the database, but collection accessors (i.e. `o2m.get` and `m2m.get`) will, by default, filter them out of the results.
 
 For example, if an `Author` has a soft-deleted `Book`:
 

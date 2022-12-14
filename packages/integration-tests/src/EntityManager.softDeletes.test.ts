@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertBookToTag, insertTag } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts";
 import { jan1 } from "joist-orm";
 import { Author, Book, Tag } from "./entities";
 import { newEntityManager } from "./setupDbTests";
@@ -13,12 +13,12 @@ describe("EntityManager.softDeletes", () => {
     expect(author.books.getWithDeleted).toMatchEntity([{ title: "b1" }]);
   });
 
-  it("m2o.get skips soft deleted entities", async () => {
+  it("m2o.get includes deleted entities", async () => {
     await insertAuthor({ first_name: "a1", deleted_at: jan1 });
     await insertBook({ author_id: 1, title: "b1" });
     const em = newEntityManager();
     const book = await em.load(Book, "b:1", "author");
-    expect(book.author.get).toEqual(undefined);
+    expect(book.author.get).toMatchEntity({ firstName: "a1" });
     expect(book.author.getWithDeleted).toMatchEntity({ firstName: "a1" });
   });
 
@@ -31,5 +31,33 @@ describe("EntityManager.softDeletes", () => {
     const tag = await em.load(Tag, "t:1", "books");
     expect(tag.books.get).toEqual([]);
     expect(tag.books.getWithDeleted).toMatchEntity([{ title: "b1" }]);
+  });
+
+  it("load through o2m skips soft deleted entities", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1", deleted_at: jan1 });
+    const em = newEntityManager();
+    const author = await em.load(Author, "a:1");
+    const books = await author.load((a) => a.books);
+    expect(books).toEqual([]);
+  });
+
+  it("load through m2o includes soft deleted entities", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ publisher_id: 1, first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    expect(await book.load((b) => b.author)).toBeDefined();
+    expect(await book.load((b) => b.author.publisher)).toBeDefined();
+  });
+
+  it("load transitively through m2o skips soft deleted entities", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    const books = await book.load((b) => b.author.books);
+    expect(books).toEqual([]);
   });
 });

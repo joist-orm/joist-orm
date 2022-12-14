@@ -276,9 +276,17 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     }, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 
-  /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
+  /**
+   * Removes pending-hard-delete (but not soft-deleted), unless explicitly asked for.
+   *
+   * Note that we leave soft-deleted entities b/c the call signature of a `book.author.get`
+   * very likely does not expect a soft-deleted entity to result in `undefined`.
+   *
+   * (Contrasted with `author.books.get` which is more intuitive to have soft-deleted
+   * entities filtered out, i.e. it doesn't fundamentally change the return type.)
+   */
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {
-    if (entity && (!opts || !opts.withDeleted) && (entity.isDeletedEntity || (entity as any).isSoftDeletedEntity)) {
+    if (entity && (!opts || !opts.withDeleted) && entity.isDeletedEntity) {
       return undefined!;
     }
     return entity;

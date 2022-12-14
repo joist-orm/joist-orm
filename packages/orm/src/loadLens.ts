@@ -56,13 +56,20 @@ export async function loadLens<T, U, V>(
 ): Promise<V> {
   const paths = collectPaths(fn);
   let current: any = start;
+  let seenSoftDeleted = false;
   // Now evaluate each step of the path
   for await (const path of paths) {
     if (Array.isArray(current)) {
       current = (await Promise.all(current.map((c) => maybeLoad(c, path, opts)))).flat();
-      current = [...new Set(current.filter((c: any) => c !== undefined))];
+      current = [...new Set(current.filter((c: any) => c !== undefined && !c.isSoftDeletedEntity))];
     } else {
       current = await maybeLoad(current, path, opts);
+      seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
+      // If we had been traversing m2o -> m2o and just hit an o2m/m2m, and any of our
+      // prior m2os had been soft deleted, just filter everything out.
+      if (Array.isArray(current) && seenSoftDeleted) {
+        return [] as any;
+      }
     }
   }
   return current!;

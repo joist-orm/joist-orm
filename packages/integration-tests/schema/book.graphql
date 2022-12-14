@@ -13,6 +13,7 @@ type Book {
   currentDraftBook: Author
   book: Image
   currentDraftAuthor: Author
+  deletedAt: DateTime
 }
 
 input SaveBookInput {
@@ -22,6 +23,7 @@ input SaveBookInput {
   createdAt: Date
   updatedAt: Date
   authorId: ID
+  deletedAt: DateTime
 }
 
 type SaveBookResult {

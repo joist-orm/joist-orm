@@ -925,6 +925,7 @@ describe("EntityManager", () => {
       bookComments: null,
       createdAt: expect.anything(),
       currentDraftBook: null,
+      deletedAt: null,
       favoriteColors: [],
       favoriteShape: null,
       firstName: "a1",

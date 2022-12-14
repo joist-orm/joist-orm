@@ -1,5 +1,5 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
-import { Author, newAuthor, newBook } from "@src/entities";
+import { Author, Book, newAuthor, newBook } from "@src/entities";
 import { jan1 } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
 
@@ -18,6 +18,16 @@ describe("toMatchEntity", () => {
     const b1 = newBook(em);
     await em.flush();
     expect(b1).toMatchEntity({ author: { firstName: "a1" } });
+  });
+
+  it("can match loaded references", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, {});
+    const b1 = newBook(em, {});
+    const expected: Array<Book | Author> = [a1, b1];
+    const a2 = await a1.populate("books");
+    const b2 = await b1.populate("author");
+    expect(expected).toMatchEntity([a2, b2]);
   });
 
   it("can match collections with soft-deleted entities", async () => {

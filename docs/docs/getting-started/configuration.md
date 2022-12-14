@@ -109,7 +109,7 @@ This `flush_database` stored procedure if created during `npm run codegen`.
 
 If you'd prefer to not use, you can set this to false:
 
-```ts
+```json
 {
   "createFlushFunction": false
 }
@@ -119,7 +119,7 @@ If you'd prefer to not use, you can set this to false:
 
 Allows ignoring tables, i.e. not generating TypeScript entities for them.
 
-```ts
+```json
 {
   "ignoredTables": ["some_old_thing"]
 }
@@ -142,6 +142,10 @@ For example the following config looks for _only_ `updated_at` and `created_at` 
     },
     "createdAt": {
       "names": ["created_at"],
+      "required": true
+    },
+    "deletedAt": {
+      "names": ["deleted_at"],
       "required": true
     }
   }

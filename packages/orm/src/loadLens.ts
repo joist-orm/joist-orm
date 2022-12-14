@@ -64,7 +64,7 @@ export async function loadLens<T, U, V>(
       current = [...new Set(current.filter((c: any) => c !== undefined && !c.isSoftDeletedEntity))];
     } else {
       current = await maybeLoad(current, path, opts);
-      seenSoftDeleted ||= (current as any).isSoftDeletedEntity;
+      seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
       // If we had been traversing m2o -> m2o and just hit an o2m/m2m, and any of our
       // prior m2os had been soft deleted, just filter everything out.
       if (Array.isArray(current) && seenSoftDeleted) {

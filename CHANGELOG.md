@@ -1,3 +1,10 @@
+## [1.42.1](https://github.com/stephenh/joist-ts/compare/v1.42.0...v1.42.1) (2022-12-14)
+
+
+### Bug Fixes
+
+* Don't skip soft-deleted entity in m2o.get. ([#478](https://github.com/stephenh/joist-ts/issues/478)) ([f0d6f2a](https://github.com/stephenh/joist-ts/commit/f0d6f2aaa01ea640324e5dcda5be3bf0a4c87832))
+
 # [1.42.0](https://github.com/stephenh/joist-ts/compare/v1.41.0...v1.42.0) (2022-12-14)
 
 

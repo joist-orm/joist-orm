@@ -1,3 +1,10 @@
+## [1.42.3](https://github.com/stephenh/joist-ts/compare/v1.42.2...v1.42.3) (2022-12-14)
+
+
+### Bug Fixes
+
+* Fix toMatchEntity in type union scenarios. ([#481](https://github.com/stephenh/joist-ts/issues/481)) ([a593b58](https://github.com/stephenh/joist-ts/commit/a593b58738dcf689df08c86e71a99b0bd783b869))
+
 ## [1.42.2](https://github.com/stephenh/joist-ts/compare/v1.42.1...v1.42.2) (2022-12-14)
 
 

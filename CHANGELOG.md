@@ -1,3 +1,10 @@
+# [1.42.0](https://github.com/stephenh/joist-ts/compare/v1.41.0...v1.42.0) (2022-12-14)
+
+
+### Features
+
+* Automatically filter soft-deleted entities. ([#477](https://github.com/stephenh/joist-ts/issues/477)) ([a8f4131](https://github.com/stephenh/joist-ts/commit/a8f41319e4d1b36fd592944ee5111d8bcfb08c13))
+
 # [1.41.0](https://github.com/stephenh/joist-ts/compare/v1.40.0...v1.41.0) (2022-12-06)
 
 

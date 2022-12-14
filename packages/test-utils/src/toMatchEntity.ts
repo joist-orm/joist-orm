@@ -44,7 +44,11 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
         isAsyncProperty(actualValue) ||
         isPersistedAsyncProperty(actualValue)
       ) {
-        actualValue = (actualValue as any).get;
+        if ("getWithDeleted" in actualValue) {
+          actualValue = (actualValue as any).getWithDeleted;
+        } else {
+          actualValue = (actualValue as any).get;
+        }
       }
 
       if (actualValue instanceof Array) {

@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts";
 import { jan1 } from "joist-orm";
-import { Author, Book, Tag } from "./entities";
+import { Author, Book, Publisher, Tag } from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.softDeletes", () => {
@@ -59,5 +59,14 @@ describe("EntityManager.softDeletes", () => {
     const book = await em.load(Book, "b:1");
     const books = await book.load((b) => b.author.books);
     expect(books).toEqual([]);
+  });
+
+  it("populates soft-deleted entities", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ publisher_id: 1, first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1", { authors: { books: { comments: {} } } });
+    expect(p1.authors.getWithDeleted[0].books.getWithDeleted[0].comments.get.length).toBe(0);
   });
 });

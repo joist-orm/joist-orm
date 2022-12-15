@@ -44,11 +44,7 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
         isAsyncProperty(actualValue) ||
         isPersistedAsyncProperty(actualValue)
       ) {
-        if ("getWithDeleted" in actualValue) {
-          actualValue = (actualValue as any).getWithDeleted;
-        } else {
-          actualValue = (actualValue as any).get;
-        }
+        actualValue = getEvenDeleted(actualValue);
       }
 
       if (actualValue instanceof Array) {
@@ -136,3 +132,7 @@ export type MatchedEntity<T> =
         : // We recurse similar to a DeepPartial
           MatchedEntity<T[K]> | null;
     };
+
+function getEvenDeleted(relation: any): any {
+  return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
+}

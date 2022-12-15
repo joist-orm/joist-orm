@@ -673,7 +673,7 @@ export class EntityManager<C = unknown> {
             const nestedLoadPromises = hints.map(([key, nestedHint]) => {
               if (Object.keys(nestedHint).length === 0) return;
               // Unique for good measure?...
-              const children = [...new Set(list.map((entity) => toArray(entity[key].get)).flat())];
+              const children = [...new Set(list.map((entity) => toArray(getEvenDeleted(entity[key]))).flat())];
               if (children.length === 0) return;
               return this.populate(children, { hint: nestedHint, ...opts });
             });
@@ -1391,4 +1391,9 @@ function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadH
 
 export function isDefined<T extends any>(param: T | undefined | null): param is T {
   return param !== null && param !== undefined;
+}
+
+/** Probes `relation` to see if it's a m2o/o2m/m2m relation that supports `getWithDeleted`, otherwise calls `get`. */
+function getEvenDeleted(relation: any): any {
+  return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
 }

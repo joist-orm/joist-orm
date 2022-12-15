@@ -1,3 +1,10 @@
+## [1.42.4](https://github.com/stephenh/joist-ts/compare/v1.42.3...v1.42.4) (2022-12-15)
+
+
+### Bug Fixes
+
+* Populate through soft-deleted collections. ([#482](https://github.com/stephenh/joist-ts/issues/482)) ([92158dc](https://github.com/stephenh/joist-ts/commit/92158dc5f2587ea923b53332dc1c87b6e2b2445b))
+
 ## [1.42.3](https://github.com/stephenh/joist-ts/compare/v1.42.2...v1.42.3) (2022-12-14)
 
 

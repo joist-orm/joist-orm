@@ -14,9 +14,22 @@ export type EntityHook =
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
+export const constraintNameToValidationError: Record<string, string> = {};
+
 /** The public API to configure an Entity's hooks & validation rules. */
 export class ConfigApi<T extends Entity, C> {
   __data = new ConfigData<T, C>();
+
+  /**
+   * Maps a given `constraintName`, i.e. `authors_publisher_id_unique_index`, to a hard-coded-but-pretty validation errors.
+   *
+   * Note that the validationError must be hard-coded b/c we cannot tease out "which entity" caused a given
+   * constraint failure from the SQL database. If you really need pretty-and-custom validation errors, you'll
+   * need to check the constraint by hand ahead of time, before calling `em.flush`.
+   */
+  addConstraintMessage(constraintName: string, validationError: string) {
+    constraintNameToValidationError[constraintName] = validationError;
+  }
 
   /**
    * Adds a validation rule for this entity.

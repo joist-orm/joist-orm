@@ -1,6 +1,7 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader from "dataloader";
 import { Knex } from "knex";
+import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
@@ -899,6 +900,14 @@ export class EntityManager<C = unknown> {
       }
 
       return entitiesToFlush;
+    } catch (e) {
+      if (e && typeof e === "object" && "constraint" in e && typeof e.constraint === "string") {
+        const message = constraintNameToValidationError[e.constraint];
+        if (message) {
+          throw new ValidationErrors(message);
+        }
+      }
+      throw e;
     } finally {
       this._isFlushing = false;
     }

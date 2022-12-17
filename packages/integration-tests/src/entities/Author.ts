@@ -227,3 +227,5 @@ config.afterCommit((author) => {
   author.afterCommitIsNewEntity = author.isNewEntity;
   author.afterCommitIsDeletedEntity = author.isDeletedEntity;
 });
+
+config.addConstraintMessage("authors_publisher_id_unique_index", "There is already a publisher with a Jim");

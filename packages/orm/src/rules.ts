@@ -34,8 +34,12 @@ export type GenericError = { message: string };
 export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {
-  constructor(public errors: ValidationError[]) {
-    super(errorMessage(errors));
+  public errors: ValidationError[];
+  constructor(errors: ValidationError[]);
+  constructor(message: string);
+  constructor(messageOrErrors: ValidationError[] | string) {
+    super(typeof messageOrErrors === "string" ? messageOrErrors : errorMessage(messageOrErrors));
+    this.errors = typeof messageOrErrors === "string" ? [] : messageOrErrors;
   }
 }
 

@@ -1332,6 +1332,14 @@ describe("EntityManager", () => {
     // And we can get the authors
     expect(publishers[0].authors.get.length).toBe(2);
   });
+
+  it("can display nice versions of constraint failures", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = newEntityManager();
+    em.create(Author, { publisher: "p:1", firstName: "Jim" });
+    em.create(Author, { publisher: "p:1", firstName: "Jim" });
+    await expect(em.flush()).rejects.toThrow("There is already a publisher with a Jim");
+  });
 });
 
 function delay(ms: number): Promise<void> {

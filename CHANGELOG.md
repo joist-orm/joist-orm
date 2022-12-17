@@ -1,3 +1,10 @@
+# [1.43.0](https://github.com/stephenh/joist-ts/compare/v1.42.4...v1.43.0) (2022-12-17)
+
+
+### Features
+
+* Support pretty-but-hard-coded messages for constraint failures. ([#483](https://github.com/stephenh/joist-ts/issues/483)) ([f1c954d](https://github.com/stephenh/joist-ts/commit/f1c954d154c5006c4f26515aec42ce907ae076f5)), closes [#243](https://github.com/stephenh/joist-ts/issues/243)
+
 ## [1.42.4](https://github.com/stephenh/joist-ts/compare/v1.42.3...v1.42.4) (2022-12-15)
 
 

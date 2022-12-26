@@ -6,7 +6,7 @@ sidebar_position: 3
 Entities can have validation rules that are run during `EntityManager.flush()`:
 
 ```typescript
-import { authorConfig as config } from "./entities"
+import { authorConfig as config } from "./entities";
 
 class Author extends AuthorCodegen {}
 
@@ -50,7 +50,7 @@ See [Issues 198](https://github.com/stephenh/joist-ts/issues/198) for tracking i
 
 Validation rules can also use a reactive hint (similar to Joist's load hints) to run cross-entity validation logic.
 
-The reactive hints include which fields the rule needs to read, and then Joist will **automatically invoke the rule** whenever any field in the hint changes, even if it's on another entity (i.e. `Book.title`), and the rule's main entity (i.e. `Author`) hasn't been loaded from the database yet. 
+The reactive hints include which fields the rule needs to read, and then Joist will **automatically invoke the rule** whenever any field in the hint changes, even if it's on another entity (i.e. `Book.title`), and the rule's main entity (i.e. `Author`) hasn't been loaded from the database yet.
 
 For example this rule:
 
@@ -81,16 +81,16 @@ Reactive hints can be either a single field name, an array of field names, or a 
 
 For example, reactive hints on an `Author` might be:
 
-* `"firstName"` - run whenever our `firstName` field changes
-* `["firstName", "lastName"]` - run whenever our `firstName` or `lastName` fields change
-* `{ books: "title" }` - run whenever any of our books' `title`s change
-* `{ books: { title: {}, reviews: "rating" }` - run whenever any of our books' `title`s change, or any of our books' reviews' `rating`s change
-  * This is an example of, when you want a nested hint for both a child/parent and as well as field, we use `title: {}` as a "nested hint" even though the `title` is itself a terminal hint. 
+- `"firstName"` - run whenever our `firstName` field changes
+- `["firstName", "lastName"]` - run whenever our `firstName` or `lastName` fields change
+- `{ books: "title" }` - run whenever any of our books' `title`s change
+- `{ books: { title: {}, reviews: "rating" }` - run whenever any of our books' `title`s change, or any of our books' reviews' `rating`s change
+  - This is an example of, when you want a nested hint for both a child/parent and as well as field, we use `title: {}` as a "nested hint" even though the `title` is itself a terminal hint.
 
 And reactive hints on a `Book` might be
 
-* `{ author: "firstName" }` - run whenever our author's `firstName` changes
-* `{ author: ["firstName", "lastName" }` - run whenever our author's `firstName` or `lastName` changes
+- `{ author: "firstName" }` - run whenever our author's `firstName` changes
+- `{ author: ["firstName", "lastName" }` - run whenever our author's `firstName` or `lastName` changes
 
 :::tip
 
@@ -106,7 +106,6 @@ config.addRule(["books", "firstName:ro"], (a) => {
 ```
 
 :::
-
 
 ## Built-in Rules
 
@@ -137,6 +136,25 @@ Also, you can make this conditional, i.e. on a status:
 
 ```typescript
 // Only allow updating cost while draft
-config.addRule(cannotBeUpdated("cost", e => e.isDraft));
+config.addRule(cannotBeUpdated("cost", (e) => e.isDraft));
 ```
 
+## Database Constraints
+
+Generally, Joist prefers implementing domain model validation rules in TypeScript code, where rules are easier to write and test than if written as SQL triggers/stored procedures/etc.
+
+That said, some rules like unique constraints are best enforced by the database, which is great, but their errors can cryptic, and not error messages you want shown to users, e.g.:
+
+```
+INSERT INTO "authors" (...) VALUES (...) - duplicate key value violates
+ unique constraint "authors_publisher_id_unique_index"
+```
+
+Joist has basic support for recognizing "a constraint of the given name failed" and mapping that to a pretty error message, for example in `Author.ts` you could configure failures on the `authors_name_unique_index`:
+
+```typescript
+// Convert unique(name) to a validation error
+config.addConstraintMessage("authors_name_unique_index", "There is already an Author with that name");
+```
+
+Note that the error message must be hard-coded, because when the database fails a unique constraint, Joist can't easily tell which specific entity is causing the error (e.g. we may be saving 5 authors, and only the 4th one caused the failure).

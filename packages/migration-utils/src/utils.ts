@@ -1,9 +1,14 @@
-/** Creates an entity table with our conventions. */
 import { ColumnDefinitions, MigrationBuilder, PgLiteral } from "node-pg-migrate";
 import { DropOptions } from "node-pg-migrate/dist/operations/generalTypes";
 import { ColumnDefinition, TableOptions } from "node-pg-migrate/dist/operations/tablesTypes";
 import { singular } from "pluralize";
 
+/**
+ * Creates an entity table with our conventions.
+ *
+ * Specifically an `id` auto-increment column (via a sequence) and `created_at` and `updated_at`
+ * columns.
+ */
 export function createEntityTable(b: MigrationBuilder, tableName: string, columns: ColumnDefinitions): void {
   b.createTable(tableName, {
     id: "id",
@@ -21,6 +26,31 @@ export function createEntityTable(b: MigrationBuilder, tableName: string, column
   });
 
   createTriggers(b, tableName);
+}
+
+/**
+ * Creates a subtype table using class-per-table inheritance.
+ *
+ * The subtable will use the base table's id as its identity, and when loading rows of the base
+ * type, Joist will automatically stitch together rows across each table into a single instance.
+ */
+export function createSubTable(
+  b: MigrationBuilder,
+  baseTableName: string,
+  subTableName: string,
+  columns: ColumnDefinitions,
+): void {
+  b.createTable(subTableName, {
+    id: { type: "int", references: `${baseTableName}.id` },
+    ...columns,
+  });
+  // Postgres doesn't automatically index foreign keys, so any column def points at
+  // another table, assume we'll be doing a lot of lookups on this column and should fk it.
+  Object.entries(columns).forEach(([name, def]) => {
+    if (typeof def === "object" && def.references) {
+      b.sql(`CREATE INDEX ${subTableName}_${name}_idx ON ${subTableName} USING btree (${name})`);
+    }
+  });
 }
 
 export function createEnumTable(b: MigrationBuilder, tableName: string, values: Array<[string, string]>): void {

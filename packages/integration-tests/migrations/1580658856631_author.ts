@@ -4,6 +4,7 @@ import {
   createEntityTable,
   createEnumTable,
   createManyToManyTable,
+  createSubTable,
   createUpdatedAtFunction,
   enumArrayColumn,
   foreignKey,
@@ -24,6 +25,14 @@ export function up(b: MigrationBuilder): void {
     ["SMALL", "Small"],
     ["BIG", "Big"],
   ]);
+
+  // Create two subclass tables
+  createSubTable(b, "publishers", "small_publishers", {
+    city: "text",
+  });
+  createSubTable(b, "publishers", "large_publishers", {
+    country: "text",
+  });
 
   createEntityTable(b, "tags", {
     name: { type: "varchar(255)", notNull: true },

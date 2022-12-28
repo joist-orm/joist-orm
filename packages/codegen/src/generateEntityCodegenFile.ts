@@ -1,5 +1,5 @@
 import { camelCase, pascalCase } from "change-case";
-import { code, Code, imp } from "ts-poet";
+import { code, Code, imp, joinCode } from "ts-poet";
 import { Config } from "./config";
 import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
@@ -339,7 +339,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     : "";
 
   const baseEntity = meta.baseClassName ? dbMeta.entities.find((e) => e.name === meta.baseClassName)! : undefined;
-  const hasSubEnties = dbMeta.entities.some((e) => e.baseClassName === meta.name);
+  const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}>`;
   const maybeBaseFields = baseEntity ? code`extends ${imp(baseEntity.name + "Fields@./entities")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
@@ -358,7 +358,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
       }
     `;
-  } else if (hasSubEnties) {
+  } else if (subEntities.length > 0) {
     cstr = code`
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         if (arguments.length === 4) {
@@ -377,6 +377,15 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
       }
     `;
+  }
+
+  let maybeOtherTypeChanges;
+  if (baseEntity) {
+    maybeOtherTypeChanges = code`| ${baseEntity.entity.type}`;
+  } else if (subEntities.length > 0) {
+    maybeOtherTypeChanges = joinCode([code``, ...subEntities.map((e) => code`${e.entity.type}`)], { on: "|" });
+  } else {
+    maybeOtherTypeChanges = "";
   }
 
   return code`
@@ -456,8 +465,8 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${setOpts}(this as any as ${entityName}, opts as ${OptsOf}<${entityName}>, { partial: true });
       }
 
-      get changes(): ${Changes}<${entityName}> {
-        return ${newChangesProxy}(this as any as ${entityName});
+      get changes(): ${Changes}<${entityName}${maybeOtherTypeChanges}> {
+        return ${newChangesProxy}(this) as any;
       }
 
       ${maybeIsSoftDeleted}

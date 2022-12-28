@@ -363,7 +363,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         if (arguments.length === 4) {
           // @ts-ignore
-          super(em, arguments[1], arguments[2], arguments[3]);
+          super(em, arguments[1], { ...arguments[2], ...${entityName}Codegen.defaultValues }, arguments[3]);
         } else {
           super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
           ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
@@ -386,6 +386,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     maybeOtherTypeChanges = joinCode([code``, ...subEntities.map((e) => code`${e.entity.type}`)], { on: "|" });
   } else {
     maybeOtherTypeChanges = "";
+  }
+
+  let maybeOtherLoaded;
+  if (baseEntity) {
+    maybeOtherLoaded = code`| ${baseEntity.entity.type}`;
+  } else {
+    maybeOtherLoaded = "";
   }
 
   return code`
@@ -483,7 +490,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         return this.em.populate(this as any as ${entityName}, hintOrOpts, fn);
       }
 
-      isLoaded<H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}, H> {
+      isLoaded<H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}${maybeOtherLoaded}, H> {
         return ${isLoaded}(this as any as ${entityName}, hint);
       }
     }

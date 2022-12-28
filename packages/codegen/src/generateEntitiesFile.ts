@@ -11,6 +11,9 @@ export function generateEntitiesFile(
   enums: Table[],
   pgEnums: PgEnumData[],
 ): Code {
+  // Assume only 1 level of inheritance for now
+  const baseClasses = entities.filter((e) => e.baseClassName === undefined);
+  const subClasses = entities.filter((e) => e.baseClassName !== undefined);
   return code`
     // organize-imports-ignore
 
@@ -20,10 +23,16 @@ export function generateEntitiesFile(
     ${enums.map((table) => {
       return `export * from "./${tableToEntityName(config, table)}";`;
     })}
-    ${entities.map((meta) => {
+    ${baseClasses.map((meta) => {
       return `export * from "./${meta.entity.name}Codegen";`;
     })}
-    ${entities.map((meta) => {
+    ${baseClasses.map((meta) => {
+      return `export * from "./${meta.entity.name}";`;
+    })}
+    ${subClasses.map((meta) => {
+      return `export * from "./${meta.entity.name}Codegen";`;
+    })}
+    ${subClasses.map((meta) => {
       return `export * from "./${meta.entity.name}";`;
     })}
     ${pgEnums.map((meta) => {

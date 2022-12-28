@@ -18,7 +18,7 @@ export class SequenceIdAssigner implements IdAssigner {
     const seqStatements: string[] = [];
     Object.values(todos).forEach((todo) => {
       if (todo.inserts.length > 0) {
-        const meta = todo.inserts[0].__orm.metadata;
+        const meta = todo.metadata;
         const sequenceName = `${meta.tableName}_id_seq`;
         const sql = `select nextval('${sequenceName}') from generate_series(1, ${
           todo.inserts.filter((e) => e.id === undefined).length

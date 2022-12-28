@@ -51,7 +51,9 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
 
 /** getOrSets a `Todo` for `entity` in `todos`. */
 export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
-  return (todos[getMetadata(entity).type] ??= new Todo(entity.__orm.metadata));
+  const meta = getMetadata(entity);
+  const maybeBase = meta.baseTypes[0] || meta;
+  return (todos[maybeBase.type] ??= new Todo(maybeBase));
 }
 
 export interface JoinRowTodo {

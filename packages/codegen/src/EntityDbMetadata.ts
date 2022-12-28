@@ -16,7 +16,14 @@ import {
   superstructConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
-import { fail, isEnumTable, isJoinTable, mapSimpleDbTypeToTypescriptType, tableToEntityName } from "./utils";
+import {
+  fail,
+  isEnumTable,
+  isJoinTable,
+  isSubClassTable,
+  mapSimpleDbTypeToTypescriptType,
+  tableToEntityName,
+} from "./utils";
 
 /** All the entities + enums in our database. */
 export interface DbMetadata {
@@ -190,12 +197,17 @@ export class EntityDbMetadata {
   createdAt: PrimitiveField | undefined;
   updatedAt: PrimitiveField | undefined;
   deletedAt: PrimitiveField | undefined;
+  baseClassName: string | undefined;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
     this.idDbType =
       table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ??
       fail(`No primary key found for ${table.name}`);
+
+    if (isSubClassTable(table)) {
+      this.baseClassName = tableToEntityName(config, table.columns.get("id").foreignKeys[0].referencedTable);
+    }
 
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
@@ -224,6 +236,7 @@ export class EntityDbMetadata {
       .filter((r) => !isEnumTable(config, r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isComponentOfPolymorphicRelation(config, r))
+      .filter((r) => !isBaseClassForeignKey(r))
       .map((r) => newManyToOneField(config, this.entity, r))
       .filter((f) => !f.ignore);
 
@@ -242,6 +255,7 @@ export class EntityDbMetadata {
       // ManyToMany join tables also show up as OneToMany tables in pg-structure
       .filter((r) => !isJoinTable(config, r.targetTable))
       .filter((r) => !isMultiColumnForeignKey(r))
+      .filter((r) => !isBaseClassForeignKey(r))
       .filter((r) => isOneToOneRelation(r))
       .map((r) => newOneToOne(config, this.entity, r))
       .filter((f) => !f.ignore);
@@ -279,6 +293,10 @@ export class EntityDbMetadata {
 
 function isMultiColumnForeignKey(r: M2ORelation | O2MRelation | M2MRelation) {
   return r.foreignKey.columns.length > 1;
+}
+
+function isBaseClassForeignKey(r: M2ORelation | O2MRelation | M2MRelation) {
+  return r.foreignKey.columns.length === 1 && r.foreignKey.columns[0].name === "id";
 }
 
 function isOneToOneRelation(r: O2MRelation) {

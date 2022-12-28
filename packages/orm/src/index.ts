@@ -231,6 +231,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
   metas.forEach((meta) => {
     // Add each constructor into our tag -> constructor map for future lookups
     tagToConstructorMap.set(meta.tagName, meta.cstr);
+    // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
         const field = meta.fields[rule.fn.field];
@@ -240,6 +241,20 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         field.immutable = true;
       }
     });
+  });
+
+  // Setup subTypes/baseTypes
+  const metaByName = metas.reduce((acc, m) => {
+    acc[m.type] = m;
+    return acc;
+  }, {} as Record<string, EntityMetadata<any>>);
+  metas.forEach((m) => {
+    // Only supporting one level of inheritance for now
+    if (m.baseType) {
+      const b = metaByName[m.baseType];
+      m.baseTypes.push(b);
+      b.subTypes.push(m);
+    }
   });
 
   // Now hook up our reactivity

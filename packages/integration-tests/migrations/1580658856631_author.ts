@@ -26,14 +26,6 @@ export function up(b: MigrationBuilder): void {
     ["BIG", "Big"],
   ]);
 
-  // Create two subclass tables
-  createSubTable(b, "publishers", "small_publishers", {
-    city: "text",
-  });
-  createSubTable(b, "publishers", "large_publishers", {
-    country: "text",
-  });
-
   createEntityTable(b, "tags", {
     name: { type: "varchar(255)", notNull: true },
   });
@@ -47,6 +39,14 @@ export function up(b: MigrationBuilder): void {
     huge_number: { type: "numeric(17, 0)", notNull: false },
     // for testing large collections
     tag_id: foreignKey("tags", { notNull: false }),
+  });
+
+  // Create two subclass tables
+  createSubTable(b, "publishers", "small_publishers", {
+    city: "text",
+  });
+  createSubTable(b, "publishers", "large_publishers", {
+    country: "text",
   });
 
   createEnumTable(b, "color", [

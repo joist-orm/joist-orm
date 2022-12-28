@@ -67,6 +67,7 @@
   "Critic": ["createdAt", "critic", "criticColumn", "id", "name", "updatedAt"],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
+  "LargePublisher": ["country", "id"],
   "Mutation": [
     "saveAuthor",
     "saveAuthorStat",
@@ -77,7 +78,9 @@
     "saveCritic",
     "saveCriticColumn",
     "saveImage",
+    "saveLargePublisher",
     "savePublisher",
+    "saveSmallPublisher",
     "saveTag"
   ],
   "Publisher": [
@@ -88,10 +91,12 @@
     "hugeNumber",
     "id",
     "images",
+    "largePublisher",
     "latitude",
     "longitude",
     "name",
     "size",
+    "smallPublisher",
     "tag",
     "type",
     "updatedAt"
@@ -147,6 +152,8 @@
   "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
+  "SaveLargePublisherInput": ["country", "id", "idId"],
+  "SaveLargePublisherResult": ["largePublisher"],
   "SavePublisherInput": [
     "createdAt",
     "hugeNumber",
@@ -160,7 +167,10 @@
     "updatedAt"
   ],
   "SavePublisherResult": ["publisher"],
+  "SaveSmallPublisherInput": ["city", "id", "idId"],
+  "SaveSmallPublisherResult": ["smallPublisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
+  "SmallPublisher": ["city", "id"],
   "Tag": ["books", "createdAt", "id", "name", "updatedAt"]
 }

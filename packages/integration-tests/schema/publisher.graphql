@@ -12,6 +12,8 @@ type Publisher {
   hugeNumber: Int
   type: PublisherType
   tag: Tag
+  largePublisher: LargePublisher
+  smallPublisher: SmallPublisher
 }
 
 input SavePublisherInput {

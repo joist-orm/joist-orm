@@ -31,7 +31,9 @@
     },
     "CriticColumn": { "tag": "cc" },
     "Image": { "tag": "i" },
+    "LargePublisher": { "tag": "lp" },
     "Publisher": { "tag": "p" },
+    "SmallPublisher": { "tag": "sp" },
     "Tag": { "relations": { "authors": { "large": true }, "publishers": { "large": true } }, "tag": "t" }
   },
   "entitiesDirectory": "./src/entities"

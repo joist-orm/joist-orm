@@ -1,7 +1,7 @@
 import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
-import { EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
+import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import {
   BaseEntity,
   BooleanFilter,
@@ -56,7 +56,7 @@ export interface ColumnMetaData {
 }
 
 /** Creates the base class with the boilerplate annotations. */
-export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata): Code {
+export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, tagName } = meta;
   const entityName = entity.name;
 
@@ -338,43 +338,81 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
   `
     : "";
 
+  const baseEntity = meta.baseClassName ? dbMeta.entities.find((e) => e.name === meta.baseClassName)! : undefined;
+  const hasSubEnties = dbMeta.entities.some((e) => e.baseClassName === meta.name);
+  const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}>`;
+  const maybeBaseFields = baseEntity ? code`extends ${imp(baseEntity.name + "Fields@./entities")}` : "";
+  const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
+  const maybeBaseIdOpts = baseEntity ? code`extends ${imp(baseEntity.name + "IdsOpts@./entities")}` : "";
+  const maybeBaseFilter = baseEntity ? code`extends ${imp(baseEntity.name + "Filter@./entities")}` : "";
+  const maybeBaseGqlFilter = baseEntity ? code`extends ${imp(baseEntity.name + "GraphQLFilter@./entities")}` : "";
+  const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
+  const maybeBaseId = baseEntity ? code` & Flavor<string, "${baseEntity.name}">` : "";
+
+  let cstr;
+  if (baseEntity) {
+    cstr = code`
+      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
+        // @ts-ignore
+        super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
+        ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
+      }
+    `;
+  } else if (hasSubEnties) {
+    cstr = code`
+      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
+        if (arguments.length === 4) {
+          // @ts-ignore
+          super(em, arguments[1], arguments[2], arguments[3]);
+        } else {
+          super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
+          ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
+        }
+      }
+    `;
+  } else {
+    cstr = code`
+      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
+        super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
+        ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
+      }
+    `;
+  }
+
   return code`
-    export type ${entityName}Id = ${Flavor}<string, "${entityName}">;
+    export type ${entityName}Id = ${Flavor}<string, "${entityName}"> ${maybeBaseId};
 
     ${generatePolymorphicTypes(meta)}
     
-    export interface ${entityName}Fields {
+    export interface ${entityName}Fields ${maybeBaseFields} {
       ${generateFieldsType(config, meta)}
     }
 
-    export interface ${entityName}Opts {
+    export interface ${entityName}Opts ${maybeBaseOpts} {
       ${generateOptsFields(config, meta)}
     }
 
-    export interface ${entityName}IdsOpts {
+    export interface ${entityName}IdsOpts ${maybeBaseIdOpts} {
       ${generateOptIdsFields(config, meta)}
     }
 
-    export interface ${entityName}Filter {
-      id?: ${ValueFilter}<${entityName}Id, never>;
+    export interface ${entityName}Filter ${maybeBaseFilter} {
       ${generateFilterFields(meta)}
     }
 
-    export interface ${entityName}GraphQLFilter {
-      id?: ${ValueGraphQLFilter}<${entityName}Id>;
+    export interface ${entityName}GraphQLFilter ${maybeBaseGqlFilter} {
       ${generateGraphQLFilterFields(meta)}
     }
 
-    export interface ${entityName}Order {
-      id?: ${OrderBy};
+    export interface ${entityName}Order ${maybeBaseOrder} {
       ${generateOrderFields(meta)}
     }
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
     ${generateDefaultValidationRules(meta, configName)}
-
-    export abstract class ${entityName}Codegen extends ${BaseEntity}<${EntityManager}> {
+    
+    export abstract class ${entityName}Codegen extends ${base} {
       static defaultValues: object = {
         ${defaultValues}
       };
@@ -390,10 +428,7 @@ export function generateEntityCodegenFile(config: Config, meta: EntityDbMetadata
       };
       ${[o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic]}
 
-      constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
-        super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
-        ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
-      }
+      ${cstr}
 
       get id(): ${entityName}Id | undefined {
         ${idCode}
@@ -609,6 +644,7 @@ function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {
+  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.name}Id, never>;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
     if (fieldType === "boolean") {
       return code`${fieldName}?: ${BooleanFilter}<${nullOrNever(notNull)}>;`;
@@ -635,10 +671,11 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
 }
 
 function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
+  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueGraphQLFilter}<${meta.entity.name}Id>;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType }) => {
     if (fieldType === "boolean") {
       return code`${fieldName}?: ${BooleanGraphQLFilter};`;
@@ -663,11 +700,11 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {
-  // Make our opts type
+  const maybeId = meta.baseClassName ? [] : [code`id?: ${OrderBy};`];
   const primitives = meta.primitives.map(({ fieldName }) => {
     return code`${fieldName}?: ${OrderBy};`;
   });
@@ -680,7 +717,7 @@ function generateOrderFields(meta: EntityDbMetadata): Code[] {
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.orderType};`;
   });
-  return [...primitives, ...enums, ...pgEnums, ...m2o];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o];
 }
 
 function maybeOptional(notNull: boolean): string {

@@ -19,11 +19,17 @@ export interface EntityMetadata<T extends Entity> {
   type: string;
   idType: "int" | "uuid";
   tableName: string;
+  /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
+  baseType: string | undefined;
   tagName: string;
   fields: Record<string, Field>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;
   factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
+  /** The list of base types for this subtype, e.g. for Dog it'd be [Animal, Mammal]. */
+  baseTypes: EntityMetadata<any>[];
+  /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
+  subTypes: EntityMetadata<any>[];
 }
 
 export type Field =

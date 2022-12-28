@@ -21,10 +21,13 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
 
   Object.values(fields).forEach((code) => code.asOneline());
 
+  const maybeBaseType = meta.baseClassName ? `"${meta.baseClassName}"` : undefined;
+
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
+      baseType: ${maybeBaseType},
       idType: "${meta.idDbType}",
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
@@ -36,6 +39,8 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       },
       config: ${entity.configConst},
       factory: ${imp(`new${entity.name}@./entities`)},
+      baseTypes: [],
+      subTypes: [],
     };
 
     (${entity.name} as any).metadata = ${entity.metaName};

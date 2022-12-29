@@ -11,6 +11,7 @@ import {
   EntityManager,
   EntityMetadata,
   FilterAndSettings,
+  getAllMetas,
   getMetadata,
   hasSerde,
   keyToNumber,
@@ -289,7 +290,11 @@ export class PostgresDriver implements Driver {
       if (todo) {
         const meta = todo.metadata;
         if (todo.inserts.length > 0) {
-          await batchInsert(knex, meta, todo.inserts);
+          if (meta.subTypes.length > 0) {
+            await batchInsertPerTable(knex, meta, todo.inserts);
+          } else {
+            await batchInsert(knex, meta, todo.inserts);
+          }
         }
         if (todo.updates.length > 0) {
           const { updatedAt } = todo.metadata.timestampFields;
@@ -369,9 +374,6 @@ export class PostgresDriver implements Driver {
 }
 
 async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
-  // We also use `.transacting` b/c even when `knex` is already a Transaction object,
-  // `batchInsert` w/o the `transacting` adds savepoints that we don't want/need.
   const fields = Object.values(meta.fields).filter(hasSerde);
   const columns = fields.flatMap((f) => f.serde.columns);
 
@@ -384,6 +386,25 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   `;
 
   await knex.raw(cleanSql(sql), bindings);
+}
+
+/** A version of `batchInsert` that supports table-per-class inheritance. */
+async function batchInsertPerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  const entitiesByType: Map<EntityMetadata<any>, Entity[]> = new Map();
+  entities.forEach((e) => {
+    getAllMetas(getMetadata(e)).forEach((m) => {
+      let list = entitiesByType.get(m);
+      if (!list) {
+        list = new Array();
+        entitiesByType.set(m, list);
+      }
+      list.push(e);
+    });
+  });
+  // Ideally we could do this in parallel
+  for await (const [meta, entities] of [...entitiesByType.entries()]) {
+    await batchInsert(knex, meta, entities);
+  }
 }
 
 // Uses a pg-specific syntax to issue a bulk update

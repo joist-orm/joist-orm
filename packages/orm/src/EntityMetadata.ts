@@ -23,6 +23,7 @@ export interface EntityMetadata<T extends Entity> {
   baseType: string | undefined;
   tagName: string;
   fields: Record<string, Field>;
+  allFields: Record<string, Field>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;
   factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
@@ -174,4 +175,23 @@ export function isReferenceField(ormField: Field): ormField is ManyToOneField | 
 
 export function isCollectionField(ormField: Field): ormField is OneToManyField | ManyToManyField {
   return ormField.kind === "o2m" || ormField.kind === "m2m";
+}
+
+export function getAllMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
+  return [...meta.baseTypes, meta];
+}
+
+export function getAllFields(meta: EntityMetadata<any>): Field[] {
+  if (!meta.baseType) {
+    return Object.values(meta.fields);
+  } else {
+    return getAllMetas(meta).flatMap((m) => Object.values(m.fields));
+  }
+}
+export function getBaseMeta(meta: EntityMetadata<any>): EntityMetadata<any> {
+  if (!meta.baseType) {
+    return meta;
+  } else {
+    return meta.baseTypes[0];
+  }
 }

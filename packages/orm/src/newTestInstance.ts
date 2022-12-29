@@ -3,6 +3,7 @@ import { Entity, isEntity } from "./Entity";
 import { ActualFactoryOpts, EntityConstructor, EntityManager, IdOf, isId, OptsOf } from "./EntityManager";
 import {
   EntityMetadata,
+  getAllFields,
   getMetadata,
   isManyToOneField,
   isOneToOneField,
@@ -46,7 +47,7 @@ export function newTestInstance<T extends Entity>(
 
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
   // instance of the entity. We'll do the o2m/other fields as a second pass.
-  const initialOpts = Object.values(meta.fields)
+  const initialOpts = getAllFields(meta)
     .map((field) => {
       const { fieldName } = field;
 

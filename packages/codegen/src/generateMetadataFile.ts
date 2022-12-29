@@ -32,6 +32,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
       fields: ${fields},
+      allFields: {},
       timestampFields: {
         createdAt: ${q(createdAt?.fieldName)},
         updatedAt: ${q(updatedAt?.fieldName)},

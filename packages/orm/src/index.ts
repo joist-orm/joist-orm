@@ -127,7 +127,7 @@ export function setOpts<T extends Entity>(
   const meta = getMetadata(entity);
 
   Object.entries(values as {}).forEach(([key, _value]) => {
-    const field = meta.fields[key];
+    const field = meta.allFields[key];
     if (!field) {
       throw new Error(`Unknown field ${key}`);
     }
@@ -249,11 +249,13 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     return acc;
   }, {} as Record<string, EntityMetadata<any>>);
   metas.forEach((m) => {
+    m.allFields = { ...m.fields };
     // Only supporting one level of inheritance for now
     if (m.baseType) {
       const b = metaByName[m.baseType];
       m.baseTypes.push(b);
       b.subTypes.push(m);
+      Object.assign(m.allFields, b.fields);
     }
   });
 

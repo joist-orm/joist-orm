@@ -140,7 +140,7 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
   return Object.fromEntries(
     Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
       const key = keyMaybeSuffix.replace(suffixRe, "");
-      const field = meta.fields[key];
+      const field = meta.allFields[key];
       if (field) {
         switch (field.kind) {
           case "m2m":
@@ -160,7 +160,7 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
         if (p && p.hint) {
           return Object.entries(convertToLoadHint(meta, p.hint));
         } else {
-          fail(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
+          fail(`Invalid hint on ${meta.tableName} ${JSON.stringify(hint)}`);
         }
       }
     }),

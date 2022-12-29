@@ -33,6 +33,7 @@ export class SequenceIdAssigner implements IdAssigner {
       let i = 0;
       Object.values(todos).forEach((todo) => {
         for (const insert of todo.inserts.filter((e) => e.id === undefined)) {
+          // Use todo.metadata so that all subtypes get their base type's tag
           insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
         }
       });

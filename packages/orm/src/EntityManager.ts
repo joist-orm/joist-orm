@@ -17,6 +17,7 @@ import {
   EntityMetadata,
   FieldStatus,
   GenericError,
+  getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
   getRelations,
@@ -736,7 +737,7 @@ export class EntityManager<C = unknown> {
       throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
     }
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
-    const { createdAt, updatedAt } = getMetadata(entity).timestampFields;
+    const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
     if (createdAt) {
       entity.__orm.data[createdAt] = new Date();
     }

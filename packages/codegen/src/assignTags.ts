@@ -21,6 +21,7 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
 
   dbMetadata.entities
     .filter((e) => !existingTags[e.name])
+    .filter((e) => !e.baseClassName)
     .forEach((e) => {
       const abbreviatedTag = guessTagName(e.name);
       const tagName = existingTagNames.includes(abbreviatedTag) ? camelCase(e.name) : abbreviatedTag;
@@ -31,6 +32,19 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
         oc.tag = tagName;
       }
       existingTagNames.push(tagName);
+    });
+
+  // Assign subtypes the same tag as the base
+  dbMetadata.entities
+    .filter((e) => e.baseClassName)
+    .forEach((e) => {
+      const oc = config.entities[e.name];
+      const tagName = config.entities[e.baseClassName!].tag;
+      if (!oc) {
+        config.entities[e.name] = { tag: tagName };
+      } else {
+        oc.tag = tagName;
+      }
     });
 
   // TODO ensure tags are unique

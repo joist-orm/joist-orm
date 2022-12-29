@@ -43,7 +43,7 @@ export function up(b: MigrationBuilder): void {
 
   // Create two subclass tables
   createSubTable(b, "publishers", "small_publishers", {
-    city: "text",
+    city: { type: "text", notNull: true },
   });
   createSubTable(b, "publishers", "large_publishers", {
     country: "text",

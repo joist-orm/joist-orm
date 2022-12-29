@@ -10,6 +10,7 @@ export async function createFlushFunction(db: Db, client: Client, config: Config
 
 function generateFlushFunction(config: Config, db: Db): string {
   const tables = db.tables.filter((t) => isEntityTable(config, t) || isJoinTable(config, t));
+  // Flush base tables before sub-tables.
   tables.sort((a, b) => {
     const i = isSubClassTable(a) ? 1 : -1;
     const j = isSubClassTable(b) ? 1 : -1;

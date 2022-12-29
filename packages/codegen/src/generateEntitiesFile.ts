@@ -11,7 +11,8 @@ export function generateEntitiesFile(
   enums: Table[],
   pgEnums: PgEnumData[],
 ): Code {
-  // Assume only 1 level of inheritance for now
+  // Output base types before subtypes, so that `class SmallPublisherCodegen extends Publisher` can
+  // immediately resolve the `Publisher` symbol. Assume only 1 level of inheritance for now.
   const baseClasses = entities.filter((e) => e.baseClassName === undefined);
   const subClasses = entities.filter((e) => e.baseClassName !== undefined);
   return code`

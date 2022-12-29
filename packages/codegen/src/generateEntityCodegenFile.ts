@@ -338,6 +338,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   `
     : "";
 
+  // Set up the codegen artifacts to extend from the base type if necessary
   const baseEntity = meta.baseClassName ? dbMeta.entities.find((e) => e.name === meta.baseClassName)! : undefined;
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
   const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}>`;

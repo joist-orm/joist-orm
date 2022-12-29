@@ -181,13 +181,6 @@ export function getAllMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
   return [...meta.baseTypes, meta];
 }
 
-export function getAllFields(meta: EntityMetadata<any>): Field[] {
-  if (!meta.baseType) {
-    return Object.values(meta.fields);
-  } else {
-    return getAllMetas(meta).flatMap((m) => Object.values(m.fields));
-  }
-}
 export function getBaseMeta(meta: EntityMetadata<any>): EntityMetadata<any> {
   if (!meta.baseType) {
     return meta;

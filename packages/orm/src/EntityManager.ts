@@ -1016,8 +1016,12 @@ export class EntityManager<C = unknown> {
     // See if this is already in our UoW
     let entity = this.findExistingInstance(id) as T;
     if (!entity) {
+      // Look for __class from the driver telling us which subtype to instantiate
+      const cstr = row.__class
+        ? meta.subTypes.find((st) => st.type === row.__class)?.cstr ?? fail(`Could not find subtype for ${row.__class}`)
+        : type;
       // Pass id as a hint that we're in hydrate mode
-      entity = new type(this, id);
+      entity = new cstr(this, id);
       Object.values(meta.fields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       // Usually if the entity already exists, we don't write over it, but in this case

@@ -1,8 +1,9 @@
-import { newSmallPublisher } from "./entities";
+import { insertLargePublisher, insertPublisher, insertSmallPublisher } from "@src/entities/inserts";
+import { LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "./entities";
 import { newEntityManager, testDriver } from "./setupDbTests";
 
 describe("Inheritance", () => {
-  it("can save a subtype", async () => {
+  it("can save a subtype into two tables", async () => {
     const em = newEntityManager();
     newSmallPublisher(em, { name: "sp1" });
     await em.flush();
@@ -26,5 +27,20 @@ describe("Inheritance", () => {
         city: "city",
       },
     ]);
+  });
+
+  it("can load a subtype from separate tables", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp2" });
+    await insertLargePublisher({ id: 2, country: "country" });
+
+    const em = newEntityManager();
+    const sp = await em.load(Publisher, "p:1");
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp).toMatchEntity({ city: "city" });
+
+    const lp = await em.load(Publisher, "p:2");
+    expect(lp).toBeInstanceOf(LargePublisher);
   });
 });

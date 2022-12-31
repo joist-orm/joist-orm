@@ -63,6 +63,14 @@ export function insertPublisher(row: {
   return testDriver.insert("publishers", row);
 }
 
+export function insertSmallPublisher(row: { id: number; city: string }) {
+  return testDriver.insert("small_publishers", row);
+}
+
+export function insertLargePublisher(row: { id: number; country: string }) {
+  return testDriver.insert("large_publishers", row);
+}
+
 export function insertTag(row: { id?: number; name: string }) {
   return testDriver.insert("tags", row);
 }

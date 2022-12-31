@@ -60,7 +60,24 @@ export class PostgresDriver implements Driver {
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);
-    return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
+    if (meta.subTypes.length === 0) {
+      return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
+    } else {
+      let q = knex.select("b.*").from(`${meta.tableName} AS b`);
+      meta.subTypes.forEach((st, i) => {
+        q.leftOuterJoin(`${st.tableName} AS s${i}`, "b.id", `s${i}.id`);
+      });
+      q.select(
+        knex.raw(
+          `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
+            meta.type
+          }' END as __class`,
+        ),
+      );
+      // CASE WHEN b_1.id IS NOT NULL THEN 1 WHEN b_0.id IS NOT NULL THEN 0 ELSE -1 END as _clazz
+      q.whereIn("b.id", untaggedIds);
+      return q;
+    }
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(

@@ -60,4 +60,14 @@ describe("Inheritance", () => {
     expect(lp).toBeInstanceOf(LargePublisher);
     expect(lp).toMatchEntity({ name: "lp2", country: "country" });
   });
+
+  it("can delete a subtype across separate tables", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+
+    const em = newEntityManager();
+    const sp = await em.load(Publisher, "p:1");
+    em.delete(sp);
+    await em.flush();
+  });
 });

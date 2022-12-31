@@ -178,7 +178,7 @@ export function isCollectionField(ormField: Field): ormField is OneToManyField |
 }
 
 export function getAllMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
-  return [...meta.baseTypes, meta];
+  return [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
 export function getBaseMeta(meta: EntityMetadata<any>): EntityMetadata<any> {

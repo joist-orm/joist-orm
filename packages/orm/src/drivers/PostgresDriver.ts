@@ -335,7 +335,11 @@ export class PostgresDriver implements Driver {
           }
         }
         if (todo.deletes.length > 0) {
-          await batchDelete(knex, meta, todo.deletes);
+          if (meta.subTypes.length > 0) {
+            await batchDeletePerTable(knex, meta, todo.deletes);
+          } else {
+            await batchDelete(knex, meta, todo.deletes);
+          }
         }
       }
     }
@@ -530,6 +534,19 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       "id",
       entities.map((e) => keyToNumber(meta, e.idTagged!).toString()),
     );
+}
+
+async function batchDeletePerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  await Promise.all(
+    getAllMetas(meta).map((meta) =>
+      knex(meta.tableName)
+        .del()
+        .whereIn(
+          "id",
+          entities.map((e) => keyToNumber(meta, e.idTagged!).toString()),
+        ),
+    ),
+  );
 }
 
 /** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */

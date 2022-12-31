@@ -29,7 +29,7 @@ describe("Inheritance", () => {
     ]);
   });
 
-  it("can load a subtype from separate tables", async () => {
+  it("can load a subtype from separate tables via the base type", async () => {
     await insertPublisher({ name: "sp1" });
     await insertSmallPublisher({ id: 1, city: "city" });
     await insertPublisher({ name: "lp2" });
@@ -38,9 +38,26 @@ describe("Inheritance", () => {
     const em = newEntityManager();
     const sp = await em.load(Publisher, "p:1");
     expect(sp).toBeInstanceOf(SmallPublisher);
-    expect(sp).toMatchEntity({ city: "city" });
+    expect(sp as SmallPublisher).toMatchEntity({ name: "sp1", city: "city" });
 
     const lp = await em.load(Publisher, "p:2");
     expect(lp).toBeInstanceOf(LargePublisher);
+    expect(lp as LargePublisher).toMatchEntity({ name: "lp2", country: "country" });
+  });
+
+  it("can load a subtype from separate tables via the sub type", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp2" });
+    await insertLargePublisher({ id: 2, country: "country" });
+
+    const em = newEntityManager();
+    const sp = await em.load(SmallPublisher, "p:1");
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp).toMatchEntity({ name: "sp1", city: "city" });
+
+    const lp = await em.load(LargePublisher, "p:2");
+    expect(lp).toBeInstanceOf(LargePublisher);
+    expect(lp).toMatchEntity({ name: "lp2", country: "country" });
   });
 });

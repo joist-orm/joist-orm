@@ -1011,23 +1011,25 @@ export class EntityManager<C = unknown> {
    * the WIP entity state.
    */
   public hydrate<T extends Entity>(type: EntityConstructor<T>, row: any, options?: { overwriteExisting?: boolean }): T {
-    const meta = getMetadata(type);
-    const id = keyToString(meta, row["id"]) || fail("No id column was available");
+    const maybeBaseMeta = getMetadata(type);
+    const id = keyToString(maybeBaseMeta, row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
     let entity = this.findExistingInstance(id) as T;
     if (!entity) {
       // Look for __class from the driver telling us which subtype to instantiate
-      const cstr = row.__class
-        ? meta.subTypes.find((st) => st.type === row.__class)?.cstr ?? fail(`Could not find subtype for ${row.__class}`)
-        : type;
+      const meta = row.__class
+        ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ??
+          fail(`Could not find subtype for ${row.__class}`)
+        : maybeBaseMeta;
       // Pass id as a hint that we're in hydrate mode
-      entity = new cstr(this, id);
-      Object.values(meta.fields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+      entity = new meta.cstr(this, id);
+      Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
+      const meta = getMetadata(entity);
       // Usually if the entity already exists, we don't write over it, but in this case
       // we assume that `EntityManager.refresh` is telling us to explicitly load the
       // latest data.
-      Object.values(meta.fields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+      Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     }
     return entity;
   }

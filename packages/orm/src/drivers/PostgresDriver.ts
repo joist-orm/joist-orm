@@ -60,21 +60,29 @@ export class PostgresDriver implements Driver {
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);
-    if (meta.subTypes.length === 0) {
+    if (meta.subTypes.length === 0 && meta.baseTypes.length === 0) {
       return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
     } else {
-      let q = knex.select("b.*").from(`${meta.tableName} AS b`);
+      // Make sure we get the base id because we're doing a `select *`
+      const q = knex.select("*").select("b.id AS id").from(`${meta.tableName} AS b`);
+      // When `.load(Publisher)` is called, join in sub-tables
       meta.subTypes.forEach((st, i) => {
         q.leftOuterJoin(`${st.tableName} AS s${i}`, "b.id", `s${i}.id`);
       });
-      q.select(
-        knex.raw(
-          `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
-            meta.type
-          }' END as __class`,
-        ),
-      );
-      // CASE WHEN b_1.id IS NOT NULL THEN 1 WHEN b_0.id IS NOT NULL THEN 0 ELSE -1 END as _clazz
+      // When `.load(SmallPublisher)` is called, join in base tables
+      meta.baseTypes.forEach((bt, i) => {
+        q.join(`${bt.tableName} AS b${i}`, "b.id", `b${i}.id`);
+      });
+      // We only need subtype detection if loading from the base type
+      if (meta.subTypes.length > 0) {
+        q.select(
+          knex.raw(
+            `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
+              meta.type
+            }' END as __class`,
+          ),
+        );
+      }
       q.whereIn("b.id", untaggedIds);
       return q;
     }

@@ -1,0 +1,21 @@
+extend type Mutation {
+  savePublisherGroup(input: SavePublisherGroupInput!): SavePublisherGroupResult!
+}
+
+type PublisherGroup {
+  id: ID!
+  name: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  publishers: [Publisher!]!
+  critics: [Critic!]!
+}
+
+input SavePublisherGroupInput {
+  id: ID
+  name: String
+}
+
+type SavePublisherGroupResult {
+  publisherGroup: PublisherGroup!
+}

@@ -1,0 +1,19 @@
+extend type Mutation {
+  saveLargePublisher(input: SaveLargePublisherInput!): SaveLargePublisherResult!
+}
+
+type LargePublisher {
+  id: ID!
+  country: String
+  id: Publisher!
+}
+
+input SaveLargePublisherInput {
+  id: ID
+  country: String
+  idId: ID
+}
+
+type SaveLargePublisherResult {
+  largePublisher: LargePublisher!
+}

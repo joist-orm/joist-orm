@@ -1,0 +1,19 @@
+extend type Mutation {
+  saveSmallPublisher(input: SaveSmallPublisherInput!): SaveSmallPublisherResult!
+}
+
+type SmallPublisher {
+  id: ID!
+  city: String
+  id: Publisher!
+}
+
+input SaveSmallPublisherInput {
+  id: ID
+  city: String
+  idId: ID
+}
+
+type SaveSmallPublisherResult {
+  smallPublisher: SmallPublisher!
+}

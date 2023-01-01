@@ -15,6 +15,7 @@ type Publisher {
   largePublisher: LargePublisher
   smallPublisher: SmallPublisher
   group: PublisherGroup
+  tags: [Tag!]!
 }
 
 input SavePublisherInput {

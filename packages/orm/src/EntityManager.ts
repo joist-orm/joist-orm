@@ -1018,8 +1018,7 @@ export class EntityManager<C = unknown> {
     if (!entity) {
       // Look for __class from the driver telling us which subtype to instantiate
       const meta = row.__class
-        ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ??
-          fail(`Could not find subtype for ${row.__class}`)
+        ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
         : maybeBaseMeta;
       // Pass id as a hint that we're in hydrate mode
       entity = new meta.cstr(this, id);

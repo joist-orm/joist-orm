@@ -29,7 +29,7 @@ export function up(b: MigrationBuilder): void {
   // Used for:
   // - Tag.books is a regular m2m
   // - Tag.authors is a large m2m
-  // - Tag.publishers is a large o2m
+  // - Tag.publishers is a table-per-class m2m
   createEntityTable(b, "tags", {
     name: { type: "varchar(255)", notNull: true },
   });
@@ -44,8 +44,6 @@ export function up(b: MigrationBuilder): void {
     latitude: { type: "numeric(9, 6)", notNull: false },
     longitude: { type: "numeric(9, 6)", notNull: false },
     huge_number: { type: "numeric(17, 0)", notNull: false },
-    // for testing large collections
-    tag_id: foreignKey("tags", { notNull: false }),
     // for testing table-per-class o2ms
     group_id: foreignKey("publisher_groups", { notNull: false }),
   });
@@ -153,13 +151,14 @@ export function up(b: MigrationBuilder): void {
     is_public: { type: "boolean", notNull: true },
   });
 
-  // for testing ignore of many to many
+  // for testing ignore of m2m
   createManyToManyTable(b, "critics_to_tags", "critics", "tags");
-
-  // for testing large many to many
+  // for testing large m2m
   createManyToManyTable(b, "authors_to_tags", "authors", "tags");
-
+  // for testing regular m2m
   createManyToManyTable(b, "books_to_tags", "books", "tags");
+  // for testing table-per-class m2m
+  createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
 
   createEnumTable(b, "image_type", [
     ["BOOK_IMAGE", "Book Image"],

@@ -100,6 +100,7 @@
     "size",
     "smallPublisher",
     "tag",
+    "tags",
     "type",
     "updatedAt"
   ],
@@ -178,5 +179,5 @@
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
   "SmallPublisher": ["city", "id"],
-  "Tag": ["books", "createdAt", "id", "name", "updatedAt"]
+  "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"]
 }

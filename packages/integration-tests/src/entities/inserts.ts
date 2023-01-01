@@ -58,7 +58,6 @@ export function insertPublisher(row: {
   latitude?: string | number;
   huge_number?: string | number;
   size_id?: number;
-  tag_id?: number;
   group_id?: number;
 }) {
   return testDriver.insert("publishers", row);
@@ -82,6 +81,10 @@ export function insertPublisherGroup(row: { id?: number; name: string }) {
 
 export function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
   return testDriver.insert("books_to_tags", row);
+}
+
+export function insertPublisherToTag(row: { id?: number; publisher_id: number; tag_id: number }) {
+  return testDriver.insert("publishers_to_tags", row);
 }
 
 export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {

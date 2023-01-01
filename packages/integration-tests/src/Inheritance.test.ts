@@ -3,9 +3,20 @@ import {
   insertLargePublisher,
   insertPublisher,
   insertPublisherGroup,
+  insertPublisherToTag,
   insertSmallPublisher,
+  insertTag,
 } from "@src/entities/inserts";
-import { Author, LargePublisher, newSmallPublisher, Publisher, PublisherGroup, SmallPublisher } from "./entities";
+import {
+  Author,
+  LargePublisher,
+  newPublisher,
+  newSmallPublisher,
+  Publisher,
+  PublisherGroup,
+  SmallPublisher,
+  Tag,
+} from "./entities";
 import { newEntityManager, testDriver } from "./setupDbTests";
 
 describe("Inheritance", () => {
@@ -21,7 +32,6 @@ describe("Inheritance", () => {
         longitude: null,
         name: "sp1",
         size_id: null,
-        tag_id: null,
         type_id: 1,
         created_at: expect.any(Date),
         updated_at: expect.any(Date),
@@ -33,6 +43,26 @@ describe("Inheritance", () => {
         city: "city",
       },
     ]);
+  });
+
+  it("can insert just a base type", async () => {
+    const em = newEntityManager();
+    newPublisher(em, { name: "sp1" });
+    await em.flush();
+    expect(await testDriver.select("publishers")).toMatchObject([
+      {
+        id: 1,
+        huge_number: null,
+        latitude: null,
+        longitude: null,
+        name: "sp1",
+        size_id: null,
+        type_id: 2,
+        created_at: expect.any(Date),
+        updated_at: expect.any(Date),
+      },
+    ]);
+    expect(await testDriver.select("small_publishers")).toMatchObject([]);
   });
 
   it("can update a subtype across two tables", async () => {
@@ -56,6 +86,21 @@ describe("Inheritance", () => {
     ]);
     expect(await testDriver.select("small_publishers")).toMatchObject([{ id: 1, city: "citya" }]);
     expect(await testDriver.select("large_publishers")).toMatchObject([{ id: 2, country: "countrya" }]);
+  });
+
+  it("can update just a base type", async () => {
+    await insertPublisher({ name: "p1" });
+
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1");
+    expect(p).toBeInstanceOf(Publisher);
+    expect(p).not.toBeInstanceOf(SmallPublisher);
+    expect(p).not.toBeInstanceOf(LargePublisher);
+
+    p.name = "pa";
+    await em.flush();
+
+    expect(await testDriver.select("publishers")).toMatchObject([{ id: 1, name: "pa" }]);
   });
 
   it("can load a subtype from separate tables via the base type", async () => {
@@ -130,6 +175,26 @@ describe("Inheritance", () => {
     const em = newEntityManager();
     const pg = await em.load(PublisherGroup, "pg:1", "publishers");
     const [sp, lp] = pg.publishers.get;
+
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp as SmallPublisher).toMatchEntity({ name: "sp1", city: "city" });
+
+    expect(lp).toBeInstanceOf(LargePublisher);
+    expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
+  });
+
+  it("can load m2m across separate tables", async () => {
+    await insertTag({ name: "t" });
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp1" });
+    await insertLargePublisher({ id: 2, country: "country" });
+    await insertPublisherToTag({ publisher_id: 1, tag_id: 1 });
+    await insertPublisherToTag({ publisher_id: 2, tag_id: 1 });
+
+    const em = newEntityManager();
+    const tag = await em.load(Tag, "t:1", "publishers");
+    const [sp, lp] = tag.publishers.get;
 
     expect(sp).toBeInstanceOf(SmallPublisher);
     expect(sp as SmallPublisher).toMatchEntity({ name: "sp1", city: "city" });

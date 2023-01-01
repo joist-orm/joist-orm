@@ -574,14 +574,16 @@ function getNow(): Date {
 function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, Entity[]]> {
   const entitiesByType: Map<EntityMetadata<any>, Entity[]> = new Map();
   entities.forEach((e) => {
-    getAllMetas(getMetadata(e)).forEach((m) => {
-      let list = entitiesByType.get(m);
-      if (!list) {
-        list = [];
-        entitiesByType.set(m, list);
-      }
-      list.push(e);
-    });
+    getAllMetas(getMetadata(e))
+      .filter((m) => e instanceof m.cstr)
+      .forEach((m) => {
+        let list = entitiesByType.get(m);
+        if (!list) {
+          list = [];
+          entitiesByType.set(m, list);
+        }
+        list.push(e);
+      });
   });
   return [...entitiesByType.entries()];
 }

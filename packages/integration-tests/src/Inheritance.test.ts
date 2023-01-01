@@ -45,7 +45,7 @@ describe("Inheritance", () => {
     ]);
   });
 
-  it("can insert just a base type", async () => {
+  it("can insert a base-only instance", async () => {
     const em = newEntityManager();
     newPublisher(em, { name: "sp1" });
     await em.flush();
@@ -88,7 +88,7 @@ describe("Inheritance", () => {
     expect(await testDriver.select("large_publishers")).toMatchObject([{ id: 2, country: "countrya" }]);
   });
 
-  it("can update just a base type", async () => {
+  it("can update just base-only instance", async () => {
     await insertPublisher({ name: "p1" });
 
     const em = newEntityManager();

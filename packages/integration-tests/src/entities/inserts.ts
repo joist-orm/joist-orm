@@ -106,6 +106,9 @@ export function insertImage(row: {
   return testDriver.insert("images", row);
 }
 
+export function insertCritic(row: { id?: number; name: string; group_id?: number }) {
+  return testDriver.insert("critics", row);
+}
 export function countOfBooks() {
   return testDriver.count("books");
 }

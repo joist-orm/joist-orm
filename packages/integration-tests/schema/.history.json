@@ -64,7 +64,7 @@
   "BookReview": ["book", "comment", "createdAt", "id", "isPublic", "parent", "parentComment", "rating", "updatedAt"],
   "Comment": ["createdAt", "id", "parent", "text", "updatedAt"],
   "CommentParent": ["Author", "Book", "BookReview", "Publisher"],
-  "Critic": ["createdAt", "critic", "criticColumn", "id", "name", "updatedAt"],
+  "Critic": ["createdAt", "critic", "criticColumn", "group", "id", "name", "publisherGroup", "updatedAt"],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
   "LargePublisher": ["country", "id"],
@@ -104,7 +104,7 @@
     "type",
     "updatedAt"
   ],
-  "PublisherGroup": ["createdAt", "id", "name", "publishers", "updatedAt"],
+  "PublisherGroup": ["createdAt", "critics", "id", "name", "publishers", "updatedAt"],
   "SaveAuthorInput": [
     "address",
     "age",
@@ -152,7 +152,7 @@
   "SaveCommentResult": ["comment"],
   "SaveCriticColumnInput": ["criticId", "id", "name"],
   "SaveCriticColumnResult": ["criticColumn"],
-  "SaveCriticInput": ["createdAt", "id", "name", "updatedAt"],
+  "SaveCriticInput": ["createdAt", "groupId", "id", "name", "publisherGroupId", "updatedAt"],
   "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],

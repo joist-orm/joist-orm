@@ -4,6 +4,8 @@ type Critic {
   createdAt: Date!
   updatedAt: Date!
   critic: CriticColumn
+  publisherGroup: PublisherGroup
+  group: PublisherGroup
 }
 
 extend type Mutation {
@@ -15,6 +17,8 @@ input SaveCriticInput {
   name: String
   createdAt: Date
   updatedAt: Date
+  publisherGroupId: ID
+  groupId: ID
 }
 
 type SaveCriticResult {

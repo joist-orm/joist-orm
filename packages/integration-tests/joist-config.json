@@ -33,7 +33,7 @@
     "Image": { "tag": "i" },
     "LargePublisher": { "tag": "p" },
     "Publisher": { "tag": "p" },
-    "PublisherGroup": { "tag": "pg" },
+    "PublisherGroup": { "relations": { "critics": { "large": true } }, "tag": "pg" },
     "SmallPublisher": { "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" }
   },

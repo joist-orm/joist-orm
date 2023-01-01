@@ -136,6 +136,8 @@ export function up(b: MigrationBuilder): void {
     // ignore test
     ignore_favourite_book_id: foreignKey("books", { notNull: false }),
     ignore_worst_book_id: foreignKey("books", { notNull: false, unique: true }),
+    // for testing large o2ms
+    group_id: foreignKey("publisher_groups", { notNull: false }),
   });
 
   // for testing a required m2o -> o2o

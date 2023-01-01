@@ -26,9 +26,16 @@ export function up(b: MigrationBuilder): void {
     ["BIG", "Big"],
   ]);
 
+  // Used for:
+  // - Tag.books is a regular m2m
+  // - Tag.authors is a large m2m
+  // - Tag.publishers is a large o2m
   createEntityTable(b, "tags", {
     name: { type: "varchar(255)", notNull: true },
   });
+
+  // Used for PublisherGroup.publishers to test table-per-class o2ms
+  createEntityTable(b, "publisher_groups", { name: "text" });
 
   createEntityTable(b, "publishers", {
     name: { type: "varchar(255)", notNull: true },
@@ -39,6 +46,8 @@ export function up(b: MigrationBuilder): void {
     huge_number: { type: "numeric(17, 0)", notNull: false },
     // for testing large collections
     tag_id: foreignKey("tags", { notNull: false }),
+    // for testing table-per-class o2ms
+    group_id: foreignKey("publisher_groups", { notNull: false }),
   });
 
   // Create two subclass tables

@@ -80,6 +80,7 @@
     "saveImage",
     "saveLargePublisher",
     "savePublisher",
+    "savePublisherGroup",
     "saveSmallPublisher",
     "saveTag"
   ],
@@ -88,6 +89,7 @@
     "bookAdvances",
     "comments",
     "createdAt",
+    "group",
     "hugeNumber",
     "id",
     "images",
@@ -101,6 +103,7 @@
     "type",
     "updatedAt"
   ],
+  "PublisherGroup": ["createdAt", "id", "name", "publishers", "updatedAt"],
   "SaveAuthorInput": [
     "address",
     "age",
@@ -154,8 +157,11 @@
   "SaveImageResult": ["image"],
   "SaveLargePublisherInput": ["country", "id", "idId"],
   "SaveLargePublisherResult": ["largePublisher"],
+  "SavePublisherGroupInput": ["id", "name"],
+  "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
     "createdAt",
+    "groupId",
     "hugeNumber",
     "id",
     "latitude",

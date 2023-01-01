@@ -26,6 +26,7 @@ import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
 import { Driver } from "./driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
+import QueryBuilder = Knex.QueryBuilder;
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
@@ -60,30 +61,13 @@ export class PostgresDriver implements Driver {
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);
-    if (meta.subTypes.length === 0 && meta.baseTypes.length === 0) {
-      return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
+    if (!needsClassPerTableJoins(meta)) {
+      return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds).orderBy("id");
     } else {
       // Make sure we get the base id because we're doing a `select *`
       const q = knex.select("*").select("b.id AS id").from(`${meta.tableName} AS b`);
-      // When `.load(Publisher)` is called, join in sub-tables
-      meta.subTypes.forEach((st, i) => {
-        q.leftOuterJoin(`${st.tableName} AS s${i}`, "b.id", `s${i}.id`);
-      });
-      // When `.load(SmallPublisher)` is called, join in base tables
-      meta.baseTypes.forEach((bt, i) => {
-        q.join(`${bt.tableName} AS b${i}`, "b.id", `b${i}.id`);
-      });
-      // We only need subtype detection if loading from the base type
-      if (meta.subTypes.length > 0) {
-        q.select(
-          knex.raw(
-            `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
-              meta.type
-            }' END as __class`,
-          ),
-        );
-      }
-      q.whereIn("b.id", untaggedIds);
+      addTablePerClassJoinsAndClassTag(knex, meta, q);
+      q.whereIn("b.id", untaggedIds).orderBy("b.id");
       return q;
     }
   }
@@ -146,13 +130,17 @@ export class PostgresDriver implements Driver {
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
-  ): Promise<U[]> {
+  ): Promise<unknown[]> {
+    const meta = collection.otherMeta;
     const knex = this.getMaybeInTxnKnex(em);
-    return knex
-      .select("*")
-      .from(collection.otherMeta.tableName)
-      .whereIn(collection.otherColumnName, untaggedIds)
-      .orderBy("id");
+    if (!needsClassPerTableJoins(meta)) {
+      return knex.select("*").from(meta.tableName).whereIn(collection.otherColumnName, untaggedIds).orderBy("id");
+    } else {
+      const q = knex.select("*").select("b.id AS id").from(`${meta.tableName} AS b`);
+      addTablePerClassJoinsAndClassTag(knex, meta, q);
+      q.whereIn(collection.otherColumnName, untaggedIds).orderBy("b.id");
+      return q;
+    }
   }
 
   findOneToMany<T extends Entity, U extends Entity>(
@@ -596,4 +584,29 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, E
     });
   });
   return [...entitiesByType.entries()];
+}
+
+function addTablePerClassJoinsAndClassTag(knex: Knex, meta: EntityMetadata<any>, q: QueryBuilder): void {
+  // When `.load(Publisher)` is called, join in sub-tables
+  meta.subTypes.forEach((st, i) => {
+    q.leftOuterJoin(`${st.tableName} AS s${i}`, "b.id", `s${i}.id`);
+  });
+  // When `.load(SmallPublisher)` is called, join in base tables
+  meta.baseTypes.forEach((bt, i) => {
+    q.join(`${bt.tableName} AS b${i}`, "b.id", `b${i}.id`);
+  });
+  // We only need subtype detection if loading from the base type
+  if (meta.subTypes.length > 0) {
+    q.select(
+      knex.raw(
+        `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
+          meta.type
+        }' END as __class`,
+      ),
+    );
+  }
+}
+
+function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
+  return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }

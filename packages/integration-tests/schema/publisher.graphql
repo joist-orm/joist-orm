@@ -14,6 +14,7 @@ type Publisher {
   tag: Tag
   largePublisher: LargePublisher
   smallPublisher: SmallPublisher
+  group: PublisherGroup
 }
 
 input SavePublisherInput {
@@ -27,6 +28,7 @@ input SavePublisherInput {
   hugeNumber: Int
   type: PublisherType
   tagId: ID
+  groupId: ID
 }
 
 type SavePublisherResult {

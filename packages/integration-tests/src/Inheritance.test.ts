@@ -1,5 +1,11 @@
-import { insertLargePublisher, insertPublisher, insertSmallPublisher } from "@src/entities/inserts";
-import { LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "./entities";
+import {
+  insertAuthor,
+  insertLargePublisher,
+  insertPublisher,
+  insertPublisherGroup,
+  insertSmallPublisher,
+} from "@src/entities/inserts";
+import { Author, LargePublisher, newSmallPublisher, Publisher, PublisherGroup, SmallPublisher } from "./entities";
 import { newEntityManager, testDriver } from "./setupDbTests";
 
 describe("Inheritance", () => {
@@ -92,5 +98,43 @@ describe("Inheritance", () => {
     const sp = await em.load(Publisher, "p:1");
     em.delete(sp);
     await em.flush();
+  });
+
+  it("can load m2o across separate tables", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp1" });
+    await insertLargePublisher({ id: 2, country: "country" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const authors = await em.loadAll(Author, ["a:1", "a:2"], "publisher");
+
+    const sp = authors[0].publisher.get;
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp as SmallPublisher).toMatchEntity({ name: "sp1", city: "city" });
+
+    const lp = authors[1].publisher.get;
+    expect(lp).toBeInstanceOf(LargePublisher);
+    expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
+  });
+
+  it("can load o2m across separate tables", async () => {
+    await insertPublisherGroup({ name: "pg1" });
+    await insertPublisher({ name: "sp1", group_id: 1 });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp1", group_id: 1 });
+    await insertLargePublisher({ id: 2, country: "country" });
+
+    const em = newEntityManager();
+    const pg = await em.load(PublisherGroup, "pg:1", "publishers");
+    const [sp, lp] = pg.publishers.get;
+
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp as SmallPublisher).toMatchEntity({ name: "sp1", city: "city" });
+
+    expect(lp).toBeInstanceOf(LargePublisher);
+    expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
   });
 });

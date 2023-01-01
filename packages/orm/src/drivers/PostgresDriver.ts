@@ -329,7 +329,11 @@ export class PostgresDriver implements Driver {
               e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
               e.__orm.data[updatedAt] = now;
             });
-            await batchUpdate(knex, meta, todo.updates);
+            if (meta.subTypes.length > 0) {
+              await batchUpdatePerTable(knex, meta, todo.updates);
+            } else {
+              await batchUpdate(knex, meta, todo.updates);
+            }
           } else {
             await batchUpdateWithoutUpdatedAt(knex, meta, todo.updates);
           }
@@ -403,8 +407,9 @@ export class PostgresDriver implements Driver {
 }
 
 async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  const fields = Object.values(meta.fields).filter(hasSerde);
-  const columns = fields.flatMap((f) => f.serde.columns);
+  const columns = Object.values(meta.fields)
+    .filter(hasSerde)
+    .flatMap((f) => f.serde.columns);
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
@@ -419,27 +424,16 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 
 /** A version of `batchInsert` that supports table-per-class inheritance. */
 async function batchInsertPerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  const entitiesByType: Map<EntityMetadata<any>, Entity[]> = new Map();
-  entities.forEach((e) => {
-    getAllMetas(getMetadata(e)).forEach((m) => {
-      let list = entitiesByType.get(m);
-      if (!list) {
-        list = new Array();
-        entitiesByType.set(m, list);
-      }
-      list.push(e);
-    });
-  });
   // Ideally we could do this in parallel
-  for await (const [meta, entities] of [...entitiesByType.entries()]) {
-    await batchInsert(knex, meta, entities);
+  for await (const [meta, group] of groupEntitiesByTable(entities)) {
+    await batchInsert(knex, meta, group);
   }
 }
 
-// Uses a pg-specific syntax to issue a bulk update
 async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const { updatedAt } = meta.timestampFields;
   if (!updatedAt) throw new Error("This batchUpdate expects updatedAt");
+
   // Get the unique set of fields that are changed across all the entities (of this type) we want to bulk update
   const changedFields = new Set<string>(["id", updatedAt]);
   entities.forEach((entity) => {
@@ -453,10 +447,10 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     return;
   }
 
-  const fields = Object.values(meta.fields)
+  const columns = Object.values(meta.fields)
     .filter((f) => changedFields.has(f.fieldName))
-    .filter(hasSerde);
-  const columns = fields.flatMap((f) => f.serde.columns);
+    .filter(hasSerde)
+    .flatMap((f) => f.serde.columns);
   const updatedAtField = (meta.fields[updatedAt] as PrimitiveField).serde.columns[0].columnName;
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
@@ -490,7 +484,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 }
 
 async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
+  // Get the unique set of fields that are changed across the entities (of this type) we want to bulk update
   const changedFields = new Set<string>(["id"]);
   entities.forEach((entity) => {
     Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
@@ -503,10 +497,10 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
     return;
   }
 
-  const fields = Object.values(meta.fields)
+  const columns = Object.values(meta.fields)
     .filter((f) => changedFields.has(f.fieldName))
-    .filter(hasSerde);
-  const columns = fields.flatMap((f) => f.serde.columns);
+    .filter(hasSerde)
+    .flatMap((f) => f.serde.columns);
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
@@ -525,6 +519,20 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
         RETURNING "${meta.tableName}".id
   `;
   await knex.raw(cleanSql(sql), bindings);
+}
+
+/** Groups table-per-class entities by table and then calls `batchUpdate` for each table. */
+async function batchUpdatePerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  let first = true;
+  // Ideally we could do this in parallel
+  for await (const [meta, group] of groupEntitiesByTable(entities)) {
+    if (first) {
+      await batchUpdate(knex, meta, group);
+      first = false;
+    } else {
+      await batchUpdateWithoutUpdatedAt(knex, meta, group);
+    }
+  }
 }
 
 async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
@@ -573,4 +581,19 @@ function getNow(): Date {
   }
   lastNow = now;
   return now;
+}
+
+function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, Entity[]]> {
+  const entitiesByType: Map<EntityMetadata<any>, Entity[]> = new Map();
+  entities.forEach((e) => {
+    getAllMetas(getMetadata(e)).forEach((m) => {
+      let list = entitiesByType.get(m);
+      if (!list) {
+        list = [];
+        entitiesByType.set(m, list);
+      }
+      list.push(e);
+    });
+  });
+  return [...entitiesByType.entries()];
 }

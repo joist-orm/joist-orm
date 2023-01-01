@@ -3,7 +3,7 @@ import { LargePublisher, newSmallPublisher, Publisher, SmallPublisher } from "./
 import { newEntityManager, testDriver } from "./setupDbTests";
 
 describe("Inheritance", () => {
-  it("can save a subtype into two tables", async () => {
+  it("can insert a subtype into two tables", async () => {
     const em = newEntityManager();
     newSmallPublisher(em, { name: "sp1" });
     await em.flush();
@@ -27,6 +27,29 @@ describe("Inheritance", () => {
         city: "city",
       },
     ]);
+  });
+
+  it("can update a subtype across two tables", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp1" });
+    await insertLargePublisher({ id: 2, country: "country" });
+
+    const em = newEntityManager();
+    const sp = await em.load(SmallPublisher, "p:1");
+    sp.name = "spa";
+    sp.city = "citya";
+    const lp = await em.load(LargePublisher, "p:2");
+    lp.name = "lpa";
+    lp.country = "countrya";
+    await em.flush();
+
+    expect(await testDriver.select("publishers")).toMatchObject([
+      { id: 1, name: "spa" },
+      { id: 2, name: "lpa" },
+    ]);
+    expect(await testDriver.select("small_publishers")).toMatchObject([{ id: 1, city: "citya" }]);
+    expect(await testDriver.select("large_publishers")).toMatchObject([{ id: 2, country: "countrya" }]);
   });
 
   it("can load a subtype from separate tables via the base type", async () => {

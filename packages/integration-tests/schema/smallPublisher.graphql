@@ -5,13 +5,11 @@ extend type Mutation {
 type SmallPublisher {
   id: ID!
   city: String
-  id: Publisher!
 }
 
 input SaveSmallPublisherInput {
   id: ID
   city: String
-  idId: ID
 }
 
 type SaveSmallPublisherResult {

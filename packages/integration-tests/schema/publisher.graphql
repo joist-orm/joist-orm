@@ -11,9 +11,6 @@ type Publisher {
   longitude: Int
   hugeNumber: Int
   type: PublisherType
-  tag: Tag
-  largePublisher: LargePublisher
-  smallPublisher: SmallPublisher
   group: PublisherGroup
   tags: [Tag!]!
 }
@@ -28,7 +25,6 @@ input SavePublisherInput {
   longitude: Int
   hugeNumber: Int
   type: PublisherType
-  tagId: ID
   groupId: ID
 }
 

@@ -3,8 +3,6 @@ type Critic {
   name: String!
   createdAt: Date!
   updatedAt: Date!
-  critic: CriticColumn
-  publisherGroup: PublisherGroup
   group: PublisherGroup
 }
 
@@ -17,7 +15,6 @@ input SaveCriticInput {
   name: String
   createdAt: Date
   updatedAt: Date
-  publisherGroupId: ID
   groupId: ID
 }
 

@@ -23,7 +23,7 @@ export interface EntityMetadata<T extends Entity> {
   baseType: string | undefined;
   tagName: string;
   fields: Record<string, Field>;
-  allFields: Record<string, Field>;
+  allFields: Record<string, Field & { alias: string }>;
   config: ConfigApi<T, any>;
   timestampFields: TimestampFields;
   factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;

@@ -3,6 +3,7 @@ import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { abbreviation } from "./QueryBuilder";
 import { reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -251,13 +252,20 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     return acc;
   }, {} as Record<string, EntityMetadata<any>>);
   metas.forEach((m) => {
-    m.allFields = { ...m.fields };
+    const abbr = `${abbreviation(m.tableName)}0`;
+    // This is basically m.fields.mapValues to assign the primary alias
+    m.allFields = Object.fromEntries(
+      Object.entries(m.fields).map(([name, field]) => [name, { ...field, alias: abbr }]),
+    );
     // Only supporting one level of inheritance for now
     if (m.baseType) {
       const b = metaByName[m.baseType];
       m.baseTypes.push(b);
       b.subTypes.push(m);
-      Object.assign(m.allFields, b.fields);
+      Object.entries(b.fields).forEach(([name, field]) => {
+        // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
+        m.allFields[name] = { ...field, alias: "b0" };
+      });
     }
   });
 

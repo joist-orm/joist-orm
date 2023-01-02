@@ -226,8 +226,7 @@ describe("Inheritance", () => {
     await insertLargePublisher({ id: 2, country: "country" });
 
     const em = newEntityManager();
-    // TODO name: { like: "%p%" }
-    const [sp] = await em.find(SmallPublisher, { city: { like: "c%" } });
+    const [sp] = await em.find(SmallPublisher, { name: { like: "%p%" }, city: { like: "c%" } });
 
     expect(sp).toBeInstanceOf(SmallPublisher);
     expect(sp).toMatchEntity({ name: "sp1", city: "city" });

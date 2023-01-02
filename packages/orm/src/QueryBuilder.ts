@@ -304,10 +304,13 @@ export function buildQuery<T extends Entity>(
           addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
         }
       } else {
-        const serde = (meta.allFields[key] ?? fail(`${key} not found`)).serde!;
+        const field = meta.allFields[key] ?? fail(`${key} not found`);
+        const serde = field.serde!;
         // TODO Currently hardcoded to single-column support; poly is handled above this
         const column = serde.columns[0];
-        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+        // TODO Currently we only support base-type WHEREs if the sub-type is the main `em.find`
+        const maybeBaseAlias = field.alias;
+        query = hasClause ? addPrimitiveClause(query, maybeBaseAlias, column, clause) : query;
         // This is not a foreign key column, so it'll have the primitive filters/order bys
         if (order) {
           query = query.orderBy(`${alias}.${column.columnName}`, order);
@@ -332,7 +335,7 @@ export function buildQuery<T extends Entity>(
   return query as Knex.QueryBuilder<{}, unknown[]>;
 }
 
-function abbreviation(tableName: string): string {
+export function abbreviation(tableName: string): string {
   return tableName
     .split("_")
     .map((w) => w[0])

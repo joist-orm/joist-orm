@@ -29,7 +29,16 @@ export function isEntityTable(config: Config, t: Table): boolean {
     }
   }
 
+  // If the ID column is a FK then we're a subclass
+  if (isSubClassTable(t)) {
+    return true;
+  }
+
   return idMatch && (hasCreatedAt || !createdAtConf.required) && (hasUpdatedAt || !updatedAtConf.required);
+}
+
+export function isSubClassTable(t: Table): boolean {
+  return t.columns.get("id")?.foreignKeys.length === 1;
 }
 
 export function isEnumTable(config: Config, t: Table): boolean {

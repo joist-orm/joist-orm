@@ -15,6 +15,7 @@ import { JoinRowTodo, Todo } from "../Todo";
 
 /** Isolates all SQL calls that joist needs to make to fetch/save data. */
 export interface Driver {
+  /** Bulk loads all rows from the table(s) for `meta`, for all `untaggedIds`. */
   load<T extends Entity>(
     em: EntityManager,
     meta: EntityMetadata<T>,
@@ -37,12 +38,14 @@ export interface Driver {
     keys: readonly string[],
   ): Promise<JoinRow[]>;
 
+  /** Bulk loads all rows in a m2o, for all entities in `untaggedIds`. */
   loadOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 
+  /** Bulk loads selective rows in a m2o, for all entities encoded in `untaggedIds`. */
   findOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
@@ -50,6 +53,7 @@ export interface Driver {
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 
+  /** Batch loads o2o rows, for all entities in `untaggedIds`. */
   loadOneToOne<T extends Entity, U extends Entity>(
     em: EntityManager,
     reference: OneToOneReferenceImpl<T, U>,

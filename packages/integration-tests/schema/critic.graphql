@@ -3,7 +3,7 @@ type Critic {
   name: String!
   createdAt: Date!
   updatedAt: Date!
-  critic: CriticColumn
+  group: PublisherGroup
 }
 
 extend type Mutation {
@@ -15,6 +15,7 @@ input SaveCriticInput {
   name: String
   createdAt: Date
   updatedAt: Date
+  groupId: ID
 }
 
 type SaveCriticResult {

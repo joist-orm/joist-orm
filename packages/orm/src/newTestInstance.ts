@@ -46,7 +46,7 @@ export function newTestInstance<T extends Entity>(
 
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
   // instance of the entity. We'll do the o2m/other fields as a second pass.
-  const initialOpts = Object.values(meta.fields)
+  const initialOpts = Object.values(meta.allFields)
     .map((field) => {
       const { fieldName } = field;
 

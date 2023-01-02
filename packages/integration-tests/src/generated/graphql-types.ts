@@ -13,9 +13,12 @@ import {
   Critic,
   Image,
   ImageType,
+  LargePublisher,
   Publisher,
+  PublisherGroup,
   PublisherSize,
   PublisherType,
+  SmallPublisher,
   Tag,
 } from "@src/entities";
 
@@ -46,6 +49,17 @@ export type ImageResolvers = {
 export type PublisherResolvers = {
   name: Resolver<Publisher, any, string>;
 };
+export type LargePublisherResolvers = {
+  name: Resolver<LargePublisher, any, string>;
+  country: Resolver<LargePublisher, any, string | undefined>;
+};
+export type SmallPublisherResolvers = {
+  name: Resolver<SmallPublisher, any, string>;
+  city: Resolver<SmallPublisher, any, string>;
+};
+export type PublisherGroupResolvers = {
+  name: Resolver<PublisherGroup, any, string | undefined>;
+};
 export type TagResolvers = {
   name: Resolver<Tag, any, string>;
 };
@@ -61,6 +75,9 @@ export type SaveBookReviewInput = {};
 export type SaveCommentInput = {};
 export type SaveImageInput = {};
 export type SavePublisherInput = {};
+export type SaveSmallPublisherInput = {};
+export type SaveLargePublisherInput = {};
+export type SavePublisherGroupInput = {};
 export type SaveTagInput = {};
 export type SaveCriticInput = {};
 
@@ -73,6 +90,9 @@ export type MutationResolvers = {
   saveComment(root: any, args: any, ctx: Context, info: any): any;
   saveImage(root: any, args: any, ctx: Context, info: any): any;
   savePublisher(root: any, args: any, ctx: Context, info: any): any;
+  saveLargePublisher(root: any, args: any, ctx: Context, info: any): any;
+  saveSmallPublisher(root: any, args: any, ctx: Context, info: any): any;
+  savePublisherGroup(root: any, args: any, ctx: Context, info: any): any;
   saveTag(root: any, args: any, ctx: Context, info: any): any;
   saveCritic(root: any, args: any, ctx: Context, info: any): any;
 };

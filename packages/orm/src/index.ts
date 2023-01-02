@@ -3,6 +3,7 @@ import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { abbreviation } from "./QueryBuilder";
 import { reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -127,7 +128,7 @@ export function setOpts<T extends Entity>(
   const meta = getMetadata(entity);
 
   Object.entries(values as {}).forEach(([key, _value]) => {
-    const field = meta.fields[key];
+    const field = meta.allFields[key];
     if (!field) {
       throw new Error(`Unknown field ${key}`);
     }
@@ -229,8 +230,11 @@ const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
-    // Add each constructor into our tag -> constructor map for future lookups
-    tagToConstructorMap.set(meta.tagName, meta.cstr);
+    if (!meta.baseType) {
+      // Add each constructor into our tag -> constructor map for future lookups
+      tagToConstructorMap.set(meta.tagName, meta.cstr);
+    }
+    // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
         const field = meta.fields[rule.fn.field];
@@ -240,6 +244,29 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         field.immutable = true;
       }
     });
+  });
+
+  // Setup subTypes/baseTypes
+  const metaByName = metas.reduce((acc, m) => {
+    acc[m.type] = m;
+    return acc;
+  }, {} as Record<string, EntityMetadata<any>>);
+  metas.forEach((m) => {
+    const abbr = `${abbreviation(m.tableName)}0`;
+    // This is basically m.fields.mapValues to assign the primary alias
+    m.allFields = Object.fromEntries(
+      Object.entries(m.fields).map(([name, field]) => [name, { ...field, alias: abbr }]),
+    );
+    // Only supporting one level of inheritance for now
+    if (m.baseType) {
+      const b = metaByName[m.baseType];
+      m.baseTypes.push(b);
+      b.subTypes.push(m);
+      Object.entries(b.fields).forEach(([name, field]) => {
+        // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
+        m.allFields[name] = { ...field, alias: "b0" };
+      });
+    }
   });
 
   // Now hook up our reactivity

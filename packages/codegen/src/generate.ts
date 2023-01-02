@@ -21,7 +21,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       return [
         {
           name: `${entityName}Codegen.ts`,
-          contents: generateEntityCodegenFile(config, meta),
+          contents: generateEntityCodegenFile(config, dbMeta, meta),
           overwrite: true,
           hash: true,
         },

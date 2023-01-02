@@ -53,7 +53,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   // The values in others might be themselves partials, so walk through and resolve them to entities.
   const p = Object.entries(others).map(async ([key, value]) => {
     // Watch for the `bookId` / `bookIds` aliases
-    const field = meta.fields[key] || Object.values(meta.fields).find((f) => f.fieldIdName === key);
+    const field = meta.allFields[key] || Object.values(meta.allFields).find((f) => f.fieldIdName === key);
 
     if (!field) {
       // Allow delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically

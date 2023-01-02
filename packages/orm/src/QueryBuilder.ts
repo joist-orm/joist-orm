@@ -4,10 +4,12 @@ import { Entity, isEntity } from "./Entity";
 import { EntityConstructor, entityLimit, FilterOf, OrderOf } from "./EntityManager";
 import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
 import {
+  addTablePerClassJoinsAndClassTag,
   Column,
   getConstructorFromTaggedId,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
+  needsClassPerTableJoins,
 } from "./index";
 import { keyToNumber } from "./keys";
 import { fail } from "./utils";
@@ -220,7 +222,7 @@ export function buildQuery<T extends Entity>(
     ];
 
     keys.forEach((key) => {
-      const field = meta.fields[key] ?? fail(`${key} not found`);
+      const field = meta.allFields[key] ?? fail(`${key} not found`);
 
       // We may/may not have a where clause or orderBy for this key, but we should have at least one of them.
       const clause = where && (where as any)[key];
@@ -302,10 +304,13 @@ export function buildQuery<T extends Entity>(
           addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
         }
       } else {
-        const serde = (meta.fields[key] ?? fail(`${key} not found`)).serde!;
+        const field = meta.allFields[key] ?? fail(`${key} not found`);
+        const serde = field.serde!;
         // TODO Currently hardcoded to single-column support; poly is handled above this
         const column = serde.columns[0];
-        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+        // TODO Currently we only support base-type WHEREs if the sub-type is the main `em.find`
+        const maybeBaseAlias = field.alias;
+        query = hasClause ? addPrimitiveClause(query, maybeBaseAlias, column, clause) : query;
         // This is not a foreign key column, so it'll have the primitive filters/order bys
         if (order) {
           query = query.orderBy(`${alias}.${column.columnName}`, order);
@@ -315,6 +320,10 @@ export function buildQuery<T extends Entity>(
   }
 
   addClauses(meta, alias, where as object, orderBy as object);
+
+  if (needsClassPerTableJoins(meta)) {
+    addTablePerClassJoinsAndClassTag(knex, meta, query, alias);
+  }
 
   // Even if they already added orders, add id as the last one to get deterministic output
   query = query.orderBy(`${alias}.id`);
@@ -326,7 +335,7 @@ export function buildQuery<T extends Entity>(
   return query as Knex.QueryBuilder<{}, unknown[]>;
 }
 
-function abbreviation(tableName: string): string {
+export function abbreviation(tableName: string): string {
   return tableName
     .split("_")
     .map((w) => w[0])

@@ -4,6 +4,7 @@ type Tag {
   createdAt: Date!
   updatedAt: Date!
   books: [Book!]!
+  publishers: [Publisher!]!
 }
 
 input SaveTagInput {

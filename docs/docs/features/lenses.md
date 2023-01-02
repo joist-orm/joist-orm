@@ -1,30 +1,38 @@
 ---
-title: Lenses
+title: Lens Traversal
+sidebar_position: 5
 ---
 
-As covered in [type safe relations](../goals/type-safe-relations.md), Joist provides populate hints to more ergonomically traverse the object graph.
-
-For example, to get all book reviews for an author:
+Lenses provide quick navigation the object graph, for example to navigate from an `Author` `a:1` to all of its books, and all of its book's reviews, you can write:
 
 ```typescript
+// Load an author as usual
+const author = await em.load(Author, "a:1");
+// The `a.books.reviews` creates a lens/path to navigate
+const reviews = await author.load(a => a.books.reviews);
+console.log(`Found ${reviews.length} reviews`);
+```
+
+Behind the scenes, the above code executes exactly the same as using Joist's populate hints to preload and then `.get` + `.flatMap` across preloaded relations:
+
+```typescript
+// Load an author but with a populate hint
 const author = await em.load(
   Author,
   "a:1",
   { books: "reviews" }
 );
+// Now flatMap book reviews w/o any awaits
 const reviews = author.books.get.flatMap((book) => {
   return book.reviews.get;
 })
 console.log(`Found ${reviews.length} reviews`);
 ```
 
-Another feature that allows similar "more ergonomic traversal" is `Entity.load`, which looks like:
+Both of these features prevent `await` hell (by having only a single `await` and then otherwise synchronous code), and which one is better depends on your need:
 
-```typescript
-const author = await em.load(Author, "a:1");
-const reviews = await author.load(a => a.books.reviews);
-console.log(`Found ${reviews.length} reviews`);
-```
+* If you need to apply filters and transformation logic, the populate hint with explicit `.get`s` and `.flatMap`s is better b/c you can intersperse your custom logic as needed.
+* If you just need to do a simple/no filtering/no transformation navigation of the object graph, then the lens `.load` approach is more succint.
 
 ## Explanation
 

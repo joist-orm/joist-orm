@@ -9,7 +9,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
 ): DataLoader<string, U | undefined> {
-  const { meta, fieldName } = collection;
+  const { meta } = collection;
   const loaderName = `find-${meta.tableName}.${collection.fieldName}`;
   return getOrSet(em.loadLoaders, loaderName, () => {
     return new DataLoader<string, U | undefined>(async (keys) => {

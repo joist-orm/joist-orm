@@ -11,6 +11,7 @@ import {
   EntityManager,
   EntityMetadata,
   FilterAndSettings,
+  getAllMetas,
   getMetadata,
   hasSerde,
   keyToNumber,
@@ -25,6 +26,7 @@ import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
 import { Driver } from "./driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
+import QueryBuilder = Knex.QueryBuilder;
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
@@ -59,7 +61,14 @@ export class PostgresDriver implements Driver {
     untaggedIds: readonly string[],
   ): Promise<unknown[]> {
     const knex = this.getMaybeInTxnKnex(em);
-    return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds);
+    if (!needsClassPerTableJoins(meta)) {
+      return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds).orderBy("id");
+    } else {
+      const q = knex.select("b.*").from(`${meta.tableName} AS b`);
+      addTablePerClassJoinsAndClassTag(knex, meta, q);
+      q.whereIn("b.id", untaggedIds).orderBy("b.id");
+      return q;
+    }
   }
 
   loadManyToMany<T extends Entity, U extends Entity>(
@@ -120,13 +129,17 @@ export class PostgresDriver implements Driver {
     em: EntityManager,
     collection: OneToManyCollection<T, U>,
     untaggedIds: readonly string[],
-  ): Promise<U[]> {
+  ): Promise<unknown[]> {
+    const meta = collection.otherMeta;
     const knex = this.getMaybeInTxnKnex(em);
-    return knex
-      .select("*")
-      .from(collection.otherMeta.tableName)
-      .whereIn(collection.otherColumnName, untaggedIds)
-      .orderBy("id");
+    if (!needsClassPerTableJoins(meta)) {
+      return knex.select("*").from(meta.tableName).whereIn(collection.otherColumnName, untaggedIds).orderBy("id");
+    } else {
+      const q = knex.select("*").from(`${meta.tableName} AS b`);
+      addTablePerClassJoinsAndClassTag(knex, meta, q);
+      q.whereIn(collection.otherColumnName, untaggedIds).orderBy("b.id");
+      return q;
+    }
   }
 
   findOneToMany<T extends Entity, U extends Entity>(
@@ -289,7 +302,11 @@ export class PostgresDriver implements Driver {
       if (todo) {
         const meta = todo.metadata;
         if (todo.inserts.length > 0) {
-          await batchInsert(knex, meta, todo.inserts);
+          if (meta.subTypes.length > 0) {
+            await batchInsertPerTable(knex, meta, todo.inserts);
+          } else {
+            await batchInsert(knex, meta, todo.inserts);
+          }
         }
         if (todo.updates.length > 0) {
           const { updatedAt } = todo.metadata.timestampFields;
@@ -299,13 +316,21 @@ export class PostgresDriver implements Driver {
               e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
               e.__orm.data[updatedAt] = now;
             });
-            await batchUpdate(knex, meta, todo.updates);
+            if (meta.subTypes.length > 0) {
+              await batchUpdatePerTable(knex, meta, todo.updates);
+            } else {
+              await batchUpdate(knex, meta, todo.updates);
+            }
           } else {
             await batchUpdateWithoutUpdatedAt(knex, meta, todo.updates);
           }
         }
         if (todo.deletes.length > 0) {
-          await batchDelete(knex, meta, todo.deletes);
+          if (meta.subTypes.length > 0) {
+            await batchDeletePerTable(knex, meta, todo.deletes);
+          } else {
+            await batchDelete(knex, meta, todo.deletes);
+          }
         }
       }
     }
@@ -369,11 +394,9 @@ export class PostgresDriver implements Driver {
 }
 
 async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  // We don't use the ids that come back from batchInsert b/c we pre-assign ids for both inserts and updates.
-  // We also use `.transacting` b/c even when `knex` is already a Transaction object,
-  // `batchInsert` w/o the `transacting` adds savepoints that we don't want/need.
-  const fields = Object.values(meta.fields).filter(hasSerde);
-  const columns = fields.flatMap((f) => f.serde.columns);
+  const columns = Object.values(meta.fields)
+    .filter(hasSerde)
+    .flatMap((f) => f.serde.columns);
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
@@ -386,10 +409,18 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   await knex.raw(cleanSql(sql), bindings);
 }
 
-// Uses a pg-specific syntax to issue a bulk update
+/** A version of `batchInsert` that supports table-per-class inheritance. */
+async function batchInsertPerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  // Ideally we could do this in parallel
+  for await (const [meta, group] of groupEntitiesByTable(entities)) {
+    await batchInsert(knex, meta, group);
+  }
+}
+
 async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   const { updatedAt } = meta.timestampFields;
   if (!updatedAt) throw new Error("This batchUpdate expects updatedAt");
+
   // Get the unique set of fields that are changed across all the entities (of this type) we want to bulk update
   const changedFields = new Set<string>(["id", updatedAt]);
   entities.forEach((entity) => {
@@ -403,10 +434,10 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     return;
   }
 
-  const fields = Object.values(meta.fields)
+  const columns = Object.values(meta.fields)
     .filter((f) => changedFields.has(f.fieldName))
-    .filter(hasSerde);
-  const columns = fields.flatMap((f) => f.serde.columns);
+    .filter(hasSerde)
+    .flatMap((f) => f.serde.columns);
   const updatedAtField = (meta.fields[updatedAt] as PrimitiveField).serde.columns[0].columnName;
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
@@ -440,7 +471,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 }
 
 async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
-  // Get the unique set of fields that are changed across all of the entities (of this type) we want to bulk update
+  // Get the unique set of fields that are changed across the entities (of this type) we want to bulk update
   const changedFields = new Set<string>(["id"]);
   entities.forEach((entity) => {
     Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
@@ -453,10 +484,10 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
     return;
   }
 
-  const fields = Object.values(meta.fields)
+  const columns = Object.values(meta.fields)
     .filter((f) => changedFields.has(f.fieldName))
-    .filter(hasSerde);
-  const columns = fields.flatMap((f) => f.serde.columns);
+    .filter(hasSerde)
+    .flatMap((f) => f.serde.columns);
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
@@ -477,6 +508,20 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
   await knex.raw(cleanSql(sql), bindings);
 }
 
+/** Groups table-per-class entities by table and then calls `batchUpdate` for each table. */
+async function batchUpdatePerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  let first = true;
+  // Ideally we could do this in parallel
+  for await (const [meta, group] of groupEntitiesByTable(entities)) {
+    if (first) {
+      await batchUpdate(knex, meta, group);
+      first = false;
+    } else {
+      await batchUpdateWithoutUpdatedAt(knex, meta, group);
+    }
+  }
+}
+
 async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
   await knex(meta.tableName)
     .del()
@@ -484,6 +529,19 @@ async function batchDelete(knex: Knex, meta: EntityMetadata<any>, entities: Enti
       "id",
       entities.map((e) => keyToNumber(meta, e.idTagged!).toString()),
     );
+}
+
+async function batchDeletePerTable(knex: Knex, meta: EntityMetadata<any>, entities: Entity[]): Promise<void> {
+  await Promise.all(
+    getAllMetas(meta).map((meta) =>
+      knex(meta.tableName)
+        .del()
+        .whereIn(
+          "id",
+          entities.map((e) => keyToNumber(meta, e.idTagged!).toString()),
+        ),
+    ),
+  );
 }
 
 /** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */
@@ -510,4 +568,55 @@ function getNow(): Date {
   }
   lastNow = now;
   return now;
+}
+
+function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, Entity[]]> {
+  const entitiesByType: Map<EntityMetadata<any>, Entity[]> = new Map();
+  entities.forEach((e) => {
+    getAllMetas(getMetadata(e))
+      .filter((m) => e instanceof m.cstr)
+      .forEach((m) => {
+        let list = entitiesByType.get(m);
+        if (!list) {
+          list = [];
+          entitiesByType.set(m, list);
+        }
+        list.push(e);
+      });
+  });
+  return [...entitiesByType.entries()];
+}
+
+export function addTablePerClassJoinsAndClassTag(
+  knex: Knex,
+  meta: EntityMetadata<any>,
+  q: QueryBuilder,
+  mainAlias = "b",
+): void {
+  // When `.load(Publisher)` is called, join in sub-tables like `SmallPublisher` and `LargePublisher`
+  meta.subTypes.forEach((st, i) => {
+    q.select(`s${i}.*`);
+    q.leftOuterJoin(`${st.tableName} AS s${i}`, `${mainAlias}.id`, `s${i}.id`);
+  });
+  // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
+  meta.baseTypes.forEach((bt, i) => {
+    q.select(`b${i}.*`);
+    q.join(`${bt.tableName} AS b${i}`, `${mainAlias}.id`, `b${i}.id`);
+  });
+  // Add an explicit `AS id` to avoid ambiguous id columns
+  q.select(`${mainAlias}.id AS id`);
+  // We only need subtype detection if loading from the base type
+  if (meta.subTypes.length > 0) {
+    q.select(
+      knex.raw(
+        `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
+          meta.type
+        }' END as __class`,
+      ),
+    );
+  }
+}
+
+export function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
+  return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }

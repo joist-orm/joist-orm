@@ -64,9 +64,10 @@
   "BookReview": ["book", "comment", "createdAt", "id", "isPublic", "parent", "parentComment", "rating", "updatedAt"],
   "Comment": ["createdAt", "id", "parent", "text", "updatedAt"],
   "CommentParent": ["Author", "Book", "BookReview", "Publisher"],
-  "Critic": ["createdAt", "critic", "criticColumn", "id", "name", "updatedAt"],
+  "Critic": ["createdAt", "critic", "criticColumn", "group", "id", "name", "publisherGroup", "updatedAt"],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
+  "LargePublisher": ["country", "id"],
   "Mutation": [
     "saveAuthor",
     "saveAuthorStat",
@@ -77,7 +78,10 @@
     "saveCritic",
     "saveCriticColumn",
     "saveImage",
+    "saveLargePublisher",
     "savePublisher",
+    "savePublisherGroup",
+    "saveSmallPublisher",
     "saveTag"
   ],
   "Publisher": [
@@ -85,17 +89,22 @@
     "bookAdvances",
     "comments",
     "createdAt",
+    "group",
     "hugeNumber",
     "id",
     "images",
+    "largePublisher",
     "latitude",
     "longitude",
     "name",
     "size",
+    "smallPublisher",
     "tag",
+    "tags",
     "type",
     "updatedAt"
   ],
+  "PublisherGroup": ["createdAt", "critics", "id", "name", "publishers", "updatedAt"],
   "SaveAuthorInput": [
     "address",
     "age",
@@ -143,12 +152,17 @@
   "SaveCommentResult": ["comment"],
   "SaveCriticColumnInput": ["criticId", "id", "name"],
   "SaveCriticColumnResult": ["criticColumn"],
-  "SaveCriticInput": ["createdAt", "id", "name", "updatedAt"],
+  "SaveCriticInput": ["createdAt", "groupId", "id", "name", "publisherGroupId", "updatedAt"],
   "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
+  "SaveLargePublisherInput": ["country", "id", "idId"],
+  "SaveLargePublisherResult": ["largePublisher"],
+  "SavePublisherGroupInput": ["id", "name"],
+  "SavePublisherGroupResult": ["publisherGroup"],
   "SavePublisherInput": [
     "createdAt",
+    "groupId",
     "hugeNumber",
     "id",
     "latitude",
@@ -160,7 +174,10 @@
     "updatedAt"
   ],
   "SavePublisherResult": ["publisher"],
+  "SaveSmallPublisherInput": ["city", "id", "idId"],
+  "SaveSmallPublisherResult": ["smallPublisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
-  "Tag": ["books", "createdAt", "id", "name", "updatedAt"]
+  "SmallPublisher": ["city", "id"],
+  "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"]
 }

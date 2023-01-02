@@ -58,17 +58,33 @@ export function insertPublisher(row: {
   latitude?: string | number;
   huge_number?: string | number;
   size_id?: number;
-  tag_id?: number;
+  group_id?: number;
 }) {
   return testDriver.insert("publishers", row);
+}
+
+export function insertSmallPublisher(row: { id: number; city: string }) {
+  return testDriver.insert("small_publishers", row);
+}
+
+export function insertLargePublisher(row: { id: number; country: string }) {
+  return testDriver.insert("large_publishers", row);
 }
 
 export function insertTag(row: { id?: number; name: string }) {
   return testDriver.insert("tags", row);
 }
 
+export function insertPublisherGroup(row: { id?: number; name: string }) {
+  return testDriver.insert("publisher_groups", row);
+}
+
 export function insertBookToTag(row: { id?: number; book_id: number; tag_id: number }) {
   return testDriver.insert("books_to_tags", row);
+}
+
+export function insertPublisherToTag(row: { id?: number; publisher_id: number; tag_id: number }) {
+  return testDriver.insert("publishers_to_tags", row);
 }
 
 export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id: number }) {
@@ -90,6 +106,9 @@ export function insertImage(row: {
   return testDriver.insert("images", row);
 }
 
+export function insertCritic(row: { id?: number; name: string; group_id?: number }) {
+  return testDriver.insert("critics", row);
+}
 export function countOfBooks() {
   return testDriver.count("books");
 }

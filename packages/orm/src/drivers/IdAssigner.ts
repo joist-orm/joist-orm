@@ -18,7 +18,7 @@ export class SequenceIdAssigner implements IdAssigner {
     const seqStatements: string[] = [];
     Object.values(todos).forEach((todo) => {
       if (todo.inserts.length > 0) {
-        const meta = todo.inserts[0].__orm.metadata;
+        const meta = todo.metadata;
         const sequenceName = `${meta.tableName}_id_seq`;
         const sql = `select nextval('${sequenceName}') from generate_series(1, ${
           todo.inserts.filter((e) => e.id === undefined).length
@@ -33,6 +33,7 @@ export class SequenceIdAssigner implements IdAssigner {
       let i = 0;
       Object.values(todos).forEach((todo) => {
         for (const insert of todo.inserts.filter((e) => e.id === undefined)) {
+          // Use todo.metadata so that all subtypes get their base type's tag
           insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
         }
       });

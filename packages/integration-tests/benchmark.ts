@@ -1,11 +1,10 @@
-import { newPgConnectionConfig } from "joist-utils";
 import { Benchmark } from "kelonio";
 import { knex as createKnex } from "knex";
 import postgres from "postgres";
 
 const knex = createKnex({
   client: "pg",
-  connection: newPgConnectionConfig(),
+  connection: "postgres://joist:local@localhost:5435/joist",
   debug: false,
   asyncStackTraces: false,
   pool: { max: 4 },
@@ -19,14 +18,19 @@ async function main() {
   const benchmark = new Benchmark();
   const numberOfEntities = 10;
   const iterations = 100;
-  const serial = true;
+
+  // Running with serial=false gives particularly bad results for the "individual" tests b/c each
+  // iteration has more statements than the number of max connections in the pool, and all iterations
+  // are kicked off immediately. This means the first author of each 100 iterations is inserted before
+  // the 1st iteration can more on to its 2nd author.
+  const serial = false;
 
   console.log({ numberOfEntities, iterations, serial });
 
   await benchmark.record(
     `Knex ${numberOfEntities} Authors individually`,
     async () => {
-      for await (const i of zeroTo(numberOfEntities)) {
+      for (const i of zeroTo(numberOfEntities)) {
         await knex.raw(`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (?, ?, ?)`, [
           `a${i}`,
           "a",
@@ -53,7 +57,7 @@ async function main() {
   await benchmark.record(
     `Postgres.js ${numberOfEntities} Authors individually`,
     async () => {
-      for await (const i of zeroTo(numberOfEntities)) {
+      for (const i of zeroTo(numberOfEntities)) {
         await sql`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (${`a${i}`}, ${"a"}, ${0})`;
       }
     },

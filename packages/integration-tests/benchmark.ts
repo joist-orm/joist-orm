@@ -1,3 +1,4 @@
+import * as console from "console";
 import { Benchmark } from "kelonio";
 import { knex as createKnex } from "knex";
 import postgres from "postgres";
@@ -89,18 +90,20 @@ async function main() {
   await benchmark.record(
     `Knex ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES`,
     async () => {
-      await knex.raw(
-        `INSERT INTO "authors" (first_name, initials, number_of_books) VALUES ${zeroTo(numberOfEntities)
-          .map(() => `(?, ?, ?)`)
-          .join(", ")}`,
-        zeroTo(numberOfEntities).flatMap((i) => [`a${i}`, "a", 0]),
-      );
-      await knex.raw(
-        `INSERT INTO "books" (title, author_id) VALUES ${zeroTo(numberOfEntities)
-          .map(() => `(?, ?)`)
-          .join(", ")}`,
-        zeroTo(numberOfEntities).flatMap((i) => [`b${i}`, 1]),
-      );
+      await Promise.all([
+        knex.raw(
+          `INSERT INTO "authors" (first_name, initials, number_of_books) VALUES ${zeroTo(numberOfEntities)
+            .map(() => `(?, ?, ?)`)
+            .join(", ")}`,
+          zeroTo(numberOfEntities).flatMap((i) => [`a${i}`, "a", 0]),
+        ),
+        knex.raw(
+          `INSERT INTO "books" (title, author_id) VALUES ${zeroTo(numberOfEntities)
+            .map(() => `(?, ?)`)
+            .join(", ")}`,
+          zeroTo(numberOfEntities).flatMap((i) => [`b${i}`, 1]),
+        ),
+      ]);
     },
     { iterations, serial },
   );
@@ -108,10 +111,12 @@ async function main() {
   await benchmark.record(
     `Postgres.js ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES`,
     async () => {
-      await sql`INSERT INTO "authors" ${sql(
-        zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
-      )}`;
-      await sql`INSERT INTO "books" ${sql(zeroTo(numberOfEntities).map((i) => ({ title: `b${i}`, author_id: 1 })))}`;
+      await Promise.all([
+        sql`INSERT INTO "authors" ${sql(
+          zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
+        )}`,
+        sql`INSERT INTO "books" ${sql(zeroTo(numberOfEntities).map((i) => ({ title: `b${i}`, author_id: 1 })))}`,
+      ]);
     },
     { iterations, serial },
   );
@@ -137,7 +142,7 @@ async function main() {
   await sql.end();
 }
 
-main();
+main().catch((err) => console.log(err));
 
 function zeroTo(n: number): number[] {
   return [...Array(n).keys()];

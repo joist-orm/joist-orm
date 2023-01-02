@@ -64,8 +64,7 @@ export class PostgresDriver implements Driver {
     if (!needsClassPerTableJoins(meta)) {
       return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds).orderBy("id");
     } else {
-      // Make sure we get the base id because we're doing a `select *`
-      const q = knex.select("*").select("b.id AS id").from(`${meta.tableName} AS b`);
+      const q = knex.select("b.*").from(`${meta.tableName} AS b`);
       addTablePerClassJoinsAndClassTag(knex, meta, q);
       q.whereIn("b.id", untaggedIds).orderBy("b.id");
       return q;
@@ -136,7 +135,7 @@ export class PostgresDriver implements Driver {
     if (!needsClassPerTableJoins(meta)) {
       return knex.select("*").from(meta.tableName).whereIn(collection.otherColumnName, untaggedIds).orderBy("id");
     } else {
-      const q = knex.select("*").select("b.id AS id").from(`${meta.tableName} AS b`);
+      const q = knex.select("*").from(`${meta.tableName} AS b`);
       addTablePerClassJoinsAndClassTag(knex, meta, q);
       q.whereIn(collection.otherColumnName, untaggedIds).orderBy("b.id");
       return q;
@@ -588,15 +587,24 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, E
   return [...entitiesByType.entries()];
 }
 
-function addTablePerClassJoinsAndClassTag(knex: Knex, meta: EntityMetadata<any>, q: QueryBuilder): void {
-  // When `.load(Publisher)` is called, join in sub-tables
+export function addTablePerClassJoinsAndClassTag(
+  knex: Knex,
+  meta: EntityMetadata<any>,
+  q: QueryBuilder,
+  mainAlias = "b",
+): void {
+  // When `.load(Publisher)` is called, join in sub-tables like `SmallPublisher` and `LargePublisher`
   meta.subTypes.forEach((st, i) => {
-    q.leftOuterJoin(`${st.tableName} AS s${i}`, "b.id", `s${i}.id`);
+    q.select(`s${i}.*`);
+    q.leftOuterJoin(`${st.tableName} AS s${i}`, `${mainAlias}.id`, `s${i}.id`);
   });
-  // When `.load(SmallPublisher)` is called, join in base tables
+  // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
   meta.baseTypes.forEach((bt, i) => {
-    q.join(`${bt.tableName} AS b${i}`, "b.id", `b${i}.id`);
+    q.select(`b${i}.*`);
+    q.join(`${bt.tableName} AS b${i}`, `${mainAlias}.id`, `b${i}.id`);
   });
+  // Add an explicit `AS id` to avoid ambiguous id columns
+  q.select(`${mainAlias}.id AS id`);
   // We only need subtype detection if loading from the base type
   if (meta.subTypes.length > 0) {
     q.select(
@@ -609,6 +617,6 @@ function addTablePerClassJoinsAndClassTag(knex: Knex, meta: EntityMetadata<any>,
   }
 }
 
-function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
+export function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
   return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }

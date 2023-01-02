@@ -202,4 +202,34 @@ describe("Inheritance", () => {
     expect(lp).toBeInstanceOf(LargePublisher);
     expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
   });
+
+  it("can find entities from the base type", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp1" });
+    await insertLargePublisher({ id: 2, country: "country" });
+
+    const em = newEntityManager();
+    const [sp, lp] = await em.find(Publisher, { name: { like: "%p%" } });
+
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp as SmallPublisher).toMatchEntity({ name: "sp1", city: "city" });
+
+    expect(lp).toBeInstanceOf(LargePublisher);
+    expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
+  });
+
+  it("can find entities from the sub type", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertSmallPublisher({ id: 1, city: "city" });
+    await insertPublisher({ name: "lp1" });
+    await insertLargePublisher({ id: 2, country: "country" });
+
+    const em = newEntityManager();
+    // TODO name: { like: "%p%" }
+    const [sp] = await em.find(SmallPublisher, { city: { like: "c%" } });
+
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp).toMatchEntity({ name: "sp1", city: "city" });
+  });
 });

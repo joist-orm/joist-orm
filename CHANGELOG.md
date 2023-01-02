@@ -1,3 +1,10 @@
+## [1.44.2](https://github.com/stephenh/joist-ts/compare/v1.44.1...v1.44.2) (2023-01-02)
+
+
+### Bug Fixes
+
+* Revert q&d attempt at cross-table em.find support. ([#488](https://github.com/stephenh/joist-ts/issues/488)) ([c26cbf7](https://github.com/stephenh/joist-ts/commit/c26cbf74ed67dda932740ff029c6007726b01884))
+
 ## [1.44.1](https://github.com/stephenh/joist-ts/compare/v1.44.0...v1.44.1) (2023-01-02)
 
 

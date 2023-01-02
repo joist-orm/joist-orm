@@ -5,6 +5,7 @@ import {
   insertComment,
   insertImage,
   insertPublisher,
+  update,
 } from "@src/entities/inserts";
 import { NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
 import {
@@ -788,6 +789,17 @@ describe("EntityManager.queries", () => {
     const comment = await review.comment.load();
     expect(comment).toBeTruthy();
     expect(comment!.text).toEqual("t1");
+  });
+
+  it("can have the same table twice in the query", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await update("authors", { id: 1, current_draft_book_id: 1 });
+
+    const em = newEntityManager();
+    const book = await em.findOneOrFail(Book, { title: "b2", author: { currentDraftBook: { title: "b1" } } });
+    expect(book.title).toBe("b2");
   });
 });
 

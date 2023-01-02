@@ -309,8 +309,8 @@ export function buildQuery<T extends Entity>(
         // TODO Currently hardcoded to single-column support; poly is handled above this
         const column = serde.columns[0];
         // TODO Currently we only support base-type WHEREs if the sub-type is the main `em.find`
-        const maybeBaseAlias = field.alias;
-        query = hasClause ? addPrimitiveClause(query, maybeBaseAlias, column, clause) : query;
+        // const maybeBaseAlias = field.alias;
+        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
         // This is not a foreign key column, so it'll have the primitive filters/order bys
         if (order) {
           query = query.orderBy(`${alias}.${column.columnName}`, order);

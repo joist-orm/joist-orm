@@ -1,3 +1,10 @@
+## [1.44.1](https://github.com/stephenh/joist-ts/compare/v1.44.0...v1.44.1) (2023-01-02)
+
+
+### Bug Fixes
+
+* Bump dependencies. ([#486](https://github.com/stephenh/joist-ts/issues/486)) ([3a5bfa0](https://github.com/stephenh/joist-ts/commit/3a5bfa0ec3159efcd463ae5859e204ecf0b42110))
+
 # [1.44.0](https://github.com/stephenh/joist-ts/compare/v1.43.0...v1.44.0) (2023-01-02)
 
 

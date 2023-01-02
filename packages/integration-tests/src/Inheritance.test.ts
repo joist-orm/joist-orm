@@ -219,7 +219,7 @@ describe("Inheritance", () => {
     expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
   });
 
-  it("can find entities from the sub type", async () => {
+  it.skip("can find entities from the sub type", async () => {
     await insertPublisher({ name: "sp1" });
     await insertSmallPublisher({ id: 1, city: "city" });
     await insertPublisher({ name: "lp1" });

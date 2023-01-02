@@ -711,7 +711,14 @@ describe("EntityManager", () => {
     expect(numberOfQueries).toEqual(1);
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
-      'select "p0".* from "publishers" as "p0" where "p0"."id" = $1 order by "p0"."id" asc limit $2',
+      [
+        `select "p0".*, "s0".*, "s1".*, "p0"."id" as "id",`,
+        ` CASE WHEN s0.id IS NOT NULL THEN 'LargePublisher' WHEN s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
+        ` from "publishers" as "p0"`,
+        ` left outer join "large_publishers" as "s0" on "p0"."id" = "s0"."id"`,
+        ` left outer join "small_publishers" as "s1" on "p0"."id" = "s1"."id"`,
+        ` where "p0"."id" = $1 order by "p0"."id" asc limit $2`,
+      ].join(""),
     ]);
     // And both results are the same
     expect(p1.length).toEqual(1);
@@ -724,18 +731,20 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
-    const p1p = em.find(Publisher, { id: "1" }, { orderBy: { id: "ASC" } });
-    const p2p = em.find(Publisher, { id: "1" }, { orderBy: { id: "DESC" } });
+    const a1p = em.find(Author, { id: "1" }, { orderBy: { id: "ASC" } });
+    const a2p = em.find(Author, { id: "1" }, { orderBy: { id: "DESC" } });
     // When they are executed in the same event loop
-    const [p1, p2] = await Promise.all([p1p, p2p]);
+    const [a1, a2] = await Promise.all([a1p, a2p]);
     // Then we issue a single SQL query
     expect(numberOfQueries).toEqual(1);
     // And it is still auto-batched
-    expect(queries).toEqual([
-      '(select *, -1 as __tag, -1 as __row from "publishers" where "id" = $1) union all (select "p0".*, 0 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = $2 and "p0"."id" = $3 order by "p0"."id" ASC, "p0"."id" ASC, "p0"."id" asc limit $4) union all (select "p0".*, 1 as __tag, row_number() over () as __row from "publishers" as "p0" where "p0"."id" = $5 and "p0"."id" = $6 order by "p0"."id" DESC, "p0"."id" DESC, "p0"."id" asc limit $7) order by "__tag" asc',
-    ]);
+    expect(queries).toMatchInlineSnapshot(`
+      [
+        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a0".*, 0 as __tag, row_number() over () as __row from "authors" as "a0" where "a0"."id" = $2 and "a0"."id" = $3 order by "a0"."id" ASC, "a0"."id" ASC, "a0"."id" asc limit $4) union all (select "a0".*, 1 as __tag, row_number() over () as __row from "authors" as "a0" where "a0"."id" = $5 and "a0"."id" = $6 order by "a0"."id" DESC, "a0"."id" DESC, "a0"."id" asc limit $7) order by "__tag" asc",
+      ]
+    `);
     // And the results are the expected reverse of each other
-    expect(p1.reverse()).toEqual(p2);
+    expect(a1.reverse()).toEqual(a2);
   });
 
   it("can save tables with self-references", async () => {

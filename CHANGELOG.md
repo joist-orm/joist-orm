@@ -1,3 +1,10 @@
+# [1.44.0](https://github.com/stephenh/joist-ts/compare/v1.43.0...v1.44.0) (2023-01-02)
+
+
+### Features
+
+* Implement Class Table Inheritance ([#484](https://github.com/stephenh/joist-ts/issues/484)) ([5107267](https://github.com/stephenh/joist-ts/commit/5107267c7bdc05f2f12c8991d0e76425117419d9))
+
 # [1.43.0](https://github.com/stephenh/joist-ts/compare/v1.42.4...v1.43.0) (2022-12-17)
 
 

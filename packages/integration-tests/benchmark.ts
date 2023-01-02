@@ -7,10 +7,11 @@ const knex = createKnex({
   client: "pg",
   connection: newPgConnectionConfig(),
   debug: false,
-  asyncStackTraces: true,
+  asyncStackTraces: false,
+  pool: { max: 4 },
 });
 
-const sql = postgres("postgres://joist:local@localhost:5435/joist", {});
+const sql = postgres("postgres://joist:local@localhost:5435/joist", { max: 4 });
 
 async function main() {
   await knex.raw("select flush_database()");
@@ -18,9 +19,12 @@ async function main() {
   const benchmark = new Benchmark();
   const numberOfEntities = 10;
   const iterations = 100;
+  const serial = true;
+
+  console.log({ numberOfEntities, iterations, serial });
 
   await benchmark.record(
-    `Knex ${numberOfEntities} individually`,
+    `Knex ${numberOfEntities} Authors individually`,
     async () => {
       for await (const i of zeroTo(numberOfEntities)) {
         await knex.raw(`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (?, ?, ?)`, [
@@ -30,11 +34,11 @@ async function main() {
         ]);
       }
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Knex ${numberOfEntities} with VALUES`,
+    `Knex ${numberOfEntities} Authors with VALUES`,
     async () => {
       await knex.raw(
         `INSERT INTO "authors" (first_name, initials, number_of_books) VALUES ${zeroTo(numberOfEntities)
@@ -43,21 +47,21 @@ async function main() {
         zeroTo(numberOfEntities).flatMap((i) => [`a${i}`, "a", 0]),
       );
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Postgres.js ${numberOfEntities} individually`,
+    `Postgres.js ${numberOfEntities} Authors individually`,
     async () => {
       for await (const i of zeroTo(numberOfEntities)) {
         await sql`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (${`a${i}`}, ${"a"}, ${0})`;
       }
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Postgres.js ${numberOfEntities} individual but pipelined`,
+    `Postgres.js ${numberOfEntities} Authors individual but pipelined`,
     async () => {
       await sql.begin((sql) => {
         return zeroTo(numberOfEntities).map((i) => {
@@ -65,21 +69,21 @@ async function main() {
         });
       });
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Postgres.js ${numberOfEntities} with VALUES`,
+    `Postgres.js ${numberOfEntities} Authors with VALUES`,
     async () => {
       await sql`INSERT INTO "authors" ${sql(
         zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
       )}`;
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Knex ${numberOfEntities} Authors & Books with VALUES`,
+    `Knex ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES`,
     async () => {
       await knex.raw(
         `INSERT INTO "authors" (first_name, initials, number_of_books) VALUES ${zeroTo(numberOfEntities)
@@ -94,22 +98,22 @@ async function main() {
         zeroTo(numberOfEntities).flatMap((i) => [`b${i}`, 1]),
       );
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Postgres.js ${numberOfEntities} Authors & Books with VALUES`,
+    `Postgres.js ${numberOfEntities} Authors & ${numberOfEntities} Books with VALUES`,
     async () => {
       await sql`INSERT INTO "authors" ${sql(
         zeroTo(numberOfEntities).map((i) => ({ first_name: `a${i}`, initials: "a", number_of_books: 0 })),
       )}`;
       await sql`INSERT INTO "books" ${sql(zeroTo(numberOfEntities).map((i) => ({ title: `b${i}`, author_id: 1 })))}`;
     },
-    { iterations },
+    { iterations, serial },
   );
 
   await benchmark.record(
-    `Postgres.js ${numberOfEntities} Authors & Books individual but pipelined`,
+    `Postgres.js ${numberOfEntities} Authors & Books ${numberOfEntities} individual but pipelined`,
     async () => {
       await sql.begin((sql) => {
         return zeroTo(numberOfEntities).flatMap((i) => {
@@ -120,7 +124,7 @@ async function main() {
         });
       });
     },
-    { iterations },
+    { iterations, serial },
   );
 
   console.log(benchmark.report());

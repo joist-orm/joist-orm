@@ -3,11 +3,11 @@ title: Class Table Inheritance
 sidebar_position: 6
 ---
 
-Joist supports [Class Table Inheritance](https://www.martinfowler.com/eaaCatalog/classTableInheritance.html), which allows inheritance/subtyping of entities, and automatically handling the mapping of polymorphic entities to the right physical SQL tables.
+Joist supports [Class Table Inheritance](https://www.martinfowler.com/eaaCatalog/classTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), and automatically handling the mapping of polymorphic entities to the right physical SQL tables.
 
 ## Database Representation
 
-For example, lets pretend we have `Dog` entities and `Cat` entities, and we want them to both extend the `Animal` entity.
+For example, lets say we have `Dog` entities and `Cat` entities, and we want them to both extend the `Animal` entity.
 
 For class table inheritance, we represent this in Postgres by having three separate tables: `animals`, `dogs`, and `cats`.
 
@@ -57,7 +57,7 @@ class Dog extends DogCodegen {
 }
 ```
 
-Now, when you load several `Animal`s, Joist will automatically probe the `dogs` and `cats` tables and create entities of the right type:
+Now, when you load several `Animal`s, Joist will automatically probe the `dogs` and `cats` tables (by using a `LEFT OUTER JOIN`) and create entities of the right type:
 
 ```typescript
 const [a1, a2] = await em.loadAll(Animal, ["a:1", "a:2"]);
@@ -81,13 +81,13 @@ await em.flush();
 
 ## What about Single Table Inheritance?
 
-An alternative to Class Table Inheritance (CTI) is [Single Table Inheritance](https://www.martinfowler.com/eaaCatalog/singleTableInheritance.html) (STI), where `Dog`s and `Cat`s don't have their own tables, but have their subtype-specific fields stored directly on the `animals` table.
+An alternative to Class Table Inheritance (CTI) is [Single Table Inheritance](https://www.martinfowler.com/eaaCatalog/singleTableInheritance.html) (STI), where `Dog`s and `Cat`s don't have their own tables, but have their subtype-specific fields stored directly on the `animals` table (e.g. both `animals.can_bark` and `animals.can_meow` would be columns directly in the `animals` table even though, for dogs, the `can_meow` column is not applicable).
 
-Joist currently does not support STI, generally because CTI has two pros:
+Joist currently does not support STI, generally because CTI has several pros:
 
 1. With CTI, the database schema makes it obvious what the class hierarchy should be.
 
-   Given how schema-driven Joist's `joist-codegen` is, it's very convenient to have the per-type fields already split out (into separate tables) and then to use the `id` foreign keys to see the "extends" relationships.
+   Given how schema-driven Joist's `joist-codegen` is, it's very convenient to have the per-type fields already split out (into separate tables) and then to use the `id` foreign keys to discover the `extends` relationships.
 
    With STI, this sort of "obvious" visibility does not exist, and we'd have to encode the type hierarchy in `joist-config.json`, i.e. some sort of mapping that says `animals.can_bark` is only applicable for the `Dog` subtype, and `animals.can_meow` is only applicable for the `Cat` subtype.
 
@@ -103,7 +103,7 @@ Joist currently does not support STI, generally because CTI has two pros:
 
    With STI, it's not possible in the database to represent/enforce that FKs are only valid for a specific subtype.
 
-That said, the pro of STI is that you don't need `JOIN`s to load entities, b/c all the database is in one table, so Joist could likely support STI someday, it just does not currently.
+That said, the pro of STI is that you don't need `LEFT OUTER JOIN`s to load entities, b/c all data for all subtypes is a single table, so Joist could likely support STI someday, it just does not currently.
 
 ## But Isn't Inheritance Bad Design?
 

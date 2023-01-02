@@ -11,11 +11,14 @@ export class Todo {
   deletes: Entity[] = [];
   validates: Map<Entity, Set<Function>> = new Map();
   asyncFields: Map<Entity, Set<string>> = new Map();
-  constructor(public metadata: EntityMetadata<any>) {}
+  constructor(
+    /** The metadata for entities in this todo; it will be the base metadata for any subtypes. */
+    public metadata: EntityMetadata<any>,
+  ) {}
 }
 
 /**
- * Scans `entities` for new/updated entities and arranges them per-type in entity order.
+ * Scans `entities` for new/updated entities and groups them by type (by base type if applicable).
  */
 export function createTodos(entities: Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
@@ -52,6 +55,7 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
 /** getOrSets a `Todo` for `entity` in `todos`. */
 export function getTodo(todos: Record<string, Todo>, entity: Entity): Todo {
   const meta = getMetadata(entity);
+  // Always create todos around the base table, so that we get the best batching against it
   const maybeBase = meta.baseTypes[0] || meta;
   return (todos[maybeBase.type] ??= new Todo(maybeBase));
 }

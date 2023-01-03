@@ -1,5 +1,5 @@
 import { insertAuthor } from "@src/entities/inserts";
-import { EntityConstructor, EntityManager } from "joist-orm";
+import { EntityManager, MaybeAbstractEntityConstructor } from "joist-orm";
 import {
   Author,
   Book,
@@ -336,7 +336,7 @@ describe("EntityManager.clone", () => {
   });
 });
 
-async function numberOf(em: EntityManager, ...args: EntityConstructor<any>[]): Promise<number[]> {
+async function numberOf(em: EntityManager, ...args: MaybeAbstractEntityConstructor<any>[]): Promise<number[]> {
   return Promise.all(
     args.map(async (ec) => {
       const entities = await em.find(ec, {});

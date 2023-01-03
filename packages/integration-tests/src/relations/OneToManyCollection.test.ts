@@ -183,7 +183,7 @@ describe("OneToManyCollection", () => {
   });
 
   it("removes deleted entities from other foreign key", async () => {
-    // Given an publisher with an author
+    // Given a publisher with an author
     const em = newEntityManager();
     // And the publisher and authors are loaded
     const p1 = newPublisher(em, { authors: [{}] });

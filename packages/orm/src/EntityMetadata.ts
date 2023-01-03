@@ -1,13 +1,15 @@
 import { ConfigApi } from "./config";
 import { Entity } from "./Entity";
-import { EntityConstructor, EntityManager, TimestampFields } from "./EntityManager";
+import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
 export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(type: EntityConstructor<T>): EntityMetadata<T>;
+export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(meta: EntityMetadata<T>): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(param: T | EntityConstructor<T> | EntityMetadata<T>): EntityMetadata<T> {
+export function getMetadata<T extends Entity>(
+  param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata<T>,
+): EntityMetadata<T> {
   return (
     typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : param.__orm.metadata
   ) as EntityMetadata<T>;
@@ -15,7 +17,7 @@ export function getMetadata<T extends Entity>(param: T | EntityConstructor<T> | 
 
 /** Runtime metadata about an entity. */
 export interface EntityMetadata<T extends Entity> {
-  cstr: EntityConstructor<T>;
+  cstr: MaybeAbstractEntityConstructor<T>;
   type: string;
   idType: "int" | "uuid";
   tableName: string;

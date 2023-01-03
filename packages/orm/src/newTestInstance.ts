@@ -1,8 +1,17 @@
 import { isPlainObject } from "is-plain-object";
 import { Entity, isEntity } from "./Entity";
-import { ActualFactoryOpts, EntityConstructor, EntityManager, IdOf, isId, OptsOf } from "./EntityManager";
+import {
+  ActualFactoryOpts,
+  EntityConstructor,
+  EntityManager,
+  IdOf,
+  isId,
+  MaybeAbstractEntityConstructor,
+  OptsOf,
+} from "./EntityManager";
 import {
   EntityMetadata,
+  getAllMetas,
   getMetadata,
   isManyToOneField,
   isOneToOneField,
@@ -121,7 +130,7 @@ export function newTestInstance<T extends Entity>(
     })
     .filter((t) => t.length > 0);
 
-  const entity = em.create(meta.cstr, Object.fromEntries(initialOpts)) as New<T>;
+  const entity = em.create(cstr, Object.fromEntries(initialOpts)) as New<T>;
 
   // If the type we just made doesn't exist in `use` yet, remember it. This works better than
   // looking at the values in `fullOpts`, because instead of waiting until the end of the
@@ -135,7 +144,7 @@ export function newTestInstance<T extends Entity>(
   // `{ parent: entity }` down to children (i.e. to replace our original
   // null marker approach).
   const additionalOpts = Object.entries(opts).map(([fieldName, optValue]) => {
-    const field = meta.fields[fieldName];
+    const field = meta.allFields[fieldName];
     // Check `!field` b/c `use` won't have a field
     if (optValue === null || optValue === undefined || !field) {
       return [];
@@ -207,7 +216,7 @@ function resolveFactoryOpt<T extends Entity>(
       }
     }
     // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
-    maybeEntity ??= (meta.fields[otherFieldName].kind === "o2o" ? null : []) as any;
+    maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
       ...applyUse((opt as any) || {}, useMap(opts), meta),
@@ -229,7 +238,11 @@ function metaFromFieldAndOpt<T extends Entity>(
   const componentToUse =
     // Otherwise, we check if the `opt` specifies a particular component to use, and if not fall back to the first one
     field.components.find(
-      (component) => opt instanceof MaybeNew && component.otherMetadata().cstr === opt.polyRefPreferredOrder[0],
+      (component) =>
+        opt instanceof MaybeNew &&
+        getAllMetas(component.otherMetadata())
+          .map((m) => m.cstr)
+          .includes(opt.polyRefPreferredOrder[0]),
     ) ?? field.components[0];
   return { meta: componentToUse.otherMetadata(), otherFieldName: componentToUse.otherFieldName };
 }
@@ -368,7 +381,7 @@ export function maybeNewPoly<T extends Entity, NewT extends T = T>(
   ifNewCstr: EntityConstructor<NewT>,
   opts?: {
     ifNewOpts?: ActualFactoryOpts<NewT>;
-    existingSearchOrder?: EntityConstructor<T>[];
+    existingSearchOrder?: MaybeAbstractEntityConstructor<T>[];
   },
 ): FactoryEntityOpt<NewT> {
   // Return a marker that resolveFactoryOpt will look for
@@ -376,7 +389,7 @@ export function maybeNewPoly<T extends Entity, NewT extends T = T>(
 }
 
 class MaybeNew<T extends Entity> {
-  constructor(public opts: FactoryOpts<T>, public polyRefPreferredOrder: EntityConstructor<T>[] = []) {}
+  constructor(public opts: FactoryOpts<T>, public polyRefPreferredOrder: MaybeAbstractEntityConstructor<T>[] = []) {}
 }
 
 /**
@@ -388,7 +401,7 @@ class MaybeNew<T extends Entity> {
  *
  * Despite the name, these are 1-based, i.e. the first `Author` is `a1`.
  */
-export function getTestIndex<T extends Entity>(em: EntityManager, type: EntityConstructor<T>): number {
+export function getTestIndex<T extends Entity>(em: EntityManager, type: MaybeAbstractEntityConstructor<T>): number {
   const existing = em.entities.filter((e) => e instanceof type);
   return existing.length + 1;
 }
@@ -444,6 +457,12 @@ type UseMap = Map<Function, [Entity, boolean]>;
 function useMap(opts: FactoryOpts<any>): UseMap {
   const use: Entity | Entity[] | UseMap | undefined = opts.use;
   let map: UseMap;
+
+  // If e is a subtype like SmallPublisher, register it for the base Publisher as well
+  function addForAllMetas(e: Entity, explicit: boolean) {
+    getAllMetas(getMetadata(e)).forEach((m) => map.set(m.cstr, [e, explicit]));
+  }
+
   if (use instanceof Map) {
     // it's already a map
     map = use;
@@ -451,10 +470,10 @@ function useMap(opts: FactoryOpts<any>): UseMap {
     map = new Map();
     if (use instanceof Array) {
       // it's a top-level `newAuthor` with a user-passed `use: array`
-      use.forEach((e) => map.set(e.constructor, [e, true]));
+      use.forEach((e) => addForAllMetas(e, true));
     } else if (use) {
       // it's a top-level `newAuthor` w/o a `use: entity` param
-      map.set(use.constructor, [use, true]);
+      addForAllMetas(use, true);
     }
     // Scan opts for entities to implicitly add to the map, i.e. if the user
     // calls `newAuthor(em, { book: b1 })`, we'll use `b1` for any other books we
@@ -464,7 +483,7 @@ function useMap(opts: FactoryOpts<any>): UseMap {
       const opts = todo.pop();
       Object.values(opts || {}).forEach((opt) => {
         if (isEntity(opt) && !map.has(opt.constructor)) {
-          map.set(opt.constructor, [opt, false]);
+          addForAllMetas(opt, false);
         } else if (opt instanceof Array) {
           todo.push(...opt);
         } else if (isPlainObject(opt)) {

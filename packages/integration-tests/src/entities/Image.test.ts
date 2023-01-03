@@ -1,4 +1,4 @@
-import { Author, Image, ImageType, Publisher } from "@src/entities";
+import { Author, Image, ImageType, SmallPublisher } from "@src/entities";
 import { insertAuthor, insertImage } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 
@@ -13,7 +13,7 @@ describe("Image", () => {
 
   it("cannot have multiple owners", async () => {
     const em = newEntityManager();
-    const p1 = em.create(Publisher, { name: "p1" });
+    const p1 = em.create(SmallPublisher, { name: "p1", city: "c1" });
     const a1 = em.create(Author, { firstName: "a1" });
     const i = em.create(Image, { type: ImageType.AuthorImage, author: a1, publisher: p1, fileName: "f1" });
     await expect(em.flush()).rejects.toThrow("One and only one owner must be set");

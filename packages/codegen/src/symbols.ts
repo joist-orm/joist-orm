@@ -64,5 +64,6 @@ export const DeepNew = imp("DeepNew@joist-orm");
 export const FactoryOpts = imp("FactoryOpts@joist-orm");
 export const SSAssert = imp("assert@superstruct");
 export const EntityConstructor = imp("EntityConstructor@joist-orm");
+export const MaybeAbstractEntityConstructor = imp("MaybeAbstractEntityConstructor@joist-orm");
 export const deTagId = imp("deTagId@joist-orm");
 export const PersistedAsyncProperty = imp("PersistedAsyncProperty@joist-orm");

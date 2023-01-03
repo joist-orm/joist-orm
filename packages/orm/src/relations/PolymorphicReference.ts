@@ -258,7 +258,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   /** Returns the other relation that points back at us, i.e. we're `comment.parent_book_id` and this is `Book.comments`. */
   private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<U, T> {
-    const component = this.field.components.find((c) => c.otherMetadata().cstr === other.constructor) as any;
+    const component = this.field.components.find((c) => other instanceof c.otherMetadata().cstr) as any;
     return (other as U)[component?.otherFieldName as keyof U] as any;
   }
 

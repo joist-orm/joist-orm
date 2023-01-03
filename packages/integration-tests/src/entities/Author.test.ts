@@ -399,7 +399,7 @@ describe("Author", () => {
 
     it("works for references", async () => {
       await insertPublisher({ name: "p1" });
-      await insertPublisher({ name: "p2" });
+      await insertPublisher({ id: 2, name: "p2" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();
       const a1 = await em.load(Author, "a:1");
@@ -437,7 +437,7 @@ describe("Author", () => {
       a1.publisher.set(p1);
       expect(a1.changes.publisher.hasChanged).toBe(false);
       expect(a1.changes.publisher.hasUpdated).toBe(false);
-      expect(a1.publisher.get!.name).toBe("Publisher 1");
+      expect(a1.publisher.get!.name).toBe("SmallPublisher 1");
     });
   });
 

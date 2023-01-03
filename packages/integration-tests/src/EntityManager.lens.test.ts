@@ -18,7 +18,7 @@ describe("EntityManager.lens", () => {
 
   it("can navigate with n+1 safe queries", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
     await insertBook({ title: "b1", author_id: 1 });

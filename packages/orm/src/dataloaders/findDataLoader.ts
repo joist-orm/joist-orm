@@ -1,13 +1,13 @@
 import DataLoader from "dataloader";
 import hash from "object-hash";
 import { Entity, isEntity } from "../Entity";
-import { EntityConstructor, EntityManager } from "../EntityManager";
+import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { FilterAndSettings } from "../QueryBuilder";
 import { getOrSet } from "../utils";
 
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
-  type: EntityConstructor<T>,
+  type: MaybeAbstractEntityConstructor<T>,
 ): DataLoader<FilterAndSettings<T>, unknown[]> {
   return getOrSet(em.findLoaders, type.name, () => {
     return new DataLoader<FilterAndSettings<T>, unknown[], string>(

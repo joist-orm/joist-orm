@@ -11,7 +11,6 @@ import {
   ConfigApi,
   deTagId,
   Entity,
-  EntityConstructor,
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
@@ -35,6 +34,7 @@ import {
   LoadHint,
   loadLens,
   ManyToOneReference,
+  MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
   OneToOneReference,
@@ -349,6 +349,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const maybeBaseGqlFilter = baseEntity ? code`extends ${imp(baseEntity.name + "GraphQLFilter@./entities")}` : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
   const maybeBaseId = baseEntity ? code` & Flavor<string, "${baseEntity.name}">` : "";
+  const maybePreventBaseTypeInstantiation = meta.abstract
+    ? code`
+    if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
+      throw new Error(\`${entity.type} \${typeof opts === "string" ? opts : ""} must be instantiated via a subtype\`);
+    }`
+    : "";
 
   let cstr;
   if (baseEntity) {
@@ -357,6 +363,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         // @ts-ignore
         super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
+        ${maybePreventBaseTypeInstantiation}
       }
     `;
   } else if (subEntities.length > 0) {
@@ -369,6 +376,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
           super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
           ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
         }
+        ${maybePreventBaseTypeInstantiation}
       }
     `;
   } else {
@@ -376,6 +384,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       constructor(em: ${EntityManager}, opts: ${entityName}Opts) {
         super(em, ${metadata}, ${entityName}Codegen.defaultValues, opts);
         ${setOpts}(this as any as ${entityName}, opts, { calledFromConstructor: true });
+        ${maybePreventBaseTypeInstantiation}
       }
     `;
   }
@@ -528,7 +537,7 @@ function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
 function generatePolymorphicTypes(meta: EntityDbMetadata) {
   return meta.polymorphics.flatMap((pf) => [
     code`export type ${pf.fieldType} = ${pf.components.map((c) => code`| ${c.otherEntity.type}`)};`,
-    code`export function get${pf.fieldType}Constructors(): ${EntityConstructor}<${pf.fieldType}>[] {
+    code`export function get${pf.fieldType}Constructors(): ${MaybeAbstractEntityConstructor}<${pf.fieldType}>[] {
       return [${pf.components.map((c) => code`${c.otherEntity.type},`)}];
     }`,
     code`export function is${pf.fieldType}(maybeEntity: ${Entity} | undefined | null): maybeEntity is ${pf.fieldType} {

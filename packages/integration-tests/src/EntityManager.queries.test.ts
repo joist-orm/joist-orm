@@ -19,6 +19,7 @@ import {
   Publisher,
   PublisherId,
   PublisherSize,
+  SmallPublisher,
 } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
@@ -93,7 +94,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by varchar through two joins", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -141,7 +142,7 @@ describe("EntityManager.queries", () => {
   it("can find by foreign key is new entity", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const publisher = new Publisher(em, { name: "p1" });
+    const publisher = new SmallPublisher(em, { name: "p1", city: "c1" });
     const authors = await em.find(Author, { publisher });
     expect(authors.length).toEqual(0);
   });
@@ -245,7 +246,7 @@ describe("EntityManager.queries", () => {
 
   it("can find books by publisher", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -325,7 +326,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by ids", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
     const pubs = await em.find(Publisher, { id: ["1", "2"] });
     expect(pubs.length).toEqual(2);
@@ -333,7 +334,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by tagged ids", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
     const pubs = await em.find(Publisher, { id: ["p:1", "p:2"] });
     expect(pubs.length).toEqual(2);
@@ -341,7 +342,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by ids with in clause", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
     const pubs = await em.find(Publisher, { id: { in: ["1", "2"] } });
     expect(pubs.length).toEqual(2);
@@ -349,7 +350,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by enums", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
-    await insertPublisher({ name: "p2", size_id: 2 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
     const em = newEntityManager();
     const pubs = await em.find(Publisher, { size: PublisherSize.Large });
     expect(pubs.length).toEqual(1);
@@ -358,7 +359,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by not equal enum", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
-    await insertPublisher({ name: "p2", size_id: 2 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
     const em = newEntityManager();
     const pubs = await em.find(Publisher, { size: { ne: PublisherSize.Large } });
     expect(pubs.length).toEqual(1);
@@ -484,7 +485,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by like and join with not equal enum", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
-    await insertPublisher({ name: "p2", size_id: 2 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
     await insertAuthor({ first_name: "a", publisher_id: 1 });
     await insertAuthor({ first_name: "a", publisher_id: 2 });
     const em = newEntityManager();
@@ -507,7 +508,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by one or fail", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
-    await insertPublisher({ name: "p2", size_id: 2 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
     const em = newEntityManager();
     const publisher = await em.findOneOrFail(Publisher, { name: "p2" });
     expect(publisher.name).toEqual("p2");
@@ -515,7 +516,7 @@ describe("EntityManager.queries", () => {
 
   it("can find by one when not found", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
-    await insertPublisher({ name: "p2", size_id: 2 });
+    await insertPublisher({ id: 2, name: "p2", size_id: 2 });
     const em = newEntityManager();
     await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow(NotFoundError);
     await expect(em.findOneOrFail(Publisher, { name: "p3" })).rejects.toThrow("Did not find Publisher for given query");
@@ -523,11 +524,11 @@ describe("EntityManager.queries", () => {
 
   it("can find by one when too many found", async () => {
     await insertPublisher({ name: "p", size_id: 1 });
-    await insertPublisher({ name: "p", size_id: 2 });
+    await insertPublisher({ id: 2, name: "p", size_id: 2 });
     const em = newEntityManager();
     await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(TooManyError);
     await expect(em.findOneOrFail(Publisher, { name: "p" })).rejects.toThrow(
-      "Found more than one: Publisher:1, Publisher:2",
+      "Found more than one: SmallPublisher:1, SmallPublisher:2",
     );
   });
 
@@ -553,7 +554,7 @@ describe("EntityManager.queries", () => {
 
   it("can order by joined string asc", async () => {
     await insertPublisher({ name: "pB" });
-    await insertPublisher({ name: "pA" });
+    await insertPublisher({ id: 2, name: "pA" });
     await insertAuthor({ first_name: "aB", publisher_id: 1 });
     await insertAuthor({ first_name: "aA", publisher_id: 2 });
     const em = newEntityManager();
@@ -649,9 +650,9 @@ describe("EntityManager.queries", () => {
 
   it("can offset/limit", async () => {
     await insertPublisher({ name: "p1" });
-    await insertPublisher({ name: "p2" });
-    await insertPublisher({ name: "p3" });
-    await insertPublisher({ name: "p4" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertPublisher({ id: 3, name: "p3" });
+    await insertPublisher({ id: 4, name: "p4" });
     const em = newEntityManager();
     const p23 = await em.find(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
     expect(p23.length).toEqual(2);

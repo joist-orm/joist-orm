@@ -14,9 +14,11 @@ import {
   newCritic,
   newCriticColumn,
   newImage,
+  newLargePublisher,
   newPublisher,
   Publisher,
   PublisherType,
+  SmallPublisher,
 } from "@src/entities";
 import { maybeNew, maybeNewPoly, newTestInstance } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
@@ -28,7 +30,7 @@ describe("EntityManager.factories", () => {
     const p1 = newPublisher(em);
     await em.flush();
     // Then we create only that entity
-    expect(p1.name).toEqual("Publisher 1");
+    expect(p1.name).toEqual("SmallPublisher 1");
     expect(em.numberOfEntities).toEqual(1);
   });
 
@@ -44,7 +46,7 @@ describe("EntityManager.factories", () => {
   it("can create a child and a required parent if opt is undefined", async () => {
     const em = newEntityManager();
     // Given we make a book with no existing/passed authors
-    const b1 = newBook(em, { author: undefined });
+    newBook(em, { author: undefined });
     // Then we still create the author b/c it's required and we assume the factory did
     // `const { author } = opts` and doesn't _really_ want the author undefined.
     // If they do, they can pass `null`.
@@ -110,7 +112,7 @@ describe("EntityManager.factories", () => {
   it("can create a child and override the parent's default child", async () => {
     const em = newEntityManager();
     // Given we make a book that requires an author
-    const b = newBook(em);
+    newBook(em);
     // Then the newAuthor factory was told to override any `books: [{}]` defaults
     expect(lastAuthorFactoryOpts).toStrictEqual({
       books: [],
@@ -229,7 +231,7 @@ describe("EntityManager.factories", () => {
   it("uses the entity's default values for enums", async () => {
     const em = newEntityManager();
     const p1 = newPublisher(em);
-    expect(p1.type).toEqual(PublisherType.Big);
+    expect(p1.type).toEqual(PublisherType.Small);
   });
 
   it("should default children to empty array if created bottom-up", async () => {
@@ -286,7 +288,7 @@ describe("EntityManager.factories", () => {
   it("should not reuse existing entities for o2os", async () => {
     const em = newEntityManager();
     // Given an existing image
-    const i = newImage(em);
+    newImage(em);
     // When we create an entity that o2os to the image
     const a = newAuthor(em);
     // Then we don't use the existing image
@@ -310,7 +312,7 @@ describe("EntityManager.factories", () => {
 
   it("can create m2m", async () => {
     const em = newEntityManager();
-    const b1 = newBook(em, { tags: [{}, {}] });
+    newBook(em, { tags: [{}, {}] });
     await em.flush();
   });
 
@@ -346,8 +348,7 @@ describe("EntityManager.factories", () => {
 
     it("uses a use entity", async () => {
       const em = newEntityManager();
-      const p1 = newPublisher(em);
-      const p2 = newPublisher(em);
+      const [, p2] = [newPublisher(em), newPublisher(em)];
       const a = newTestInstance(em, Author, {
         publisher: maybeNew<Publisher>({}),
         use: p2,
@@ -387,10 +388,10 @@ describe("EntityManager.factories", () => {
 
     it("should use an existing Publisher for the Comment.parent even though there is a book/author", async () => {
       const em = newEntityManager();
-      const p1 = newPublisher(em);
+      const p1 = newLargePublisher(em);
       newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(Publisher, { existingSearchOrder: [Publisher, Author, Book] }),
+        parent: maybeNewPoly<CommentParent>(SmallPublisher, { existingSearchOrder: [Publisher, Author, Book] }),
       });
       expect(ft1.parent.get).toEqual(p1);
     });
@@ -400,7 +401,7 @@ describe("EntityManager.factories", () => {
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent, Author>(Author, {
           ifNewOpts: { firstName: "test" },
-          existingSearchOrder: [Author, Book, Publisher],
+          existingSearchOrder: [Author, Book, SmallPublisher],
         }),
       });
       expect(ft1.parent.isSet).toBeTruthy();
@@ -427,7 +428,7 @@ describe("EntityManager.factories", () => {
 
     it("creates a new entity when configured not to search for books as a possible default", async () => {
       const em = newEntityManager();
-      const b1 = newBook(em);
+      newBook(em);
       const ft1 = newTestInstance(em, Comment, {
         parent: maybeNewPoly<CommentParent>(Author, {
           existingSearchOrder: [Author, Publisher],
@@ -451,7 +452,7 @@ describe("EntityManager.factories", () => {
       const p1 = newPublisher(em);
       const p2 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(Publisher),
+        parent: maybeNewPoly(SmallPublisher),
       });
       expect(ft1.parent.get).not.toEqual(p1);
       expect(ft1.parent.get).not.toEqual(p2);
@@ -460,10 +461,9 @@ describe("EntityManager.factories", () => {
 
     it("uses a use entity", async () => {
       const em = newEntityManager();
-      const p1 = newPublisher(em);
-      const p2 = newPublisher(em);
+      const [, p2] = [newPublisher(em), newPublisher(em)];
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(Publisher),
+        parent: maybeNewPoly(SmallPublisher),
         use: p2,
       });
       expect(ft1.parent.get).toEqual(p2);
@@ -472,8 +472,9 @@ describe("EntityManager.factories", () => {
     it("can provide defaults", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(Publisher, { ifNewOpts: { name: "p2" } }),
+        parent: maybeNewPoly(SmallPublisher, { ifNewOpts: { name: "p2" } }),
       });
+      expect(ft1.parent.get).toBeInstanceOf(SmallPublisher);
       expect((ft1.parent.get as Publisher).name).toEqual("p2");
     });
   });
@@ -501,7 +502,6 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     // Given an author with a book and a review
     const a = newAuthor(em, { books: [{ reviews: [{ rating: 1 }] }] });
-    const b = a.books;
     await em.flush();
     // And another em creates a 2nd book
     const em2 = newEntityManager();
@@ -517,7 +517,7 @@ describe("EntityManager.factories", () => {
   it("uniquely assigns name fields", async () => {
     const em = newEntityManager();
     const [p1, p2] = [newPublisher(em), newPublisher(em)];
-    expect(p1.name).toEqual("Publisher 1");
-    expect(p2.name).toEqual("Publisher 2");
+    expect(p1.name).toEqual("SmallPublisher 1");
+    expect(p2.name).toEqual("SmallPublisher 2");
   });
 });

@@ -5,6 +5,7 @@ import { EntityConstructor, entityLimit, FilterOf, OrderOf } from "./EntityManag
 import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
 import {
   addTablePerClassJoinsAndClassTag,
+  asConcreteCstr,
   Column,
   getConstructorFromTaggedId,
   maybeGetConstructorFromReference,
@@ -244,7 +245,16 @@ export function buildQuery<T extends Entity>(
           query = addPolyClause(query, alias, field, meta, clause);
         } else if (clause === null) {
           query = field.components.reduce(
-            (query, component) => addPolyClause(query, alias, field, meta, component.otherMetadata().cstr, clause),
+            (query, component) =>
+              addPolyClause(
+                query,
+                alias,
+                field,
+                meta,
+                // Not really sure if this is safe, being lazy for now...
+                asConcreteCstr(component.otherMetadata().cstr),
+                clause,
+              ),
             query,
           );
         } else if (typeof clause === "object" && Object.keys(clause).length === 1 && "ne" in clause) {

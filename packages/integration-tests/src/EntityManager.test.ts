@@ -712,12 +712,12 @@ describe("EntityManager", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `select "p0".*, "s0".*, "s1".*, "p0"."id" as "id",`,
+        `select "p".*, "s0".*, "s1".*, "p"."id" as "id",`,
         ` CASE WHEN s0.id IS NOT NULL THEN 'LargePublisher' WHEN s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
-        ` from "publishers" as "p0"`,
-        ` left outer join "large_publishers" as "s0" on "p0"."id" = "s0"."id"`,
-        ` left outer join "small_publishers" as "s1" on "p0"."id" = "s1"."id"`,
-        ` where "p0"."id" = $1 order by "p0"."id" asc limit $2`,
+        ` from "publishers" as "p"`,
+        ` left outer join "large_publishers" as "s0" on "p"."id" = "s0"."id"`,
+        ` left outer join "small_publishers" as "s1" on "p"."id" = "s1"."id"`,
+        ` where "p"."id" = $1 order by "p"."id" asc limit $2`,
       ].join(""),
     ]);
     // And both results are the same
@@ -740,7 +740,7 @@ describe("EntityManager", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a0".*, 0 as __tag, row_number() over () as __row from "authors" as "a0" where "a0"."id" = $2 and "a0"."id" = $3 order by "a0"."id" ASC, "a0"."id" ASC, "a0"."id" asc limit $4) union all (select "a0".*, 1 as __tag, row_number() over () as __row from "authors" as "a0" where "a0"."id" = $5 and "a0"."id" = $6 order by "a0"."id" DESC, "a0"."id" DESC, "a0"."id" asc limit $7) order by "__tag" asc",
+        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $2 and "a"."id" = $3 order by "a"."id" ASC, "a"."id" ASC, "a"."id" asc limit $4) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $5 and "a"."id" = $6 order by "a"."id" DESC, "a"."id" DESC, "a"."id" asc limit $7) order by "__tag" asc",
       ]
     `);
     // And the results are the expected reverse of each other

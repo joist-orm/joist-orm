@@ -201,7 +201,7 @@ export function buildQuery<T extends Entity>(
     const abbrev = abbreviation(tableName);
     const i = aliases[abbrev] || 0;
     aliases[abbrev] = i + 1;
-    return `${abbrev}${i}`;
+    return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
   const alias = getAlias(meta.tableName);

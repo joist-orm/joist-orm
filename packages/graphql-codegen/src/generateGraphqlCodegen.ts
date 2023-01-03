@@ -25,7 +25,7 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
     module.exports = { mappers, enumValues };
   `;
 
-  return { name: "../../graphql-codegen-joist.js", overwrite: true, contents, hash: true };
+  return { name: "../../graphql-codegen-joist.js", overwrite: true, contents };
 }
 
 function sortObject<T extends object>(obj: T): T {

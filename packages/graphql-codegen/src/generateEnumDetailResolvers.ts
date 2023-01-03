@@ -30,5 +30,5 @@ export function generateEnumDetailResolvers(enums: EnumMetadata): CodegenFile {
     };
   `;
 
-  return { name: "../resolvers/enumResolvers.ts", overwrite: true, hash: true, contents };
+  return { name: "../resolvers/enumResolvers.ts", overwrite: true, contents };
 }

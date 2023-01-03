@@ -23,7 +23,6 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
           name: `${entityName}Codegen.ts`,
           contents: generateEntityCodegenFile(config, dbMeta, meta),
           overwrite: true,
-          hash: true,
         },
         { name: `${entityName}.ts`, contents: generateInitialEntityFile(meta), overwrite: false },
       ];
@@ -38,7 +37,6 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
           name: `${enumName}.ts`,
           contents: generateEnumFile(config, enumData, enumName),
           overwrite: true,
-          hash: true,
         },
       ];
     })
@@ -50,7 +48,6 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
           name: `${enumData.name}.ts`,
           contents: generatePgEnumFile(config, enumData),
           overwrite: true,
-          hash: true,
         },
       ];
     })
@@ -74,7 +71,6 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
       ${configureMetadata}(allMetadata);
     `,
     overwrite: true,
-    hash: true,
     toStringOpts: { dprintOptions: { lineWidth: 400 } },
   };
 

@@ -1,3 +1,10 @@
+# [1.45.0](https://github.com/stephenh/joist-ts/compare/v1.44.3...v1.45.0) (2023-01-03)
+
+
+### Features
+
+* Support abstract base types. ([#492](https://github.com/stephenh/joist-ts/issues/492)) ([930873f](https://github.com/stephenh/joist-ts/commit/930873f77db5bbcea0cb5deaa2bab43fa3aaf675))
+
 ## [1.44.3](https://github.com/stephenh/joist-ts/compare/v1.44.2...v1.44.3) (2023-01-03)
 
 

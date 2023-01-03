@@ -182,6 +182,23 @@ async function main() {
     { iterations, serial },
   );
 
+  await benchmark.record(
+    `Postgres.js ${numberOfEntities} Authors & Books ${numberOfEntities} individual but pipelined in order in txn`,
+    async () => {
+      await sql.begin((sql) => {
+        return [
+          ...zeroTo(numberOfEntities).map((i) => {
+            return sql`INSERT INTO "authors" (first_name, initials, number_of_books) VALUES (${`a${i}`}, ${"a"}, ${0})`;
+          }),
+          ...zeroTo(numberOfEntities).map((i) => {
+            return sql`INSERT INTO "books" (title, author_id) VALUES (${`b${i}`}, ${1})`;
+          }),
+        ];
+      });
+    },
+    { iterations, serial },
+  );
+
   console.log(benchmark.report());
 
   await knex.destroy();

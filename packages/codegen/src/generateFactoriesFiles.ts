@@ -24,7 +24,6 @@ export function generateFactoriesFiles(entities: EntityDbMetadata[]): CodegenFil
     name: "./factories.ts",
     contents: code`${entities.map(({ entity }) => code`export * from "./${entity.name}.factories";`)}`,
     overwrite: true,
-    hash: true,
   };
 
   return [...entityFiles, factoriesFile];

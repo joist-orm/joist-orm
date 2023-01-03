@@ -1,10 +1,10 @@
 import { BookReview, newBookReview } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisherAsSmall } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 
 describe("hasOneDerived", () => {
   it("can load a reference", async () => {
-    await insertPublisher({ name: "p1" });
+    await insertPublisherAsSmall({ name: "p1" });
     await insertAuthor({ first_name: "f", publisher_id: 1 });
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });
@@ -16,7 +16,7 @@ describe("hasOneDerived", () => {
   });
 
   it("can populate a reference", async () => {
-    await insertPublisher({ name: "p1" });
+    await insertPublisherAsSmall({ name: "p1" });
     await insertAuthor({ first_name: "f", publisher_id: 1 });
     await insertBook({ title: "t", author_id: 1 });
     await insertBookReview({ rating: 5, book_id: 1 });

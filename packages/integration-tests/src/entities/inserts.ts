@@ -63,6 +63,19 @@ export function insertPublisher(row: {
   return testDriver.insert("publishers", row);
 }
 
+export async function insertPublisherAsSmall(row: {
+  id?: number;
+  name: string;
+  longitude?: string | number;
+  latitude?: string | number;
+  huge_number?: string | number;
+  size_id?: number;
+  group_id?: number;
+}) {
+  await testDriver.insert("publishers", row);
+  await testDriver.insert("small_publishers", { id: row.id ?? 1, city: "c1" });
+}
+
 export function insertSmallPublisher(row: { id: number; city: string }) {
   return testDriver.insert("small_publishers", row);
 }

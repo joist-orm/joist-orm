@@ -198,6 +198,7 @@ export class EntityDbMetadata {
   updatedAt: PrimitiveField | undefined;
   deletedAt: PrimitiveField | undefined;
   baseClassName: string | undefined;
+  abstract: boolean;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
@@ -279,6 +280,7 @@ export class EntityDbMetadata {
 
     this.tableName = table.name;
     this.tagName = config.entities[this.entity.name]?.tag;
+    this.abstract = config.entities[this.entity.name]?.abstract || false;
 
     const { createdAtConf, updatedAtConf, deletedAtConf } = getTimestampConfig(config);
     this.createdAt = this.primitives.find((f) => createdAtConf.names.includes(f.columnName));

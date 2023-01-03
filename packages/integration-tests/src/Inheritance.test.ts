@@ -45,7 +45,8 @@ describe("Inheritance", () => {
     ]);
   });
 
-  it("can insert a base-only instance", async () => {
+  // We cannot test this scenario anymore b/c we made `Publisher` abstract
+  it.skip("can insert a base-only instance", async () => {
     const em = newEntityManager();
     newPublisher(em, { name: "sp1" });
     await em.flush();
@@ -57,7 +58,7 @@ describe("Inheritance", () => {
         longitude: null,
         name: "sp1",
         size_id: null,
-        type_id: 2,
+        type_id: 1,
         created_at: expect.any(Date),
         updated_at: expect.any(Date),
       },
@@ -88,7 +89,8 @@ describe("Inheritance", () => {
     expect(await testDriver.select("large_publishers")).toMatchObject([{ id: 2, country: "countrya" }]);
   });
 
-  it("can update just base-only instance", async () => {
+  // We cannot test this scenario anymore b/c we made `Publisher` abstract
+  it.skip("can update just base-only instance", async () => {
     await insertPublisher({ name: "p1" });
 
     const em = newEntityManager();
@@ -133,6 +135,12 @@ describe("Inheritance", () => {
     const lp = await em.load(LargePublisher, "p:2");
     expect(lp).toBeInstanceOf(LargePublisher);
     expect(lp).toMatchEntity({ name: "lp2", country: "country" });
+  });
+
+  it("cannot load a base-only instance that is abstract", async () => {
+    await insertPublisher({ name: "sp1" });
+    const em = newEntityManager();
+    await expect(em.load(Publisher, "p:1")).rejects.toThrow("Publisher must be instantiated via a subtype");
   });
 
   it("can delete a subtype across separate tables", async () => {

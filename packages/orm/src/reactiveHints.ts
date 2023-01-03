@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { EntityConstructor, FieldsOf } from "./EntityManager";
+import { FieldsOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getProperties } from "./getProperties";
 import { Loadable, Loaded, LoadHint } from "./loadHints";
@@ -62,7 +62,7 @@ export type Reacted<T extends Entity, H> = Entity & {
 };
 
 export function reverseReactiveHint<T extends Entity>(
-  entityType: EntityConstructor<T>,
+  entityType: MaybeAbstractEntityConstructor<T>,
   hint: ReactiveHint<T>,
   reactForOtherSide?: string | boolean,
   isFirst: boolean = true,
@@ -168,7 +168,7 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
 }
 
 export interface ReactiveTarget {
-  entity: EntityConstructor<any>;
+  entity: MaybeAbstractEntityConstructor<any>;
   fields: string[];
   path: string[];
 }

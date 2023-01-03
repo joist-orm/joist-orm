@@ -1,7 +1,7 @@
 import { Entity, isEntity } from "./Entity";
-import { EntityConstructor, EntityManager, IdOf, isKey, OptIdsOf, OptsOf } from "./EntityManager";
+import { EntityManager, IdOf, isKey, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { getConstructorFromTaggedId, PartialOrNull } from "./index";
+import { asConcreteCstr, getConstructorFromTaggedId, PartialOrNull } from "./index";
 import { NullOrDefinedOr } from "./utils";
 
 /**
@@ -42,7 +42,7 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
  */
 export async function createOrUpdatePartial<T extends Entity>(
   em: EntityManager<any>,
-  constructor: EntityConstructor<T>,
+  constructor: MaybeAbstractEntityConstructor<T>,
   opts: DeepPartialOrNull<T>,
 ): Promise<T> {
   const { id, ...others } = opts as any;
@@ -155,7 +155,8 @@ export async function createOrUpdatePartial<T extends Entity>(
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
 
   if (isNew) {
-    return em.createPartial(constructor, _opts);
+    // asConcreteCstr is not actually safe
+    return em.createPartial(asConcreteCstr(constructor), _opts);
   } else {
     const entity = await em.load(constructor, id);
     // For o2m and m2m .set to work, they need to be loaded so that they know what to remove.

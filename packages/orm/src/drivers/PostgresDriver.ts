@@ -440,6 +440,11 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     .flatMap((f) => f.serde.columns);
   const updatedAtField = (meta.fields[updatedAt] as PrimitiveField).serde.columns[0].columnName;
 
+  // If we're updating class table inheritance, we might not actually have any columns to update
+  if (columns.length === 1) {
+    return;
+  }
+
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
   const bindings = entities.flatMap((entity) => [
@@ -488,6 +493,11 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
     .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
+
+  // If we're updating class table inheritance, we might not actually have any columns to update
+  if (columns.length === 1) {
+    return;
+  }
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.

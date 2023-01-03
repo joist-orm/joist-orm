@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookToTag, insertPublisherAsSmall, insertTag } from "@src/entities/inserts";
 import { jan1 } from "joist-orm";
 import { Author, Book, Publisher, Tag } from "./entities";
 import { newEntityManager } from "./setupDbTests";
@@ -43,7 +43,7 @@ describe("EntityManager.softDeletes", () => {
   });
 
   it("load through m2o includes soft deleted entities", async () => {
-    await insertPublisher({ name: "p1" });
+    await insertPublisherAsSmall({ name: "p1" });
     await insertAuthor({ publisher_id: 1, first_name: "a1", deleted_at: jan1 });
     await insertBook({ author_id: 1, title: "b1" });
     const em = newEntityManager();
@@ -62,7 +62,7 @@ describe("EntityManager.softDeletes", () => {
   });
 
   it("populates soft-deleted entities", async () => {
-    await insertPublisher({ name: "p1" });
+    await insertPublisherAsSmall({ name: "p1" });
     await insertAuthor({ publisher_id: 1, first_name: "a1", deleted_at: jan1 });
     await insertBook({ author_id: 1, title: "b1" });
     const em = newEntityManager();

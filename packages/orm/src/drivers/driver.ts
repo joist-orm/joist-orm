@@ -1,6 +1,6 @@
 import { Knex } from "knex";
 import { Entity } from "../Entity";
-import { EntityConstructor, EntityManager } from "../EntityManager";
+import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { FilterAndSettings } from "../QueryBuilder";
 import {
@@ -62,7 +62,7 @@ export interface Driver {
 
   find<T extends Entity>(
     em: EntityManager,
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     queries: readonly FilterAndSettings<T>[],
   ): Promise<unknown[][]>;
 

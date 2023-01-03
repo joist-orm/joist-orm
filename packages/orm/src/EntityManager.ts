@@ -8,6 +8,7 @@ import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/driver";
 import { Entity, isEntity } from "./Entity";
 import {
+  asConcreteCstr,
   assertIdsAreTagged,
   Changes,
   CustomCollection,
@@ -42,11 +43,24 @@ import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { assertNever, fail, getOrSet, MaybePromise, toArray } from "./utils";
 
+/**
+ * The constructor for concrete entity types.
+ *
+ * Abstract entity types, like a base `Publisher` class that is marked `abstract`, cannot
+ * implement this and instead only have the `AbsEntityConstructor` type.
+ */
 export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
 
   defaultValues: object;
 }
+
+/**
+ * Constructors for either concrete or abstract entity types.
+ *
+ * I.e. this is more like "MaybeAbstractEntityConstructor".
+ */
+export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any>, opts: any) => T;
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
 export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
@@ -168,14 +182,14 @@ export class EntityManager<C = unknown> {
     return this._entityIndex.get(id) as T | undefined;
   }
 
-  public async find<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
+  public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate?: Const<H>; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
@@ -192,14 +206,17 @@ export class EntityManager<C = unknown> {
    *
    * I.e. filtering by `null` on fields that are non-`nullable`.
    */
-  public async findGql<T extends Entity>(type: EntityConstructor<T>, where: GraphQLFilterOf<T>): Promise<T[]>;
+  public async findGql<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterOf<T>,
+  ): Promise<T[]>;
   public async findGql<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
     options?: { populate?: Const<H>; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
@@ -211,14 +228,17 @@ export class EntityManager<C = unknown> {
     return result;
   }
 
-  public async findOne<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T | undefined>;
+  public async findOne<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterOf<T>,
+  ): Promise<T | undefined>;
   public async findOne<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate: Const<H> },
   ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends Entity>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate: any },
   ): Promise<T | undefined> {
@@ -233,14 +253,14 @@ export class EntityManager<C = unknown> {
   }
 
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
-  public async findOneOrFail<T extends Entity>(type: EntityConstructor<T>, where: FilterOf<T>): Promise<T>;
+  public async findOneOrFail<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterOf<T>): Promise<T>;
   public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options: { populate: Const<H> },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends Entity>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     where: FilterOf<T>,
     options?: { populate: any },
   ): Promise<T> {
@@ -437,7 +457,8 @@ export class EntityManager<C = unknown> {
       );
 
       // Call `new` just like the user would do
-      const clone = new meta.cstr(this, copy);
+      // The `asConcreteCstr` is safe b/c we got meta from a concrete/already-instantiated entity
+      const clone = new (asConcreteCstr(meta.cstr))(this, copy);
 
       return [entity, clone] as const;
     });
@@ -478,20 +499,24 @@ export class EntityManager<C = unknown> {
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
   public async load<T>(id: IdOf<T>): Promise<T>;
   public async load(id: string): Promise<Entity>;
-  public async load<T extends Entity>(type: EntityConstructor<T>, id: string): Promise<T>;
+  public async load<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, id: string): Promise<T>;
   public async load<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     id: string,
     populate: Const<H>,
   ): Promise<Loaded<T, H>>;
   public async load<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     id: string,
     populate: Const<H>,
   ): Promise<Loaded<T, H>>;
-  async load<T extends Entity>(typeOrId: EntityConstructor<T> | string, id?: string, hint?: any): Promise<T> {
+  async load<T extends Entity>(
+    typeOrId: MaybeAbstractEntityConstructor<T> | string,
+    id?: string,
+    hint?: any,
+  ): Promise<T> {
     // Handle the `typeOrId` overload
-    let type: EntityConstructor<T>;
+    let type: MaybeAbstractEntityConstructor<T>;
     if (typeof typeOrId === "string") {
       type = getConstructorFromTaggedId(typeOrId);
       id = typeOrId;
@@ -515,13 +540,17 @@ export class EntityManager<C = unknown> {
   }
 
   /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
-  public async loadAll<T extends Entity>(type: EntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
+  public async loadAll<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
   public async loadAll<T extends Entity, H extends LoadHint<T>>(
-    type: EntityConstructor<T>,
+    type: MaybeAbstractEntityConstructor<T>,
     ids: readonly string[],
     populate: Const<H>,
   ): Promise<Loaded<T, H>[]>;
-  async loadAll<T extends Entity>(type: EntityConstructor<T>, _ids: readonly string[], hint?: any): Promise<T[]> {
+  async loadAll<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    _ids: readonly string[],
+    hint?: any,
+  ): Promise<T[]> {
     const meta = getMetadata(type);
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
@@ -1010,7 +1039,11 @@ export class EntityManager<C = unknown> {
    * i.e. when we're loading collections and have db results that are potentially stale compared to
    * the WIP entity state.
    */
-  public hydrate<T extends Entity>(type: EntityConstructor<T>, row: any, options?: { overwriteExisting?: boolean }): T {
+  public hydrate<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    row: any,
+    options?: { overwriteExisting?: boolean },
+  ): T {
     const maybeBaseMeta = getMetadata(type);
     const id = keyToString(maybeBaseMeta, row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
@@ -1021,7 +1054,8 @@ export class EntityManager<C = unknown> {
         ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
         : maybeBaseMeta;
       // Pass id as a hint that we're in hydrate mode
-      entity = new meta.cstr(this, id);
+      // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
+      entity = new (asConcreteCstr(meta.cstr))(this, id);
       Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       const meta = getMetadata(entity);

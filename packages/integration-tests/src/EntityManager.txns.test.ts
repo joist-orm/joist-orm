@@ -1,4 +1,4 @@
-import { Publisher } from "@src/entities";
+import { Publisher, SmallPublisher } from "@src/entities";
 import { Stepper } from "@src/Stepper.test";
 import { newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
@@ -128,7 +128,7 @@ describe("EntityManager", () => {
       const em = newEntityManager();
       await em.transaction(async () => {
         await steps.on(1, async () => em.find(Publisher, { name: "foo" }));
-        await steps.on(3, async () => em.create(Publisher, { name: "foo" }));
+        await steps.on(3, async () => em.create(SmallPublisher, { name: "foo", city: "c1" }));
       });
       await steps.on(5, async () => {});
     })();
@@ -137,7 +137,7 @@ describe("EntityManager", () => {
       const em = newEntityManager();
       await em.transaction(async () => {
         await steps.on(2, async () => em.find(Publisher, { name: "foo" }));
-        await steps.on(4, async () => em.create(Publisher, { name: "foo" }));
+        await steps.on(4, async () => em.create(SmallPublisher, { name: "foo", city: "c1" }));
         // noop wait to ensure that step 5 has run, i.e. the t1 has committed
         await steps.on(6, async () => {});
       });

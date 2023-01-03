@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisherAsSmall, select } from "@src/entities/inserts";
 import { defaultValue, getMetadata } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
@@ -80,7 +80,7 @@ describe("Author", () => {
   it("can have reactive validation fired on optional child", async () => {
     // Given the author has no publisher
     await insertAuthor({ first_name: "a1" });
-    await insertPublisher({ name: "p1" });
+    await insertPublisherAsSmall({ name: "p1" });
     const em = newEntityManager();
     // When we set the publisher
     const a1 = await em.load(Author, "1");
@@ -398,8 +398,8 @@ describe("Author", () => {
     });
 
     it("works for references", async () => {
-      await insertPublisher({ name: "p1" });
-      await insertPublisher({ name: "p2" });
+      await insertPublisherAsSmall({ name: "p1" });
+      await insertPublisherAsSmall({ id: 2, name: "p2" });
       await insertAuthor({ first_name: "a1", publisher_id: 1 });
       const em = newEntityManager();
       const a1 = await em.load(Author, "a:1");
@@ -437,7 +437,7 @@ describe("Author", () => {
       a1.publisher.set(p1);
       expect(a1.changes.publisher.hasChanged).toBe(false);
       expect(a1.changes.publisher.hasUpdated).toBe(false);
-      expect(a1.publisher.get!.name).toBe("Publisher 1");
+      expect(a1.publisher.get!.name).toBe("SmallPublisher 1");
     });
   });
 

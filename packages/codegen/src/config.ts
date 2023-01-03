@@ -24,6 +24,8 @@ export interface EntityConfig {
   tableName?: string;
   fields?: Record<string, FieldConfig>;
   relations?: Record<string, RelationConfig>;
+  /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
+  abstract?: boolean;
 }
 
 export interface TimestampConfig {

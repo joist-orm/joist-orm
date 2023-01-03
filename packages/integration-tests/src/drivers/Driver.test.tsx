@@ -1,4 +1,4 @@
-import { Author, Book, newBook, newTag, Publisher, Tag } from "@src/entities";
+import { Author, Book, newBook, newTag, SmallPublisher, Tag } from "@src/entities";
 import {
   insertAuthor,
   insertBook,
@@ -115,7 +115,7 @@ describe("Driver", () => {
     await insertAuthor({ first_name: "a2", publisher_id: 1 });
     // And we create a dummy publisher to get the authors
     const em = newEntityManager();
-    const p2 = em.create(Publisher, { name: "p2" });
+    const p2 = em.create(SmallPublisher, { name: "p2", city: "C1" });
     // Purposefully using the non-dummy id 1
     const rows = await driver.loadOneToMany(em, p2.authors as any, ["1"]);
     expect(rows.length).toEqual(2);

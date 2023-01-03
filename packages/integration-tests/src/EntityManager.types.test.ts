@@ -1,12 +1,12 @@
-import { insertPublisher, select } from "@src/entities/inserts";
-import { Publisher } from "./entities";
+import { insertPublisher, insertSmallPublisher, select } from "@src/entities/inserts";
+import { Publisher, SmallPublisher } from "./entities";
 import { newEntityManager, testDriver } from "./setupDbTests";
 
 describe("EntityManager.types", () => {
   it("supports decimals", async () => {
     const em = newEntityManager();
     // Given we make an entity with some decimals
-    await em.create(Publisher, { name: "p1", latitude: 38.46281, longitude: -122.72805 });
+    await em.create(SmallPublisher, { name: "p1", latitude: 38.46281, longitude: -122.72805, city: "c1" });
     await em.flush();
     const rows = await select("publishers");
     if (testDriver.isInMemory) {
@@ -30,6 +30,7 @@ describe("EntityManager.types", () => {
       // This is above max integer's 2^51 - 1
       huge_number: "10,000,000,000,000,000".replace(/,/g, ""),
     });
+    await insertSmallPublisher({ id: 1, city: "c1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "p:1");
     expect(p1.hugeNumber).toEqual(10_000_000_000_000_000);
@@ -38,7 +39,7 @@ describe("EntityManager.types", () => {
   it("supports null decimals", async () => {
     const em = newEntityManager();
     // Given longitude is left null
-    await em.create(Publisher, { name: "p1", latitude: 38.46281 });
+    await em.create(SmallPublisher, { name: "p1", latitude: 38.46281, city: "c1" });
     await em.flush();
     // Then we'll read it as undefined
     const em2 = newEntityManager();

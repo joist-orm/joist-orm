@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisherAsSmall, select, update } from "@src/entities/inserts";
 import { Author, Book, newAuthor } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
@@ -62,7 +62,7 @@ describe("ManyToOneReference", () => {
 
   it("removes deleted entities from collections", async () => {
     // Given an author with a publisher
-    await insertPublisher({ name: "p1" });
+    await insertPublisherAsSmall({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = newEntityManager();
     // And we load the author with a1.publisher already populated

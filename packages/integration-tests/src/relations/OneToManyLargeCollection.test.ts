@@ -1,5 +1,5 @@
 import { Critic, newCritic, newPublisherGroup, newTag, Publisher, PublisherGroup } from "@src/entities";
-import { insertCritic, insertPublisher, insertPublisherGroup, select } from "@src/entities/inserts";
+import { insertCritic, insertPublisherAsSmall, insertPublisherGroup, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/setupDbTests";
 import { LoadHint } from "joist-orm";
 
@@ -57,7 +57,7 @@ describe("OneToManyLargeCollection", () => {
   it("can include on a new entity", async () => {
     // Given an existing publisher
     const em = newEntityManager();
-    await insertPublisher({ name: "c1" });
+    await insertPublisherAsSmall({ name: "c1" });
     const c1 = await em.load(Publisher, "p:1");
     resetQueryCount();
     // And a new tag

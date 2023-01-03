@@ -1,5 +1,11 @@
 import { Entity, EntityOrmField, isEntity } from "./Entity";
-import { currentFlushSecret, EntityConstructor, EntityManager, OptsOf } from "./EntityManager";
+import {
+  currentFlushSecret,
+  EntityConstructor,
+  EntityManager,
+  MaybeAbstractEntityConstructor,
+  OptsOf,
+} from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
@@ -224,7 +230,7 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
     .map((f) => f.fieldName);
 }
 
-const tagToConstructorMap = new Map<string, EntityConstructor<any>>();
+const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 
 /** Processes the metas based on any custom calls to the `configApi` hooks. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
@@ -311,14 +317,14 @@ export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
   return Object.values(entity).filter((v: any) => v instanceof AbstractRelationImpl);
 }
 
-export function getConstructorFromTaggedId(id: string): EntityConstructor<any> {
+export function getConstructorFromTaggedId(id: string): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
 }
 
 export function maybeGetConstructorFromReference(
   value: string | Entity | Reference<any, any, any> | undefined,
-): EntityConstructor<any> | undefined {
+): MaybeAbstractEntityConstructor<any> | undefined {
   const id = maybeResolveReferenceToId(value);
   return id ? getConstructorFromTaggedId(id) : undefined;
 }
@@ -334,4 +340,9 @@ function equalOrSameEntity(a: any, b: any): boolean {
 
 function equal(a: any, b: any): boolean {
   return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
+}
+
+/** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */
+export function asConcreteCstr<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): EntityConstructor<T> {
+  return cstr as any;
 }

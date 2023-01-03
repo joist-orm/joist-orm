@@ -244,7 +244,15 @@ export function buildQuery<T extends Entity>(
           query = addPolyClause(query, alias, field, meta, clause);
         } else if (clause === null) {
           query = field.components.reduce(
-            (query, component) => addPolyClause(query, alias, field, meta, component.otherMetadata().cstr, clause),
+            (query, component) =>
+              addPolyClause(
+                query,
+                alias,
+                field,
+                meta,
+                component.otherMetadata().cstr as EntityConstructor<any>,
+                clause,
+              ),
             query,
           );
         } else if (typeof clause === "object" && Object.keys(clause).length === 1 && "ne" in clause) {

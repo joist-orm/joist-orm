@@ -1,6 +1,7 @@
 import { Entity } from "./Entity";
 import * as EM from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
+import { asConcreteCstr } from "./index";
 
 // Hack to make currentlyInstantiatingEntity assignable
 const em = EM;
@@ -42,13 +43,16 @@ const fakeInstances: Record<string, Entity> = {};
  * be inspected on boot.
  */
 export function getFakeInstance<T extends Entity>(meta: EntityMetadata<T>): T {
-  return (fakeInstances[meta.cstr.name] ??= new meta.cstr(
+  // asConcreteCstr is safe b/c we're just doing property scanning and not real instantiation
+  return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
       register: (metadata: any, entity: any) => {
         em.currentlyInstantiatingEntity = entity;
         entity.__orm.metadata = meta;
         entity.__orm.data = {};
       },
+      // Tell our "cannot instantiate an abstract class" constructor logic check to chill
+      fakeInstance: true,
     } as any,
     {},
   )) as T;

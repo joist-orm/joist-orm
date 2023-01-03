@@ -5,6 +5,7 @@ import { EntityConstructor, entityLimit, FilterOf, OrderOf } from "./EntityManag
 import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
 import {
   addTablePerClassJoinsAndClassTag,
+  asConcreteCstr,
   Column,
   getConstructorFromTaggedId,
   maybeGetConstructorFromReference,
@@ -250,7 +251,8 @@ export function buildQuery<T extends Entity>(
                 alias,
                 field,
                 meta,
-                component.otherMetadata().cstr as EntityConstructor<any>,
+                // Not really sure if this is safe, being lazy for now...
+                asConcreteCstr(component.otherMetadata().cstr),
                 clause,
               ),
             query,

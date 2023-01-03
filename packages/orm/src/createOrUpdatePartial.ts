@@ -155,7 +155,7 @@ export async function createOrUpdatePartial<T extends Entity>(
   const _opts = Object.fromEntries(await Promise.all(p)) as OptsOf<T>;
 
   if (isNew) {
-    // asConcreteCstr is not actually safe
+    // asConcreteCstr is not actually safe but for now we rely on our cstr runtime check to catch this
     return em.createPartial(asConcreteCstr(constructor), _opts);
   } else {
     const entity = await em.load(constructor, id);

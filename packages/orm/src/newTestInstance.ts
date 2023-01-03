@@ -457,6 +457,12 @@ type UseMap = Map<Function, [Entity, boolean]>;
 function useMap(opts: FactoryOpts<any>): UseMap {
   const use: Entity | Entity[] | UseMap | undefined = opts.use;
   let map: UseMap;
+
+  // If e is a subtype like SmallPublisher, register it for the base Publisher as well
+  function addForAllMetas(e: Entity, explicit: boolean) {
+    getAllMetas(getMetadata(e)).forEach((m) => map.set(m.cstr, [e, explicit]));
+  }
+
   if (use instanceof Map) {
     // it's already a map
     map = use;
@@ -464,18 +470,10 @@ function useMap(opts: FactoryOpts<any>): UseMap {
     map = new Map();
     if (use instanceof Array) {
       // it's a top-level `newAuthor` with a user-passed `use: array`
-      use.forEach((e) => {
-        // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-        getAllMetas(getMetadata(e)).forEach((m) => {
-          map.set(m.cstr, [e, true]);
-        });
-      });
+      use.forEach((e) => addForAllMetas(e, true));
     } else if (use) {
       // it's a top-level `newAuthor` w/o a `use: entity` param
-      // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-      getAllMetas(getMetadata(use)).forEach((m) => {
-        map.set(m.cstr, [use, true]);
-      });
+      addForAllMetas(use, true);
     }
     // Scan opts for entities to implicitly add to the map, i.e. if the user
     // calls `newAuthor(em, { book: b1 })`, we'll use `b1` for any other books we
@@ -485,7 +483,7 @@ function useMap(opts: FactoryOpts<any>): UseMap {
       const opts = todo.pop();
       Object.values(opts || {}).forEach((opt) => {
         if (isEntity(opt) && !map.has(opt.constructor)) {
-          map.set(opt.constructor, [opt, false]);
+          addForAllMetas(opt, false);
         } else if (opt instanceof Array) {
           todo.push(...opt);
         } else if (isPlainObject(opt)) {

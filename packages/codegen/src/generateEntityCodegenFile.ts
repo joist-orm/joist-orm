@@ -352,7 +352,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const maybePreventBaseTypeInstantiation = meta.abstract
     ? code`
     if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
-      throw new Error("${entity.type} must be instantiated via a subtype");
+      throw new Error(\`${entity.type} \${typeof opts === "string" ? opts : ""} must be instantiated via a subtype\`);
     }`
     : "";
 

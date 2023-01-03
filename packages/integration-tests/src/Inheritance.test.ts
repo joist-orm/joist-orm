@@ -140,7 +140,7 @@ describe("Inheritance", () => {
   it("cannot load a base-only instance that is abstract", async () => {
     await insertPublisher({ name: "sp1" });
     const em = newEntityManager();
-    await expect(em.load(Publisher, "p:1")).rejects.toThrow("Publisher must be instantiated via a subtype");
+    await expect(em.load(Publisher, "p:1")).rejects.toThrow("Publisher p:1 must be instantiated via a subtype");
   });
 
   it("can delete a subtype across separate tables", async () => {

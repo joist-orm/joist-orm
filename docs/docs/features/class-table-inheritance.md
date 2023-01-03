@@ -3,11 +3,11 @@ title: Class Table Inheritance
 sidebar_position: 6
 ---
 
-Joist supports [Class Table Inheritance](https://www.martinfowler.com/eaaCatalog/classTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), and automatically handling the mapping of polymorphic entities to the right physical SQL tables.
+Joist supports [Class Table Inheritance](https://www.martinfowler.com/eaaCatalog/classTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), by automatically mapping single/logical polymorphic entities across separate per-subtype/physical SQL tables.
 
 ## Database Representation
 
-For example, lets say we have `Dog` entities and `Cat` entities, and we want them to both extend the `Animal` entity.
+For example, lets say we have a `Dog` entity and a `Cat` entity, and we want them to both extend the `Animal` entity.
 
 For class table inheritance, we represent this in Postgres by having three separate tables: `animals`, `dogs`, and `cats`.
 
@@ -31,9 +31,9 @@ createSubTable(b, "animals", "cats", {
 
 ## Entity Representation
 
-When `joist-codegen` sees that `dogs.id` is actually a foreign key to `animals.id`, it will create TypeScript output where the `Dog` class extends the `Animal` class.
+When `joist-codegen` sees that `dogs.id` is actually a foreign key to `animals.id`, Joist will ensure that the `Dog` model extends the `Animal` model.
 
-Note that because of the "codegen" entities, it will actually end up looking like:
+Note that because of the codegen entities, which contain the getter/setter boilerplate, it will actually end up looking like:
 
 ```typescript
 // in AnimalCodegen.ts
@@ -47,7 +47,7 @@ class Animal extends AnimalCodegen {
 }
 
 // in DogCodegen.ts
-abstract class DogCodegen extends Dog {
+abstract class DogCodegen extends Animal {
   can_bark: boolean;
 }
 
@@ -57,7 +57,7 @@ class Dog extends DogCodegen {
 }
 ```
 
-Now, when you load several `Animal`s, Joist will automatically probe the `dogs` and `cats` tables (by using a `LEFT OUTER JOIN`) and create entities of the right type:
+And when you load several `Animal`s, Joist will automatically probe the `dogs` and `cats` tables (by using a `LEFT OUTER JOIN` to each subtype table) and create entities of the right type:
 
 ```typescript
 const [a1, a2] = await em.loadAll(Animal, ["a:1", "a:2"]);
@@ -67,7 +67,7 @@ expect(a1).toBeInstanceOf(Dog);
 expect(a2).toBeInstanceOf(Cat);
 ``` 
 
-Similarly, if you save a `Dog`, Joist will automatically handle inserting the entity into both tables, putting the `name` into `animals` and `can_bark` into `dogs`, with the same `id` value for both rows:
+Similarly, if you save a `Dog` entity, Joist will automatically split the entity's data across both tables, putting the `name` into `animals` and `can_bark` into `dogs`, with the same `id` value for both rows:
 
 ```typescript
 const dog = em.create(Dog, {
@@ -78,6 +78,20 @@ const dog = em.create(Dog, {
 // `INSERT INTO dogs ...`.
 await em.flush();
 ```
+
+## Tagged Ids
+
+Currently, subtypes share the same tagged id as the base type.
+
+For example, `dog1.id` returns `a:1` because the `Dog`'s base type is `Animal`, and all `Animal`s (regardless of whether they're `Dog`s or `Cat`s) use the `a` tag.
+
+Joist might someday support per-subtype tags, but it would be complicated b/c we don't always know the subtype of an id; e.g. if there is a `pet_owners.animal_id` foreign key, and it points to either `Dog`s or `Cat`s, when loading the row `PetOwner:123` it's impossible to know if the tagged id its `animal_id` value should be `d:1` or `c:1` without first probing the `dogs` and `cats` tables, which takes extra SQL calls to do. So for now it's simplest/most straightforward to just share the same tag across the subtypes.
+
+## Abstract Only Base Types
+
+Currently, Joist does not support enforcing that a subtype _must_ be used, i.e. that an `Animal` cannot be instantiated directly, and the user must either instantiate specifically `Cat`s or `Dog`s.
+
+This should be easy to implement, it just hasn't been done yet.
 
 ## What about Single Table Inheritance?
 

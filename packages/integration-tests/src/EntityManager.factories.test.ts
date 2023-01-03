@@ -14,6 +14,7 @@ import {
   newCritic,
   newCriticColumn,
   newImage,
+  newLargePublisher,
   newPublisher,
   Publisher,
   PublisherType,
@@ -380,17 +381,17 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p1 = newPublisher(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent, Author>(Author, { existingSearchOrder: [Author, Book, SmallPublisher] }),
+        parent: maybeNewPoly<CommentParent, Author>(Author, { existingSearchOrder: [Author, Book, Publisher] }),
       });
       expect(ft1.parent.get).toEqual(p1);
     });
 
     it("should use an existing Publisher for the Comment.parent even though there is a book/author", async () => {
       const em = newEntityManager();
-      const p1 = newPublisher(em);
+      const p1 = newLargePublisher(em);
       newBook(em);
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly<CommentParent>(SmallPublisher, { existingSearchOrder: [SmallPublisher, Author, Book] }),
+        parent: maybeNewPoly<CommentParent>(SmallPublisher, { existingSearchOrder: [Publisher, Author, Book] }),
       });
       expect(ft1.parent.get).toEqual(p1);
     });

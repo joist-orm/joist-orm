@@ -87,11 +87,30 @@ For example, `dog1.id` returns `a:1` because the `Dog`'s base type is `Animal`, 
 
 Joist might someday support per-subtype tags, but it would be complicated b/c we don't always know the subtype of an id; e.g. if there is a `pet_owners.animal_id` foreign key, and it points to either `Dog`s or `Cat`s, when loading the row `PetOwner:123` it's impossible to know if the tagged id its `animal_id` value should be `d:1` or `c:1` without first probing the `dogs` and `cats` tables, which takes extra SQL calls to do. So for now it's simplest/most straightforward to just share the same tag across the subtypes.
 
-## Abstract Only Base Types
+## Abstract Base Types
 
-Currently, Joist does not support enforcing that a subtype _must_ be used, i.e. that an `Animal` cannot be instantiated directly, and the user must either instantiate specifically `Cat`s or `Dog`s.
+If you'd like to enforce that base type is abstract, i.e. that users cannot instantiate `Animal`, they must instantiate either a `Dog` or `Cat`, then you can mark `Animal` as `abstract` in the `joist-config.json` file:
 
-This should be easy to implement, it just hasn't been done yet.
+```json
+{
+ "entities": {
+    "Animal": {
+       "tag": "a",
+       "abstract": true
+    }
+ }
+}
+```
+
+You also need to manually update the `Animal.ts` file to make the class `abstract`:
+
+```typescript
+export abstract class Animal extends AnimalCodegen {}
+```
+
+After this, Joist will enforce that all `Animal`s must be either `Dog`s or `Cat`s.
+
+For example, if an `em.load(Animal, "a:1")` finds a row only in the `animals` table, and no matching row in the `dogs` or `cats` table, then the `em.load` method will fail with an error message.
 
 ## What about Single Table Inheritance?
 

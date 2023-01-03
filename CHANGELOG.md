@@ -1,3 +1,10 @@
+# [1.46.0](https://github.com/stephenh/joist-ts/compare/v1.45.0...v1.46.0) (2023-01-03)
+
+
+### Features
+
+* Remove the hash versions from codegen files. ([#493](https://github.com/stephenh/joist-ts/issues/493)) ([c596b5d](https://github.com/stephenh/joist-ts/commit/c596b5dfe12c330b39f34c685eb5b29530b7b9fa))
+
 # [1.45.0](https://github.com/stephenh/joist-ts/compare/v1.44.3...v1.45.0) (2023-01-03)
 
 

@@ -1,3 +1,10 @@
+## [1.44.3](https://github.com/stephenh/joist-ts/compare/v1.44.2...v1.44.3) (2023-01-03)
+
+
+### Bug Fixes
+
+* Skip the suffix for the first abbreviation. ([#490](https://github.com/stephenh/joist-ts/issues/490)) ([555a425](https://github.com/stephenh/joist-ts/commit/555a4257fab205136eb79335ef1bf6fe0da008b7))
+
 ## [1.44.2](https://github.com/stephenh/joist-ts/compare/v1.44.1...v1.44.2) (2023-01-02)
 
 

@@ -1,4 +1,4 @@
-import { insertPublisher, insertSmallPublisher, select } from "@src/entities/inserts";
+import { insertPublisher, select } from "@src/entities/inserts";
 import { Publisher, SmallPublisher } from "./entities";
 import { newEntityManager, testDriver } from "./setupDbTests";
 
@@ -30,7 +30,6 @@ describe("EntityManager.types", () => {
       // This is above max integer's 2^51 - 1
       huge_number: "10,000,000,000,000,000".replace(/,/g, ""),
     });
-    await insertSmallPublisher({ id: 1, city: "c1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "p:1");
     expect(p1.hugeNumber).toEqual(10_000_000_000_000_000);

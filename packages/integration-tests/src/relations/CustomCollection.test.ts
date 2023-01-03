@@ -1,10 +1,10 @@
-import { insertAuthor, insertBook, insertImage, insertPublisherAsSmall } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertImage, insertPublisher } from "@src/entities/inserts";
 import { Book, Image, ImageType, Publisher } from "../entities";
 import { newEntityManager } from "../setupDbTests";
 
 describe("CustomCollection", () => {
   it("can load a collection", async () => {
-    await insertPublisherAsSmall({ name: "p" });
+    await insertPublisher({ name: "p" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });
@@ -18,7 +18,7 @@ describe("CustomCollection", () => {
   });
 
   it("can populate a collection", async () => {
-    await insertPublisherAsSmall({ name: "p" });
+    await insertPublisher({ name: "p" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });
@@ -31,7 +31,7 @@ describe("CustomCollection", () => {
   });
 
   it("does not cache the collection value", async () => {
-    await insertPublisherAsSmall({ name: "p" });
+    await insertPublisher({ name: "p" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });
@@ -47,7 +47,7 @@ describe("CustomCollection", () => {
   });
 
   it("can set a collection", async () => {
-    await insertPublisherAsSmall({ name: "p" });
+    await insertPublisher({ name: "p" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });
@@ -67,7 +67,7 @@ describe("CustomCollection", () => {
   });
 
   it("can add to a collection", async () => {
-    await insertPublisherAsSmall({ name: "p" });
+    await insertPublisher({ name: "p" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });
@@ -87,7 +87,7 @@ describe("CustomCollection", () => {
   });
 
   it("can remove from a collection", async () => {
-    await insertPublisherAsSmall({ name: "p" });
+    await insertPublisher({ name: "p" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertImage({ file_name: "i1", type_id: 3, publisher_id: 1 });

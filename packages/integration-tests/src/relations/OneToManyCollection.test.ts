@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertBookReview, insertPublisherAsSmall, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
 import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
@@ -168,7 +168,7 @@ describe("OneToManyCollection", () => {
 
   it("removes deleted entities from other collections", async () => {
     // Given an author with a publisher
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = newEntityManager();
     // And the a1.publishers collection is loaded
@@ -199,7 +199,7 @@ describe("OneToManyCollection", () => {
 
   it("respects deleted entities before the collection loaded", async () => {
     // Given an author with a publisher
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = newEntityManager();
     // And the a1.publishers collection is not loaded
@@ -215,7 +215,7 @@ describe("OneToManyCollection", () => {
 
   it("can set to both add and remove", async () => {
     // Given the publisher already has a1 and a2
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
     await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
     await insertAuthor({ id: 3, first_name: "a3" });
@@ -259,7 +259,7 @@ describe("OneToManyCollection", () => {
 
   it("does not duplicate items", async () => {
     // Given the publisher p1 already has an author a1
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
 
     // And we re-add a1 to the unloaded publisher collection

@@ -1,11 +1,11 @@
-import { insertAuthor, insertBook, insertBookReview, insertPublisherAsSmall } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher } from "@src/entities/inserts";
 import { Lens } from "joist-orm";
 import { Author, Book, Publisher } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.lens", () => {
   it("can navigate references", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
@@ -17,8 +17,8 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate with n+1 safe queries", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
-    await insertPublisherAsSmall({ id: 2, name: "p2" });
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -42,7 +42,7 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate collections", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -59,7 +59,7 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate collections then reference", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -82,7 +82,7 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate collections then nullable references", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -103,7 +103,7 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate into async helper methods", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
@@ -120,7 +120,7 @@ describe("EntityManager.lens", () => {
   });
 
   it("can navigate into getters", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();

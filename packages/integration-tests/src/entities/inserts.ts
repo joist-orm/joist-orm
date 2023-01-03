@@ -51,7 +51,7 @@ export function insertComment(row: {
   return testDriver.insert("comments", row);
 }
 
-export function insertPublisher(row: {
+export function insertPublisherOnly(row: {
   id?: number;
   name: string;
   longitude?: string | number;
@@ -63,7 +63,8 @@ export function insertPublisher(row: {
   return testDriver.insert("publishers", row);
 }
 
-export async function insertPublisherAsSmall(row: {
+/** Inserts a small publisher, into `publishers` and `small_publishers`. */
+export async function insertPublisher(row: {
   id?: number;
   name: string;
   longitude?: string | number;
@@ -71,17 +72,25 @@ export async function insertPublisherAsSmall(row: {
   huge_number?: string | number;
   size_id?: number;
   group_id?: number;
+  city?: string;
 }) {
   await testDriver.insert("publishers", row);
-  await testDriver.insert("small_publishers", { id: row.id ?? 1, city: "c1" });
+  await testDriver.insert("small_publishers", { id: row.id ?? 1, city: row.city ?? "city" });
 }
 
-export function insertSmallPublisher(row: { id: number; city: string }) {
-  return testDriver.insert("small_publishers", row);
-}
-
-export function insertLargePublisher(row: { id: number; country: string }) {
-  return testDriver.insert("large_publishers", row);
+/** Inserts a large publisher, into `publishers` and `large_publishers`. */
+export async function insertLargePublisher(row: {
+  id?: number;
+  name: string;
+  longitude?: string | number;
+  latitude?: string | number;
+  huge_number?: string | number;
+  size_id?: number;
+  group_id?: number;
+  country?: string;
+}) {
+  await testDriver.insert("publishers", row);
+  await testDriver.insert("large_publishers", { id: row.id ?? 1, country: row.country ?? "country" });
 }
 
 export function insertTag(row: { id?: number; name: string }) {

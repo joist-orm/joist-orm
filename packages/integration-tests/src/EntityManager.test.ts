@@ -7,7 +7,7 @@ import {
   insertBook,
   insertBookReview,
   insertBookToTag,
-  insertPublisherAsSmall,
+  insertPublisher,
   insertTag,
   select,
   update,
@@ -322,7 +322,7 @@ describe("EntityManager", () => {
   });
 
   it("can load null enums", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     expect(p1.size).toBeUndefined();
@@ -330,7 +330,7 @@ describe("EntityManager", () => {
 
   it("can delete an entity", async () => {
     // Given a publisher
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     // When its deleted
@@ -343,8 +343,8 @@ describe("EntityManager", () => {
 
   it("can delete multiple entities", async () => {
     // Given several publishers publisher
-    await insertPublisherAsSmall({ name: "p1" });
-    await insertPublisherAsSmall({ id: 2, name: "p2" });
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const p2 = await em.load(Publisher, "2");
@@ -358,7 +358,7 @@ describe("EntityManager", () => {
 
   it("does not re-delete an already deleted entity", async () => {
     // Given a publisher
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     // And its deleted
@@ -372,7 +372,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify a deleted entity", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     em.delete(p1);
@@ -381,7 +381,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify a deleted entity's o2m collection", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     em.delete(p1);
@@ -399,7 +399,7 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     // Given we've loaded an entity
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
@@ -413,7 +413,7 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity with a loaded o2m collection", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a collection
     const em = newEntityManager();
@@ -428,14 +428,14 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity with a loaded m2o reference", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a reference
     const em = newEntityManager();
     const a1 = await em.load(Author, "1", "publisher");
     expect(a1.publisher.get!.name).toEqual("p1");
     // And the foreign key is changed by something else
-    await insertPublisherAsSmall({ id: 2, name: "p2" });
+    await insertPublisher({ id: 2, name: "p2" });
     await update("authors", { id: 1, publisher_id: 2 });
     // When we refresh the entity
     await em.refresh(a1);
@@ -462,7 +462,7 @@ describe("EntityManager", () => {
   });
 
   it("refresh an entity that is deleted", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     // Given we've loaded an entity with a reference
     const em = newEntityManager();
@@ -636,7 +636,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot flush while another flush is in progress", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     const em = newEntityManager();
     const author = await em.load(Author, "1");
@@ -672,7 +672,7 @@ describe("EntityManager", () => {
   });
 
   it("cannot modify an entity's o2m collection during a flush outside hooks", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const a1 = em.create(Author, { firstName: "a1" });
@@ -700,7 +700,7 @@ describe("EntityManager", () => {
   });
 
   it.unlessInMemory("will dedup queries that are loaded at the same time", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause
@@ -727,8 +727,8 @@ describe("EntityManager", () => {
   });
 
   it.unlessInMemory("does dedup queries with different order bys", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
-    await insertPublisherAsSmall({ id: 2, name: "p2" });
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
@@ -892,7 +892,7 @@ describe("EntityManager", () => {
   });
 
   it("caches finds within a UnitOfWork", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause
@@ -904,7 +904,7 @@ describe("EntityManager", () => {
   });
 
   it("resets the find cache after a flush", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     // Given two queries with exactly the same where clause
     await em.find(Publisher, { id: "1" });
@@ -955,7 +955,7 @@ describe("EntityManager", () => {
     try {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });
-      await insertPublisherAsSmall({ name: "p1" });
+      await insertPublisher({ name: "p1" });
 
       setEntityLimit(3);
       const em = newEntityManager();
@@ -1344,7 +1344,7 @@ describe("EntityManager", () => {
   });
 
   it("can display nice versions of constraint failures", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     em.create(Author, { publisher: "p:1", firstName: "Jim" });

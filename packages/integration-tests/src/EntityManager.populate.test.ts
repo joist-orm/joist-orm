@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertPublisherAsSmall } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { setEntityLimit } from "joist-orm";
 import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
@@ -24,7 +24,7 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate many-to-one with nested keys", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
@@ -35,7 +35,7 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate one-to-many with nested keys", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -54,7 +54,7 @@ describe("EntityManager.populate", () => {
   });
 
   it("can populate one-to-many with nested keys as an array", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -195,7 +195,7 @@ describe("EntityManager.populate", () => {
   });
 
   it("can re-populate nested keys after changes", async () => {
-    await insertPublisherAsSmall({ name: "p1" });
+    await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });

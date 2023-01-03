@@ -3,8 +3,8 @@ import {
   insertLargePublisher,
   insertPublisher,
   insertPublisherGroup,
+  insertPublisherOnly,
   insertPublisherToTag,
-  insertSmallPublisher,
   insertTag,
 } from "@src/entities/inserts";
 import {
@@ -68,9 +68,7 @@ describe("Inheritance", () => {
 
   it("can update a subtype across two tables", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp1" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1" });
 
     const em = newEntityManager();
     const sp = await em.load(SmallPublisher, "p:1");
@@ -91,7 +89,7 @@ describe("Inheritance", () => {
 
   // We cannot test this scenario anymore b/c we made `Publisher` abstract
   it.skip("can update just base-only instance", async () => {
-    await insertPublisher({ name: "p1" });
+    await insertPublisherOnly({ name: "p1" });
 
     const em = newEntityManager();
     const p = await em.load(Publisher, "p:1");
@@ -107,9 +105,7 @@ describe("Inheritance", () => {
 
   it("can load a subtype from separate tables via the base type", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp2" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp2" });
 
     const em = newEntityManager();
     const sp = await em.load(Publisher, "p:1");
@@ -123,9 +119,7 @@ describe("Inheritance", () => {
 
   it("can load a subtype from separate tables via the sub type", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp2" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp2" });
 
     const em = newEntityManager();
     const sp = await em.load(SmallPublisher, "p:1");
@@ -138,14 +132,13 @@ describe("Inheritance", () => {
   });
 
   it("cannot load a base-only instance that is abstract", async () => {
-    await insertPublisher({ name: "sp1" });
+    await insertPublisherOnly({ name: "sp1" });
     const em = newEntityManager();
     await expect(em.load(Publisher, "p:1")).rejects.toThrow("Publisher p:1 must be instantiated via a subtype");
   });
 
   it("can delete a subtype across separate tables", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
 
     const em = newEntityManager();
     const sp = await em.load(Publisher, "p:1");
@@ -155,9 +148,7 @@ describe("Inheritance", () => {
 
   it("can load m2o across separate tables", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp1" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
     await insertAuthor({ first_name: "a2", publisher_id: 2 });
 
@@ -176,9 +167,7 @@ describe("Inheritance", () => {
   it("can load o2m across separate tables", async () => {
     await insertPublisherGroup({ name: "pg1" });
     await insertPublisher({ name: "sp1", group_id: 1 });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp1", group_id: 1 });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1", group_id: 1 });
 
     const em = newEntityManager();
     const pg = await em.load(PublisherGroup, "pg:1", "publishers");
@@ -194,9 +183,7 @@ describe("Inheritance", () => {
   it("can load m2m across separate tables", async () => {
     await insertTag({ name: "t" });
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp1" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1" });
     await insertPublisherToTag({ publisher_id: 1, tag_id: 1 });
     await insertPublisherToTag({ publisher_id: 2, tag_id: 1 });
 
@@ -213,9 +200,7 @@ describe("Inheritance", () => {
 
   it("can find entities from the base type", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp1" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1" });
 
     const em = newEntityManager();
     const [sp, lp] = await em.find(Publisher, { name: { like: "%p%" } });
@@ -229,9 +214,7 @@ describe("Inheritance", () => {
 
   it.skip("can find entities from the sub type", async () => {
     await insertPublisher({ name: "sp1" });
-    await insertSmallPublisher({ id: 1, city: "city" });
-    await insertPublisher({ name: "lp1" });
-    await insertLargePublisher({ id: 2, country: "country" });
+    await insertLargePublisher({ id: 2, name: "lp1", country: "country" });
 
     const em = newEntityManager();
     const [sp] = await em.find(SmallPublisher, { name: { like: "%p%" }, city: { like: "c%" } });

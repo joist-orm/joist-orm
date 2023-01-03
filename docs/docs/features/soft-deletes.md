@@ -11,14 +11,15 @@ In our experience, it's common to have application bugs where business logic "fo
 
 To use Joist's soft-delete support, just add `deleted_at` columns to any entity you want to soft-delete.
 
+By default, Joist will pick up any column named `deleted_at` or `deletedAt` as a soft-delete column, and use it for implicit filtering.
+
 If you want to change the name of the `deleted_at` column, you can configure that in `joist-config.json`'s `timestampFields` key:
 
 ```json
 {
   "timestampFields": {
     "deletedAt": {
-      "names": ["deleted_at"],
-      "required": true
+      "names": ["deleted_at"]
     }
   }
 }

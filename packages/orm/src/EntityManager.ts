@@ -475,8 +475,6 @@ export class EntityManager<C = unknown> {
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
           if (existing) {
-            // Clear the existing value so that set's percolation treats us as a new entity
-            clone.__orm.data[fieldName] = undefined;
             ((clone as any)[fieldName] as any).set(entityToClone.get(existing) ?? existing);
           }
         }

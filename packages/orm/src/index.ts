@@ -125,7 +125,8 @@ export function setOpts<T extends Entity>(
   values: Partial<OptsOf<T>> | string | undefined,
   opts?: { calledFromConstructor?: boolean; partial?: boolean },
 ): void {
-  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row, so skip all this.
+  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row, so skip all this,
+  // because `hydrate` manually calls `serde.setOnEntity`.
   // If `values` is undefined, we're being called by `createPartial` that will do its own opt handling.
   if (values === undefined || typeof values === "string") {
     return;

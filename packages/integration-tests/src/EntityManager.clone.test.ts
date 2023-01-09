@@ -53,17 +53,24 @@ describe("EntityManager.clone", () => {
   });
 
   it("can clone entities and referenced entities", async () => {
-    const em = newEntityManager();
-
     // Given an entity with a reference to another entity
-    const a1 = newAuthor(em, { firstName: "a1" });
-    const b1 = newBook(em, { title: "b1", author: a1 });
-    // And the author itself points to the book we'll clone
-    a1.currentDraftBook.set(b1);
-    await em.flush();
+    {
+      const em = newEntityManager();
+      const a1 = newAuthor(em, { firstName: "a1" });
+      const b1 = newBook(em, { title: "b1", author: a1 });
+      // And the author itself points to the book we'll clone
+      a1.currentDraftBook.set(b1);
+      await em.flush();
+    }
 
     // When we clone that entity and its reference
+    // (and use a new EM to ensure Book.author is not loaded, to reproduce a duplication bug)
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1", "books");
+    const b1 = await em.load(Book, "b:1");
     const a2 = await em.clone(a1, { deep: "books" });
+    // And a1 was left alone
+    expect(a1.books.get.length).toBe(1);
     await em.flush();
 
     // Then we expect the cloned entity to have a cloned copy of the original's reference
@@ -72,7 +79,31 @@ describe("EntityManager.clone", () => {
     const [b2] = a2.books.get;
     expect(b2).not.toBe(b1);
     // And a2 got updated to point to its cloned book
-    expect(a2.currentDraftBook.get).toBe(b2);
+    expect(await a2.currentDraftBook.load()).toBe(b2);
+  });
+
+  it("can clone entities and referenced entities when already loaded", async () => {
+    // Given an entity with a reference to another entity
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1" });
+    const b1 = newBook(em, { title: "b1", author: a1 });
+    // And the author itself points to the book we'll clone
+    a1.currentDraftBook.set(b1);
+    await em.flush();
+
+    // When we clone that entity and its reference
+    const a2 = await em.clone(a1, { deep: "books" });
+    // And a1 was left alone
+    expect(a1.books.get.length).toBe(1);
+    await em.flush();
+
+    // Then we expect the cloned entity to have a cloned copy of the original's reference
+    expect(a2.books.get[0].title).toEqual(b1.title);
+    // But the book is a different book
+    const [b2] = a2.books.get;
+    expect(b2).not.toBe(b1);
+    // And a2 got updated to point to its cloned book
+    expect(await a2.currentDraftBook.load()).toBe(b2);
   });
 
   it("can clone entities and referenced entities that are undefined", async () => {

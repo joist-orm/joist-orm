@@ -1,3 +1,10 @@
+## [1.46.1](https://github.com/stephenh/joist-ts/compare/v1.46.0...v1.46.1) (2023-01-09)
+
+
+### Bug Fixes
+
+* Fix o2m duplication in clone. ([#495](https://github.com/stephenh/joist-ts/issues/495)) ([d4f792d](https://github.com/stephenh/joist-ts/commit/d4f792d56c395696512f2b92c03598e3c586c880))
+
 # [1.46.0](https://github.com/stephenh/joist-ts/compare/v1.45.0...v1.46.0) (2023-01-03)
 
 

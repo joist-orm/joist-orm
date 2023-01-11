@@ -23,7 +23,7 @@
     "dataloader": "^2.1.0",
     "is-plain-object": "^5.0.0",
     "joist-utils": "workspace:*",
-    "knex": "^2.3.0",
+    "knex": "^2.4.0",
     "object-hash": "^3.0.0",
     "pg": "^8.8.0"
   },

@@ -103,6 +103,44 @@ describe("Inheritance", () => {
     expect(await testDriver.select("publishers")).toMatchObject([{ id: 1, name: "pa" }]);
   });
 
+  it("runs base type validation rules against the sub type", async () => {
+    const em = newEntityManager();
+    newSmallPublisher(em, { name: undefined } as any);
+    await expect(em.flush()).rejects.toThrow("name is required");
+  });
+
+  it("runs subtype validation rules against the sub type", async () => {
+    const em = newEntityManager();
+    newSmallPublisher(em, { name: "large" });
+    await expect(em.flush()).rejects.toThrow("name cannot be large");
+  });
+
+  it("runs hooks on subtypes", async () => {
+    const em = newEntityManager();
+    const sp = new SmallPublisher(em, { name: "sp", city: "city" });
+    expect(sp.beforeFlushRan).toBeFalsy();
+    expect(sp.beforeCreateRan).toBeFalsy();
+    expect(sp.beforeUpdateRan).toBeFalsy();
+    expect(sp.afterCommitRan).toBeFalsy();
+    expect(sp.afterValidationRan).toBeFalsy();
+    expect(sp.beforeDeleteRan).toBeFalsy();
+    await em.flush();
+    expect(sp.beforeFlushRan).toBeTruthy();
+    expect(sp.beforeCreateRan).toBeTruthy();
+    expect(sp.beforeUpdateRan).toBeFalsy();
+    expect(sp.beforeDeleteRan).toBeFalsy();
+    expect(sp.afterValidationRan).toBeTruthy();
+    expect(sp.afterCommitRan).toBeTruthy();
+    sp.name = "new name";
+    sp.beforeCreateRan = false;
+    await em.flush();
+    expect(sp.beforeCreateRan).toBeFalsy();
+    expect(sp.beforeUpdateRan).toBeTruthy();
+    em.delete(sp);
+    await em.flush();
+    expect(sp.beforeDeleteRan).toBeTruthy();
+  });
+
   it("can load a subtype from separate tables via the base type", async () => {
     await insertPublisher({ name: "sp1" });
     await insertLargePublisher({ id: 2, name: "lp2" });

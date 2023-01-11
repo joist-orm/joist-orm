@@ -23,3 +23,29 @@ After the `em.clone` is finished:
 Besides setting the correct "parent" `book.author` to `a2` for each cloned child `Book`, any other references/FKs in the newly-created entities that happened to point to also-cloned input entities (like `a1.favoriteBook` pointing to `a1.books.get[0]`) are adjusted to point to the correct/corresponding newly-cloned output entity.
 
 Basically Joist will keep the subgraph of cloned entities intact.
+
+### Advanced Features
+
+When calling `em.clone`, you can provide three config options to customize the behavior:
+
+* `opts.deep` is the load hint from above, i.e. `{ books: "reviews" }`, that specifies the subgraph to clone.
+
+* `opts.skipIf` is a function that accepts an entity and returns `true` if that entity should be skipped/not cloned:
+
+   ```ts
+   // This will duplicate the author's books, but skip any book where the title includes `sea`
+   const duplicatedBooks = await em.clone(
+     author.books.get,
+     { skipIf: (original) => original.title.includes("sea") }
+   );
+   ```
+  
+* `opts.postClone` is a function that accepts both the original entity and its new clone, to allow customizing to the clone:
+
+   ```ts
+   // This will duplicate the author's books, and assign them to a different author
+   const duplicatedBooks = await em.clone(
+     author.books.get,
+     { postClone: (_original, clone) => clone.author.set(author2) }
+   );
+   ```

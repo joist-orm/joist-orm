@@ -382,7 +382,7 @@ export class EntityManager<C = unknown> {
   ): Promise<Loaded<T, H>>;
 
   /**
-   * Utility to clone an entity and its nested relations, as determined by a populate hint
+   * Utility to clone an entity and its nested relations, as determined by a populate hint.
    *
    * @param entities - Any homogeneous list of entities
    * @param opts - Options to control the clone behaviour
@@ -421,8 +421,6 @@ export class EntityManager<C = unknown> {
 
     // 1. Find all entities w/o mutating them yets
     await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf });
-
-    const now = new Date();
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {

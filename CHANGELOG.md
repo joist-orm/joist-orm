@@ -1,3 +1,10 @@
+## [1.46.2](https://github.com/stephenh/joist-ts/compare/v1.46.1...v1.46.2) (2023-01-11)
+
+
+### Bug Fixes
+
+* Run rules/hooks on subtypes. ([#496](https://github.com/stephenh/joist-ts/issues/496)) ([ff05b01](https://github.com/stephenh/joist-ts/commit/ff05b01ec072fe9abb32358a36e4bc593db32258))
+
 ## [1.46.1](https://github.com/stephenh/joist-ts/compare/v1.46.0...v1.46.1) (2023-01-09)
 
 

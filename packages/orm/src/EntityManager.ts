@@ -18,6 +18,7 @@ import {
   EntityMetadata,
   FieldStatus,
   GenericError,
+  getAllMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
@@ -1199,11 +1200,11 @@ async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<voi
 // because even for reactive validations on mutated entities, we defer to addReactiveValidations
 // to mark only the rules that need to run.
 async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap(({ metadata, inserts, updates }) => {
-    const { rules } = metadata.config.__data;
+  const p = Object.values(todos).flatMap(({ inserts, updates }) => {
     return [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
+        const rules = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.rules);
         return rules
           .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
@@ -1245,10 +1246,10 @@ async function runHook(
   keys: ("inserts" | "deletes" | "updates")[],
 ): Promise<void> {
   const p = Object.values(todos).flatMap((todo) => {
-    const hookFns = todo.metadata.config.__data.hooks[hook];
     return keys
       .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
       .flatMap((entity) => {
+        const hookFns = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
         // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
         // hook blowing up doesn't orphan the others .
         return hookFns.map(async (fn) => fn(entity, ctx as any));
@@ -1323,8 +1324,8 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
   );
 
   for (const entity of entities) {
-    const derivedFields = derivedFieldsByMeta.get(entity.__orm.metadata);
-    derivedFields?.forEach((fieldName) => {
+    const derivedFields = getAllMetas(getMetadata(entity)).flatMap((m) => derivedFieldsByMeta.get(m) || []);
+    derivedFields.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.
       setField(entity, fieldName as any, (entity as any)[fieldName]);
     });
@@ -1333,7 +1334,7 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
 
 /** Calcs async derived fields that have been triggered by a reactive hint. */
 async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap(({ metadata, asyncFields }) => {
+  const p = Object.values(todos).flatMap(({ asyncFields }) => {
     return [...asyncFields.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fields]) => {

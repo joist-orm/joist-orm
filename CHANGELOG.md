@@ -1,3 +1,10 @@
+# [1.47.0](https://github.com/stephenh/joist-ts/compare/v1.46.2...v1.47.0) (2023-01-16)
+
+
+### Features
+
+* Let newTestInstance deep merge opts. ([#499](https://github.com/stephenh/joist-ts/issues/499)) ([ebcb210](https://github.com/stephenh/joist-ts/commit/ebcb21003909f802b607f0e003b90acead393922))
+
 ## [1.46.2](https://github.com/stephenh/joist-ts/compare/v1.46.1...v1.46.2) (2023-01-11)
 
 

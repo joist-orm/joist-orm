@@ -246,6 +246,7 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newBookReview(em, { book: {} });
     expect(lastBookFactoryOpts).toStrictEqual({
+      author: maybeNew<Author>({ age: 40 }),
       reviews: [],
       use: expect.any(Map),
     });

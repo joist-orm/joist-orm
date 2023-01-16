@@ -47,9 +47,30 @@ export let testDate = jan1;
 export function newTestInstance<T extends Entity>(
   em: EntityManager,
   cstr: EntityConstructor<T>,
-  opts: FactoryOpts<T> = {},
+  /** The test's test-specific override opts. */
+  overrideOpts: FactoryOpts<T> = {},
+  /** The factory file's default custom opts. */
+  defaultOpts: FactoryOpts<T> = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
+
+  // Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged
+  const opts: any = overrideOpts;
+  Object.entries(defaultOpts).forEach(([key, value]) => {
+    if (opts[key] === undefined) {
+      opts[key] = value;
+    } else if (isPlainObject(value) && isPlainObject(opts[key])) {
+      opts[key] = { ...value, ...opts[key] };
+    } else if (value instanceof MaybeNew && isPlainObject(opts[key])) {
+      opts[key] = { ...value.opts, ...opts[key] };
+    } else if (value instanceof MaybeNew && opts[key] instanceof MaybeNew) {
+      opts[key] = new MaybeNew<any>(
+        { ...value.opts, ...opts[key].opts },
+        opts[key].polyRefPreferredOrder ?? value.polyRefPreferredOrder,
+      );
+    }
+  });
+
   // We share a single `use` map for a given `newEntity` factory call
   const use = useMap(opts);
 

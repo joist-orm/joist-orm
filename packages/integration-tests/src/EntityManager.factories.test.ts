@@ -60,6 +60,8 @@ describe("EntityManager.factories", () => {
     await em.flush();
     // Then we create the author b/c it's required
     expect(b1.author.get.firstName).toEqual("long name");
+    // And we kept the Book.factories.ts `{ age: 40 }` default
+    expect(b1.author.get.age).toEqual(40);
   });
 
   it("can create a child and use an existing parent from opt", async () => {
@@ -115,7 +117,10 @@ describe("EntityManager.factories", () => {
     newBook(em);
     // Then the newAuthor factory was told to override any `books: [{}]` defaults
     expect(lastAuthorFactoryOpts).toStrictEqual({
+      age: 40,
       books: [],
+      opts: { age: 40 },
+      polyRefPreferredOrder: [],
       use: expect.any(Map),
     });
   });
@@ -133,8 +138,11 @@ describe("EntityManager.factories", () => {
     expect(a1.publisher.get).toEqual(p1);
     // And we explicitly passed the publisher b/c it's an explicit `use` entry
     expect(lastAuthorFactoryOpts).toStrictEqual({
+      age: 40,
       books: [],
       publisher: p1,
+      opts: { age: 40 },
+      polyRefPreferredOrder: [],
       use: expect.any(Map),
     });
   });

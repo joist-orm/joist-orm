@@ -119,8 +119,6 @@ describe("EntityManager.factories", () => {
     expect(lastAuthorFactoryOpts).toStrictEqual({
       age: 40,
       books: [],
-      opts: { age: 40 },
-      polyRefPreferredOrder: [],
       use: expect.any(Map),
     });
   });
@@ -141,8 +139,6 @@ describe("EntityManager.factories", () => {
       age: 40,
       books: [],
       publisher: p1,
-      opts: { age: 40 },
-      polyRefPreferredOrder: [],
       use: expect.any(Map),
     });
   });

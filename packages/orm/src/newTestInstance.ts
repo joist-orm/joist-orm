@@ -309,7 +309,8 @@ function getObviousDefault<T extends Entity>(
 // opts of only-one-existing or factory-created instances.
 
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
-function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): object {
+function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata<any>): object {
+  const opts = optsMaybeNew instanceof MaybeNew ? optsMaybeNew.opts : optsMaybeNew;
   // Find any unset fields
   Object.values(metadata.fields)
     .filter((f) => !(f.fieldName in opts))
@@ -324,7 +325,7 @@ function applyUse(opts: object, use: UseMap, metadata: EntityMetadata<any>): obj
         }
       }
     });
-  // Make a copy so we don't leak `use` onto opts that tests might later use in assertions.
+  // Make a copy so that we don't leak `use` onto opts that tests might later use in assertions.
   return { ...opts, use };
 }
 

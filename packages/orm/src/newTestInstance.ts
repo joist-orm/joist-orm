@@ -53,26 +53,8 @@ export function newTestInstance<T extends Entity>(
   defaultOpts: FactoryOpts<T> = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
-
-  // Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged
-  const opts: any = overrideOpts;
-  Object.entries(defaultOpts).forEach(([key, value]) => {
-    if (opts[key] === undefined) {
-      opts[key] = value;
-    } else if (isPlainObject(value) && isPlainObject(opts[key])) {
-      opts[key] = { ...value, ...opts[key] };
-    } else if (value instanceof MaybeNew && isPlainObject(opts[key])) {
-      opts[key] = { ...value.opts, ...opts[key] };
-    } else if (value instanceof MaybeNew && opts[key] instanceof MaybeNew) {
-      opts[key] = new MaybeNew<any>(
-        { ...value.opts, ...opts[key].opts },
-        opts[key].polyRefPreferredOrder ?? value.polyRefPreferredOrder,
-      );
-    }
-  });
-
-  // We share a single `use` map for a given `newEntity` factory call
-  const use = useMap(opts);
+  const opts = mergeOpts(overrideOpts, defaultOpts);
+  const use = getOrCreateUseMap(opts);
 
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
   // instance of the entity. We'll do the o2m/other fields as a second pass.
@@ -240,7 +222,7 @@ function resolveFactoryOpt<T extends Entity>(
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
-      ...applyUse((opt as any) || {}, useMap(opts), meta),
+      ...applyUse((opt as any) || {}, getOrCreateUseMap(opts), meta),
       ...(opt instanceof MaybeNew && opt.opts),
       [otherFieldName]: maybeEntity,
     });
@@ -275,7 +257,7 @@ function getObviousDefault<T extends Entity>(
   opts: FactoryOpts<any>,
 ): T | undefined {
   // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field then look in use
-  const use = useMap(opts);
+  const use = getOrCreateUseMap(opts);
   // ...we used to check "explicit use" vs. "implicit use" here and only use implicit values
   // if the field was required; but in theory our "use if-only-one" heuristic was already looser
   // that this, so it seems fine to just always check use, regardless of field required/optional.
@@ -475,8 +457,9 @@ type AllowRelationsOrPartials<T> = {
 // Map of constructor --> [default entity, explicitly passed/created internally]
 type UseMap = Map<Function, [Entity, boolean]>;
 
-// Do a one-time conversion of the user's `use` array into a map for internal use
-function useMap(opts: FactoryOpts<any>): UseMap {
+// Do a one-time conversion of the user's `use` array into a map for internal use, which we'll
+// then re-use across all `newTestInstance` calls within a given `new<Entity>` call.
+function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
   const use: Entity | Entity[] | UseMap | undefined = opts.use;
   let map: UseMap;
 
@@ -518,4 +501,25 @@ function useMap(opts: FactoryOpts<any>): UseMap {
   // Use as any b/c UseMap is our internal impl detail and not public.
   (opts as any).use = map;
   return map;
+}
+
+/** Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged. */
+function mergeOpts(overrideOpts: FactoryOpts<any>, defaultOpts: FactoryOpts<any>): object {
+  // Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged
+  const opts: any = overrideOpts;
+  Object.entries(defaultOpts).forEach(([key, value]) => {
+    if (opts[key] === undefined) {
+      opts[key] = value;
+    } else if (isPlainObject(value) && isPlainObject(opts[key])) {
+      opts[key] = { ...value, ...opts[key] };
+    } else if (value instanceof MaybeNew && isPlainObject(opts[key])) {
+      opts[key] = { ...value.opts, ...opts[key] };
+    } else if (value instanceof MaybeNew && opts[key] instanceof MaybeNew) {
+      opts[key] = new MaybeNew<any>(
+        { ...value.opts, ...opts[key].opts },
+        opts[key].polyRefPreferredOrder ?? value.polyRefPreferredOrder,
+      );
+    }
+  });
+  return opts;
 }

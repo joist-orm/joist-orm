@@ -111,9 +111,9 @@ Joist's assertion is that this strict 1-1 mapping is a feature, because it shoul
 
 Joist's approach is "schema first", i.e. we first declare the database schema, and then generate the domain model from the database schema.
 
-Along with "schema-first", there are at least two other approaches:
+Along with "schema-first", there generally three approaches to domain model/database mapping:
 
-1. Schema-first (generate code from the schema database)
+1. Schema-first (generate code from the schema database, like Joist)
 2. Code-first (generate the schema from the code, i.e. from `@Column` and `@ManyToOne` annotations in the domain model)
 3. No automatic generation either way, just map the two by hand
 

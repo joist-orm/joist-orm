@@ -5,7 +5,9 @@ sidebar_position: 0
 
 Joist generates customizable factories for easily creating test data. The idea is very similar to generic tools like [Fishery](https://github.com/thoughtbot/fishery), but with deep/native integration with Joist.
 
-Joist fundamentally assumes the database is reset between each test (see [Fast Database Resets](./fast-database-resets.md)), and so allowing tests to succinctly create the entire graph of entities they need is a key part of Joist's developer experience.
+The goal of factories are to provide tests with "valid by default" instances of entities, so that each test can focus solely on the state/behavior that is unique to its boundary case.
+
+Joist also fundamentally assumes the database is reset between each test (see [Fast Database Resets](./fast-database-resets.md)), and so allowing tests to succinctly create the entire graph of entities they need is a key part of Joist's developer experience.
 
 Note that Joist's factories are **not intended to be used in production code**; they are only for quickly creating synthetic data in unit tests.
 
@@ -18,7 +20,7 @@ import { EntityManager, FactoryOpts, New, newTestInstance } from "joist-orm";
 import { Book } from "./entities";
 
 export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
-  return newTestInstance(em, Book, opts);
+  return newTestInstance(em, Book, opts, {});
 }
 ```
 

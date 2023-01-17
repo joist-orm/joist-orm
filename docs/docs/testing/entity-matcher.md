@@ -1,5 +1,5 @@
 ---
-title: Custom Matchers
+title: Custom Jest Matcher
 sidebar_position: 4
 ---
 
@@ -88,7 +88,7 @@ Note that if an entity is new, i.e. the test has not done `em.flush` (which is f
 In your `setupTests.ts`, add:
 
 ```typescript
-import { toMatchEntity } from "joist-test-utils";
+import { toMatchEntity } from "joist-test-utils.md";
 
 expect.extend({ toMatchEntity });
 ```

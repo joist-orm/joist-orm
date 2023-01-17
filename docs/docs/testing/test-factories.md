@@ -3,131 +3,268 @@ title: Test Factories
 sidebar_position: 0
 ---
 
-Joist generates customizable factories for easily creating test data.
+Joist generates customizable factories for easily creating test data. The idea is very similar to generic tools like [Fishery](https://github.com/thoughtbot/fishery), but with deep/native integration with Joist.
 
-I.e. for a `Book` entity, Joist will one-time generate a `Book.factories.ts` file that looks like:
+Joist fundamentally assumes the database is reset between each test (see [Fast Database Resets](./fast-database-resets.md)), and so allowing tests to succinctly create the entire graph of entities they need is a key part of Joist's developer experience.
+
+Note that Joist's factories are **not intended to be used in production code**; they are only for quickly creating synthetic data in unit tests.
+
+## Overview
+
+For example, given a `Book` entity, Joist will generate a `Book.factories.ts` file that looks like:
 
 ```typescript
 import { EntityManager, FactoryOpts, New, newTestInstance } from "joist-orm";
 import { Book } from "./entities";
 
-export function newBook(em: EntityManager, opts?: FactoryOpts<Book>): New<Book> {
+export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
   return newTestInstance(em, Book, opts);
 }
 ```
 
-Tests can then invoke `newBook` with as little opts as they want, and all required defaults (both fields and entities) will be filled in.
+Tests can then call `newBook` with as few opts as they want, and all required fields (for both primitives and relations) will be filled in.
 
-I.e. since `book.author_id` is a not-null column, calling `const b1 = newBook()` will create both a `Book` with a `title` (required primitive field) as well as create a new `Author` (required foreign key/many-to-one field) and assign it to `b1.author`:
+For example, since `book.author_id` is a not-null column, calling `const b1 = newBook()` will create both a `Book` with a `title` (required primitive field) as well as create a new `Author` (required foreign key/many-to-one field) and assign it to `b1.author`:
 
 ```typescript
-const b = newBook();
+const b = newBook(em);
 expect(b.title).toEqual("title");
 expect(b.author.get.firstName).toEqual("firstName");
 ```
 
 This creation is recursive, i.e. `newBookReview()` will make a new `BookReview`, a new `Book` (required for `bookReview.book`), and a new `Author` (required for `book.author`).
 
-You can also pass partials for either the book or the author:
+Importantly, you can also pass partials for either the book or the author:
 
 ```typescript
-const b = newBook({ author: { firstName: "a1" } });
-// title was not in opts, so it gets the same default
+// Given a book by the author "a1"
+const b = newBook(em, { author: { firstName: "a1" } });
+// Then we got the default title
 expect(b.title).toEqual("title");
-// author.firstName was in opts, so it's used for the firstName field
+// And "a1" was used as the author's firstName
 expect(b.author.get.firstName).toEqual("a1");
 ```
 
-The factories will usually make new entities for required fields, but will reuse an existing instance if:
+This is key so that your tests can **set only the minimum amount of fields necessary to specify their boundary case**, and defer to the factories for any other irrelevant boilerplate.
 
-1. The `EntityManager` already as a _single_ instance of that entity. I.e.:
+## Usage
 
-   ```typescript
-   // We have a single author
-   const a = newAuthor();
-   // Making a new book will see "there is only 1 author" and assume we want to use that
-   const b = newBook();
-   expect(b.author.get).toEqual(a);
-   ```
+### Defaults for Primitives
 
-2. If you pass entities as a `use` parameter. I.e.:
-
-   ```typescript
-   // We have multiple authors
-   const a1 = newAuthor();
-   const a2 = newAuthor();
-   // Make a new book review, but use a2 instead of creating a new Author
-   const br = newBookReview({ use: a2 });
-   ```
-
-   This will make a new `BookReview`, and a new `Book`, but when filling in `Book.author`, it will use `a2`.
-
-   (Note that `use` is specifically useful for passing entities to use "several levels up the tree", i.e. if you were making a `newBook` you could directly pass `newBook({ author: a2 })`. In the `newBookReview` example, author is not immediately set on the `BookReview` itself, so we put `a2` in the `use` opt for the factories to "use it as needed/up the tree".)
-
-The factory files can be customized, i.e.:
+Factories can provide test suite-wide defaults, for example providing a default age:
 
 ```typescript
-export function newBook(em: EntityManager, opts?: FactoryOpts<Book>): New<Book> {
-  return newTestInstance(em, Book, {
-    // Assume every book should have 1 review by default. This can be a partial that will
-    // be recursively filled in. It will also be ignored if the caller passes
-    // their own `newBook(em, { reviews: ... })` opt.
-    reviews: [{}]
-    // Give a unique-ish name, testIndex will be 1/2/etc increasing and reset per-test
-    title: `b${testIndex}`
-    ...opts
+// Default Authors (only within tests) to age 40
+export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): New<Author> {
+  return newTestInstance(em, Author, opts, {
+    age: 40,
   });
 }
 ```
 
-And then every caller of `newBook` will get these defaults.
-
-Note that you can also customize the `opts` type to add your own application-specific hints, i.e.:
+And then every `newAuthor` will have an `age` of 40, unless a test specifically requires a different age:
 
 ```typescript
-export function newBook(em: EntityManager, opts?: FactoryOpts<Book> & { withManyReview?: boolean }): New<Book> {
-  // if opts?.withManyReview then make 10 reviews
+// Given an author that is 30
+const a = newAuthor(em, { age: 30 });
+// Then we didn't use the default age
+expect(a.age).toEqual(30);
+```
+
+### Unique Strings
+
+If you have a field that must be unique, like `name` with a database-enforce `UNIQUE` constraint, you can use the `testIndex` helper to automatically create unique-but-deterministic values:
+
+```typescript
+import { testIndex } from "joist-orm";
+
+export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
+  return newTestInstance(em, Book, opts, {
+    // Make a unique name, `testIndex` will be 1/2/etc increasing and reset per-test
+    title: `b${testIndex}`,
+  });
 }
 ```
 
-### Auto-Refreshing Test Instances
+### Defaults for References
 
-The `EntityManager.refresh` method reloads all currently-loaded entities from the database, as well as any of their loaded relations (i.e. if you have `author1.books` loaded and a new `books` row is added with `author_id=1`, then after `refresh()` the `author1.books` collection will have the newly-added book in it).
-
-This is primarily useful for tests, where you want to do behavior like:
+Factories can also provide default entities, for example a book creating a default author:
 
 ```typescript
-// Given an author
-const a = em.create(Author, { ... });
-// When we perform the business logic
-// (...assumme this is a test helper method that invokes the logic and
-// then calls EntityManager.refresh before returning)
-await run(em, (em) => invokeBusinessLogicUnderTest(em));
-// Then we have a new book
-expect(a.books.get.length).toEqual(1);
-
-// Defined as a helper method
-async function run<T>(em, fn: async () => Promise<T>): Promise<T> {
-  // Flush existing test data to the db
-  await em.flush();
-  // Make a new `em` however that is done for your app
-  const em2 = newEntityManager();
-  // Invoke business logic under test
-  const result = await fn(em2);
-  // Reload our test's em to have the latest data
-  await em.refresh();
+export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
+  return newTestInstance(em, Book, opts, {
+    author: {},
+  });
 }
 ```
 
-This runs `invokeBusinessLogicUnderTest` in its own transaction/`EntityManager` instance (to avoid accidentally relying on the test's `EntityManager` state), but after `invokeBusinessLogicUnderTest` completes, the test's Author `a` local variable can be used for assertions and will have the latest & great data from the database.
+Note that, if `author` was required, we would not have to explicitly pass `author: {}`; we'd only pass `author` to `newTestInstance` if:
 
-Without this approach, tests often jump through various hoops like having duplicate `a1`/`a1Reloaded` variables that are explicitly loaded:
+- The `author` field is not required, but we want all test `Book`s to have one anyway
+- We want all `Book`s' authors to themselves have some specific defaults, like `author: { age: 30 }`,
+- We want to explicitly create a _new_ author (see the next point)
+
+### Reusing Existing Entities
+
+When factories need to set a relation field, they will first look for an "obvious default" entity before creating a new entity.
+
+This is useful for stitching together complex schemas, because it means validation rules like "a `BookReview` must have the same `bookReview.author` as its `bookReview.author.book`" (pretending that `BookReview` had its own `author` field) will pass "for free" because we don't "sprawl out" and continually create new/unnecessary entities.
+
+That said, Joist will only reuse an entity if there is a _single_ instance of that entity.
 
 ```typescript
-const a1 = em.create(Author, { ... });
-await invokeBusinessLogicUnderTest(em);
-// load the latest a1
-await a1_2 = em.load(Author, a1.idOrFail);
+// Given we have a single author
+const a = newAuthor(em);
+// Then newBook will see "there is only 1 author" and assume we want that one
+const b = newBook(em);
+expect(b.author.get).toEqual(a);
 ```
 
-Joist's `EntityManager.refresh` method and the `run` helper method convention let's you avoid doing this "load the latest X" in all of your tests.
+If there are multiple `Author`s created in the test, Joist sees it as ambiguous which one it should use, and so creates a new `Author`:
+
+```typescript
+// Given we have two existing Authors
+const [a1, a2] = [newAuthor(em), newAuthor(em)];
+// Then newBook will create a 3rd Author
+const b = newBook(em);
+expect(b.author.get.name).toEqual("a3");
+```
+
+#### Forcing New Entities
+
+If you want to a specific field to never reuse existing entities, you can use `{}` as a marker for "always create a new entity":
+
+```typescript
+export function newBook(em: EntityManager, opts: FactoryOpts<Book> = {}): New<Book> {
+  return newTestInstance(em, Book, opts, {
+    author: {},
+  });
+}
+```
+
+#### Reusing Entities With `use`
+
+As covered, if your test has already created multiple entities of a given type (e.g. multiple `Author`s), Joist will not use them as "obvious defaults", but if you want to nominate a specific `Author` as the default for a given `newBookReview` call, you can pass the `use` option:
+
+```typescript
+// We have multiple authors
+const [a1, a2] = [newAuthor(em), newAuthor(em)];
+// Make a new book review, but use a2 instead of creating a new Author
+const br = newBookReview(em, { use: a2 });
+```
+
+### Defaults for Collections
+
+If you have validation rules like "all `Author`s must have at least one `Book`", the `newAuthor` factory can create valid-by-default `Author`s by passing `books: [{}]`:
+
+```typescript
+export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): New<Author> {
+  return newTestInstance(em, Author, opts, {
+    // Every Author has at least one Book
+    books: [{}],
+  });
+}
+```
+
+Note that, due to the native factory integration, Joist is smart enough that if you create the graph "bottom up" and call `newBook()`, it will be smart enough to know that `newAuthor` should not create a 2nd book:
+
+```typescript
+// Given we create a book
+const b = newBook(em);
+// Then `newAuthor` was effectively passed `books: [b]` and did not create a 2nd book
+expect(b.author.get.books.get.length).toBe(1);
+```
+
+### Custom Opts
+
+Besides just setting existing entity fields, like `Author.firstName` and `Books.author`, Joist's factories allow you to declare custom, factory-specific opts so that multiple tests can request the similar "pre-baked" test data from a factory.
+
+:::info
+
+In fishery, these are called transient params.
+
+:::
+
+For example, a test might need to create a somewhat large graph of test data for a business scenario, perhaps a `Book` with a signed contract with a larger publisher (this is not that big, but it's a good example):
+
+```typescript
+// Given a book that is signed with a large publisher
+const b = newBook(em, {
+  author: {
+    contracts: [{ signed: true, publisher: { type: "large" } }],
+  },
+});
+```
+
+If this "create a book ... with an author ... with a contract ... that is signed" is a common requirement for tests, it can be cumbersome to copy/paste this snippet across many tests, and keep it up to date (perhaps `signed` changes from `true` to a `signedOn` timestamp).
+
+Instead, Joist's factories allow you to add a custom `withSignedContract` opt to the `newBook` factory:
+
+```typescript
+// Add an optional `withSignedContract` opt
+export function newBook(
+  em: EntityManager,
+  opts: FactoryOpts<Book> & { withSignedContract?: boolean } = {},
+): New<Book> {
+  return newTestInstance(em, Book, opts, {
+    // Conditionally create the snippet when requested
+    ...(opts.withSignedContract
+      ? { author: { contracts: [{ signed: true, publisher: { type: "large" } }] } }
+      : {}),
+  });
+}
+```
+
+And now tests can request this behavior for free:
+
+```typescript
+// Given we have a book with a signed contract
+const book = newBook(em, { title: "b1", withSignedContract: true });
+// And it also works if going through BookReview
+const br = newBookReview(em, { book: { withSignedContract: true } });
+```
+
+In general, we have two recommendations for this feature:
+
+* Be careful and don't abuse it; tests are simplest to read when any assertions they have are against data that is specified directly inline in the "Given" block; if you've abstracted too much of your test's setup to a custom opt, it will hurt readability.
+
+  Also, custom opts are a slippery slope to the seed data anti-pattern, where the seed data becomes so large & gnarly (because it's been tweaked over the years to support more and more disparate test cases), that the seed data becomes very brittle and can't be changed without failing a ton of tests.
+
+* Use prefixes like `with` and `and` in the names of custom opts, e.g. `withSignedContract` or `andSigned` to make it clear to readers that the opt is custom and not actually a regular database/entity field.
+
+## `async` Free Assertions
+
+In production code, Joist relations must be accessed asynchronously, i.e. either with `load()` calls or `populate` preloads:
+
+```typescript
+// Call load directly
+const b1 = await em.load(Book, "b:1");
+const a1 = await book.author.load();
+// Use a preload
+const b2 = await em.load(Book, "b:2", "author");
+const a2 = book.author.get;
+```
+
+However, because in tests we "just know" there is not that much data, and the factories control the instantiation of entities, we can make the assumption that all relations are loaded by default. So factories return a `DeepNew` type that marks all relations as loaded:
+
+```typescript
+it("some test", async () => {
+  const em = newEntityManager();
+  // Given a book
+  const b1 = newBook(em);
+  // When we exercise our production code
+  performSomeBusinessLogic(b1);
+  // Then we can assert against b1.authors w/o an await/load
+  expect(b1.authors.get.length).toBe(1);
+  // And we can assert against the author's publisher
+  expect(b1.authors.get[0].publisher.get.name).toBe("p1");
+});
+```
+
+This capability can dramatically clean up test assertions, by removing the need for `await` and `load()` calls.
+
+:::tip
+
+Also see Joist's [toMatchEntity](./entity-matcher.md), which provides another ergonomic way to assert against entities.
+
+:::

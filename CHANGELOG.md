@@ -1,3 +1,10 @@
+## [1.47.1](https://github.com/stephenh/joist-ts/compare/v1.47.0...v1.47.1) (2023-01-17)
+
+
+### Bug Fixes
+
+* Tests setting undefined should always win. ([#500](https://github.com/stephenh/joist-ts/issues/500)) ([9c90a37](https://github.com/stephenh/joist-ts/commit/9c90a37f48c68bf2037d857c26bd6f674a6aaf70))
+
 # [1.47.0](https://github.com/stephenh/joist-ts/compare/v1.46.2...v1.47.0) (2023-01-16)
 
 

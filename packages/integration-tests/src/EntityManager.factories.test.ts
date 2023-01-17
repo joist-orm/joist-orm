@@ -64,6 +64,15 @@ describe("EntityManager.factories", () => {
     expect(b1.author.get.age).toEqual(40);
   });
 
+  it("can create a child and a required parent with opts that ignore a default", async () => {
+    const em = newEntityManager();
+    // Given we make a book and want the author's age to stay unset
+    const b1 = newBook(em, { author: { age: undefined } });
+    await em.flush();
+    // Then age is undefined
+    expect(b1.author.get.age).toBeUndefined();
+  });
+
   it("can create a child and use an existing parent from opt", async () => {
     const em = newEntityManager();
     // Given there are multiple existing authors

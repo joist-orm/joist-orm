@@ -67,7 +67,8 @@ describe("EntityManager.factories", () => {
   it("can create a child and a required parent with opts that ignore a default", async () => {
     const em = newEntityManager();
     // Given we make a book and want the author's age to stay unset
-    const b1 = newBook(em, { author: { age: undefined } });
+    // (...and set isPopular so that newAuthor does an { age: 50 } that we can see is ignored)
+    const b1 = newBook(em, { author: { isPopular: true, age: undefined } });
     await em.flush();
     // Then age is undefined
     expect(b1.author.get.age).toBeUndefined();
@@ -126,6 +127,8 @@ describe("EntityManager.factories", () => {
     newBook(em);
     // Then the newAuthor factory was told to override any `books: [{}]` defaults
     expect(lastAuthorFactoryOpts).toStrictEqual({
+      firstName: "aTEST_INDEX",
+      image: undefined,
       age: 40,
       books: [],
       use: expect.any(Map),
@@ -145,6 +148,8 @@ describe("EntityManager.factories", () => {
     expect(a1.publisher.get).toEqual(p1);
     // And we explicitly passed the publisher b/c it's an explicit `use` entry
     expect(lastAuthorFactoryOpts).toStrictEqual({
+      firstName: "aTEST_INDEX",
+      image: undefined,
       age: 40,
       books: [],
       publisher: p1,
@@ -261,6 +266,8 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newImage(em, { author: {} });
     expect(lastAuthorFactoryOpts).toStrictEqual({
+      firstName: "aTEST_INDEX",
+      age: undefined,
       image: null,
       use: expect.any(Map),
     });

@@ -48,12 +48,12 @@ export function newTestInstance<T extends Entity>(
   em: EntityManager,
   cstr: EntityConstructor<T>,
   /** The test's test-specific override opts. */
-  overrideOpts: FactoryOpts<T> = {},
-  /** The factory file's default custom opts. */
-  defaultOpts: FactoryOpts<T> = {},
+  testOpts: FactoryOpts<T> = {},
+  /** The factory file's default opts. */
+  factoryOpts: FactoryOpts<T> = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
-  const opts = mergeOpts(overrideOpts, defaultOpts);
+  const opts = mergeOpts(testOpts, factoryOpts);
   const use = getOrCreateUseMap(opts);
 
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
@@ -504,20 +504,26 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
 }
 
 /** Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged. */
-function mergeOpts(overrideOpts: FactoryOpts<any>, defaultOpts: FactoryOpts<any>): object {
+function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, any>): object {
   // Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged
-  const opts: any = overrideOpts;
-  Object.entries(defaultOpts).forEach(([key, value]) => {
-    if (opts[key] === undefined) {
-      opts[key] = value;
-    } else if (isPlainObject(value) && isPlainObject(opts[key])) {
-      opts[key] = { ...value, ...opts[key] };
-    } else if (value instanceof MaybeNew && isPlainObject(opts[key])) {
-      opts[key] = { ...value.opts, ...opts[key] };
-    } else if (value instanceof MaybeNew && opts[key] instanceof MaybeNew) {
+  const opts: any = testOpts;
+  Object.entries(factoryOpts).forEach(([key, factoryValue]) => {
+    const testValue = testOpts[key];
+    if (testOpts[key] === undefined) {
+      // If the test doesn't define an opt, we have nothing to merge...unless
+      // they literally passed `foo: undefined`, in which case they win.
+      if (!(key in testOpts)) {
+        opts[key] = factoryValue;
+      }
+    } else if (isPlainObject(factoryValue) && isPlainObject(testValue)) {
+      // Should this deep merge? Probably?
+      opts[key] = { ...factoryValue, ...testValue };
+    } else if (factoryValue instanceof MaybeNew && isPlainObject(testValue)) {
+      opts[key] = { ...factoryValue.opts, ...testValue };
+    } else if (factoryValue instanceof MaybeNew && testValue instanceof MaybeNew) {
       opts[key] = new MaybeNew<any>(
-        { ...value.opts, ...opts[key].opts },
-        opts[key].polyRefPreferredOrder ?? value.polyRefPreferredOrder,
+        { ...factoryValue.opts, ...testValue.opts },
+        testValue.polyRefPreferredOrder ?? factoryValue.polyRefPreferredOrder,
       );
     }
   });

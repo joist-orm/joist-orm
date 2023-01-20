@@ -114,7 +114,7 @@ export abstract class SmallPublisherCodegen extends Publisher {
     setOpts(this as any as SmallPublisher, opts as OptsOf<SmallPublisher>, { partial: true });
   }
 
-  get changes(): Changes<SmallPublisher | Publisher> {
+  get changes(): Changes<SmallPublisher> {
     return newChangesProxy(this) as any;
   }
 

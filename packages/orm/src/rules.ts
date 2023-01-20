@@ -57,12 +57,14 @@ export function newRequiredRule<T extends Entity>(key: keyof T & string): Valida
  *
  * If the optional `unless` function returns true, then the update is allowed.
  */
-export function cannotBeUpdated<T extends Entity & EntityChanges<T>, K extends keyof Changes<T> & string>(
+export function cannotBeUpdated<T extends Entity, K extends keyof Changes<T> & string>(
   field: K,
   unless?: (entity: T) => MaybePromise<boolean>,
 ): CannotBeUpdatedRule<T> {
   const fn = async (entity: T) => {
-    if (entity.changes[field].hasUpdated) {
+    // For now putting the `EntityChanges` cast here to avoid breaking cannotBeUpdated rules
+    // on base types, see Publisher.ts's `cannotBeUpdated("type")` repro.
+    if ((entity as any as EntityChanges<T>).changes[field].hasUpdated) {
       return maybePromiseThen(unless ? unless(entity) : false, (result) => {
         if (!result) {
           return `${field} cannot be updated`;

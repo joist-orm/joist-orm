@@ -17,6 +17,12 @@ config.addRule((p) => {
   }
 });
 
+// Noop rule to verify we can check both subtype & based type fields
+config.beforeFlush((sp) => {
+  if (sp.changes.city.hasChanged || sp.changes.name.hasChanged) {
+  }
+});
+
 config.beforeFlush(async (sp) => {
   sp.beforeFlushRan = true;
 });

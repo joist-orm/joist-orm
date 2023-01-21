@@ -1,4 +1,4 @@
-import { Collection, CustomCollection, getEm, Loaded } from "joist-orm";
+import { cannotBeUpdated, Collection, CustomCollection, getEm, Loaded } from "joist-orm";
 import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig as config } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
@@ -38,6 +38,9 @@ export abstract class Publisher extends PublisherCodegen {
     },
   });
 }
+
+// Example of a rule against a base type
+config.addRule(cannotBeUpdated("type"));
 
 config.addRule("authors", (p) => {
   if (p.authors.get.length === 13) {

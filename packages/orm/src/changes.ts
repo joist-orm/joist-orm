@@ -21,12 +21,11 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
 /**
  * Creates the `this.changes.firstName` changes API for a given entity `T`.
  *
- * Specifically we use the fields from OptsOf but:
- *
- * - Exclude collections
- * - Convert entity types to id types to match what is stored in originalData
+ * We use `FieldsOf` because that already excludes collection, and then also
+ * convert reference fields to `ManyToOneFieldStatus` to be the id type
+ * because the reference may not be loaded.
  */
-export type Changes<T extends Entity> = { fields: (keyof FieldsOf<T>)[] } & {
+export type Changes<T extends Entity, K = keyof FieldsOf<T>> = { fields: K[] } & {
   [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends infer U | undefined
     ? U extends Entity
       ? ManyToOneFieldStatus<U>
@@ -46,10 +45,6 @@ export type Changes<T extends Entity> = { fields: (keyof FieldsOf<T>)[] } & {
  * Ideally this would live on `Entity` directly, but results in circular type issues.
  */
 export interface EntityChanges<T extends Entity> {
-  // Ideally we could use Record<keyof T, { hasChanged: boolean }> but we only want
-  // keys that are actually columns. Right now OptsOf<T> has collections (not in .changed)
-  // and OrderOf<T> has id/createdAt/updatedAt (also not in .changed), so just using an index
-  // type for now.
   changes: Changes<T>;
 }
 

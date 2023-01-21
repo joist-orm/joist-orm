@@ -71,7 +71,7 @@ export function reverseReactiveHint<T extends Entity>(
   const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
-    const field = meta.fields[key];
+    const field = meta.allFields[key];
     const isReadOnly = !!keyMaybeSuffix.match(suffixRe) || (field && field.immutable);
     if (field) {
       switch (field.kind) {
@@ -88,9 +88,9 @@ export function reverseReactiveHint<T extends Entity>(
         case "m2m":
         case "o2m":
         case "o2o": {
-          const isOtherReadOnly = field.otherMetadata().fields[field.otherFieldName].immutable;
+          const isOtherReadOnly = field.otherMetadata().allFields[field.otherFieldName].immutable;
           const otherFieldName =
-            field.otherMetadata().fields[field.otherFieldName].kind === "poly"
+            field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
               ? `${field.otherFieldName}@${meta.type}`
               : field.otherFieldName;
           // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide

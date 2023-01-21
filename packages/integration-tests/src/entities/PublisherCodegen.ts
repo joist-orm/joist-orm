@@ -8,6 +8,7 @@ import {
   EntityOrmField,
   EnumGraphQLFilter,
   fail,
+  FieldsOf,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -31,6 +32,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -63,7 +65,6 @@ import {
   TagId,
   tagMeta,
 } from "./entities";
-import type { EntityManager } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -306,7 +307,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
   }
 
-  get changes(): Changes<Publisher | LargePublisher | SmallPublisher> {
+  get changes(): Changes<
+    Publisher,
+    keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>
+  > {
     return newChangesProxy(this) as any;
   }
 

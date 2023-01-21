@@ -16,6 +16,7 @@ import {
   EntityOrmField,
   EnumGraphQLFilter,
   fail as failSymbol,
+  FieldsOf,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -390,10 +391,22 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   }
 
   let maybeOtherTypeChanges;
-  if (baseEntity) {
-    maybeOtherTypeChanges = code`| ${baseEntity.entity.type}`;
-  } else if (subEntities.length > 0) {
-    maybeOtherTypeChanges = joinCode([code``, ...subEntities.map((e) => code`${e.entity.type}`)], { on: "|" });
+  if (subEntities.length > 0) {
+    maybeOtherTypeChanges = joinCode(
+      // Pass `K = keyof Publisher | keyof SmallPublisher | keyof LargePublisher` to `changes` so that
+      // our subtypes can have `SmallPublisher.changes(): Changes<SmallPublisher>` be covariant, which
+      // will break if it adds a key to `Changes.fields` that `Publisher.changes()` does not include.
+      //
+      // type A1 = { foo: 1 | 2 };
+      // type A2 = { foo: 1 | 2 | 3 };
+      // type A3 = A2 extends A1 ? 1 : 2;
+      //
+      // A3 will be 2 because the extra 3 breaks code written against A1.foo.
+      //
+      // So essentially we're pre-emptively our subtypes "3".
+      [code`, `, ...[meta, ...subEntities].map((e) => code`keyof ${FieldsOf}<${e.entity.type}>`)],
+      { on: "|" },
+    );
   } else {
     maybeOtherTypeChanges = "";
   }

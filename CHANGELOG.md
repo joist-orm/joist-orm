@@ -1,3 +1,10 @@
+## [1.47.3](https://github.com/stephenh/joist-ts/compare/v1.47.2...v1.47.3) (2023-01-21)
+
+
+### Bug Fixes
+
+* Fix load hints on base properties. ([#503](https://github.com/stephenh/joist-ts/issues/503)) ([8d2d849](https://github.com/stephenh/joist-ts/commit/8d2d84961cb258c807420056492ee52a269664e0))
+
 ## [1.47.2](https://github.com/stephenh/joist-ts/compare/v1.47.1...v1.47.2) (2023-01-21)
 
 

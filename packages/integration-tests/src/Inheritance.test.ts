@@ -260,4 +260,12 @@ describe("Inheritance", () => {
     expect(sp).toBeInstanceOf(SmallPublisher);
     expect(sp).toMatchEntity({ name: "sp1", city: "city" });
   });
+
+  it("can load through a subtype", async () => {
+    await insertPublisher({ name: "sp1" });
+    const em = newEntityManager();
+    // Use regular load to avoid a DeepNew
+    const sp = await em.load(SmallPublisher, "p:1", { authors: "books" });
+    expect(sp.authors.get[0]?.books.get).toBeUndefined();
+  });
 });

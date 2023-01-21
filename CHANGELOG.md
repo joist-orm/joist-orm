@@ -1,3 +1,10 @@
+## [1.47.2](https://github.com/stephenh/joist-ts/compare/v1.47.1...v1.47.2) (2023-01-21)
+
+
+### Bug Fixes
+
+* Fixes for 'changes' when using inheritance. ([#501](https://github.com/stephenh/joist-ts/issues/501)) ([fbc8594](https://github.com/stephenh/joist-ts/commit/fbc85943ac664108452273e22f08f73c2c7ce302))
+
 ## [1.47.1](https://github.com/stephenh/joist-ts/compare/v1.47.0...v1.47.1) (2023-01-17)
 
 

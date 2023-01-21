@@ -17,25 +17,35 @@ import { NullOrDefinedOr } from "./utils";
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
 
+// Use any to correctly handle subtype/base type load hints.
+//
+// If a load hint is typed as `LoadHint<SmallPublisher, "authors">`, but the property
+// is actually `Publisher.authors`, if we do `P extends LoadedCollection<SmallPublisher, ...>`
+// the `SmallPublisher !== Publisher`, so the `authors` property doesn't match, and then
+// we drop the rest of the nested load hint.
+//
+// But if we check `P extends LoadedCollection<any, ...>` it works.
+type MaybeBaseType = any;
+
 /** Marks a given `T[K]` field as the loaded/synchronous version of the collection. */
-export type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<T, infer U>
+export type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<MaybeBaseType, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, H>>
-  : P extends Reference<T, infer U, infer N>
+  : P extends Reference<MaybeBaseType, infer U, infer N>
   ? LoadedReference<T, Loaded<U, H>, N>
-  : P extends Collection<T, infer U>
+  : P extends Collection<MaybeBaseType, infer U>
   ? LoadedCollection<T, Loaded<U, H>>
-  : P extends AsyncProperty<T, infer V>
+  : P extends AsyncProperty<MaybeBaseType, infer V>
   ? LoadedProperty<T, V>
   : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
-type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<T, infer U>
+type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBaseType, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends Reference<T, infer U, infer N>
+  : P extends Reference<MaybeBaseType, infer U, infer N>
   ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
-  : P extends Collection<T, infer U>
+  : P extends Collection<MaybeBaseType, infer U>
   ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends AsyncProperty<T, infer V>
+  : P extends AsyncProperty<MaybeBaseType, infer V>
   ? LoadedProperty<T, V>
   : unknown;
 

@@ -114,14 +114,9 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBookReview>[1];
   };
 
-  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
+  readonly book: ManyToOneReference<Book, never> = hasOne(bookMeta, "book", "reviews");
 
-  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(
-    commentMeta,
-    "comment",
-    "parent",
-    "parent_book_review_id",
-  );
+  readonly comment: OneToOneReference<Comment> = hasOneToOne(commentMeta, "comment", "parent", "parent_book_review_id");
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, BookReviewCodegen.defaultValues, opts);

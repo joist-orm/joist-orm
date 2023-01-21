@@ -19,17 +19,17 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
   otherMeta: EntityMetadata<U>,
-  fieldName: keyof T & string,
+  fieldName: string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-): Collection<T, U> {
+): Collection<U> {
   const entity = currentlyInstantiatingEntity as T;
-  return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+  return new OneToManyCollection(entity, otherMeta, fieldName as keyof T & string, otherFieldName, otherColumnName);
 }
 
 export class OneToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U>
+  implements Collection<U>
 {
   readonly #entity: T;
   private loaded: U[] | undefined;

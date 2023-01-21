@@ -106,13 +106,9 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
 
-  readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne(
-    publisherGroupMeta,
-    "group",
-    "critics",
-  );
+  readonly group: ManyToOneReference<PublisherGroup, undefined> = hasOne(publisherGroupMeta, "group", "critics");
 
-  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(
+  readonly criticColumn: OneToOneReference<CriticColumn> = hasOneToOne(
     criticColumnMeta,
     "criticColumn",
     "critic",

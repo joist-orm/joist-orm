@@ -9,7 +9,7 @@ import { Relation } from "./Relation";
  * We consider this a `Relation`, but not a true `Collection` b/c it cannot be
  * loaded.
  */
-export interface LargeCollection<T extends Entity, U extends Entity> extends Relation<T, U> {
+export interface LargeCollection<U extends Entity> extends Relation<U> {
   /** Looks up the specific `id` without fully loading the collection. */
   find(id: IdOf<U>): Promise<U | undefined>;
 

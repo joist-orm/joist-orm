@@ -33,9 +33,9 @@ export type EntityResolver<T extends Entity> = {
     ? Resolver<T, Record<string, any>, IdOf<T>>
     : T[P] extends GraphQLPrimitive | GraphQLPrimitive[]
     ? Resolver<T, Record<string, any>, T[P]>
-    : T[P] extends Collection<T, infer U>
+    : T[P] extends Collection<infer U>
     ? Resolver<T, Record<string, any>, U[]>
-    : T[P] extends Reference<T, infer U, infer N>
+    : T[P] extends Reference<infer U, infer N>
     ? Resolver<T, Record<string, any>, U>
     : T[P] extends AsyncProperty<T, infer V>
     ? Resolver<T, Record<string, any>, V>

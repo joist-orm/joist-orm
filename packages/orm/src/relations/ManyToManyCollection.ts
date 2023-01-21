@@ -16,17 +16,17 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
-  fieldName: keyof T & string,
+  fieldName: string,
   columnName: string,
   otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-): Collection<T, U> {
+): Collection<U> {
   const entity = currentlyInstantiatingEntity as T;
   return new ManyToManyCollection<T, U>(
     joinTableName,
     entity,
-    fieldName,
+    fieldName as keyof T & string,
     columnName,
     otherMeta,
     otherFieldName,
@@ -36,7 +36,7 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U>
+  implements Collection<U>
 {
   readonly #entity: T;
   private loaded: U[] | undefined;

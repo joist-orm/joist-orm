@@ -32,7 +32,6 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -65,6 +64,7 @@ import {
   TagId,
   tagMeta,
 } from "./entities";
+import type { EntityManager } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -161,26 +161,22 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
 
-  readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
+  readonly authors: Collection<Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
 
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
+  readonly bookAdvances: Collection<BookAdvance> = hasMany(
     bookAdvanceMeta,
     "bookAdvances",
     "publisher",
     "publisher_id",
   );
 
-  readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
+  readonly comments: Collection<Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
 
-  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
+  readonly images: Collection<Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
 
-  readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne(
-    publisherGroupMeta,
-    "group",
-    "publishers",
-  );
+  readonly group: ManyToOneReference<PublisherGroup, undefined> = hasOne(publisherGroupMeta, "group", "publishers");
 
-  readonly tags: Collection<Publisher, Tag> = hasManyToMany(
+  readonly tags: Collection<Tag> = hasManyToMany(
     "publishers_to_tags",
     "tags",
     "publisher_id",

@@ -31,7 +31,7 @@ export function isPolymorphicReference(maybeReference: any): maybeReference is P
 }
 
 export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+  extends Reference<U, N> {
   /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
   id: IdOf<U> | undefined;
 
@@ -257,7 +257,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   /** Returns the other relation that points back at us, i.e. we're `comment.parent_book_id` and this is `Book.comments`. */
-  private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<U, T> {
+  private getOtherRelation(other: U): OneToManyCollection<U, T> | OneToOneReference<T> {
     const component = this.field.components.find((c) => other instanceof c.otherMetadata().cstr) as any;
     return (other as U)[component?.otherFieldName as keyof U] as any;
   }

@@ -21,7 +21,7 @@ type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T
 export function hasManyDerived<T extends Entity, U extends Entity, H extends LoadHint<T>>(
   loadHint: H,
   opts: HasManyDerivedOpts<T, U, H>,
-): Collection<T, U> {
+): Collection<U> {
   const entity: T = currentlyInstantiatingEntity as T;
   const { load, ...rest } = opts;
   return new CustomCollection<T, U>(entity, {

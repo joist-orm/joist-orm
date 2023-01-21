@@ -30,7 +30,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
  */
 export class CustomCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U>
+  implements Collection<U>
 {
   readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because

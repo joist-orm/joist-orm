@@ -18,7 +18,7 @@ import {
  */
 export function hasManyThrough<T extends Entity, U extends Entity>(
   lens: (lens: Lens<T>) => Lens<U, U[]>,
-): Collection<T, U> {
+): Collection<U> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomCollection<T, U>(entity, {
     load: async (entity, opts) => {

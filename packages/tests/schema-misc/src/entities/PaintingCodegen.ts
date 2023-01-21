@@ -90,7 +90,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newPainting>[1];
   };
 
-  readonly artist: ManyToOneReference<Painting, Artist, never> = hasOne(artistMeta, "artist", "paintings");
+  readonly artist: ManyToOneReference<Artist, never> = hasOne(artistMeta, "artist", "paintings");
 
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, paintingMeta, PaintingCodegen.defaultValues, opts);

@@ -117,9 +117,9 @@ function getTestId(em: EntityManager, entity: Entity): string {
 export type MatchedEntity<T> =
   | T
   | {
-      [K in keyof T]?: T[K] extends Reference<any, infer U, any>
+      [K in keyof T]?: T[K] extends Reference<infer U, any>
         ? MatchedEntity<U> | U
-        : T[K] extends Collection<any, infer U>
+        : T[K] extends Collection<infer U>
         ? Array<MatchedEntity<U> | U>
         : T[K] extends AsyncProperty<any, infer V>
         ? V

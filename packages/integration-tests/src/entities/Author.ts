@@ -15,8 +15,8 @@ import {
 import { AuthorCodegen, authorConfig as config, Book, BookReview, Comment } from "./entities";
 
 export class Author extends AuthorCodegen {
-  readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
-  readonly reviewedBooks: Collection<Author, Book> = hasManyDerived(
+  readonly reviews: Collection<BookReview> = hasManyThrough((author) => author.books.reviews);
+  readonly reviewedBooks: Collection<Book> = hasManyDerived(
     { books: "reviews" },
     {
       get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
@@ -43,7 +43,7 @@ export class Author extends AuthorCodegen {
       },
     },
   );
-  readonly latestComment: Reference<Author, Comment, undefined> = hasOneDerived(
+  readonly latestComment: Reference<Comment, undefined> = hasOneDerived(
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );

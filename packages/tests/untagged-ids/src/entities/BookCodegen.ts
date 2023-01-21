@@ -91,7 +91,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
+  readonly author: ManyToOneReference<Author, never> = hasOne(authorMeta, "author", "books");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);

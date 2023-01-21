@@ -28,7 +28,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
  */
 export class CustomReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, N>
+  implements Reference<U, N>
 {
   readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because

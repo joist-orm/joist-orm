@@ -177,6 +177,24 @@ describe("OneToManyCollection", () => {
     expect(a1.books.get.length).toEqual(0);
   });
 
+  it("combines both pre-deleted and persisted entities when not in memory yet", async () => {
+    // Given an author with two books
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = newEntityManager();
+    // When we load the Book and delete it
+    em.delete(await em.load(Book, "b:1"));
+    // And then later do load the Author
+    const a1 = await em.load(Author, "a:1", "books");
+    // Then a1.books only has b2 in it
+    expect(a1.books.get.length).toBe(1);
+    // And toMatchEntity also ignores the hard-deleted book
+    expect(a1).toMatchEntity({ books: [{ title: "b2" }] });
+    // And getWithDeleted has both
+    expect(a1.books.getWithDeleted.length).toBe(2);
+  });
+
   it("combines both pre-loaded and post-loaded removed entities", async () => {
     // Given an author with one book
     await insertAuthor({ first_name: "a1" });

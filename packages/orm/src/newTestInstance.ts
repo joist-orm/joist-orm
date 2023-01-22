@@ -104,7 +104,12 @@ export function newTestInstance<T extends Entity>(
       const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
       const required = field.required && !ignoreAllDefaults;
 
-      if (field.kind === "primitive" && required && !field.derived && !field.protected) {
+      if (
+        field.kind === "primitive" &&
+        (required || (opts as any)[fieldName] === defaultValueMarker) &&
+        !field.derived &&
+        !field.protected
+      ) {
         const codegenDefault = (cstr as any).defaultValues[field.fieldName];
         return [fieldName, codegenDefault ?? defaultValueForField(em, cstr, field)];
       } else if (field.kind === "m2o") {

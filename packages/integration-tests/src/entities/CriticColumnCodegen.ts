@@ -80,7 +80,7 @@ criticColumnConfig.addRule(newRequiredRule("critic"));
 export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: CriticColumnFilter;
     gqlFilterType: CriticColumnGraphQLFilter;
     orderType: CriticColumnOrder;

@@ -135,7 +135,7 @@ bookConfig.addRule(newRequiredRule("author"));
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = { order: 1 };
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: BookFilter;
     gqlFilterType: BookGraphQLFilter;
     orderType: BookOrder;

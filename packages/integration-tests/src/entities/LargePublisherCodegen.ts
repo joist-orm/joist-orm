@@ -63,7 +63,7 @@ export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 export abstract class LargePublisherCodegen extends Publisher {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: LargePublisherFilter;
     gqlFilterType: LargePublisherGraphQLFilter;
     orderType: LargePublisherOrder;

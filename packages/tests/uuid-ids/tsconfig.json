@@ -1,8 +1,7 @@
 {
   "compilerOptions": {
-    "target": "es2020",
+    "target": "es2022",
     "module": "commonjs",
-    "lib": ["es2020"],
     "strict": true,
     "types": ["jest", "node"],
     "esModuleInterop": true,

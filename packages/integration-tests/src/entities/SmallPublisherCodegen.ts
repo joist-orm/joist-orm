@@ -66,7 +66,7 @@ smallPublisherConfig.addRule(newRequiredRule("city"));
 export abstract class SmallPublisherCodegen extends Publisher {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: SmallPublisherFilter;
     gqlFilterType: SmallPublisherGraphQLFilter;
     orderType: SmallPublisherOrder;

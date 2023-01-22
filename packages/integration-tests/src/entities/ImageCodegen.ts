@@ -117,7 +117,7 @@ imageConfig.addRule(newRequiredRule("type"));
 export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: ImageFilter;
     gqlFilterType: ImageGraphQLFilter;
     orderType: ImageOrder;

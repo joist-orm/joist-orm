@@ -104,7 +104,7 @@ bookReviewConfig.addRule(newRequiredRule("book"));
 export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: BookReviewFilter;
     gqlFilterType: BookReviewGraphQLFilter;
     orderType: BookReviewOrder;

@@ -1,3 +1,10 @@
+## [1.49.1](https://github.com/stephenh/joist-ts/compare/v1.49.0...v1.49.1) (2023-01-22)
+
+
+### Bug Fixes
+
+* Fix hard deletes showing up in toMatchEntity. ([#508](https://github.com/stephenh/joist-ts/issues/508)) ([f1fc186](https://github.com/stephenh/joist-ts/commit/f1fc186c2bf29e292d25d3854e9c228f75a97d20))
+
 # [1.49.0](https://github.com/stephenh/joist-ts/compare/v1.48.2...v1.49.0) (2023-01-22)
 
 

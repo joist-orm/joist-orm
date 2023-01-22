@@ -230,11 +230,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       if (!this.#entity.isNewEntity) {
         this.#entity.em.entities
           .filter((e) => e instanceof this.#otherMeta.cstr)
+          .filter((e) => !this.#addedBeforeLoaded.includes(e as U))
           .forEach((e) => {
-            if (
-              sameEntity((e as any).__orm.data[this.otherFieldName], this.#entity) &&
-              !this.#addedBeforeLoaded.includes(e as U)
-            ) {
+            if (sameEntity((e as any).__orm.data[this.otherFieldName], this.#entity)) {
               this.#addedBeforeLoaded.push(e as U);
             }
           });

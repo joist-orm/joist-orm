@@ -44,7 +44,7 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
         isAsyncProperty(actualValue) ||
         isPersistedAsyncProperty(actualValue)
       ) {
-        actualValue = getEvenDeleted(actualValue);
+        actualValue = getWithSoftDeleted(actualValue);
       }
 
       if (actualValue instanceof Array) {
@@ -133,6 +133,20 @@ export type MatchedEntity<T> =
           MatchedEntity<T[K]> | null;
     };
 
-function getEvenDeleted(relation: any): any {
-  return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
+/**
+ * Adds back soft-deleted to `.get`.
+ *
+ * In Joist, `.get` filters both soft and hard deleted entities, because `.get`
+ * is likely used by real business logic that doesn't want to see either.
+ *
+ * However, in tests with `toMatchEntity`, we take a stronger stance that the
+ * developer needs to know "this is _soft_ deleted and not hard deleted", so
+ * we add-back soft deleted entities.
+ *
+ * We do this by calling `getWithDeleted`, which returns all hard and soft
+ * deleted entities, and then filtering out the hard deletes.
+ */
+function getWithSoftDeleted(relation: any): any {
+  const r = "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
+  return Array.isArray(r) ? r.filter((e: any) => !e.isDeletedEntity) : r;
 }

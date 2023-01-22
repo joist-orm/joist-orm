@@ -10,7 +10,7 @@ workflows:
       - build:
           matrix:
             parameters:
-              node-version: ["14.20.0", "16.16.0", "18.10.0"]
+              node-version: ["18.0.0", "18.10.0"]
 
 jobs:
   build:

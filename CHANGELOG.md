@@ -1,3 +1,10 @@
+# [1.49.0](https://github.com/stephenh/joist-ts/compare/v1.48.2...v1.49.0) (2023-01-22)
+
+
+### Features
+
+* Add useFactoryDefaults escape hatch. ([#507](https://github.com/stephenh/joist-ts/issues/507)) ([5ef5000](https://github.com/stephenh/joist-ts/commit/5ef500024c72d9b73c813f7442d327170edc5101))
+
 ## [1.48.2](https://github.com/stephenh/joist-ts/compare/v1.48.1...v1.48.2) (2023-01-22)
 
 

@@ -174,10 +174,10 @@
     "updatedAt"
   ],
   "SavePublisherResult": ["publisher"],
-  "SaveSmallPublisherInput": ["city", "id", "idId"],
+  "SaveSmallPublisherInput": ["allAuthorNames", "city", "id", "idId"],
   "SaveSmallPublisherResult": ["smallPublisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
-  "SmallPublisher": ["city", "id"],
+  "SmallPublisher": ["allAuthorNames", "city", "id"],
   "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"]
 }

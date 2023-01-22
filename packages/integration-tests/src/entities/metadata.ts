@@ -412,7 +412,11 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   idType: "int",
   tagName: "p",
   tableName: "small_publishers",
-  fields: { "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true }, "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false } },
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
+    "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false },
+    "allAuthorNames": { kind: "primitive", fieldName: "allAuthorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("allAuthorNames", "all_author_names", "text"), immutable: false },
+  },
   allFields: {},
   timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
   config: smallPublisherConfig,

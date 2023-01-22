@@ -1174,9 +1174,11 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
           e.isDeletedEntity ||
           ((e as any).changes as Changes<any>).fields.some((f) => field.fields.includes(f)),
       );
+      console.log("Handling", field.name, "triggered", triggered);
       (await followReverseHint(triggered, field.path))
         .filter((entity) => !entity.isDeletedEntity)
         .forEach((entity) => {
+          console.log("Queueing", field.name, "on", entity);
           const { asyncFields } = getTodo(todos, entity);
           if (!asyncFields.has(entity)) {
             asyncFields.set(entity, new Set());
@@ -1336,7 +1338,12 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
     return [...asyncFields.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fields]) => {
-        return [...fields.values()].map((fieldName) => (entity as any)[fieldName].load());
+        return (
+          [...fields.values()]
+            // Look for fields that don't exist b/c they might be on a different subtype
+            .filter((fieldName) => (entity as any)[fieldName])
+            .map((fieldName) => (entity as any)[fieldName].load())
+        );
       });
   });
   await Promise.all(p);

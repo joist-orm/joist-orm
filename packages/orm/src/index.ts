@@ -304,6 +304,9 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
           const reversals = reverseReactiveHint(meta.cstr, asyncProperty.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({ name: field.fieldName, path, fields });
+            if (field.fieldName === "allAuthorNames") {
+              console.log(`Adding ${fields} -> ${path} to ${entity.name}`);
+            }
           });
         }
       });

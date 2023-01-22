@@ -6,10 +6,12 @@ import {
   insertPublisherOnly,
   insertPublisherToTag,
   insertTag,
+  select,
 } from "@src/entities/inserts";
 import {
   Author,
   LargePublisher,
+  newAuthor,
   newPublisher,
   newSmallPublisher,
   Publisher,
@@ -267,5 +269,26 @@ describe("Inheritance", () => {
     // Use regular load to avoid a DeepNew
     const sp = await em.load(SmallPublisher, "p:1", { authors: "books" });
     expect(sp.authors.get[0]?.books.get).toBeUndefined();
+  });
+
+  it("can have persisted fields on a subtype", async () => {
+    // Given a small publisher
+    await insertPublisher({ name: "sp1" });
+    const em = newEntityManager();
+    // When we make an author
+    newAuthor(em, { publisher: "p:1" });
+    await em.flush();
+    // Then the field is recacled
+    expect(await select("small_publishers")).toMatchObject([{ all_author_names: "a1" }]);
+  });
+
+  it("can ignore persisted fields from a different subtype", async () => {
+    // Given a small publisher
+    await insertLargePublisher({ name: "lp1" });
+    const em = newEntityManager();
+    // When we make an author
+    newAuthor(em, { publisher: "p:1" });
+    // Then we can flush w/o erroring out
+    await expect(em.flush()).resolves.toBeDefined();
   });
 });

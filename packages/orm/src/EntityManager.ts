@@ -1338,7 +1338,7 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
       .flatMap(([entity, fields]) => {
         return (
           [...fields.values()]
-            // Look for fields that don't exist b/c they might be on a different subtype
+            // Ignores fields that don't exist b/c they are likely just on a different subtype
             .filter((fieldName) => (entity as any)[fieldName])
             .map((fieldName) => (entity as any)[fieldName].load())
         );

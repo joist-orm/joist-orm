@@ -283,12 +283,12 @@ describe("Inheritance", () => {
   });
 
   it("can ignore persisted fields from a different subtype", async () => {
-    // Given a small publisher
+    // Given a large publisher
     await insertLargePublisher({ name: "lp1" });
     const em = newEntityManager();
     // When we make an author
     newAuthor(em, { publisher: "p:1" });
-    // Then we can flush w/o erroring out
+    // Then we can flush w/o blowing up on `allAuthorNames` is an invalid field
     await expect(em.flush()).resolves.toBeDefined();
   });
 });

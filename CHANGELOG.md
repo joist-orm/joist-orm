@@ -1,3 +1,10 @@
+# [1.48.0](https://github.com/stephenh/joist-ts/compare/v1.47.3...v1.48.0) (2023-01-22)
+
+
+### Features
+
+* Bump TypeScript output to ES2022. ([#504](https://github.com/stephenh/joist-ts/issues/504)) ([e27bb32](https://github.com/stephenh/joist-ts/commit/e27bb324b7fbc8efa08ef5af2402d7c1b37c455b))
+
 ## [1.47.3](https://github.com/stephenh/joist-ts/compare/v1.47.2...v1.47.3) (2023-01-21)
 
 

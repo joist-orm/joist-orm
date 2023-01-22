@@ -88,7 +88,7 @@ commentConfig.addRule(newRequiredRule("parent"));
 export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: CommentFilter;
     gqlFilterType: CommentGraphQLFilter;
     orderType: CommentOrder;

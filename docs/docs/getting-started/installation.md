@@ -21,6 +21,12 @@ If you want a faster intro than this page, you should be able to check out the s
 
 :::
 
+::: info
+
+Joist requires Node 18.
+
+:::
+
 ## Setting up your database
 
 The sample app uses `docker compose` and a `db.dockerfile` file to manage the local Postgres database.

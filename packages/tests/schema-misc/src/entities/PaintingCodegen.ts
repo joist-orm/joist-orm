@@ -80,7 +80,7 @@ paintingConfig.addRule(newRequiredRule("artist"));
 export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: PaintingFilter;
     gqlFilterType: PaintingGraphQLFilter;
     orderType: PaintingOrder;

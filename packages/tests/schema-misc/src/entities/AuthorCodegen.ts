@@ -76,7 +76,7 @@ authorConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
     orderType: AuthorOrder;

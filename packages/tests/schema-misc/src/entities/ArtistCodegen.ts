@@ -77,7 +77,7 @@ artistConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: ArtistFilter;
     gqlFilterType: ArtistGraphQLFilter;
     orderType: ArtistOrder;

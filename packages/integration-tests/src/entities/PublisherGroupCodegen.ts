@@ -81,7 +81,7 @@ publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: PublisherGroupFilter;
     gqlFilterType: PublisherGroupGraphQLFilter;
     orderType: PublisherGroupOrder;

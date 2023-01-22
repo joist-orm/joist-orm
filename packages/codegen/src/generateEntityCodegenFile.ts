@@ -456,7 +456,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${defaultValues}
       };
 
-      readonly __orm!: ${EntityOrmField} & {
+      declare readonly __orm: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
         gqlFilterType: ${entityName}GraphQLFilter;
         orderType: ${entityName}Order;

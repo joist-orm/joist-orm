@@ -96,7 +96,7 @@ criticConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: CriticFilter;
     gqlFilterType: CriticGraphQLFilter;
     orderType: CriticOrder;

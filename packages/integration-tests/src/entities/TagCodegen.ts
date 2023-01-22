@@ -87,7 +87,7 @@ tagConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class TagCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: TagFilter;
     gqlFilterType: TagGraphQLFilter;
     orderType: TagOrder;

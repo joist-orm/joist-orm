@@ -32,7 +32,6 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import type { EntityManager } from "./entities";
 import {
   Author,
   AuthorId,
@@ -65,6 +64,7 @@ import {
   TagId,
   tagMeta,
 } from "./entities";
+import type { EntityManager } from "./entities";
 
 export type PublisherId = Flavor<string, "Publisher">;
 
@@ -151,7 +151,7 @@ publisherConfig.addRule(newRequiredRule("type"));
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = { type: PublisherType.Big };
 
-  readonly __orm!: EntityOrmField & {
+  declare readonly __orm: EntityOrmField & {
     filterType: PublisherFilter;
     gqlFilterType: PublisherGraphQLFilter;
     orderType: PublisherOrder;

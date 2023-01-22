@@ -18,6 +18,7 @@ describe("Entity", () => {
         "ageRuleInvoked": 0,
         "authors": {
           "fieldName": "authors",
+          "loaded": undefined,
           "otherColumnName": "mentor_id",
           "otherFieldName": "mentor",
           "undefined": null,
@@ -34,6 +35,7 @@ describe("Entity", () => {
               "comments": {},
             },
           },
+          "loadPromise": undefined,
           "loaded": false,
           "reactiveHint": {
             "books": {
@@ -44,12 +46,14 @@ describe("Entity", () => {
         "bookCommentsCalcInvoked": 0,
         "books": {
           "fieldName": "books",
+          "loaded": undefined,
           "otherColumnName": "author_id",
           "otherFieldName": "author",
           "undefined": null,
         },
         "comments": {
           "fieldName": "comments",
+          "loaded": undefined,
           "otherColumnName": "parent_author_id",
           "otherFieldName": "parent",
           "undefined": null,
@@ -58,6 +62,7 @@ describe("Entity", () => {
           "_isLoaded": false,
           "fieldName": "currentDraftBook",
           "isCascadeDelete": false,
+          "loaded": undefined,
           "otherFieldName": "currentDraftAuthor",
           "undefined": null,
         },
@@ -67,12 +72,14 @@ describe("Entity", () => {
           "_isLoaded": false,
           "fieldName": "image",
           "isCascadeDelete": true,
+          "loaded": undefined,
           "otherColumnName": "author_id",
           "otherFieldName": "author",
           "undefined": null,
         },
         "latestComment": {
           "_isLoaded": false,
+          "loadPromise": undefined,
           "opts": {
             "get": {},
             "isLoaded": {},
@@ -84,6 +91,7 @@ describe("Entity", () => {
           "_isLoaded": false,
           "fieldName": "mentor",
           "isCascadeDelete": false,
+          "loaded": undefined,
           "otherFieldName": "authors",
           "undefined": null,
         },
@@ -94,6 +102,7 @@ describe("Entity", () => {
           "loadHint": {
             "books": {},
           },
+          "loadPromise": undefined,
           "loaded": false,
           "reactiveHint": [
             "books",
@@ -103,6 +112,7 @@ describe("Entity", () => {
         "numberOfBooks2": {
           "fn": {},
           "hint": "books",
+          "loadPromise": undefined,
           "loaded": false,
         },
         "numberOfBooksCalcInvoked": 0,
@@ -110,11 +120,13 @@ describe("Entity", () => {
           "_isLoaded": false,
           "fieldName": "publisher",
           "isCascadeDelete": false,
+          "loaded": undefined,
           "otherFieldName": "authors",
           "undefined": null,
         },
         "reviewedBooks": {
           "_isLoaded": false,
+          "loadPromise": undefined,
           "opts": {
             "add": {},
             "get": {},
@@ -126,6 +138,7 @@ describe("Entity", () => {
         },
         "reviews": {
           "_isLoaded": false,
+          "loadPromise": undefined,
           "opts": {
             "get": {},
             "isLoaded": {},
@@ -138,6 +151,7 @@ describe("Entity", () => {
           "fieldName": "tags",
           "isCascadeDelete": false,
           "joinTableName": "authors_to_tags",
+          "loaded": undefined,
           "otherColumnName": "tag_id",
           "otherFieldName": "authors",
           "removedBeforeLoaded": [],

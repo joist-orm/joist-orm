@@ -258,6 +258,14 @@ expect(b.title).toBeUndefined();
 expect(b.author.get).toBeUndefined();
 ```
 
+:::tip
+
+If you find yourself regularly using `useFactoryDefaults`, it might be an indication that your factory's defaults are too opinionated, and the factory should do less by default.
+
+For example, instead of the factory having "not actually universally required/useful" defaults that frequently need to be turned off, only the tests that actually rely on the sometimes-wanted/sometimes-not-wanted defaults should opt in to them via a dedicated custom opt.
+
+:::
+
 ## `async` Free Assertions
 
 In production code, Joist relations must be accessed asynchronously, i.e. either with `load()` calls or `populate` preloads:

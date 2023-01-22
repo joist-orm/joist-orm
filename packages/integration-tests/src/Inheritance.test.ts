@@ -304,7 +304,7 @@ describe("Inheritance", () => {
     await expect(em.flush()).rejects.toThrow("SmallPublishers cannot have more than 5 authors");
   });
 
-  it("ignores have reactive rules from the other subtype", async () => {
+  it("ignores reactive rules from the other subtype", async () => {
     const em = newEntityManager();
     // Given a large publisher
     const lg = newLargePublisher(em, { name: "lp1" });

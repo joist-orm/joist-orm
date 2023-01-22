@@ -1,3 +1,10 @@
+## [1.48.1](https://github.com/stephenh/joist-ts/compare/v1.48.0...v1.48.1) (2023-01-22)
+
+
+### Bug Fixes
+
+* Fix derived fields on subtypes. ([#505](https://github.com/stephenh/joist-ts/issues/505)) ([cafd95a](https://github.com/stephenh/joist-ts/commit/cafd95ae92101f91fda5b1b9d62b7214e8e5116c))
+
 # [1.48.0](https://github.com/stephenh/joist-ts/compare/v1.47.3...v1.48.0) (2023-01-22)
 
 

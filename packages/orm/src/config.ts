@@ -1,5 +1,13 @@
 import { Entity } from "./Entity";
-import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, RelationsIn } from "./index";
+import {
+  getMetadata,
+  Loaded,
+  LoadHint,
+  MaybeAbstractEntityConstructor,
+  Reacted,
+  ReactiveHint,
+  RelationsIn,
+} from "./index";
 import { convertToLoadHint } from "./reactiveHints";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ValidationRule, ValidationRuleInternal } from "./rules";
@@ -137,6 +145,7 @@ export class ConfigApi<T extends Entity, C> {
  * a `ReactiveRule` with fields `["title"]`, path `books`, and rule `ruleFn`.
  */
 interface ReactiveRule {
+  cstr: MaybeAbstractEntityConstructor<any>;
   name: string;
   fields: string[];
   path: string[];
@@ -150,6 +159,7 @@ interface ReactiveRule {
  * a `ReactiveFields` with fields `["title"]`, path `books`, and name `title`.
  */
 interface ReactiveField {
+  cstr: MaybeAbstractEntityConstructor<any>;
   name: string;
   fields: string[];
   path: string[];

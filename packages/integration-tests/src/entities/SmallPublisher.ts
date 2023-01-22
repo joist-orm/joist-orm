@@ -24,6 +24,13 @@ config.addRule((p) => {
   }
 });
 
+// Example of a reactive rule on a subtype
+config.addRule("authors", (sp) => {
+  if (sp.authors.get.length > 5) {
+    return "SmallPublishers cannot have more than 5 authors";
+  }
+});
+
 // Noop rule to verify we can check both subtype & based type fields
 config.beforeFlush((sp) => {
   if (sp.changes.city.hasChanged || sp.changes.name.hasChanged) {

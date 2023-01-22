@@ -285,7 +285,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
         reversals.forEach(({ entity, path, fields }) => {
-          getMetadata(entity).config.__data.reactiveRules.push({ name, fields, path, fn });
+          getMetadata(entity).config.__data.reactiveRules.push({ cstr: meta.cstr, name, fields, path, fn });
         });
       }
     });
@@ -303,7 +303,12 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         if (asyncProperty?.reactiveHint) {
           const reversals = reverseReactiveHint(meta.cstr, asyncProperty.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
-            getMetadata(entity).config.__data.reactiveDerivedValues.push({ name: field.fieldName, path, fields });
+            getMetadata(entity).config.__data.reactiveDerivedValues.push({
+              cstr: meta.cstr,
+              name: field.fieldName,
+              path,
+              fields,
+            });
           });
         }
       });

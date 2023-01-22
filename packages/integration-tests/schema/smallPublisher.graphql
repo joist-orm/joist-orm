@@ -5,6 +5,7 @@ extend type Mutation {
 type SmallPublisher {
   id: ID!
   city: String
+  allAuthorNames: String
 }
 
 input SaveSmallPublisherInput {

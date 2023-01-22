@@ -14,6 +14,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PersistedAsyncProperty,
   setField,
   setOpts,
   ValueFilter,
@@ -49,14 +50,17 @@ export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
 
 export interface SmallPublisherFilter extends PublisherFilter {
   city?: ValueFilter<string, never>;
+  allAuthorNames?: ValueFilter<string, null | undefined>;
 }
 
 export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   city?: ValueGraphQLFilter<string>;
+  allAuthorNames?: ValueGraphQLFilter<string>;
 }
 
 export interface SmallPublisherOrder extends PublisherOrder {
   city?: OrderBy;
+  allAuthorNames?: OrderBy;
 }
 
 export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
@@ -105,6 +109,8 @@ export abstract class SmallPublisherCodegen extends Publisher {
   set city(city: string) {
     setField(this, "city", city);
   }
+
+  abstract readonly allAuthorNames: PersistedAsyncProperty<SmallPublisher, string | undefined>;
 
   set(opts: Partial<SmallPublisherOpts>): void {
     setOpts(this as any as SmallPublisher, opts);

@@ -96,31 +96,29 @@ describe("OneToManyCollection", () => {
     // Given a book that has two potential authors as already persisted entities
     {
       const em = newEntityManager();
-      const b1 = em.create(Book, { title: "b1" } as any); // as any b/c we're testing add
-      const a1 = em.create(Author, { firstName: "a1" });
-      em.create(Author, { firstName: "a2" });
-      b1.author.set(a1);
+      const [a1] = [newAuthor(em), newAuthor(em)];
+      newBook(em, { author: a1 });
       await em.flush();
     }
 
-    const em2 = newEntityManager();
+    const em = newEntityManager();
     // TODO Use populate when we have it.
-    const b1_2 = await em2.load(Book, "1");
-    const a1_2 = await em2.load(Author, "1");
-    const a2_2 = await em2.load(Author, "2");
+    const b1 = await em.load(Book, "1");
+    const a1 = await em.load(Author, "1");
+    const a2 = await em.load(Author, "2");
 
     // When we add the book to the 2nd author
-    a2_2.books.add(b1_2);
+    a2.books.add(b1);
 
     // Then the book is associated with only the 2nd author
-    expect(await b1_2.author.load()).toEqual(a2_2);
-    expect((await a1_2.books.load()).length).toEqual(0);
-    expect((await a2_2.books.load()).length).toEqual(1);
+    expect(await b1.author.load()).toEqual(a2);
+    expect((await a1.books.load()).length).toEqual(0);
+    expect((await a2.books.load()).length).toEqual(1);
 
     // And the book association to a2 is persisted to the database.
-    await em2.flush();
+    await em.flush();
     const rows = await select("books");
-    expect(`a:${rows[0].author_id}`).toEqual(a2_2.id);
+    expect(`a:${rows[0].author_id}`).toEqual(a2.id);
   });
 
   it("can add to collection from the other side", async () => {
@@ -140,7 +138,7 @@ describe("OneToManyCollection", () => {
     const a1 = await em.load(Author, "1");
 
     // When we give the author a new book
-    const b2 = em.create(Book, { title: "b2", author: a1 });
+    em.create(Book, { title: "b2", author: a1 });
     // And load the books collection
     const books = await a1.books.load();
 
@@ -148,6 +146,35 @@ describe("OneToManyCollection", () => {
     expect(books.length).toEqual(2);
     expect(books[0].id).toEqual("b:1");
     expect(books[1].id).toEqual(undefined);
+  });
+
+  it("combines both pre-added and persisted entities when not in memory yet", async () => {
+    // Given an author with one book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    // And we do _not_ load the author
+    const em = newEntityManager();
+    // When we give the author a new book (via their tag, such that they are not loaded in the EM)
+    em.create(Book, { title: "b2", author: "a:1" });
+    // And then later do load the author
+    const a1 = await em.load(Author, "1", "books");
+    // Then the collection has the new book in it
+    expect(a1.books.get.length).toEqual(2);
+  });
+
+  it("combines both pre-removed and persisted entities when not in memory yet", async () => {
+    // Given an author with one book
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    // And we do _not_ load the author
+    const em = newEntityManager();
+    // When we load the book and change its author
+    const b1 = await em.load(Book, "b:1");
+    b1.author.set(newAuthor(em));
+    // And then later do load the author
+    const a1 = await em.load(Author, "1", "books");
+    // Then the collection doesn't have the moved book in it
+    expect(a1.books.get.length).toEqual(0);
   });
 
   it("combines both pre-loaded and post-loaded removed entities", async () => {

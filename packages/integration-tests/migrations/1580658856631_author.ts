@@ -51,6 +51,8 @@ export function up(b: MigrationBuilder): void {
   // Create two subclass tables
   createSubTable(b, "publishers", "small_publishers", {
     city: { type: "text", notNull: true },
+    // Used to test reactive fields that only exist on a subtype
+    all_author_names: { type: "text" },
   });
   createSubTable(b, "publishers", "large_publishers", {
     country: "text",

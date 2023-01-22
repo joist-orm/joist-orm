@@ -1336,7 +1336,12 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
     return [...asyncFields.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fields]) => {
-        return [...fields.values()].map((fieldName) => (entity as any)[fieldName].load());
+        return (
+          [...fields.values()]
+            // Ignores fields that don't exist b/c they are likely just on a different subtype
+            .filter((fieldName) => (entity as any)[fieldName])
+            .map((fieldName) => (entity as any)[fieldName].load())
+        );
       });
   });
   await Promise.all(p);

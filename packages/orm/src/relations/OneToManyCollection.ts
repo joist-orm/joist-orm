@@ -220,11 +220,26 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   private maybeAppendAddedBeforeLoaded(): void {
     if (this.loaded) {
+      // If our entity is not new, then entities in the EM might have been mutated to point
+      // to our foreign key (instead of our loaded instance), which means they should be in
+      // `addedBeforeLoaded` but are not.
+      //
+      // (Note that we don't have to handle the case for "removed before loaded" here because
+      // the oneToManyDataLoader already handles that; although maybe arguably that logic should
+      // be handled here?)
+      if (!this.#entity.isNewEntity) {
+        this.#entity.em.entities
+          .filter((e) => e instanceof this.#otherMeta.cstr)
+          .filter((e) => !this.#addedBeforeLoaded.includes(e as U))
+          .forEach((e) => {
+            if (sameEntity((e as any).__orm.data[this.otherFieldName], this.#entity)) {
+              this.#addedBeforeLoaded.push(e as U);
+            }
+          });
+      }
       const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
       // Push on the end to better match the db order of "newer things come last"
-      for (const e of newEntities) {
-        this.loaded.push(e);
-      }
+      this.loaded.push(...newEntities);
       this.#addedBeforeLoaded = [];
     }
   }

@@ -1,3 +1,10 @@
+## [1.48.2](https://github.com/stephenh/joist-ts/compare/v1.48.1...v1.48.2) (2023-01-22)
+
+
+### Bug Fixes
+
+* Fix reactive rules on subtypes. ([#506](https://github.com/stephenh/joist-ts/issues/506)) ([7dca97a](https://github.com/stephenh/joist-ts/commit/7dca97a30d7a3c79ce9c4a110b34da6b46121581))
+
 ## [1.48.1](https://github.com/stephenh/joist-ts/compare/v1.48.0...v1.48.1) (2023-01-22)
 
 

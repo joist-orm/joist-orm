@@ -1146,6 +1146,7 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
       // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
       (await followReverseHint(triggered, rule.path))
         .filter((entity) => !entity.isDeletedEntity)
+        .filter((e) => e instanceof rule.cstr)
         .forEach((entity) => {
           const { validates } = getTodo(todos, entity);
           // Even if the entity is in inserts/updates, we need to explicitly mark it for validation
@@ -1176,6 +1177,7 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
       );
       (await followReverseHint(triggered, field.path))
         .filter((entity) => !entity.isDeletedEntity)
+        .filter((e) => e instanceof field.cstr)
         .forEach((entity) => {
           const { asyncFields } = getTodo(todos, entity);
           if (!asyncFields.has(entity)) {
@@ -1336,12 +1338,7 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
     return [...asyncFields.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fields]) => {
-        return (
-          [...fields.values()]
-            // Ignores fields that don't exist b/c they are likely just on a different subtype
-            .filter((fieldName) => (entity as any)[fieldName])
-            .map((fieldName) => (entity as any)[fieldName].load())
-        );
+        return [...fields.values()].map((fieldName) => (entity as any)[fieldName].load());
       });
   });
   await Promise.all(p);

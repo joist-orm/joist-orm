@@ -8,10 +8,12 @@ import {
   insertTag,
   select,
 } from "@src/entities/inserts";
+import { zeroTo } from "@src/utils";
 import {
   Author,
   LargePublisher,
   newAuthor,
+  newLargePublisher,
   newPublisher,
   newSmallPublisher,
   Publisher,
@@ -289,6 +291,26 @@ describe("Inheritance", () => {
     // When we make an author
     newAuthor(em, { publisher: "p:1" });
     // Then we can flush w/o blowing up on `allAuthorNames` is an invalid field
+    await expect(em.flush()).resolves.toBeDefined();
+  });
+
+  it("can have reactive rules on a subtype", async () => {
+    const em = newEntityManager();
+    // Given a small publisher
+    const sp = newSmallPublisher(em, { name: "sp1" });
+    // When we make six authors
+    zeroTo(6).forEach(() => newAuthor(em, { publisher: sp }));
+    // Then the rule fails
+    await expect(em.flush()).rejects.toThrow("SmallPublishers cannot have more than 5 authors");
+  });
+
+  it("ignores have reactive rules from the other subtype", async () => {
+    const em = newEntityManager();
+    // Given a large publisher
+    const lg = newLargePublisher(em, { name: "lp1" });
+    // When we make six authors
+    zeroTo(6).forEach(() => newAuthor(em, { publisher: lg }));
+    // Then the rule isn't ran
     await expect(em.flush()).resolves.toBeDefined();
   });
 });

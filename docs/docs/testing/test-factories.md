@@ -204,15 +204,10 @@ Instead, Joist's factories allow you to add a custom `withSignedContract` opt to
 
 ```typescript
 // Add an optional `withSignedContract` opt
-export function newBook(
-  em: EntityManager,
-  opts: FactoryOpts<Book> & { withSignedContract?: boolean } = {},
-): New<Book> {
+export function newBook(em: EntityManager, opts: FactoryOpts<Book> & { withSignedContract?: boolean } = {}): New<Book> {
   return newTestInstance(em, Book, opts, {
     // Conditionally create the snippet when requested
-    ...(opts.withSignedContract
-      ? { author: { contracts: [{ signed: true, publisher: { type: "large" } }] } }
-      : {}),
+    ...(opts.withSignedContract ? { author: { contracts: [{ signed: true, publisher: { type: "large" } }] } } : {}),
   });
 }
 ```
@@ -228,11 +223,40 @@ const br = newBookReview(em, { book: { withSignedContract: true } });
 
 In general, we have two recommendations for this feature:
 
-* Be careful and don't abuse it; tests are simplest to read when any assertions they have are against data that is specified directly inline in the "Given" block; if you've abstracted too much of your test's setup to a custom opt, it will hurt readability.
+- Be careful and don't abuse it; tests are simplest to read when any assertions they have are against data that is specified directly inline in the "Given" block; if you've abstracted too much of your test's setup to a custom opt, it will hurt readability.
 
   Also, custom opts are a slippery slope to the seed data anti-pattern, where the seed data becomes so large & gnarly (because it's been tweaked over the years to support more and more disparate test cases), that the seed data becomes very brittle and can't be changed without failing a ton of tests.
 
-* Use prefixes like `with` and `and` in the names of custom opts, e.g. `withSignedContract` or `andSigned` to make it clear to readers that the opt is custom and not actually a regular database/entity field.
+- Use prefixes like `with` and `and` in the names of custom opts, e.g. `withSignedContract` or `andSigned` to make it clear to readers that the opt is custom and not actually a regular database/entity field.
+
+### Disabling Factory Defaults
+
+Sometimes you'll have a test that wants to opt-out of the defaults provided by a factory.
+
+You can do this by using `useFactoryDefaults: false`, for example if `Author.factories.ts` establishes a default age of 40, you can ignore it by passing `useFactoryDefaults: false`:
+
+```typescript
+// Ignore the default when creating an author
+const a = newAuthor(em, { useFactoryDefaults: false });
+
+// You can also ignore when creating an author via another factory
+const br = newBookReview(em, {
+  book: { author: { useFactoryDefaults: false } },
+});
+```
+
+Setting `useFactoryDefaults: false` ignores the defaults inside of `Author.factories.ts`, `Book.factories.ts`, etc., but it does not disable Joist's fundamental "required fields must always be set" defaults.
+
+If you want to disable those as well, you can use `useFactoryDefaults: "none"`:
+
+```typescript
+// Ignore all defaults
+const b = newBook(em, { useFactoryDefaults: "none" });
+// Normally this would be "title", but is left unset
+expect(b.title).toBeUndefined();
+// Normally this would be a new/existing Author, but is left unset
+expect(b.author.get).toBeUndefined();
+```
 
 ## `async` Free Assertions
 

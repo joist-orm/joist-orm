@@ -257,6 +257,7 @@ describe("EntityManager.factories", () => {
     newBookReview(em, { book: {} });
     expect(lastBookFactoryOpts).toStrictEqual({
       author: maybeNew<Author>({ age: 40 }),
+      title: "Book for Review TEST_INDEX",
       reviews: [],
       use: expect.any(Map),
     });
@@ -540,5 +541,45 @@ describe("EntityManager.factories", () => {
     const [p1, p2] = [newPublisher(em), newPublisher(em)];
     expect(p1.name).toEqual("SmallPublisher 1");
     expect(p2.name).toEqual("SmallPublisher 2");
+  });
+
+  describe("useFactoryDefaults", () => {
+    it("can ignore defaults on immediate opts", async () => {
+      const em = newEntityManager();
+      // Ignore the { age: 50 } in Author.factories.ts
+      const a = newAuthor(em, { isPopular: true, useFactoryDefaults: false });
+      expect(a.age).toBeUndefined();
+    });
+
+    it("can ignore defaults on nested opts", async () => {
+      const em = newEntityManager();
+      // Ignore the { title: ... } in BookReview.factories.ts
+      const br = newBookReview(em, { book: { useFactoryDefaults: false } });
+      expect(br.book.get.title).toEqual("title");
+    });
+
+    it("can ignore required field defaults", async () => {
+      const em = newEntityManager();
+      // Ignore even the { title: "title" } in newTestInstance
+      const br = newBookReview(em, { book: { useFactoryDefaults: "none" } });
+      expect(br.book.get.title).toBeUndefined();
+      expect(br.book.get.author.get).toBeUndefined();
+    });
+
+    it("can ignore obvious defaults", async () => {
+      const em = newEntityManager();
+      // Given an existing author
+      newAuthor(em);
+      // We still ignore it
+      const br = newBookReview(em, { book: { useFactoryDefaults: "none" } });
+      expect(br.book.get.author.get).toBeUndefined();
+    });
+
+    it("can ignore maybeNew defaults", async () => {
+      const em = newEntityManager();
+      // Ignore the maybeNew({ age: 40 }); in Book.factories.ts
+      const br3 = newBookReview(em, { book: { author: { useFactoryDefaults: false } } });
+      expect(br3.book.get.author.get.age).toBeUndefined();
+    });
   });
 });

@@ -37,7 +37,10 @@ import { assertNever } from "./utils";
  *
  * 2. Works specifically against the constructor/entity opts fields.
  */
-export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & { use?: Entity | Entity[] };
+export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
+  use?: Entity | Entity[];
+  useFactoryDefaults?: boolean | "none";
+};
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
 export const jan1 = new Date(2018, 0, 1);
@@ -97,9 +100,13 @@ export function newTestInstance<T extends Entity>(
         }
       }
 
+      // Don't fill in required fields if told not to
+      const ignoreAllDefaults = "useFactoryDefaults" in opts && opts.useFactoryDefaults === "none";
+      const required = field.required && !ignoreAllDefaults;
+
       if (
         field.kind === "primitive" &&
-        (field.required || (opts as any)[fieldName] === defaultValueMarker) &&
+        (required || (opts as any)[fieldName] === defaultValueMarker) &&
         !field.derived &&
         !field.protected
       ) {
@@ -116,17 +123,17 @@ export function newTestInstance<T extends Entity>(
           isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
           existing[field.otherFieldName].isLoaded &&
           existing[field.otherFieldName].isSet;
-        if (existing && !isUniqueAndAlreadyUsed) {
+        if (existing && !isUniqueAndAlreadyUsed && !ignoreAllDefaults) {
           return [fieldName, existing];
         }
         // Otherwise, only make a new entity only if the field is required
-        if (field.required) {
+        if (required) {
           return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
         }
-      } else if (field.kind === "enum" && field.required) {
+      } else if (field.kind === "enum" && required) {
         const codegenDefault = (cstr as any).defaultValues[field.fieldName];
         return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
-      } else if (field.kind === "poly" && field.required) {
+      } else if (field.kind === "poly" && required) {
         return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
       }
       return [];
@@ -156,7 +163,10 @@ export function newTestInstance<T extends Entity>(
       // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
       return [fieldName, (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, entity))];
     } else if (field.kind == "m2m") {
-      return [fieldName, (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, [entity]))];
+      return [
+        fieldName,
+        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, [entity] as any)),
+      ];
     } else if (field.kind === "o2o") {
       // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
       return [fieldName, resolveFactoryOpt(em, opts, field, optValue as any, entity)];
@@ -187,14 +197,14 @@ function resolveFactoryOpt<T extends Entity>(
   em: EntityManager,
   opts: FactoryOpts<any>,
   field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
-  opt: FactoryEntityOpt<T> | undefined,
+  opt: FactoryEntityOpt<any> | undefined,
   maybeEntity: T | undefined,
 ): T | IdOf<T> {
   const { meta, otherFieldName } = metaFromFieldAndOpt(field, opt);
   // const meta = field.kind === "poly" ? field.components[0].otherMetadata() : field.otherMetadata();
   // const otherFieldName = field.kind === "poly" ? field.components[0].otherFieldName : field.otherFieldName;
   if (isEntity(opt)) {
-    return opt;
+    return opt as T;
   } else if (isId(opt)) {
     // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
     return (em.entities.find((e) => e.idTagged === opt || getTestId(em, e) === opt) as T) || opt;
@@ -440,7 +450,10 @@ type DefinedOr<T> = T | undefined | null;
 type DeepPartialOpts<T extends Entity> = AllowRelationsOrPartials<OptsOf<T>>;
 
 /** What a factory can accept for a given entity. */
-export type FactoryEntityOpt<T extends Entity> = T | IdOf<T> | ActualFactoryOpts<T>;
+export type FactoryEntityOpt<T extends Entity> =
+  | T
+  | IdOf<T>
+  | (ActualFactoryOpts<T> & { useFactoryDefaults?: boolean | "none" });
 
 type AllowRelationsOrPartials<T> = {
   [P in keyof T]?: T[P] extends DefinedOr<infer U>
@@ -506,6 +519,9 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
 /** Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged. */
 function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, any>): object {
   // Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged
+  if (testOpts.useFactoryDefaults === false || testOpts.useFactoryDefaults === "none") {
+    return testOpts;
+  }
   const opts: any = testOpts;
   Object.entries(factoryOpts).forEach(([key, factoryValue]) => {
     const testValue = testOpts[key];
@@ -517,12 +533,12 @@ function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, an
       }
     } else if (isPlainObject(factoryValue) && isPlainObject(testValue)) {
       // Should this deep merge? Probably?
-      opts[key] = { ...factoryValue, ...testValue };
+      opts[key] = mergeOpts(testValue, factoryValue);
     } else if (factoryValue instanceof MaybeNew && isPlainObject(testValue)) {
-      opts[key] = { ...factoryValue.opts, ...testValue };
+      opts[key] = mergeOpts(testValue, factoryValue.opts);
     } else if (factoryValue instanceof MaybeNew && testValue instanceof MaybeNew) {
       opts[key] = new MaybeNew<any>(
-        { ...factoryValue.opts, ...testValue.opts },
+        mergeOpts(testValue.opts, factoryValue.opts),
         testValue.polyRefPreferredOrder ?? factoryValue.polyRefPreferredOrder,
       );
     }

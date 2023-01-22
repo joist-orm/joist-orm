@@ -8,10 +8,7 @@ export class SmallPublisher extends SmallPublisherCodegen {
   readonly allAuthorNames: PersistedAsyncProperty<SmallPublisher, string> = hasPersistedAsyncProperty(
     "allAuthorNames",
     { authors: ["firstName"] },
-    (sp) => {
-      console.log("CALC", sp.authors.get.length, sp.authors.get.map((a) => a.firstName).join(", "));
-      return sp.authors.get.map((a) => a.firstName).join(", ");
-    },
+    (sp) => sp.authors.get.map((a) => a.firstName).join(", "),
   );
   public beforeFlushRan = false;
   public beforeCreateRan = false;

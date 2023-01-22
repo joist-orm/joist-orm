@@ -1174,11 +1174,9 @@ async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promi
           e.isDeletedEntity ||
           ((e as any).changes as Changes<any>).fields.some((f) => field.fields.includes(f)),
       );
-      console.log("Handling", field.name, "triggered", triggered);
       (await followReverseHint(triggered, field.path))
         .filter((entity) => !entity.isDeletedEntity)
         .forEach((entity) => {
-          console.log("Queueing", field.name, "on", entity);
           const { asyncFields } = getTodo(todos, entity);
           if (!asyncFields.has(entity)) {
             asyncFields.set(entity, new Set());

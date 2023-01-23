@@ -1,4 +1,14 @@
-import { Author, Book, BookReview, Color, newAuthor, newBook, newBookReview, newPublisher } from "@src/entities";
+import {
+  Author,
+  Book,
+  BookReview,
+  Color,
+  newAuthor,
+  newBook,
+  newBookReview,
+  newPublisher,
+  SmallPublisher,
+} from "@src/entities";
 import { getMetadata } from "joist-orm";
 
 const sm = expect.stringMatching;
@@ -144,6 +154,10 @@ describe("EntityManager.reactiveRules", () => {
     expect(getMetadata(BookReview).config.__data.reactiveRules).toEqual([
       // Book's "reviewsRuleInvoked", when BookReview.book is immutable field
       { cstr, name: sm(/Book.ts:\d+/), fields: [], path: ["book"], fn },
+    ]);
+
+    expect(getMetadata(SmallPublisher).config.__data.reactiveRules).toEqual([
+      { cstr: SmallPublisher, name: sm(/SmallPublisher.ts:\d+/), fields: [], path: [], fn },
     ]);
   });
 

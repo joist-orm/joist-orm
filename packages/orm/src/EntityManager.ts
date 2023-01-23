@@ -1135,7 +1135,8 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    return todo.metadata.config.__data.reactiveRules.map(async (rule) => {
+    const rules = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
+    return rules.map(async (rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
         (e) =>
@@ -1167,7 +1168,9 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
 async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
-    return todo.metadata.config.__data.reactiveDerivedValues.map(async (field) => {
+    // Use getAllMetas to ensure we pick up subtype-only fields
+    const fields = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    return fields.map(async (field) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
         (e) =>

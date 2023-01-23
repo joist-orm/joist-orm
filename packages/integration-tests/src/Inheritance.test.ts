@@ -273,7 +273,7 @@ describe("Inheritance", () => {
     expect(sp.authors.get[0]?.books.get).toBeUndefined();
   });
 
-  it("can have persisted fields on a subtype", async () => {
+  it("can recalc persisted fields on a subtype", async () => {
     // Given a small publisher
     await insertPublisher({ name: "sp1" });
     const em = newEntityManager();
@@ -282,6 +282,15 @@ describe("Inheritance", () => {
     await em.flush();
     // Then the field is recacled
     expect(await select("small_publishers")).toMatchObject([{ all_author_names: "a1" }]);
+  });
+
+  it("can initialize persisted fields on a subtype", async () => {
+    const em = newEntityManager();
+    // Given a small publisher
+    const sp = newSmallPublisher(em, { name: "sp1" });
+    await em.flush();
+    // Then the field was initialized
+    expect(await select("small_publishers")).toMatchObject([{ all_author_names: "" }]);
   });
 
   it("can ignore persisted fields from a different subtype", async () => {

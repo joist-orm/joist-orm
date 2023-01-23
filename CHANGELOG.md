@@ -1,3 +1,10 @@
+## [1.49.2](https://github.com/stephenh/joist-ts/compare/v1.49.1...v1.49.2) (2023-01-23)
+
+
+### Bug Fixes
+
+* Fix initial calc of subtype-only derived values. ([#509](https://github.com/stephenh/joist-ts/issues/509)) ([f939746](https://github.com/stephenh/joist-ts/commit/f9397461dca75628dd48dabd2b90cf32502099fe))
+
 ## [1.49.1](https://github.com/stephenh/joist-ts/compare/v1.49.0...v1.49.1) (2023-01-22)
 
 

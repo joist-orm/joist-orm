@@ -264,7 +264,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get otherMeta(): EntityMetadata<U> {
-    return (getMetadata(this.#entity).fields[this.#fieldName] as OneToManyField).otherMetadata();
+    return (getMetadata(this.#entity).allFields[this.#fieldName] as OneToManyField).otherMetadata();
   }
 
   public toString(): string {

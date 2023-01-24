@@ -30,11 +30,6 @@ describe("Entity", () => {
         "bookComments": {
           "fieldName": "bookComments",
           "fn": {},
-          "loadHint": {
-            "books": {
-              "comments": {},
-            },
-          },
           "loadPromise": undefined,
           "loaded": false,
           "reactiveHint": {
@@ -97,9 +92,6 @@ describe("Entity", () => {
         "numberOfBooks": {
           "fieldName": "numberOfBooks",
           "fn": {},
-          "loadHint": {
-            "books": {},
-          },
           "loadPromise": undefined,
           "loaded": false,
           "reactiveHint": [

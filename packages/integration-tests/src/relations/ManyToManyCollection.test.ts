@@ -37,12 +37,8 @@ describe("ManyToManyCollection", () => {
     // Given a book has 5 tags
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    await Promise.all(
-      zeroTo(5).map(async (i) => {
-        await insertTag({ name: `t${i}` });
-        await insertBookToTag({ book_id: 1, tag_id: i + 1 });
-      }),
-    );
+    await Promise.all(zeroTo(5).map((i) => insertTag({ name: `t${i}` })));
+    await Promise.all(zeroTo(5).map((i) => insertBookToTag({ book_id: 1, tag_id: i + 1 })));
 
     const em = newEntityManager();
     const book = await em.load(Book, "1");
@@ -54,22 +50,14 @@ describe("ManyToManyCollection", () => {
   });
 
   it("can load both sides of a many-to-many with constant queries", async () => {
-    // Given a book has 5 tags
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
-    await Promise.all(
-      zeroTo(5).map(async (i) => {
-        await insertTag({ name: `t${i}` });
-        await insertBookToTag({ book_id: 1, tag_id: i + 1 });
-      }),
-    );
+    // Given a book has 5 tags
+    await Promise.all(zeroTo(5).map((i) => insertTag({ name: `t${i}` })));
+    await Promise.all(zeroTo(5).map((i) => insertBookToTag({ book_id: 1, tag_id: i + 1 })));
     // And the 1st tag itself has two more books
-    await Promise.all(
-      zeroTo(2).map(async (i) => {
-        await insertBook({ title: `b${i + 1}`, author_id: 1 });
-        await insertBookToTag({ book_id: i + 2, tag_id: 1 });
-      }),
-    );
+    await Promise.all(zeroTo(2).map((i) => insertBook({ title: `b${i + 1}`, author_id: 1 })));
+    await Promise.all(zeroTo(2).map((i) => insertBookToTag({ book_id: i + 2, tag_id: 1 })));
 
     const em = newEntityManager();
     const book = await em.load(Book, "1");

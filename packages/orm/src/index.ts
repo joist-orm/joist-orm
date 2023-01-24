@@ -299,10 +299,10 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
         // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
         if (ap?.reactiveHint) {
-          // Cache the load hint so that we don't constantly recalc it on instantiation.
-          getAllMetas(meta).forEach((m) => {
-            m.config.__data.cachedReactiveLoadHints[field.fieldName] = convertToLoadHint(meta, ap.reactiveHint);
-          });
+          // Cache the load hint so that we don't constantly re-calc it on instantiation.
+          const loadHint = convertToLoadHint(meta, ap.reactiveHint);
+          getAllMetas(meta).forEach((m) => (m.config.__data.cachedReactiveLoadHints[field.fieldName] = loadHint));
+
           const reversals = reverseReactiveHint(meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({

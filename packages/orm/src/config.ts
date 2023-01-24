@@ -183,6 +183,8 @@ export class ConfigData<T extends Entity, C> {
   // An array of the reactive fields that depend on this entity
   reactiveDerivedValues: ReactiveField[] = [];
   cascadeDeleteFields: Array<keyof RelationsIn<T>> = [];
+  // Constantly converting reactive hints to load hints is expense, so cache them here
+  cachedReactiveLoadHints: Record<string, any> = {};
 }
 
 function getCallerName(): string {

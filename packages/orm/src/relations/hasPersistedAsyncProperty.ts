@@ -2,7 +2,7 @@ import { Entity } from "../Entity";
 import { Const, currentlyInstantiatingEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
-import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
+import { Reacted, ReactiveHint } from "../reactiveHints";
 
 const I = Symbol();
 
@@ -62,9 +62,9 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   implements PersistedAsyncProperty<T, V>
 {
   readonly #entity: T;
+  readonly #reactiveHint: Const<H>;
   private loaded = false;
   private loadPromise: any;
-  private loadHint: any;
   constructor(
     entity: T,
     public fieldName: keyof T & string,
@@ -72,7 +72,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
     private fn: (entity: Reacted<T, H>) => V,
   ) {
     this.#entity = entity;
-    this.loadHint = convertToLoadHint(getMetadata(entity), reactiveHint as any);
+    this.#reactiveHint = reactiveHint;
   }
 
   load(): Promise<V> {
@@ -116,6 +116,10 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
 
   get isLoaded() {
     return this.loaded;
+  }
+
+  get loadHint(): any {
+    return getMetadata(this.#entity).config.__data.cachedReactiveLoadHints[this.fieldName];
   }
 }
 

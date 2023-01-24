@@ -1,3 +1,10 @@
+## [1.49.5](https://github.com/stephenh/joist-ts/compare/v1.49.4...v1.49.5) (2023-01-24)
+
+
+### Bug Fixes
+
+* Lazy init cascadeDelete and addedBeforeLoaded. ([#513](https://github.com/stephenh/joist-ts/issues/513)) ([2ef2313](https://github.com/stephenh/joist-ts/commit/2ef23137b847e255c46b33a7ba759d9ed3e43e1d))
+
 ## [1.49.4](https://github.com/stephenh/joist-ts/compare/v1.49.3...v1.49.4) (2023-01-24)
 
 

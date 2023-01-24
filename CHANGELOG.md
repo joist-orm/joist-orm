@@ -1,3 +1,10 @@
+## [1.49.6](https://github.com/stephenh/joist-ts/compare/v1.49.5...v1.49.6) (2023-01-24)
+
+
+### Bug Fixes
+
+* Fix repeatedly converting load hints ([#515](https://github.com/stephenh/joist-ts/issues/515)) ([f9d16c1](https://github.com/stephenh/joist-ts/commit/f9d16c1240a40b79c731897d49d4a507522221d6))
+
 ## [1.49.5](https://github.com/stephenh/joist-ts/compare/v1.49.4...v1.49.5) (2023-01-24)
 
 

@@ -228,6 +228,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       // the oneToManyDataLoader already handles that; although maybe arguably that logic should
       // be handled here?)
       if (!this.#entity.isNewEntity) {
+        /*
+        Scanning `em._entities.filter(...)` is just fundamentally too slow once there are 10k+
+        entities in the EM, and we might have 5k new entities all call this method, which means
+        scanning the list 5k times. So comment this out for now until we can find a better way.
+
         this.#entity.em.entities
           .filter((e) => e instanceof this.#otherMeta.cstr)
           .filter((e) => !this.#addedBeforeLoaded.includes(e as U))
@@ -236,6 +241,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
               this.#addedBeforeLoaded.push(e as U);
             }
           });
+        */
       }
       const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
       // Push on the end to better match the db order of "newer things come last"

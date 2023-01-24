@@ -1,3 +1,10 @@
+## [1.49.3](https://github.com/stephenh/joist-ts/compare/v1.49.2...v1.49.3) (2023-01-24)
+
+
+### Bug Fixes
+
+* Fix default values for fields in base types. ([#510](https://github.com/stephenh/joist-ts/issues/510)) ([d0ddc2e](https://github.com/stephenh/joist-ts/commit/d0ddc2e38953df47c47d180008ab2c2418962be0))
+
 ## [1.49.2](https://github.com/stephenh/joist-ts/compare/v1.49.1...v1.49.2) (2023-01-23)
 
 

@@ -1,3 +1,10 @@
+## [1.49.4](https://github.com/stephenh/joist-ts/compare/v1.49.3...v1.49.4) (2023-01-24)
+
+
+### Bug Fixes
+
+* Fix performance issue into o2m.addedBeforeLoaded handling. ([#511](https://github.com/stephenh/joist-ts/issues/511)) ([dd86e03](https://github.com/stephenh/joist-ts/commit/dd86e03390adc86283dc21c65cf5ecbba3362d46))
+
 ## [1.49.3](https://github.com/stephenh/joist-ts/compare/v1.49.2...v1.49.3) (2023-01-24)
 
 

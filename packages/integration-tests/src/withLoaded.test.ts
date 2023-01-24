@@ -7,6 +7,6 @@ describe("withLoaded", () => {
     const em = newEntityManager();
     const author = newAuthor(em, { publisher: {} });
     const { publisher } = withLoaded(author);
-    expect(publisher?.name).toEqual("SmallPublisher 1");
+    expect(publisher?.name).toEqual("LargePublisher 1");
   });
 });

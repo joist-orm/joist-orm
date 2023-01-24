@@ -6,6 +6,7 @@ import {
   EntityMetadata,
   getMetadata,
   IdOf,
+  ManyToManyField,
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
@@ -39,11 +40,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   implements Collection<T, U>
 {
   readonly #entity: T;
+  readonly #fieldName: keyof T & string;
   private loaded: U[] | undefined;
-  private addedBeforeLoaded: U[] = [];
-  private removedBeforeLoaded: U[] = [];
-  private isCascadeDelete: boolean;
-  readonly #otherMeta: EntityMetadata<U>;
+  private addedBeforeLoaded: U[] | undefined;
+  private removedBeforeLoaded: U[] | undefined;
 
   constructor(
     public joinTableName: string,
@@ -61,8 +61,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   ) {
     super();
     this.#entity = entity;
-    this.#otherMeta = otherMeta;
-    this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.#fieldName = fieldName;
   }
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
@@ -87,7 +86,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       return this.loaded.find((u) => u.id === id);
     } else {
-      const added = this.addedBeforeLoaded.find((u) => u.id === id);
+      const added = this.addedBeforeLoaded?.find((u) => u.id === id);
       if (added) {
         return added;
       }
@@ -103,7 +102,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       return this.loaded.includes(other);
     } else {
-      if (this.addedBeforeLoaded.includes(other)) {
+      if (this.addedBeforeLoaded?.includes(other)) {
         return true;
       } else if (other.isNewEntity) {
         return false;
@@ -123,8 +122,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       }
       this.loaded.push(other);
     } else {
-      remove(this.removedBeforeLoaded, other);
-      if (!this.addedBeforeLoaded.includes(other)) {
+      if (this.removedBeforeLoaded) {
+        remove(this.removedBeforeLoaded, other);
+      }
+      if (!(this.addedBeforeLoaded ??= []).includes(other)) {
         this.addedBeforeLoaded.push(other);
       }
     }
@@ -166,8 +167,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
     } else {
-      remove(this.addedBeforeLoaded, other);
-      if (!this.removedBeforeLoaded.includes(other)) {
+      if (this.addedBeforeLoaded) {
+        remove(this.addedBeforeLoaded, other);
+      }
+      if (!(this.removedBeforeLoaded ??= []).includes(other)) {
         this.removedBeforeLoaded.push(other);
       }
     }
@@ -257,7 +260,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded) {
       // this.loaded.unshift(...this.addedBeforeLoaded);
       // this.addedBeforeLoaded = [];
-      this.removedBeforeLoaded.forEach((e) => {
+      this.removedBeforeLoaded?.forEach((e) => {
         remove(this.loaded!, e);
         const { em } = this.#entity;
         const row = em.__data.joinRows[this.joinTableName].find(
@@ -272,7 +275,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.loaded || this.addedBeforeLoaded, opts);
+    return this.filterDeleted(this.loaded ?? this.addedBeforeLoaded ?? [], opts);
   }
 
   public get entity(): T {
@@ -284,12 +287,16 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get otherMeta(): EntityMetadata<U> {
-    return this.#otherMeta;
+    return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToManyField).otherMetadata();
+  }
+
+  private get isCascadeDelete(): boolean {
+    return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
   public toString(): string {
     return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.#otherMeta.type
+      this.otherMeta.type
     }, otherFieldName: ${this.otherFieldName})`;
   }
 

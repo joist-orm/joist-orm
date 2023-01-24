@@ -61,7 +61,6 @@ describe("Entity", () => {
         "currentDraftBook": {
           "_isLoaded": false,
           "fieldName": "currentDraftBook",
-          "isCascadeDelete": false,
           "loaded": undefined,
           "otherFieldName": "currentDraftAuthor",
           "undefined": null,
@@ -90,7 +89,6 @@ describe("Entity", () => {
         "mentor": {
           "_isLoaded": false,
           "fieldName": "mentor",
-          "isCascadeDelete": false,
           "loaded": undefined,
           "otherFieldName": "authors",
           "undefined": null,
@@ -119,7 +117,6 @@ describe("Entity", () => {
         "publisher": {
           "_isLoaded": false,
           "fieldName": "publisher",
-          "isCascadeDelete": false,
           "loaded": undefined,
           "otherFieldName": "authors",
           "undefined": null,
@@ -146,15 +143,14 @@ describe("Entity", () => {
           },
         },
         "tags": {
-          "addedBeforeLoaded": [],
+          "addedBeforeLoaded": undefined,
           "columnName": "author_id",
           "fieldName": "tags",
-          "isCascadeDelete": false,
           "joinTableName": "authors_to_tags",
           "loaded": undefined,
           "otherColumnName": "tag_id",
           "otherFieldName": "authors",
-          "removedBeforeLoaded": [],
+          "removedBeforeLoaded": undefined,
         },
       }
     `);

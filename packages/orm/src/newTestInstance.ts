@@ -110,7 +110,7 @@ export function newTestInstance<T extends Entity>(
         !field.derived &&
         !field.protected
       ) {
-        const codegenDefault = (cstr as any).defaultValues[field.fieldName];
+        const codegenDefault = getCodegenDefault(cstr, field.fieldName);
         return [fieldName, codegenDefault ?? defaultValueForField(em, cstr, field)];
       } else if (field.kind === "m2o") {
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
@@ -131,7 +131,7 @@ export function newTestInstance<T extends Entity>(
           return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
         }
       } else if (field.kind === "enum" && required) {
-        const codegenDefault = (cstr as any).defaultValues[field.fieldName];
+        const codegenDefault = getCodegenDefault(cstr, field.fieldName);
         return [fieldName, codegenDefault ?? field.enumDetailType.getValues()[0]];
       } else if (field.kind === "poly" && required) {
         return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
@@ -544,4 +544,16 @@ function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, an
     }
   });
   return opts;
+}
+
+function getCodegenDefault(cstr: any, fieldName: string): any {
+  const m = getMetadata(cstr);
+  if (!m.baseType) {
+    return (m.cstr as any).defaultValues[fieldName];
+  } else {
+    // Look for defaults for fields in base types
+    return getAllMetas(m)
+      .map((m) => (m.cstr as any).defaultValues[fieldName])
+      .filter((v) => v !== undefined)[0];
+  }
 }

@@ -9,6 +9,7 @@ import { Driver } from "./drivers/driver";
 import { Entity, isEntity } from "./Entity";
 import {
   asConcreteCstr,
+  assertIdIsTagged,
   assertIdsAreTagged,
   Changes,
   CustomCollection,
@@ -759,26 +760,27 @@ export class EntityManager<C = unknown> {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(meta: EntityMetadata<any>, entity: Entity): void {
-    if (entity.idTagged && this.findExistingInstance(entity.idTagged) !== undefined) {
-      throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
-    }
-    // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
-    const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
-    if (createdAt) {
-      entity.__orm.data[createdAt] = new Date();
-    }
-    if (updatedAt) {
-      entity.__orm.data[updatedAt] = new Date();
-    }
-
-    this._entities.push(entity);
     if (entity.idTagged) {
-      assertIdsAreTagged([entity.idTagged]);
+      if (this.findExistingInstance(entity.idTagged) !== undefined) {
+        throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
+      }
       this._entityIndex.set(entity.idTagged, entity);
     }
 
+    this._entities.push(entity);
     if (this._entities.length >= entityLimit) {
       throw new Error(`More than ${entityLimit} entities have been instantiated`);
+    }
+
+    // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
+    if (entity.isNewEntity) {
+      const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
+      if (createdAt) {
+        entity.__orm.data[createdAt] = new Date();
+      }
+      if (updatedAt) {
+        entity.__orm.data[updatedAt] = new Date();
+      }
     }
 
     currentlyInstantiatingEntity = entity;
@@ -1023,7 +1025,7 @@ export class EntityManager<C = unknown> {
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // Currently only public for the driver impls
   public findExistingInstance<T>(id: string): T | undefined {
-    assertIdsAreTagged([id]);
+    assertIdIsTagged(id);
     return this._entityIndex.get(id) as T | undefined;
   }
 

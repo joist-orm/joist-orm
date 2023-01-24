@@ -1,3 +1,10 @@
+## [1.49.7](https://github.com/stephenh/joist-ts/compare/v1.49.6...v1.49.7) (2023-01-24)
+
+
+### Bug Fixes
+
+* Optimize em.register. ([#516](https://github.com/stephenh/joist-ts/issues/516)) ([1bbabf2](https://github.com/stephenh/joist-ts/commit/1bbabf2e4a85ad9419784b087378a42f42c3938e))
+
 ## [1.49.6](https://github.com/stephenh/joist-ts/compare/v1.49.5...v1.49.6) (2023-01-24)
 
 

@@ -9,6 +9,7 @@ import {
   getMetadata,
   IdOf,
   maybeResolveReferenceToId,
+  OneToManyField,
   sameEntity,
 } from "../index";
 import { remove } from "../utils";
@@ -32,14 +33,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   implements Collection<T, U>
 {
   readonly #entity: T;
+  readonly #fieldName: keyof T & string;
   private loaded: U[] | undefined;
   // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
   // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
   // groups the hydrated rows by their _current parent m2o field value_, which for a removed child will no
   // longer be us, so it will effectively not show up in our post-load `loaded` array.
-  #addedBeforeLoaded: U[] = [];
-  readonly #isCascadeDelete: boolean;
-  readonly #otherMeta: EntityMetadata<U>;
+  #addedBeforeLoaded: U[] | undefined;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -51,8 +51,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   ) {
     super();
     this.#entity = entity;
-    this.#otherMeta = otherMeta;
-    this.#isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.#fieldName = fieldName;
   }
 
   // opts is an internal parameter
@@ -74,7 +73,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       return this.loaded.find((other) => other.id === id);
     } else {
-      const added = this.#addedBeforeLoaded.find((u) => u.id === id);
+      const added = this.#addedBeforeLoaded?.find((u) => u.id === id);
       if (added) {
         return added;
       }
@@ -116,8 +115,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     }
 
     // If we're changing `a1.books = [b1, b2]` to `a1.books = [b2]`, then implicitly delete the old book
-    const otherCannotChange = this.#otherMeta.fields[this.otherFieldName].immutable;
-    if (this.#isCascadeDelete && otherCannotChange) {
+    const otherCannotChange = this.otherMeta.fields[this.otherFieldName].immutable;
+    if (this.isCascadeDelete && otherCannotChange) {
       const implicitlyDeleted = this.loaded.filter((e) => !values.includes(e));
       implicitlyDeleted.forEach((e) => this.#entity.em.delete(e));
       // Keep the implicitlyDeleted values for `getWithDeleted` to return
@@ -142,8 +141,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   add(other: U): void {
     ensureNotDeleted(this.#entity);
     if (this.loaded === undefined) {
-      if (!this.#addedBeforeLoaded.includes(other)) {
-        this.#addedBeforeLoaded.push(other);
+      if (!this.#addedBeforeLoaded?.includes(other)) {
+        (this.#addedBeforeLoaded ??= []).push(other);
       }
     } else {
       if (!this.loaded.includes(other)) {
@@ -161,7 +160,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
-    remove(this.loaded || this.#addedBeforeLoaded, other);
+    remove(this.loaded ?? this.#addedBeforeLoaded ?? [], other);
     // This will no-op and mark other dirty if necessary
     this.getOtherRelation(other).set(undefined);
   }
@@ -193,13 +192,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   removeIfLoaded(other: U) {
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
-    } else {
+    } else if (this.#addedBeforeLoaded) {
       remove(this.#addedBeforeLoaded, other);
     }
   }
 
   maybeCascadeDelete(): void {
-    if (this.#isCascadeDelete) {
+    if (this.isCascadeDelete) {
       this.current({ withDeleted: true }).forEach((e) => this.#entity.em.delete(e));
     }
   }
@@ -243,15 +242,17 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
           });
         */
       }
-      const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
-      // Push on the end to better match the db order of "newer things come last"
-      this.loaded.push(...newEntities);
+      if (this.#addedBeforeLoaded) {
+        const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
+        // Push on the end to better match the db order of "newer things come last"
+        this.loaded.push(...newEntities);
+      }
       this.#addedBeforeLoaded = [];
     }
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.loaded || this.#addedBeforeLoaded, opts);
+    return this.filterDeleted(this.loaded ?? this.#addedBeforeLoaded ?? [], opts);
   }
 
   public get meta(): EntityMetadata<T> {
@@ -263,12 +264,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get otherMeta(): EntityMetadata<U> {
-    return this.#otherMeta;
+    return (getMetadata(this.#entity).fields[this.#fieldName] as OneToManyField).otherMetadata();
   }
 
   public toString(): string {
     return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.#otherMeta.type
+      this.otherMeta.type
     }, otherFieldName: ${this.otherFieldName})`;
   }
 
@@ -282,6 +283,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */
   private getOtherRelation(other: U): ManyToOneReferenceImpl<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
+  }
+
+  private get isCascadeDelete(): boolean {
+    return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
   [RelationT]: T = null!;

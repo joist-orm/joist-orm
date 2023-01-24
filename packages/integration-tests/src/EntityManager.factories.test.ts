@@ -4,6 +4,7 @@ import {
   Book,
   Comment,
   CommentParent,
+  LargePublisher,
   lastAuthorFactoryOpts,
   lastBookFactoryOpts,
   lastCriticFactory,
@@ -30,7 +31,7 @@ describe("EntityManager.factories", () => {
     const p1 = newPublisher(em);
     await em.flush();
     // Then we create only that entity
-    expect(p1.name).toEqual("SmallPublisher 1");
+    expect(p1.name).toEqual("LargePublisher 1");
     expect(em.numberOfEntities).toEqual(1);
   });
 
@@ -249,7 +250,7 @@ describe("EntityManager.factories", () => {
   it("uses the entity's default values for enums", async () => {
     const em = newEntityManager();
     const p1 = newPublisher(em);
-    expect(p1.type).toEqual(PublisherType.Small);
+    expect(p1.type).toEqual(PublisherType.Big);
   });
 
   it("should default children to empty array if created bottom-up", async () => {
@@ -485,7 +486,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const [, p2] = [newPublisher(em), newPublisher(em)];
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(SmallPublisher),
+        parent: maybeNewPoly(LargePublisher),
         use: p2,
       });
       expect(ft1.parent.get).toEqual(p2);
@@ -494,9 +495,9 @@ describe("EntityManager.factories", () => {
     it("can provide defaults", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {
-        parent: maybeNewPoly(SmallPublisher, { ifNewOpts: { name: "p2" } }),
+        parent: maybeNewPoly(LargePublisher, { ifNewOpts: { name: "p2" } }),
       });
-      expect(ft1.parent.get).toBeInstanceOf(SmallPublisher);
+      expect(ft1.parent.get).toBeInstanceOf(LargePublisher);
       expect((ft1.parent.get as Publisher).name).toEqual("p2");
     });
   });
@@ -539,8 +540,8 @@ describe("EntityManager.factories", () => {
   it("uniquely assigns name fields", async () => {
     const em = newEntityManager();
     const [p1, p2] = [newPublisher(em), newPublisher(em)];
-    expect(p1.name).toEqual("SmallPublisher 1");
-    expect(p2.name).toEqual("SmallPublisher 2");
+    expect(p1.name).toEqual("LargePublisher 1");
+    expect(p2.name).toEqual("LargePublisher 2");
   });
 
   describe("useFactoryDefaults", () => {

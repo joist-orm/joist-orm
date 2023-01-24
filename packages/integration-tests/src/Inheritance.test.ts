@@ -36,7 +36,7 @@ describe("Inheritance", () => {
         longitude: null,
         name: "sp1",
         size_id: null,
-        type_id: 1,
+        type_id: 2,
         created_at: expect.any(Date),
         updated_at: expect.any(Date),
       },

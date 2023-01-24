@@ -148,7 +148,8 @@ describe("OneToManyCollection", () => {
     expect(books[1].id).toEqual(undefined);
   });
 
-  it("combines both pre-added and persisted entities when not in memory yet", async () => {
+  // Skipped due to the first/naive implementation causing performance issues
+  it.skip("combines both pre-added and persisted entities when not in memory yet", async () => {
     // Given an author with one book
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

@@ -275,10 +275,10 @@ describe("Inheritance", () => {
 
   it("can recalc persisted fields on a subtype", async () => {
     // Given a small publisher
-    await insertPublisher({ name: "sp1" });
     const em = newEntityManager();
     // When we make an author
-    newAuthor(em, { publisher: "p:1" });
+    const sp1 = newSmallPublisher(em);
+    newAuthor(em, { publisher: sp1 });
     await em.flush();
     // Then the field is recacled
     expect(await select("small_publishers")).toMatchObject([{ all_author_names: "a1" }]);

@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "../Entity";
 import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import {
   deTagIds,
   ensureNotDeleted,
@@ -63,12 +63,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   implements ManyToOneReference<T, U, N>
 {
   readonly #entity: T;
+  readonly #fieldName: keyof T & string;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
   private _isLoaded = false;
-  private readonly isCascadeDelete: boolean;
-  readonly #otherMeta: EntityMetadata<U>;
 
   constructor(
     entity: T,
@@ -78,8 +77,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   ) {
     super();
     this.#entity = entity;
-    this.#otherMeta = otherMeta;
-    this.isCascadeDelete = otherMeta?.config.__data.cascadeDeleteFields.includes(fieldName as any);
+    this.#fieldName = fieldName;
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
@@ -90,7 +88,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined) {
-      this.loaded = (await this.#entity.em.load(this.#otherMeta.cstr, current)) as any as U;
+      this.loaded = (await this.#entity.em.load(this.otherMeta.cstr, current)) as any as U;
     } else {
       this.loaded = current;
     }
@@ -182,7 +180,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.#otherMeta, [this.id])[0];
+    return this.id && deTagIds(this.otherMeta, [this.id])[0];
   }
 
   get idUntaggedOrFail(): string {
@@ -267,12 +265,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   public get otherMeta(): EntityMetadata<U> {
-    return this.#otherMeta;
+    return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
   }
 
   public toString(): string {
     return `ManyToOneReference(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.#otherMeta.type
+      this.otherMeta.type
     }, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
   }
 
@@ -297,6 +295,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     other: U,
   ): OneToManyCollection<U, T> | OneToOneReferenceImpl<U, T> | OneToManyLargeCollection<U, T> {
     return (other as U)[this.otherFieldName] as any;
+  }
+
+  private get isCascadeDelete(): boolean {
+    return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
   /**

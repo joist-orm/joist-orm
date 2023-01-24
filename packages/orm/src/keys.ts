@@ -59,6 +59,12 @@ export function assertIdsAreTagged(keys: readonly string[]): void {
   }
 }
 
+export function assertIdIsTagged(key: string): void {
+  if (key.indexOf(tagDelimiter) === -1) {
+    throw new Error(`Key is not tagged ${key}`);
+  }
+}
+
 /** Tags a potentially untagged id, while our API inputs still accept either tagged or untagged ids. */
 export function tagId(meta: HasTagName, id: string | number): string;
 export function tagId(cstr: EntityConstructor<any>, id: string | number): string;

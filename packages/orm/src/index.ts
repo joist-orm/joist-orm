@@ -6,11 +6,11 @@ import {
   MaybeAbstractEntityConstructor,
   OptsOf,
 } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { abbreviation } from "./QueryBuilder";
-import { reverseReactiveHint } from "./reactiveHints";
+import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
@@ -294,14 +294,16 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     Object.values(meta.fields)
       .filter((f) => f.kind === "primitive" && f.derived === "async")
       .forEach((field) => {
-        const asyncProperty = getFakeInstance(meta)[field.fieldName] as
-          | PersistedAsyncPropertyImpl<any, any, any>
-          | undefined;
+        const ap = getFakeInstance(meta)[field.fieldName] as PersistedAsyncPropertyImpl<any, any, any> | undefined;
         // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
-        if (asyncProperty?.reactiveHint) {
-          const reversals = reverseReactiveHint(meta.cstr, asyncProperty.reactiveHint);
+        if (ap?.reactiveHint) {
+          // Cache the load hint so that we don't constantly recalc it on instantiation.
+          getAllMetas(meta).forEach((m) => {
+            m.config.__data.cachedReactiveLoadHints[field.fieldName] = convertToLoadHint(meta, ap.reactiveHint);
+          });
+          const reversals = reverseReactiveHint(meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
               cstr: meta.cstr,

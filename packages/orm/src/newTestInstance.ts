@@ -147,7 +147,7 @@ export function newTestInstance<T extends Entity>(
   // `build fullOpts` loop, we're also invoking `newTestInstance` as we go through the loop itself,
   // creating each test instance within nested/recursive `newTestInstance` calls.
   if (!use.has(entity.constructor)) {
-    use.set(entity.constructor, [entity, false]);
+    addForAllMetas(use, entity, false);
   }
 
   // Now that we've got the entity, do a 2nd pass for o2m/m2m where we pass
@@ -480,11 +480,6 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
   const use: Entity | Entity[] | UseMap | undefined = opts.use;
   let map: UseMap;
 
-  // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-  function addForAllMetas(e: Entity, explicit: boolean) {
-    getAllMetas(getMetadata(e)).forEach((m) => map.set(m.cstr, [e, explicit]));
-  }
-
   if (use instanceof Map) {
     // it's already a map
     map = use;
@@ -492,10 +487,10 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
     map = new Map();
     if (use instanceof Array) {
       // it's a top-level `newAuthor` with a user-passed `use: array`
-      use.forEach((e) => addForAllMetas(e, true));
+      use.forEach((e) => addForAllMetas(map, e, true));
     } else if (use) {
       // it's a top-level `newAuthor` w/o a `use: entity` param
-      addForAllMetas(use, true);
+      addForAllMetas(map, use, true);
     }
     // Scan opts for entities to implicitly add to the map, i.e. if the user
     // calls `newAuthor(em, { book: b1 })`, we'll use `b1` for any other books we
@@ -505,7 +500,7 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
       const opts = todo.pop();
       Object.values(opts || {}).forEach((opt) => {
         if (isEntity(opt) && !map.has(opt.constructor)) {
-          addForAllMetas(opt, false);
+          addForAllMetas(map, opt, false);
         } else if (opt instanceof Array) {
           todo.push(...opt);
         } else if (isPlainObject(opt)) {
@@ -518,6 +513,16 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
   // Use as any b/c UseMap is our internal impl detail and not public.
   (opts as any).use = map;
   return map;
+}
+
+// If e is a subtype like SmallPublisher, register it for the base Publisher as well
+function addForAllMetas(map: UseMap, e: Entity, explicit: boolean) {
+  const meta = getMetadata(e);
+  if (meta.baseType || meta.subTypes.length) {
+    getAllMetas(meta).forEach((m) => map.set(m.cstr, [e, explicit]));
+  } else {
+    map.set(meta.cstr, [e, explicit]);
+  }
 }
 
 /** Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged. */

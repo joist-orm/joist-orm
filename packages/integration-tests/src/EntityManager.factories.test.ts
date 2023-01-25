@@ -334,6 +334,22 @@ describe("EntityManager.factories", () => {
     expect(i2.author.get).toBeUndefined();
   });
 
+  it("can reuse existing entities of a subtype", async () => {
+    const em = newEntityManager();
+    // Given an existing author
+    const sp = newSmallPublisher(em);
+    const a = newAuthor(em);
+    expect(a.publisher.get).toBe(sp);
+  });
+
+  it("can reuse existing entities of a subtype via use", async () => {
+    const em = newEntityManager();
+    // Given an existing author
+    const [sp1] = [newSmallPublisher(em), newSmallPublisher(em)];
+    const a = newAuthor(em, { use: sp1 });
+    expect(a.publisher.get).toBe(sp1);
+  });
+
   it("can create m2m", async () => {
     const em = newEntityManager();
     newBook(em, { tags: [{}, {}] });

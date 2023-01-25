@@ -1,3 +1,10 @@
+## [1.49.9](https://github.com/stephenh/joist-ts/compare/v1.49.8...v1.49.9) (2023-01-25)
+
+
+### Bug Fixes
+
+* Fix defaults for polys looking for all parent types. ([#518](https://github.com/stephenh/joist-ts/issues/518)) ([f9c0dfc](https://github.com/stephenh/joist-ts/commit/f9c0dfc9bbc369d03ba95ac9e4940d7297f66bec))
+
 ## [1.49.8](https://github.com/stephenh/joist-ts/compare/v1.49.7...v1.49.8) (2023-01-25)
 
 

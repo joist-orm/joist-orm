@@ -213,19 +213,23 @@ function resolveFactoryOpt<T extends Entity>(
     return meta.factory(em, opt);
   } else {
     // Look for an obvious default
-    if (opt === undefined || (opt instanceof MaybeNew && field.kind !== "poly")) {
-      const existing = getObviousDefault(em, meta, opts);
-      if (existing) {
-        return existing;
-      }
-      // Otherwise fall though to making a new entity via the factory
-    } else if (field.kind === "poly" && opt instanceof MaybeNew) {
-      // We have a polymorphic maybeNew to sort through
-      const existing = opt.polyRefPreferredOrder
-        .map((cstr) => getObviousDefault(em, getMetadata(cstr), opts))
-        .find((existing) => !!existing);
-      if (existing) {
-        return existing;
+    if (opt === undefined || opt instanceof MaybeNew) {
+      if (field.kind !== "poly") {
+        const existing = getObviousDefault(em, meta, opts);
+        if (existing) {
+          return existing;
+        }
+        // Otherwise fall though to making a new entity via the factory
+      } else {
+        // We have a polymorphic maybeNew to sort through
+        const existing = (
+          opt instanceof MaybeNew ? opt.polyRefPreferredOrder : field.components.map((c) => c.otherMetadata().cstr)
+        )
+          .map((cstr) => getObviousDefault(em, getMetadata(cstr), opts))
+          .find((existing) => !!existing);
+        if (existing) {
+          return existing;
+        }
       }
     }
     // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []

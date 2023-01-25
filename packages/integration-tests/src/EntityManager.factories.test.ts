@@ -17,6 +17,7 @@ import {
   newImage,
   newLargePublisher,
   newPublisher,
+  newSmallPublisher,
   Publisher,
   PublisherType,
   SmallPublisher,
@@ -447,6 +448,14 @@ describe("EntityManager.factories", () => {
       const ft1 = newTestInstance(em, Comment, {});
       expect(ft1.parent.isSet).toBeTruthy();
       expect(await ft1.parent.load()).toBeInstanceOf(Author);
+    });
+
+    it("reuse an entity if possible without an opt passed", async () => {
+      const em = newEntityManager();
+      const p = newSmallPublisher(em);
+      const ft1 = newTestInstance(em, Comment, {});
+      expect(ft1.parent.isSet).toBeTruthy();
+      expect(await ft1.parent.load()).toBeInstanceOf(SmallPublisher);
     });
 
     it("creates a new entity when configured not to search for books as a possible default", async () => {

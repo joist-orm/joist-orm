@@ -1,3 +1,10 @@
+## [1.49.8](https://github.com/stephenh/joist-ts/compare/v1.49.7...v1.49.8) (2023-01-25)
+
+
+### Bug Fixes
+
+* Fix setPartial a collection to undefined should be ignored. ([#517](https://github.com/stephenh/joist-ts/issues/517)) ([3cc2f81](https://github.com/stephenh/joist-ts/commit/3cc2f813a8091dca522f28d67d30bc2c1edbe10c))
+
 ## [1.49.7](https://github.com/stephenh/joist-ts/compare/v1.49.6...v1.49.7) (2023-01-24)
 
 

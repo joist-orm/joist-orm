@@ -440,14 +440,14 @@ describe("EntityManager.factories", () => {
         parent: {},
       });
       expect(ft1.parent.isSet).toBeTruthy();
-      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+      expect(ft1.parent.get).toBeInstanceOf(Author);
     });
 
     it("creates a new entity if needed without an opt passed", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {});
       expect(ft1.parent.isSet).toBeTruthy();
-      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+      expect(ft1.parent.get).toBeInstanceOf(Author);
     });
 
     it("reuse an entity if possible without an opt passed", async () => {
@@ -455,7 +455,7 @@ describe("EntityManager.factories", () => {
       const p = newSmallPublisher(em);
       const ft1 = newTestInstance(em, Comment, {});
       expect(ft1.parent.isSet).toBeTruthy();
-      expect(await ft1.parent.load()).toBeInstanceOf(SmallPublisher);
+      expect(ft1.parent.get).toBeInstanceOf(SmallPublisher);
     });
 
     it("creates a new entity when configured not to search for books as a possible default", async () => {
@@ -467,7 +467,7 @@ describe("EntityManager.factories", () => {
         }),
       });
       expect(ft1.parent.isSet).toBeTruthy();
-      expect(await ft1.parent.load()).toBeInstanceOf(Author);
+      expect(ft1.parent.get).toBeInstanceOf(Author);
     });
 
     it("uses an if-only-one entity", async () => {

@@ -52,12 +52,16 @@ Specifically, the semantics of `Entity.setPartial` is that:
 
 - For a required field `firstName`: 
   - `{ firstName: "foo" }` will update `firstName`
-  - `{ firstName: undefined }` or `{}` will do nothing
-  - `{ firstName: null }` will be a runtime error b/c `firstName` is required and cannot be `null`
+  - `{ firstName: undefined }` will do nothing
+  - `{ firstName: null }` will cause a validation error b/c `firstName` is required and cannot be `null`
 - For an optional field `lastName`: 
   - `{ lastName: "bar" }` will update `lastName`
-  - `{ lastName: undefined }` or `{}` will do nothing
+  - `{ lastName: undefined }` will do nothing
   - `{ lastName: null }` will unset `lastName` (i.e. set it as `undefined`)
+- For collections like `books`:
+  - `{ books: [b1] }` will set the collection to *just* `b1`
+  - `{ books: null }` will set the collection to `[]`
+  - `{ books: undefined }` will do nothing
 
 The `EntityManager.createPartial` and `EntityManager.createOrUpdatePartial` methods both have these semantics as well.
 

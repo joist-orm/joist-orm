@@ -119,6 +119,10 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
  * However, if you pass `ignoreUndefined: true`, then any opt that is `undefined` will be treated
  * as "do not set", and `null` will still mean "set to `undefined`". This is useful for implementing
  * APIs were an input of `undefined` means "do not set / noop" and `null` means "unset".
+ *
+ * Note that constructors _always_ call this method, but if the call is coming from `em.hydrate`, we
+ * use `values` being a primary key to short-circuit and let `hydrate` set the fields via the serde
+ * `setOnEntity` methods.
  */
 export function setOpts<T extends Entity>(
   entity: T,

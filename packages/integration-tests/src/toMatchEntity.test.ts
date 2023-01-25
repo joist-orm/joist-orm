@@ -308,5 +308,18 @@ describe("toMatchEntity", () => {
       -   "a#2",
         ]
     `);
+    expect(() => expect([] as any).toMatchEntity([{ author1: a1 }])).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 3
+      + Received  + 1
+
+        Array [
+      -   Object {
+      -     "author1": "a#1",
+      -   },
+      +   Object {},
+        ]
+    `);
   });
 });

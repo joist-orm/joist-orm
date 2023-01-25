@@ -34,7 +34,7 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
       actual instanceof Array ? [...Array(Math.max(actual.length, expected.length)).keys()] : Object.keys(expected);
 
     for (const key of keys) {
-      let actualValue = actual[key];
+      let actualValue = actual ? actual[key] : undefined;
       const expectedValue = expected?.[key];
 
       // We assume the test is asserting already-loaded / DeepNew entities, so just call .get
@@ -82,7 +82,7 @@ export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): Cu
         // We've hit a non-list/non-object literal expected value, so clean both
         // expected+clean keys to make sure they're not entities, and stop recursion.
         if (key in expected) expected[key] = maybeTestId(expectedValue);
-        if (key in actual) clean[key] = maybeTestId(actualValue);
+        if (actual && key in actual) clean[key] = maybeTestId(actualValue);
       }
     }
   }

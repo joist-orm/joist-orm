@@ -112,6 +112,11 @@ export async function createOrUpdatePartial<T extends Entity>(
     } else if (field.kind === "o2m" || field.kind === "m2m") {
       // Look for one-to-many/many-to-many partials
 
+      // `null` is handled later, and treated as `[]`, which needs the collection loaded
+      if (value === undefined) {
+        return [name, undefined];
+      }
+
       // We allow `delete` and `remove` commands but only if they don't collide with existing fields
       // Also we trust the API layer, i.e. GraphQL, to not let these fields leak unless explicitly allowed.
       const allowDelete = !field.otherMetadata().fields["delete"];

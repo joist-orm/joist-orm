@@ -133,7 +133,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: ["1"] });
+    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", books: ["1"] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
 
@@ -141,7 +141,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", bookIds: ["1"] });
+    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", bookIds: ["1"] });
     expect((await a1.books.load())[0].title).toEqual("b1");
   });
 
@@ -149,7 +149,7 @@ describe("EntityManager.createOrUpdatePartial", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: null });
+    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", books: null });
     expect(await a1.books.load()).toEqual([]);
   });
 
@@ -157,8 +157,8 @@ describe("EntityManager.createOrUpdatePartial", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const a1 = await em.createOrUpdatePartial(Author, { firstName: "a2", books: undefined });
-    expect(await a1.books.load()).toEqual([]);
+    const a1 = await em.createOrUpdatePartial(Author, { id: "a:1", firstName: "a2", books: undefined });
+    expect(await a1.books.load()).toHaveLength(1);
   });
 
   it("collections are not upserted", async () => {

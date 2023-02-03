@@ -1,3 +1,10 @@
+# [1.50.0](https://github.com/stephenh/joist-ts/compare/v1.49.9...v1.50.0) (2023-02-03)
+
+
+### Features
+
+* include inherited fields in graphql files ([#520](https://github.com/stephenh/joist-ts/issues/520)) ([ed2b0d0](https://github.com/stephenh/joist-ts/commit/ed2b0d065a12a4582b58561df66a3bf80e347d33))
+
 ## [1.49.9](https://github.com/stephenh/joist-ts/compare/v1.49.8...v1.49.9) (2023-01-25)
 
 

@@ -12,6 +12,7 @@
         "ignoreUsedToBeUsefulRequiredWithDefault": { "ignore": true },
         "initials": { "derived": "sync" },
         "numberOfBooks": { "derived": "async" },
+        "numberOfPublicReviews": { "derived": "async" },
         "wasEverPopular": { "protected": true }
       },
       "tag": "a"

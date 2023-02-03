@@ -218,37 +218,25 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private maybeAppendAddedBeforeLoaded(): void {
-    if (this.loaded) {
-      // If our entity is not new, then entities in the EM might have been mutated to point
-      // to our foreign key (instead of our loaded instance), which means they should be in
-      // `addedBeforeLoaded` but are not.
-      //
-      // (Note that we don't have to handle the case for "removed before loaded" here because
-      // the oneToManyDataLoader already handles that; although maybe arguably that logic should
-      // be handled here?)
-      if (!this.#entity.isNewEntity) {
-        /*
-        Scanning `em._entities.filter(...)` is just fundamentally too slow once there are 10k+
-        entities in the EM, and we might have 5k new entities all call this method, which means
-        scanning the list 5k times. So comment this out for now until we can find a better way.
-
-        this.#entity.em.entities
-          .filter((e) => e instanceof this.#otherMeta.cstr)
-          .filter((e) => !this.#addedBeforeLoaded.includes(e as U))
-          .forEach((e) => {
-            if (sameEntity((e as any).__orm.data[this.otherFieldName], this.#entity)) {
-              this.#addedBeforeLoaded.push(e as U);
-            }
-          });
-        */
-      }
-      if (this.#addedBeforeLoaded) {
-        const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
-        // Push on the end to better match the db order of "newer things come last"
-        this.loaded.push(...newEntities);
-      }
-      this.#addedBeforeLoaded = [];
+    // If our entity is not new, then entities in the EM might have been mutated to point
+    // to our foreign key (instead of our loaded instance), which means they should be in
+    // `addedBeforeLoaded` but are not.
+    //
+    // (Note that we don't have to handle the case for "removed before loaded" here because
+    // the oneToManyDataLoader already handles that; although maybe arguably that logic should
+    // be handled here?)
+    if (!this.#entity.isNewEntity) {
+      const { em } = this.#entity;
+      const newChildren = (em.pendingChildren.get(this.#entity.idTagged!) ?? []) as U[];
+      em.pendingChildren.delete(this.#entity.idTagged!);
+      (this.#addedBeforeLoaded ??= []).push(...newChildren);
     }
+    if (this.#addedBeforeLoaded) {
+      const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
+      // Push on the end to better match the db order of "newer things come last"
+      this.loaded!.push(...newEntities);
+    }
+    this.#addedBeforeLoaded = [];
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {

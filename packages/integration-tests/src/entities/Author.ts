@@ -47,6 +47,11 @@ export class Author extends AuthorCodegen {
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
+  readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+    "numberOfPublicReviews",
+    { books: { reviews: "isPublic" } },
+    (a) => a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get).length,
+  );
 
   public beforeFlushRan = false;
   public beforeCreateRan = false;

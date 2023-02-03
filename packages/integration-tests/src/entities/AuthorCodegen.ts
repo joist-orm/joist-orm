@@ -129,6 +129,7 @@ export interface AuthorFilter {
   wasEverPopular?: BooleanFilter<null | undefined>;
   address?: ValueFilter<Address, null | undefined>;
   deletedAt?: ValueFilter<Date, null | undefined>;
+  numberOfPublicReviews?: ValueFilter<number, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   favoriteColors?: ValueFilter<Color[], null | undefined>;
@@ -152,6 +153,7 @@ export interface AuthorGraphQLFilter {
   wasEverPopular?: BooleanGraphQLFilter;
   address?: ValueGraphQLFilter<Address>;
   deletedAt?: ValueGraphQLFilter<Date>;
+  numberOfPublicReviews?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: EnumGraphQLFilter<Color>;
@@ -175,6 +177,7 @@ export interface AuthorOrder {
   wasEverPopular?: OrderBy;
   address?: OrderBy;
   deletedAt?: OrderBy;
+  numberOfPublicReviews?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   favoriteColors?: OrderBy;
@@ -325,6 +328,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
+
+  abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;
 
   get createdAt(): Date {
     return this.__orm.data["createdAt"];

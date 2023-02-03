@@ -119,7 +119,10 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName, fieldType };
     });
 
-    return [id, ...primitives, ...enums, ...pgEnums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
+    const inheritedFields = e.baseClassName ?
+      createEntityFields([findBaseEntity(entities, e.baseClassName)]).map((f) => ({...f, ...common})) : [];
+
+    return [id, ...inheritedFields, ...primitives, ...enums, ...pgEnums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
   });
 }
 
@@ -175,7 +178,10 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
     });
 
-    return [id, ...primitives, ...enums, ...pgEnums, ...m2os, ...polys];
+    const inherited = e.baseClassName ?
+      createSaveEntityInputFields([findBaseEntity(entities, e.baseClassName)]).map((f) => ({...f, ...common})) : [];
+
+    return [id, ...inherited, ...primitives, ...enums, ...pgEnums, ...m2os, ...polys];
   });
 }
 
@@ -201,4 +207,8 @@ function maybeRequired(notNull: boolean): string {
 /** I.e. `Book` --> `books.graphql`. */
 function fileName(e: EntityDbMetadata): string {
   return `${camelCase(e.entity.name)}.graphql`;
+}
+
+function findBaseEntity(entities: EntityDbMetadata[], baseClassName: string): EntityDbMetadata {
+  return entities.find((e) => e.entity.name === baseClassName) as EntityDbMetadata;
 }

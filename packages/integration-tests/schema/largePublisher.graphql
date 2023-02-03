@@ -5,11 +5,32 @@ extend type Mutation {
 type LargePublisher {
   id: ID!
   country: String
+  name: String!
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  size: PublisherSizeDetail
+  type: PublisherTypeDetail!
+  group: PublisherGroup
+  authors: [Author!]!
+  bookAdvances: [BookAdvance!]!
+  comments: [Comment!]!
+  images: [Image!]!
+  tags: [Tag!]!
 }
 
 input SaveLargePublisherInput {
   id: ID
   country: String
+  name: String
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
+  size: PublisherSize
+  type: PublisherType
+  groupId: ID
 }
 
 type SaveLargePublisherResult {

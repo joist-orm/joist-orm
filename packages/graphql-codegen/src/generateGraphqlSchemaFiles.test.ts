@@ -356,4 +356,43 @@ describe("generateGraphqlSchemaFiles", () => {
       "
     `);
   });
+
+  it("adds inherited fields", async () => {
+    // Given a small publisher which inherits from publisher
+    const entities: EntityDbMetadata[] = [
+      newEntityMetadata("Publisher", {
+        primitives: [newPrimitiveField("name")],
+      }),
+      newEntityMetadata("SmallPublisher", {
+        baseClassName: "Publisher",
+        primitives: [newPrimitiveField("city")],
+      }),
+    ];
+    // When ran
+    const fs = newFs({});
+    await generateGraphqlSchemaFiles(fs, entities);
+    // Then the input has both both types of fields as appropriate
+    expect(await fs.load("smallPublisher.graphql")).toMatchInlineSnapshot(`
+      "extend type Mutation {
+        saveSmallPublisher(input: SaveSmallPublisherInput!): SaveSmallPublisherResult!
+      }
+
+      type SmallPublisher {
+        id: ID!
+        name: String!
+        city: String!
+      }
+
+      input SaveSmallPublisherInput {
+        id: ID
+        name: String
+        city: String
+      }
+
+      type SaveSmallPublisherResult {
+        smallPublisher: SmallPublisher!
+      }
+      "
+    `);
+  });
 });

@@ -6,11 +6,32 @@ type SmallPublisher {
   id: ID!
   city: String
   allAuthorNames: String
+  name: String!
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  size: PublisherSizeDetail
+  type: PublisherTypeDetail!
+  group: PublisherGroup
+  authors: [Author!]!
+  bookAdvances: [BookAdvance!]!
+  comments: [Comment!]!
+  images: [Image!]!
+  tags: [Tag!]!
 }
 
 input SaveSmallPublisherInput {
   id: ID
   city: String
+  name: String
+  latitude: Int
+  longitude: Int
+  hugeNumber: Int
+  size: PublisherSize
+  type: PublisherType
+  groupId: ID
 }
 
 type SaveSmallPublisherResult {

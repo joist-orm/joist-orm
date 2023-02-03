@@ -120,7 +120,9 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
     });
 
     const inheritedFields = e.baseClassName ?
-      createEntityFields([findBaseEntity(entities, e.baseClassName)]).map((f) => ({...f, ...common})) : [];
+      createEntityFields([findBaseEntity(entities, e.baseClassName)])
+      .map((f) => ({...f, ...common}))
+      .filter((f) => f.fieldName !== "id") : [];
 
     return [id, ...inheritedFields, ...primitives, ...enums, ...pgEnums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
   });
@@ -179,7 +181,9 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
     });
 
     const inherited = e.baseClassName ?
-      createSaveEntityInputFields([findBaseEntity(entities, e.baseClassName)]).map((f) => ({...f, ...common})) : [];
+      createSaveEntityInputFields([findBaseEntity(entities, e.baseClassName)])
+      .map((f) => ({...f, ...common}))
+      .filter((f) => f.fieldName !== "id") : [];
 
     return [id, ...inherited, ...primitives, ...enums, ...pgEnums, ...m2os, ...polys];
   });

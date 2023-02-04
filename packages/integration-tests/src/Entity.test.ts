@@ -106,6 +106,20 @@ describe("Entity", () => {
           "loaded": false,
         },
         "numberOfBooksCalcInvoked": 0,
+        "numberOfPublicReviews": {
+          "fieldName": "numberOfPublicReviews",
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": false,
+          "reactiveHint": {
+            "books": {
+              "reviews": [
+                "isPublic",
+                "rating",
+              ],
+            },
+          },
+        },
         "publisher": {
           "_isLoaded": false,
           "fieldName": "publisher",

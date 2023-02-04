@@ -186,7 +186,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);
     expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
-      { cstr, name: "numberOfPublicReviews", fields: ["isPublic"], path: ["book", "author"] },
+      { cstr, name: "numberOfPublicReviews", fields: ["isPublic", "rating"], path: ["book", "author"] },
       { cstr, name: "isPublic", fields: [], path: [] },
     ]);
   });
@@ -332,17 +332,28 @@ describe("EntityManager.reactiveRules", () => {
       });
 
       it.withCtx("calculates on initial author save w/a matching book", async ({ em }) => {
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{}] }] });
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
         await em.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
       });
 
       it.withCtx("calculates on new review", async ({ em }) => {
-        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [] }] });
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{}] });
         await em.flush();
         // Use a new em to ensure nothing is cached
         const em2 = newEntityManager();
-        await em2.create(BookReview, { book: "b:1", rating: 1 });
+        em2.create(BookReview, { book: "b:1", rating: 1 });
+        await em2.flush();
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
+      });
+
+      it.withCtx("calculates on updated review", async ({ em }) => {
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 0 }] }] });
+        await em.flush();
+        // Use a new em to ensure nothing is cached
+        const em2 = newEntityManager();
+        const br = await em2.load(BookReview, "br:1");
+        br.rating = 1;
         await em2.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
       });

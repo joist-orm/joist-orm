@@ -49,8 +49,8 @@ export class Author extends AuthorCodegen {
   );
   readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfPublicReviews",
-    { books: { reviews: "isPublic" } },
-    (a) => a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get).length,
+    { books: { reviews: ["isPublic", "rating"] } },
+    (a) => a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && r.rating > 0).length,
   );
 
   public beforeFlushRan = false;

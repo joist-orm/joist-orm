@@ -227,9 +227,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     // be handled here?)
     if (!this.#entity.isNewEntity) {
       const { em } = this.#entity;
-      const newChildren = (em.pendingChildren.get(this.#entity.idTagged!) ?? []) as U[];
-      em.pendingChildren.delete(this.#entity.idTagged!);
-      (this.#addedBeforeLoaded ??= []).push(...newChildren);
+      const newChildren = em.pendingChildren.get(this.#entity.idTagged!)?.get(this.fieldName);
+      if (newChildren) {
+        (this.#addedBeforeLoaded ??= []).push(...(newChildren as U[]));
+        newChildren.splice(0, newChildren.length);
+      }
     }
     if (this.#addedBeforeLoaded) {
       const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));

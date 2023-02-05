@@ -258,12 +258,17 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     } else if (typeof id === "string") {
       // Other is not loaded in memory, but cache it in case our other side is later loaded
       const { em } = this.#entity;
-      let pending = em.pendingChildren.get(id);
-      if (!pending) {
-        pending = [];
-        em.pendingChildren.set(id, pending);
+      let map = em.pendingChildren.get(id);
+      if (!map) {
+        map = new Map();
+        em.pendingChildren.set(id, map);
       }
-      pending.push(this.#entity);
+      let list = map.get(this.otherFieldName);
+      if (!list) {
+        list = [];
+        map.set(this.otherFieldName, list);
+      }
+      list.push(this.#entity);
     }
   }
 

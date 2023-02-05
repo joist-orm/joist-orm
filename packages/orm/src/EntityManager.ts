@@ -144,7 +144,7 @@ export class EntityManager<C = unknown> {
   private _isFlushing: boolean = false;
   private _isValidating: boolean = false;
   // TODO Make these private
-  public pendingChildren: Map<string, Entity[]> = new Map();
+  public pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
   public loadLoaders: LoaderCache = {};
   public findLoaders: LoaderCache = {};
   public populateLoaders: LoaderCache = {};

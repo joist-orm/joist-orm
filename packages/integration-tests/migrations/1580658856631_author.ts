@@ -99,6 +99,8 @@ export function up(b: MigrationBuilder): void {
     // for testing jsbon columns
     address: { type: "jsonb", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },
+    // for testing derived fields using other derived fields
+    number_of_public_reviews: { type: "int", notNull: false },
   });
 
   // A publisher can only have one author named `Jim`, but still have other authors

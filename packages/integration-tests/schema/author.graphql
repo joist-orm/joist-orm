@@ -22,6 +22,7 @@ type Author {
   author: Image
   bookComments: String
   deletedAt: DateTime
+  numberOfPublicReviews: Int
 }
 
 input SaveAuthorInput {

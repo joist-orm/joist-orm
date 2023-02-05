@@ -149,7 +149,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.loaded = id ? this.#entity.em.getEntity(id) : undefined;
     this._isLoaded = !!this.loaded;
     this.maybeRemove(previous);
-    this.maybeAdd(this.maybeFindEntity());
+    this.maybeAdd();
   }
 
   // Internal method used by OneToManyCollection
@@ -171,7 +171,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       this._isLoaded = true;
     }
     this.maybeRemove(previous);
-    this.maybeAdd(this.maybeFindEntity());
+    this.maybeAdd();
   }
 
   get idOrFail(): IdOf<U> {
@@ -242,8 +242,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     }
   }
 
-  maybeAdd(other: U | undefined) {
+  maybeAdd() {
+    const id = this.current();
+    const other = this.maybeFindEntity();
     if (other) {
+      // Other is already loaded in memory, immediately hook it up
       const newRelation = this.getOtherRelation(other);
       if (newRelation instanceof OneToManyCollection) {
         newRelation.add(this.#entity);
@@ -252,6 +255,20 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       } else {
         newRelation.set(this.#entity, { percolating: true });
       }
+    } else if (typeof id === "string") {
+      // Other is not loaded in memory, but cache it in case our other side is later loaded
+      const { em } = this.#entity;
+      let map = em.pendingChildren.get(id);
+      if (!map) {
+        map = new Map();
+        em.pendingChildren.set(id, map);
+      }
+      let list = map.get(this.otherFieldName);
+      if (!list) {
+        list = [];
+        map.set(this.otherFieldName, list);
+      }
+      list.push(this.#entity);
     }
   }
 

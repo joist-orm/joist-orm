@@ -21,6 +21,7 @@
     "lastName",
     "mentor",
     "numberOfBooks",
+    "numberOfPublicReviews",
     "publisher",
     "tags",
     "updatedAt",
@@ -138,6 +139,7 @@
     "lastName",
     "mentorId",
     "numberOfBooks",
+    "numberOfPublicReviews",
     "publisherId",
     "updatedAt",
     "wasEverPopular"

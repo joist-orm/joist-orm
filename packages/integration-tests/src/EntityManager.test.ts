@@ -945,6 +945,7 @@ describe("EntityManager", () => {
       lastName: null,
       mentor: null,
       numberOfBooks: null,
+      numberOfPublicReviews: null,
       publisher: "p:1",
       updatedAt: expect.anything(),
       wasEverPopular: null,

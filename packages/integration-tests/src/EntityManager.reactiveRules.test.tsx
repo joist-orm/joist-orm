@@ -9,6 +9,8 @@ import {
   newPublisher,
   SmallPublisher,
 } from "@src/entities";
+import { select } from "@src/entities/inserts";
+import { newEntityManager } from "@src/setupDbTests";
 import { getMetadata } from "joist-orm";
 
 const sm = expect.stringMatching;
@@ -180,7 +182,12 @@ describe("EntityManager.reactiveRules", () => {
     expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([
       { cstr, name: "numberOfBooks", fields: ["author"], path: ["author"] },
       { cstr, name: "bookComments", fields: ["author"], path: ["author"] },
+      { cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
+    ]);
+    expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
+      { cstr, name: "numberOfPublicReviews", fields: ["isPublic", "rating"], path: ["book", "author"] },
+      { cstr, name: "isPublic", fields: [], path: [] },
     ]);
   });
 
@@ -315,6 +322,41 @@ describe("EntityManager.reactiveRules", () => {
       p.authors.get[2].publisher.set(undefined);
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 15 books");
+    });
+
+    describe("numberOfPublicReviews", () => {
+      it.withCtx("calculates on initial author save", async ({ em }) => {
+        newAuthor(em);
+        await em.flush();
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 0 }]);
+      });
+
+      it.withCtx("calculates on initial author save w/a matching book", async ({ em }) => {
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
+        await em.flush();
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
+      });
+
+      it.withCtx("calculates on new review", async ({ em }) => {
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{}] });
+        await em.flush();
+        // Use a new em to ensure nothing is cached
+        const em2 = newEntityManager();
+        em2.create(BookReview, { book: "b:1", rating: 1 });
+        await em2.flush();
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
+      });
+
+      it.withCtx("calculates on updated review", async ({ em }) => {
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 0 }] }] });
+        await em.flush();
+        // Use a new em to ensure nothing is cached
+        const em2 = newEntityManager();
+        const br = await em2.load(BookReview, "br:1");
+        br.rating = 1;
+        await em2.flush();
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
+      });
     });
   });
 });

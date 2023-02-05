@@ -1,3 +1,10 @@
+## [1.50.1](https://github.com/stephenh/joist-ts/compare/v1.50.0...v1.50.1) (2023-02-05)
+
+
+### Bug Fixes
+
+* Re-fixes the o2m loading issue w/o a scan. ([#522](https://github.com/stephenh/joist-ts/issues/522)) ([94de9c6](https://github.com/stephenh/joist-ts/commit/94de9c67968d3358716b99d88855a13eb4706a2d))
+
 # [1.50.0](https://github.com/stephenh/joist-ts/compare/v1.49.9...v1.50.0) (2023-02-03)
 
 

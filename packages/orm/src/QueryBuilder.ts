@@ -2,7 +2,7 @@ import { groupBy } from "joist-utils";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { EntityConstructor, entityLimit, FilterOf, OrderOf } from "./EntityManager";
-import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
+import { EntityMetadata, Field, getMetadata, PolymorphicField } from "./EntityMetadata";
 import {
   addTablePerClassJoinsAndClassTag,
   asConcreteCstr,
@@ -208,6 +208,29 @@ export function buildQuery<T extends Entity>(
   const alias = getAlias(meta.tableName);
   let query: Knex.QueryBuilder<any, any> = knex.select<unknown>(`${alias}.*`).from(`${meta.tableName} AS ${alias}`);
 
+  function mapBaseTypeFields<T extends Entity>(
+    meta: EntityMetadata<T>,
+    where: Record<string, unknown>,
+  ): [Record<string, string>, Record<string, unknown>] {
+    const fields = Object.keys(meta.fields).filter((f) => f !== "id");
+    const baseEntity = meta.baseTypes.find((t) => t.type === meta.baseType);
+    if (baseEntity) {
+      const subTypeFields = Object.keys(baseEntity.fields);
+      const whereFields = Object.keys(where as any);
+      const [baseFields, baseTree] = mapBaseTypeFields(baseEntity, {
+        [baseEntity.type]: {
+          ...whereFields
+            .filter((f) => subTypeFields.includes(f))
+            .reduce((acc, f) => ({ ...acc, [f]: (where as any)[f] }), {}),
+        },
+      });
+      return [baseFields, baseTree];
+    }
+    return [fields.reduce((acc, f) => ({ ...acc, [f]: meta.type }), {}), where];
+  }
+
+  const [baseTypeFields, baseTypeTree] = mapBaseTypeFields(meta, where as Record<string, unknown>);
+
   // Define a function for recursively adding joins & filters
   function addClauses(
     meta: EntityMetadata<any>,
@@ -318,9 +341,16 @@ export function buildQuery<T extends Entity>(
         const serde = field.serde!;
         // TODO Currently hardcoded to single-column support; poly is handled above this
         const column = serde.columns[0];
-        // TODO Currently we only support base-type WHEREs if the sub-type is the main `em.find`
-        // const maybeBaseAlias = field.alias;
-        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+        // If the field is a base type field we add the clause to the base type table
+        const maybeBaseType = baseTypeFields[key];
+        const baseMeta = meta.baseTypes.find((b) => b.type === maybeBaseType)!;
+        if (maybeBaseType && hasClause && baseMeta) {
+          const baseTypeIndex = meta.baseTypes.indexOf(baseMeta);
+          const baseAlias = `b${baseTypeIndex}`;
+          addClauses(baseMeta, baseAlias, baseTypeTree[maybeBaseType] as any, order);
+        } else {
+          query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
+        }
         // This is not a foreign key column, so it'll have the primitive filters/order bys
         if (order) {
           query = query.orderBy(`${alias}.${column.columnName}`, order);

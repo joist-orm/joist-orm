@@ -2,7 +2,7 @@ import { groupBy } from "joist-utils";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { EntityConstructor, entityLimit, FilterOf, OrderOf } from "./EntityManager";
-import { EntityMetadata, Field, getMetadata, PolymorphicField } from "./EntityMetadata";
+import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
 import {
   addTablePerClassJoinsAndClassTag,
   asConcreteCstr,

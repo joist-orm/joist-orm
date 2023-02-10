@@ -65,6 +65,12 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   abstract get idOrFail(): string;
   abstract get idTaggedOrFail(): string;
 
+  /**
+   * Returns whether the entity is new.
+   *
+   * This is not just `this.id === undefined`, because just assigning an id doesn't mean the entity
+   * is no longer new; this only flips to `false` after the `flush` transaction has been committed.
+   */
   get isNewEntity(): boolean {
     return this.__orm.isNew;
   }

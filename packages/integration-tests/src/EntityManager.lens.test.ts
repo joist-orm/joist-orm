@@ -1,6 +1,13 @@
-import { insertAuthor, insertBook, insertBookReview, insertPublisher } from "@src/entities/inserts";
-import { Lens } from "joist-orm";
-import { Author, Book, Publisher } from "./entities";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertBookToTag,
+  insertPublisher,
+  insertTag,
+} from "@src/entities/inserts";
+import { getLens, Lens } from "joist-orm";
+import { Author, Book, Publisher, Tag } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.lens", () => {
@@ -117,6 +124,29 @@ describe("EntityManager.lens", () => {
     const a1 = await em.load(Author, "1");
     const publisherName: string | undefined = await a1.load((a) => a.publisher.name);
     expect(publisherName).toEqual(undefined);
+  });
+
+  it("can navigate across undefined references from a list", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertTag({ name: "t1" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+    const em = newEntityManager();
+    const t1 = await em.load(Tag, "t:1");
+    const publishers = await t1.load((t) => t.books.author.publisher);
+    // Use `toStrictEqual` to ensure the list is not `[undefined]`
+    expect(publishers).toStrictEqual([]);
+    expect(getLens(t1, (t) => t.books.author.publisher)).toStrictEqual([]);
+  });
+
+  it("can navigate across soft-deleted references from an entity", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: new Date() });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "b:1");
+    const books = await b1.load((b) => b.author.books);
+    expect(books).toMatchEntity([]);
+    expect(getLens(b1, (b) => b.author.books)).toMatchEntity([]);
   });
 
   it("can navigate into getters", async () => {

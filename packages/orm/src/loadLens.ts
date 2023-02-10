@@ -97,13 +97,20 @@ function maybeLoad(object: any, path: string, opts: { forceReload?: boolean }): 
 export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V {
   const paths = collectPaths(fn);
   let current: any = start;
+  let seenSoftDeleted = false;
   // Now evaluate each step of the path
   for (const path of paths) {
     if (Array.isArray(current)) {
       current = current.map((c) => maybeGet(c, path)).flat();
-      current = [...new Set(current)];
+      current = [...new Set(current.filter((c: any) => c !== undefined && !c.isSoftDeletedEntity))];
     } else {
       current = maybeGet(current, path);
+      seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
+      // If we had been traversing m2o -> m2o and just hit an o2m/m2m, and any of our
+      // prior m2os had been soft deleted, just filter everything out.
+      if (Array.isArray(current) && seenSoftDeleted) {
+        return [] as any;
+      }
     }
   }
   return current!;

@@ -1,3 +1,10 @@
+## [1.50.2](https://github.com/stephenh/joist-ts/compare/v1.50.1...v1.50.2) (2023-02-10)
+
+
+### Bug Fixes
+
+* Fix getLens not filtering undefined references. ([#526](https://github.com/stephenh/joist-ts/issues/526)) ([91ec7b1](https://github.com/stephenh/joist-ts/commit/91ec7b1f74738a8816c88adaafabcffcb3d39f5b))
+
 ## [1.50.1](https://github.com/stephenh/joist-ts/compare/v1.50.0...v1.50.1) (2023-02-05)
 
 

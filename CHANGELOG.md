@@ -1,3 +1,10 @@
+## [1.50.3](https://github.com/stephenh/joist-ts/compare/v1.50.2...v1.50.3) (2023-02-13)
+
+
+### Bug Fixes
+
+* Fix nested load hints on async properties. ([#527](https://github.com/stephenh/joist-ts/issues/527)) ([81836ef](https://github.com/stephenh/joist-ts/commit/81836efd982442dbb6caa6ef41994ea86f6a38e3))
+
 ## [1.50.2](https://github.com/stephenh/joist-ts/compare/v1.50.1...v1.50.2) (2023-02-10)
 
 

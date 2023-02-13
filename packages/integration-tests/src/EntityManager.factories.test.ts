@@ -535,13 +535,24 @@ describe("EntityManager.factories", () => {
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
   });
 
+  it("has deeply new references", async () => {
+    const em = newEntityManager();
+    // Given an author with a comment
+    const a = newAuthor(em, { comments: [{}] });
+    // Then the comment is already deeply loaded
+    expect(a.latestComment.get!.parent.get).toBe(a);
+  });
+
   it("has loaded async properties", async () => {
     const em = newEntityManager();
     // Given an author with a book and a review
-    const a = newAuthor(em, { books: [{}] });
+    const a = newAuthor(em, { books: [{}], comments: [{}] });
     // Then the async property is already preloaded
     expect(a.numberOfBooks.get).toBe(1);
     expect(a.numberOfBooks2.get).toBe(1);
+    // And the async property is deeply loaded
+    expect(a.latestComment2.get!.parent.get).toBe(a);
+    expect(a.latestComments.get[0].parent.get).toBe(a);
   });
 
   it("refreshes newly created entities", async () => {

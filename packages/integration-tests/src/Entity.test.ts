@@ -81,6 +81,24 @@ describe("Entity", () => {
           },
           "undefined": null,
         },
+        "latestComment2": {
+          "fn": {},
+          "hint": {
+            "comments": {},
+            "publisher": "comments",
+          },
+          "loadPromise": undefined,
+          "loaded": false,
+        },
+        "latestComments": {
+          "fn": {},
+          "hint": {
+            "comments": {},
+            "publisher": "comments",
+          },
+          "loadPromise": undefined,
+          "loaded": false,
+        },
         "mentor": {
           "_isLoaded": false,
           "fieldName": "mentor",

@@ -28,14 +28,17 @@ type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
 type MaybeBaseType = any;
 
 /** Marks a given `T[K]` field as the loaded/synchronous version of the collection. */
-export type MarkLoaded<T extends Entity, P, H = {}> = P extends OneToOneReference<MaybeBaseType, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, H>>
+export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReference<MaybeBaseType, infer U>
+  ? LoadedOneToOneReference<T, Loaded<U, UH>>
   : P extends Reference<MaybeBaseType, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, H>, N>
+  ? LoadedReference<T, Loaded<U, UH>, N>
   : P extends Collection<MaybeBaseType, infer U>
-  ? LoadedCollection<T, Loaded<U, H>>
+  ? LoadedCollection<T, Loaded<U, UH>>
   : P extends AsyncProperty<MaybeBaseType, infer V>
-  ? LoadedProperty<T, V>
+  ? // prettier-ignore
+    [V] extends [(infer U extends Entity) | undefined]
+    ? LoadedProperty<T, Loaded<U, UH> | Exclude<V, U>>
+    : LoadedProperty<T, V>
   : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
@@ -46,7 +49,10 @@ type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBase
   : P extends Collection<MaybeBaseType, infer U>
   ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
   : P extends AsyncProperty<MaybeBaseType, infer V>
-  ? LoadedProperty<T, V>
+  ? // prettier-ignore
+    [V] extends [(infer U extends Entity) | undefined]
+    ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>> | Exclude<V, U>>
+    : LoadedProperty<T, V>
   : unknown;
 
 /**
@@ -132,7 +138,9 @@ export type LoadableValue<V> = V extends Reference<any, infer U, any>
   : V extends Collection<any, infer U>
   ? U
   : V extends AsyncProperty<any, infer P>
-  ? P
+  ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
+    // prettier-ignore
+    P extends (infer U extends Entity) | undefined ? U : P
   : never;
 
 /**

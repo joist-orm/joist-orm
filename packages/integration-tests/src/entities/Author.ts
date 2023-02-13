@@ -132,6 +132,12 @@ export class Author extends AuthorCodegen {
   readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
     return a.books.get.length;
   });
+
+  /** Example of an async property that returns an entity. */
+  readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasAsyncProperty(
+    { publisher: "comments", comments: {} },
+    (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
+  );
 }
 
 config.cascadeDelete("books");

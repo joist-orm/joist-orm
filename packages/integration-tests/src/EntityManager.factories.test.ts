@@ -552,6 +552,7 @@ describe("EntityManager.factories", () => {
     expect(a.numberOfBooks2.get).toBe(1);
     // And the async property is deeply loaded
     expect(a.latestComment2.get!.parent.get).toBe(a);
+    expect(a.latestComments.get[0].parent.get).toBe(a);
   });
 
   it("refreshes newly created entities", async () => {

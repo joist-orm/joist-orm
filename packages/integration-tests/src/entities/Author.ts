@@ -138,6 +138,12 @@ export class Author extends AuthorCodegen {
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
+
+  /** Example of an async property that returns a list of entities. */
+  readonly latestComments: AsyncProperty<Author, Comment[]> = hasAsyncProperty(
+    { publisher: "comments", comments: {} },
+    (author) => [...(author.publisher.get?.comments.get ?? []), ...author.comments.get],
+  );
 }
 
 config.cascadeDelete("books");

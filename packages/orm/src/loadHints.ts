@@ -38,6 +38,8 @@ export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReferen
   ? // prettier-ignore
     [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, UH> | Exclude<V, U>>
+    : V extends readonly (infer U extends Entity)[]
+    ? LoadedProperty<T, Loaded<U, UH>[]>
     : LoadedProperty<T, V>
   : unknown;
 
@@ -52,6 +54,8 @@ type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBase
   ? // prettier-ignore
     [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>> | Exclude<V, U>>
+    : V extends readonly (infer U extends Entity)[]
+    ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>>[]>
     : LoadedProperty<T, V>
   : unknown;
 

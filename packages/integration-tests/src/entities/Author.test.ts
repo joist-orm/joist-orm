@@ -576,7 +576,7 @@ describe("Author", () => {
     expect(pl.authors.get[0].numberOfBooks2.get).toEqual(0);
   });
 
-  it("can nested load async properties", async () => {
+  it("can load nested async properties of references", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { comments: [{}] }) as Author;
     // TODO a1.populate does not work due to lack of consts...needs TS 5.x
@@ -585,6 +585,14 @@ describe("Author", () => {
     // Ensure the `latestComment2.get` still has `| undefined`
     // @ts-expect-error
     expect(al.latestComment2.get.parent.get).toEqual(al);
+  });
+
+  it("can load nested async properties of collections", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { comments: [{}] }) as Author;
+    // TODO a1.populate does not work due to lack of consts...needs TS 5.x
+    const al = await em.populate(a1, { latestComments: "parent" });
+    expect(al.latestComments.get[0].parent.get).toEqual(al);
   });
 
   it("has an em property", async () => {

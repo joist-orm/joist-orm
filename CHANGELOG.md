@@ -1,3 +1,10 @@
+## [1.50.4](https://github.com/stephenh/joist-ts/compare/v1.50.3...v1.50.4) (2023-02-14)
+
+
+### Bug Fixes
+
+* Add missing Const to loadFromQuery. ([#528](https://github.com/stephenh/joist-ts/issues/528)) ([2943c98](https://github.com/stephenh/joist-ts/commit/2943c98efa5a0d535f9861143d330975af91389e))
+
 ## [1.50.3](https://github.com/stephenh/joist-ts/compare/v1.50.2...v1.50.3) (2023-02-13)
 
 

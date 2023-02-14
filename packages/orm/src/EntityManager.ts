@@ -626,7 +626,7 @@ export class EntityManager<C = unknown> {
   public async loadFromQuery<T extends Entity, H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     query: Knex.QueryBuilder,
-    populate: H,
+    populate: Const<H>,
   ): Promise<Loaded<T, H>[]>;
   public async loadFromQuery<T extends Entity>(
     type: EntityConstructor<T>,

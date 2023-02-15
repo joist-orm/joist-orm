@@ -1,9 +1,10 @@
 import { Knex } from "knex";
 import { Entity } from "../Entity";
+import { FilterAndSettings, ValueFilter } from "../EntityFilter";
 import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
-import { FilterAndSettings, parseEntityFilter, parseValueFilter, ValueFilter } from "../QueryBuilder";
+import { parseEntityFilter, parseValueFilter } from "../QueryParser";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { hasSerde } from "../serde";
@@ -102,7 +103,7 @@ export class InMemoryDriver implements Driver {
         Object.values(todo.metadata.fields)
           .filter(hasSerde)
           .flatMap((f) => f.serde.columns.map((c) => [f, c] as const))
-          .forEach(([f, c]) => {
+          .forEach(([, c]) => {
             // Kinda surprised mapToDb doesn't work here...
             row[c.columnName] = c.dbValue(u.__orm.data) ?? null;
           });

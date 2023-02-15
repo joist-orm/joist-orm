@@ -64,7 +64,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         throw new Error(`Unsupported call to ${String(p)}`);
       }
 
-      const originalValue = entity.__orm.originalData[p];
+      const originalValue = entity.__orm.originalData[p] ?? entity.__orm.data[p];
       const hasChanged = (entity.isNewEntity && entity.__orm.data[p] !== undefined) || p in entity.__orm.originalData;
       const hasUpdated = !entity.isNewEntity && p in entity.__orm.originalData;
       return {

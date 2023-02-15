@@ -352,7 +352,7 @@ describe("Author", () => {
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
       expect(a1.changes.firstName.hasChanged).toBeTruthy();
       expect(a1.changes.firstName.hasUpdated).toBeFalsy();
-      expect(a1.changes.firstName.originalValue).toBeUndefined();
+      expect(a1.changes.firstName.originalValue).toBe("f1");
       expect(a1.changes.isPopular.hasChanged).toBeFalsy();
       expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName"]);
     });
@@ -363,7 +363,7 @@ describe("Author", () => {
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.hasUpdated).toBeFalsy();
-      expect(a1.changes.firstName.originalValue).toBeUndefined();
+      expect(a1.changes.firstName.originalValue).toBe("a1");
       expect(a1.changes.fields).toEqual([]);
     });
 
@@ -373,7 +373,7 @@ describe("Author", () => {
       const a1 = await em.load(Author, "1");
       expect(a1.changes.firstName.hasChanged).toBeFalsy();
       expect(a1.changes.firstName.hasUpdated).toBeFalsy();
-      expect(a1.changes.firstName.originalValue).toBeUndefined();
+      expect(a1.changes.firstName.originalValue).toBe("a1");
       expect(a1.changes.fields).toEqual([]);
       a1.firstName = "a2";
       expect(a1.changes.firstName.hasChanged).toBeTruthy();
@@ -405,7 +405,7 @@ describe("Author", () => {
       const a1 = await em.load(Author, "a:1");
       const [p1, p2] = await em.loadAll(Publisher, ["p:1", "p:2"]);
       expect(a1.changes.publisher.hasChanged).toBeFalsy();
-      expect(a1.changes.publisher.originalValue).toBeUndefined();
+      expect(a1.changes.publisher.originalValue).toBe("p:1");
       expect(await a1.changes.publisher.originalEntity).toBeUndefined();
       expect(a1.changes.fields).toEqual([]);
       a1.publisher.set(p2);

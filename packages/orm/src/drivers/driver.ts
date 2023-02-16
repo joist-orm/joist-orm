@@ -1,8 +1,8 @@
 import { Knex } from "knex";
 import { Entity } from "../Entity";
+import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
-import { FilterAndSettings } from "../QueryBuilder";
 import {
   ManyToManyCollection,
   ManyToManyLargeCollection,

@@ -1,8 +1,8 @@
 import DataLoader from "dataloader";
 import hash from "object-hash";
 import { Entity, isEntity } from "../Entity";
+import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { FilterAndSettings } from "../QueryBuilder";
 import { getOrSet } from "../utils";
 
 export function findDataLoader<T extends Entity>(

@@ -24,6 +24,8 @@ export { ConfigApi, EntityHook } from "./config";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export { Entity, EntityOrmField, isEntity } from "./Entity";
+export * from "./EntityFilter";
+export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export * from "./getProperties";
@@ -44,6 +46,7 @@ export {
 export * from "./loadLens";
 export * from "./newTestInstance";
 export * from "./QueryBuilder";
+export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {

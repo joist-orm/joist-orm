@@ -7,7 +7,14 @@ import {
   insertPublisher,
   update,
 } from "@src/entities/inserts";
-import { NotFoundError, setDefaultEntityLimit, setEntityLimit, TooManyError } from "joist-orm";
+import {
+  getMetadata,
+  NotFoundError,
+  parseEntityFilter,
+  setDefaultEntityLimit,
+  setEntityLimit,
+  TooManyError,
+} from "joist-orm";
 import {
   Author,
   Book,
@@ -32,6 +39,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(2);
     expect(authors[0].firstName).toEqual("a1");
     expect(authors[1].firstName).toEqual("a2");
+    expect(parseEntityFilter(getMetadata(Author), {})).toEqual({ kind: "join", subFilter: {} });
   });
 
   it("can find by simple varchar", async () => {
@@ -41,6 +49,10 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, { firstName: "a2" });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
+    expect(parseEntityFilter(getMetadata(Author), { firstName: "a2" })).toEqual({
+      kind: "join",
+      subFilter: { firstName: "a2" },
+    });
   });
 
   it("can find by simple varchar is null", async () => {
@@ -50,6 +62,10 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, { lastName: null });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
+    expect(parseEntityFilter(getMetadata(Author), { lastName: null })).toEqual({
+      kind: "join",
+      subFilter: { lastName: null },
+    });
   });
 
   it("cannot find by simple varchar is undefined", async () => {
@@ -58,6 +74,10 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const authors = await em.find(Author, { lastName: undefined });
     expect(authors.length).toEqual(2);
+    expect(parseEntityFilter(getMetadata(Author), { lastName: undefined })).toEqual({
+      kind: "join",
+      subFilter: { lastName: undefined },
+    });
   });
 
   it("can find by simple varchar not null", async () => {
@@ -67,6 +87,10 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, { lastName: { ne: null } });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
+    expect(parseEntityFilter(getMetadata(Author), { lastName: { ne: null } })).toEqual({
+      kind: "join",
+      subFilter: { lastName: { ne: null } },
+    });
   });
 
   it("can find by simple varchar not undefined", async () => {

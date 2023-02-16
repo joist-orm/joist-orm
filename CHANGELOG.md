@@ -1,3 +1,10 @@
+## [1.50.5](https://github.com/stephenh/joist-ts/compare/v1.50.4...v1.50.5) (2023-02-16)
+
+
+### Bug Fixes
+
+* Fix originalValue to return the value if unchanged. ([#529](https://github.com/stephenh/joist-ts/issues/529)) ([b44de59](https://github.com/stephenh/joist-ts/commit/b44de5969b58aab0b5eea2b5e606474c28d0365c))
+
 ## [1.50.4](https://github.com/stephenh/joist-ts/compare/v1.50.3...v1.50.4) (2023-02-14)
 
 

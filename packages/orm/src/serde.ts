@@ -107,7 +107,7 @@ export class KeySerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    return keyToNumber(this.meta, maybeResolveReferenceToId(value));
+    return value === null ? value : keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 }
 

@@ -334,11 +334,11 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
           const ef = parseEntityFilter(otherMeta, value);
           switch (ef.kind) {
             case "eq":
-              return currentValue === ef.id;
+              return currentValue === ef.value;
             case "ne":
-              return notEqual(currentValue, ef.id);
+              return notEqual(currentValue, ef.value);
             case "in":
-              return ef.ids.includes(currentValue);
+              return ef.value.includes(currentValue);
             case "join":
               if (currentValue === null) {
                 return false;

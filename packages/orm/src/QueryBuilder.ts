@@ -13,6 +13,7 @@ import {
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
   needsClassPerTableJoins,
+  parseEntityFilter,
 } from "./index";
 import { fail } from "./utils";
 
@@ -30,6 +31,8 @@ export function buildQuery<T extends Entity>(
 ): Knex.QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
   const { where, orderBy, limit, offset } = filter;
+
+  const parsed = parseEntityFilter(getMetadata(type), filter.where);
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -148,7 +151,6 @@ export function buildQuery<T extends Entity>(
           addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
         }
       } else {
-        const field = meta.allFields[key] ?? fail(`${key} not found`);
         const serde = field.serde!;
         // TODO Currently hardcoded to single-column support; poly is handled above this
         const column = serde.columns[0];

@@ -1,7 +1,8 @@
+import { groupBy } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import { keyToNumber } from "./keys";
+import { getConstructorFromTaggedId } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
@@ -65,7 +66,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy =
     filter: any,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
-    const ef = parseEntityFilter(meta, filter);
+    const ef = parseEntityFilter(filter);
     if (ef.kind === "pass" && join !== "primary") {
       return;
     }
@@ -91,7 +92,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy =
           }
         } else if (field.kind === "m2o") {
           // Probe the filter and see if it's just an id, if so we can avoid the join
-          const f = parseEntityFilter(field.otherMetadata(), (ef.subFilter as any)[key]);
+          const f = parseEntityFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
           if (f.kind === "pass") {
             // skip
@@ -108,6 +109,46 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy =
           } else {
             applyDbFilter(f, (v) => column.mapToDb(v));
             conditions.push({ alias, column: column.columnName, cond: f });
+          }
+        } else if (field.kind === "poly") {
+          const f = parseEntityFilter((ef.subFilter as any)[key]);
+          if (f.kind === "pass") {
+            // skip
+          } else if (f.kind === "join") {
+            throw new Error("Joins through polys are not supported");
+          } else {
+            // We're left with basically a ValueFilter against the ids
+            // For now only support eq/ne/in/is-null
+            if (f.kind === "eq" || f.kind === "ne") {
+              const comp =
+                field.components.find(
+                  (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
+                ) || fail(`Could not find component for ${f.value}`);
+              const serde = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+              applyDbFilter(f, (v) => serde.mapToDb(v));
+              conditions.push({ alias, column: comp.columnName, cond: f });
+            } else if (f.kind === "is-null") {
+              // Add a condition for every component
+              // TODO ...should these be anded or ored?
+              field.components.forEach((comp) => {
+                conditions.push({ alias, column: comp.columnName, cond: f });
+              });
+            } else if (f.kind === "in") {
+              // Split up the ids by constructor
+              const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
+              field.components.forEach((comp) => {
+                const ids = idsByConstructor[comp.otherMetadata().cstr.name];
+                if (ids && ids.length > 0) {
+                  const serde = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+                  const f2 = { kind: "in", value: ids } as const;
+                  applyDbFilter(f2, (v) => serde.mapToDb(v));
+                  // TODO ...should these be anded or ored?
+                  conditions.push({ alias, column: comp.columnName, cond: f2 });
+                }
+              });
+            } else {
+              throw new Error(`Filters on polys for ${f.kind} are not supported`);
+            }
           }
         } else if (field.kind === "o2o") {
           // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
@@ -170,28 +211,28 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy =
 /** An ADT version of `EntityFilter`. */
 export type ParsedEntityFilter =
   // ParsedValueFilter is any simple match on `id`
-  | ParsedValueFilter<number>
+  | ParsedValueFilter<string | number>
   // Otherwise we return the join/complex
   | { kind: "join"; subFilter: object };
 
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): ParsedEntityFilter {
+export function parseEntityFilter(filter: any): ParsedEntityFilter {
   if (filter === undefined) {
     // This matches legacy `em.find({ author: undefined })` behavior
     return { kind: "pass" };
   } else if (filter === null) {
-    return { kind: "eq", value: null };
+    return { kind: "is-null" };
   } else if (typeof filter === "string" || typeof filter === "number") {
-    return { kind: "eq", value: keyToNumber(meta, filter) };
+    return { kind: "eq", value: filter };
   } else if (Array.isArray(filter)) {
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return keyToNumber(meta, isEntity(v) ? v.id ?? -1 : v);
+        return isEntity(v) ? v.id ?? -1 : v;
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: keyToNumber(meta, filter.id || -1) };
+    return { kind: "eq", value: filter.id || -1 };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -199,11 +240,11 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
     if (keys.length === 1 && keys[0] === "ne") {
       const value = filter["ne"];
       if (value === null || value === undefined) {
-        return { kind: "ne", value: null };
+        return { kind: "not-null" };
       } else if (typeof value === "string" || typeof value === "number") {
-        return { kind: "ne", value: keyToNumber(meta, value) };
+        return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: keyToNumber(meta, value.id || -1) };
+        return { kind: "ne", value: value.id || -1 };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -212,14 +253,13 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
     if (keys.length === 1 && keys[0] === "id") {
       const value = filter["id"];
       if (value === null || value === undefined) {
-        return { kind: "eq", value: null };
+        return { kind: "is-null" };
       } else if (typeof value === "string" || typeof value === "number") {
-        return { kind: "eq", value: keyToNumber(meta, value) };
+        return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: keyToNumber(meta, value.id || -1) };
+        return { kind: "eq", value: value.id || -1 };
       } else {
         return parseValueFilter(value);
-        throw new Error(`Unsupported "id" value ${value}`);
       }
     }
     return { kind: "join", subFilter: filter };
@@ -234,11 +274,13 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
  * The ValueFilter is a
  */
 export type ParsedValueFilter<V> =
-  | { kind: "eq"; value: V | null }
+  | { kind: "eq"; value: V }
   | { kind: "in"; value: V[] }
   | { kind: "gt"; value: V }
   | { kind: "gte"; value: V }
-  | { kind: "ne"; value: V | null }
+  | { kind: "ne"; value: V }
+  | { kind: "is-null" }
+  | { kind: "not-null" }
   | { kind: "lt"; value: V }
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
@@ -248,7 +290,7 @@ export type ParsedValueFilter<V> =
 
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
   if (filter === null) {
-    return { kind: "eq", value: filter };
+    return { kind: "is-null" };
   } else if (filter === undefined) {
     return { kind: "pass" };
   } else if (Array.isArray(filter)) {
@@ -261,9 +303,17 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
       const key = keys[0];
       switch (key) {
         case "eq":
-          return { kind: "eq", value: filter[key] ?? null };
+          if (filter[key] === null) {
+            return { kind: "is-null" };
+          } else {
+            return { kind: "eq", value: filter[key] };
+          }
         case "ne":
-          return { kind: "ne", value: filter[key] ?? null };
+          if (filter[key] === null) {
+            return { kind: "not-null" };
+          } else {
+            return { kind: "ne", value: filter[key] ?? null };
+          }
         case "in":
           return { kind: "in", value: filter[key] };
         case "gt":
@@ -277,7 +327,11 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     } else if (keys.length === 2 && "op" in filter && "value" in filter) {
       // Probe for `findGql` op & value
       const { op, value } = filter;
-      return { kind: op, value: value ?? null };
+      if (value === null) {
+        return { kind: "is-null" };
+      } else {
+        return { kind: op, value: value ?? null };
+      }
     } else if (keys.length === 2 && "gte" in filter && "lte" in filter) {
       const { gte, lte } = filter;
       return { kind: "between", value: [gte, lte] };
@@ -285,7 +339,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     throw new Error("unsupported value filter");
   } else {
     // This is a primitive like a string, number
-    return { kind: "eq", value: filter ?? null };
+    return { kind: "eq", value: filter };
   }
 }
 
@@ -309,6 +363,9 @@ function applyDbFilter(filter: ParsedValueFilter<any>, fn: (value: any) => any):
     case "between":
       filter.value[0] = fn(filter.value[0]);
       filter.value[1] = fn(filter.value[1]);
+      break;
+    case "is-null":
+    case "not-null":
       break;
     default:
       assertNever(filter);

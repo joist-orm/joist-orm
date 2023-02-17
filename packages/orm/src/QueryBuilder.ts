@@ -32,7 +32,7 @@ export function buildQuery<T extends Entity>(
   const meta = getMetadata(type);
   const { where, orderBy, limit, offset } = filter;
 
-  const parsed = parseEntityFilter(getMetadata(type), filter.where);
+  const parsed = parseEntityFilter(filter.where);
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -70,6 +70,7 @@ export function buildQuery<T extends Entity>(
 
       if (field.kind === "poly") {
         if (Array.isArray(clause)) {
+          // condition of `parent_foo_id in (1, 2, 3)` or `parent_bar_id in (4, 5, 6)`
           const ids = clause.map((e) => maybeResolveReferenceToId(e)!);
           const idsByConstructor = groupBy(ids, (id) => getConstructorFromTaggedId(id).name);
           query = query.where((query) =>
@@ -79,8 +80,10 @@ export function buildQuery<T extends Entity>(
             }, query),
           );
         } else if (isEntity(clause) || typeof clause === "string") {
+          // condition of `parent_id = 1`
           query = addPolyClause(query, alias, field, meta, clause);
         } else if (clause === null) {
+          // where they are all null
           query = field.components.reduce(
             (query, component) =>
               addPolyClause(

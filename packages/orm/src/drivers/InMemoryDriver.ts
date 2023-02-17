@@ -331,7 +331,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
           }
         case "m2o":
           const otherMeta = field.otherMetadata();
-          const ef = parseEntityFilter(otherMeta, value);
+          const ef = parseEntityFilter(value);
           switch (ef.kind) {
             case "eq":
               return currentValue === ef.value;

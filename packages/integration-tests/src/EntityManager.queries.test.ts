@@ -25,6 +25,7 @@ import {
   BookReview,
   Color,
   Comment,
+  CommentFilter,
   Image,
   ImageType,
   Publisher,
@@ -38,6 +39,7 @@ import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTes
 const am = getMetadata(Author);
 const bm = getMetadata(Book);
 const pm = getMetadata(Publisher);
+const cm = getMetadata(Comment);
 
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
@@ -85,7 +87,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "last_name", cond: { kind: "eq", value: null } }],
+      conditions: [{ alias: "a", column: "last_name", cond: { kind: "is-null" } }],
     });
   });
 
@@ -116,7 +118,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "last_name", cond: { kind: "ne", value: null } }],
+      conditions: [{ alias: "a", column: "last_name", cond: { kind: "not-null" } }],
     });
   });
 
@@ -216,7 +218,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "eq", value: null } }],
+      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "is-null" } }],
     });
   });
 
@@ -264,7 +266,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "ne", value: null } }],
+      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "not-null" } }],
     });
   });
 
@@ -281,7 +283,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "ne", value: null } }],
+      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "not-null" } }],
     });
   });
 
@@ -667,7 +669,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "age", cond: { kind: "eq", value: null } }],
+      conditions: [{ alias: "a", column: "age", cond: { kind: "is-null" } }],
     });
   });
 
@@ -683,7 +685,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, where)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "age", cond: { kind: "eq", value: null } }],
+      conditions: [{ alias: "a", column: "age", cond: { kind: "is-null" } }],
     });
   });
 
@@ -981,7 +983,7 @@ describe("EntityManager.queries", () => {
 
     expect(parseFindQuery(am, gqlFilter)).toEqual({
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "ne", value: null } }],
+      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "not-null" } }],
     });
   });
 
@@ -1095,10 +1097,16 @@ describe("EntityManager.queries", () => {
     await insertComment({ text: "t2" });
 
     const em = newEntityManager();
-    const comments = await em.find(Comment, { parent: "b:1" });
+    const where = { parent: "b:1" } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
     const [comment] = comments;
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t1");
+
+    expect(parseFindQuery(cm, where)).toEqual({
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      conditions: [{ alias: "c", column: "parent_book_id", cond: { kind: "eq", value: 1 } }],
+    });
   });
 
   it("can find through a polymorphic reference by entity", async () => {
@@ -1109,10 +1117,16 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const book = await em.load(Book, "1");
-    const comments = await em.find(Comment, { parent: book });
+    const where = { parent: book } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
     const [comment] = comments;
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t1");
+
+    expect(parseFindQuery(cm, where)).toEqual({
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      conditions: [{ alias: "c", column: "parent_book_id", cond: { kind: "eq", value: 1 } }],
+    });
   });
 
   it("can find through a null polymorphic reference", async () => {
@@ -1122,10 +1136,21 @@ describe("EntityManager.queries", () => {
     await insertComment({ text: "t2" });
 
     const em = newEntityManager();
-    const comments = await em.find(Comment, { parent: null });
+    const where = { parent: null } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
     const [comment] = comments;
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t2");
+
+    expect(parseFindQuery(cm, where)).toEqual({
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      conditions: [
+        { alias: "c", column: "parent_author_id", cond: { kind: "is-null" } },
+        { alias: "c", column: "parent_book_id", cond: { kind: "is-null" } },
+        { alias: "c", column: "parent_book_review_id", cond: { kind: "is-null" } },
+        { alias: "c", column: "parent_publisher_id", cond: { kind: "is-null" } },
+      ],
+    });
   });
 
   it("can find through polymorphic reference by array of ids/entities", async () => {
@@ -1137,11 +1162,20 @@ describe("EntityManager.queries", () => {
     await insertComment({ text: "t3" });
 
     const em = newEntityManager();
-    const comments = await em.find(Comment, { parent: ["b:1", "br:1"] });
+    const where = { parent: ["b:1", "br:1"] } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
     const [c1, c2] = comments;
     expect(comments.length).toEqual(2);
     expect(c1.text).toEqual("t1");
     expect(c2.text).toEqual("t2");
+
+    expect(parseFindQuery(cm, where)).toEqual({
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      conditions: [
+        { alias: "c", column: "parent_book_id", cond: { kind: "in", value: [1] } },
+        { alias: "c", column: "parent_book_review_id", cond: { kind: "in", value: [1] } },
+      ],
+    });
   });
 
   it("can find through polymorphic reference by not id", async () => {
@@ -1152,10 +1186,16 @@ describe("EntityManager.queries", () => {
     await insertComment({ text: "t2" });
 
     const em = newEntityManager();
-    const comments = await em.find(Comment, { parent: { ne: "b:1" } });
+    const where = { parent: { ne: "b:1" } } satisfies CommentFilter;
+    const comments = await em.find(Comment, where);
     const [comment] = comments;
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t2");
+
+    expect(parseFindQuery(cm, where)).toEqual({
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      conditions: [{ alias: "c", column: "parent_book_id", cond: { kind: "ne", value: 1 } }],
+    });
   });
 
   it("can find through o2m to a polymorphic reference", async () => {

@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "./Entity";
-import { ValueFilter } from "./EntityFilter";
+import { OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { keyToNumber } from "./keys";
 import { abbreviation } from "./QueryBuilder";
@@ -31,14 +31,22 @@ interface JoinTable {
 
 type ParsedTable = PrimaryTable | JoinTable;
 
+interface ParsedOrderBy {
+  alias: string;
+  column: string;
+  order: OrderBy;
+}
+
 interface ParsedFindQuery {
   tables: ParsedTable[];
   conditions: ParsedCondition[];
+  orderBys?: ParsedOrderBy[];
 }
 
-export function parseFindQuery(meta: EntityMetadata<any>, filter: any): ParsedFindQuery {
+export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy = {}): ParsedFindQuery {
   const tables: ParsedTable[] = [];
   const conditions: ParsedCondition[] = [];
+  const orderBys: ParsedOrderBy[] = [];
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -102,6 +110,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any): ParsedFi
             conditions.push({ alias, column: column.columnName, cond: f });
           }
         } else if (field.kind === "o2o") {
+          // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
           const a = getAlias(field.otherMetadata().tableName);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
           addTable(field.otherMetadata(), a, "o2o", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
@@ -116,11 +125,46 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any): ParsedFi
     }
   }
 
+  function addOrderBy(meta: EntityMetadata<any>, alias: string, orderBy: any): void {
+    // Assume only one key
+    const entries = Object.entries(orderBy);
+    if (entries.length === 0) {
+      return;
+    }
+    const [key, value] = entries[0];
+    const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
+    if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
+      const column = field.serde.columns[0];
+      orderBys.push({ alias, column: column.columnName, order: value as OrderBy });
+    } else if (field.kind === "m2o") {
+      // Do we already this table joined in?
+      let table = tables.find((t) => t.table === field.otherMetadata().tableName);
+      if (table) {
+        addOrderBy(field.otherMetadata(), table.alias, value);
+      } else {
+        const table = field.otherMetadata().tableName;
+        const a = getAlias(table);
+        const column = field.serde.columns[0].columnName;
+        tables.push({ alias: a, table, join: "m2o", col1: `${alias}.${column}`, col2: `${a}.id` });
+        addOrderBy(field.otherMetadata(), a, value);
+      }
+    } else {
+      throw new Error(`Unsupported field ${key}`);
+    }
+  }
+
   // always add the main table
   const alias = getAlias(meta.tableName);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
+  if (orderBy) {
+    addOrderBy(meta, alias, orderBy);
+  }
 
-  return { tables, conditions };
+  const parsed = { tables, conditions };
+  if (orderBys.length > 0) {
+    Object.assign(parsed, { orderBys });
+  }
+  return parsed;
 }
 
 /** An ADT version of `EntityFilter`. */

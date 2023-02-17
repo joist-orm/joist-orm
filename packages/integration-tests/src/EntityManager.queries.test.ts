@@ -18,6 +18,8 @@ import {
 import {
   Author,
   AuthorFilter,
+  AuthorGraphQLFilter,
+  AuthorOrder,
   Book,
   BookFilter,
   BookReview,
@@ -880,20 +882,36 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a2" });
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const authors = await em.find(Author, {}, { orderBy: { firstName: "ASC" } });
+
+    const orderBy = { firstName: "ASC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
     expect(authors.length).toEqual(2);
     expect(authors[0].firstName).toEqual("a1");
     expect(authors[1].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, {}, orderBy)).toEqual({
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [],
+      orderBys: [{ alias: "a", column: "first_name", order: "ASC" }],
+    });
   });
 
   it("can order by string desc", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
+
     const em = newEntityManager();
-    const authors = await em.find(Author, {}, { orderBy: { firstName: "DESC" } });
+    const orderBy = { firstName: "DESC" } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
     expect(authors.length).toEqual(2);
     expect(authors[0].firstName).toEqual("a2");
     expect(authors[1].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, {}, orderBy)).toEqual({
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [],
+      orderBys: [{ alias: "a", column: "first_name", order: "DESC" }],
+    });
   });
 
   it("can order by joined string asc", async () => {
@@ -901,11 +919,22 @@ describe("EntityManager.queries", () => {
     await insertPublisher({ id: 2, name: "pA" });
     await insertAuthor({ first_name: "aB", publisher_id: 1 });
     await insertAuthor({ first_name: "aA", publisher_id: 2 });
+
     const em = newEntityManager();
-    const authors = await em.find(Author, {}, { orderBy: { publisher: { name: "ASC" } } });
+    const orderBy = { publisher: { name: "ASC" } } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
     expect(authors.length).toEqual(2);
     expect(authors[0].firstName).toEqual("aA");
     expect(authors[1].firstName).toEqual("aB");
+
+    expect(parseFindQuery(am, {}, orderBy)).toEqual({
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "p", table: "publishers", join: "m2o", col1: "a.publisher_id", col2: "p.id" },
+      ],
+      conditions: [],
+      orderBys: [{ alias: "p", column: "name", order: "ASC" }],
+    });
   });
 
   it("can find empty results in a loop", async () => {
@@ -924,6 +953,7 @@ describe("EntityManager.queries", () => {
   it("can find with GQL filters", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
+
     const em = newEntityManager();
     const gqlFilter: GraphQLAuthorFilter = {
       age: { eq: 2 },
@@ -931,16 +961,28 @@ describe("EntityManager.queries", () => {
     const authors = await em.findGql(Author, gqlFilter);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, gqlFilter)).toEqual({
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [{ alias: "a", column: "age", cond: { kind: "eq", value: 2 } }],
+    });
   });
 
   it("can findGql by foreign key is not null", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
     const em = newEntityManager();
-    const authors = await em.findGql(Author, { publisher: { ne: null } });
+    const gqlFilter = { publisher: { ne: null } } as GraphQLAuthorFilter;
+    const authors = await em.findGql(Author, gqlFilter);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, gqlFilter)).toEqual({
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "ne", value: null } }],
+    });
   });
 
   it("can find with GQL filters but still use hash declaration", async () => {
@@ -977,9 +1019,16 @@ describe("EntityManager.queries", () => {
   it("can find with GQL by greater than with op/value", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
+
     const em = newEntityManager();
-    const authors = await em.findGql(Author, { age: { op: "gt", value: 1 } });
+    const gqlFilter = { age: { op: "gt", value: 1 } } satisfies AuthorGraphQLFilter;
+    const authors = await em.findGql(Author, gqlFilter);
     expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, gqlFilter)).toEqual({
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [{ alias: "a", column: "age", cond: { kind: "gt", value: 1 } }],
+    });
   });
 
   it("can find with GQL filters with offset/limit", async () => {

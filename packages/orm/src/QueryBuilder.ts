@@ -40,61 +40,14 @@ export function buildQuery<T extends Entity>(
     }
   });
 
-  function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
-    const { alias, column, cond } = cc;
-    const columnName = `${alias}.${column}`;
-    switch (cond.kind) {
-      case "eq":
-      case "ne":
-      case "gte":
-      case "gt":
-      case "lte":
-      case "lt":
-      case "like":
-      case "ilike":
-        const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-        query.where(columnName, fn, cond.value);
-        break;
-      case "is-null":
-        query.whereNull(columnName);
-        break;
-      case "not-null":
-        query.whereNotNull(columnName);
-        break;
-      case "in":
-        query.whereIn(columnName, cond.value);
-        break;
-      case "@>":
-        query.where(columnName, "@>", cond.value);
-        break;
-      case "between":
-        const [min, max] = cond.value;
-        query.where(columnName, ">=", min);
-        query.where(columnName, "<=", max);
-        break;
-      case "pass":
-        break;
-      default:
-        assertNever(cond);
-    }
-  }
+  parsed.conditions.forEach((c) => {
+    addColumnCondition(query, c);
+  });
 
-  parsed.conditions.forEach((c) => addColumnCondition(query, c));
-
-  function addComplexCondition(complex: ExpressionCondition): void {
-    query.where((q) => {
-      const op = complex.op === "and" ? "andWhere" : "orWhere";
-      complex.conditions.forEach((c) => {
-        if ("op" in c) {
-          throw new Error("Not implemented");
-        } else {
-          q[op]((q) => addColumnCondition(q, c));
-        }
-      });
+  parsed.complexConditions &&
+    parsed.complexConditions.forEach((c) => {
+      addComplexCondition(query, c);
     });
-  }
-
-  parsed.complexConditions && parsed.complexConditions.forEach(addComplexCondition);
 
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {
@@ -116,4 +69,56 @@ export function abbreviation(tableName: string): string {
     .split("_")
     .map((w) => w[0])
     .join("");
+}
+
+function addComplexCondition(query: QueryBuilder, complex: ExpressionCondition): void {
+  query.where((q) => {
+    const op = complex.op === "and" ? "andWhere" : "orWhere";
+    complex.conditions.forEach((c) => {
+      if ("op" in c) {
+        throw new Error("Not implemented");
+      } else {
+        q[op]((q) => addColumnCondition(q, c));
+      }
+    });
+  });
+}
+
+function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
+  const { alias, column, cond } = cc;
+  const columnName = `${alias}.${column}`;
+  switch (cond.kind) {
+    case "eq":
+    case "ne":
+    case "gte":
+    case "gt":
+    case "lte":
+    case "lt":
+    case "like":
+    case "ilike":
+      const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
+      query.where(columnName, fn, cond.value);
+      break;
+    case "is-null":
+      query.whereNull(columnName);
+      break;
+    case "not-null":
+      query.whereNotNull(columnName);
+      break;
+    case "in":
+      query.whereIn(columnName, cond.value);
+      break;
+    case "@>":
+      query.where(columnName, "@>", cond.value);
+      break;
+    case "between":
+      const [min, max] = cond.value;
+      query.where(columnName, ">=", min);
+      query.where(columnName, "<=", max);
+      break;
+    case "pass":
+      break;
+    default:
+      assertNever(cond);
+  }
 }

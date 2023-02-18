@@ -1,21 +1,11 @@
-import { groupBy } from "joist-utils";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { FilterAndSettings } from "./EntityFilter";
 import { Operator, operators, opToFn } from "./EntityGraphQLFilter";
 import { EntityConstructor, entityLimit } from "./EntityManager";
 import { EntityMetadata, getMetadata, PolymorphicField } from "./EntityMetadata";
-import {
-  addTablePerClassJoinsAndClassTag,
-  asConcreteCstr,
-  Column,
-  getConstructorFromTaggedId,
-  maybeGetConstructorFromReference,
-  maybeResolveReferenceToId,
-  needsClassPerTableJoins,
-  parseEntityFilter,
-} from "./index";
-import { fail } from "./utils";
+import { Column, maybeGetConstructorFromReference, parseFindQuery } from "./index";
+import { assertNever, fail } from "./utils";
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -32,153 +22,72 @@ export function buildQuery<T extends Entity>(
   const meta = getMetadata(type);
   const { where, orderBy, limit, offset } = filter;
 
-  const parsed = parseEntityFilter(filter.where);
+  const parsed = parseFindQuery(meta, filter.where, filter.orderBy);
 
-  const aliases: Record<string, number> = {};
-  function getAlias(tableName: string): string {
-    const abbrev = abbreviation(tableName);
-    const i = aliases[abbrev] || 0;
-    aliases[abbrev] = i + 1;
-    return i === 0 ? abbrev : `${abbrev}${i}`;
-  }
+  const primary = parsed.tables.find((t) => t.join === "primary")!;
+  let query: Knex.QueryBuilder<any, any> = knex.from(`${primary.table} AS ${primary.alias}`);
 
-  const alias = getAlias(meta.tableName);
-  let query: Knex.QueryBuilder<any, any> = knex.select<unknown>(`${alias}.*`).from(`${meta.tableName} AS ${alias}`);
+  parsed.selects.forEach((s) => {
+    query.select(knex.raw(s));
+  });
 
-  // Define a function for recursively adding joins & filters
-  function addClauses(
-    meta: EntityMetadata<any>,
-    alias: string,
-    where: object | undefined,
-    orderBy: object | undefined,
-  ): void {
-    // Combine the where and orderBy keys so that we can add them to aliases as that same time
-    // Filter out undefined values as they should be ignored (for now?)
-    const keys = [
-      ...(where ? Object.keys(where).filter((key) => (where as any)[key] !== undefined) : []),
-      ...(orderBy ? Object.keys(orderBy).filter((key) => (orderBy as any)[key] !== undefined) : []),
-    ];
+  parsed.tables.forEach((t) => {
+    if (t.join === "left") {
+      query.leftOuterJoin(`${t.table} AS ${t.alias}`, t.col1, t.col2);
+    } else if (t.join !== "primary") {
+      query.join(`${t.table} AS ${t.alias}`, t.col1, t.col2);
+    }
+  });
 
-    keys.forEach((key) => {
-      const field = meta.allFields[key] ?? fail(`${key} not found`);
+  parsed.conditions.forEach(({ alias, column, cond }) => {
+    const columnName = `${alias}.${column}`;
+    switch (cond.kind) {
+      case "eq":
+      case "ne":
+      case "gte":
+      case "gt":
+      case "lte":
+      case "lt":
+      case "like":
+      case "ilike":
+        const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
+        query.where(columnName, fn, cond.value);
+        break;
+      case "is-null":
+        query.whereNull(columnName);
+        break;
+      case "not-null":
+        query.whereNotNull(columnName);
+        break;
+      case "in":
+        query.whereIn(columnName, cond.value);
+        break;
+      case "between":
+        const [min, max] = cond.value;
+        query.where(columnName, ">=", min);
+        query.where(columnName, "<=", max);
+        break;
+      case "pass":
+        break;
+      default:
+        assertNever(cond);
+    }
+  });
 
-      // We may/may not have a where clause or orderBy for this key, but we should have at least one of them.
-      const clause = where && (where as any)[key];
-      const hasClause = where && key in where;
-      const order = orderBy && (orderBy as any)[key];
-      const hasOrder = !!order;
+  // if (needsClassPerTableJoins(meta)) {
+  //   addTablePerClassJoinsAndClassTag(knex, meta, query, alias);
+  // }
 
-      if (field.kind === "poly") {
-        if (Array.isArray(clause)) {
-          // condition of `parent_foo_id in (1, 2, 3)` or `parent_bar_id in (4, 5, 6)`
-          const ids = clause.map((e) => maybeResolveReferenceToId(e)!);
-          const idsByConstructor = groupBy(ids, (id) => getConstructorFromTaggedId(id).name);
-          query = query.where((query) =>
-            field.serde.columns.reduce((query, { columnName, otherMetadata, mapToDb }) => {
-              const ids = idsByConstructor[otherMetadata().cstr.name];
-              return ids && ids.length > 0 ? query.orWhereIn(`${alias}.${columnName}`, ids.map(mapToDb)) : query;
-            }, query),
-          );
-        } else if (isEntity(clause) || typeof clause === "string") {
-          // condition of `parent_id = 1`
-          query = addPolyClause(query, alias, field, meta, clause);
-        } else if (clause === null) {
-          // where they are all null
-          query = field.components.reduce(
-            (query, component) =>
-              addPolyClause(
-                query,
-                alias,
-                field,
-                meta,
-                // Not really sure if this is safe, being lazy for now...
-                asConcreteCstr(component.otherMetadata().cstr),
-                clause,
-              ),
-            query,
-          );
-        } else if (typeof clause === "object" && Object.keys(clause).length === 1 && "ne" in clause) {
-          const { ne: value } = clause as { ne: string | Entity | undefined | null };
-          if (isEntity(value) || typeof value === "string") {
-            const column = polyColumnFor(meta, field, value);
-            query = query.where((query) =>
-              query
-                .whereNot(`${alias}.${column.columnName}`, column.mapToDb(value))
-                // for some reason whereNot excludes null values, so explicitly include them here
-                .orWhereNull(`${alias}.${column.columnName}`),
-            );
-          } else if (value === null) {
-            query = query.where((b) =>
-              field.components.reduce((b, { columnName }) => b.orWhereNotNull(`${alias}.${columnName}`), b),
-            );
-          }
-        }
-      } else if (field.kind === "o2o") {
-        // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
-        const otherMeta = field.otherMetadata();
-        const otherAlias = getAlias(otherMeta.tableName);
-        const otherColumn = otherMeta.fields[field.otherFieldName]!;
-
-        query = query.leftJoin(
-          `${otherMeta.tableName} AS ${otherAlias}`,
-          `${otherAlias}.${otherColumn.serde!.columns[0].columnName}`,
-          `${alias}.id`,
-        );
-
-        const [shouldAddClauses, _query] = hasClause
-          ? addForeignKeyClause(query, otherAlias, otherMeta.fields["id"]!.serde!.columns[0], clause)
-          : [false, query];
-        query = _query;
-
-        if (shouldAddClauses || hasOrder) {
-          addClauses(otherMeta, otherAlias, shouldAddClauses ? clause : undefined, hasOrder ? order : undefined);
-        }
-      } else if (field.kind === "m2o") {
-        const serde = (meta.fields[key] ?? fail(`${key} not found`)).serde!;
-        // TODO Currently hardcoded to single-column support; poly is handled above this
-        const column = serde.columns[0];
-
-        // Add `otherTable.column = ...` clause, unless `key` is not in `where`, i.e. there is only an orderBy for this fk
-        const [whereNeedsJoin, _query] = hasClause ? addForeignKeyClause(query, alias, column, clause) : [false, query];
-        query = _query;
-        if (whereNeedsJoin || hasOrder) {
-          // Add a join for this column
-          const otherMeta = field.otherMetadata();
-          const otherAlias = getAlias(otherMeta.tableName);
-          query = query.innerJoin(
-            `${otherMeta.tableName} AS ${otherAlias}`,
-            `${alias}.${column.columnName}`,
-            `${otherAlias}.id`,
-          );
-          // Then recurse to add its conditions to the query
-          addClauses(otherMeta, otherAlias, whereNeedsJoin ? clause : undefined, hasOrder ? order : undefined);
-        }
-      } else {
-        const serde = field.serde!;
-        // TODO Currently hardcoded to single-column support; poly is handled above this
-        const column = serde.columns[0];
-        // TODO Currently we only support base-type WHEREs if the sub-type is the main `em.find`
-        // const maybeBaseAlias = field.alias;
-        query = hasClause ? addPrimitiveClause(query, alias, column, clause) : query;
-        // This is not a foreign key column, so it'll have the primitive filters/order bys
-        if (order) {
-          query = query.orderBy(`${alias}.${column.columnName}`, order);
-        }
-      }
+  parsed.orderBys &&
+    parsed.orderBys.forEach(({ alias, column, order }) => {
+      query.orderBy(`${alias}.${column}`, order);
     });
-  }
-
-  addClauses(meta, alias, where as object, orderBy as object);
-
-  if (needsClassPerTableJoins(meta)) {
-    addTablePerClassJoinsAndClassTag(knex, meta, query, alias);
-  }
 
   // Even if they already added orders, add id as the last one to get deterministic output
-  query = query.orderBy(`${alias}.id`);
-  query = query.limit(limit || entityLimit);
+  query.orderBy(`${primary.alias}.id`);
+  query.limit(limit || entityLimit);
   if (offset) {
-    query = query.offset(offset);
+    query.offset(offset);
   }
 
   return query as Knex.QueryBuilder<{}, unknown[]>;

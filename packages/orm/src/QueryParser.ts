@@ -2,7 +2,7 @@ import { groupBy } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import { getConstructorFromTaggedId } from "./index";
+import { getConstructorFromTaggedId, needsClassPerTableJoins } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
@@ -23,7 +23,7 @@ interface PrimaryTable {
 }
 
 interface JoinTable {
-  join: "m2o" | "o2m" | "o2o";
+  join: "m2o" | "o2m" | "o2o" | "left";
   alias: string;
   table: string;
   col1: string;
@@ -39,12 +39,14 @@ interface ParsedOrderBy {
 }
 
 interface ParsedFindQuery {
+  selects: string[];
   tables: ParsedTable[];
   conditions: ParsedCondition[];
   orderBys?: ParsedOrderBy[];
 }
 
-export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy = {}): ParsedFindQuery {
+export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: any = {}): ParsedFindQuery {
+  const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ParsedCondition[] = [];
   const orderBys: ParsedOrderBy[] = [];
@@ -142,7 +144,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy =
                   const serde = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                   const f2 = { kind: "in", value: ids } as const;
                   applyDbFilter(f2, (v) => serde.mapToDb(v));
-                  // TODO ...should these be anded or ored?
+                  // TODO These should be ORd
                   conditions.push({ alias, column: comp.columnName, cond: f2 });
                 }
               });
@@ -196,12 +198,31 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy =
 
   // always add the main table
   const alias = getAlias(meta.tableName);
+  selects.push(`${alias}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
   }
 
-  const parsed = { tables, conditions };
+  if (needsClassPerTableJoins(meta)) {
+    // addTablePerClassJoinsAndClassTag()
+    meta.subTypes.forEach((st, i) => {
+      selects.push(`s${i}.*`);
+      tables.push({ alias: `s${i}`, table: st.tableName, join: "left", col1: `${alias}.id`, col2: `s${i}.id` });
+    });
+    // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
+    meta.baseTypes.forEach((bt, i) => {
+      selects.push(`b${i}.*`);
+      tables.push({ alias: `b${i}`, table: bt.tableName, join: "left", col1: `${alias}.id`, col2: `b${i}.id` });
+    });
+    selects.push(
+      `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
+        meta.type
+      }' END as __class`,
+    );
+  }
+
+  const parsed = { selects, tables, conditions };
   if (orderBys.length > 0) {
     Object.assign(parsed, { orderBys });
   }

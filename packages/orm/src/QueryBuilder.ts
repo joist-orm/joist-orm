@@ -62,6 +62,9 @@ export function buildQuery<T extends Entity>(
       case "in":
         query.whereIn(columnName, cond.value);
         break;
+      case "@>":
+        query.where(columnName, "@>", cond.value);
+        break;
       case "between":
         const [min, max] = cond.value;
         query.where(columnName, ">=", min);

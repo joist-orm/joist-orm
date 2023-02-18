@@ -2,7 +2,7 @@ import { groupBy } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import { OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import { getConstructorFromTaggedId, needsClassPerTableJoins } from "./index";
+import { Column, getConstructorFromTaggedId, needsClassPerTableJoins } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
@@ -10,7 +10,12 @@ import { assertNever, fail } from "./utils";
 // I want a list of conditions
 // I want a list of order bys
 
-interface ParsedCondition {
+interface ExpressionCondition {
+  op: "and" | "or";
+  conditions: (ExpressionCondition | ColumnCondition)[];
+}
+
+interface ColumnCondition {
   alias: string;
   column: string;
   cond: ParsedValueFilter<any>;
@@ -41,14 +46,14 @@ interface ParsedOrderBy {
 interface ParsedFindQuery {
   selects: string[];
   tables: ParsedTable[];
-  conditions: ParsedCondition[];
+  conditions: ColumnCondition[];
   orderBys?: ParsedOrderBy[];
 }
 
 export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: any = {}): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
-  const conditions: ParsedCondition[] = [];
+  const conditions: ColumnCondition[] = [];
   const orderBys: ParsedOrderBy[] = [];
 
   const aliases: Record<string, number> = {};
@@ -88,9 +93,8 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const filter = parseValueFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
-          applyDbFilter(filter, (v) => column.mapToDb(v));
           if (filter.kind !== "pass") {
-            conditions.push({ alias, column: column.columnName, cond: filter });
+            conditions.push({ alias, column: column.columnName, cond: applyDbFilter(column, filter) });
           }
         } else if (field.kind === "m2o") {
           // Probe the filter and see if it's just an id, if so we can avoid the join
@@ -109,8 +113,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
               (ef.subFilter as any)[key],
             );
           } else {
-            applyDbFilter(f, (v) => column.mapToDb(v));
-            conditions.push({ alias, column: column.columnName, cond: f });
+            conditions.push({ alias, column: column.columnName, cond: applyDbFilter(column, f) });
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter((ef.subFilter as any)[key]);
@@ -126,9 +129,8 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
                 field.components.find(
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
                 ) || fail(`Could not find component for ${f.value}`);
-              const serde = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              applyDbFilter(f, (v) => serde.mapToDb(v));
-              conditions.push({ alias, column: comp.columnName, cond: f });
+              const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+              conditions.push({ alias, column: comp.columnName, cond: applyDbFilter(column, f) });
             } else if (f.kind === "is-null") {
               // Add a condition for every component
               // TODO ...should these be anded or ored?
@@ -141,11 +143,13 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
               field.components.forEach((comp) => {
                 const ids = idsByConstructor[comp.otherMetadata().cstr.name];
                 if (ids && ids.length > 0) {
-                  const serde = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                  const f2 = { kind: "in", value: ids } as const;
-                  applyDbFilter(f2, (v) => serde.mapToDb(v));
+                  const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                   // TODO These should be ORd
-                  conditions.push({ alias, column: comp.columnName, cond: f2 });
+                  conditions.push({
+                    alias,
+                    column: comp.columnName,
+                    cond: applyDbFilter(column, { kind: "in", value: ids } as const),
+                  });
                 }
               });
             } else {
@@ -163,8 +167,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       });
     } else {
       const column = meta.fields["id"].serde!.columns[0];
-      applyDbFilter(ef, (v) => column.mapToDb(v));
-      conditions.push({ alias, column: "id", cond: ef });
+      conditions.push({ alias, column: "id", cond: applyDbFilter(column, ef) });
     }
   }
 
@@ -297,6 +300,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter {
 export type ParsedValueFilter<V> =
   | { kind: "eq"; value: V }
   | { kind: "in"; value: V[] }
+  | { kind: "@>"; value: V[] }
   | { kind: "gt"; value: V }
   | { kind: "gte"; value: V }
   | { kind: "ne"; value: V }
@@ -324,13 +328,13 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
       const key = keys[0];
       switch (key) {
         case "eq":
-          if (filter[key] === null) {
+          if (filter[key] === null || filter[key] === undefined) {
             return { kind: "is-null" };
           } else {
             return { kind: "eq", value: filter[key] };
           }
         case "ne":
-          if (filter[key] === null) {
+          if (filter[key] === null || filter[key] === undefined) {
             return { kind: "not-null" };
           } else {
             return { kind: "ne", value: filter[key] ?? null };
@@ -364,7 +368,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
   }
 }
 
-function applyDbFilter(filter: ParsedValueFilter<any>, fn: (value: any) => any): void {
+function applyDbFilter(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   switch (filter.kind) {
     case "eq":
     case "gt":
@@ -374,21 +378,30 @@ function applyDbFilter(filter: ParsedValueFilter<any>, fn: (value: any) => any):
     case "lte":
     case "like":
     case "ilike":
-      filter.value = fn(filter.value);
-      break;
+      filter.value = column.mapToDb(filter.value);
+      return filter;
     case "pass":
-      break;
+      return filter;
+    case "@>":
     case "in":
-      filter.value = filter.value.map(fn);
-      break;
+      if (column.isArray) {
+        // Arrays need a special operator
+        return {
+          kind: "@>",
+          value: column.mapToDb(filter.value),
+        };
+      } else {
+        filter.value = filter.value.map((v) => column.mapToDb(v));
+      }
+      return filter;
     case "between":
-      filter.value[0] = fn(filter.value[0]);
-      filter.value[1] = fn(filter.value[1]);
-      break;
+      filter.value[0] = column.mapToDb(filter.value[0]);
+      filter.value[1] = column.mapToDb(filter.value[1]);
+      return filter;
     case "is-null":
     case "not-null":
-      break;
+      return filter;
     default:
-      assertNever(filter);
+      throw assertNever(filter);
   }
 }

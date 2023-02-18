@@ -140,7 +140,7 @@ describe("EntityManager.queries", () => {
     expect(parseFindQuery(am, where)).toEqual({
       selects: ["a.*"],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "last_name", cond: { kind: "ne", value: null } }],
+      conditions: [{ alias: "a", column: "last_name", cond: { kind: "not-null" } }],
     });
   });
 

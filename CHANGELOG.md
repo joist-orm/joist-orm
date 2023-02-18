@@ -1,3 +1,10 @@
+## [1.50.6](https://github.com/stephenh/joist-ts/compare/v1.50.5...v1.50.6) (2023-02-18)
+
+
+### Bug Fixes
+
+* treat tsvector columns as text ([#532](https://github.com/stephenh/joist-ts/issues/532)) ([f3e6c44](https://github.com/stephenh/joist-ts/commit/f3e6c445e0c5d39daed8316356affebc9eb1fc05))
+
 ## [1.50.5](https://github.com/stephenh/joist-ts/compare/v1.50.4...v1.50.5) (2023-02-16)
 
 

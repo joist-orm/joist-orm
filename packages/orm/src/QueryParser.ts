@@ -6,16 +6,12 @@ import { Column, getConstructorFromTaggedId, needsClassPerTableJoins } from "./i
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
-// I want a list of joins (with aliases as appropriate)
-// I want a list of conditions
-// I want a list of order bys
-
-interface ExpressionCondition {
+export interface ExpressionCondition {
   op: "and" | "or";
   conditions: (ExpressionCondition | ColumnCondition)[];
 }
 
-interface ColumnCondition {
+export interface ColumnCondition {
   alias: string;
   column: string;
   cond: ParsedValueFilter<any>;
@@ -43,17 +39,25 @@ interface ParsedOrderBy {
   order: OrderBy;
 }
 
+/** The result of parsing an `em.find` filter. */
 interface ParsedFindQuery {
   selects: string[];
+  /** The primary table plus any joins. */
   tables: ParsedTable[];
+  /** Simple conditions that are ANDd together. */
   conditions: ColumnCondition[];
+  /** Any optional complex conditions that will be ANDd with the simple conditions. */
+  complexConditions?: ExpressionCondition[];
+  /** Any optional orders to add before the default 'order by id'. */
   orderBys?: ParsedOrderBy[];
 }
 
+/** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
 export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: any = {}): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
+  const complexConditions: ExpressionCondition[] = [];
   const orderBys: ParsedOrderBy[] = [];
 
   const aliases: Record<string, number> = {};
@@ -140,18 +144,12 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
             } else if (f.kind === "in") {
               // Split up the ids by constructor
               const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
-              field.components.forEach((comp) => {
-                const ids = idsByConstructor[comp.otherMetadata().cstr.name];
-                if (ids && ids.length > 0) {
-                  const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                  // TODO These should be ORd
-                  conditions.push({
-                    alias,
-                    column: comp.columnName,
-                    cond: applyDbFilter(column, { kind: "in", value: ids } as const),
-                  });
-                }
+              // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
+              const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
+                const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
+                return { alias, column: column.columnName, cond: applyDbFilter(column, { kind: "in", value: ids }) };
               });
+              complexConditions.push({ op: "or", conditions });
             } else {
               throw new Error(`Filters on polys for ${f.kind} are not supported`);
             }
@@ -228,6 +226,9 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
   const parsed = { selects, tables, conditions };
   if (orderBys.length > 0) {
     Object.assign(parsed, { orderBys });
+  }
+  if (complexConditions.length > 0) {
+    Object.assign(parsed, { complexConditions });
   }
   return parsed;
 }

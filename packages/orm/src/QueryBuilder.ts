@@ -4,8 +4,9 @@ import { FilterAndSettings } from "./EntityFilter";
 import { opToFn } from "./EntityGraphQLFilter";
 import { EntityConstructor, entityLimit } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { parseFindQuery } from "./index";
+import { ColumnCondition, ExpressionCondition, parseFindQuery } from "./index";
 import { assertNever, fail } from "./utils";
+import QueryBuilder = Knex.QueryBuilder;
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -39,7 +40,8 @@ export function buildQuery<T extends Entity>(
     }
   });
 
-  parsed.conditions.forEach(({ alias, column, cond }) => {
+  function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
+    const { alias, column, cond } = cc;
     const columnName = `${alias}.${column}`;
     switch (cond.kind) {
       case "eq":
@@ -75,11 +77,24 @@ export function buildQuery<T extends Entity>(
       default:
         assertNever(cond);
     }
-  });
+  }
 
-  // if (needsClassPerTableJoins(meta)) {
-  //   addTablePerClassJoinsAndClassTag(knex, meta, query, alias);
-  // }
+  parsed.conditions.forEach((c) => addColumnCondition(query, c));
+
+  function addComplexCondition(complex: ExpressionCondition): void {
+    query.where((q) => {
+      const op = complex.op === "and" ? "andWhere" : "orWhere";
+      complex.conditions.forEach((c) => {
+        if ("op" in c) {
+          throw new Error("Not implemented");
+        } else {
+          q[op]((q) => addColumnCondition(q, c));
+        }
+      });
+    });
+  }
+
+  parsed.complexConditions && parsed.complexConditions.forEach(addComplexCondition);
 
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {

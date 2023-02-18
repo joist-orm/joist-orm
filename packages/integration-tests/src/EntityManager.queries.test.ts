@@ -1241,10 +1241,17 @@ describe("EntityManager.queries", () => {
     expect(c2.text).toEqual("t2");
 
     expect(parseFindQuery(cm, where)).toEqual({
+      selects: ["c.*"],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
-      conditions: [
-        { alias: "c", column: "parent_book_id", cond: { kind: "in", value: [1] } },
-        { alias: "c", column: "parent_book_review_id", cond: { kind: "in", value: [1] } },
+      conditions: [],
+      complexConditions: [
+        {
+          op: "or",
+          conditions: [
+            { alias: "c", column: "parent_book_id", cond: { kind: "in", value: [1] } },
+            { alias: "c", column: "parent_book_review_id", cond: { kind: "in", value: [1] } },
+          ],
+        },
       ],
     });
   });

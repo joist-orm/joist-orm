@@ -111,6 +111,7 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
     case "character varying":
     case "varchar":
     case "uuid":
+    case "tsvector":
       return "string";
     case "timestamp with time zone":
     case "timestamp without time zone":

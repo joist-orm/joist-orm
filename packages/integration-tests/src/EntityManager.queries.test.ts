@@ -569,7 +569,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", expect.anything()],
+      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       conditions: [{ alias: "p", column: "id", cond: { kind: "in", value: [1, 2] } }],
     });
@@ -585,7 +585,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", expect.anything()],
+      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
         { alias: "s0", table: "large_publishers", join: "left", col1: "p.id", col2: "s0.id" },
@@ -605,7 +605,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", expect.anything()],
+      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       conditions: [{ alias: "p", column: "id", cond: { kind: "in", value: [1, 2] } }],
     });
@@ -626,6 +626,7 @@ describe("EntityManager.queries", () => {
         "p.*",
         "s0.*",
         "s1.*",
+        "p.id as id",
         "CASE WHEN s0.id IS NOT NULL THEN 'LargePublisher' WHEN s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class",
       ],
       tables: [
@@ -648,7 +649,7 @@ describe("EntityManager.queries", () => {
     expect(pubs[0].name).toEqual("p1");
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", expect.anything()],
+      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
         { alias: "s0", table: "large_publishers", join: "left", col1: "p.id", col2: "s0.id" },

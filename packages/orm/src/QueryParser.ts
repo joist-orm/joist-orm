@@ -216,6 +216,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       selects.push(`b${i}.*`);
       tables.push({ alias: `b${i}`, table: bt.tableName, join: "left", col1: `${alias}.id`, col2: `b${i}.id` });
     });
+    selects.push(`${alias}.id as id`);
     selects.push(
       `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
         meta.type

@@ -713,7 +713,7 @@ describe("EntityManager", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `select "p".*, "s0".*, "s1".*, "p"."id" as "id",`,
+        `select p.*, s0.*, s1.*, p.id as id,`,
         ` CASE WHEN s0.id IS NOT NULL THEN 'LargePublisher' WHEN s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
         ` from "publishers" as "p"`,
         ` left outer join "large_publishers" as "s0" on "p"."id" = "s0"."id"`,
@@ -741,7 +741,7 @@ describe("EntityManager", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $2 and "a"."id" = $3 order by "a"."id" ASC, "a"."id" ASC, "a"."id" asc limit $4) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $5 and "a"."id" = $6 order by "a"."id" DESC, "a"."id" DESC, "a"."id" asc limit $7) order by "__tag" asc",
+        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select a.*, 0 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $2 order by "a"."id" ASC, "a"."id" asc limit $3) union all (select a.*, 1 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $4 order by "a"."id" DESC, "a"."id" asc limit $5) order by "__tag" asc",
       ]
     `);
     // And the results are the expected reverse of each other

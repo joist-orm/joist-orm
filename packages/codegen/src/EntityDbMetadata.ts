@@ -72,7 +72,8 @@ export type DatabaseColumnType =
   | "timestamp with time zone"
   | "timestamp without time zone"
   | "date"
-  | "jsonb";
+  | "jsonb"
+  | "tsvector";
 
 /**
  * A logical entity field.

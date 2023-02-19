@@ -98,7 +98,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
           const filter = parseValueFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
           if (filter.kind !== "pass") {
-            conditions.push({ alias, column: column.columnName, cond: applyDbFilter(column, filter) });
+            conditions.push({ alias, column: column.columnName, cond: mapToDb(column, filter) });
           }
         } else if (field.kind === "m2o") {
           // Probe the filter and see if it's just an id, if so we can avoid the join
@@ -117,7 +117,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
               (ef.subFilter as any)[key],
             );
           } else {
-            conditions.push({ alias, column: column.columnName, cond: applyDbFilter(column, f) });
+            conditions.push({ alias, column: column.columnName, cond: mapToDb(column, f) });
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter((ef.subFilter as any)[key]);
@@ -134,7 +134,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              conditions.push({ alias, column: comp.columnName, cond: applyDbFilter(column, f) });
+              conditions.push({ alias, column: comp.columnName, cond: mapToDb(column, f) });
             } else if (f.kind === "is-null") {
               // Add a condition for every component
               // TODO ...should these be anded or ored?
@@ -147,7 +147,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
               // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
               const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
                 const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
-                return { alias, column: column.columnName, cond: applyDbFilter(column, { kind: "in", value: ids }) };
+                return { alias, column: column.columnName, cond: mapToDb(column, { kind: "in", value: ids }) };
               });
               complexConditions.push({ op: "or", conditions });
             } else {
@@ -165,7 +165,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       });
     } else {
       const column = meta.fields["id"].serde!.columns[0];
-      conditions.push({ alias, column: "id", cond: applyDbFilter(column, ef) });
+      conditions.push({ alias, column: "id", cond: mapToDb(column, ef) });
     }
   }
 
@@ -370,7 +370,8 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
   }
 }
 
-function applyDbFilter(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
+/** Converts domain-level values like string ids/enums into their db equivalent. */
+function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   switch (filter.kind) {
     case "eq":
     case "gt":

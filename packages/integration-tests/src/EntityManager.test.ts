@@ -713,11 +713,11 @@ describe("EntityManager", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `select p.*, s0.*, s1.*, p.id as id,`,
-        ` CASE WHEN s0.id IS NOT NULL THEN 'LargePublisher' WHEN s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
+        `select p.*, p_s0.*, p_s1.*, p.id as id,`,
+        ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
         ` from "publishers" as "p"`,
-        ` left outer join "large_publishers" as "s0" on "p"."id" = "s0"."id"`,
-        ` left outer join "small_publishers" as "s1" on "p"."id" = "s1"."id"`,
+        ` left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id"`,
+        ` left outer join "small_publishers" as "p_s1" on "p"."id" = "p_s1"."id"`,
         ` where "p"."id" = $1 order by "p"."id" asc limit $2`,
       ].join(""),
     ]);

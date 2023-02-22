@@ -90,7 +90,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
 
     // Maybe only do this if we're the primary, or have a field that needs it?
     if (needsClassPerTableJoins(meta)) {
-      addTablePerClassJoinsAndClassTag(selects, tables, meta, alias);
+      addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, join === "primary");
     }
 
     if (ef.kind === "pass") {
@@ -404,19 +404,8 @@ function addTablePerClassJoinsAndClassTag(
   tables: ParsedTable[],
   meta: EntityMetadata<any>,
   alias: string,
+  isPrimary: boolean,
 ): void {
-  // When `.load(Publisher)` is called, join in sub tables like `SmallPublisher` and `LargePublisher`
-  meta.subTypes.forEach((st, i) => {
-    selects.push(`${alias}_s${i}.*`);
-    tables.push({
-      alias: `${alias}_s${i}`,
-      table: st.tableName,
-      join: "left",
-      col1: `${alias}.id`,
-      col2: `${alias}_s${i}.id`,
-    });
-  });
-
   // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
   meta.baseTypes.forEach((bt, i) => {
     selects.push(`${alias}_b${i}.*`);
@@ -428,11 +417,30 @@ function addTablePerClassJoinsAndClassTag(
       col2: `${alias}_b${i}.id`,
     });
   });
-  selects.push(`${alias}.id as id`);
 
-  // If our meta has no subtypes, we're a left type and don't need a __class
-  const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);
-  if (cases.length > 0) {
-    selects.push(`CASE ${cases.join(" ")} ELSE '${meta.type}' END as __class`);
+  // We always join in the base table in case a query happens to use
+  // it as a filter, but we only need to do the subtype joins + selects
+  // if this is the primary table
+  if (isPrimary) {
+    // When `.load(Publisher)` is called, join in sub tables like `SmallPublisher` and `LargePublisher`
+    meta.subTypes.forEach((st, i) => {
+      selects.push(`${alias}_s${i}.*`);
+      tables.push({
+        alias: `${alias}_s${i}`,
+        table: st.tableName,
+        join: "left",
+        col1: `${alias}.id`,
+        col2: `${alias}_s${i}.id`,
+      });
+    });
+
+    // Nominate a specific `id` column to avoid ambiguity
+    selects.push(`${alias}.id as id`);
+
+    // If our meta has no subtypes, we're a left type and don't need a __class
+    const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);
+    if (cases.length > 0) {
+      selects.push(`CASE ${cases.join(" ")} ELSE '${meta.type}' END as __class`);
+    }
   }
 }

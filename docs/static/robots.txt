@@ -1,0 +1,3 @@
+User-agent: *
+Disallow:
+Sitemap: https://joist-orm.io/sitemap.xml

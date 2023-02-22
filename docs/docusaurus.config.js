@@ -46,6 +46,7 @@ const config = {
           { href: "https://joist-ts.slack.com/ssb/redirect", label: "Slack", position: "right" },
         ],
       },
+      metadata: [{ name: "keywords", content: "TypeScript, ORM, Reactivity, Domain Driven Design" }],
       footer: {
         style: "dark",
         links: [

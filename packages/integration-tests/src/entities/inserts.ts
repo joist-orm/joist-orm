@@ -89,8 +89,9 @@ export async function insertLargePublisher(row: {
   group_id?: number;
   country?: string;
 }) {
-  await testDriver.insert("publishers", row);
-  await testDriver.insert("large_publishers", { id: row.id ?? 1, country: row.country ?? "country" });
+  const { country = "country", ...others } = row;
+  await testDriver.insert("publishers", others);
+  await testDriver.insert("large_publishers", { id: row.id ?? 1, country });
 }
 
 export function insertTag(row: { id?: number; name: string }) {

@@ -98,7 +98,11 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
           const filter = parseValueFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
           if (filter.kind !== "pass") {
-            conditions.push({ alias, column: column.columnName, cond: mapToDb(column, filter) });
+            conditions.push({
+              alias: `${alias}${field.aliasSuffix}`,
+              column: column.columnName,
+              cond: mapToDb(column, filter),
+            });
           }
         } else if (field.kind === "m2o") {
           // Probe the filter and see if it's just an id, if so we can avoid the join
@@ -206,22 +210,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
   }
 
   if (needsClassPerTableJoins(meta)) {
-    // addTablePerClassJoinsAndClassTag()
-    meta.subTypes.forEach((st, i) => {
-      selects.push(`s${i}.*`);
-      tables.push({ alias: `s${i}`, table: st.tableName, join: "left", col1: `${alias}.id`, col2: `s${i}.id` });
-    });
-    // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
-    meta.baseTypes.forEach((bt, i) => {
-      selects.push(`b${i}.*`);
-      tables.push({ alias: `b${i}`, table: bt.tableName, join: "left", col1: `${alias}.id`, col2: `b${i}.id` });
-    });
-    selects.push(`${alias}.id as id`);
-    selects.push(
-      `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
-        meta.type
-      }' END as __class`,
-    );
+    addTablePerClassJoinsAndClassTag(selects, tables, meta, alias);
   }
 
   const parsed = { selects, tables, conditions };
@@ -406,5 +395,43 @@ function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFil
       return filter;
     default:
       throw assertNever(filter);
+  }
+}
+
+function addTablePerClassJoinsAndClassTag(
+  selects: string[],
+  tables: ParsedTable[],
+  meta: EntityMetadata<any>,
+  alias: string,
+): void {
+  // When `.load(Publisher)` is called, join in sub tables like `SmallPublisher` and `LargePublisher`
+  meta.subTypes.forEach((st, i) => {
+    selects.push(`${alias}_s${i}.*`);
+    tables.push({
+      alias: `${alias}_s${i}`,
+      table: st.tableName,
+      join: "left",
+      col1: `${alias}.id`,
+      col2: `${alias}_s${i}.id`,
+    });
+  });
+
+  // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
+  meta.baseTypes.forEach((bt, i) => {
+    selects.push(`${alias}_b${i}.*`);
+    tables.push({
+      alias: `${alias}_b${i}`,
+      table: bt.tableName,
+      join: "left",
+      col1: `${alias}.id`,
+      col2: `${alias}_b${i}.id`,
+    });
+  });
+  selects.push(`${alias}.id as id`);
+
+  // If our meta has no subtypes, we're a left type and don't need a __class
+  const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);
+  if (cases.length > 0) {
+    selects.push(`CASE ${cases.join(" ")} ELSE '${meta.type}' END as __class`);
   }
 }

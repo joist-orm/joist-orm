@@ -269,16 +269,25 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     const abbr = `${abbreviation(m.tableName)}0`;
     // This is basically m.fields.mapValues to assign the primary alias
     m.allFields = Object.fromEntries(
-      Object.entries(m.fields).map(([name, field]) => [name, { ...field, alias: abbr }]),
+      Object.entries(m.fields).map(([name, field]) => [name, { ...field, aliasSuffix: "" }]),
     );
-    // Only supporting one level of inheritance for now
+    // Only supporting one level of inheritance for now, ideally would loop `while current !== null`
     if (m.baseType) {
       const b = metaByName[m.baseType];
       m.baseTypes.push(b);
       b.subTypes.push(m);
+      // Add all the base's fields to our allFields, with the base's aliasSuffix, so that in
+      // `WHERE` clauses for `small_publishers`, we'll have joined in `publishers` with an
+      // alias + this alias suffix, so can `WHERE` on `${alias}_b0.name = 'foo'` and get
+      // to the correct table.
+      //
+      // Note that we don't need to do this for subtypes, because `em.find` queries aren't
+      // allowed to `WHERE` against columns in their subtypes. Maybe someday we can support
+      // that like the GraphQL `...on SmallPublisher` syntax, like conditional/subtype-specific
+      // clauses.
       Object.entries(b.fields).forEach(([name, field]) => {
         // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
-        m.allFields[name] = { ...field, alias: "b0" };
+        m.allFields[name] = { ...field, aliasSuffix: "_b0" };
       });
     }
   });

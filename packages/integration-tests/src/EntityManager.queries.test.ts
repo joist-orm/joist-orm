@@ -569,7 +569,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
+      selects: ["p.*", "p_s0.*", "p_s1.*", "p.id as id", expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       conditions: [{ alias: "p", column: "id", cond: { kind: "in", value: [1, 2] } }],
     });
@@ -585,11 +585,11 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
+      selects: ["p.*", "p_s0.*", "p_s1.*", "p.id as id", expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "s0", table: "large_publishers", join: "left", col1: "p.id", col2: "s0.id" },
-        { alias: "s1", table: "small_publishers", join: "left", col1: "p.id", col2: "s1.id" },
+        { alias: "p_s0", table: "large_publishers", join: "left", col1: "p.id", col2: "p_s0.id" },
+        { alias: "p_s1", table: "small_publishers", join: "left", col1: "p.id", col2: "p_s1.id" },
       ],
       conditions: [{ alias: "p", column: "id", cond: { kind: "in", value: [1, 2] } }],
     });
@@ -605,7 +605,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
+      selects: ["p.*", "p_s0.*", "p_s1.*", "p.id as id", expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       conditions: [{ alias: "p", column: "id", cond: { kind: "in", value: [1, 2] } }],
     });
@@ -624,15 +624,15 @@ describe("EntityManager.queries", () => {
     expect(parseFindQuery(pm, where)).toEqual({
       selects: [
         "p.*",
-        "s0.*",
-        "s1.*",
+        "p_s0.*",
+        "p_s1.*",
         "p.id as id",
-        "CASE WHEN s0.id IS NOT NULL THEN 'LargePublisher' WHEN s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class",
+        "CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class",
       ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "s0", table: "large_publishers", join: "left", col1: "p.id", col2: "s0.id" },
-        { alias: "s1", table: "small_publishers", join: "left", col1: "p.id", col2: "s1.id" },
+        { alias: "p_s0", table: "large_publishers", join: "left", col1: "p.id", col2: "p_s0.id" },
+        { alias: "p_s1", table: "small_publishers", join: "left", col1: "p.id", col2: "p_s1.id" },
       ],
       conditions: [{ alias: "p", column: "size_id", cond: { kind: "eq", value: 2 } }],
     });
@@ -649,11 +649,11 @@ describe("EntityManager.queries", () => {
     expect(pubs[0].name).toEqual("p1");
 
     expect(parseFindQuery(pm, where)).toEqual({
-      selects: ["p.*", "s0.*", "s1.*", "p.id as id", expect.anything()],
+      selects: ["p.*", "p_s0.*", "p_s1.*", "p.id as id", expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "s0", table: "large_publishers", join: "left", col1: "p.id", col2: "s0.id" },
-        { alias: "s1", table: "small_publishers", join: "left", col1: "p.id", col2: "s1.id" },
+        { alias: "p_s0", table: "large_publishers", join: "left", col1: "p.id", col2: "p_s0.id" },
+        { alias: "p_s1", table: "small_publishers", join: "left", col1: "p.id", col2: "p_s1.id" },
       ],
       conditions: [{ alias: "p", column: "size_id", cond: { kind: "ne", value: 2 } }],
     });

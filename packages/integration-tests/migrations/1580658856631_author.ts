@@ -142,6 +142,8 @@ export function up(b: MigrationBuilder): void {
     ignore_worst_book_id: foreignKey("books", { notNull: false, unique: true }),
     // for testing large o2ms
     group_id: foreignKey("publisher_groups", { notNull: false }),
+    // for testing `em.find` filtered on base table columns
+    favorite_large_publisher_id: foreignKey("large_publishers", { notNull: false }),
   });
 
   // for testing a required m2o -> o2o

@@ -89,8 +89,9 @@ export async function insertLargePublisher(row: {
   group_id?: number;
   country?: string;
 }) {
-  await testDriver.insert("publishers", row);
-  await testDriver.insert("large_publishers", { id: row.id ?? 1, country: row.country ?? "country" });
+  const { country = "country", ...others } = row;
+  await testDriver.insert("publishers", others);
+  await testDriver.insert("large_publishers", { id: row.id ?? 1, country });
 }
 
 export function insertTag(row: { id?: number; name: string }) {
@@ -128,7 +129,12 @@ export function insertImage(row: {
   return testDriver.insert("images", row);
 }
 
-export function insertCritic(row: { id?: number; name: string; group_id?: number }) {
+export function insertCritic(row: {
+  id?: number;
+  name: string;
+  group_id?: number;
+  favorite_large_publisher_id?: number;
+}) {
   return testDriver.insert("critics", row);
 }
 export function countOfBooks() {

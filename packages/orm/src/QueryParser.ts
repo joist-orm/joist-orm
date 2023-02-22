@@ -88,6 +88,11 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
     }
 
+    // Maybe only do this if we're the primary, or have a field that needs it?
+    if (needsClassPerTableJoins(meta)) {
+      addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, join === "primary");
+    }
+
     if (ef.kind === "pass") {
       //
     } else if (ef.kind === "join") {
@@ -98,7 +103,11 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
           const filter = parseValueFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
           if (filter.kind !== "pass") {
-            conditions.push({ alias, column: column.columnName, cond: mapToDb(column, filter) });
+            conditions.push({
+              alias: `${alias}${field.aliasSuffix}`,
+              column: column.columnName,
+              cond: mapToDb(column, filter),
+            });
           }
         } else if (field.kind === "m2o") {
           // Probe the filter and see if it's just an id, if so we can avoid the join
@@ -203,25 +212,6 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
-  }
-
-  if (needsClassPerTableJoins(meta)) {
-    // addTablePerClassJoinsAndClassTag()
-    meta.subTypes.forEach((st, i) => {
-      selects.push(`s${i}.*`);
-      tables.push({ alias: `s${i}`, table: st.tableName, join: "left", col1: `${alias}.id`, col2: `s${i}.id` });
-    });
-    // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
-    meta.baseTypes.forEach((bt, i) => {
-      selects.push(`b${i}.*`);
-      tables.push({ alias: `b${i}`, table: bt.tableName, join: "left", col1: `${alias}.id`, col2: `b${i}.id` });
-    });
-    selects.push(`${alias}.id as id`);
-    selects.push(
-      `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
-        meta.type
-      }' END as __class`,
-    );
   }
 
   const parsed = { selects, tables, conditions };
@@ -406,5 +396,51 @@ function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFil
       return filter;
     default:
       throw assertNever(filter);
+  }
+}
+
+function addTablePerClassJoinsAndClassTag(
+  selects: string[],
+  tables: ParsedTable[],
+  meta: EntityMetadata<any>,
+  alias: string,
+  isPrimary: boolean,
+): void {
+  // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
+  meta.baseTypes.forEach((bt, i) => {
+    selects.push(`${alias}_b${i}.*`);
+    tables.push({
+      alias: `${alias}_b${i}`,
+      table: bt.tableName,
+      join: "left",
+      col1: `${alias}.id`,
+      col2: `${alias}_b${i}.id`,
+    });
+  });
+
+  // We always join in the base table in case a query happens to use
+  // it as a filter, but we only need to do the subtype joins + selects
+  // if this is the primary table
+  if (isPrimary) {
+    // When `.load(Publisher)` is called, join in sub tables like `SmallPublisher` and `LargePublisher`
+    meta.subTypes.forEach((st, i) => {
+      selects.push(`${alias}_s${i}.*`);
+      tables.push({
+        alias: `${alias}_s${i}`,
+        table: st.tableName,
+        join: "left",
+        col1: `${alias}.id`,
+        col2: `${alias}_s${i}.id`,
+      });
+    });
+
+    // Nominate a specific `id` column to avoid ambiguity
+    selects.push(`${alias}.id as id`);
+
+    // If our meta has no subtypes, we're a left type and don't need a __class
+    const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);
+    if (cases.length > 0) {
+      selects.push(`CASE ${cases.join(" ")} ELSE '${meta.type}' END as __class`);
+    }
   }
 }

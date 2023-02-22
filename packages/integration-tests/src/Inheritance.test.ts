@@ -1,5 +1,6 @@
 import {
   insertAuthor,
+  insertCritic,
   insertLargePublisher,
   insertPublisher,
   insertPublisherGroup,
@@ -11,6 +12,7 @@ import {
 import { zeroTo } from "@src/utils";
 import {
   Author,
+  Critic,
   LargePublisher,
   newAuthor,
   newLargePublisher,
@@ -254,7 +256,7 @@ describe("Inheritance", () => {
     expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
   });
 
-  it.skip("can find entities from the sub type", async () => {
+  it("can find entities from the sub type", async () => {
     await insertPublisher({ name: "sp1" });
     await insertLargePublisher({ id: 2, name: "lp1", country: "country" });
 
@@ -263,6 +265,21 @@ describe("Inheritance", () => {
 
     expect(sp).toBeInstanceOf(SmallPublisher);
     expect(sp).toMatchEntity({ name: "sp1", city: "city" });
+  });
+
+  it("can find entities from the sub type via a join", async () => {
+    await insertPublisher({ name: "sp1" });
+    await insertLargePublisher({ id: 2, name: "lp1", country: "country" });
+    await insertCritic({ name: "c1", favorite_large_publisher_id: 2 });
+
+    const em = newEntityManager();
+    const [critic] = await em.find(
+      Critic,
+      { favoriteLargePublisher: { name: "lp1", country: "country" } },
+      { populate: "favoriteLargePublisher" },
+    );
+
+    expect(critic.favoriteLargePublisher.get).toBeInstanceOf(LargePublisher);
   });
 
   it("can load through a subtype", async () => {

@@ -19,6 +19,7 @@ type LargePublisher {
   comments: [Comment!]!
   images: [Image!]!
   tags: [Tag!]!
+  critics: [Critic!]!
 }
 
 input SaveLargePublisherInput {

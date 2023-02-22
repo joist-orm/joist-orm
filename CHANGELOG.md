@@ -1,3 +1,10 @@
+# [1.51.0](https://github.com/stephenh/joist-ts/compare/v1.50.6...v1.51.0) (2023-02-22)
+
+
+### Features
+
+* Refactor QueryBuilder to use QueryParser ([#531](https://github.com/stephenh/joist-ts/issues/531)) ([61ca6ce](https://github.com/stephenh/joist-ts/commit/61ca6ce5bf43e7835ef6d066a9c4b6af6ce68921))
+
 ## [1.50.6](https://github.com/stephenh/joist-ts/compare/v1.50.5...v1.50.6) (2023-02-18)
 
 

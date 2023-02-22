@@ -1,3 +1,10 @@
+# [1.52.0](https://github.com/stephenh/joist-ts/compare/v1.51.0...v1.52.0) (2023-02-22)
+
+
+### Features
+
+* Support filtering on base fields ([#534](https://github.com/stephenh/joist-ts/issues/534)) ([8cb64b0](https://github.com/stephenh/joist-ts/commit/8cb64b09615d58b6ca264a30a34485d73dbbc68c))
+
 # [1.51.0](https://github.com/stephenh/joist-ts/compare/v1.50.6...v1.51.0) (2023-02-22)
 
 

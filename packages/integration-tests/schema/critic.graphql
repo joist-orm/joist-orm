@@ -4,6 +4,7 @@ type Critic {
   createdAt: Date!
   updatedAt: Date!
   group: PublisherGroup
+  favoriteLargePublisher: LargePublisher
 }
 
 extend type Mutation {
@@ -16,6 +17,7 @@ input SaveCriticInput {
   createdAt: Date
   updatedAt: Date
   groupId: ID
+  favoriteLargePublisherId: ID
 }
 
 type SaveCriticResult {

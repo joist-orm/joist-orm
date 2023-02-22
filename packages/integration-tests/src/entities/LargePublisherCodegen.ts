@@ -1,9 +1,11 @@
 import {
   Changes,
+  Collection,
   ConfigApi,
   EntityOrmField,
   fail,
   Flavor,
+  hasMany,
   isLoaded,
   Lens,
   Loaded,
@@ -20,6 +22,9 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import {
+  Critic,
+  CriticId,
+  criticMeta,
   LargePublisher,
   largePublisherMeta,
   newLargePublisher,
@@ -41,9 +46,11 @@ export interface LargePublisherFields extends PublisherFields {
 
 export interface LargePublisherOpts extends PublisherOpts {
   country?: string | null;
+  critics?: Critic[];
 }
 
 export interface LargePublisherIdsOpts extends PublisherIdsOpts {
+  criticIds?: CriticId[] | null;
 }
 
 export interface LargePublisherFilter extends PublisherFilter {
@@ -72,6 +79,13 @@ export abstract class LargePublisherCodegen extends Publisher {
     optIdsType: LargePublisherIdsOpts;
     factoryOptsType: Parameters<typeof newLargePublisher>[1];
   };
+
+  readonly critics: Collection<LargePublisher, Critic> = hasMany(
+    criticMeta,
+    "critics",
+    "favoriteLargePublisher",
+    "favorite_large_publisher_id",
+  );
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {
     // @ts-ignore

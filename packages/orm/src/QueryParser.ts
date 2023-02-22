@@ -88,6 +88,11 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       tables.push({ alias, table: meta.tableName, join, col1, col2 });
     }
 
+    // Maybe only do this if we're the primary, or have a field that needs it?
+    if (needsClassPerTableJoins(meta)) {
+      addTablePerClassJoinsAndClassTag(selects, tables, meta, alias);
+    }
+
     if (ef.kind === "pass") {
       //
     } else if (ef.kind === "join") {
@@ -207,10 +212,6 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
-  }
-
-  if (needsClassPerTableJoins(meta)) {
-    addTablePerClassJoinsAndClassTag(selects, tables, meta, alias);
   }
 
   const parsed = { selects, tables, conditions };

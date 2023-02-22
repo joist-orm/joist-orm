@@ -35,6 +35,10 @@ import {
   CriticColumnId,
   criticColumnMeta,
   criticMeta,
+  LargePublisher,
+  LargePublisherId,
+  largePublisherMeta,
+  LargePublisherOrder,
   newCritic,
   PublisherGroup,
   PublisherGroupId,
@@ -47,16 +51,19 @@ export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticFields {
   name: string;
+  favoriteLargePublisher: LargePublisher | undefined;
   group: PublisherGroup | undefined;
 }
 
 export interface CriticOpts {
   name: string;
+  favoriteLargePublisher?: LargePublisher | LargePublisherId | null;
   group?: PublisherGroup | PublisherGroupId | null;
   criticColumn?: CriticColumn | null;
 }
 
 export interface CriticIdsOpts {
+  favoriteLargePublisherId?: LargePublisherId | null;
   groupId?: PublisherGroupId | null;
   criticColumnId?: CriticColumnId | null;
 }
@@ -66,6 +73,7 @@ export interface CriticFilter {
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  favoriteLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null | undefined>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null | undefined>;
   criticColumn?: EntityFilter<CriticColumn, CriticColumnId, FilterOf<CriticColumn>, null | undefined>;
 }
@@ -75,6 +83,12 @@ export interface CriticGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  favoriteLargePublisher?: EntityGraphQLFilter<
+    LargePublisher,
+    LargePublisherId,
+    GraphQLFilterOf<LargePublisher>,
+    null | undefined
+  >;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null | undefined>;
   criticColumn?: EntityGraphQLFilter<CriticColumn, CriticColumnId, GraphQLFilterOf<CriticColumn>, null | undefined>;
 }
@@ -84,6 +98,7 @@ export interface CriticOrder {
   name?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  favoriteLargePublisher?: LargePublisherOrder;
   group?: PublisherGroupOrder;
 }
 
@@ -105,6 +120,12 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
+
+  readonly favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> = hasOne(
+    largePublisherMeta,
+    "favoriteLargePublisher",
+    "critics",
+  );
 
   readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne(
     publisherGroupMeta,

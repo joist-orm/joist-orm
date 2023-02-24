@@ -1,3 +1,10 @@
+## [1.52.1](https://github.com/stephenh/joist-ts/compare/v1.52.0...v1.52.1) (2023-02-24)
+
+
+### Bug Fixes
+
+* Don't skip derived fields in the FieldsOf type. ([#535](https://github.com/stephenh/joist-ts/issues/535)) ([5f4f8fe](https://github.com/stephenh/joist-ts/commit/5f4f8feeb58f1b1fda9136240c699569f13f9e2e))
+
 # [1.52.0](https://github.com/stephenh/joist-ts/compare/v1.51.0...v1.52.0) (2023-02-22)
 
 

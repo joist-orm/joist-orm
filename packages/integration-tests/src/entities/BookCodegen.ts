@@ -64,6 +64,8 @@ export interface BookFields {
   title: string;
   order: number;
   deletedAt: Date | undefined;
+  createdAt: Date;
+  updatedAt: Date;
   author: Author;
 }
 

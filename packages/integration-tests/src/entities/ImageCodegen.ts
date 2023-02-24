@@ -54,6 +54,8 @@ export type ImageId = Flavor<string, "Image">;
 
 export interface ImageFields {
   fileName: string;
+  createdAt: Date;
+  updatedAt: Date;
   type: ImageType;
   author: Author | undefined;
   book: Book | undefined;

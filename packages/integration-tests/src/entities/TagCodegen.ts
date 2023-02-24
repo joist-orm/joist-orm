@@ -44,6 +44,8 @@ export type TagId = Flavor<string, "Tag">;
 
 export interface TagFields {
   name: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface TagOpts {

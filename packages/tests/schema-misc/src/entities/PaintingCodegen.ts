@@ -34,6 +34,8 @@ export type PaintingId = Flavor<string, "Painting">;
 
 export interface PaintingFields {
   title: string;
+  createdAt: Date;
+  updatedAt: Date;
   artist: Artist;
 }
 

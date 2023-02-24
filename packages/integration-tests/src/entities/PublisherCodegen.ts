@@ -73,6 +73,8 @@ export interface PublisherFields {
   latitude: number | undefined;
   longitude: number | undefined;
   hugeNumber: number | undefined;
+  createdAt: Date;
+  updatedAt: Date;
   size: PublisherSize | undefined;
   type: PublisherType;
   group: PublisherGroup | undefined;

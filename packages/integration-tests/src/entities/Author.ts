@@ -47,6 +47,7 @@ export class Author extends AuthorCodegen {
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
+  // Example of persisted property depending on another persisted property
   readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfPublicReviews",
     { books: { reviews: ["isPublic", "rating"] } },

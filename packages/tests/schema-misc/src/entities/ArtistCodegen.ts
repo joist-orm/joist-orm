@@ -31,6 +31,8 @@ export type ArtistId = Flavor<string, "Artist">;
 export interface ArtistFields {
   firstName: string;
   lastName: string;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface ArtistOpts {

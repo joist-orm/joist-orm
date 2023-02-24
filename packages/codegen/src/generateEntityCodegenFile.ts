@@ -633,10 +633,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 // Make our fields type
 function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
   const primitives = meta.primitives.map((field) => {
-    const { fieldName, fieldType, notNull, derived } = field;
-    if (derived) {
-      return code``;
-    }
+    const { fieldName, fieldType, notNull } = field;
     return code`${fieldName}: ${fieldType}${maybeUndefined(notNull)};`;
   });
   const enums = meta.enums.map((field) => {

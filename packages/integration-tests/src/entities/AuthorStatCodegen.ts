@@ -38,6 +38,8 @@ export interface AuthorStatFields {
   bigserial: number;
   doublePrecision: number;
   nullableText: string | undefined;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AuthorStatOpts {

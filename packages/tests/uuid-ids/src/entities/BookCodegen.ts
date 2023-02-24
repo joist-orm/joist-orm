@@ -34,6 +34,8 @@ export type BookId = Flavor<string, "Book">;
 
 export interface BookFields {
   title: string;
+  createdAt: Date;
+  updatedAt: Date;
   author: Author;
 }
 

@@ -34,6 +34,8 @@ export type CriticColumnId = Flavor<string, "CriticColumn">;
 
 export interface CriticColumnFields {
   name: string;
+  createdAt: Date;
+  updatedAt: Date;
   critic: Critic;
 }
 

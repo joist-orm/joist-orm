@@ -39,6 +39,7 @@ export type SmallPublisherId = Flavor<string, "SmallPublisher"> & Flavor<string,
 
 export interface SmallPublisherFields extends PublisherFields {
   city: string;
+  allAuthorNames: string | undefined;
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {

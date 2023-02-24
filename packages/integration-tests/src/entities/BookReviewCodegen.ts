@@ -50,6 +50,9 @@ export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewFields {
   rating: number;
+  isPublic: boolean;
+  createdAt: Date;
+  updatedAt: Date;
   book: Book;
 }
 

@@ -51,6 +51,8 @@ export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticFields {
   name: string;
+  createdAt: Date;
+  updatedAt: Date;
   favoriteLargePublisher: LargePublisher | undefined;
   group: PublisherGroup | undefined;
 }

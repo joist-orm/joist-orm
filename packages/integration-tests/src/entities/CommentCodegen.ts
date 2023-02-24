@@ -44,6 +44,8 @@ export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEn
 
 export interface CommentFields {
   text: string | undefined;
+  createdAt: Date;
+  updatedAt: Date;
   parent: CommentParent;
 }
 

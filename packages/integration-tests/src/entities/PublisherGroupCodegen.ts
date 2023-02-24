@@ -41,6 +41,8 @@ export type PublisherGroupId = Flavor<string, "PublisherGroup">;
 
 export interface PublisherGroupFields {
   name: string | undefined;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface PublisherGroupOpts {

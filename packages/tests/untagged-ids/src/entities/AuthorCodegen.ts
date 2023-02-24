@@ -32,6 +32,8 @@ export type AuthorId = Flavor<string, "Author">;
 export interface AuthorFields {
   firstName: string;
   lastName: string | undefined;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AuthorOpts {

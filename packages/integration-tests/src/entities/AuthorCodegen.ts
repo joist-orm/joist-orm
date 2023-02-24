@@ -71,12 +71,18 @@ export type AuthorId = Flavor<string, "Author">;
 export interface AuthorFields {
   firstName: string;
   lastName: string | undefined;
+  initials: string;
+  numberOfBooks: number;
+  bookComments: string | undefined;
   isPopular: boolean | undefined;
   age: number | undefined;
   graduated: Date | undefined;
   wasEverPopular: boolean | undefined;
   address: Address | undefined;
   deletedAt: Date | undefined;
+  numberOfPublicReviews: number | undefined;
+  createdAt: Date;
+  updatedAt: Date;
   favoriteColors: Color[];
   favoriteShape: FavoriteShape | undefined;
   mentor: Author | undefined;

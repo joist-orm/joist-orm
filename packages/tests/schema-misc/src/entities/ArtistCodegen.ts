@@ -3,8 +3,10 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  EntityFilter,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
   hasMany,
   isLoaded,
@@ -51,6 +53,7 @@ export interface ArtistFilter {
   lastName?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  paintings?: EntityFilter<Painting, PaintingId, FilterOf<Painting>, null | undefined>;
 }
 
 export interface ArtistGraphQLFilter {

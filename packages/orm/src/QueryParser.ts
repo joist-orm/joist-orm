@@ -168,6 +168,10 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
           const a = getAlias(field.otherMetadata().tableName);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
           addTable(field.otherMetadata(), a, "o2o", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
+        } else if (field.kind === "o2m") {
+          const a = getAlias(field.otherMetadata().tableName);
+          const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
+          addTable(field.otherMetadata(), a, "o2m", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
         } else {
           throw new Error(`Unsupported field ${key}`);
         }

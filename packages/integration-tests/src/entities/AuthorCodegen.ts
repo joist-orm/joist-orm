@@ -144,6 +144,9 @@ export interface AuthorFilter {
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
+  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {

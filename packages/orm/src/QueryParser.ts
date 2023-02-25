@@ -412,7 +412,9 @@ function addTablePerClassJoinsAndClassTag(
 ): void {
   // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
   meta.baseTypes.forEach((bt, i) => {
-    selects.push(`${alias}_b${i}.*`);
+    if (isPrimary) {
+      selects.push(`${alias}_b${i}.*`);
+    }
     tables.push({
       alias: `${alias}_b${i}`,
       table: bt.tableName,

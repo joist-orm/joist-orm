@@ -3,7 +3,9 @@ import {
   insertBook,
   insertBookReview,
   insertComment,
+  insertCritic,
   insertImage,
+  insertLargePublisher,
   insertPublisher,
   update,
 } from "@src/entities/inserts";
@@ -26,6 +28,8 @@ import {
   Color,
   Comment,
   CommentFilter,
+  Critic,
+  CriticFilter,
   Image,
   ImageType,
   Publisher,
@@ -40,6 +44,7 @@ const am = getMetadata(Author);
 const bm = getMetadata(Book);
 const pm = getMetadata(Publisher);
 const cm = getMetadata(Comment);
+const criticMeta = getMetadata(Critic);
 
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
@@ -1378,6 +1383,30 @@ describe("EntityManager.queries", () => {
         { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
       ],
       conditions: [{ alias: "b", column: "id", cond: { kind: "eq", value: 2 } }],
+    });
+  });
+
+  it("can find through o2m via inheritance", async () => {
+    await insertLargePublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertCritic({ name: "c1", favorite_large_publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { favoriteLargePublisher: { authors: { firstName: "a1" } } } satisfies CriticFilter;
+    const critics = await em.find(Critic, where);
+    expect(critics.length).toEqual(1);
+
+    expect(parseFindQuery(criticMeta, where)).toEqual({
+      selects: ["c.*"],
+      tables: [
+        { alias: "c", table: "critics", join: "primary" },
+        { alias: "lp", table: "large_publishers", join: "m2o", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
+        // We don't technically need this, but we would if a condition touched the base table
+        { alias: "lp_b0", table: "publishers", join: "left", col1: "lp.id", col2: "lp_b0.id" },
+        // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
+        { alias: "a", table: "authors", join: "o2m", col1: "lp.id", col2: "a.publisher_id" },
+      ],
+      conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } }],
     });
   });
 });

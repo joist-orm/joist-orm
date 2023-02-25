@@ -31,7 +31,6 @@ export function buildQuery<T extends Entity>(
   const primary = parsed.tables.find((t) => t.join === "primary")!;
   let query: Knex.QueryBuilder<any, any> = knex.from(`${primary.table} AS ${primary.alias}`);
 
-  // query.distinctOn(`${primary.alias}.id`);
   parsed.selects.forEach((s, i) => {
     const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
     query.select(knex.raw(`${maybeDistinct}${s}`));

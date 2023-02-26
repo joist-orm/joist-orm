@@ -78,7 +78,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(filter);
-    if (ef.kind === "pass" && join !== "primary") {
+    if (!ef && join !== "primary") {
       return;
     }
 
@@ -93,29 +93,24 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, join === "primary");
     }
 
-    if (ef.kind === "pass") {
-      //
-    } else if (ef.kind === "join") {
+    if (ef && ef.kind === "join") {
       // subFilter really means we're matching against the entity columns/further joins
       Object.keys(ef.subFilter).forEach((key) => {
         const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
-          const filters = parseValueFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
-          if (filters.length > 1 || filters[0].kind !== "pass") {
-            filters.forEach((filter) => {
-              conditions.push({
-                alias: `${alias}${field.aliasSuffix}`,
-                column: column.columnName,
-                cond: mapToDb(column, filter),
-              });
+          parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
+            conditions.push({
+              alias: `${alias}${field.aliasSuffix}`,
+              column: column.columnName,
+              cond: mapToDb(column, filter),
             });
-          }
+          });
         } else if (field.kind === "m2o") {
           // Probe the filter and see if it's just an id, if so we can avoid the join
           const f = parseEntityFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
-          if (f.kind === "pass") {
+          if (!f) {
             // skip
           } else if (f.kind === "join") {
             const a = getAlias(field.otherMetadata().tableName);
@@ -132,7 +127,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter((ef.subFilter as any)[key]);
-          if (f.kind === "pass") {
+          if (!f) {
             // skip
           } else if (f.kind === "join") {
             throw new Error("Joins through polys are not supported");
@@ -178,7 +173,7 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
           throw new Error(`Unsupported field ${key}`);
         }
       });
-    } else {
+    } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
       conditions.push({ alias, column: "id", cond: mapToDb(column, ef) });
     }
@@ -238,10 +233,10 @@ export type ParsedEntityFilter =
   | { kind: "join"; subFilter: object };
 
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(filter: any): ParsedEntityFilter {
+export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
   if (filter === undefined) {
-    // This matches legacy `em.find({ author: undefined })` behavior
-    return { kind: "pass" };
+    // This matches legacy `em.find(Book, { author: undefined })` behavior
+    return undefined;
   } else if (filter === null) {
     return { kind: "is-null" };
   } else if (typeof filter === "string" || typeof filter === "number") {
@@ -308,20 +303,21 @@ export type ParsedValueFilter<V> =
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
   | { kind: "ilike"; value: V }
-  | { kind: "pass" }
   | { kind: "between"; value: [V, V] };
 
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
   if (filter === null) {
     return [{ kind: "is-null" }];
   } else if (filter === undefined) {
-    return [{ kind: "pass" }];
+    // This is legacy behavior where `em.find(Book, { author: undefined })` would match all books
+    return [];
   } else if (Array.isArray(filter)) {
     return [{ kind: "in", value: filter }];
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
     if (keys.length === 0) {
-      return [{ kind: "pass" }];
+      // Should this be an error?
+      return [];
     } else if (keys.length === 2 && "op" in filter && "value" in filter) {
       // Probe for `findGql` op & value
       const { op, value } = filter;
@@ -380,8 +376,6 @@ function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFil
     case "like":
     case "ilike":
       filter.value = column.mapToDb(filter.value);
-      return filter;
-    case "pass":
       return filter;
     case "@>":
     case "in":

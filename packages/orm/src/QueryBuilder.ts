@@ -124,8 +124,6 @@ function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
       query.where(columnName, ">=", min);
       query.where(columnName, "<=", max);
       break;
-    case "pass":
-      break;
     default:
       assertNever(cond);
   }

@@ -305,7 +305,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
           } else if (field.kind === "primaryKey") {
             fn = (v) => keyToNumber(meta, v as any);
           }
-          const filter = parseValueFilter(value as ValueFilter<any, any>);
+          const filter = parseValueFilter(value as ValueFilter<any, any>)[0];
           switch (filter.kind) {
             case "eq":
               return currentValue === fn(filter.value);

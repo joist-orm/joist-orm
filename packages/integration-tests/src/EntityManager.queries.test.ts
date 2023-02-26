@@ -836,6 +836,25 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by greater than and lesser than", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { age: { gt: 0, lt: 3 } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(2);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: ["a.*"],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [
+        { alias: "a", column: "age", cond: { kind: "gt", value: 0 } },
+        { alias: "a", column: "age", cond: { kind: "lt", value: 3 } },
+      ],
+    });
+  });
+
   it("can find by not equal", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

@@ -100,13 +100,15 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       Object.keys(ef.subFilter).forEach((key) => {
         const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
-          const filter = parseValueFilter((ef.subFilter as any)[key]);
+          const filters = parseValueFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
-          if (filter.kind !== "pass") {
-            conditions.push({
-              alias: `${alias}${field.aliasSuffix}`,
-              column: column.columnName,
-              cond: mapToDb(column, filter),
+          if (filters.length > 1 || filters[0].kind !== "pass") {
+            filters.forEach((filter) => {
+              conditions.push({
+                alias: `${alias}${field.aliasSuffix}`,
+                column: column.columnName,
+                cond: mapToDb(column, filter),
+              });
             });
           }
         } else if (field.kind === "m2o") {
@@ -279,7 +281,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter {
       } else if (isEntity(value)) {
         return { kind: "eq", value: value.id || -1 };
       } else {
-        return parseValueFilter(value);
+        return parseValueFilter(value)[0] as any;
       }
     }
     return { kind: "join", subFilter: filter };
@@ -309,58 +311,60 @@ export type ParsedValueFilter<V> =
   | { kind: "pass" }
   | { kind: "between"; value: [V, V] };
 
-export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V> {
+export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
   if (filter === null) {
-    return { kind: "is-null" };
+    return [{ kind: "is-null" }];
   } else if (filter === undefined) {
-    return { kind: "pass" };
+    return [{ kind: "pass" }];
   } else if (Array.isArray(filter)) {
-    return { kind: "in", value: filter };
+    return [{ kind: "in", value: filter }];
   } else if (typeof filter === "object") {
     const keys = Object.keys(filter);
     if (keys.length === 0) {
-      return { kind: "pass" };
-    } else if (keys.length === 1) {
-      const key = keys[0];
-      switch (key) {
-        case "eq":
-          if (filter[key] === null || filter[key] === undefined) {
-            return { kind: "is-null" };
-          } else {
-            return { kind: "eq", value: filter[key] };
-          }
-        case "ne":
-          if (filter[key] === null || filter[key] === undefined) {
-            return { kind: "not-null" };
-          } else {
-            return { kind: "ne", value: filter[key] ?? null };
-          }
-        case "in":
-          return { kind: "in", value: filter[key] };
-        case "gt":
-        case "gte":
-        case "lt":
-        case "lte":
-        case "like":
-        case "ilike":
-          return { kind: key, value: filter[key] };
-      }
+      return [{ kind: "pass" }];
     } else if (keys.length === 2 && "op" in filter && "value" in filter) {
       // Probe for `findGql` op & value
       const { op, value } = filter;
       if (value === null) {
-        return { kind: "is-null" };
+        return [{ kind: "is-null" }];
       } else {
-        return { kind: op, value: value ?? null };
+        return [{ kind: op, value: value ?? null }];
       }
     } else if (keys.length === 2 && "gte" in filter && "lte" in filter) {
       const { gte, lte } = filter;
-      return { kind: "between", value: [gte, lte] };
+      return [{ kind: "between", value: [gte, lte] }];
+    } else {
+      return Object.entries(filter).map(([key]) => {
+        switch (key) {
+          case "eq":
+            if (filter[key] === null || filter[key] === undefined) {
+              return { kind: "is-null" };
+            } else {
+              return { kind: "eq", value: filter[key] };
+            }
+          case "ne":
+            if (filter[key] === null || filter[key] === undefined) {
+              return { kind: "not-null" };
+            } else {
+              return { kind: "ne", value: filter[key] ?? null };
+            }
+          case "in":
+            return { kind: "in", value: filter[key] };
+          case "gt":
+          case "gte":
+          case "lt":
+          case "lte":
+          case "like":
+          case "ilike":
+            return { kind: key, value: filter[key] };
+          default:
+            throw new Error(`Unsupported value filter key ${key}`);
+        }
+      });
     }
-    throw new Error("unsupported value filter");
   } else {
     // This is a primitive like a string, number
-    return { kind: "eq", value: filter };
+    return [{ kind: "eq", value: filter }];
   }
 }
 

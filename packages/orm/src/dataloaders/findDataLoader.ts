@@ -23,7 +23,16 @@ export function findDataLoader<T extends Entity>(
 }
 
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
-const replacer = (v: any) => (isEntity(v) ? v.id : v);
+function replacer(v: any) {
+  if (isEntity(v)) {
+    return v.id;
+  }
+  if (v && typeof v === "object" && Object.keys(v).includes("as")) {
+    const { as, ...others } = v;
+    return others;
+  }
+  return v;
+}
 
 export function whereFilterHash(where: FilterAndSettings<any>): string {
   return hash(where, { replacer, algorithm: "md5" });

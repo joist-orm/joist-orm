@@ -17,7 +17,9 @@ import {
   DeepPartialOrNull,
   EntityHook,
   EntityMetadata,
+  ExpressionFilter,
   FieldStatus,
+  FilterWithAlias,
   GenericError,
   getAllMetas,
   getBaseMeta,
@@ -185,15 +187,21 @@ export class EntityManager<C = unknown> {
     return this._entityIndex.get(id) as T | undefined;
   }
 
-  public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterOf<T>): Promise<T[]>;
+  public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterWithAlias<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
-    options?: { populate?: Const<H>; orderBy?: OrderOf<T>; limit?: number; offset?: number },
+    where: FilterWithAlias<T>,
+    options?: {
+      conditions?: ExpressionFilter;
+      populate?: Const<H>;
+      orderBy?: OrderOf<T>;
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
     const rows = await findDataLoader(this, type).load({ where, ...options });
@@ -220,7 +228,7 @@ export class EntityManager<C = unknown> {
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
   ): Promise<T[]> {
     const rows = await findDataLoader(this, type).load({ where, ...options });
@@ -233,16 +241,16 @@ export class EntityManager<C = unknown> {
 
   public async findOne<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
   ): Promise<T | undefined>;
   public async findOne<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: { populate: Const<H> },
   ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: { populate: any },
   ): Promise<T | undefined> {
     const list = await this.find(type, where, options);
@@ -256,15 +264,18 @@ export class EntityManager<C = unknown> {
   }
 
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
-  public async findOneOrFail<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterOf<T>): Promise<T>;
+  public async findOneOrFail<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+  ): Promise<T>;
   public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
     options: { populate: Const<H> },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: { populate: any },
   ): Promise<T> {
     const list = await this.find(type, where, options);
@@ -308,7 +319,7 @@ export class EntityManager<C = unknown> {
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
   >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<T> {
-    const entities = await this.find(type, where as FilterOf<T>);
+    const entities = await this.find(type, where as FilterWithAlias<T>);
     let entity: T;
     if (entities.length > 1) {
       throw new TooManyError();

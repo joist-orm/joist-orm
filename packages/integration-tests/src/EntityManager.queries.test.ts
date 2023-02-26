@@ -10,6 +10,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import {
+  alias,
   getMetadata,
   NotFoundError,
   parseFindQuery,
@@ -978,7 +979,7 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a1");
     expect(authors[1].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, {}, orderBy)).toEqual({
+    expect(parseFindQuery(am, {}, undefined, orderBy)).toEqual({
       selects: ["a.*"],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [],
@@ -997,7 +998,7 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
     expect(authors[1].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, {}, orderBy)).toEqual({
+    expect(parseFindQuery(am, {}, undefined, orderBy)).toEqual({
       selects: ["a.*"],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [],
@@ -1018,7 +1019,7 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("aA");
     expect(authors[1].firstName).toEqual("aB");
 
-    expect(parseFindQuery(am, {}, orderBy)).toEqual({
+    expect(parseFindQuery(am, {}, undefined, orderBy)).toEqual({
       selects: ["a.*"],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -1426,6 +1427,74 @@ describe("EntityManager.queries", () => {
         { alias: "a", table: "authors", join: "o2m", col1: "lp.id", col2: "a.publisher_id" },
       ],
       conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } }],
+    });
+  });
+
+  describe("complex queries", () => {
+    it("can use aliases for or", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.eq("a1"), a.firstName.eq("a2")] };
+      const authors = await em.find(Author, { as: a }, { conditions });
+      expect(authors.length).toEqual(2);
+
+      expect(parseFindQuery(am, { as: a }, conditions)).toEqual({
+        selects: ["a.*"],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        conditions: [],
+        complexConditions: [
+          {
+            op: "or",
+            conditions: [
+              { alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } },
+              { alias: "a", column: "first_name", cond: { kind: "eq", value: "a2" } },
+            ],
+          },
+        ],
+      });
+    });
+
+    it("can use aliases for or with nested and", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", age: 30 });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(
+        Author,
+        { as: a },
+        {
+          conditions: {
+            or: [a.firstName.eq("a1"), { and: [a.firstName.eq("a2"), a.age.eq(30)] }],
+          },
+        },
+      );
+      expect(authors.length).toEqual(2);
+    });
+  });
+
+  describe("aliases", () => {
+    it("can eq", async () => {
+      const a = alias(Author);
+      expect(a.firstName.eq("a1")).toEqual({
+        alias: "unset",
+        column: "first_name",
+        cond: { kind: "eq", value: "a1" },
+      });
+    });
+
+    it("can ne", async () => {
+      const a = alias(Author);
+      expect(a.firstName.ne("a1")).toEqual({
+        alias: "unset",
+        column: "first_name",
+        cond: { kind: "ne", value: "a1" },
+      });
     });
   });
 });

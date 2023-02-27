@@ -305,7 +305,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
           } else if (field.kind === "primaryKey") {
             fn = (v) => keyToNumber(meta, v as any);
           }
-          const filter = parseValueFilter(value as ValueFilter<any, any>);
+          const filter = parseValueFilter(value as ValueFilter<any, any>)[0];
           switch (filter.kind) {
             case "eq":
               return currentValue === fn(filter.value);
@@ -324,14 +324,15 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
               const b = fn(filter.value);
               const op = ops[filter.kind];
               return op(a, b);
-            case "pass":
-              return true;
             default:
               throw new Error("Unsupported");
           }
         case "m2o":
           const otherMeta = field.otherMetadata();
           const ef = parseEntityFilter(value);
+          if (!ef) {
+            return;
+          }
           switch (ef.kind) {
             case "eq":
               return currentValue === ef.value;

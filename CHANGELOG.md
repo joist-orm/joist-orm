@@ -1,3 +1,10 @@
+# [1.54.0](https://github.com/stephenh/joist-ts/compare/v1.53.0...v1.54.0) (2023-02-27)
+
+
+### Features
+
+* Support multiple conditions in a single filter ([#538](https://github.com/stephenh/joist-ts/issues/538)) ([25ffd19](https://github.com/stephenh/joist-ts/commit/25ffd1981a92ff5c0db3b97f595bb6d93fb6dfba))
+
 # [1.53.0](https://github.com/stephenh/joist-ts/compare/v1.52.1...v1.53.0) (2023-02-27)
 
 

@@ -1,6 +1,7 @@
 import { groupBy } from "joist-utils";
+import { AliasMgmt, aliasMgmt } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
-import { AliasMgmt, aliasMgmt, ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
+import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { Column, getConstructorFromTaggedId, needsClassPerTableJoins } from "./index";
 import { abbreviation } from "./QueryBuilder";

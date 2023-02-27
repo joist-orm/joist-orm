@@ -18,6 +18,7 @@ import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
 export { newPgConnectionConfig } from "joist-utils";
+export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
 export * from "./changes";
 export { ConfigApi, EntityHook } from "./config";

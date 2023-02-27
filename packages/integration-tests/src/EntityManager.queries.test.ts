@@ -3,7 +3,9 @@ import {
   insertBook,
   insertBookReview,
   insertComment,
+  insertCritic,
   insertImage,
+  insertLargePublisher,
   insertPublisher,
   update,
 } from "@src/entities/inserts";
@@ -26,6 +28,8 @@ import {
   Color,
   Comment,
   CommentFilter,
+  Critic,
+  CriticFilter,
   Image,
   ImageType,
   Publisher,
@@ -40,6 +44,7 @@ const am = getMetadata(Author);
 const bm = getMetadata(Book);
 const pm = getMetadata(Publisher);
 const cm = getMetadata(Comment);
+const criticMeta = getMetadata(Critic);
 
 describe("EntityManager.queries", () => {
   it("can find all", async () => {
@@ -1314,6 +1319,95 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const book = await em.findOneOrFail(Book, { title: "b2", author: { currentDraftBook: { title: "b1" } } });
     expect(book.title).toBe("b2");
+  });
+
+  it("can find through o2m with all children matching", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b10", author_id: 1 });
+    await insertBook({ title: "b11", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const where = { books: { title: { like: "b1%" } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
+      ],
+      conditions: [{ alias: "b", column: "title", cond: { kind: "like", value: "b1%" } }],
+    });
+  });
+
+  it("can find through o2m with no children matching", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b10", author_id: 1 });
+    await insertBook({ title: "b11", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+
+    const em = newEntityManager();
+    const where = { books: { title: { eq: "b3" } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
+      ],
+      conditions: [{ alias: "b", column: "title", cond: { kind: "eq", value: "b3" } }],
+    });
+  });
+
+  it("can find through o2m matching on a primary key", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b10", author_id: 1 });
+    await insertBook({ title: "b11", author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { books: "b:2" } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: ["a.*"],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
+      ],
+      conditions: [{ alias: "b", column: "id", cond: { kind: "eq", value: 2 } }],
+    });
+  });
+
+  it("can find through o2m via inheritance", async () => {
+    await insertLargePublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertCritic({ name: "c1", favorite_large_publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { favoriteLargePublisher: { authors: { firstName: "a1" } } } satisfies CriticFilter;
+    const critics = await em.find(Critic, where);
+    expect(critics.length).toEqual(1);
+
+    expect(parseFindQuery(criticMeta, where)).toEqual({
+      selects: ["c.*"],
+      tables: [
+        { alias: "c", table: "critics", join: "primary" },
+        { alias: "lp", table: "large_publishers", join: "m2o", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
+        // We don't technically need this, but we would if a condition touched the base table
+        { alias: "lp_b0", table: "publishers", join: "left", col1: "lp.id", col2: "lp_b0.id" },
+        // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
+        { alias: "a", table: "authors", join: "o2m", col1: "lp.id", col2: "a.publisher_id" },
+      ],
+      conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } }],
+    });
   });
 });
 

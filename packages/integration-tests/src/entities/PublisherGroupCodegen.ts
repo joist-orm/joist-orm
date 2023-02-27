@@ -3,8 +3,10 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  EntityFilter,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
   hasLargeMany,
   hasMany,
@@ -59,6 +61,7 @@ export interface PublisherGroupFilter {
   name?: ValueFilter<string, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface PublisherGroupGraphQLFilter {

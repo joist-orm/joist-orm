@@ -25,11 +25,15 @@ export function buildQuery<T extends Entity>(
 
   const parsed = parseFindQuery(meta, filter.where, filter.orderBy);
 
+  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
+  const needsDistinct = parsed.tables.some((t) => t.join === "o2m");
+
   const primary = parsed.tables.find((t) => t.join === "primary")!;
   let query: Knex.QueryBuilder<any, any> = knex.from(`${primary.table} AS ${primary.alias}`);
 
-  parsed.selects.forEach((s) => {
-    query.select(knex.raw(s));
+  parsed.selects.forEach((s, i) => {
+    const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
+    query.select(knex.raw(`${maybeDistinct}${s}`));
   });
 
   parsed.tables.forEach((t) => {
@@ -51,6 +55,10 @@ export function buildQuery<T extends Entity>(
 
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {
+      // If we're doing "select distinct" for o2m joins, then all order bys must be selects
+      if (needsDistinct) {
+        query.select(`${alias}.${column}`);
+      }
       query.orderBy(`${alias}.${column}`, order);
     });
 

@@ -115,6 +115,10 @@ export interface PublisherFilter {
   size?: ValueFilter<PublisherSize, null | undefined>;
   type?: ValueFilter<PublisherType, never>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null | undefined>;
+  authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
 export interface PublisherGraphQLFilter {

@@ -4,8 +4,10 @@ import {
   Collection,
   ConfigApi,
   deTagId,
+  EntityFilter,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
   hasMany,
   isLoaded,
@@ -52,6 +54,7 @@ export interface AuthorFilter {
   lastName?: ValueFilter<string, null | undefined>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {

@@ -2,8 +2,10 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  EntityFilter,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
   hasMany,
   isLoaded,
@@ -55,6 +57,7 @@ export interface LargePublisherIdsOpts extends PublisherIdsOpts {
 
 export interface LargePublisherFilter extends PublisherFilter {
   country?: ValueFilter<string, null | undefined>;
+  critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
 }
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {

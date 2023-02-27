@@ -704,10 +704,13 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
+  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...polys];
 }
 
 function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {

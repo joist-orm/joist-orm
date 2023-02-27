@@ -27,6 +27,7 @@ function replacer(v: any) {
   if (isEntity(v)) {
     return v.id;
   }
+  // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
   if (v && typeof v === "object" && Object.keys(v).includes("as")) {
     const { as, ...others } = v;
     return others;

@@ -1,3 +1,10 @@
+# [1.53.0](https://github.com/stephenh/joist-ts/compare/v1.52.1...v1.53.0) (2023-02-27)
+
+
+### Features
+
+* Support filtering o2ms. ([#537](https://github.com/stephenh/joist-ts/issues/537)) ([bd594a5](https://github.com/stephenh/joist-ts/commit/bd594a55682b30c02ade3c3e457f2e0c71daea0e))
+
 ## [1.52.1](https://github.com/stephenh/joist-ts/compare/v1.52.0...v1.52.1) (2023-02-24)
 
 

@@ -1,3 +1,10 @@
+## [1.55.1](https://github.com/stephenh/joist-ts/compare/v1.55.0...v1.55.1) (2023-02-28)
+
+
+### Bug Fixes
+
+* Fix originalValue sometimes returning an entity. ([#541](https://github.com/stephenh/joist-ts/issues/541)) ([95162ff](https://github.com/stephenh/joist-ts/commit/95162fff0ece9d32bb25ab5554f1dd567afddb3a))
+
 # [1.55.0](https://github.com/stephenh/joist-ts/compare/v1.54.0...v1.55.0) (2023-02-28)
 
 

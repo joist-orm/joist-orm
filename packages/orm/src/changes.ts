@@ -66,7 +66,10 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
 
       // If `p` is in originalData, always respect that, even if it's undefined
       const originalValue = p in entity.__orm.originalData ? entity.__orm.originalData[p] : entity.__orm.data[p];
-      const hasChanged = entity.isNewEntity ? p in entity.__orm.data : p in entity.__orm.originalData;
+      // Use `__orm.data[p] !== undefined` instead of `p in entity.__orm.data` because if a new (or cloned) entity
+      // sets-then-unsets a value, it will return to `undefined` but still be present in `__orm.data`.
+      const hasChanged = entity.isNewEntity ? entity.__orm.data[p] !== undefined : p in entity.__orm.originalData;
+      // const hasChanged = entity.isNewEntity ? p in entity.__orm.data : p in entity.__orm.originalData;
       const hasUpdated = !entity.isNewEntity && p in entity.__orm.originalData;
       return {
         hasChanged,

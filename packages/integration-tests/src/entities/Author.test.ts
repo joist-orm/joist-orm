@@ -355,6 +355,11 @@ describe("Author", () => {
       expect(a1.changes.firstName.originalValue).toBe(undefined);
       expect(a1.changes.isPopular.hasChanged).toBe(false);
       expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName"]);
+      a1.lastName = undefined;
+      expect(a1.changes.lastName.hasChanged).toBe(false);
+      expect(a1.changes.lastName.hasUpdated).toBe(false);
+      expect(a1.changes.lastName.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
     });
 
     it("after initial load nothing is considered changed", async () => {
@@ -395,6 +400,11 @@ describe("Author", () => {
       expect(a1.changes.lastName.hasUpdated).toBe(true);
       expect(a1.changes.lastName.originalValue).toBe(undefined);
       expect(a1.changes.fields).toEqual(["lastName"]);
+      a1.lastName = undefined;
+      expect(a1.changes.lastName.hasChanged).toBe(false);
+      expect(a1.changes.lastName.hasUpdated).toBe(false);
+      expect(a1.changes.lastName.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual([]);
     });
 
     it("does not have collections", async () => {

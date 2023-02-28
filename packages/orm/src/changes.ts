@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, isId, OptsOf } from "./EntityManager";
-import { getConstructorFromTaggedId } from "./index";
+import { getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -64,13 +64,16 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         throw new Error(`Unsupported call to ${String(p)}`);
       }
 
-      const originalValue = entity.__orm.originalData[p] ?? entity.__orm.data[p];
+      // If `p` is in originalData, always respect that, even if it's undefined
+      const originalValue = p in entity.__orm.originalData ? entity.__orm.originalData[p] : entity.__orm.data[p];
       const hasChanged = (entity.isNewEntity && entity.__orm.data[p] !== undefined) || p in entity.__orm.originalData;
       const hasUpdated = !entity.isNewEntity && p in entity.__orm.originalData;
       return {
         hasChanged,
         hasUpdated,
-        originalValue,
+        get originalValue() {
+          return maybeResolveReferenceToId(originalValue);
+        },
         get originalEntity() {
           if (isEntity(originalValue)) {
             return Promise.resolve(originalValue);

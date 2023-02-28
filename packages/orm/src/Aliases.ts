@@ -1,7 +1,8 @@
 import { Entity } from "./Entity";
-import { FieldsOf, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ColumnCondition, ParsedValueFilter } from "./QueryParser";
+import { ColumnCondition, mapToDb, ParsedValueFilter } from "./QueryParser";
+import { Column } from "./serde";
 
 /** Creates an alias for complex filtering against `T`. */
 export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
@@ -17,7 +18,11 @@ export function aliases<T1 extends Entity, T2 extends Entity>(
 }
 
 export type Alias<T extends Entity> = {
-  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends infer V ? PrimitiveAlias<V> : never;
+  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V }
+    ? PrimitiveAlias<V>
+    : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
+    ? EntityAlias<U>
+    : never;
 };
 
 export interface PrimitiveAlias<V> {
@@ -31,6 +36,10 @@ export interface PrimitiveAlias<V> {
   like(value: V): ColumnCondition;
   ilike(value: V): ColumnCondition;
   between(v1: V, v2: V): ColumnCondition;
+}
+
+export interface EntityAlias<T> {
+  eq(value: T | IdOf<T>): ColumnCondition;
 }
 
 export const aliasMgmt = Symbol("aliasMgmt");
@@ -62,7 +71,9 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primaryKey":
         case "primitive":
         case "enum":
-          return new PrimitiveAliasImpl(conditions, field.serde!.columns[0].columnName);
+          return new PrimitiveAliasImpl(conditions, field.serde!.columns[0]);
+        case "m2o":
+          return new EntityAliasImpl(conditions, field.serde!.columns[0]);
         default:
           throw new Error(`Unsupported alias field kind ${field.kind}`);
       }
@@ -71,7 +82,7 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
 }
 
 class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
-  public constructor(private conditions: ColumnCondition[], private columnName: string) {}
+  public constructor(private conditions: ColumnCondition[], private column: Column) {}
 
   eq(value: V): ColumnCondition {
     return this.addCondition({ kind: "eq", value });
@@ -114,7 +125,29 @@ class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
   }
 
   private addCondition(value: ParsedValueFilter<V>): ColumnCondition {
-    const cond: ColumnCondition = { alias: "unset", column: this.columnName, cond: value };
+    const cond: ColumnCondition = {
+      alias: "unset",
+      column: this.column.columnName,
+      cond: mapToDb(this.column, value),
+    };
+    this.conditions.push(cond);
+    return cond;
+  }
+}
+
+class EntityAliasImpl<V> implements EntityAlias<V> {
+  public constructor(private conditions: ColumnCondition[], private column: Column) {}
+
+  eq(value: V): ColumnCondition {
+    return this.addCondition({ kind: "eq", value });
+  }
+
+  private addCondition(value: ParsedValueFilter<V>): ColumnCondition {
+    const cond: ColumnCondition = {
+      alias: "unset",
+      column: this.column.columnName,
+      cond: mapToDb(this.column, value),
+    };
     this.conditions.push(cond);
     return cond;
   }

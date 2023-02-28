@@ -634,25 +634,26 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull } = field;
-    return code`${fieldName}: ${fieldType}${maybeUndefined(notNull)};`;
+    return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
     if (isArray) {
       // Arrays are always optional and we'll default to `[]`
-      return code`${fieldName}: ${enumType}[];`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}[]; nullable: never };`;
     } else {
-      return code`${fieldName}: ${enumType}${maybeUndefined(notNull)};`;
+      return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${undefinedOrNever(notNull)} };`;
     }
   });
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
-    return code`${fieldName}: ${enumType}${maybeUndefined(notNull)};`;
+    const nullable = undefinedOrNever(notNull);
+    return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true };`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}: ${otherEntity.type}${maybeUndefined(notNull)};`;
+    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(notNull)} };`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}: ${fieldType}${maybeUndefined(notNull)}`;
+    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} }`;
   });
   return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
 }
@@ -773,6 +774,10 @@ function maybeUnionNull(notNull: boolean): string {
 
 function maybeUndefined(notNull: boolean): string {
   return notNull ? "" : " | undefined";
+}
+
+function undefinedOrNever(notNull: boolean): string {
+  return notNull ? "never" : "undefined";
 }
 
 function nullOrNever(notNull: boolean): string {

@@ -43,10 +43,10 @@ export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEn
 }
 
 export interface CommentFields {
-  text: string | undefined;
-  createdAt: Date;
-  updatedAt: Date;
-  parent: CommentParent;
+  text: { kind: "primitive"; type: string; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
 
 export interface CommentOpts {

@@ -31,6 +31,7 @@ import {
   CommentFilter,
   Critic,
   CriticFilter,
+  FavoriteShape,
   Image,
   ImageType,
   Publisher,
@@ -1476,6 +1477,24 @@ describe("EntityManager.queries", () => {
       );
       expect(authors.length).toEqual(2);
     });
+
+    it("can use aliases for m2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+
+      const em = newEntityManager();
+      const b = alias(Book);
+      const books = await em.find(
+        Book,
+        { as: b },
+        {
+          conditions: { or: [b.author.eq("a:1"), b.author.eq("a:2")] },
+        },
+      );
+      expect(books.length).toEqual(2);
+    });
   });
 
   describe("aliases", () => {
@@ -1494,6 +1513,33 @@ describe("EntityManager.queries", () => {
         alias: "unset",
         column: "first_name",
         cond: { kind: "ne", value: "a1" },
+      });
+    });
+
+    it("can eq a native enum", async () => {
+      const a = alias(Author);
+      expect(a.favoriteShape.ne(FavoriteShape.Square)).toEqual({
+        alias: "unset",
+        column: "favorite_shape",
+        cond: { kind: "ne", value: "square" },
+      });
+    });
+
+    it("can eq an enum", async () => {
+      const p = alias(Publisher);
+      expect(p.size.eq(PublisherSize.Large)).toEqual({
+        alias: "unset",
+        column: "size_id",
+        cond: { kind: "eq", value: 2 },
+      });
+    });
+
+    it("can eq an foreign key", async () => {
+      const b = alias(Book);
+      expect(b.author.eq("a:1")).toEqual({
+        alias: "unset",
+        column: "author_id",
+        cond: { kind: "eq", value: 1 },
       });
     });
   });

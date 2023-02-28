@@ -69,25 +69,25 @@ import type { EntityManager } from "./entities";
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
-  firstName: string;
-  lastName: string | undefined;
-  initials: string;
-  numberOfBooks: number;
-  bookComments: string | undefined;
-  isPopular: boolean | undefined;
-  age: number | undefined;
-  graduated: Date | undefined;
-  wasEverPopular: boolean | undefined;
-  address: Address | undefined;
-  deletedAt: Date | undefined;
-  numberOfPublicReviews: number | undefined;
-  createdAt: Date;
-  updatedAt: Date;
-  favoriteColors: Color[];
-  favoriteShape: FavoriteShape | undefined;
-  mentor: Author | undefined;
-  currentDraftBook: Book | undefined;
-  publisher: Publisher | undefined;
+  firstName: { kind: "primitive"; type: string; nullable: never };
+  lastName: { kind: "primitive"; type: string; nullable: undefined };
+  initials: { kind: "primitive"; type: string; nullable: never };
+  numberOfBooks: { kind: "primitive"; type: number; nullable: never };
+  bookComments: { kind: "primitive"; type: string; nullable: undefined };
+  isPopular: { kind: "primitive"; type: boolean; nullable: undefined };
+  age: { kind: "primitive"; type: number; nullable: undefined };
+  graduated: { kind: "primitive"; type: Date; nullable: undefined };
+  wasEverPopular: { kind: "primitive"; type: boolean; nullable: undefined };
+  address: { kind: "primitive"; type: Address; nullable: undefined };
+  deletedAt: { kind: "primitive"; type: Date; nullable: undefined };
+  numberOfPublicReviews: { kind: "primitive"; type: number; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
+  favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
+  mentor: { kind: "m2o"; type: Author; nullable: undefined };
+  currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined };
+  publisher: { kind: "m2o"; type: Publisher; nullable: undefined };
 }
 
 export interface AuthorOpts {

@@ -27,19 +27,19 @@ import type { EntityManager } from "./entities";
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 
 export interface AuthorStatFields {
-  smallint: number;
-  integer: number;
-  nullableInteger: number | undefined;
-  bigint: number;
-  decimal: number;
-  real: number;
-  smallserial: number;
-  serial: number;
-  bigserial: number;
-  doublePrecision: number;
-  nullableText: string | undefined;
-  createdAt: Date;
-  updatedAt: Date;
+  smallint: { kind: "primitive"; type: number; nullable: never };
+  integer: { kind: "primitive"; type: number; nullable: never };
+  nullableInteger: { kind: "primitive"; type: number; nullable: undefined };
+  bigint: { kind: "primitive"; type: number; nullable: never };
+  decimal: { kind: "primitive"; type: number; nullable: never };
+  real: { kind: "primitive"; type: number; nullable: never };
+  smallserial: { kind: "primitive"; type: number; nullable: never };
+  serial: { kind: "primitive"; type: number; nullable: never };
+  bigserial: { kind: "primitive"; type: number; nullable: never };
+  doublePrecision: { kind: "primitive"; type: number; nullable: never };
+  nullableText: { kind: "primitive"; type: string; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
 }
 
 export interface AuthorStatOpts {

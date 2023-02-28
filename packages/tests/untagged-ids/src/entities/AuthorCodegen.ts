@@ -32,10 +32,10 @@ import type { EntityManager } from "./entities";
 export type AuthorId = Flavor<string, "Author">;
 
 export interface AuthorFields {
-  firstName: string;
-  lastName: string | undefined;
-  createdAt: Date;
-  updatedAt: Date;
+  firstName: { kind: "primitive"; type: string; nullable: never };
+  lastName: { kind: "primitive"; type: string; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
 }
 
 export interface AuthorOpts {

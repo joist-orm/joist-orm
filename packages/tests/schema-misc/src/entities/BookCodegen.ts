@@ -33,8 +33,8 @@ import type { EntityManager } from "./entities";
 export type BookId = Flavor<string, "Book">;
 
 export interface BookFields {
-  title: string;
-  author: Author;
+  title: { kind: "primitive"; type: string; nullable: never };
+  author: { kind: "m2o"; type: Author; nullable: never };
 }
 
 export interface BookOpts {

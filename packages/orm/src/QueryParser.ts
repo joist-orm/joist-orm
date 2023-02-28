@@ -388,7 +388,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
+export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   switch (filter.kind) {
     case "eq":
     case "gt":

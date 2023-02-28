@@ -229,7 +229,7 @@ export function parseFindQuery(
 
   // always add the main table
   const alias = getAlias(meta.tableName);
-  selects.push(`${alias}.*`);
+  selects.push(`"${alias}".*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (expression) {
     complexConditions.push(parseExpression(expression));
@@ -462,7 +462,7 @@ function addTablePerClassJoinsAndClassTag(
     });
 
     // Nominate a specific `id` column to avoid ambiguity
-    selects.push(`${alias}.id as id`);
+    selects.push(`"${alias}".id as id`);
 
     // If our meta has no subtypes, we're a left type and don't need a __class
     const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);

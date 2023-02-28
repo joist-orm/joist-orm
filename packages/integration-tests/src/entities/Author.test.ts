@@ -350,19 +350,24 @@ describe("Author", () => {
     it("on create set fields are considered changed but not updated", async () => {
       const em = newEntityManager();
       const a1 = new Author(em, { firstName: "f1", lastName: "ln" });
-      expect(a1.changes.firstName.hasChanged).toBeTruthy();
-      expect(a1.changes.firstName.hasUpdated).toBeFalsy();
-      expect(a1.changes.firstName.originalValue).toBe("f1");
-      expect(a1.changes.isPopular.hasChanged).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBe(true);
+      expect(a1.changes.firstName.hasUpdated).toBe(false);
+      expect(a1.changes.firstName.originalValue).toBe(undefined);
+      expect(a1.changes.isPopular.hasChanged).toBe(false);
       expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName", "lastName"]);
+      a1.lastName = undefined;
+      expect(a1.changes.lastName.hasChanged).toBe(false);
+      expect(a1.changes.lastName.hasUpdated).toBe(false);
+      expect(a1.changes.lastName.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual(["createdAt", "updatedAt", "firstName"]);
     });
 
     it("after initial load nothing is considered changed", async () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const a1 = await em.load(Author, "1");
-      expect(a1.changes.firstName.hasChanged).toBeFalsy();
-      expect(a1.changes.firstName.hasUpdated).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBe(false);
+      expect(a1.changes.firstName.hasUpdated).toBe(false);
       expect(a1.changes.firstName.originalValue).toBe("a1");
       expect(a1.changes.fields).toEqual([]);
     });
@@ -371,15 +376,35 @@ describe("Author", () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const a1 = await em.load(Author, "1");
-      expect(a1.changes.firstName.hasChanged).toBeFalsy();
-      expect(a1.changes.firstName.hasUpdated).toBeFalsy();
+      expect(a1.changes.firstName.hasChanged).toBe(false);
+      expect(a1.changes.firstName.hasUpdated).toBe(false);
       expect(a1.changes.firstName.originalValue).toBe("a1");
       expect(a1.changes.fields).toEqual([]);
       a1.firstName = "a2";
-      expect(a1.changes.firstName.hasChanged).toBeTruthy();
-      expect(a1.changes.firstName.hasUpdated).toBeTruthy();
+      expect(a1.changes.firstName.hasChanged).toBe(true);
+      expect(a1.changes.firstName.hasUpdated).toBe(true);
       expect(a1.changes.firstName.originalValue).toEqual("a1");
       expect(a1.changes.fields).toEqual(["firstName"]);
+    });
+
+    it("after initial load of undefined and mutate then hasChanged is true", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "1");
+      expect(a1.changes.lastName.hasChanged).toBe(false);
+      expect(a1.changes.lastName.hasUpdated).toBe(false);
+      expect(a1.changes.lastName.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual([]);
+      a1.lastName = "a2";
+      expect(a1.changes.lastName.hasChanged).toBe(true);
+      expect(a1.changes.lastName.hasUpdated).toBe(true);
+      expect(a1.changes.lastName.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual(["lastName"]);
+      a1.lastName = undefined;
+      expect(a1.changes.lastName.hasChanged).toBe(false);
+      expect(a1.changes.lastName.hasUpdated).toBe(false);
+      expect(a1.changes.lastName.originalValue).toBe(undefined);
+      expect(a1.changes.fields).toEqual([]);
     });
 
     it("does not have collections", async () => {
@@ -419,6 +444,14 @@ describe("Author", () => {
       expect(a1.changes.publisher.hasChanged).toBe(false);
       expect(await a1.changes.publisher.originalEntity).toBe(p1);
       expect(a1.changes.fields).toEqual([]);
+    });
+
+    it("works for references with new entity", async () => {
+      const em = newEntityManager();
+      const a1 = newAuthor(em, { publisher: {} });
+      expect(a1.changes.publisher.hasChanged).toBe(true);
+      expect(a1.changes.publisher.hasUpdated).toBe(false);
+      expect(a1.changes.publisher.originalValue).toBe(undefined);
     });
 
     it("works for references when already loaded", async () => {

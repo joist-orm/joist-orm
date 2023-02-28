@@ -1,3 +1,10 @@
+# [1.55.0](https://github.com/stephenh/joist-ts/compare/v1.54.0...v1.55.0) (2023-02-28)
+
+
+### Features
+
+* Support ands/ors in em.find. ([#540](https://github.com/stephenh/joist-ts/issues/540)) ([11830fb](https://github.com/stephenh/joist-ts/commit/11830fbd037f83dfd0d94921157f351b238be598))
+
 # [1.54.0](https://github.com/stephenh/joist-ts/compare/v1.53.0...v1.54.0) (2023-02-27)
 
 

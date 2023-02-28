@@ -26,7 +26,7 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
  * because the reference may not be loaded.
  */
 export type Changes<T extends Entity, K = keyof FieldsOf<T>> = { fields: K[] } & {
-  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends infer U | undefined
+  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends { type: infer U | undefined }
     ? U extends Entity
       ? ManyToOneFieldStatus<U>
       : FieldStatus<U>

@@ -33,10 +33,10 @@ import type { EntityManager } from "./entities";
 export type CriticColumnId = Flavor<string, "CriticColumn">;
 
 export interface CriticColumnFields {
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
-  critic: Critic;
+  name: { kind: "primitive"; type: string; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  critic: { kind: "m2o"; type: Critic; nullable: never };
 }
 
 export interface CriticColumnOpts {

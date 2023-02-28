@@ -1,11 +1,13 @@
 import { groupBy } from "joist-utils";
+import { AliasMgmt, aliasMgmt } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
-import { OrderBy, ValueFilter } from "./EntityFilter";
+import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { Column, getConstructorFromTaggedId, needsClassPerTableJoins } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
+// Maybe rename this to `ParsedComplexExpression`?
 export interface ExpressionCondition {
   op: "and" | "or";
   conditions: (ExpressionCondition | ColumnCondition)[];
@@ -53,7 +55,12 @@ interface ParsedFindQuery {
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
-export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: any = {}): ParsedFindQuery {
+export function parseFindQuery(
+  meta: EntityMetadata<any>,
+  filter: any,
+  expression: ExpressionFilter | undefined = undefined,
+  orderBy: any = {},
+): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
@@ -93,9 +100,22 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
       addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, join === "primary");
     }
 
+    // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
+    // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
+    // might actually be `a1` if there are two `authors` tables in the query, so push the
+    // canonical alias value for the current clause into the Alias.
+    if (filter && typeof filter === "object" && "as" in filter) {
+      const mgmt = filter.as[aliasMgmt] as AliasMgmt | undefined;
+      if (mgmt) {
+        mgmt.setAlias(alias);
+      }
+    }
+
     if (ef && ef.kind === "join") {
       // subFilter really means we're matching against the entity columns/further joins
       Object.keys(ef.subFilter).forEach((key) => {
+        // Skip the `{ as: ... }` alias binding
+        if (key === "as") return;
         const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
@@ -211,6 +231,9 @@ export function parseFindQuery(meta: EntityMetadata<any>, filter: any, orderBy: 
   const alias = getAlias(meta.tableName);
   selects.push(`${alias}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
+  if (expression) {
+    complexConditions.push(parseExpression(expression));
+  }
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
   }
@@ -365,7 +388,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
 }
 
 /** Converts domain-level values like string ids/enums into their db equivalent. */
-function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
+export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedValueFilter<any> {
   switch (filter.kind) {
     case "eq":
     case "gt":
@@ -447,4 +470,15 @@ function addTablePerClassJoinsAndClassTag(
       selects.push(`CASE ${cases.join(" ")} ELSE '${meta.type}' END as __class`);
     }
   }
+}
+
+function parseExpression(expression: ExpressionFilter): ExpressionCondition {
+  const [op, expressions] =
+    "and" in expression
+      ? ["and" as const, expression.and]
+      : "or" in expression
+      ? ["or" as const, expression.or]
+      : fail(`Invalid expression ${expression}`);
+  const conditions = expressions.map((exp) => ("and" in exp || "or" in exp ? parseExpression(exp) : exp));
+  return { op, conditions };
 }

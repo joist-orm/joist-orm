@@ -69,15 +69,15 @@ import type { EntityManager } from "./entities";
 export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherFields {
-  name: string;
-  latitude: number | undefined;
-  longitude: number | undefined;
-  hugeNumber: number | undefined;
-  createdAt: Date;
-  updatedAt: Date;
-  size: PublisherSize | undefined;
-  type: PublisherType;
-  group: PublisherGroup | undefined;
+  name: { kind: "primitive"; type: string; nullable: never };
+  latitude: { kind: "primitive"; type: number; nullable: undefined };
+  longitude: { kind: "primitive"; type: number; nullable: undefined };
+  hugeNumber: { kind: "primitive"; type: number; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  size: { kind: "enum"; type: PublisherSize; nullable: undefined };
+  type: { kind: "enum"; type: PublisherType; nullable: never };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined };
 }
 
 export interface PublisherOpts {

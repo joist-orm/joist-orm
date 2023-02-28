@@ -49,11 +49,11 @@ import type { EntityManager } from "./entities";
 export type BookAdvanceId = Flavor<string, "BookAdvance">;
 
 export interface BookAdvanceFields {
-  createdAt: Date;
-  updatedAt: Date;
-  status: AdvanceStatus;
-  book: Book;
-  publisher: Publisher;
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  status: { kind: "enum"; type: AdvanceStatus; nullable: never };
+  book: { kind: "m2o"; type: Book; nullable: never };
+  publisher: { kind: "m2o"; type: Publisher; nullable: never };
 }
 
 export interface BookAdvanceOpts {

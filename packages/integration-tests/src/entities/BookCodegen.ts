@@ -61,12 +61,12 @@ import type { EntityManager } from "./entities";
 export type BookId = Flavor<string, "Book">;
 
 export interface BookFields {
-  title: string;
-  order: number;
-  deletedAt: Date | undefined;
-  createdAt: Date;
-  updatedAt: Date;
-  author: Author;
+  title: { kind: "primitive"; type: string; nullable: never };
+  order: { kind: "primitive"; type: number; nullable: never };
+  deletedAt: { kind: "primitive"; type: Date; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  author: { kind: "m2o"; type: Author; nullable: never };
 }
 
 export interface BookOpts {

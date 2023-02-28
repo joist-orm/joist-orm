@@ -43,9 +43,9 @@ import type { EntityManager } from "./entities";
 export type TagId = Flavor<string, "Tag">;
 
 export interface TagFields {
-  name: string;
-  createdAt: Date;
-  updatedAt: Date;
+  name: { kind: "primitive"; type: string; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; nullable: never };
 }
 
 export interface TagOpts {

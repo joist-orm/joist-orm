@@ -1,3 +1,10 @@
+## [1.55.2](https://github.com/stephenh/joist-ts/compare/v1.55.1...v1.55.2) (2023-02-28)
+
+
+### Bug Fixes
+
+* Quote aliases for keywords like do. ([#542](https://github.com/stephenh/joist-ts/issues/542)) ([604bd17](https://github.com/stephenh/joist-ts/commit/604bd174cd5ea67a15171b9688bc2002e664c23f))
+
 ## [1.55.1](https://github.com/stephenh/joist-ts/compare/v1.55.0...v1.55.1) (2023-02-28)
 
 

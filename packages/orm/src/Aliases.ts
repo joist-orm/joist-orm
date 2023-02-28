@@ -39,7 +39,9 @@ export interface PrimitiveAlias<V> {
 }
 
 export interface EntityAlias<T> {
-  eq(value: T | IdOf<T>): ColumnCondition;
+  eq(value: T | IdOf<T> | null): ColumnCondition;
+  ne(value: T | IdOf<T> | null): ColumnCondition;
+  in(value: Array<T | IdOf<T>>): ColumnCondition;
 }
 
 export const aliasMgmt = Symbol("aliasMgmt");
@@ -135,14 +137,30 @@ class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
   }
 }
 
-class EntityAliasImpl<V> implements EntityAlias<V> {
+class EntityAliasImpl<T> implements EntityAlias<T> {
   public constructor(private conditions: ColumnCondition[], private column: Column) {}
 
-  eq(value: V): ColumnCondition {
-    return this.addCondition({ kind: "eq", value });
+  eq(value: T | IdOf<T> | null): ColumnCondition {
+    if (value === null) {
+      return this.addCondition({ kind: "is-null" });
+    } else {
+      return this.addCondition({ kind: "eq", value });
+    }
   }
 
-  private addCondition(value: ParsedValueFilter<V>): ColumnCondition {
+  ne(value: T | IdOf<T> | null): ColumnCondition {
+    if (value === null) {
+      return this.addCondition({ kind: "not-null" });
+    } else {
+      return this.addCondition({ kind: "ne", value });
+    }
+  }
+
+  in(value: Array<T | IdOf<T>>): ColumnCondition {
+    return this.addCondition({ kind: "in", value });
+  }
+
+  private addCondition(value: ParsedValueFilter<T | IdOf<T>>): ColumnCondition {
     const cond: ColumnCondition = {
       alias: "unset",
       column: this.column.columnName,

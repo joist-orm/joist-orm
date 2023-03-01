@@ -1052,7 +1052,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "p", table: "publishers", join: "m2o", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "p", table: "publishers", join: "left", col1: "a.publisher_id", col2: "p.id" },
       ],
       conditions: [],
       orderBys: [{ alias: "p", column: "name", order: "ASC" }],

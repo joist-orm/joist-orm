@@ -1,3 +1,10 @@
+## [1.55.5](https://github.com/stephenh/joist-ts/compare/v1.55.4...v1.55.5) (2023-03-01)
+
+
+### Bug Fixes
+
+* Fix originalValue on dates. ([#545](https://github.com/stephenh/joist-ts/issues/545)) ([03a2c7d](https://github.com/stephenh/joist-ts/commit/03a2c7db3d46aaa35cc92737bcafc6d654ecdb56))
+
 ## [1.55.4](https://github.com/stephenh/joist-ts/compare/v1.55.3...v1.55.4) (2023-03-01)
 
 

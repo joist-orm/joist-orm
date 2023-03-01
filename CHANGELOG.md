@@ -1,3 +1,10 @@
+## [1.55.3](https://github.com/stephenh/joist-ts/compare/v1.55.2...v1.55.3) (2023-03-01)
+
+
+### Bug Fixes
+
+* Fix multiple order bys. ([#543](https://github.com/stephenh/joist-ts/issues/543)) ([63b34c3](https://github.com/stephenh/joist-ts/commit/63b34c3858bf0412b57f2b185f2b3297bec7f715))
+
 ## [1.55.2](https://github.com/stephenh/joist-ts/compare/v1.55.1...v1.55.2) (2023-02-28)
 
 

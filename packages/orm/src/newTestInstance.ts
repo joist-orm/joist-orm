@@ -44,6 +44,7 @@ export type FactoryOpts<T extends Entity> = DeepPartialOpts<T> & {
 
 // Chosen b/c it's a monday https://www.timeanddate.com/calendar/monthly.html?year=2018&month=1&country=1
 export const jan1 = new Date(2018, 0, 1);
+export const jan2 = new Date(2018, 0, 2);
 export let testDate = jan1;
 
 /** Creates a test instance of `T`. */

@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, isId, OptsOf } from "./EntityManager";
-import { getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
+import { getConstructorFromTaggedId } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -75,7 +75,8 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         hasChanged,
         hasUpdated,
         get originalValue() {
-          return maybeResolveReferenceToId(originalValue);
+          // To be consistent whether a reference is loaded/unloaded, always coerce an entity to its id
+          return isEntity(originalValue) ? originalValue.id : originalValue;
         },
         get originalEntity() {
           if (isEntity(originalValue)) {

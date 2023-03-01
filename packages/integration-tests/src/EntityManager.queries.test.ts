@@ -239,7 +239,24 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("cannot find by foreign key is undefined", async () => {
+  it("skips find by foreign key id is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const where = { publisher: { id: undefined } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [],
+    });
+  });
+
+  it("skips find by foreign key id is undefined", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
@@ -298,13 +315,13 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const where = { publisher: { ne: undefined } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
-    expect(authors.length).toEqual(1);
-    expect(authors[0].firstName).toEqual("a2");
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
 
     expect(parseFindQuery(am, where)).toEqual({
       selects: [`"a".*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "not-null" } }],
+      conditions: [],
     });
   });
 

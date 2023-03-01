@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
-import { defaultValue, getMetadata } from "joist-orm";
+import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, BookReview, newAuthor, newBookReview, newPublisher, Publisher } from "../entities";
@@ -444,6 +444,19 @@ describe("Author", () => {
       expect(a1.changes.publisher.hasChanged).toBe(false);
       expect(await a1.changes.publisher.originalEntity).toBe(p1);
       expect(a1.changes.fields).toEqual([]);
+    });
+
+    it("works for dates", async () => {
+      await insertAuthor({ first_name: "a1", graduated: jan1 });
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "1");
+      expect(a1.changes.graduated.originalValue).toEqual(jan1);
+      expect(a1.changes.fields).toEqual([]);
+      a1.graduated = jan2;
+      expect(a1.changes.graduated.hasChanged).toBe(true);
+      expect(a1.changes.graduated.hasUpdated).toBe(true);
+      expect(a1.changes.graduated.originalValue).toEqual(jan1);
+      expect(a1.changes.fields).toEqual(["graduated"]);
     });
 
     it("works for references with new entity", async () => {

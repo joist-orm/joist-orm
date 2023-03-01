@@ -205,26 +205,28 @@ export function parseFindQuery(
     if (entries.length === 0) {
       return;
     }
-    const [key, value] = entries[0];
-    const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
-    if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
-      const column = field.serde.columns[0];
-      orderBys.push({ alias, column: column.columnName, order: value as OrderBy });
-    } else if (field.kind === "m2o") {
-      // Do we already this table joined in?
-      let table = tables.find((t) => t.table === field.otherMetadata().tableName);
-      if (table) {
-        addOrderBy(field.otherMetadata(), table.alias, value);
+    Object.entries(orderBy).forEach(([key, value]) => {
+      const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
+      if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
+        const column = field.serde.columns[0];
+        orderBys.push({ alias, column: column.columnName, order: value as OrderBy });
+      } else if (field.kind === "m2o") {
+        // Do we already this table joined in?
+        let table = tables.find((t) => t.table === field.otherMetadata().tableName);
+        if (table) {
+          addOrderBy(field.otherMetadata(), table.alias, value);
+        } else {
+          const table = field.otherMetadata().tableName;
+          const a = getAlias(table);
+          const column = field.serde.columns[0].columnName;
+          // If we don't have a join, don't force this to be an inner join
+          tables.push({ alias: a, table, join: "left", col1: `${alias}.${column}`, col2: `${a}.id` });
+          addOrderBy(field.otherMetadata(), a, value);
+        }
       } else {
-        const table = field.otherMetadata().tableName;
-        const a = getAlias(table);
-        const column = field.serde.columns[0].columnName;
-        tables.push({ alias: a, table, join: "m2o", col1: `${alias}.${column}`, col2: `${a}.id` });
-        addOrderBy(field.otherMetadata(), a, value);
+        throw new Error(`Unsupported field ${key}`);
       }
-    } else {
-      throw new Error(`Unsupported field ${key}`);
-    }
+    });
   }
 
   // always add the main table

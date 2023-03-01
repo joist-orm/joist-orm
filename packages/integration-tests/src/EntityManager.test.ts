@@ -713,7 +713,7 @@ describe("EntityManager", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `select "p".*, p_s0.*, p_s1.*, "p".id as id,`,
+        `select distinct "p".*, p_s0.*, p_s1.*, "p".id as id,`,
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
         ` from "publishers" as "p"`,
         ` left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id"`,

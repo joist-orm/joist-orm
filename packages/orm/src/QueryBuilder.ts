@@ -26,7 +26,7 @@ export function buildQuery<T extends Entity>(
   const parsed = parseFindQuery(meta, where, conditions, orderBy);
 
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "o2m");
+  const needsDistinct = parsed.tables.some((t) => t.join === "o2m" || t.join === "left");
 
   const primary = parsed.tables.find((t) => t.join === "primary")!;
   let query: Knex.QueryBuilder<any, any> = knex.from(`${primary.table} AS ${primary.alias}`);

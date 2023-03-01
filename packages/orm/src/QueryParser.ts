@@ -281,7 +281,9 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
     // Special case only looking at `ne`
     if (keys.length === 1 && keys[0] === "ne") {
       const value = filter["ne"];
-      if (value === null || value === undefined) {
+      if (value === undefined) {
+        return undefined;
+      } else if (value === null) {
         return { kind: "not-null" };
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
@@ -294,7 +296,9 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
     // Special case only looking at `id`
     if (keys.length === 1 && keys[0] === "id") {
       const value = filter["id"];
-      if (value === null || value === undefined) {
+      if (value === undefined) {
+        return undefined;
+      } else if (value === null) {
         return { kind: "is-null" };
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };

@@ -1007,6 +1007,34 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can order by multiple m2os", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 2 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const orderBy = { currentDraftBook: { title: "ASC" }, publisher: { name: "ASC" } } satisfies AuthorOrder;
+    const authors = await em.find(Author, {}, { orderBy });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a2");
+    expect(authors[1].firstName).toEqual("a1");
+
+    expect(parseFindQuery(am, {}, undefined, orderBy)).toEqual({
+      selects: [`"a".*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "left", col1: "a.current_draft_book_id", col2: "b.id" },
+        { alias: "p", table: "publishers", join: "left", col1: "a.publisher_id", col2: "p.id" },
+      ],
+      conditions: [],
+      orderBys: [
+        { alias: "b", column: "title", order: "ASC" },
+        { alias: "p", column: "name", order: "ASC" },
+      ],
+    });
+  });
+
   it("can order by joined string asc", async () => {
     await insertPublisher({ name: "pB" });
     await insertPublisher({ id: 2, name: "pA" });

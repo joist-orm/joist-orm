@@ -1,3 +1,10 @@
+## [1.55.4](https://github.com/stephenh/joist-ts/compare/v1.55.3...v1.55.4) (2023-03-01)
+
+
+### Bug Fixes
+
+* Restore behavior of id: undefined is skipped. ([#544](https://github.com/stephenh/joist-ts/issues/544)) ([30c857a](https://github.com/stephenh/joist-ts/commit/30c857aa966b2664eb752b7b5c095b2ecdab406b))
+
 ## [1.55.3](https://github.com/stephenh/joist-ts/compare/v1.55.2...v1.55.3) (2023-03-01)
 
 

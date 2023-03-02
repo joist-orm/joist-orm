@@ -1,3 +1,10 @@
+## [1.55.6](https://github.com/stephenh/joist-ts/compare/v1.55.5...v1.55.6) (2023-03-02)
+
+
+### Bug Fixes
+
+* Fix batching order bys shouldn't distinct. ([#546](https://github.com/stephenh/joist-ts/issues/546)) ([0ea8f86](https://github.com/stephenh/joist-ts/commit/0ea8f867c2a89cee48ca13aba565a15783dbaf1c))
+
 ## [1.55.5](https://github.com/stephenh/joist-ts/compare/v1.55.4...v1.55.5) (2023-03-01)
 
 

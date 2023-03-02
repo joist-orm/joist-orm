@@ -26,11 +26,12 @@ interface PrimaryTable {
 }
 
 interface JoinTable {
-  join: "m2o" | "o2m" | "o2o" | "left";
+  join: "inner" | "outer";
   alias: string;
   table: string;
   col1: string;
   col2: string;
+  distinct?: boolean;
 }
 
 type ParsedTable = PrimaryTable | JoinTable;
@@ -137,7 +138,7 @@ export function parseFindQuery(
             addTable(
               field.otherMetadata(),
               a,
-              "m2o",
+              "inner",
               `${alias}.${column.columnName}`,
               `${a}.id`,
               (ef.subFilter as any)[key],
@@ -184,11 +185,11 @@ export function parseFindQuery(
           // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
           const a = getAlias(field.otherMetadata().tableName);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
-          addTable(field.otherMetadata(), a, "o2o", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
+          addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
         } else if (field.kind === "o2m") {
           const a = getAlias(field.otherMetadata().tableName);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
-          addTable(field.otherMetadata(), a, "o2m", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
+          addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
         } else {
           throw new Error(`Unsupported field ${key}`);
         }
@@ -220,7 +221,7 @@ export function parseFindQuery(
           const a = getAlias(table);
           const column = field.serde.columns[0].columnName;
           // If we don't have a join, don't force this to be an inner join
-          tables.push({ alias: a, table, join: "left", col1: `${alias}.${column}`, col2: `${a}.id` });
+          tables.push({ alias: a, table, join: "outer", col1: `${alias}.${column}`, col2: `${a}.id`, distinct: false });
           addOrderBy(field.otherMetadata(), a, value);
         }
       } else {
@@ -445,9 +446,10 @@ function addTablePerClassJoinsAndClassTag(
     tables.push({
       alias: `${alias}_b${i}`,
       table: bt.tableName,
-      join: "left",
+      join: "outer",
       col1: `${alias}.id`,
       col2: `${alias}_b${i}.id`,
+      distinct: false,
     });
   });
 
@@ -461,9 +463,10 @@ function addTablePerClassJoinsAndClassTag(
       tables.push({
         alias: `${alias}_s${i}`,
         table: st.tableName,
-        join: "left",
+        join: "outer",
         col1: `${alias}.id`,
         col2: `${alias}_s${i}.id`,
+        distinct: false,
       });
     });
 

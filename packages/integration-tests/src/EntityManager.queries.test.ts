@@ -169,7 +169,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "a", table: "authors", join: "m2o", col1: "b.author_id", col2: "a.id" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
       ],
       conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a2" } }],
     });
@@ -193,8 +193,8 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "a", table: "authors", join: "m2o", col1: "b.author_id", col2: "a.id" },
-        { alias: "p", table: "publishers", join: "m2o", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+        { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
       ],
       conditions: [{ alias: "p", column: "name", cond: { kind: "eq", value: "p2" } }],
     });
@@ -471,7 +471,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "a", table: "authors", join: "m2o", col1: "b.author_id", col2: "a.id" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
       ],
       conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "eq", value: 2 } }],
     });
@@ -496,7 +496,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "i", table: "images", join: "o2o", col1: "b.id", col2: "i.book_id" },
+        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
       ],
       conditions: [{ alias: "i", column: "id", cond: { kind: "eq", value: 2 } }],
     });
@@ -520,7 +520,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "i", table: "images", join: "o2o", col1: "b.id", col2: "i.book_id" },
+        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
       ],
       conditions: [{ alias: "i", column: "type_id", cond: { kind: "eq", value: 1 } }],
     });
@@ -612,8 +612,8 @@ describe("EntityManager.queries", () => {
       selects: [`"p".*`, "p_s0.*", "p_s1.*", `"p".id as id`, expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "p_s0", table: "large_publishers", join: "left", col1: "p.id", col2: "p_s0.id" },
-        { alias: "p_s1", table: "small_publishers", join: "left", col1: "p.id", col2: "p_s1.id" },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
       ],
       conditions: [{ alias: "p", column: "id", cond: { kind: "in", value: [1, 2] } }],
     });
@@ -655,8 +655,8 @@ describe("EntityManager.queries", () => {
       ],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "p_s0", table: "large_publishers", join: "left", col1: "p.id", col2: "p_s0.id" },
-        { alias: "p_s1", table: "small_publishers", join: "left", col1: "p.id", col2: "p_s1.id" },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
       ],
       conditions: [{ alias: "p", column: "size_id", cond: { kind: "eq", value: 2 } }],
     });
@@ -676,8 +676,8 @@ describe("EntityManager.queries", () => {
       selects: [`"p".*`, "p_s0.*", "p_s1.*", `"p".id as id`, expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
-        { alias: "p_s0", table: "large_publishers", join: "left", col1: "p.id", col2: "p_s0.id" },
-        { alias: "p_s1", table: "small_publishers", join: "left", col1: "p.id", col2: "p_s1.id" },
+        { alias: "p_s0", table: "large_publishers", join: "outer", col1: "p.id", col2: "p_s0.id", distinct: false },
+        { alias: "p_s1", table: "small_publishers", join: "outer", col1: "p.id", col2: "p_s1.id", distinct: false },
       ],
       conditions: [{ alias: "p", column: "size_id", cond: { kind: "ne", value: 2 } }],
     });
@@ -944,7 +944,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "p", table: "publishers", join: "m2o", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
       ],
       conditions: [
         { alias: "a", column: "first_name", cond: { kind: "eq", value: "a" } },
@@ -1041,8 +1041,8 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "left", col1: "a.current_draft_book_id", col2: "b.id" },
-        { alias: "p", table: "publishers", join: "left", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "b", table: "books", join: "outer", col1: "a.current_draft_book_id", col2: "b.id", distinct: false },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
       ],
       conditions: [],
       orderBys: [
@@ -1069,7 +1069,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "p", table: "publishers", join: "left", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id", distinct: false },
       ],
       conditions: [],
       orderBys: [{ alias: "p", column: "name", order: "ASC" }],
@@ -1404,7 +1404,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
+        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
       ],
       conditions: [{ alias: "b", column: "title", cond: { kind: "like", value: "b1%" } }],
     });
@@ -1426,7 +1426,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
+        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
       ],
       conditions: [{ alias: "b", column: "title", cond: { kind: "eq", value: "b3" } }],
     });
@@ -1446,7 +1446,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "o2m", col1: "a.id", col2: "b.author_id" },
+        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
       ],
       conditions: [{ alias: "b", column: "id", cond: { kind: "eq", value: 2 } }],
     });
@@ -1466,11 +1466,11 @@ describe("EntityManager.queries", () => {
       selects: [`"c".*`],
       tables: [
         { alias: "c", table: "critics", join: "primary" },
-        { alias: "lp", table: "large_publishers", join: "m2o", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
+        { alias: "lp", table: "large_publishers", join: "inner", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
         // We don't technically need this, but we would if a condition touched the base table
-        { alias: "lp_b0", table: "publishers", join: "left", col1: "lp.id", col2: "lp_b0.id" },
+        { alias: "lp_b0", table: "publishers", join: "outer", col1: "lp.id", col2: "lp_b0.id", distinct: false },
         // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
-        { alias: "a", table: "authors", join: "o2m", col1: "lp.id", col2: "a.publisher_id" },
+        { alias: "a", table: "authors", join: "outer", col1: "lp.id", col2: "a.publisher_id" },
       ],
       conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } }],
     });

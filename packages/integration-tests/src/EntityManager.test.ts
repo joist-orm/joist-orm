@@ -713,7 +713,7 @@ describe("EntityManager", () => {
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `select distinct "p".*, p_s0.*, p_s1.*, "p".id as id,`,
+        `select "p".*, p_s0.*, p_s1.*, "p".id as id,`,
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
         ` from "publishers" as "p"`,
         ` left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id"`,
@@ -733,7 +733,7 @@ describe("EntityManager", () => {
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
     const a1p = em.find(Author, { id: "1" }, { orderBy: { id: "ASC" } });
-    const a2p = em.find(Author, { id: "1" }, { orderBy: { id: "DESC" } });
+    const a2p = em.find(Author, { id: "1" }, { orderBy: { age: "DESC" } });
     // When they are executed in the same event loop
     const [a1, a2] = await Promise.all([a1p, a2p]);
     // Then we issue a single SQL query
@@ -741,7 +741,29 @@ describe("EntityManager", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $2 order by "a"."id" ASC, "a"."id" asc limit $3) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $4 order by "a"."id" DESC, "a"."id" asc limit $5) order by "__tag" asc",
+        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $2 order by "a"."id" ASC, "a"."id" asc limit $3) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $4 order by "a"."age" DESC, "a"."id" asc limit $5) order by "__tag" asc",
+      ]
+    `);
+    // And the results are the expected reverse of each other
+    expect(a1.reverse()).toEqual(a2);
+  });
+
+  it.unlessInMemory("does dedup queries with different order bys via m2os", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    // Given two queries with exactly the same where clause but different orders
+    const a1p = em.find(Author, { id: "1" }, { orderBy: { publisher: { id: "ASC" } } });
+    const a2p = em.find(Author, { id: "1" }, { orderBy: { currentDraftBook: { title: "DESC" } } });
+    // When they are executed in the same event loop
+    const [a1, a2] = await Promise.all([a1p, a2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // And it is still auto-batched
+    expect(queries).toMatchInlineSnapshot(`
+      [
+        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" left outer join "publishers" as "p" on "a"."publisher_id" = "p"."id" where "a"."id" = $2 order by "p"."id" ASC, "a"."id" asc limit $3) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" left outer join "books" as "b" on "a"."current_draft_book_id" = "b"."id" where "a"."id" = $4 order by "b"."title" DESC, "a"."id" asc limit $5) order by "__tag" asc",
       ]
     `);
     // And the results are the expected reverse of each other

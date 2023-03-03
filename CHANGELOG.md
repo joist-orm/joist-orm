@@ -1,3 +1,10 @@
+## [1.56.4](https://github.com/stephenh/joist-ts/compare/v1.56.3...v1.56.4) (2023-03-03)
+
+
+### Bug Fixes
+
+* Allow keeping only explicit aliases. ([#552](https://github.com/stephenh/joist-ts/issues/552)) ([8f290ab](https://github.com/stephenh/joist-ts/commit/8f290ab4c3043ebc13ce0204e680401848835ae3))
+
 ## [1.56.3](https://github.com/stephenh/joist-ts/compare/v1.56.2...v1.56.3) (2023-03-03)
 
 

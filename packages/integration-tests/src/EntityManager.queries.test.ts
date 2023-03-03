@@ -1567,6 +1567,31 @@ describe("EntityManager.queries", () => {
       });
     });
 
+    it("keeps all joins if pruneJoins is false", async () => {
+      const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
+      expect(parseFindQuery(am, filter, undefined, undefined, false)).toEqual({
+        selects: [`"a".*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        conditions: [],
+      });
+    });
+
+    it("keeps marked aliases", async () => {
+      const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
+      expect(parseFindQuery(am, filter, undefined, undefined, true, ["b"])).toEqual({
+        selects: [`"a".*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        conditions: [],
+      });
+    });
+
     it("does not prune joins from complex conditions", async () => {
       const [p, b] = aliases(Publisher, Book);
       expect(parseFindQuery(am, { publisher: { as: p }, books: { as: b } }, { and: [b.title.eq("b1")] })).toEqual({

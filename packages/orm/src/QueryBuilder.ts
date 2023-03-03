@@ -18,12 +18,12 @@ import QueryBuilder = Knex.QueryBuilder;
 export function buildQuery<T extends Entity>(
   knex: Knex,
   type: EntityConstructor<T>,
-  filter: FilterAndSettings<T>,
+  filter: FilterAndSettings<T> & { pruneJoins?: boolean },
 ): Knex.QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
-  const { where, conditions, orderBy, limit, offset } = filter;
+  const { where, conditions, orderBy, limit, offset, pruneJoins = true } = filter;
 
-  const parsed = parseFindQuery(meta, where, conditions, orderBy);
+  const parsed = parseFindQuery(meta, where, conditions, orderBy, pruneJoins);
 
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
   const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);

@@ -62,6 +62,7 @@ export function parseFindQuery(
   filter: any,
   expression: ExpressionFilter | undefined = undefined,
   orderBy: any = {},
+  pruneJoins = true,
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
@@ -249,7 +250,9 @@ export function parseFindQuery(
   if (complexConditions.length > 0) {
     Object.assign(parsed, { complexConditions });
   }
-  pruneUnusedJoins(parsed);
+  if (pruneJoins) {
+    pruneUnusedJoins(parsed);
+  }
   return parsed;
 }
 

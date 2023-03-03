@@ -1,3 +1,10 @@
+## [1.56.3](https://github.com/stephenh/joist-ts/compare/v1.56.2...v1.56.3) (2023-03-03)
+
+
+### Bug Fixes
+
+* Allow buildQuery to keep joins. ([#551](https://github.com/stephenh/joist-ts/issues/551)) ([659f4d6](https://github.com/stephenh/joist-ts/commit/659f4d6e24d39b657960f141852163bb54ff307f))
+
 ## [1.56.2](https://github.com/stephenh/joist-ts/compare/v1.56.1...v1.56.2) (2023-03-03)
 
 

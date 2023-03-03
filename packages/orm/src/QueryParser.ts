@@ -63,6 +63,7 @@ export function parseFindQuery(
   expression: ExpressionFilter | undefined = undefined,
   orderBy: any = {},
   pruneJoins = true,
+  keepAliases: string[] = [],
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
@@ -251,18 +252,19 @@ export function parseFindQuery(
     Object.assign(parsed, { complexConditions });
   }
   if (pruneJoins) {
-    pruneUnusedJoins(parsed);
+    pruneUnusedJoins(parsed, keepAliases);
   }
   return parsed;
 }
 
 // Remove any joins that are not used in the select or conditions
-function pruneUnusedJoins(parsed: ParsedFindQuery): void {
+function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
   // Mark all terminal usages
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
   parsed.conditions.forEach((c) => used.add(c.alias));
   parsed.orderBys?.forEach((o) => used.add(o.alias));
+  keepAliases.forEach((a) => used.add(a));
   const todo = [...(parsed.complexConditions ?? [])];
   while (todo.length !== 0) {
     const cc = todo.pop()!;

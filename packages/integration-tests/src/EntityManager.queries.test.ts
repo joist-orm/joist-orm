@@ -1567,6 +1567,18 @@ describe("EntityManager.queries", () => {
       });
     });
 
+    it("keeps unused joins if marked", async () => {
+      const filter = { publisher: {}, books: {} } satisfies AuthorFilter;
+      expect(parseFindQuery(am, filter, undefined, undefined, true, ["b"])).toEqual({
+        selects: [`"a".*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        conditions: [],
+      });
+    });
+
     it("does not prune joins from complex conditions", async () => {
       const [p, b] = aliases(Publisher, Book);
       expect(parseFindQuery(am, { publisher: { as: p }, books: { as: b } }, { and: [b.title.eq("b1")] })).toEqual({

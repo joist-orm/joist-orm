@@ -1,3 +1,10 @@
+# [1.57.0](https://github.com/stephenh/joist-ts/compare/v1.56.4...v1.57.0) (2023-03-03)
+
+
+### Features
+
+* Allow aliases to be entity filters. ([#553](https://github.com/stephenh/joist-ts/issues/553)) ([5815d0c](https://github.com/stephenh/joist-ts/commit/5815d0cf38d6ff64956bcef03dfb8ba7707c68fe))
+
 ## [1.56.4](https://github.com/stephenh/joist-ts/compare/v1.56.3...v1.56.4) (2023-03-03)
 
 

@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
 import hash from "object-hash";
+import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
@@ -28,9 +29,8 @@ function replacer(v: any) {
     return v.id;
   }
   // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
-  if (v && typeof v === "object" && Object.keys(v).includes("as")) {
-    const { as, ...others } = v;
-    return others;
+  if (isAlias(v)) {
+    return "alias";
   }
   return v;
 }

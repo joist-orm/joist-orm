@@ -1,6 +1,6 @@
 import { isPlainObject } from "is-plain-object";
 import { groupBy } from "joist-utils";
-import { AliasMgmt, aliasMgmt } from "./Aliases";
+import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
@@ -89,7 +89,7 @@ export function parseFindQuery(
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(filter);
-    if (!ef && join !== "primary") {
+    if (!ef && join !== "primary" && !isAlias(filter)) {
       return;
     }
 
@@ -108,11 +108,10 @@ export function parseFindQuery(
     // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
     // might actually be `a1` if there are two `authors` tables in the query, so push the
     // canonical alias value for the current clause into the Alias.
-    if (filter && typeof filter === "object" && "as" in filter) {
-      const mgmt = filter.as[aliasMgmt] as AliasMgmt | undefined;
-      if (mgmt) {
-        mgmt.setAlias(alias);
-      }
+    if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
+      filter.as[aliasMgmt].setAlias(alias);
+    } else if (isAlias(filter)) {
+      filter[aliasMgmt].setAlias(alias);
     }
 
     if (ef && ef.kind === "join") {
@@ -131,21 +130,19 @@ export function parseFindQuery(
             });
           });
         } else if (field.kind === "m2o") {
-          // Probe the filter and see if it's just an id, if so we can avoid the join
-          const f = parseEntityFilter((ef.subFilter as any)[key]);
           const column = field.serde.columns[0];
+          const sub = (ef.subFilter as any)[key];
+          if (isAlias(sub)) {
+            const a = getAlias(field.otherMetadata().tableName);
+            addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
+          }
+          const f = parseEntityFilter(sub);
+          // Probe the filter and see if it's just an id, if so we can avoid the join
           if (!f) {
             // skip
           } else if (f.kind === "join") {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(
-              field.otherMetadata(),
-              a,
-              "inner",
-              `${alias}.${column.columnName}`,
-              `${a}.id`,
-              (ef.subFilter as any)[key],
-            );
+            addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
           } else {
             conditions.push({ alias, column: column.columnName, cond: mapToDb(column, f) });
           }
@@ -310,6 +307,9 @@ export type ParsedEntityFilter =
 export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
   if (filter === undefined) {
     // This matches legacy `em.find(Book, { author: undefined })` behavior
+    return undefined;
+  } else if (isAlias(filter)) {
+    // We're just binding an alias to this position in the join tree
     return undefined;
   } else if (filter === null) {
     return { kind: "is-null" };

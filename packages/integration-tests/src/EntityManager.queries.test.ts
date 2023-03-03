@@ -1541,9 +1541,7 @@ describe("EntityManager.queries", () => {
     });
 
     it("prunes unused joins", async () => {
-      const a = alias(Author);
-      const p = alias(Publisher);
-      const b = alias(Book);
+      const [a, p, b] = aliases(Author, Publisher, Book);
       expect(parseFindQuery(am, { as: a, publisher: { as: p }, books: { as: b } })).toEqual({
         selects: [`"a".*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],

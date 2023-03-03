@@ -1,3 +1,10 @@
+## [1.56.1](https://github.com/stephenh/joist-ts/compare/v1.56.0...v1.56.1) (2023-03-03)
+
+
+### Bug Fixes
+
+* Allow many aliases to `aliases`. ([#549](https://github.com/stephenh/joist-ts/issues/549)) ([82e6702](https://github.com/stephenh/joist-ts/commit/82e6702c897fc461b4922170aa1559ebff6b673f))
+
 # [1.56.0](https://github.com/stephenh/joist-ts/compare/v1.55.6...v1.56.0) (2023-03-03)
 
 

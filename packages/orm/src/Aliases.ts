@@ -10,11 +10,10 @@ export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>)
 }
 
 /** Creates multiple aliases for complex filtering. */
-export function aliases<T1 extends Entity, T2 extends Entity>(
-  cstr1: MaybeAbstractEntityConstructor<T1>,
-  cstr2: MaybeAbstractEntityConstructor<T2>,
-): [Alias<T1>, Alias<T2>] {
-  return [newAliasProxy(cstr1), newAliasProxy(cstr2)];
+export function aliases<T extends readonly MaybeAbstractEntityConstructor<any>[]>(
+  ...type: T
+): { [P in keyof T]: T[P] extends MaybeAbstractEntityConstructor<infer E extends Entity> ? Alias<E> : never } {
+  return type.map((t) => newAliasProxy(t)) as any;
 }
 
 export type Alias<T extends Entity> = {

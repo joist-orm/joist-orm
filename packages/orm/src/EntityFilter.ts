@@ -34,7 +34,8 @@ export type EntityFilter<T extends Entity, I, F, N> =
   | I[]
   | ({ as?: Alias<T> } & F)
   | N
-  | { ne: T | I | N };
+  | { ne: T | I | N }
+  | Alias<T>;
 
 export type BooleanFilter<N> = true | false | N;
 

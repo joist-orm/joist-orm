@@ -1521,6 +1521,26 @@ describe("EntityManager.queries", () => {
       });
     });
 
+    it("can use aliases as an m2o entity filter", async () => {
+      await insertLargePublisher({ name: "p1" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const p = alias(Publisher);
+      const authors = await em.find(Author, { publisher: p }, { conditions: { and: [p.name.eq("p1")] } });
+      expect(authors.length).toEqual(1);
+    });
+
+    it("can use aliases as an o2m entity filter", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      const b = alias(Book);
+      const authors = await em.find(Author, { books: b }, { conditions: { and: [b.title.eq("b1")] } });
+      expect(authors.length).toEqual(1);
+    });
+
     it("can use aliases for or with nested and", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", age: 30 });

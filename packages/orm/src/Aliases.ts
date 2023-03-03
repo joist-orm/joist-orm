@@ -1,3 +1,4 @@
+import { fail } from "src/utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
@@ -80,6 +81,11 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
       }
     },
   }) as any;
+}
+
+export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt } {
+  // Oddly enough `typeof` will be a function b/c we are proxying the constructors
+  return obj && typeof obj === "function" && obj[aliasMgmt] !== undefined;
 }
 
 class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {

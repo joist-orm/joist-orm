@@ -1,3 +1,10 @@
+## [1.56.2](https://github.com/stephenh/joist-ts/compare/v1.56.1...v1.56.2) (2023-03-03)
+
+
+### Bug Fixes
+
+* Fix date filtering. ([#550](https://github.com/stephenh/joist-ts/issues/550)) ([f577e80](https://github.com/stephenh/joist-ts/commit/f577e80d1ceedbf90a18668f0463b66d612088d2))
+
 ## [1.56.1](https://github.com/stephenh/joist-ts/compare/v1.56.0...v1.56.1) (2023-03-03)
 
 

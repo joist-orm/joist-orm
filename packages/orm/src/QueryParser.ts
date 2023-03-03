@@ -248,7 +248,49 @@ export function parseFindQuery(
   if (complexConditions.length > 0) {
     Object.assign(parsed, { complexConditions });
   }
+  pruneUnusedJoins(parsed);
   return parsed;
+}
+
+// Remove any joins that are not used in the select or conditions
+function pruneUnusedJoins(parsed: ParsedFindQuery): void {
+  // Mark all terminal usages
+  const used = new Set<string>();
+  parsed.selects.forEach((s) => used.add(parseAlias(s)));
+  parsed.conditions.forEach((c) => used.add(c.alias));
+  parsed.orderBys?.forEach((o) => used.add(o.alias));
+  const todo = [...(parsed.complexConditions ?? [])];
+  while (todo.length !== 0) {
+    const cc = todo.pop()!;
+    for (const c of cc.conditions) {
+      if ("op" in c) {
+        todo.push(c);
+      } else {
+        used.add(c.alias);
+      }
+    }
+  }
+  // Mark all usages via joins
+  for (let i = 0; i < parsed.tables.length; i++) {
+    const t = parsed.tables[i];
+    if (t.join !== "primary") {
+      // If alias (col2) is required, ensure the col1 alias is also required
+      const a2 = t.alias;
+      const a1 = parseAlias(t.col1);
+      if (used.has(a2) && !used.has(a1)) {
+        used.add(a1);
+        // Restart at zero to find dependencies before us
+        i = 0;
+      }
+    }
+  }
+  // Now remove any unused joins
+  parsed.tables = parsed.tables.filter((t) => used.has(t.alias));
+}
+
+/** Returns the `a` from `"a".*`. */
+function parseAlias(alias: string): string {
+  return alias.split(".")[0].replaceAll(`"`, "");
 }
 
 /** An ADT version of `EntityFilter`. */

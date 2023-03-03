@@ -1,3 +1,10 @@
+# [1.56.0](https://github.com/stephenh/joist-ts/compare/v1.55.6...v1.56.0) (2023-03-03)
+
+
+### Features
+
+* Prune unused joins. ([#548](https://github.com/stephenh/joist-ts/issues/548)) ([060a80e](https://github.com/stephenh/joist-ts/commit/060a80e096eaafba1563ff8e6ecea48c100790f7))
+
 ## [1.55.6](https://github.com/stephenh/joist-ts/compare/v1.55.5...v1.55.6) (2023-03-02)
 
 

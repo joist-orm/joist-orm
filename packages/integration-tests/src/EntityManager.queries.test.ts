@@ -11,6 +11,7 @@ import {
 } from "@src/entities/inserts";
 import {
   alias,
+  aliases,
   getMetadata,
   NotFoundError,
   parseFindQuery,
@@ -1467,8 +1468,6 @@ describe("EntityManager.queries", () => {
       tables: [
         { alias: "c", table: "critics", join: "primary" },
         { alias: "lp", table: "large_publishers", join: "inner", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
-        // We don't technically need this, but we would if a condition touched the base table
-        { alias: "lp_b0", table: "publishers", join: "outer", col1: "lp.id", col2: "lp_b0.id", distinct: false },
         // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
         { alias: "a", table: "authors", join: "outer", col1: "lp.id", col2: "a.publisher_id" },
       ],
@@ -1539,6 +1538,32 @@ describe("EntityManager.queries", () => {
         },
       );
       expect(books.length).toEqual(2);
+    });
+
+    it("prunes unused joins", async () => {
+      const a = alias(Author);
+      const p = alias(Publisher);
+      const b = alias(Book);
+      expect(parseFindQuery(am, { as: a, publisher: { as: p }, books: { as: b } })).toEqual({
+        selects: [`"a".*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        conditions: [],
+      });
+    });
+
+    it("does not prune joins from complex conditions", async () => {
+      const [p, b] = aliases(Publisher, Book);
+      expect(parseFindQuery(am, { publisher: { as: p }, books: { as: b } }, { and: [b.title.eq("b1")] })).toEqual({
+        selects: [`"a".*`],
+        tables: [
+          { alias: "a", table: "authors", join: "primary" },
+          { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        ],
+        conditions: [],
+        complexConditions: [
+          { op: "and", conditions: [{ alias: "b", column: "title", cond: { kind: "eq", value: "b1" } }] },
+        ],
+      });
     });
   });
 

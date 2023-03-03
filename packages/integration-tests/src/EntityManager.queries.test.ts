@@ -13,6 +13,8 @@ import {
   alias,
   aliases,
   getMetadata,
+  jan1,
+  jan2,
   NotFoundError,
   parseFindQuery,
   setDefaultEntityLimit,
@@ -905,6 +907,22 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [{ alias: "a", column: "first_name", cond: { kind: "like", value: "a%" } }],
+    });
+  });
+
+  it("can find by date", async () => {
+    await insertAuthor({ first_name: "a1", graduated: jan1 });
+    await insertAuthor({ first_name: "a2", graduated: jan2 });
+
+    const em = newEntityManager();
+    const where = { graduated: jan2 } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [{ alias: "a", column: "graduated", cond: { kind: "eq", value: jan2 } }],
     });
   });
 

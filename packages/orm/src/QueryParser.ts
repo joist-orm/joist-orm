@@ -1,3 +1,4 @@
+import { isPlainObject } from "is-plain-object";
 import { groupBy } from "joist-utils";
 import { AliasMgmt, aliasMgmt } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
@@ -385,7 +386,7 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
     return [];
   } else if (Array.isArray(filter)) {
     return [{ kind: "in", value: filter }];
-  } else if (typeof filter === "object") {
+  } else if (isPlainObject(filter)) {
     const keys = Object.keys(filter);
     if (keys.length === 0) {
       // Should this be an error?

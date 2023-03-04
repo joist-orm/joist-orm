@@ -1,3 +1,10 @@
+## [1.57.1](https://github.com/stephenh/joist-ts/compare/v1.57.0...v1.57.1) (2023-03-04)
+
+
+### Bug Fixes
+
+* utils import ([#554](https://github.com/stephenh/joist-ts/issues/554)) ([1ae25ca](https://github.com/stephenh/joist-ts/commit/1ae25ca59d3d46cce56e932c1baba68b9e5968e4))
+
 # [1.57.0](https://github.com/stephenh/joist-ts/compare/v1.56.4...v1.57.0) (2023-03-03)
 
 

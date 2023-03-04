@@ -1,4 +1,4 @@
-import { fail } from "src/utils";
+import { fail } from "./utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";

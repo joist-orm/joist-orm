@@ -1,5 +1,5 @@
 ---
-title: Cascading Deletions
+title: Cascading Deletes
 ---
 
 You can have a parent cascade delete its children by doing:

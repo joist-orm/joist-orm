@@ -21,7 +21,7 @@ If you want a faster intro than this page, you should be able to check out the s
 
 :::
 
-::: info
+:::info
 
 Joist requires Node 18.
 

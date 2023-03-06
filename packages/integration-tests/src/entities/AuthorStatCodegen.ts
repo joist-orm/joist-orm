@@ -63,7 +63,7 @@ export interface AuthorStatFilter {
   id?: ValueFilter<AuthorStatId, never>;
   smallint?: ValueFilter<number, never>;
   integer?: ValueFilter<number, never>;
-  nullableInteger?: ValueFilter<number, null | undefined>;
+  nullableInteger?: ValueFilter<number, null>;
   bigint?: ValueFilter<number, never>;
   decimal?: ValueFilter<number, never>;
   real?: ValueFilter<number, never>;
@@ -71,7 +71,7 @@ export interface AuthorStatFilter {
   serial?: ValueFilter<number, never>;
   bigserial?: ValueFilter<number, never>;
   doublePrecision?: ValueFilter<number, never>;
-  nullableText?: ValueFilter<string, null | undefined>;
+  nullableText?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
 }

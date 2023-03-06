@@ -96,7 +96,7 @@ export interface BookFilter {
   id?: ValueFilter<BookId, never>;
   title?: ValueFilter<string, never>;
   order?: ValueFilter<number, never>;
-  deletedAt?: ValueFilter<Date, null | undefined>;
+  deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;

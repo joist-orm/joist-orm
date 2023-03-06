@@ -60,7 +60,7 @@ export interface CommentIdsOpts {
 
 export interface CommentFilter {
   id?: ValueFilter<CommentId, never>;
-  text?: ValueFilter<string, null | undefined>;
+  text?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;

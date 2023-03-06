@@ -57,7 +57,7 @@ export interface LargePublisherIdsOpts extends PublisherIdsOpts {
 }
 
 export interface LargePublisherFilter extends PublisherFilter {
-  country?: ValueFilter<string, null | undefined>;
+  country?: ValueFilter<string, null>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
 }
 

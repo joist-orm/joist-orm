@@ -82,9 +82,9 @@ export interface ImageFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<ImageType, never>;
-  author?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  book?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  author?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
+  book?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
+  publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
 }
 
 export interface ImageGraphQLFilter {
@@ -93,9 +93,9 @@ export interface ImageGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: EnumGraphQLFilter<ImageType>;
-  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
-  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
-  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
+  author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
+  book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
 }
 
 export interface ImageOrder {

@@ -784,5 +784,5 @@ function undefinedOrNever(notNull: boolean): string {
 }
 
 function nullOrNever(notNull: boolean): string {
-  return notNull ? "never" : " null | undefined";
+  return notNull ? "never" : "null";
 }

@@ -107,14 +107,14 @@ export interface PublisherIdsOpts {
 export interface PublisherFilter {
   id?: ValueFilter<PublisherId, never>;
   name?: ValueFilter<string, never>;
-  latitude?: ValueFilter<number, null | undefined>;
-  longitude?: ValueFilter<number, null | undefined>;
-  hugeNumber?: ValueFilter<number, null | undefined>;
+  latitude?: ValueFilter<number, null>;
+  longitude?: ValueFilter<number, null>;
+  hugeNumber?: ValueFilter<number, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  size?: ValueFilter<PublisherSize, null | undefined>;
+  size?: ValueFilter<PublisherSize, null>;
   type?: ValueFilter<PublisherType, never>;
-  group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null | undefined>;
+  group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -131,7 +131,7 @@ export interface PublisherGraphQLFilter {
   updatedAt?: ValueGraphQLFilter<Date>;
   size?: EnumGraphQLFilter<PublisherSize>;
   type?: EnumGraphQLFilter<PublisherType>;
-  group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null | undefined>;
+  group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
   authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;

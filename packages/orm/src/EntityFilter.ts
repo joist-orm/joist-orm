@@ -49,7 +49,7 @@ export type ValueFilter<V, N> =
   // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
   | { eq: V | N }
   | { ne: V | N }
-  | { in: V[] }
+  | { in: (V | N)[] }
   | { gt: V }
   | { gte: V }
   | { lt: V }

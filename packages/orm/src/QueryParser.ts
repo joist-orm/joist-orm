@@ -4,7 +4,7 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import { Column, getConstructorFromTaggedId, needsClassPerTableJoins } from "./index";
+import { Column, getConstructorFromTaggedId, isDefined, needsClassPerTableJoins } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
@@ -408,33 +408,39 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
       const { gte, lte } = filter;
       return [{ kind: "between", value: [gte, lte] }];
     } else {
-      return Object.entries(filter).map(([key]) => {
-        switch (key) {
-          case "eq":
-            if (filter[key] === null || filter[key] === undefined) {
-              return { kind: "is-null" };
-            } else {
-              return { kind: "eq", value: filter[key] };
-            }
-          case "ne":
-            if (filter[key] === null || filter[key] === undefined) {
-              return { kind: "not-null" };
-            } else {
-              return { kind: "ne", value: filter[key] ?? null };
-            }
-          case "in":
-            return { kind: "in", value: filter[key] };
-          case "gt":
-          case "gte":
-          case "lt":
-          case "lte":
-          case "like":
-          case "ilike":
-            return { kind: key, value: filter[key] };
-          default:
-            throw new Error(`Unsupported value filter key ${key}`);
-        }
-      });
+      return Object.entries(filter)
+        .map(([key]) => {
+          switch (key) {
+            case "eq":
+              if (filter[key] === null || filter[key] === undefined) {
+                return { kind: "is-null" as const };
+              } else {
+                return { kind: "eq" as const, value: filter[key] };
+              }
+            case "ne":
+              if (filter[key] === null || filter[key] === undefined) {
+                return { kind: "not-null" as const };
+              } else {
+                return { kind: "ne" as const, value: filter[key] ?? null };
+              }
+            case "in":
+              if (filter[key] === undefined) {
+                return undefined;
+              } else {
+                return { kind: "in" as const, value: filter[key] };
+              }
+            case "gt":
+            case "gte":
+            case "lt":
+            case "lte":
+            case "like":
+            case "ilike":
+              return { kind: key, value: filter[key] };
+            default:
+              throw new Error(`Unsupported value filter key ${key}`);
+          }
+        })
+        .filter(isDefined);
     }
   } else {
     // This is a primitive like a string, number

@@ -355,7 +355,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
     const where = { publisher: { id: { in: [publisherId] } } } satisfies AuthorFilter;
-    const authors = await em.find(Author, { publisher: { id: { in: [publisherId] } } });
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
@@ -363,6 +363,24 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "in", value: [1] } }],
+    });
+  });
+
+  it("can find by foreign key id in list that is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: { id: { in: undefined } } } satisfies AuthorGraphQLFilter;
+    const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [],
     });
   });
 
@@ -401,6 +419,24 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "in", value: [1] } }],
+    });
+  });
+
+  it("can find by foreign key is entity list that is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const publisher = await em.load(Publisher, "p:1");
+    const where = { publisher: undefined } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [],
     });
   });
 

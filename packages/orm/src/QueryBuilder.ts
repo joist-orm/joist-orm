@@ -132,6 +132,9 @@ function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
     case "in":
       query.whereIn(columnName, cond.value);
       break;
+    case "nin":
+      query.whereNotIn(columnName, cond.value);
+      break;
     case "@>":
       query.where(columnName, "@>", cond.value);
       break;

@@ -50,6 +50,7 @@ export type ValueFilter<V, N> =
   | { eq: V | N }
   | { ne: V | N }
   | { in: (V | N)[] }
+  | { nin: (V | N)[] }
   | { gt: V }
   | { gte: V }
   | { lt: V }

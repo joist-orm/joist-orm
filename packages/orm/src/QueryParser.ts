@@ -371,6 +371,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
 export type ParsedValueFilter<V> =
   | { kind: "eq"; value: V }
   | { kind: "in"; value: V[] }
+  | { kind: "nin"; value: V[] }
   | { kind: "@>"; value: V[] }
   | { kind: "gt"; value: V }
   | { kind: "gte"; value: V }
@@ -409,26 +410,26 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
       return [{ kind: "between", value: [gte, lte] }];
     } else {
       return Object.entries(filter)
-        .map(([key]) => {
+        .map(([key, value]) => {
+          // Always do condition pruning on the value
+          if (value === undefined) {
+            return undefined;
+          }
           switch (key) {
             case "eq":
-              if (filter[key] === null || filter[key] === undefined) {
+              if (value === null) {
                 return { kind: "is-null" as const };
               } else {
                 return { kind: "eq" as const, value: filter[key] };
               }
             case "ne":
-              if (filter[key] === null || filter[key] === undefined) {
+              if (value === null) {
                 return { kind: "not-null" as const };
               } else {
                 return { kind: "ne" as const, value: filter[key] ?? null };
               }
             case "in":
-              if (filter[key] === undefined) {
-                return undefined;
-              } else {
-                return { kind: "in" as const, value: filter[key] };
-              }
+            case "nin":
             case "gt":
             case "gte":
             case "lt":
@@ -469,6 +470,14 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
           kind: "@>",
           value: column.mapToDb(filter.value),
         };
+      } else {
+        filter.value = filter.value.map((v) => column.mapToDb(v));
+      }
+      return filter;
+    case "nin":
+      if (column.isArray) {
+        // Arrays need a special operator
+        throw new Error("The nin operator is not supported on array columns yet");
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }

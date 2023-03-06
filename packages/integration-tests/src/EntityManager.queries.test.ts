@@ -144,13 +144,12 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const where = { lastName: { ne: undefined } } satisfies AuthorFilter;
     const authors = await em.find(Author, where);
-    expect(authors.length).toEqual(1);
-    expect(authors[0].firstName).toEqual("a1");
+    expect(authors.length).toEqual(2);
 
     expect(parseFindQuery(am, where)).toEqual({
       selects: [`"a".*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
-      conditions: [{ alias: "a", column: "last_name", cond: { kind: "not-null" } }],
+      conditions: [],
     });
   });
 
@@ -374,6 +373,45 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
     const where = { publisher: { id: { in: undefined } } } satisfies AuthorGraphQLFilter;
+    const authors = await em.findGql(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [],
+    });
+  });
+
+  it("can find by foreign key id nin list", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ id: 2, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: { id: { nin: [publisherId] } } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "nin", value: [1] } }],
+    });
+  });
+
+  it("can find by foreign key id nin list that is undefined", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ id: 2, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 2 });
+
+    const em = newEntityManager();
+    const publisherId: PublisherId = "1";
+    const where = { publisher: { id: { nin: undefined } } } satisfies AuthorGraphQLFilter;
     const authors = await em.findGql(Author, where);
     expect(authors.length).toEqual(2);
 
@@ -1275,6 +1313,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const authors = await em.find(Author, { favoriteColors: [Color.Red] });
     expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
   });
 
   it("can find equal an enum array", async () => {
@@ -1283,6 +1322,18 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const authors = await em.find(Author, { favoriteColors: { eq: [Color.Red] } });
     expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a2");
+  });
+
+  it("can find neq an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [1] });
+    await insertAuthor({ first_name: "a3", favorite_colors: [] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { ne: [Color.Red] } });
+    expect(authors.length).toEqual(2);
+    expect(authors[0].firstName).toEqual("a1");
+    expect(authors[1].firstName).toEqual("a3");
   });
 
   it("can find through a polymorphic reference by id", async () => {

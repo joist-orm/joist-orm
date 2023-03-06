@@ -1,3 +1,10 @@
+## [1.58.2](https://github.com/stephenh/joist-ts/compare/v1.58.1...v1.58.2) (2023-03-06)
+
+
+### Bug Fixes
+
+* Allow non-GQL find queries to use pruning. ([#559](https://github.com/stephenh/joist-ts/issues/559)) ([4fd67bd](https://github.com/stephenh/joist-ts/commit/4fd67bda8628f3816867a0bbf552b7381e714010))
+
 ## [1.58.1](https://github.com/stephenh/joist-ts/compare/v1.58.0...v1.58.1) (2023-03-06)
 
 

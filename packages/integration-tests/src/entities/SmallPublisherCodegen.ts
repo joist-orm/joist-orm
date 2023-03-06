@@ -51,7 +51,7 @@ export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
 
 export interface SmallPublisherFilter extends PublisherFilter {
   city?: ValueFilter<string, never>;
-  allAuthorNames?: ValueFilter<string, null | undefined>;
+  allAuthorNames?: ValueFilter<string, null>;
 }
 
 export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {

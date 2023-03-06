@@ -51,7 +51,7 @@ export interface AuthorIdsOpts {
 export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never>;
   firstName?: ValueFilter<string, never>;
-  lastName?: ValueFilter<string, null | undefined>;
+  lastName?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;

@@ -34,7 +34,8 @@ export type EntityFilter<T extends Entity, I, F, N> =
   | I[]
   | ({ as?: Alias<T> } & F)
   | N
-  | { ne: T | I | N }
+  | undefined
+  | { ne: T | I | N | undefined }
   | Alias<T>;
 
 export type BooleanFilter<N> = true | false | N;
@@ -46,18 +47,19 @@ export type ValueFilter<V, N> =
   | V
   | V[]
   | N
+  | undefined
   // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
-  | { eq: V | N }
-  | { ne: V | N }
-  | { in: (V | N)[] }
-  | { nin: (V | N)[] }
-  | { gt: V }
-  | { gte: V }
-  | { lt: V }
-  | { lte: V }
-  | { like: V }
-  | { ilike: V }
-  | { gte: V; lte: V };
+  | { eq: V | N | undefined }
+  | { ne: V | N | undefined }
+  | { in: (V | N)[] | undefined }
+  | { nin: (V | N)[] | undefined }
+  | { gt: V | undefined }
+  | { gte: V | undefined }
+  | { lt: V | undefined }
+  | { lte: V | undefined }
+  | { like: V | undefined }
+  | { ilike: V | undefined }
+  | { gte: V | undefined; lte: V | undefined };
 
 /** Filters against complex expressions of filters. */
 export type ExpressionFilter =

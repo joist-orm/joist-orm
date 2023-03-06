@@ -183,18 +183,6 @@ The win here is that, without the pruning feature, the filter construction code 
 
 :::tip
 
-Condition and join pruning work best with the "GQL" variation of Joist filters.
-
-Joist's standard filters, i.e. `AuthorFilter`, are generally as type-safe as possible, for example if an `book.author` is required, it's invalid to make a find query like `find(Book, { author: null })` because `author` can never be null.
-
-However, this strict-ness can be difficult with wire formats like GraphQL those generated types are often rife with optional keys and `type | null | undefined` values.
-
-To be pragmatic, Joist provides GraphQL-specific filter types (i.e. `AuthorGraphQLFilter`) and the `em.findGql` method that works exactly like its `find` counterpart, but has looser typing, which, pertinent to this section, means you're more likely to be able to use condition pruning.
-
-:::
-
-:::tip
-
 This means if you want to filter on "is null", you need to use an explicit `firstName: null` or `firstName: { eq: null }` instead of assuming that `undefined` will be treated as `null`.
 
 This approach is admittedly contrary to `null` vs. `undefined` behavior in the rest of Joist, where `undefined` _is_ converted to `NULL` i.e. when saving column values to the database.

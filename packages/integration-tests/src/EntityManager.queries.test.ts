@@ -372,7 +372,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
-    const where = { publisher: { id: { in: undefined } } } satisfies AuthorGraphQLFilter;
+    const where = { publisher: { id: { in: undefined } } } satisfies AuthorFilter;
     const authors = await em.findGql(Author, where);
     expect(authors.length).toEqual(2);
 
@@ -411,7 +411,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
-    const where = { publisher: { id: { nin: undefined } } } satisfies AuthorGraphQLFilter;
+    const where = { publisher: { id: { nin: undefined } } } satisfies AuthorFilter;
     const authors = await em.findGql(Author, where);
     expect(authors.length).toEqual(2);
 

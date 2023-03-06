@@ -1,3 +1,10 @@
+## [1.58.1](https://github.com/stephenh/joist-ts/compare/v1.58.0...v1.58.1) (2023-03-06)
+
+
+### Bug Fixes
+
+* Forgot to add o2ms to the GraphQL filters. ([#558](https://github.com/stephenh/joist-ts/issues/558)) ([345ca11](https://github.com/stephenh/joist-ts/commit/345ca118950b2c00846ca81c874f7ef26d724d53))
+
 # [1.58.0](https://github.com/stephenh/joist-ts/compare/v1.57.2...v1.58.0) (2023-03-06)
 
 

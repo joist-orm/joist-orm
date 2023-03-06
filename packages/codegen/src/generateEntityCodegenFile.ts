@@ -737,10 +737,13 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
+  const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...polys];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {

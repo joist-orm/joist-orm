@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityFilter,
+  EntityGraphQLFilter,
   EntityOrmField,
   fail,
   FilterOf,
@@ -62,6 +63,7 @@ export interface ArtistGraphQLFilter {
   lastName?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  paintings?: EntityGraphQLFilter<Painting, PaintingId, FilterOf<Painting>, null | undefined>;
 }
 
 export interface ArtistOrder {

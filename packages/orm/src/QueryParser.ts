@@ -477,10 +477,7 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
     case "nin":
       if (column.isArray) {
         // Arrays need a special operator
-        return {
-          kind: "@>",
-          value: column.mapToDb(filter.value),
-        };
+        throw new Error("The nin operator is not supported on array columns yet");
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }

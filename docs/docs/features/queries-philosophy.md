@@ -49,7 +49,7 @@ const r4 = await em.find(Author, { publisher: p1 });
 
 If object graph navigation is ~80-90% of your application's queries (because they are all implicit), `find` queries will likely be **~10% of your queries**.
 
-See [Find Queries](./find-queries.md) for more documentation and examples.
+See [Find Queries](./queries-find) for more documentation and examples.
 
 * Pro: Still succinct because joins are implicit in the object literal
 * Pro: Supports `WHERE`-based filtering/returning a subset of entities

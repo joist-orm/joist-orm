@@ -1,13 +1,13 @@
 ---
-title: Enum Tables
+title: Enums
 sidebar_position: 6
 ---
 
-Joist supports enum tables for modeling fields that can be set to a fixed number of values (i.e. state, status, and other fields)
+Joist supports enum tables for modeling fields that can be set to a fixed number of values (i.e. a `state` field that can be `OPEN` or `CLOSED`, or a field `status` field that can be `ACTIVE`, `DRAFT`, `PENDING`, etc.)
 
 ### What's an Enum Table
 
-Enum tables are a pattern of putting each enum in your domain model into a corresponding table in the database, with rows for each enum values.
+Enum tables are a pattern where each enum (`Color`) in your domain model has a corresponding table (`colors`) in the database, with rows for each enum values.
 
 For example, for a `Color` enum with values of `Color.RED`, `Color.GREEN`, `Color.Blue`, the `color` table would look like:
 

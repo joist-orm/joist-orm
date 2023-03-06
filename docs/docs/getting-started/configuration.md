@@ -8,10 +8,10 @@ Joist prefers convention over configuration, but it still has some knobs to cont
 
 The configuration is split into two sections:
 
-- Codegen config, i.e. configuration used by `npm run joist-codegen` during the code generation build step
-- Runtime config, i.e. configuration by `EntityManager` at runtime to configure the database & SQL that Joist uses
+1. Codegen config, used by `npm run joist-codegen` during the code generation build step,
+2. Runtime config, used by `EntityManager` at runtime to configure the database that Joist connects to.
 
-You should be able to get started without any Codegen config, and only some minimal Runtime config.
+You can get started without any codegen config, and only some minimal runtime config.
 
 ## Codegen Configuration
 
@@ -21,16 +21,11 @@ A short, minimalistic example is:
 
 ```json
 {
-  "contextType": "Context@src/context",
-  "databaseUrl": "postgres://db:user@localhost:5432/your_schema",
-  "entities": {
-    "Author": { "tag": "a" }
-  },
   "entitiesDirectory": "./src/entities"
 }
 ```
 
-Each of the supported keys are described below.
+Each of the supported keys are described below. Note this is an exhaustive list, but all the keys are optional.
 
 ### `databaseUrl`
 

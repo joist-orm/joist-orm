@@ -40,7 +40,7 @@ const config = {
           { type: "doc", docId: "getting-started/installation", position: "left", label: "Getting Started" },
           { type: "doc", docId: "goals/overview", position: "left", label: "Goals" },
           { type: "doc", docId: "modeling/fields", position: "left", label: "Domain Modeling" },
-          { type: "doc", docId: "features/unit-of-work", position: "left", label: "Features" },
+          { type: "doc", docId: "features/entity-manager", position: "left", label: "Features" },
           { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
           { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
           { href: "https://joist-ts.slack.com/ssb/redirect", label: "Slack", position: "right" },

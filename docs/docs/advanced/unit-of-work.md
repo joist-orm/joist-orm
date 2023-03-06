@@ -3,15 +3,14 @@ title: Unit of Work
 sidebar_position: 1
 ---
 
-Joist's `EntityManager` acts as a [Unit of Work](https://www.martinfowler.com/eaaCatalog/unitOfWork.html), which caches the entities that are currently loaded/being mutated for each request.
-
-This means that entities must be loaded from the `EntityManager`, i.e. via `em.load(Author, 1)`, and not from methods on `Author`, i.e. like an ActiveRecord `Author.find_by_id(1)`, but there are several reasons for this:
+Joist's `EntityManager` acts as a [Unit of Work](https://www.martinfowler.com/eaaCatalog/unitOfWork.html), which allows it to provide several features:
 
 1. Per-request entity caching
-2. Data consistency
+2. Per-request data consistency
 3. Automatically batching updates
-4. Automatically using transactions 
-5. Hooks and derived values
+4. Automatically using transactions
+5. Enforcing hooks and reactive values
+
 
 ## Per-Request Entity Caching
 
@@ -36,7 +35,7 @@ This caching also works for references & collections: for example if two places 
 
 Granted, in simple endpoints with no abstractions or complicated business logic, this caching is likely not a big deal; but once a codebase grows and access patterns get complicated (i.e. in GraphQL resolvers or validation rules/business logics), not constantly refetching the same `Author id=1` row in the database is a nice win.
 
-## Data Consistency
+## Per-Request Data Consistency
 
 An additional upshot of entity caching (which focuses on avoiding reloads) is data consistency.
 
@@ -91,7 +90,7 @@ And because it is opt-in, most endpoints forget/do not bother doing this.
 
 However, transactions are so fundamental to the pleasantness of Postgres and relational databases, that Joist's assertion is that **transactions should always be used by default**, and not just opt-in.
 
-## Hooks and Derived Values
+## Enforcing Hooks and Derived Values
 
 Joist's goal is not to be "just a query builder", but to facilitate building a rich domain model.
 

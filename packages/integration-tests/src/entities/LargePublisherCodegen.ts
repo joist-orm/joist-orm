@@ -3,6 +3,7 @@ import {
   Collection,
   ConfigApi,
   EntityFilter,
+  EntityGraphQLFilter,
   EntityOrmField,
   fail,
   FilterOf,
@@ -62,6 +63,7 @@ export interface LargePublisherFilter extends PublisherFilter {
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   country?: ValueGraphQLFilter<string>;
+  critics?: EntityGraphQLFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
 }
 
 export interface LargePublisherOrder extends PublisherOrder {

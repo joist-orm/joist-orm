@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityFilter,
+  EntityGraphQLFilter,
   EntityOrmField,
   fail,
   FilterOf,
@@ -62,6 +63,7 @@ export interface AuthorGraphQLFilter {
   lastName?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  books?: EntityGraphQLFilter<Book, BookId, FilterOf<Book>, null | undefined>;
 }
 
 export interface AuthorOrder {

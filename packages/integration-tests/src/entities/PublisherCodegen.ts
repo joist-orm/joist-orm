@@ -132,6 +132,10 @@ export interface PublisherGraphQLFilter {
   size?: EnumGraphQLFilter<PublisherSize>;
   type?: EnumGraphQLFilter<PublisherType>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null | undefined>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  images?: EntityGraphQLFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
 }
 
 export interface PublisherOrder {

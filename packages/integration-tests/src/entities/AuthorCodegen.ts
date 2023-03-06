@@ -171,6 +171,9 @@ export interface AuthorGraphQLFilter {
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  books?: EntityGraphQLFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface AuthorOrder {

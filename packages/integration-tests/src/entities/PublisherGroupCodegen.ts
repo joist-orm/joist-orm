@@ -4,6 +4,7 @@ import {
   Collection,
   ConfigApi,
   EntityFilter,
+  EntityGraphQLFilter,
   EntityOrmField,
   fail,
   FilterOf,
@@ -69,6 +70,7 @@ export interface PublisherGroupGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  publishers?: EntityGraphQLFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface PublisherGroupOrder {

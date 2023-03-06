@@ -1,3 +1,10 @@
+## [1.57.2](https://github.com/stephenh/joist-ts/compare/v1.57.1...v1.57.2) (2023-03-06)
+
+
+### Bug Fixes
+
+* Allow `in` values to be undefined. ([#555](https://github.com/stephenh/joist-ts/issues/555)) ([b3ddaec](https://github.com/stephenh/joist-ts/commit/b3ddaecbb355a548f34e4e1389d16232c1b4966b))
+
 ## [1.57.1](https://github.com/stephenh/joist-ts/compare/v1.57.0...v1.57.1) (2023-03-04)
 
 

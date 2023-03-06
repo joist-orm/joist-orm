@@ -1,3 +1,10 @@
+# [1.58.0](https://github.com/stephenh/joist-ts/compare/v1.57.2...v1.58.0) (2023-03-06)
+
+
+### Features
+
+* Add nin filter. ([#557](https://github.com/stephenh/joist-ts/issues/557)) ([d8fe13b](https://github.com/stephenh/joist-ts/commit/d8fe13be7428eecb59b5a6068d4066c86b55417f))
+
 ## [1.57.2](https://github.com/stephenh/joist-ts/compare/v1.57.1...v1.57.2) (2023-03-06)
 
 

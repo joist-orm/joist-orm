@@ -1,3 +1,10 @@
+## [1.58.3](https://github.com/stephenh/joist-ts/compare/v1.58.2...v1.58.3) (2023-03-08)
+
+
+### Bug Fixes
+
+* Fix bad import that led to 'any' typing. ([#560](https://github.com/stephenh/joist-ts/issues/560)) ([9d24a5c](https://github.com/stephenh/joist-ts/commit/9d24a5ca302b7343dcf7a1cb6d7803291cad0f3d))
+
 ## [1.58.2](https://github.com/stephenh/joist-ts/compare/v1.58.1...v1.58.2) (2023-03-06)
 
 

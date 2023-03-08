@@ -1,4 +1,4 @@
-import { Alias } from "src/Aliases";
+import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
 import { FilterOf, OrderOf } from "./EntityManager";
 import { ColumnCondition } from "./QueryParser";

@@ -1758,6 +1758,48 @@ describe("EntityManager.queries", () => {
         ],
       });
     });
+
+    it("prunes partially used complex conditions", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.eq("a1"), a.firstName.eq(undefined)] };
+      const authors = await em.find(Author, { as: a }, { conditions });
+      expect(authors.length).toEqual(1);
+
+      expect(parseFindQuery(am, { as: a }, conditions)).toEqual({
+        selects: [`"a".*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        conditions: [],
+        complexConditions: [
+          {
+            op: "or",
+            conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } }],
+          },
+        ],
+      });
+    });
+
+    it("prunes completely unused conditions", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.eq(undefined), a.firstName.eq(undefined)] };
+      const authors = await em.find(Author, { as: a }, { conditions });
+      expect(authors.length).toEqual(3);
+
+      expect(parseFindQuery(am, { as: a }, conditions)).toEqual({
+        selects: [`"a".*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        conditions: [],
+      });
+    });
   });
 
   describe("aliases", () => {

@@ -1,3 +1,10 @@
+# [1.59.0](https://github.com/stephenh/joist-ts/compare/v1.58.3...v1.59.0) (2023-03-11)
+
+
+### Features
+
+* Add m2m support to em.find. ([#561](https://github.com/stephenh/joist-ts/issues/561)) ([119ed02](https://github.com/stephenh/joist-ts/commit/119ed02be5c0ef06861063995743be02f23bcefc))
+
 ## [1.58.3](https://github.com/stephenh/joist-ts/compare/v1.58.2...v1.58.3) (2023-03-08)
 
 

@@ -208,8 +208,8 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Image, fn);
+  load<U, V>(fn: (lens: Lens<Image>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Image, fn, opts);
   }
 
   populate<H extends LoadHint<Image>>(hint: H): Promise<Loaded<Image, H>>;

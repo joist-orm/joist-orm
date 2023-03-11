@@ -413,8 +413,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     return this.__orm.data.deletedAt !== undefined;
   }
 
-  load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Author, fn);
+  load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Author, fn, opts);
   }
 
   populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;

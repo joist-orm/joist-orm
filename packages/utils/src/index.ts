@@ -4,7 +4,11 @@ export function fail(message?: string): never {
   throw new Error(message || "Failed");
 }
 
-export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x: T) => Y): Record<string, Y[]> {
+export function groupBy<T, Y = T>(
+  list: readonly T[],
+  fn: (x: T) => string,
+  valueFn?: (x: T) => Y,
+): Record<string, Y[]> {
   const result: Record<string, Y[]> = {};
   list.forEach((o) => {
     const group = fn(o);

@@ -1,0 +1,171 @@
+import DataLoader from "dataloader";
+import { Entity } from "../Entity";
+import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { getMetadata, ManyToOneField } from "../EntityMetadata";
+import { deTagIds, tagId } from "../keys";
+import { mapPathsToTarget } from "../loadLens";
+import { abbreviation, buildFindQuery } from "../QueryBuilder";
+import { addTablePerClassJoinsAndClassTag, ColumnCondition, ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { getOrSet, groupBy } from "../utils";
+
+/**
+ * Loads lens paths via SQL.
+ *
+ * I.e. instead of loading `author.load(a => a.books.reviews)` by pulling all
+ * Books into memory, we do a join from the Author to BookReviews.
+ */
+export function lensDataLoader<T extends Entity>(
+  em: EntityManager,
+  type: MaybeAbstractEntityConstructor<T>,
+  startIsArray: boolean,
+  paths: string[],
+): DataLoader<string, T | T[]> {
+  // Batch lens loads by type + path to avoid N+1s
+  const key = `${type.name}:${paths.join("/")}`;
+  return getOrSet(em.findLoaders, key, () => {
+    return new DataLoader<string, T | T[]>(async (sourceIds) => {
+      const aliases: Record<string, number> = {};
+      function getAlias(tableName: string): string {
+        const abbrev = abbreviation(tableName);
+        const i = aliases[abbrev] || 0;
+        aliases[abbrev] = i + 1;
+        return i === 0 ? abbrev : `${abbrev}${i}`;
+      }
+
+      // br.load(br => br.book.author)
+      // select br.id as __source_id, a.*
+      // from authors a
+      // join books b ON b.author_id = a.id
+      // join book_reviews br ON br.book_id = br.id
+      // where br.id in (keys)
+      // source=BR, target=Author, fields=books,bookReviews
+
+      // a.load(a => a.books.reviews)
+      // select b.author_id as __source_id, br.*
+      // from book_reviews br
+      // join books b on b.id = br.book_id
+      // where b.author_id in (keys)
+
+      const source = getMetadata(type);
+      // Walk source -> paths -> the target, and return the target -> source fields
+      const [target, fields] = mapPathsToTarget(source, paths);
+      let resultIsArray = startIsArray;
+
+      const alias = getAlias(target.tableName);
+      const selects = [`${alias}.*`];
+      const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
+      addTablePerClassJoinsAndClassTag(selects, tables, target, alias, true);
+      const conditions: ColumnCondition[] = [];
+
+      let lastAlias = alias;
+      fields.forEach(([, field], i) => {
+        const isLast = i === fields.length - 1;
+        switch (field.kind) {
+          case "o2m": {
+            // This is `Publisher.authors` and we want to join in the authors table,
+            // so get the `Author.publisher` field to know the column name
+            const other = field.otherMetadata();
+            const m2o = other.allFields[field.otherFieldName] as ManyToOneField;
+            const alias = getAlias(other.tableName);
+            tables.push({
+              alias,
+              join: "inner",
+              table: other.tableName,
+              col1: `${alias}.${m2o.serde.columns[0].columnName}`,
+              col2: `${lastAlias}.id`,
+            });
+            if (other.timestampFields.deletedAt) {
+              const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
+              conditions.push({ alias, column, cond: { kind: "is-null" } });
+            }
+            if (isLast) {
+              selects.push(`${alias}.id as __source_id`);
+              conditions.push({
+                alias,
+                column: "id",
+                cond: { kind: "in", value: deTagIds(source, sourceIds) },
+              });
+            }
+            lastAlias = alias;
+            break;
+          }
+          case "m2o": {
+            // This is `Book.author` and we want to join in the authors table
+            const other = field.otherMetadata();
+            const alias = getAlias(other.tableName);
+            if (!isLast) {
+              tables.push({
+                alias,
+                join: "inner",
+                table: other.tableName,
+                col1: `${alias}.id`,
+                col2: `${lastAlias}.${field.serde.columns[0].columnName}`,
+              });
+              if (other.timestampFields.deletedAt) {
+                const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
+                conditions.push({ alias, column, cond: { kind: "is-null" } });
+              }
+            } else {
+              selects.push(`${lastAlias}.${field.serde.columns[0].columnName} as __source_id`);
+              conditions.push({
+                alias: lastAlias,
+                column: field.serde.columns[0].columnName,
+                cond: { kind: "in", value: deTagIds(source, sourceIds) },
+              });
+            }
+            resultIsArray = true;
+            lastAlias = alias;
+            break;
+          }
+          case "m2m": {
+            // This is `Book.tags` and we want to join through the m2m table
+            const other = field.otherMetadata();
+            const alias = getAlias(other.tableName);
+            tables.push({
+              alias: `${alias}_m2m`,
+              join: "inner",
+              table: field.joinTableName,
+              col1: `${alias}_m2m.${field.columnNames[0]}`,
+              col2: `${lastAlias}.id`,
+            });
+            tables.push({
+              alias,
+              join: "inner",
+              table: other.tableName,
+              col1: `${alias}.id`,
+              col2: `${alias}_m2m.${field.columnNames[1]}`,
+            });
+            if (isLast) {
+              selects.push(`${alias}.id as __source_id`);
+              conditions.push({ alias, column: "id", cond: { kind: "in", value: deTagIds(source, sourceIds) } });
+            }
+            resultIsArray = true;
+            lastAlias = alias;
+            break;
+          }
+          default:
+            throw new Error("Unsupported field kind: " + field.kind);
+        }
+      });
+
+      // Get back `__source_id, target.*`
+      const parsed: ParsedFindQuery = { selects, tables, conditions };
+      const rows = await buildFindQuery((em.ctx as any).knex, parsed, {});
+
+      // Group the target entities (i.e. BookReview) by the source id we reached them from.
+      const map = new Map(
+        [...groupBy(rows, (row) => row["__source_id"]).entries()].map(([sourceId, rows]) => {
+          // We may technically re-hydrate the same entity twice if it was reached
+          // via multiple sources, but that should be fine/get deduped by hydrate.
+          return [tagId(source, sourceId), rows.map((row) => em.hydrate(target.cstr, row))];
+        }),
+      );
+
+      // Re-order the output by the batched input
+      return sourceIds.map((id) => {
+        const result = map.get(id)!;
+        return resultIsArray ? [...new Set(result)] : result?.[0];
+      });
+    });
+  });
+}

@@ -21,9 +21,7 @@ export function hasManyThrough<T extends Entity, U extends Entity>(
 ): Collection<T, U> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomCollection<T, U>(entity, {
-    load: async (entity, opts) => {
-      await loadLens(entity, lens, opts);
-    },
+    load: (entity, opts) => loadLens(entity, lens, opts),
     get: () => getLens(entity, lens),
     isLoaded: () => isLensLoaded(entity, lens),
   });

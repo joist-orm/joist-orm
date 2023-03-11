@@ -186,8 +186,8 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Critic, fn);
+  load<U, V>(fn: (lens: Lens<Critic>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Critic, fn, opts);
   }
 
   populate<H extends LoadHint<Critic>>(hint: H): Promise<Loaded<Critic, H>>;

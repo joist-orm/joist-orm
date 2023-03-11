@@ -6,9 +6,11 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
-import { getLens, Lens } from "joist-orm";
+import { getLens, getMetadata, Lens, testing } from "joist-orm";
 import { Author, Book, Publisher, Tag } from "./entities";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
+
+const { isAllSqlPaths } = testing;
 
 describe("EntityManager.lens", () => {
   it("can navigate references", async () => {
@@ -21,6 +23,7 @@ describe("EntityManager.lens", () => {
     expect(p1?.name).toEqual("p1");
     // @ts-expect-error
     expect(p1.name).toEqual("p1");
+    expect(em.entities.length).toBe(3);
   });
 
   it("can navigate with n+1 safe queries", async () => {
@@ -36,7 +39,6 @@ describe("EntityManager.lens", () => {
     const [p1, p2] = await Promise.all([b1, b2].map((book) => book.load((b) => b.author.publisher)));
     expect(p1?.name).toEqual("p1");
     expect(p2?.name).toEqual("p2");
-    // 2 = 1 for authors, 1 for publishers
     expect(numberOfQueries).toEqual(2);
   });
 
@@ -136,6 +138,8 @@ describe("EntityManager.lens", () => {
     const publishers = await t1.load((t) => t.books.author.publisher);
     // Use `toStrictEqual` to ensure the list is not `[undefined]`
     expect(publishers).toStrictEqual([]);
+    // Explicitly populate so we can test getLens
+    await t1.populate({ books: { author: "publisher" } });
     expect(getLens(t1, (t) => t.books.author.publisher)).toStrictEqual([]);
   });
 
@@ -146,6 +150,8 @@ describe("EntityManager.lens", () => {
     const b1 = await em.load(Book, "b:1");
     const books = await b1.load((b) => b.author.books);
     expect(books).toMatchEntity([]);
+    // Explicitly populate so we can test getLens
+    await b1.populate({ author: "books" });
     expect(getLens(b1, (b) => b.author.books)).toMatchEntity([]);
   });
 
@@ -157,5 +163,85 @@ describe("EntityManager.lens", () => {
     const b1 = await em.load(Book, "1");
     const p1Id = await b1.load((b) => b.author.publisher.idOrFail);
     expect(p1Id).toEqual("p:1");
+  });
+
+  describe("sql", () => {
+    it("loads a subset via m2o", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 2 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "b:1");
+      const p1 = await b1.load((b) => b.author.publisher, { sql: true });
+      expect(p1!.name).toEqual("p1");
+      expect(em.entities.length).toBe(2);
+
+      expect(lastQuery()).toMatchInlineSnapshot(
+        `"select p.*, p_s0.*, p_s1.*, "p".id as id, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, b.id as __source_id from "publishers" as "p" left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id" left outer join "small_publishers" as "p_s1" on "p"."id" = "p_s1"."id" inner join "authors" as "a" on "a"."publisher_id" = "p"."id" inner join "books" as "b" on "b"."author_id" = "a"."id" where "a"."deleted_at" is null and "b"."deleted_at" is null and "b"."id" in ($1) order by "p"."id" asc limit $2"`,
+      );
+    });
+
+    it("loads a subset via o2m", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 2 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+
+      const em = newEntityManager();
+      const p1 = await em.load(Publisher, "p:1");
+      const books = await p1.load((p) => p.authors.books, { sql: true });
+      expect(books).toMatchEntity([{ title: "b1" }]);
+      expect(em.entities.length).toBe(2);
+
+      expect(lastQuery()).toMatchInlineSnapshot(
+        `"select b.*, "b".id as id, a.publisher_id as __source_id from "books" as "b" inner join "authors" as "a" on "a"."id" = "b"."author_id" where "a"."deleted_at" is null and "a"."publisher_id" in ($1) order by "b"."id" asc limit $2"`,
+      );
+    });
+
+    it("loads a subset via m2m last", async () => {
+      await insertTag({ name: "t1" });
+      await insertTag({ name: "t2" });
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertBookToTag({ book_id: 1, tag_id: 1 });
+      await insertBookToTag({ book_id: 2, tag_id: 2 });
+
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      const tags = await a1.load((a) => a.books.tags, { sql: true });
+      expect(tags).toMatchEntity([{ name: "t1" }]);
+      expect(em.entities.length).toBe(2);
+    });
+
+    it("loads a subset via m2m first", async () => {
+      await insertTag({ name: "t1" });
+      await insertTag({ name: "t2" });
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertBookToTag({ book_id: 1, tag_id: 1 });
+      await insertBookToTag({ book_id: 2, tag_id: 2 });
+
+      const em = newEntityManager();
+      const t1 = await em.load(Tag, "t:1");
+      const authors = await t1.load((t) => t.books.author, { sql: true });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+      expect(em.entities.length).toBe(2);
+    });
+
+    it("has isAllSql", () => {
+      expect(isAllSqlPaths(getMetadata(Book), ["author"])).toBe(true);
+      expect(isAllSqlPaths(getMetadata(Book), ["author", "publisher"])).toBe(true);
+      expect(isAllSqlPaths(getMetadata(Book), ["author", "numberOfBooks"])).toBe(false);
+    });
   });
 });

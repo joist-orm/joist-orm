@@ -29,13 +29,13 @@ export interface ColumnCondition {
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
 export const skipCondition: ColumnCondition = { alias: "skip", column: "skip", cond: undefined as any };
 
-interface PrimaryTable {
+export interface PrimaryTable {
   join: "primary";
   alias: string;
   table: string;
 }
 
-interface JoinTable {
+export interface JoinTable {
   join: "inner" | "outer";
   alias: string;
   table: string;
@@ -44,7 +44,7 @@ interface JoinTable {
   distinct?: boolean;
 }
 
-type ParsedTable = PrimaryTable | JoinTable;
+export type ParsedTable = PrimaryTable | JoinTable;
 
 interface ParsedOrderBy {
   alias: string;
@@ -53,7 +53,7 @@ interface ParsedOrderBy {
 }
 
 /** The result of parsing an `em.find` filter. */
-interface ParsedFindQuery {
+export interface ParsedFindQuery {
   selects: string[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
@@ -421,9 +421,9 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
  */
 export type ParsedValueFilter<V> =
   | { kind: "eq"; value: V }
-  | { kind: "in"; value: V[] }
-  | { kind: "nin"; value: V[] }
-  | { kind: "@>"; value: V[] }
+  | { kind: "in"; value: readonly V[] }
+  | { kind: "nin"; value: readonly V[] }
+  | { kind: "@>"; value: readonly V[] }
   | { kind: "gt"; value: V }
   | { kind: "gte"; value: V }
   | { kind: "ne"; value: V }
@@ -548,7 +548,7 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
   }
 }
 
-function addTablePerClassJoinsAndClassTag(
+export function addTablePerClassJoinsAndClassTag(
   selects: string[],
   tables: ParsedTable[],
   meta: EntityMetadata<any>,

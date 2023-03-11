@@ -144,8 +144,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Book, fn);
+  load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Book, fn, opts);
   }
 
   populate<H extends LoadHint<Book>>(hint: H): Promise<Loaded<Book, H>>;

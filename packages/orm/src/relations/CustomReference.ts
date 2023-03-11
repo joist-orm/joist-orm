@@ -8,7 +8,7 @@ import { RelationT, RelationU } from "./Relation";
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
   // each time it's invoked so that it reflects any changed values.
-  load: (entity: T, opts: { forceReload?: boolean }) => Promise<void>;
+  load: (entity: T, opts: { forceReload?: boolean }) => Promise<unknown>;
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
@@ -33,7 +33,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
-  private loadPromise: Promise<void> | undefined;
+  private loadPromise: Promise<unknown> | undefined;
   private _isLoaded = false;
 
   constructor(entity: T, private opts: CustomReferenceOpts<T, U, N>) {

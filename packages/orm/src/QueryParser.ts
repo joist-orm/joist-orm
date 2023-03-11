@@ -15,10 +15,9 @@ import {
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
-// Maybe rename this to `ParsedComplexExpression`?
-export interface ExpressionCondition {
+export interface ParsedExpressionFilter {
   op: "and" | "or";
-  conditions: (ExpressionCondition | ColumnCondition)[];
+  conditions: (ParsedExpressionFilter | ColumnCondition)[];
 }
 
 export interface ColumnCondition {
@@ -26,6 +25,8 @@ export interface ColumnCondition {
   column: string;
   cond: ParsedValueFilter<any>;
 }
+
+export const skipCondition: ColumnCondition = { alias: "skip", column: "skip", cond: undefined as any };
 
 interface PrimaryTable {
   join: "primary";
@@ -58,7 +59,7 @@ interface ParsedFindQuery {
   /** Simple conditions that are ANDd together. */
   conditions: ColumnCondition[];
   /** Any optional complex conditions that will be ANDd with the simple conditions. */
-  complexConditions?: ExpressionCondition[];
+  complexConditions?: ParsedExpressionFilter[];
   /** Any optional orders to add before the default 'order by id'. */
   orderBys?: ParsedOrderBy[];
 }
@@ -75,7 +76,7 @@ export function parseFindQuery(
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
-  const complexConditions: ExpressionCondition[] = [];
+  const complexConditions: ParsedExpressionFilter[] = [];
   const orderBys: ParsedOrderBy[] = [];
 
   const aliases: Record<string, number> = {};
@@ -281,7 +282,10 @@ export function parseFindQuery(
   selects.push(`"${alias}".*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (expression) {
-    complexConditions.push(parseExpression(expression));
+    const parsed = parseExpression(expression);
+    if (parsed) {
+      complexConditions.push(parsed);
+    }
   }
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
@@ -590,13 +594,19 @@ function addTablePerClassJoinsAndClassTag(
   }
 }
 
-function parseExpression(expression: ExpressionFilter): ExpressionCondition {
+function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
   const [op, expressions] =
     "and" in expression
       ? ["and" as const, expression.and]
       : "or" in expression
       ? ["or" as const, expression.or]
       : fail(`Invalid expression ${expression}`);
-  const conditions = expressions.map((exp) => ("and" in exp || "or" in exp ? parseExpression(exp) : exp));
+  const conditions = expressions
+    .map((exp) => ("and" in exp || "or" in exp ? parseExpression(exp) : exp))
+    .filter(isDefined)
+    .filter((maybeCond) => maybeCond !== skipCondition);
+  if (conditions.length === 0) {
+    return undefined;
+  }
   return { op, conditions };
 }

@@ -1,9 +1,9 @@
-import { fail } from "./utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ColumnCondition, mapToDb, ParsedValueFilter } from "./QueryParser";
+import { ColumnCondition, mapToDb, ParsedValueFilter, skipCondition } from "./QueryParser";
 import { Column } from "./serde";
+import { fail } from "./utils";
 
 /** Creates an alias for complex filtering against `T`. */
 export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
@@ -26,22 +26,22 @@ export type Alias<T extends Entity> = {
 };
 
 export interface PrimitiveAlias<V> {
-  eq(value: V): ColumnCondition;
-  ne(value: V): ColumnCondition;
-  in(values: V[]): ColumnCondition;
-  gt(value: V): ColumnCondition;
-  gte(value: V): ColumnCondition;
-  lt(value: V): ColumnCondition;
-  lte(value: V): ColumnCondition;
-  like(value: V): ColumnCondition;
-  ilike(value: V): ColumnCondition;
-  between(v1: V, v2: V): ColumnCondition;
+  eq(value: V | undefined): ColumnCondition;
+  ne(value: V | undefined): ColumnCondition;
+  in(values: V[] | undefined): ColumnCondition;
+  gt(value: V | undefined): ColumnCondition;
+  gte(value: V | undefined): ColumnCondition;
+  lt(value: V | undefined): ColumnCondition;
+  lte(value: V | undefined): ColumnCondition;
+  like(value: V | undefined): ColumnCondition;
+  ilike(value: V | undefined): ColumnCondition;
+  between(v1: V | undefined, v2: V | undefined): ColumnCondition;
 }
 
 export interface EntityAlias<T> {
-  eq(value: T | IdOf<T> | null): ColumnCondition;
-  ne(value: T | IdOf<T> | null): ColumnCondition;
-  in(value: Array<T | IdOf<T>>): ColumnCondition;
+  eq(value: T | IdOf<T> | null | undefined): ColumnCondition;
+  ne(value: T | IdOf<T> | null | undefined): ColumnCondition;
+  in(value: Array<T | IdOf<T>> | undefined): ColumnCondition;
 }
 
 export const aliasMgmt = Symbol("aliasMgmt");
@@ -91,43 +91,53 @@ export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt 
 class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
   public constructor(private conditions: ColumnCondition[], private column: Column) {}
 
-  eq(value: V): ColumnCondition {
+  eq(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "eq", value });
   }
 
-  ne(value: V): ColumnCondition {
+  ne(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "ne", value });
   }
 
-  gt(value: V): ColumnCondition {
+  gt(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "gt", value });
   }
 
-  gte(value: V): ColumnCondition {
+  gte(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "gte", value });
   }
 
-  lt(value: V): ColumnCondition {
+  lt(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "lt", value });
   }
 
-  lte(value: V): ColumnCondition {
+  lte(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "lte", value });
   }
 
-  between(v1: V, v2: V): ColumnCondition {
+  between(v1: V | undefined, v2: V | undefined): ColumnCondition {
+    if (v1 === undefined || v2 === undefined) return skipCondition;
     return this.addCondition({ kind: "between", value: [v1, v2] });
   }
 
-  like(value: V): ColumnCondition {
+  like(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "like", value });
   }
 
-  ilike(value: V): ColumnCondition {
+  ilike(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "ilike", value });
   }
 
-  in(values: V[]): ColumnCondition {
+  in(values: V[] | undefined): ColumnCondition {
+    if (values === undefined) return skipCondition;
     return this.addCondition({ kind: "in", value: values });
   }
 
@@ -145,24 +155,29 @@ class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
 class EntityAliasImpl<T> implements EntityAlias<T> {
   public constructor(private conditions: ColumnCondition[], private column: Column) {}
 
-  eq(value: T | IdOf<T> | null): ColumnCondition {
-    if (value === null) {
+  eq(value: T | IdOf<T> | null | undefined): ColumnCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value === null) {
       return this.addCondition({ kind: "is-null" });
     } else {
       return this.addCondition({ kind: "eq", value });
     }
   }
 
-  ne(value: T | IdOf<T> | null): ColumnCondition {
-    if (value === null) {
+  ne(value: T | IdOf<T> | null | undefined): ColumnCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value === null) {
       return this.addCondition({ kind: "not-null" });
     } else {
       return this.addCondition({ kind: "ne", value });
     }
   }
 
-  in(value: Array<T | IdOf<T>>): ColumnCondition {
-    return this.addCondition({ kind: "in", value });
+  in(values: Array<T | IdOf<T>> | undefined): ColumnCondition {
+    if (values === undefined) return skipCondition;
+    return this.addCondition({ kind: "in", value: values });
   }
 
   private addCondition(value: ParsedValueFilter<T | IdOf<T>>): ColumnCondition {

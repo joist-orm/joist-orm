@@ -4,7 +4,7 @@ import { FilterAndSettings } from "./EntityFilter";
 import { opToFn } from "./EntityGraphQLFilter";
 import { EntityConstructor, entityLimit } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ColumnCondition, ExpressionCondition, parseFindQuery } from "./index";
+import { ColumnCondition, ParsedExpressionFilter, parseFindQuery } from "./index";
 import { assertNever, fail } from "./utils";
 import QueryBuilder = Knex.QueryBuilder;
 
@@ -95,7 +95,7 @@ export function abbreviation(tableName: string): string {
     .join("");
 }
 
-function addComplexCondition(query: QueryBuilder, complex: ExpressionCondition): void {
+function addComplexCondition(query: QueryBuilder, complex: ParsedExpressionFilter): void {
   query.where((q) => {
     const op = complex.op === "and" ? "andWhere" : "orWhere";
     complex.conditions.forEach((c) => {

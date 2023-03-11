@@ -4,7 +4,14 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import { Column, getConstructorFromTaggedId, isDefined, needsClassPerTableJoins } from "./index";
+import {
+  Column,
+  getConstructorFromTaggedId,
+  isDefined,
+  keyToNumber,
+  maybeResolveReferenceToId,
+  needsClassPerTableJoins,
+} from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail } from "./utils";
 
@@ -190,6 +197,45 @@ export function parseFindQuery(
           const a = getAlias(field.otherMetadata().tableName);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
           addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
+        } else if (field.kind === "m2m") {
+          // Always join into the m2m table
+          const ja = getAlias(field.joinTableName);
+          tables.push({
+            alias: ja,
+            join: "outer",
+            table: field.joinTableName,
+            col1: `${alias}.id`,
+            col2: `${ja}.${field.columnNames[0]}`,
+          });
+          // But conditionally join into the alias table
+          const sub = (ef.subFilter as any)[key];
+          if (isAlias(sub)) {
+            const a = getAlias(field.otherMetadata().tableName);
+            addTable(field.otherMetadata(), a, "inner", `${ja}.${field.columnNames[1]}`, `${a}.id`, sub);
+          }
+          const f = parseEntityFilter(sub);
+          // Probe the filter and see if it's just an id, if so we can avoid the join
+          if (!f) {
+            // skip
+          } else if (f.kind === "join") {
+            const a = getAlias(field.otherMetadata().tableName);
+            addTable(
+              field.otherMetadata(),
+              a,
+              "outer",
+              `${ja}.${field.columnNames[1]}`,
+              `${a}.id`,
+              (ef.subFilter as any)[key],
+            );
+          } else {
+            const meta = field.otherMetadata();
+            const column: any = {
+              mapToDb(value: any) {
+                return value === null ? value : keyToNumber(meta, maybeResolveReferenceToId(value));
+              },
+            };
+            conditions.push({ alias: ja, column: field.columnNames[1], cond: mapToDb(column, f) });
+          }
         } else {
           throw new Error(`Unsupported field ${key}`);
         }

@@ -1,5 +1,6 @@
 import {
   insertAuthor,
+  insertAuthorToTag,
   insertBook,
   insertBookReview,
   insertComment,
@@ -7,6 +8,7 @@ import {
   insertImage,
   insertLargePublisher,
   insertPublisher,
+  insertTag,
   update,
 } from "@src/entities/inserts";
 import {
@@ -1480,6 +1482,49 @@ describe("EntityManager.queries", () => {
     const comment = await review.comment.load();
     expect(comment).toBeTruthy();
     expect(comment!.text).toEqual("t1");
+  });
+
+  it("can find through m2m matching on a primary key", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertTag({ name: "t1" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+
+    const em = newEntityManager();
+    const where = { tags: "t:1" } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+      ],
+      conditions: [{ alias: "att", column: "tag_id", cond: { kind: "eq", value: 1 } }],
+    });
+  });
+
+  it("can find through m2m matching on a column value", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertTag({ name: "t1" });
+    await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+
+    const em = newEntityManager();
+    const where = { tags: { name: "t1" } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(1);
+
+    expect(parseFindQuery(am, where)).toEqual({
+      selects: [`"a".*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+        { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
+      ],
+      conditions: [{ alias: "t", column: "name", cond: { kind: "eq", value: "t1" } }],
+    });
   });
 
   it("can have the same table twice in the query", async () => {

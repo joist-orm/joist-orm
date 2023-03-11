@@ -122,6 +122,8 @@ export type ManyToManyField = {
   otherFieldName: string;
   serde: undefined;
   immutable: false;
+  joinTableName: string;
+  columnNames: [string, string];
 };
 
 export type OneToOneField = {

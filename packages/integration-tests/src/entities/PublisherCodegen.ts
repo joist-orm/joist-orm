@@ -119,6 +119,7 @@ export interface PublisherFilter {
   bookAdvances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface PublisherGraphQLFilter {
@@ -136,6 +137,7 @@ export interface PublisherGraphQLFilter {
   bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   images?: EntityGraphQLFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface PublisherOrder {

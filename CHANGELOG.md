@@ -1,3 +1,10 @@
+## [1.60.1](https://github.com/stephenh/joist-ts/compare/v1.60.0...v1.60.1) (2023-03-11)
+
+
+### Bug Fixes
+
+* Allow pruning complex conditions if any are undefined. ([#563](https://github.com/stephenh/joist-ts/issues/563)) ([72205b2](https://github.com/stephenh/joist-ts/commit/72205b22f785655fdd73c450e6fb59364e931430))
+
 # [1.60.0](https://github.com/stephenh/joist-ts/compare/v1.59.0...v1.60.0) (2023-03-11)
 
 

@@ -164,8 +164,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
     `;
   });
 
-  dbMetadata.manyToManys.forEach((m2o) => {
-    const { fieldName, singularName, otherEntity, otherFieldName } = m2o;
+  dbMetadata.manyToManys.forEach((m2m) => {
+    const { fieldName, singularName, otherEntity, otherFieldName } = m2m;
     fields[fieldName] = code`
       {
         kind: "m2m",
@@ -176,6 +176,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         otherFieldName: "${otherFieldName}",
         serde: undefined,
         immutable: false,
+        joinTableName: "${m2m.joinTableName}",
+        columnNames: ["${m2m.columnName}", "${m2m.otherColumnName}"],
       }
     `;
   });

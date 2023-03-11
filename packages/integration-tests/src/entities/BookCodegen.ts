@@ -105,6 +105,7 @@ export interface BookFilter {
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface BookGraphQLFilter {
@@ -120,6 +121,7 @@ export interface BookGraphQLFilter {
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityGraphQLFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface BookOrder {

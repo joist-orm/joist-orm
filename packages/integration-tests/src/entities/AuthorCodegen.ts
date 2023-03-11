@@ -147,6 +147,7 @@ export interface AuthorFilter {
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {
@@ -174,6 +175,7 @@ export interface AuthorGraphQLFilter {
   authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
 export interface AuthorOrder {

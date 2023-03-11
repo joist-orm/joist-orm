@@ -3,8 +3,10 @@ import {
   Changes,
   Collection,
   ConfigApi,
+  EntityFilter,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
   hasLargeManyToMany,
   hasManyToMany,
@@ -64,6 +66,8 @@ export interface TagFilter {
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface TagGraphQLFilter {
@@ -71,6 +75,8 @@ export interface TagGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
 }
 
 export interface TagOrder {

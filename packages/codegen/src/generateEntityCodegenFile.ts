@@ -708,10 +708,13 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
+  const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
 }
 
 function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
@@ -740,10 +743,13 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
+  const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
+    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+  });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;
   });
-  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...polys];
+  return [...maybeId, ...primitives, ...enums, ...pgEnums, ...m2o, ...o2o, ...o2m, ...m2m, ...polys];
 }
 
 function generateOrderFields(meta: EntityDbMetadata): Code[] {

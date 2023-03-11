@@ -62,6 +62,7 @@ export type ValueFilter<V, N> =
   | { gte: V | undefined; lte: V | undefined };
 
 /** Filters against complex expressions of filters. */
-export type ExpressionFilter =
+export type ExpressionFilter = (
   | { and: Array<ExpressionFilter | ColumnCondition> }
-  | { or: Array<ExpressionFilter | ColumnCondition> };
+  | { or: Array<ExpressionFilter | ColumnCondition> }
+) & { pruneIfUndefined?: "any" | "all" };

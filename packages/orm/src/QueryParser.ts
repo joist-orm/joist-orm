@@ -13,7 +13,7 @@ import {
   needsClassPerTableJoins,
 } from "./index";
 import { abbreviation } from "./QueryBuilder";
-import { assertNever, fail } from "./utils";
+import { assertNever, fail, partition } from "./utils";
 
 export interface ParsedExpressionFilter {
   op: "and" | "or";
@@ -601,12 +601,10 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
       : "or" in expression
       ? ["or" as const, expression.or]
       : fail(`Invalid expression ${expression}`);
-  const conditions = expressions
-    .map((exp) => ("and" in exp || "or" in exp ? parseExpression(exp) : exp))
-    .filter(isDefined)
-    .filter((maybeCond) => maybeCond !== skipCondition);
-  if (conditions.length === 0) {
+  const conditions = expressions.map((exp) => ("and" in exp || "or" in exp ? parseExpression(exp) : exp));
+  const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
+  if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
     return undefined;
   }
-  return { op, conditions };
+  return { op, conditions: valid.filter(isDefined) };
 }

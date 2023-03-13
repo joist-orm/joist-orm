@@ -309,6 +309,14 @@ describe("EntityManager", () => {
     expect(authors[0].books.get).toEqual([]);
   });
 
+  it.unlessInMemory("can load from rows", async () => {
+    await insertAuthor({ first_name: "a1", is_popular: null });
+    const em = newEntityManager();
+    const rows = await knex.select("*").from("authors");
+    const authors = await em.loadFromRows(Author, rows);
+    expect(authors.length).toEqual(1);
+  });
+
   it("can save enums", async () => {
     const em = newEntityManager();
     newPublisher(em, { name: "a1", size: PublisherSize.Large });

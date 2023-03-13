@@ -26,6 +26,7 @@ export interface ColumnCondition {
   cond: ParsedValueFilter<any>;
 }
 
+/** A marker condition for alias methods to indicate they should be skipped/pruned. */
 export const skipCondition: ColumnCondition = { alias: "skip", column: "skip", cond: undefined as any };
 
 interface PrimaryTable {
@@ -434,6 +435,9 @@ export type ParsedValueFilter<V> =
   | { kind: "ilike"; value: V }
   | { kind: "between"; value: [V, V] };
 
+/**
+ * Parses the many/hodgepdoge (ergonomic!) patterns of value filters into a `ParsedValueFilter`.
+ */
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
   if (filter === null) {
     return [{ kind: "is-null" }];

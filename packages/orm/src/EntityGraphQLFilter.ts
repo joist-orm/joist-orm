@@ -1,3 +1,6 @@
+import { Entity } from "./Entity";
+import { EntityFilter } from "./EntityFilter";
+
 /**
  * This essentially matches the ValueFilter but with looser types to placate GraphQL.
  */
@@ -42,4 +45,4 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
 export type EnumGraphQLFilter<V> = V[] | null | undefined;
 
 /** A GraphQL version of EntityFilter. */
-export type EntityGraphQLFilter<T, I, F, N> = T | I | I[] | F | { ne: T | I | N } | null | undefined;
+export type EntityGraphQLFilter<T extends Entity, I, F, N> = EntityFilter<T, I, F, N> | null;

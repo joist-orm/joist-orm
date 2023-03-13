@@ -1,3 +1,10 @@
+# [1.61.0](https://github.com/stephenh/joist-ts/compare/v1.60.1...v1.61.0) (2023-03-13)
+
+
+### Features
+
+* Add EntityManager.loadFromRows. ([#564](https://github.com/stephenh/joist-ts/issues/564)) ([e1e2aba](https://github.com/stephenh/joist-ts/commit/e1e2aba1edf6915825319c921925039ab82557be))
+
 ## [1.60.1](https://github.com/stephenh/joist-ts/compare/v1.60.0...v1.60.1) (2023-03-11)
 
 

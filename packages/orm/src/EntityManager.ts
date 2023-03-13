@@ -652,6 +652,25 @@ export class EntityManager<C = unknown> {
     return entities;
   }
 
+  /** Loads entities from rows. */
+  public async loadFromRows<T extends Entity>(type: EntityConstructor<T>, rows: unknown[]): Promise<T[]>;
+  public async loadFromRows<T extends Entity, H extends LoadHint<T>>(
+    type: EntityConstructor<T>,
+    rows: unknown[],
+    populate: Const<H>,
+  ): Promise<Loaded<T, H>[]>;
+  public async loadFromRows<T extends Entity>(
+    type: EntityConstructor<T>,
+    rows: unknown[],
+    populate?: any,
+  ): Promise<T[]> {
+    const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    if (populate) {
+      await this.populate(entities, populate);
+    }
+    return entities;
+  }
+
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
   public async populate<T extends Entity, H extends LoadHint<T>, V = Loaded<T, H>>(
     entity: T,

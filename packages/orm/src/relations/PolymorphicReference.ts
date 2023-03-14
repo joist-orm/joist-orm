@@ -16,7 +16,7 @@ import {
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
   fieldName: keyof T & string,
@@ -31,7 +31,7 @@ export function isPolymorphicReference(maybeReference: any): maybeReference is P
 }
 
 export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+  extends Reference<U, N> {
   /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
   id: IdOf<U> | undefined;
 
@@ -266,7 +266,6 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     return this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined;
   }
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
 }

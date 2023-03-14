@@ -5,7 +5,7 @@ import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(
@@ -13,12 +13,12 @@ export function hasLargeMany<T extends Entity, U extends Entity>(
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-): LargeCollection<T, U> {
+): LargeCollection<U> {
   const entity = currentlyInstantiatingEntity as T;
   return new OneToManyLargeCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
-export class OneToManyLargeCollection<T extends Entity, U extends Entity> implements LargeCollection<T, U> {
+export class OneToManyLargeCollection<T extends Entity, U extends Entity> implements LargeCollection<U> {
   // Even though a large collection can never be loaded, we do track local
   // mutations so that `find` can be accurate.
   private locallyAdded: U[] = [];
@@ -94,6 +94,5 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
 
   isLoaded = false;
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
 }

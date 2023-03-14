@@ -5,18 +5,18 @@ import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReference } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 const OneToOne = Symbol();
 
 /** The lazy-loaded/lookup side of a one-to-one, i.e. the side w/o the unique foreign key column. */
-export interface OneToOneReference<T extends Entity, U extends Entity> extends Reference<T, U, undefined> {
+export interface OneToOneReference<U extends Entity> extends Reference<U, undefined> {
   // Need to differentiate OneToOneReference from Reference
-  [OneToOne]: T;
+  [OneToOne]: U;
 }
 
 /** Adds a known-safe `get` accessor. */
-export interface LoadedOneToOneReference<T extends Entity, U extends Entity> extends LoadedReference<T, U, undefined> {
+export interface LoadedOneToOneReference<U extends Entity> extends LoadedReference<U, undefined> {
   get: U | undefined;
 
   getWithDeleted: U | undefined;
@@ -36,14 +36,14 @@ export interface LoadedOneToOneReference<T extends Entity, U extends Entity> ext
 }
 
 /** Type guard utility for determining if an entity field is a Reference. */
-export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any, any> {
+export function isOneToOneReference(maybeReference: any): maybeReference is OneToOneReference<any> {
   return maybeReference instanceof OneToOneReferenceImpl;
 }
 
 /** Type guard utility for determining if an entity field is a loaded Reference. */
 export function isLoadedOneToOneReference(
   maybeReference: any,
-): maybeReference is Reference<any, any, any> & LoadedOneToOneReference<any, any> {
+): maybeReference is Reference<any, any> & LoadedOneToOneReference<any> {
   return isOneToOneReference(maybeReference) && maybeReference.isLoaded;
 }
 
@@ -53,7 +53,7 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-): OneToOneReference<T, U> {
+): OneToOneReference<U> {
   const entity = currentlyInstantiatingEntity as T;
   return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
@@ -77,7 +77,7 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
  */
 export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U>
-  implements OneToOneReference<T, U>
+  implements OneToOneReference<U>
 {
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
@@ -221,11 +221,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */
-  private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
+  private getOtherRelation(other: U): ManyToOneReference<T, any> {
     return (other as U)[this.otherFieldName] as any;
   }
 
-  [RelationT] = null!;
   [RelationU] = null!;
   [ReferenceN] = null!;
   [OneToOne] = null!;

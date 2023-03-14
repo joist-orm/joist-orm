@@ -15,7 +15,7 @@ import {
 import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
@@ -23,14 +23,14 @@ export function hasMany<T extends Entity, U extends Entity>(
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-): Collection<T, U> {
+): Collection<U> {
   const entity = currentlyInstantiatingEntity as T;
   return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
 export class OneToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U>
+  implements Collection<U>
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
@@ -279,6 +279,5 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
 }

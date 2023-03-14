@@ -11,7 +11,7 @@ type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T
   remove?: (entity: Loaded<T, H>, value: U) => void;
 };
 
-/**
+/*react*
  * Creates a CustomCollection that can conditionally walk across references in the object graph.
  *
  * I.e. An Author "has many reviews" through the `author -> books -> reviews` relation.
@@ -21,7 +21,7 @@ type HasManyDerivedOpts<T extends Entity, U extends Entity, H extends LoadHint<T
 export function hasManyDerived<T extends Entity, U extends Entity, H extends LoadHint<T>>(
   loadHint: H,
   opts: HasManyDerivedOpts<T, U, H>,
-): Collection<T, U> {
+): Collection<U> {
   const entity: T = currentlyInstantiatingEntity as T;
   const { load, ...rest } = opts;
   return new CustomCollection<T, U>(entity, {

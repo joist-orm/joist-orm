@@ -2,7 +2,7 @@ import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
 import { Collection, ensureNotDeleted, fail } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
@@ -30,7 +30,7 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
  */
 export class CustomCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U>
+  implements Collection<U>
 {
   readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
@@ -161,6 +161,5 @@ export class CustomCollection<T extends Entity, U extends Entity>
     fail(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
 }

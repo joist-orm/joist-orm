@@ -348,7 +348,7 @@ export function getConstructorFromTaggedId(id: string): MaybeAbstractEntityConst
 }
 
 export function maybeGetConstructorFromReference(
-  value: string | Entity | Reference<any, any, any> | undefined,
+  value: string | Entity | Reference<any, any> | undefined,
 ): MaybeAbstractEntityConstructor<any> | undefined {
   const id = maybeResolveReferenceToId(value);
   return id ? getConstructorFromTaggedId(id) : undefined;

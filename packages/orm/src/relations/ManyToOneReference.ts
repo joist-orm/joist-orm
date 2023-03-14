@@ -14,25 +14,24 @@ import {
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
-): ManyToOneReference<T, U, N> {
+): ManyToOneReference<U, N> {
   const entity = currentlyInstantiatingEntity as T;
   return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
 }
 
 /** Type guard utility for determining if an entity field is a ManyToOneReference. */
-export function isManyToOneReference(maybeReference: any): maybeReference is ManyToOneReference<any, any, any> {
+export function isManyToOneReference(maybeReference: any): maybeReference is ManyToOneReference<any, any> {
   return maybeReference instanceof ManyToOneReferenceImpl;
 }
 
-export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+export interface ManyToOneReference<U extends Entity, N extends never | undefined> extends Reference<U, N> {
   /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
   id: IdOf<U> | undefined;
 
@@ -60,7 +59,7 @@ export interface ManyToOneReference<T extends Entity, U extends Entity, N extend
  */
 export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements ManyToOneReference<T, U, N>
+  implements ManyToOneReference<U, N>
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
@@ -327,7 +326,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this.loaded ?? (this.id !== undefined ? this.#entity.em.getEntity(this.id) : undefined);
   }
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
 }

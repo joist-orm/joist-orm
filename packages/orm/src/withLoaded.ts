@@ -16,14 +16,14 @@ import { MaybePromise, maybePromiseThen } from "./utils";
 // undefined references are properly propagated and that polymorphic references don't overwhelm the type system.
 export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>> = T & {
   [K in keyof L]: L[K] extends PolymorphicReference<T, infer U, infer N>
-    ? L[K] extends LoadedReference<T, U, N>
+    ? L[K] extends LoadedReference<U, N>
       ? U | N
       : L[K]
-    : L[K] extends LoadedReference<T, infer U, never>
+    : L[K] extends LoadedReference<infer U, never>
     ? U
-    : L[K] extends LoadedReference<T, infer U, undefined>
+    : L[K] extends LoadedReference<infer U, undefined>
     ? U | undefined
-    : L[K] extends LoadedCollection<T, infer U>
+    : L[K] extends LoadedCollection<infer U>
     ? U[]
     : L[K] extends LoadedProperty<T, infer V>
     ? V

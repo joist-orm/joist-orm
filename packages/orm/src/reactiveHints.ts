@@ -49,10 +49,10 @@ export type NestedReactiveHint<T extends Entity> = {
 export type Reacted<T extends Entity, H> = Entity & {
   [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
     ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
-    : T[K] extends Reference<any, infer U, infer N>
-    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
-    : T[K] extends Collection<any, infer U>
-    ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+    : T[K] extends Reference<infer U, infer N>
+    ? LoadedReference<Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+    : T[K] extends Collection<infer U>
+    ? LoadedCollection<Entity & Reacted<U, NormalizeHint<T, H>[K]>>
     : T[K] extends AsyncProperty<any, infer V>
     ? LoadedProperty<any, V>
     : T[K];

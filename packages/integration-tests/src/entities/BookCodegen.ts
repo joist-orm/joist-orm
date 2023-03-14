@@ -155,24 +155,24 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
+  readonly advances: Collection<BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
 
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
+  readonly reviews: Collection<BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
 
-  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
+  readonly comments: Collection<Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
+  readonly author: ManyToOneReference<Author, never> = hasOne(authorMeta, "author", "books");
 
-  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
+  readonly currentDraftAuthor: OneToOneReference<Author> = hasOneToOne(
     authorMeta,
     "currentDraftAuthor",
     "currentDraftBook",
     "current_draft_book_id",
   );
 
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
+  readonly image: OneToOneReference<Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
 
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
+  readonly tags: Collection<Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);

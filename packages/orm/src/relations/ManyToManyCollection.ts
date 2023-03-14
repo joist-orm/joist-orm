@@ -12,7 +12,7 @@ import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { getOrSet, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
@@ -22,7 +22,7 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
   otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-): Collection<T, U> {
+): Collection<U> {
   const entity = currentlyInstantiatingEntity as T;
   return new ManyToManyCollection<T, U>(
     joinTableName,
@@ -37,7 +37,7 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>
   extends AbstractRelationImpl<U[]>
-  implements Collection<T, U>
+  implements Collection<U>
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
@@ -300,7 +300,6 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     }, otherFieldName: ${this.otherFieldName})`;
   }
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
 }
 

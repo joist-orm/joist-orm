@@ -227,7 +227,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-      readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
+      readonly ${fieldName}: ${ManyToOneReference}<${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(
           ${otherEntity.metaType},
           "${fieldName}",
@@ -240,7 +240,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const o2m = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasMany}(
+      readonly ${fieldName}: ${Collection}<${otherEntity.type}> = ${hasMany}(
         ${otherEntity.metaType},
         "${fieldName}",
         "${otherFieldName}",
@@ -253,7 +253,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const lo2m = meta.largeOneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
     return code`
-      readonly ${fieldName}: ${LargeCollection}<${entity.type}, ${otherEntity.type}> = ${hasLargeMany}(
+      readonly ${fieldName}: ${LargeCollection}<${otherEntity.type}> = ${hasLargeMany}(
         ${otherEntity.metaType},
         "${fieldName}",
         "${otherFieldName}",
@@ -266,7 +266,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const o2o = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
     return code`
-      readonly ${fieldName}: ${OneToOneReference}<${entity.type}, ${otherEntity.type}> =
+      readonly ${fieldName}: ${OneToOneReference}<${otherEntity.type}> =
         ${hasOneToOne}(
           ${otherEntity.metaType},
           "${fieldName}",
@@ -280,7 +280,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const m2m = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasManyToMany}(
+      readonly ${fieldName}: ${Collection}<${otherEntity.type}> = ${hasManyToMany}(
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -295,7 +295,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const lm2m = meta.largeManyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
     return code`
-      readonly ${fieldName}: ${LargeCollection}<${entity.type}, ${otherEntity.type}> = ${hasLargeManyToMany}(
+      readonly ${fieldName}: ${LargeCollection}<${otherEntity.type}> = ${hasLargeManyToMany}(
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -311,7 +311,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
     return code`
-      readonly ${fieldName}: ${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
+      readonly ${fieldName}: ${PolymorphicReference}<${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
         "${fieldName}",
       );
     `;

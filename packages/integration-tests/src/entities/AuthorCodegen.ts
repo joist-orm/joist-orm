@@ -222,32 +222,25 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
+  readonly authors: Collection<Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id");
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id");
+  readonly books: Collection<Book> = hasMany(bookMeta, "books", "author", "author_id");
 
-  readonly comments: Collection<Author, Comment> = hasMany(commentMeta, "comments", "parent", "parent_author_id");
+  readonly comments: Collection<Comment> = hasMany(commentMeta, "comments", "parent", "parent_author_id");
 
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
+  readonly mentor: ManyToOneReference<Author, undefined> = hasOne(authorMeta, "mentor", "authors");
 
-  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
+  readonly currentDraftBook: ManyToOneReference<Book, undefined> = hasOne(
     bookMeta,
     "currentDraftBook",
     "currentDraftAuthor",
   );
 
-  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
+  readonly publisher: ManyToOneReference<Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
+  readonly image: OneToOneReference<Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
 
-  readonly tags: Collection<Author, Tag> = hasManyToMany(
-    "authors_to_tags",
-    "tags",
-    "author_id",
-    tagMeta,
-    "authors",
-    "tag_id",
-  );
+  readonly tags: Collection<Tag> = hasManyToMany("authors_to_tags", "tags", "author_id", tagMeta, "authors", "tag_id");
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);

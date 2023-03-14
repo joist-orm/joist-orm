@@ -18,7 +18,7 @@ import {
  */
 export function hasOneThrough<T extends Entity, U extends Entity, N extends never | undefined, V extends U | N>(
   lens: (lens: Lens<T>) => Lens<V>,
-): Reference<T, U, N> {
+): Reference<U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
     load: async (entity, opts) => {

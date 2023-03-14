@@ -17,7 +17,7 @@ export const ReferenceN = Symbol();
  * `U | undefined`. If it is not optional, `N` will be `never`, making the return types
  * `U | never` which becomes just `U`.
  */
-export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
+export interface Reference<U extends Entity, N extends never | undefined> extends Relation<U> {
   readonly isLoaded: boolean;
 
   load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
@@ -28,8 +28,7 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
 }
 
 /** Adds a known-safe `get` accessor. */
-export interface LoadedReference<T extends Entity, U extends Entity, N extends never | undefined>
-  extends Reference<T, U, N> {
+export interface LoadedReference<U extends Entity, N extends never | undefined> extends Reference<U, N> {
   // Since we've fetched the entity from the db, we're going to omit out the "| undefined" from Reference.id
   // which handles "this reference is set to a new entity" and just assume the id is there (or else N which
   // is for nullable references, which will just always be potentially `undefined`).
@@ -49,7 +48,7 @@ export interface LoadedReference<T extends Entity, U extends Entity, N extends n
 }
 
 /** Type guard utility for determining if an entity field is a Reference. */
-export function isReference(maybeReference: any): maybeReference is Reference<any, any, any> {
+export function isReference(maybeReference: any): maybeReference is Reference<any, any> {
   return (
     maybeReference instanceof OneToOneReferenceImpl ||
     maybeReference instanceof ManyToOneReferenceImpl ||
@@ -61,6 +60,6 @@ export function isReference(maybeReference: any): maybeReference is Reference<an
 /** Type guard utility for determining if an entity field is a loaded Reference. */
 export function isLoadedReference(
   maybeReference: any,
-): maybeReference is Reference<any, any, any> & LoadedReference<any, any, any> {
+): maybeReference is Reference<any, any> & LoadedReference<any, any> {
   return isReference(maybeReference) && maybeReference.isLoaded;
 }

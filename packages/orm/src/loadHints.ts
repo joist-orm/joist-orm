@@ -28,12 +28,12 @@ type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
 type MaybeBaseType = any;
 
 /** Marks a given `T[K]` field as the loaded/synchronous version of the collection. */
-export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReference<MaybeBaseType, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, UH>>
-  : P extends Reference<MaybeBaseType, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, UH>, N>
-  : P extends Collection<MaybeBaseType, infer U>
-  ? LoadedCollection<T, Loaded<U, UH>>
+export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReference<infer U>
+  ? LoadedOneToOneReference<Loaded<U, UH>>
+  : P extends Reference<infer U, infer N>
+  ? LoadedReference<Loaded<U, UH>, N>
+  : P extends Collection<infer U>
+  ? LoadedCollection<Loaded<U, UH>>
   : P extends AsyncProperty<MaybeBaseType, infer V>
   ? // prettier-ignore
     [V] extends [(infer U extends Entity) | undefined]
@@ -44,12 +44,12 @@ export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReferen
   : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
-type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBaseType, infer U>
-  ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends Reference<MaybeBaseType, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
-  : P extends Collection<MaybeBaseType, infer U>
-  ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
+type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<infer U>
+  ? LoadedOneToOneReference<Loaded<U, DeepLoadHint<U>>>
+  : P extends Reference<infer U, infer N>
+  ? LoadedReference<Loaded<U, DeepLoadHint<U>>, N>
+  : P extends Collection<infer U>
+  ? LoadedCollection<Loaded<U, DeepLoadHint<U>>>
   : P extends AsyncProperty<MaybeBaseType, infer V>
   ? // prettier-ignore
     [V] extends [(infer U extends Entity) | undefined]
@@ -74,15 +74,15 @@ type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBase
  */
 type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] extends NullOrDefinedOr<infer OK>
   ? OK extends Entity
-    ? T[K] extends OneToOneReference<T, infer U>
-      ? LoadedOneToOneReference<T, U>
-      : T[K] extends Reference<T, infer U, infer N>
-      ? LoadedReference<T, OK, N>
+    ? T[K] extends OneToOneReference<infer U>
+      ? LoadedOneToOneReference<U>
+      : T[K] extends Reference<infer U, infer N>
+      ? LoadedReference<OK, N>
       : never
     : OK extends Array<infer OU>
     ? OU extends Entity
-      ? T[K] extends Collection<T, infer U>
-        ? LoadedCollection<T, OU>
+      ? T[K] extends Collection<infer U>
+        ? LoadedCollection<OU>
         : never
       : T[K]
     : T[K]
@@ -137,9 +137,9 @@ export type Loadable<T extends Entity> = {
  * Note that we usually return entities, but for AsyncProperties it could be
  * a calculated primitive value like number or string.
  */
-export type LoadableValue<V> = V extends Reference<any, infer U, any>
+export type LoadableValue<V> = V extends Reference<infer U, any>
   ? U
-  : V extends Collection<any, infer U>
+  : V extends Collection<infer U>
   ? U
   : V extends AsyncProperty<any, infer P>
   ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
@@ -209,7 +209,7 @@ export function ensureLoadedThen<T extends Entity, H extends LoadHint<T>, R>(
 }
 
 /** From any `Relations` field in `T`, i.e. for loader hints. */
-export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
+export type RelationsIn<T extends Entity> = SubType<T, Relation<any>>;
 
 // https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
 type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;

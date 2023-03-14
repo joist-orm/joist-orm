@@ -3,7 +3,7 @@ import { IdOf } from "../EntityManager";
 import { ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+import { RelationU } from "./Relation";
 
 export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends never | undefined> = {
   // We purposefully don't capture the return value of `load` b/c we want `get` to re-calc from `entity`
@@ -28,7 +28,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
  */
 export class CustomReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<U>
-  implements Reference<T, U, N>
+  implements Reference<U, N>
 {
   readonly #entity: T;
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
@@ -146,7 +146,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     fail(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
-  [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
 }

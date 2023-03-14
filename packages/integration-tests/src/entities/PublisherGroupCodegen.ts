@@ -98,14 +98,9 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newPublisherGroup>[1];
   };
 
-  readonly publishers: Collection<PublisherGroup, Publisher> = hasMany(
-    publisherMeta,
-    "publishers",
-    "group",
-    "group_id",
-  );
+  readonly publishers: Collection<Publisher> = hasMany(publisherMeta, "publishers", "group", "group_id");
 
-  readonly critics: LargeCollection<PublisherGroup, Critic> = hasLargeMany(criticMeta, "critics", "group", "group_id");
+  readonly critics: LargeCollection<Critic> = hasLargeMany(criticMeta, "critics", "group", "group_id");
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
     super(em, publisherGroupMeta, PublisherGroupCodegen.defaultValues, opts);

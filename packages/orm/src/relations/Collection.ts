@@ -6,7 +6,7 @@ import { OneToManyCollection } from "./OneToManyCollection";
 import { Relation } from "./Relation";
 
 /** A collection of `U` within `T`, either one-to-many or many-to-many. */
-export interface Collection<T extends Entity, U extends Entity> extends Relation<T, U> {
+export interface Collection<U extends Entity> extends Relation<U> {
   load(opts?: { withDeleted: boolean }): Promise<ReadonlyArray<U>>;
 
   /** Looks up the specific `id` without fully loading the collection. */
@@ -23,7 +23,7 @@ export interface Collection<T extends Entity, U extends Entity> extends Relation
 }
 
 /** Adds a known-safe `get` accessor. */
-export interface LoadedCollection<T extends Entity, U extends Entity> extends Collection<T, U> {
+export interface LoadedCollection<U extends Entity> extends Collection<U> {
   get: ReadonlyArray<U>;
 
   getWithDeleted: ReadonlyArray<U>;
@@ -34,7 +34,7 @@ export interface LoadedCollection<T extends Entity, U extends Entity> extends Co
 }
 
 /** Type guard utility for determining if an entity field is a Collection. */
-export function isCollection(maybeCollection: any): maybeCollection is Collection<any, any> {
+export function isCollection(maybeCollection: any): maybeCollection is Collection<any> {
   return (
     maybeCollection instanceof OneToManyCollection ||
     maybeCollection instanceof ManyToManyCollection ||
@@ -43,8 +43,6 @@ export function isCollection(maybeCollection: any): maybeCollection is Collectio
 }
 
 /** Type guard utility for determining if an entity field is a loaded Collection. */
-export function isLoadedCollection(
-  maybeCollection: any,
-): maybeCollection is Collection<any, any> & LoadedCollection<any, any> {
+export function isLoadedCollection(maybeCollection: any): maybeCollection is Collection<any> & LoadedCollection<any> {
   return isCollection(maybeCollection) && maybeCollection.isLoaded;
 }

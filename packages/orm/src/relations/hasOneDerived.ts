@@ -17,7 +17,7 @@ export function hasOneDerived<
   N extends never | undefined,
   V extends U | N,
   H extends LoadHint<T>,
->(loadHint: Const<H>, get: (entity: Loaded<T, H>) => V): Reference<T, U, N> {
+>(loadHint: Const<H>, get: (entity: Loaded<T, H>) => V): Reference<U, N> {
   const entity: T = currentlyInstantiatingEntity as T;
   return new CustomReference<T, U, N>(entity, {
     load: (entity, opts) => entity.em.populate(entity, { hint: loadHint, ...opts }),

@@ -85,7 +85,7 @@ export abstract class LargePublisherCodegen extends Publisher {
     factoryOptsType: Parameters<typeof newLargePublisher>[1];
   };
 
-  readonly critics: Collection<LargePublisher, Critic> = hasMany(
+  readonly critics: Collection<Critic> = hasMany(
     criticMeta,
     "critics",
     "favoriteLargePublisher",

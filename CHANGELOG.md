@@ -1,3 +1,10 @@
+## [1.61.1](https://github.com/stephenh/joist-ts/compare/v1.61.0...v1.61.1) (2023-03-14)
+
+
+### Bug Fixes
+
+* Align EntityGraphQL filter with EntityFilter. ([#565](https://github.com/stephenh/joist-ts/issues/565)) ([28ceb83](https://github.com/stephenh/joist-ts/commit/28ceb830ea441929f8474d704ff368e2ea9f0464))
+
 # [1.61.0](https://github.com/stephenh/joist-ts/compare/v1.60.1...v1.61.0) (2023-03-13)
 
 

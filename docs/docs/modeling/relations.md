@@ -17,7 +17,7 @@ Two common themes for all of Joist's relations are that:
 
 ## Many To One References
 
-Joist looks for `m2o` "outgoing" foreign keys like `books.author_id` pointing to `books.id` and automatically includes a `ManyToOneReference` in the `BookCodegen` file:
+Joist looks for "outgoing" (many-to-one) foreign keys like `books.author_id` pointing to `books.id` and automatically includes a `ManyToOneReference` in the `BookCodegen` file:
 
 ```typescript
 export abstract class BookCodegen {
@@ -25,28 +25,29 @@ export abstract class BookCodegen {
 }
 ```
 
-### Optional vs. Required
-
-If `books.author_id` is `not null`, then the reference will be required, i.e. `someBook.author.get` will return `Author`, otherwise it will be optional, and `someBook.author.get` will return `Author | undefined`.
-
-### Loading
-
-Accessing the `Author` entity from a `Book` requires either calling `.load()` or a populate hint:
+Accessing the `author` field requires either calling `.load()` or a populate hint:
 
 ```typescript
-// Unloaded
+// Unloaded author field
 const b1 = await em.load(Book, "b:1");
 const a1 = await b1.author.load();
 console.log(a1.firstName);
 
-// Preloaded
+// Preloaded author field
 const b2 = await em.load(Book, "b:2", "author");
 console.log(b2.author.get.firstName);
 ```
 
+:::info
+
+If `books.author_id` is `not null`, then the reference will be required, i.e. `someBook.author.get` will return `Author`, otherwise it will be optional, and `someBook.author.get` will return `Author | undefined`.
+
+
+:::
+
 ## One To Many Collections
 
-Joist looks for "incoming" `m2o` foreign keys like `books.author_id` pointing to `author.id` and automatically generates a `hasMany` collection on the "other side" in `AuthorCodegen.ts`:
+Joist also looks for "incoming" (one-to-many) foreign keys like the opposite of `Author` being "pointed at" by the `books.author_id` column and automatically generates a `hasMany` collection as the "other side" in `AuthorCodegen.ts`:
 
 ```typescript
 export abstract class AuthorCodegen {
@@ -54,9 +55,7 @@ export abstract class AuthorCodegen {
 }
 ```
 
-### Loading 
-
-When unloaded, `Collection`s only support adding and removing:
+When unloaded, `Collection`s support adding and removing:
 
 ```typescript
 const a = await em.load(Author, "a:1");
@@ -64,15 +63,15 @@ a.books.add(someBook);
 a.books.remove(otherBook);
 ```
 
-To access the collection, it must have `.load()` called or be loaded with a populate hint:
+But accessing the contents of the collection requires being loaded, again either with a `.load()` call or a populate hint:
 
 ```typescript
-// Unloaded
+// Unloaded Author.books collection
 const a1 = await em.load(Author, "a:1");
 const books = await a1.books.load();
 console.log(books.length);
 
-// Preloaded
+// Preloaded Author.books collection
 const a2 = await em.load(Author, "a:2", "books");
 console.log(a2.books.get.length);
 console.log(a2.books.get[0].title);
@@ -125,7 +124,7 @@ To use polymorphic references, there are two steps:
    
    Joist with then use the `publisher` name to scan for any other `publisher_`-prefixed foreign keys and automatically pull them in as components of this polymorphic reference.
 
-## In Sync Relations
+## Consistent Relations
 
 Joist keeps both sides of m2o/o2m/o2o relationships in sync, i.e.:
 
@@ -145,54 +144,83 @@ If the `Author.books` collection is not loaded yet, then the `b.author.set` line
 
 Besides the core relations discovered from the schema's foreign keys, Joist lets you declare additional relations in your domain model.
 
+:::tip
+
+These custom relations are great for defining relationships between *entities* in your domain model, like how `Author` might relate to `BookReview`.
+
+If you'd like to define custom *non-entity* fields, like derived numbers or strings, see [Derived Fields](./derived-fields). 
+
+:::
+
 ### hasOneThrough
 
-You can define common paths through your entity graph with `hasOneThrough`:
+`hasOneThrough` defines a shortcut from your entity to a single other entity, for example if asking for a `BookReview`'s author (via the `Book`) is very common, you can define a `BookReview.author` relation:
 
 ```typescript
 export class BookReview extends BookReviewCodegen {
+  // use never if Author will always be set, or undefined if it might be unset
   readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
+  // Paths can be arbitrarily long
+  readonly publisher: Reference<BookReview, Publisher, never> = hasOneThrough((review) => review.book.author.publisher);
 }
 ```
 
-The `hasOneThrough` DSL is built on Joist's `CustomReferences`, so will also work with `populate`, i.e.:
+With this alias defined, you can refactor code to be more succinct:
 
 ```typescript
-const review = await em.load(BookReview, "1", { author: "publisher" });
-expect(review.author.get.publisher.get.name).toEqual("p1");
+// Using the core relations
+const br1 = await em.load(BookReview, { book: { author: "publisher" } });
+console.log(`br1 publisher:` + br1.book.get.author.get.publisher.get);
+
+// Using the hasOneThrough alias
+const br2 = await em.load(BookReview, "publisher");
+console.log(`br2 publisher:` + br2.publisher.get);
 ```
+
+:::info
+
+Note that currently `hasOneThrough` and `hasManyThrough` load the data on the "path", i.e. the above example pulls all of the review's books, the book's authors, and the author's publisher into memory.
+
+We have an issue tracking optimizing this to avoid loading entities, see [Issue 524](https://github.com/stephenh/joist-ts/issues/524).
+
+:::
 
 ### hasManyThrough
 
-You can define common paths through your entity graph with `hasOneThrough`:
+`hasManyThrough` is very similar to `hasOneThrough` but for collections of multiple entities:
 
 ```typescript
-export class BookReview extends BookReviewCodegen {
-  readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
+export class Publisher extends PublisherCodegen {
+  readonly reviews: Collection<Publisher, BookReview> = hasManyThrough((p) => p.authors.books.bookReviews);
 }
 ```
 
-The `hasOneThrough` DSL is built on Joist's `CustomReferences`, so will also work with `populate`, i.e.:
+The behavior is the same as `hasOneThrough`:
 
 ```typescript
-const review = await em.load(BookReview, "1", { author: "publisher" });
-expect(review.author.get.publisher.get.name).toEqual("p1");
+// Using the core relations
+const p1 = await em.load(Publisher, { authors: { books: "reviews" } });
+console.log(`p1 reviews:` + p1.authors.get.flatMap(a => a.books.get.flatMap(b => b.reviews.get)));
+
+// Using the hasManyThrough alias
+const p2 = await em.load(Publisher, "reviews");
+console.log(`p2 reviews:` + p2.reviews.get);
 ```
 
-### hasOneDerived
+### hasOneDerived & hasManyDerived
 
-You can define a relation that is conditional with `hasOneDerived`:
+`hasOneDerived` and `hasManyDerived` are very similar to `hasOneThrough` and `hasManyThrough`, but all you to use a lambda to filter the results.
+
+For example, maybe `Publisher.reviews` should only be `public` reviews:
 
 ```typescript
-class BookReview extends BookReviewCodegen {
-  readonly publisher: Reference<BookReview, Publisher, undefined> = hasOneDerived(
-    {book: {author: "publisher"}},
-    (review) => {
-      // some conditional logic here, but review is loaded
-      return review.book.get.author.get.publisher.get
-    },
+class BookReview extends PublisherCodegen {
+  readonly reviews: Collection<Publisher, BookReview> = hasManyDerived(
+    { authors: { books: "reviews" } },
+    (p) => p.authors.get
+      .flatMap(a => a.books.get.flatMap(b => b.reviews.get))
+      .filter(br => br.isPublic)
   );
 }
 ```
 
-This works a lot like `hasOneThrough`, but if useful for when you have conditional navigation logic, instead of a fixed navigation path.

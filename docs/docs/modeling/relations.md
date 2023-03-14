@@ -177,9 +177,11 @@ const br2 = await em.load(BookReview, "publisher");
 console.log(`br2 publisher:` + br2.publisher.get);
 ```
 
+Both of these approaches have the same runtime behavior, i.e. under the hook `br2.publisher.get` is actually executing `review.book.get.author.get.publisher.get`.
+
 :::info
 
-Note that currently `hasOneThrough` and `hasManyThrough` load the data on the "path", i.e. the above example pulls all of the review's books, the book's authors, and the author's publisher into memory.
+Note that currently `hasOneThrough` and `hasManyThrough` load all the entities on the path between the current entity and the target(s), i.e. the above example pulls all the review's books, the book's authors, and the author's publisher into memory.
 
 We have an issue tracking optimizing this to avoid loading entities, see [Issue 524](https://github.com/stephenh/joist-ts/issues/524).
 

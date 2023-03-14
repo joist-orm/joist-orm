@@ -211,7 +211,7 @@ console.log(`p2 reviews:` + p2.reviews.get);
 
 ### hasOneDerived & hasManyDerived
 
-`hasOneDerived` and `hasManyDerived` are very similar to `hasOneThrough` and `hasManyThrough`, but all you to use a lambda to filter the results.
+`hasOneDerived` and `hasManyDerived` are very similar to `hasOneThrough` and `hasManyThrough`, but allow a lambda to filter the results.
 
 For example, maybe `Publisher.reviews` should only be `public` reviews:
 

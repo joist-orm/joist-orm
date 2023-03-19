@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { getMetadata, ManyToOneField } from "../EntityMetadata";
+import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import { deTagIds, tagId } from "../keys";
 import { mapPathsToTarget } from "../loadLens";
 import { abbreviation, buildFindQuery } from "../QueryBuilder";
@@ -57,6 +57,13 @@ export function lensDataLoader<T extends Entity>(
       addTablePerClassJoinsAndClassTag(selects, tables, target, alias, true);
       const conditions: ColumnCondition[] = [];
 
+      function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
+        if (other.timestampFields.deletedAt) {
+          const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
+          conditions.push({ alias, column, cond: { kind: "is-null" } });
+        }
+      }
+
       let lastAlias = alias;
       fields.forEach(([, field], i) => {
         const isLast = i === fields.length - 1;
@@ -74,10 +81,7 @@ export function lensDataLoader<T extends Entity>(
               col1: `${alias}.${m2o.serde.columns[0].columnName}`,
               col2: `${lastAlias}.id`,
             });
-            if (other.timestampFields.deletedAt) {
-              const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
-              conditions.push({ alias, column, cond: { kind: "is-null" } });
-            }
+            maybeAddNotSoftDeleted(other, alias);
             if (isLast) {
               selects.push(`${alias}.id as __source_id`);
               conditions.push({
@@ -101,10 +105,7 @@ export function lensDataLoader<T extends Entity>(
                 col1: `${alias}.id`,
                 col2: `${lastAlias}.${field.serde.columns[0].columnName}`,
               });
-              if (other.timestampFields.deletedAt) {
-                const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
-                conditions.push({ alias, column, cond: { kind: "is-null" } });
-              }
+              maybeAddNotSoftDeleted(other, alias);
             } else {
               selects.push(`${lastAlias}.${field.serde.columns[0].columnName} as __source_id`);
               conditions.push({
@@ -112,6 +113,7 @@ export function lensDataLoader<T extends Entity>(
                 column: field.serde.columns[0].columnName,
                 cond: { kind: "in", value: deTagIds(source, sourceIds) },
               });
+              // Need to add filter for soft-deleted...
             }
             resultIsArray = true;
             lastAlias = alias;
@@ -128,6 +130,7 @@ export function lensDataLoader<T extends Entity>(
               col1: `${alias}_m2m.${field.columnNames[0]}`,
               col2: `${lastAlias}.id`,
             });
+            // If this is the last table, we could skip this join like we do for m2os
             tables.push({
               alias,
               join: "inner",
@@ -135,6 +138,7 @@ export function lensDataLoader<T extends Entity>(
               col1: `${alias}.id`,
               col2: `${alias}_m2m.${field.columnNames[1]}`,
             });
+            maybeAddNotSoftDeleted(other, alias);
             if (isLast) {
               selects.push(`${alias}.id as __source_id`);
               conditions.push({ alias, column: "id", cond: { kind: "in", value: deTagIds(source, sourceIds) } });
@@ -153,7 +157,7 @@ export function lensDataLoader<T extends Entity>(
       const rows = await buildFindQuery((em.ctx as any).knex, parsed, {});
 
       // Group the target entities (i.e. BookReview) by the source id we reached them from.
-      const map = new Map(
+      const entitiesBySourceId = new Map(
         [...groupBy(rows, (row) => row["__source_id"]).entries()].map(([sourceId, rows]) => {
           // We may technically re-hydrate the same entity twice if it was reached
           // via multiple sources, but that should be fine/get deduped by hydrate.
@@ -163,8 +167,8 @@ export function lensDataLoader<T extends Entity>(
 
       // Re-order the output by the batched input
       return sourceIds.map((id) => {
-        const result = map.get(id)!;
-        return resultIsArray ? [...new Set(result)] : result?.[0];
+        const result = entitiesBySourceId.get(id);
+        return resultIsArray ? [...new Set(result ?? [])] : result?.[0];
       });
     });
   });

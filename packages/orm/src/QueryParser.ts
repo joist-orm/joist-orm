@@ -69,16 +69,26 @@ export interface ParsedFindQuery {
 export function parseFindQuery(
   meta: EntityMetadata<any>,
   filter: any,
-  expression: ExpressionFilter | undefined = undefined,
-  orderBy: any = {},
-  pruneJoins = true,
-  keepAliases: string[] = [],
+  opts: {
+    conditions?: ExpressionFilter;
+    orderBy?: any;
+    pruneJoins?: boolean;
+    keepAliases?: string[];
+    softDeletes?: "include" | "exclude";
+  } = {},
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
   const complexConditions: ParsedExpressionFilter[] = [];
   const orderBys: ParsedOrderBy[] = [];
+  const {
+    orderBy = {},
+    conditions: expression = undefined,
+    softDeletes = "exclude",
+    pruneJoins = true,
+    keepAliases = [],
+  } = opts;
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -86,6 +96,17 @@ export function parseFindQuery(
     const i = aliases[abbrev] || 0;
     aliases[abbrev] = i + 1;
     return i === 0 ? abbrev : `${abbrev}${i}`;
+  }
+
+  function filterSoftDeletes(meta: EntityMetadata<any>): boolean {
+    return softDeletes === "exclude" && !!meta.timestampFields.deletedAt;
+  }
+
+  function maybeAddNotSoftDeleted(meta: EntityMetadata<any>, alias: string): void {
+    if (filterSoftDeletes(meta)) {
+      const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0].columnName!;
+      conditions.push({ alias, column, cond: { kind: "is-null" } });
+    }
   }
 
   function addTable(
@@ -112,6 +133,8 @@ export function parseFindQuery(
     if (needsClassPerTableJoins(meta)) {
       addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, join === "primary");
     }
+
+    maybeAddNotSoftDeleted(meta, alias);
 
     // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
     // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
@@ -146,10 +169,10 @@ export function parseFindQuery(
             addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
           }
           const f = parseEntityFilter(sub);
-          // Probe the filter and see if it's just an id, if so we can avoid the join
+          // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
           if (!f) {
             // skip
-          } else if (f.kind === "join") {
+          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
           } else {
@@ -219,7 +242,7 @@ export function parseFindQuery(
           // Probe the filter and see if it's just an id, if so we can avoid the join
           if (!f) {
             // skip
-          } else if (f.kind === "join") {
+          } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
             const a = getAlias(field.otherMetadata().tableName);
             addTable(
               field.otherMetadata(),

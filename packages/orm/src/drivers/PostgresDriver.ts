@@ -17,6 +17,7 @@ import {
   keyToNumber,
   maybeResolveReferenceToId,
   OneToManyCollection,
+  ParsedFindQuery,
   PrimitiveField,
   tagIds,
 } from "../index";
@@ -24,15 +25,16 @@ import { ManyToManyCollection, OneToOneReferenceImpl } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
-import { Driver } from "./driver";
+import { buildKnexQuery } from "./buildKnexQuery";
+import { Driver } from "./Driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
 import QueryBuilder = Knex.QueryBuilder;
+
+let lastNow = new Date();
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
 }
-
-let lastNow = new Date();
 
 /**
  * Implements the `Driver` interface for Postgres.
@@ -261,6 +263,15 @@ export class PostgresDriver implements Driver {
       result[i] = resultForUniques[queryToUnique[i]];
     });
     return result;
+  }
+
+  async executeFind(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<any[]> {
+    const knex = this.getMaybeInTxnKnex(em);
+    return buildKnexQuery(knex, parsed, settings);
   }
 
   async transaction<T>(
@@ -597,6 +608,7 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, E
   return [...entitiesByType.entries()];
 }
 
+// We should eventually delete this and have all callers use `ParsedFindQuery`
 function addTablePerClassJoinsAndClassTag(
   knex: Knex,
   meta: EntityMetadata<any>,

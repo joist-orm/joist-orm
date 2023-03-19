@@ -4,7 +4,7 @@ import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager"
 import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import { deTagIds, tagId } from "../keys";
 import { mapPathsToTarget } from "../loadLens";
-import { abbreviation, buildFindQuery } from "../QueryBuilder";
+import { abbreviation } from "../QueryBuilder";
 import { addTablePerClassJoinsAndClassTag, ColumnCondition, ParsedFindQuery, ParsedTable } from "../QueryParser";
 import { getOrSet, groupBy } from "../utils";
 
@@ -154,7 +154,7 @@ export function lensDataLoader<T extends Entity>(
 
       // Get back `__source_id, target.*`
       const parsed: ParsedFindQuery = { selects, tables, conditions };
-      const rows = await buildFindQuery((em.ctx as any).knex, parsed, {});
+      const rows = await em.driver.executeFind(em, parsed, {});
 
       // Group the target entities (i.e. BookReview) by the source id we reached them from.
       const entitiesBySourceId = new Map(

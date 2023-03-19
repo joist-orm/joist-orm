@@ -1,3 +1,10 @@
+# [1.63.0](https://github.com/stephenh/joist-ts/compare/v1.62.0...v1.63.0) (2023-03-19)
+
+
+### Features
+
+* Teach em.find to filter soft deletes. ([#572](https://github.com/stephenh/joist-ts/issues/572)) ([2e9b270](https://github.com/stephenh/joist-ts/commit/2e9b2701e7ad84ac30d0366e1feec641b6187461))
+
 # [1.62.0](https://github.com/stephenh/joist-ts/compare/v1.61.1...v1.62.0) (2023-03-19)
 
 

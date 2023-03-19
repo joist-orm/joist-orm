@@ -12,8 +12,7 @@ import {
   maybeResolveReferenceToId,
   needsClassPerTableJoins,
 } from "./index";
-import { abbreviation } from "./QueryBuilder";
-import { assertNever, fail, partition } from "./utils";
+import { abbreviation, assertNever, fail, partition } from "./utils";
 
 export interface ParsedExpressionFilter {
   op: "and" | "or";

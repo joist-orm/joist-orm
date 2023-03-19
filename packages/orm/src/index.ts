@@ -10,13 +10,12 @@ import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
-import { abbreviation } from "./QueryBuilder";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
 import { isCannotBeUpdatedRule } from "./rules";
-import { fail } from "./utils";
+import { abbreviation, fail } from "./utils";
 
 export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
@@ -65,7 +64,7 @@ export {
   ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
-export { asNew, fail } from "./utils";
+export { abbreviation, asNew, fail } from "./utils";
 export { withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/

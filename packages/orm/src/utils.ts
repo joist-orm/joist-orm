@@ -104,3 +104,10 @@ export function assertNever(x: never): never {
 export function asNew<T extends Entity>(entity: T): New<T> {
   return entity as New<T>;
 }
+
+export function abbreviation(tableName: string): string {
+  return tableName
+    .split("_")
+    .map((w) => w[0])
+    .join("");
+}

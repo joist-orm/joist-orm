@@ -1,7 +1,6 @@
-import { Knex } from "knex";
 import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ParsedFindQuery } from "../QueryParser";
 import {
@@ -14,8 +13,13 @@ import {
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 
-/** Isolates all SQL calls that joist needs to make to fetch/save data. */
-export interface Driver {
+/**
+ * Isolates all SQL calls that joist needs to make to fetch/save data.
+ *
+ * @typeparam Q The low-level connection type for the driver, i.e. `Knex`.
+ * @typeparam T The low-level transaction type for the driver, i.e. `Knex.Transaction`.
+ */
+export interface Driver<Q, TXN> {
   /** Bulk loads all rows from the table(s) for `meta`, for all `untaggedIds`. */
   load<T extends Entity>(
     em: EntityManager,
@@ -67,6 +71,23 @@ export interface Driver {
     queries: readonly FilterAndSettings<T>[],
   ): Promise<unknown[][]>;
 
+  /**
+   * Builds low-level SQL/knex queries, similar to `EntityManager.find`, for further customization.
+   *
+   * @param em The `EntityManager` that is building the query.
+   * @param type The primary entity type that `filter` is based on.
+   * @param filter[keepAliases] Marks specific aliases to keep in the query, even if they are not used
+   *   by any selects or conditions, i.e. because you plan on adding your own joins/conditions
+   *   against the `QueryBuilder` directly.
+   * @param filter[pruneJoins] Disables removing any unused joins, i.e. because you plan on adding your
+   *   own joins/conditions against the `QueryBuilder` directly.
+   */
+  buildQuery<T extends Entity>(
+    em: EntityManager,
+    type: EntityConstructor<T>,
+    filter: FilterAndSettings<T> & { pruneJoins?: boolean; keepAliases?: string[] },
+  ): Q;
+
   /** Executes a low-level `ParsedFindQuery` against the database and returns the rows. */
   executeFind(
     em: EntityManager,
@@ -74,11 +95,7 @@ export interface Driver {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]>;
 
-  transaction<T>(
-    em: EntityManager,
-    fn: (txn: Knex.Transaction) => Promise<T>,
-    isolationLevel?: "serializable",
-  ): Promise<T>;
+  transaction<T>(em: EntityManager, fn: (txn: TXN) => Promise<T>, isolationLevel?: "serializable"): Promise<T>;
 
   assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void>;
 

@@ -1,3 +1,10 @@
+# [1.62.0](https://github.com/stephenh/joist-ts/compare/v1.61.1...v1.62.0) (2023-03-19)
+
+
+### Features
+
+* Support loading lens via SQL joins ([#568](https://github.com/stephenh/joist-ts/issues/568)) ([9869a1f](https://github.com/stephenh/joist-ts/commit/9869a1fa5667669d793f2596bd77f6020cb52f2d))
+
 ## [1.61.1](https://github.com/stephenh/joist-ts/compare/v1.61.0...v1.61.1) (2023-03-14)
 
 

@@ -5,9 +5,9 @@ sidebar_position: 3
 
 Joist has built-in support for the soft-delete pattern, of marking rows with a `deleted_at` column and then "mostly ignoring them" within the application.
 
-In our experience, it's common to have application bugs where business logic "forgets to ignore soft-deleted rows", so Joist flips the model to where soft-deleted rows are *ignored by default*, and business logic needs to explicitly opt-in to seeing them.
+In our experience, it's common to have application bugs where business logic "forgets to ignore soft-deleted rows", so Joist flips the model to where soft-deleted rows are _ignored by default_, and business logic needs to explicitly opt-in to seeing them.
 
-### Setup
+## Setup
 
 To use Joist's soft-delete support, just add `deleted_at` columns to any entity you want to soft-delete.
 
@@ -27,9 +27,9 @@ If you want to change the name of the `deleted_at` column, you can configure tha
 
 Note that currently Joist assumes that `deleted_at` columns are timestamps, but they should work as `boolean` columns as well.
 
-### Behavior
+## Load/Populate Behavior
 
-When rows are soft-deleted, Joist will still fetch them from the database, but collection accessors (i.e. `o2m.get` and `m2m.get`) will, by default, filter them out of the results.
+When entities are soft-deleted, Joist's `populate` methods will still fetch their rows from the database, but collection accessors (i.e. `o2m.get` and `m2m.get`) will filter them out of the results.
 
 For example, if an `Author` has a soft-deleted `Book`:
 
@@ -47,18 +47,12 @@ If you do want to explicitly access soft-deleted rows, you can use the `getWithD
 console.log(a.books.getWithDeleted);
 ```
 
-### Notes
+## Find Queries
 
-Currently, Joist does not implicitly modify any SQL queries to ignore soft-deleted rows.
+`em.find` queries also filter out soft-deleted rows by default but at the database level (by adding a `WHERE deleted_at IS NULL` to the query).
 
-For example `em.find(Book, { title: "t1" })` does not inject a `WHERE deleted_at IS NOT NULL` into the SQL query, so it will return soft-deleted books.
+If you'd like to include soft-deleted rows in a `find` query, you can use the `softDeletes` option:
 
-The rationale for this is a combination of:
-
-1. Implementation simplicity, it's easier to let SQL queries fetch all rows and then filter them in-memory
-2. If soft-deleted rows are not loaded up-front, then the `getWithDeleted` opt-in method would need to be `async`, to "go back to the database" and now fetch the rest of the rows.
-
-Granted, this does have the downside of likely needlessly fetching soft-deleted rows; if you have a large amount of soft-deleted rows such that this is problematic, then you can either:
-
-- Just manually add `{ deletedAt: null }` conditions to your queries, or
-- Work on adding this "implicitly update `WHERE` clauses" feature to Joist
+```ts
+const allBooks = await em.find(Book, {}, { softDeletes: "include" });
+```

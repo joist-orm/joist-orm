@@ -197,12 +197,19 @@ export class EntityManager<C = unknown> {
       orderBy?: OrderOf<T>;
       limit?: number;
       offset?: number;
+      softDeletes?: "include" | "exclude";
     },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
+    options?: {
+      populate?: any;
+      orderBy?: OrderOf<T>;
+      limit?: number;
+      offset?: number;
+      softDeletes?: "include" | "exclude";
+    },
   ): Promise<T[]> {
     const rows = await findDataLoader(this, type).load({ where, ...options });
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
@@ -224,12 +231,24 @@ export class EntityManager<C = unknown> {
   public async findGql<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: { populate?: Const<H>; orderBy?: OrderOf<T>; limit?: number; offset?: number },
+    options?: {
+      populate?: Const<H>;
+      orderBy?: OrderOf<T>;
+      limit?: number;
+      offset?: number;
+      softDeletes?: "include" | "exclude";
+    },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate?: any; orderBy?: OrderOf<T>; limit?: number; offset?: number },
+    options?: {
+      populate?: any;
+      orderBy?: OrderOf<T>;
+      limit?: number;
+      offset?: number;
+      softDeletes?: "include" | "exclude";
+    },
   ): Promise<T[]> {
     const rows = await findDataLoader(this, type).load({ where, ...options });
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
@@ -246,12 +265,18 @@ export class EntityManager<C = unknown> {
   public async findOne<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate: Const<H> },
+    options?: {
+      populate?: Const<H>;
+      softDeletes?: "include" | "exclude";
+    },
   ): Promise<Loaded<T, H> | undefined>;
   async findOne<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate: any },
+    options?: {
+      populate?: any;
+      softDeletes?: "include" | "exclude";
+    },
   ): Promise<T | undefined> {
     const list = await this.find(type, where, options);
     if (list.length === 0) {
@@ -271,12 +296,12 @@ export class EntityManager<C = unknown> {
   public async findOneOrFail<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options: { populate: Const<H> },
+    options: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H>>;
   async findOneOrFail<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: { populate: any },
+    options?: { populate?: any; softDeletes?: "include" | "exclude" },
   ): Promise<T> {
     const list = await this.find(type, where, options);
     if (list.length === 0) {

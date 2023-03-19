@@ -12,6 +12,7 @@ export type FilterAndSettings<T> = {
   orderBy?: OrderOf<T>;
   limit?: number;
   offset?: number;
+  softDeletes?: "exclude" | "include";
 };
 
 export type OrderBy = "ASC" | "DESC";

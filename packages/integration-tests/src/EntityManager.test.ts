@@ -740,8 +740,8 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
-    const a1p = em.find(Author, { id: "1" }, { orderBy: { id: "ASC" } });
-    const a2p = em.find(Author, { id: "1" }, { orderBy: { age: "DESC" } });
+    const a1p = em.find(Author, { id: "1" }, { orderBy: { id: "ASC" }, softDeletes: "include" });
+    const a2p = em.find(Author, { id: "1" }, { orderBy: { age: "DESC" }, softDeletes: "include" });
     // When they are executed in the same event loop
     const [a1, a2] = await Promise.all([a1p, a2p]);
     // Then we issue a single SQL query
@@ -762,8 +762,12 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
-    const a1p = em.find(Author, { id: "1" }, { orderBy: { publisher: { id: "ASC" } } });
-    const a2p = em.find(Author, { id: "1" }, { orderBy: { currentDraftBook: { title: "DESC" } } });
+    const a1p = em.find(Author, { id: "1" }, { orderBy: { publisher: { id: "ASC" } }, softDeletes: "include" });
+    const a2p = em.find(
+      Author,
+      { id: "1" },
+      { orderBy: { currentDraftBook: { title: "DESC" } }, softDeletes: "include" },
+    );
     // When they are executed in the same event loop
     const [a1, a2] = await Promise.all([a1p, a2p]);
     // Then we issue a single SQL query

@@ -69,4 +69,45 @@ describe("EntityManager.softDeletes", () => {
     const p1 = await em.load(Publisher, "p:1", { authors: { books: { comments: {} } } });
     expect(p1.authors.getWithDeleted[0].books.getWithDeleted[0].comments.get.length).toBe(0);
   });
+
+  it("find ignores soft-deleted entities in middle of o2m join", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ publisher_id: 1, first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const publishers = await em.find(Publisher, { authors: { books: { title: "b1" } } });
+    expect(publishers.length).toBe(0);
+  });
+
+  it("find ignores soft-deleted entities at start of query", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { firstName: "a1" });
+    expect(authors.length).toBe(0);
+  });
+
+  it("find ignores soft-deleted entities at end of m2o join", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const books = await em.find(Book, { author: { firstName: "a1" } });
+    expect(books.length).toBe(0);
+  });
+
+  it("find ignores soft-deleted entities at end of m2o without join", async () => {
+    await insertAuthor({ first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const books = await em.find(Book, { author: "a:1" });
+    expect(books.length).toBe(0);
+  });
+
+  it("find can return soft-deleted entities", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ publisher_id: 1, first_name: "a1", deleted_at: jan1 });
+    await insertBook({ author_id: 1, title: "b1" });
+    const em = newEntityManager();
+    const publishers = await em.find(Publisher, { authors: { books: { title: "b1" } } }, { softDeletes: "include" });
+    expect(publishers.length).toBe(1);
+  });
 });

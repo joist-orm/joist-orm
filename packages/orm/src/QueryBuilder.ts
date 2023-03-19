@@ -5,7 +5,6 @@ import { FilterAndSettings } from "./EntityFilter";
 import { EntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
 import { parseFindQuery } from "./index";
-import QueryBuilder = Knex.QueryBuilder;
 
 /**
  * Builds the SQL/knex queries for `EntityManager.find` calls.
@@ -25,11 +24,23 @@ import QueryBuilder = Knex.QueryBuilder;
 export function buildQuery<T extends Entity>(
   knex: Knex,
   type: EntityConstructor<T>,
-  filter: FilterAndSettings<T> & { pruneJoins?: boolean; keepAliases?: string[] },
+  filter: FilterAndSettings<T> & {
+    pruneJoins?: boolean;
+    keepAliases?: string[];
+  },
 ): Knex.QueryBuilder<{}, unknown[]> {
   const meta = getMetadata(type);
-  const { where, conditions, orderBy, limit, offset, pruneJoins = true, keepAliases = [] } = filter;
-  const parsed = parseFindQuery(meta, where, conditions, orderBy, pruneJoins, keepAliases);
+  const {
+    where,
+    conditions,
+    orderBy,
+    limit,
+    offset,
+    pruneJoins = true,
+    keepAliases = [],
+    softDeletes = "exclude",
+  } = filter;
+  const parsed = parseFindQuery(meta, where, { conditions, orderBy, pruneJoins, keepAliases, softDeletes });
   return buildKnexQuery(knex, parsed, { limit, offset });
 }
 

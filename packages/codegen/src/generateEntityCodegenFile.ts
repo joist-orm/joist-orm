@@ -501,8 +501,8 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       ${maybeIsSoftDeleted}
 
-      load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>): Promise<V> {
-        return ${loadLens}(this as any as ${entityName}, fn);
+      load<U, V>(fn: (lens: ${Lens}<${entity.type}>) => ${Lens}<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+        return ${loadLens}(this as any as ${entityName}, fn, opts);
       }
 
       populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;

@@ -266,8 +266,8 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<AuthorStat>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as AuthorStat, fn);
+  load<U, V>(fn: (lens: Lens<AuthorStat>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as AuthorStat, fn, opts);
   }
 
   populate<H extends LoadHint<AuthorStat>>(hint: H): Promise<Loaded<AuthorStat, H>>;

@@ -59,3 +59,7 @@ export function maybeBeginAndCommit(): number {
   // the query count will be lower by two than the real pg driver
   return testDriver.isInMemory ? 0 : 2;
 }
+
+export function lastQuery(): string {
+  return queries[queries.length - 1];
+}

@@ -597,7 +597,7 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, E
   return [...entitiesByType.entries()];
 }
 
-export function addTablePerClassJoinsAndClassTag(
+function addTablePerClassJoinsAndClassTag(
   knex: Knex,
   meta: EntityMetadata<any>,
   q: QueryBuilder,

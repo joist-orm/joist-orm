@@ -125,8 +125,8 @@ export abstract class SmallPublisherCodegen extends Publisher {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<SmallPublisher>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as SmallPublisher, fn);
+  load<U, V>(fn: (lens: Lens<SmallPublisher>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as SmallPublisher, fn, opts);
   }
 
   populate<H extends LoadHint<SmallPublisher>>(hint: H): Promise<Loaded<SmallPublisher, H>>;

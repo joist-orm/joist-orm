@@ -4,7 +4,7 @@ import { FilterAndSettings } from "./EntityFilter";
 import { opToFn } from "./EntityGraphQLFilter";
 import { EntityConstructor, entityLimit } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ColumnCondition, ParsedExpressionFilter, parseFindQuery } from "./index";
+import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, parseFindQuery } from "./index";
 import { assertNever, fail } from "./utils";
 import QueryBuilder = Knex.QueryBuilder;
 
@@ -32,6 +32,17 @@ export function buildQuery<T extends Entity>(
   const { where, conditions, orderBy, limit, offset, pruneJoins = true, keepAliases = [] } = filter;
 
   const parsed = parseFindQuery(meta, where, conditions, orderBy, pruneJoins, keepAliases);
+
+  return buildFindQuery(knex, parsed, { limit, offset });
+}
+
+// Probably move this to the Driver interface
+export function buildFindQuery<T extends Entity>(
+  knex: Knex,
+  parsed: ParsedFindQuery,
+  settings: { limit?: number; offset?: number },
+): Knex.QueryBuilder<{}, unknown[]> {
+  const { limit, offset } = settings;
 
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
   const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);

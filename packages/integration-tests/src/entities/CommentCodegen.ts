@@ -151,8 +151,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Comment>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Comment, fn);
+  load<U, V>(fn: (lens: Lens<Comment>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Comment, fn, opts);
   }
 
   populate<H extends LoadHint<Comment>>(hint: H): Promise<Loaded<Comment, H>>;

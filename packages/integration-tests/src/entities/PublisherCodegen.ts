@@ -326,8 +326,8 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Publisher, fn);
+  load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Publisher, fn, opts);
   }
 
   populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;

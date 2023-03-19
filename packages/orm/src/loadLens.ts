@@ -1,3 +1,7 @@
+import { lensDataLoader } from "./dataloaders/lensDataLoader";
+import { Entity, isEntity } from "./Entity";
+import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
+
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };
 
@@ -49,12 +53,41 @@ export type Lens<T, R = T> = {
 // For some reason accepting Lens<this, this> does not work when called from within the entity
 // subclass itself, so we use the codegen hammer in our subclass to force the right Lens type
 // in a .load stub that just calls us for the implementation.
-export async function loadLens<T, U, V>(
+export async function loadLens<T extends Entity, U, V>(
   start: T | T[],
   fn: (lens: Lens<T>) => Lens<U, V>,
-  opts: { forceReload?: boolean } = {},
+  opts: { forceReload?: boolean; sql?: boolean } = {},
 ): Promise<V> {
+  // If we're already loaded, just return
+  if (!opts.forceReload && isLensLoaded(start, fn)) {
+    return getLens(start, fn);
+  }
+
   const paths = collectPaths(fn);
+
+  // See if we can load this via SQL
+  if (opts.sql) {
+    const meta = Array.isArray(start)
+      ? isEntity(start[0]) && getMetadata(start[0])
+      : isEntity(start) && getMetadata(start);
+    if (!meta) return [] as V;
+    // Are all paths SQL query-able?
+    if (!isAllSqlPaths(meta, paths)) {
+      throw new Error("Cannot use loadLens opts.sql with non-SQL paths");
+    }
+    // If there is only 1 path, don't both with the fancy join
+    if (paths.length > 1) {
+      // TODO We can only do this is _none_ of the paths are loaded, otherwise we'll miss WIP mutations
+      if (Array.isArray(start)) {
+        const em = start[0].em;
+        return (await lensDataLoader(em, meta.cstr, true, paths).loadMany(start.map((e) => e.idOrFail))) as V;
+      } else {
+        const em = start.em;
+        return (await lensDataLoader(em, meta.cstr, false, paths).load(start.idOrFail)) as V;
+      }
+    }
+  }
+
   let current: any = start;
   let seenSoftDeleted = false;
   // Now evaluate each step of the path
@@ -73,6 +106,37 @@ export async function loadLens<T, U, V>(
     }
   }
   return current!;
+}
+
+export function isAllSqlPaths(meta: EntityMetadata<any>, paths: string[]): boolean {
+  for (let i = 0, current = meta; i < paths.length; i++) {
+    const next = current.allFields[paths[i]];
+    if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m")) {
+      current = next.otherMetadata();
+    } else {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Given BookReview+[book, author] return [Author, books+bookReviews]
+export function mapPathsToTarget(
+  source: EntityMetadata<any>,
+  paths: string[],
+): [EntityMetadata<any>, [EntityMetadata<any>, Field][]] {
+  let other = source;
+  let fields: [EntityMetadata<any>, Field][] = [];
+  for (let i = 0; i < paths.length; i++) {
+    const next = other.allFields[paths[i]];
+    if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m")) {
+      other = next.otherMetadata();
+      fields.push([other, other.allFields[next.otherFieldName]]);
+    } else {
+      throw new Error("Either not an all-SQL path or not supported yet");
+    }
+  }
+  return [other, fields.reverse()];
 }
 
 function maybeLoad(object: any, path: string, opts: { forceReload?: boolean }): unknown {
@@ -94,7 +158,7 @@ function maybeLoad(object: any, path: string, opts: { forceReload?: boolean }): 
  *
  * This assumes you've first evaluated the lens with `loadLens` and now can access it synchronously.
  */
-export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V {
+export function getLens<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): V {
   const paths = collectPaths(fn);
   let current: any = start;
   let seenSoftDeleted = false;
@@ -117,7 +181,7 @@ export function getLens<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): V
 }
 
 /** Returns whether a lens is loaded; primarily for deeply loaded instances in tests. */
-export function isLensLoaded<T, U, V>(start: T, fn: (lens: Lens<T>) => Lens<U, V>): boolean {
+export function isLensLoaded<T, U, V>(start: T | T[], fn: (lens: Lens<T>) => Lens<U, V>): boolean {
   // This is pretty hacky, but we just call `get` and assume it will blow up with "not loaded" errors.
   try {
     getLens(start, fn);

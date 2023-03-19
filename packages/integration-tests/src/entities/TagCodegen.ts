@@ -181,8 +181,8 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Tag, fn);
+  load<U, V>(fn: (lens: Lens<Tag>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Tag, fn, opts);
   }
 
   populate<H extends LoadHint<Tag>>(hint: H): Promise<Loaded<Tag, H>>;

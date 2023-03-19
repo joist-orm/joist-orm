@@ -9,6 +9,7 @@ import {
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
+import { isAllSqlPaths } from "./loadLens";
 import { abbreviation } from "./QueryBuilder";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
@@ -17,6 +18,7 @@ import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncPropert
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
+export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";

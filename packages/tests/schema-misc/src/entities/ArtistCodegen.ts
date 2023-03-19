@@ -153,8 +153,8 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
     return newChangesProxy(this) as any;
   }
 
-  load<U, V>(fn: (lens: Lens<Artist>) => Lens<U, V>): Promise<V> {
-    return loadLens(this as any as Artist, fn);
+  load<U, V>(fn: (lens: Lens<Artist>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
+    return loadLens(this as any as Artist, fn, opts);
   }
 
   populate<H extends LoadHint<Artist>>(hint: H): Promise<Loaded<Artist, H>>;

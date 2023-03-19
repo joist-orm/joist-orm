@@ -61,7 +61,7 @@ See [Find Queries](./queries-find) for more documentation and examples.
 
 ### 3. Other Query Builders
 
-For query that grow outside of what `em.find` can provide, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kelsey](https://github.com/koskimas/kysely).
+For query that grow outside what `em.find` can provide, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kelsey](https://github.com/koskimas/kysely).
 
 Knex would be a natural choice, because Joist uses Knex as an internal dependency, but Kelsey would be fine too.
 
@@ -74,13 +74,13 @@ Are best done via Knex or Kysely.
 
 #### `buildQuery`
 
-Joist does provide a `buildQuery` method that allows blending approaches 2 and 3: you can pass an `em.find` join literal to `buildQuery`, and get back a Knex `QueryBuilder` with all the joins added, to which you can do your own further joins or filters.
+Joist does provide a `buildQuery` method that allows blending approaches 2 and 3: you can pass an `em.find` join literal to `buildQuery` (with either inline or complex conditions), and get back a Knex `QueryBuilder` with all the joins and conditions added, to which you can do your own further joins or filters.
 
 ```ts
 const query = buildQuery(knex, Book, {
   where: { author: [a1, a2] },
 });
-// Use knex methods to continue building the query0
+// Use knex methods to continue building the query
 query.whereNotNull("parent_bill_id");
 // Then load the entities with the customizing query
 const books = await em.loadFromQuery(Book, query);
@@ -88,7 +88,7 @@ const books = await em.loadFromQuery(Book, query);
 
 :::tip
 
-The first three options all focus on loading *entities*, which your code will then iterate over to perform business/view logic.
+These three options all focus on loading *entities*, which your code will then iterate over to perform business/view logic.
 
 If you need to load bespoke, non-entity fragments of data across several tables (i.e. with aggregates/group bys/etc.), that is currently not a feature that Joist provides, but you're free to use a raw query builder, which is fourth option in the above list.
 

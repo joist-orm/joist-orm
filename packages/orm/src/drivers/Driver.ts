@@ -3,6 +3,7 @@ import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
+import { ParsedFindQuery } from "../QueryParser";
 import {
   ManyToManyCollection,
   ManyToManyLargeCollection,
@@ -65,6 +66,13 @@ export interface Driver {
     type: MaybeAbstractEntityConstructor<T>,
     queries: readonly FilterAndSettings<T>[],
   ): Promise<unknown[][]>;
+
+  /** Executes a low-level `ParsedFindQuery` against the database and returns the rows. */
+  executeFind(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<any[]>;
 
   transaction<T>(
     em: EntityManager,

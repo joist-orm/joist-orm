@@ -4,13 +4,13 @@ import { FilterAndSettings, ValueFilter } from "../EntityFilter";
 import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
-import { parseEntityFilter, parseValueFilter } from "../QueryParser";
+import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
 import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { hasSerde } from "../serde";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
-import { Driver } from "./driver";
+import { Driver } from "./Driver";
 
 export class InMemoryDriver implements Driver {
   // Map from table name --> string untagged id --> record
@@ -71,6 +71,14 @@ export class InMemoryDriver implements Driver {
       const sorted = !orderBy ? matched : matched.sort((a, b) => sort(this, meta, orderBy as any, a, b));
       return ensureUnderLimit(sorted.slice(offset, offset + (limit ?? sorted.length)));
     });
+  }
+
+  async executeFind(
+    em: EntityManager,
+    parsed: ParsedFindQuery,
+    settings: { limit?: number; offset?: number },
+  ): Promise<any[]> {
+    throw new Error("Not implemented");
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {

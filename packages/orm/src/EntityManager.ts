@@ -5,7 +5,7 @@ import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
-import { Driver } from "./drivers/driver";
+import { Driver } from "./drivers/Driver";
 import { Entity, isEntity } from "./Entity";
 import {
   asConcreteCstr,

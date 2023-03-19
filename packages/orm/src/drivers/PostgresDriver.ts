@@ -3,7 +3,6 @@ import { whereFilterHash } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
   beforeTransaction,
-  buildQuery,
   deTagId,
   Entity,
   EntityConstructor,
@@ -18,6 +17,7 @@ import {
   maybeResolveReferenceToId,
   OneToManyCollection,
   ParsedFindQuery,
+  parseFindQuery,
   PrimitiveField,
   tagIds,
 } from "../index";
@@ -50,7 +50,7 @@ export interface PostgresDriverOpts {
  *
  * - We use a pg-specific bulk update syntax.
  */
-export class PostgresDriver implements Driver {
+export class PostgresDriver implements Driver<Knex.QueryBuilder, Knex.Transaction> {
   private readonly idAssigner: IdAssigner;
 
   constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
@@ -188,7 +188,7 @@ export class PostgresDriver implements Driver {
 
     // If there is only 1 query, we can skip the tagging step.
     if (queries.length === 1) {
-      return [ensureUnderLimit(await buildQuery(knex, type, queries[0]))];
+      return [ensureUnderLimit(await this.buildQuery(em, type, queries[0]))];
     }
 
     // Map each incoming query[i] to itself or a previous dup
@@ -205,7 +205,7 @@ export class PostgresDriver implements Driver {
 
     // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
     if (uniqueQueries.length === 1) {
-      const rows = ensureUnderLimit(await buildQuery(knex, type, queries[0]));
+      const rows = ensureUnderLimit(await this.buildQuery(em, type, queries[0]));
       // Reuse this same result for however many callers asked for it.
       return queries.map(() => rows);
     }
@@ -228,7 +228,7 @@ export class PostgresDriver implements Driver {
     // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
     // not guarantee order).
     const tagged = uniqueQueries.map((queryAndSettings, i) => {
-      const query = buildQuery(knex, type, queryAndSettings) as Knex.QueryBuilder;
+      const query = this.buildQuery(em, type, queryAndSettings) as Knex.QueryBuilder;
       return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
     });
 
@@ -272,6 +272,18 @@ export class PostgresDriver implements Driver {
   ): Promise<any[]> {
     const knex = this.getMaybeInTxnKnex(em);
     return buildKnexQuery(knex, parsed, settings);
+  }
+
+  buildQuery<T extends Entity>(
+    em: EntityManager,
+    type: EntityConstructor<T>,
+    filter: FilterAndSettings<T> & { pruneJoins?: boolean; keepAliases?: string[] },
+  ): Knex.QueryBuilder {
+    const knex = this.getMaybeInTxnKnex(em);
+    const meta = getMetadata(type);
+    const { where, conditions, orderBy, limit, offset, pruneJoins = true, keepAliases = [] } = filter;
+    const parsed = parseFindQuery(meta, where, conditions, orderBy, pruneJoins, keepAliases);
+    return buildKnexQuery(knex, parsed, { limit, offset });
   }
 
   async transaction<T>(

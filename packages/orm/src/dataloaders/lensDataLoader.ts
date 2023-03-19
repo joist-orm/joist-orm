@@ -4,9 +4,8 @@ import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager"
 import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import { deTagIds, tagId } from "../keys";
 import { mapPathsToTarget } from "../loadLens";
-import { abbreviation } from "../QueryBuilder";
 import { addTablePerClassJoinsAndClassTag, ColumnCondition, ParsedFindQuery, ParsedTable } from "../QueryParser";
-import { getOrSet, groupBy } from "../utils";
+import { abbreviation, getOrSet, groupBy } from "../utils";
 
 /**
  * Loads lens paths via SQL.

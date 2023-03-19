@@ -9,7 +9,7 @@ Each request should get its own `EntityManager`, which will coordinate loading &
 
 :::info
 
-This means that entities must be loaded from the `EntityManager`, i.e. via `em.load(Author, 1)`, and not from methods on `Author`, i.e. like an ActiveRecord `Author.find_by_id(1)`, but there are several reasons for this:
+This means that entities must be loaded from the `EntityManager`, i.e. via `em.load(Author, 1)`, and not from methods on `Author`, i.e. like the prototypical ActiveRecord `Author.find_by_id(1)` methods in Rails.
 
 :::
 

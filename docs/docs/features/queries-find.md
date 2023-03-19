@@ -3,25 +3,40 @@ title: Find Queries
 sidebar_position: 3
 ---
 
-Find queries are Joist's minimalist syntax for building `SELECT` queries that load entities. They look like this:
+Find queries are Joist's minimalist syntax for building `SELECT` queries that load entities.
+
+They look like this:
 
 ```ts
-const reviews = await em.find(BookReview, {
+// Find all BookReviews for a given Publisher
+const reviews1 = await em.find(BookReview, {
   book: { author: { publisher: p1 } }
 });
+
+// Find all BookReviews of Books with foo in the title
+const reviews2 = await em.find(BookReview, {
+  book: { title: { like: "%foo%" } }
+});
+
 ```
 
-And are all methods on the `EntityManager`.
+All `find` queries are executed via Joist's [EntityManager](./entity-manager).
+
+:::info
+
+As mentioned on [Loading Entities](./loading-entities), Joist's `find` methods are meant to handle the ~80-90% of SQL queries in your codebase that are simple `SELECT`s of entities with a variety of joins and conditions.
+
+If you need more complex queries, i.e. with aggregates or subqueries, you can still use a raw query builder like Knex.
+
+:::
 
 ## Structure
 
 Find queries are made up of three parts:
 
-1. A join literal that describes the tables to join,
-2. Inline conditions within the join literal itself, and
-3. Explicit conditions that are passed as a separate argument
-
-The join literal is the main part that "walks the graph" of entities/tables to join into the query.
+1. A **join literal** that describes the tables to query/filter against,
+2. **Inline conditions** within the join literal itself, and
+3. Optional **complex conditions** that are passed as a separate argument
 
 For example, to query all `BookReview`s for a given `Publisher`, by joining through the `Book` and `Author` tables, we start at `BookReviews` and then use nested object literals to join in the `Book` and `Author`:
 
@@ -110,13 +125,13 @@ The `op` format is useful for frontend UIs where the operator is bound to a drop
 
 :::
 
-## Explicit Conditions
+## Complex Conditions
 
 While inline conditions are very succinct, they only support `AND`s.
 
-Explicit conditions allow complex conditions, i.e. `AND` and `OR`s that can be nested arbitrarily deep.
+Complex conditions allow complex conditions, i.e. `AND` and `OR`s that can be nested arbitrarily deep.
 
-To support this, explicit conditions introduce the concept of "aliases", which allow conditions to be created _outside_ of join literal, in a 3rd `conditions` argument that can be organized orthogonally to how the tables are joined into the query.
+To support this, complex conditions introduce the concept of "aliases", which allow conditions to be created _outside_ of join literal, in a 3rd `conditions` argument that can be organized orthogonally to how the tables are joined into the query.
 
 For example, to do an `OR`:
 

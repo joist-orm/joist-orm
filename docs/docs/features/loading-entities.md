@@ -1,15 +1,17 @@
 ---
-title: Making Queries
+title: Loading Entities
 sidebar_position: 2
 ---
 
-Joist has several ways to query entities, and which to use depends on how much control you need over the query.
+Joist has several ways to load entities, and which to use depends on how much control you need over the query.
 
-## Philosophy
+:::tip
 
 Joist's primary focus is not "_never_ having to hand-write SQL", so it is not a full-fledged query builder (like [Knex](https://knexjs.org/) or [Kelsey](https://github.com/koskimas/kysely)); instead it focuses on robust domain modeling, with validation rules, reactive derived values, etc.
 
-So it's expected to, for sufficiently advanced/complicated queries, use a 3rd party query builder in addition to Joist, as covered in Approach 3.
+So it's expected to, for advanced/complicated queries, occasionally use a 3rd party query builder in addition to Joist, as covered in Approach 3.
+
+:::
 
 ## Approaches
 

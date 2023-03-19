@@ -39,6 +39,7 @@ describe("EntityManager.lens", () => {
     const [p1, p2] = await Promise.all([b1, b2].map((book) => book.load((b) => b.author.publisher)));
     expect(p1?.name).toEqual("p1");
     expect(p2?.name).toEqual("p2");
+    // 2 = 1 for authors, 1 for publishers
     expect(numberOfQueries).toEqual(2);
   });
 
@@ -138,8 +139,6 @@ describe("EntityManager.lens", () => {
     const publishers = await t1.load((t) => t.books.author.publisher);
     // Use `toStrictEqual` to ensure the list is not `[undefined]`
     expect(publishers).toStrictEqual([]);
-    // Explicitly populate so we can test getLens
-    await t1.populate({ books: { author: "publisher" } });
     expect(getLens(t1, (t) => t.books.author.publisher)).toStrictEqual([]);
   });
 
@@ -150,8 +149,6 @@ describe("EntityManager.lens", () => {
     const b1 = await em.load(Book, "b:1");
     const books = await b1.load((b) => b.author.books);
     expect(books).toMatchEntity([]);
-    // Explicitly populate so we can test getLens
-    await b1.populate({ author: "books" });
     expect(getLens(b1, (b) => b.author.books)).toMatchEntity([]);
   });
 

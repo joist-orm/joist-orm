@@ -1,3 +1,10 @@
+## [1.63.2](https://github.com/stephenh/joist-ts/compare/v1.63.1...v1.63.2) (2023-03-21)
+
+
+### Bug Fixes
+
+* Set declarationMap. ([#575](https://github.com/stephenh/joist-ts/issues/575)) ([e299201](https://github.com/stephenh/joist-ts/commit/e299201a3ba00ebcfd7089ebf97c17eb651506fb))
+
 ## [1.63.1](https://github.com/stephenh/joist-ts/compare/v1.63.0...v1.63.1) (2023-03-21)
 
 

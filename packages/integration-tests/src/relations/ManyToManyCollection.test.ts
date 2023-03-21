@@ -1,5 +1,5 @@
 import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
-import { Author, Book, newBook, newTag, Tag } from "../entities";
+import { Author, Book, newAuthor, newBook, newTag, Tag } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
@@ -440,5 +440,12 @@ describe("ManyToManyCollection", () => {
     const [includes1, includes2] = await Promise.all([p1, p2]);
     expect(includes1).toBe(true);
     expect(includes2).toBe(true);
+  });
+
+  it("can forceReload a new many-to-many", async () => {
+    const em = newEntityManager();
+    const book = new Book(em, { title: "b1", author: newAuthor(em) });
+    const loaded = await book.populate({ hint: "tags", forceReload: true });
+    expect(loaded.tags.get.length).toBe(0);
   });
 });

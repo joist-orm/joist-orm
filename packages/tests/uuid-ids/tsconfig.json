@@ -8,6 +8,8 @@
     "skipLibCheck": true,
     "composite": true,
     "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
     "baseUrl": "./",

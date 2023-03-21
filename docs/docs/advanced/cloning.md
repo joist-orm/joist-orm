@@ -3,7 +3,7 @@ title: Entity Cloning
 sidebar_position: 4
 ---
 
-Joist supporting cloning entities, to easily support feature requests like "duplicate this author", or "duplicate this author and all of their books".
+Joist supports cloning entities, to easily implement feature requests like "duplicate this author", or "duplicate this author and all of their books".
 
 To clone an entity, call `em.clone` and pass a load-hint of the subgraph you want to be included in the `clone` operation.
 

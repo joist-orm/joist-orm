@@ -7,7 +7,7 @@ sidebar_position: 0
 
 Joist's goal is to bring [ActiveRecord](https://guides.rubyonrails.org/active_record_basics.html)-level productivity to TypeScript/Node projects.
 
-This is a lofty goal, and Joist has just started down that road, but that is the standard Joist strives for and ideally can surpass.
+This is a lofty goal, but that is the standard Joist strives for and ideally can surpass.
 
 The major goals are:
 

@@ -853,7 +853,7 @@ describe("EntityManager", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
-    const b1 = await em.findOrCreate(Book, { title: "b1", author: a1 }, {}, {}, "author");
+    const b1 = await em.findOrCreate(Book, { title: "b1", author: a1 }, {}, {}, { populate: "author" });
     expect(b1.author.get).toEqual(a1);
   });
 

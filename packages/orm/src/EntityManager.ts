@@ -336,15 +336,28 @@ export class EntityManager<C = unknown> {
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<Loaded<T, H>>;
+  >(
+    type: EntityConstructor<T>,
+    where: F,
+    ifNew: O,
+    upsert?: U,
+    options?: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
+  ): Promise<Loaded<T, H>>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     O extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U, populate?: Const<H>): Promise<T> {
-    const entities = await this.find(type, where as FilterWithAlias<T>);
+  >(
+    type: EntityConstructor<T>,
+    where: F,
+    ifNew: O,
+    upsert?: U,
+    options?: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
+  ): Promise<T> {
+    const { softDeletes, populate } = options ?? {};
+    const entities = await this.find(type, where as FilterWithAlias<T>, { softDeletes });
     let entity: T;
     if (entities.length > 1) {
       throw new TooManyError();

@@ -1,3 +1,10 @@
+## [1.63.1](https://github.com/stephenh/joist-ts/compare/v1.63.0...v1.63.1) (2023-03-21)
+
+
+### Bug Fixes
+
+* Add softDeletes option to findOrCreate. ([#574](https://github.com/stephenh/joist-ts/issues/574)) ([9841226](https://github.com/stephenh/joist-ts/commit/98412261ec31302d1b08ece2cac798c81276e621))
+
 # [1.63.0](https://github.com/stephenh/joist-ts/compare/v1.62.0...v1.63.0) (2023-03-19)
 
 

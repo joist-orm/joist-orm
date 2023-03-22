@@ -334,7 +334,6 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   // Mark all terminal usages
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
-  // Delete soft-delete clauses we don't need
   parsed.conditions.filter((c) => !c.pruneable).forEach((c) => used.add(c.alias));
   parsed.orderBys?.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));

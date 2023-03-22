@@ -1,3 +1,10 @@
+## [1.63.3](https://github.com/stephenh/joist-ts/compare/v1.63.2...v1.63.3) (2023-03-22)
+
+
+### Bug Fixes
+
+* Fix m2m reload failing up on new entities. ([#576](https://github.com/stephenh/joist-ts/issues/576)) ([6bbcfe1](https://github.com/stephenh/joist-ts/commit/6bbcfe1e2ce6870770eadac4a92e67628aaff8cf))
+
 ## [1.63.2](https://github.com/stephenh/joist-ts/compare/v1.63.1...v1.63.2) (2023-03-21)
 
 

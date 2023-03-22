@@ -1,3 +1,10 @@
+# [1.64.0](https://github.com/stephenh/joist-ts/compare/v1.63.4...v1.64.0) (2023-03-22)
+
+
+### Features
+
+* added assertLoaded and ensureWithLoaded, repurposed ensureLoaded, renamed ensureLoadedThen to maybePopulateThen ([#578](https://github.com/stephenh/joist-ts/issues/578)) ([b3eb908](https://github.com/stephenh/joist-ts/commit/b3eb908301554c3962e5aa9c849da3f91d615b6a))
+
 ## [1.63.4](https://github.com/stephenh/joist-ts/compare/v1.63.3...v1.63.4) (2023-03-22)
 
 

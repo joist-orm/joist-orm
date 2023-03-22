@@ -12,7 +12,7 @@ import {
   Relation,
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
-import { NullOrDefinedOr } from "./utils";
+import { fail, MaybePromise, NullOrDefinedOr } from "./utils";
 
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };
@@ -196,16 +196,24 @@ export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hin
   }
 }
 
-export function ensureLoaded<T extends Entity, H extends LoadHint<T>, R>(entity: T, hint: H): Promise<Loaded<T, H>> {
-  return isLoaded(entity, hint) ? entity : (entity as any).populate(hint);
-}
-
-export function ensureLoadedThen<T extends Entity, H extends LoadHint<T>, R>(
+export function maybePopulateThen<T extends Entity, H extends LoadHint<T>, R>(
   entity: T,
   hint: H,
   fn: (loaded: Loaded<T, H>) => R,
-): R | Promise<R> {
+): MaybePromise<R> {
   return isLoaded(entity, hint) ? fn(entity) : (entity as any).populate(hint).then(fn);
+}
+
+export function assertLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+  entity: T,
+  hint: H,
+): asserts entity is L {
+  if (!isLoaded(entity, hint)) fail(`${entity.idOrFail} is not loaded for ${JSON.stringify(hint)}`);
+}
+
+export function ensureLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(entity: T, hint: H): L {
+  assertLoaded<T, H, L>(entity, hint);
+  return entity;
 }
 
 /** From any `Relations` field in `T`, i.e. for loader hints. */

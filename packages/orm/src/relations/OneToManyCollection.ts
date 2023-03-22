@@ -57,12 +57,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.#entity, { ignore: "pending" });
-    if (this.loaded === undefined || opts.forceReload) {
-      if (this.#entity.idTagged === undefined) {
-        this.loaded = [];
-      } else {
-        this.loaded = await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
-      }
+    if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
+      this.loaded = await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!);
       this.maybeAppendAddedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded, opts);

@@ -421,4 +421,18 @@ describe("OneToManyCollection", () => {
     // And we did not make any db queries
     expect(numberOfQueries).toEqual(0);
   });
+
+  it("can forceReload a new one-to-many that is empty", async () => {
+    const em = newEntityManager();
+    const author = new Author(em, { firstName: "a1" });
+    const loaded = await author.populate({ hint: "books", forceReload: true });
+    expect(loaded.books.get.length).toBe(0);
+  });
+
+  it("can forceReload a new one-to-many that is not empty", async () => {
+    const em = newEntityManager();
+    const author = newAuthor(em, { books: [{}] });
+    const loaded = await author.populate({ hint: "books", forceReload: true });
+    expect(loaded.books.get.length).toBe(1);
+  });
 });

@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { Loaded, LoadHint } from "./loadHints";
+import { assertLoaded, Loaded, LoadHint } from "./loadHints";
 import {
   isLoadedAsyncProperty,
   isLoadedCollection,
@@ -51,7 +51,7 @@ export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded
  * them inadvertently being stored and passed to code that expects a real entity.
  */
 export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
-  loaded: Promise<L>,
+  promise: Promise<L>,
 ): Promise<WithLoaded<T, H, L>>;
 export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
   loaded: L,
@@ -74,4 +74,12 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
         },
       }) as WithLoaded<T, H, L>,
   );
+}
+
+export function ensureWithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(
+  entity: T,
+  hint: H,
+): WithLoaded<T, H, L> {
+  assertLoaded<T, H, L>(entity, hint);
+  return withLoaded<T, H, L>(entity);
 }

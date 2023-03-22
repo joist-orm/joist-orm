@@ -34,15 +34,16 @@ export * from "./EntityMetadata";
 export * from "./getProperties";
 export * from "./keys";
 export {
+  assertLoaded,
   DeepNew,
   ensureLoaded,
-  ensureLoadedThen,
   isLoaded,
   isNew,
   Loadable,
   Loaded,
   LoadHint,
   MarkLoaded,
+  maybePopulateThen,
   New,
   RelationsIn,
 } from "./loadHints";
@@ -66,7 +67,7 @@ export {
 } from "./rules";
 export * from "./serde";
 export { asNew, fail } from "./utils";
-export { withLoaded } from "./withLoaded";
+export { ensureWithLoaded, withLoaded, WithLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {

@@ -24,6 +24,7 @@ export interface ColumnCondition {
   alias: string;
   column: string;
   cond: ParsedValueFilter<any>;
+  pruneable?: boolean;
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
@@ -105,7 +106,7 @@ export function parseFindQuery(
   function maybeAddNotSoftDeleted(meta: EntityMetadata<any>, alias: string): void {
     if (filterSoftDeletes(meta)) {
       const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0].columnName!;
-      conditions.push({ alias, column, cond: { kind: "is-null" } });
+      conditions.push({ alias, column, cond: { kind: "is-null" }, pruneable: true });
     }
   }
 
@@ -333,20 +334,10 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   // Mark all terminal usages
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
-  parsed.conditions.forEach((c) => used.add(c.alias));
+  parsed.conditions.filter((c) => !c.pruneable).forEach((c) => used.add(c.alias));
   parsed.orderBys?.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  const todo = [...(parsed.complexConditions ?? [])];
-  while (todo.length !== 0) {
-    const cc = todo.pop()!;
-    for (const c of cc.conditions) {
-      if ("op" in c) {
-        todo.push(c);
-      } else {
-        used.add(c.alias);
-      }
-    }
-  }
+  flattenComplexConditions(parsed.complexConditions).forEach((c) => used.add(c.alias));
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];
@@ -363,6 +354,27 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   }
   // Now remove any unused joins
   parsed.tables = parsed.tables.filter((t) => used.has(t.alias));
+  // And then remove any soft-delete conditions we don't need anymore
+  parsed.conditions = parsed.conditions.filter((c) => {
+    const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
+    return !prune;
+  });
+}
+
+function flattenComplexConditions(conditions: ParsedExpressionFilter[] | undefined): ColumnCondition[] {
+  const todo = conditions ? [...conditions] : [];
+  const result: ColumnCondition[] = [];
+  while (todo.length !== 0) {
+    const cc = todo.pop()!;
+    for (const c of cc.conditions) {
+      if ("op" in c) {
+        todo.push(c);
+      } else {
+        result.push(c);
+      }
+    }
+  }
+  return result;
 }
 
 /** Returns the `a` from `"a".*`. */

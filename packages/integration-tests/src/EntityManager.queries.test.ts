@@ -1812,6 +1812,22 @@ describe("EntityManager.queries", () => {
         conditions: [],
       });
     });
+
+    it("prunes unnecessary soft-deleted conditions", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ author_id: 1, title: "b1" });
+
+      const em = newEntityManager();
+      const where = { books: { title: undefined } } satisfies AuthorFilter;
+      const authors = await em.find(Author, where);
+      expect(authors.length).toEqual(1);
+
+      expect(parseFindQuery(am, where, { softDeletes: "exclude" })).toEqual({
+        selects: [`"a".*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        conditions: [{ alias: "a", column: "deleted_at", cond: { kind: "is-null" }, pruneable: true }],
+      });
+    });
   });
 
   describe("aliases", () => {

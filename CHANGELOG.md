@@ -1,3 +1,10 @@
+## [1.64.1](https://github.com/stephenh/joist-ts/compare/v1.64.0...v1.64.1) (2023-03-22)
+
+
+### Bug Fixes
+
+* Drop unnecessary soft-deleted conditions. ([#579](https://github.com/stephenh/joist-ts/issues/579)) ([21670b3](https://github.com/stephenh/joist-ts/commit/21670b388303d726f97326656ea63032a7eb8d60))
+
 # [1.64.0](https://github.com/stephenh/joist-ts/compare/v1.63.4...v1.64.0) (2023-03-22)
 
 

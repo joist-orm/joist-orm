@@ -1,3 +1,10 @@
+## [1.63.4](https://github.com/stephenh/joist-ts/compare/v1.63.3...v1.63.4) (2023-03-22)
+
+
+### Bug Fixes
+
+* Fix forceReload with o2ms. ([#577](https://github.com/stephenh/joist-ts/issues/577)) ([13c57d0](https://github.com/stephenh/joist-ts/commit/13c57d0a768db4fb361e7295b94cd34d0e5b54b9))
+
 ## [1.63.3](https://github.com/stephenh/joist-ts/compare/v1.63.2...v1.63.3) (2023-03-22)
 
 

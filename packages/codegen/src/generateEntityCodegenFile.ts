@@ -653,7 +653,7 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
     return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(notNull)} };`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
-    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} }`;
+    return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
   });
   return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
 }

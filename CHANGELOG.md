@@ -1,3 +1,10 @@
+## [1.64.2](https://github.com/stephenh/joist-ts/compare/v1.64.1...v1.64.2) (2023-03-24)
+
+
+### Bug Fixes
+
+* Fix missing semi-colon after poly fields. ([#580](https://github.com/stephenh/joist-ts/issues/580)) ([809ca3e](https://github.com/stephenh/joist-ts/commit/809ca3e128b3ac68405a5120577144d1607e4da7))
+
 ## [1.64.1](https://github.com/stephenh/joist-ts/compare/v1.64.0...v1.64.1) (2023-03-22)
 
 

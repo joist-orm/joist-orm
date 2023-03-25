@@ -25,6 +25,7 @@ export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveFiel
     derived: false,
     notNull: true,
     protected: false,
+    unique: false,
     columnDefault: null,
     superstruct: undefined,
     ...opts,

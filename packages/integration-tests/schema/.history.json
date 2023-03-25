@@ -13,6 +13,7 @@
     "favoriteColors",
     "favoriteShape",
     "firstName",
+    "fullName",
     "graduated",
     "id",
     "image",
@@ -23,6 +24,7 @@
     "numberOfBooks",
     "numberOfPublicReviews",
     "publisher",
+    "ssn",
     "tags",
     "updatedAt",
     "wasEverPopular"
@@ -143,6 +145,7 @@
     "favoriteColors",
     "favoriteShape",
     "firstName",
+    "fullName",
     "graduated",
     "id",
     "initials",
@@ -152,6 +155,7 @@
     "numberOfBooks",
     "numberOfPublicReviews",
     "publisherId",
+    "ssn",
     "updatedAt",
     "wasEverPopular"
   ],

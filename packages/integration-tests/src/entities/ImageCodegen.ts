@@ -53,9 +53,9 @@ import type { EntityManager } from "./entities";
 export type ImageId = Flavor<string, "Image">;
 
 export interface ImageFields {
-  fileName: { kind: "primitive"; type: string; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  fileName: { kind: "primitive"; type: string; unique: false; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   type: { kind: "enum"; type: ImageType; nullable: never };
   author: { kind: "m2o"; type: Author; nullable: undefined };
   book: { kind: "m2o"; type: Book; nullable: undefined };

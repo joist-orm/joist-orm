@@ -23,6 +23,7 @@ import {
   setDefaultEntityLimit,
   setEntityLimit,
   TooManyError,
+  UniqueFilter,
 } from "joist-orm";
 import {
   Author,
@@ -1608,6 +1609,27 @@ describe("EntityManager.queries", () => {
       ],
       conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a1" } }],
     });
+  });
+
+  it("can find by unique", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "12" });
+    await insertAuthor({ first_name: "a2", ssn: "13" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [a1, a2, a3] = await Promise.all([
+      em.findByUnique(Author, { ssn: "12" }),
+      em.findByUnique(Author, { ssn: "13" }),
+      em.findByUnique(Author, { ssn: "14" }),
+    ]);
+    expect(a1!.firstName).toEqual("a1");
+    expect(a2!.firstName).toEqual("a2");
+    expect(a3).toBeUndefined();
+    // Then we only issued a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // @ts-expect-error
+    const f1 = { firstName: "a1" } satisfies UniqueFilter<Author>;
+    // @ts-expect-error
+    const f2 = { publisher: "p:1" } satisfies UniqueFilter<Author>;
   });
 
   describe("complex queries", () => {

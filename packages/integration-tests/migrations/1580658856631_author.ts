@@ -70,6 +70,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "authors", {
     first_name: { type: "varchar(255)", notNull: true },
     last_name: { type: "varchar(255)", notNull: false },
+    ssn: { type: "varchar(25)", notNull: false, unique: true },
     // for testing sync derived values
     initials: { type: "varchar(255)", notNull: true },
     // for testing async derived values

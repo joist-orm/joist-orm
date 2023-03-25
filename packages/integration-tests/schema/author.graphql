@@ -2,6 +2,7 @@ type Author {
   id: ID!
   firstName: String!
   lastName: String
+  fullName: String
   initials: String!
   numberOfBooks: Int!
   isPopular: Boolean
@@ -23,6 +24,7 @@ type Author {
   bookComments: String
   deletedAt: DateTime
   numberOfPublicReviews: Int
+  ssn: String
 }
 
 input SaveAuthorInput {
@@ -43,6 +45,7 @@ input SaveAuthorInput {
   favoriteShape: FavoriteShape
   currentDraftBookId: ID
   deletedAt: DateTime
+  ssn: String
 }
 
 type SaveAuthorResult {

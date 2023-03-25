@@ -44,7 +44,7 @@ import type { EntityManager } from "./entities";
 export type LargePublisherId = Flavor<string, "LargePublisher"> & Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
-  country: { kind: "primitive"; type: string; nullable: undefined };
+  country: { kind: "primitive"; type: string; unique: false; nullable: undefined };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {

@@ -38,8 +38,8 @@ import type { EntityManager } from "./entities";
 export type SmallPublisherId = Flavor<string, "SmallPublisher"> & Flavor<string, "Publisher">;
 
 export interface SmallPublisherFields extends PublisherFields {
-  city: { kind: "primitive"; type: string; nullable: never };
-  allAuthorNames: { kind: "primitive"; type: string; nullable: undefined };
+  city: { kind: "primitive"; type: string; unique: false; nullable: never };
+  allAuthorNames: { kind: "primitive"; type: string; unique: false; nullable: undefined };
 }
 
 export interface SmallPublisherOpts extends PublisherOpts {

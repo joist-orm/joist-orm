@@ -39,13 +39,6 @@ export interface Driver {
     keys: readonly string[],
   ): Promise<JoinRow[]>;
 
-  /** Bulk loads all rows in a m2o, for all entities in `untaggedIds`. */
-  loadOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
-
   /** Bulk loads selective rows in a m2o, for all entities encoded in `untaggedIds`. */
   findOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,

@@ -8,7 +8,6 @@ import {
   ColumnCondition,
   maybeAddNotSoftDeleted,
   ParsedFindQuery,
-  ParsedTable,
 } from "../QueryParser";
 import { Column } from "../serde";
 import { getOrSet, groupBy } from "../utils";
@@ -25,12 +24,14 @@ export function findByUniqueDataLoader<T extends Entity>(
       const meta = getMetadata(type);
       const alias = abbreviation(meta.tableName);
 
-      const selects = [`${alias}.*`];
-      const tables: ParsedTable[] = [{ alias, join: "primary", table: meta.tableName }];
       const conditions: ColumnCondition[] = [];
-      const parsed: ParsedFindQuery = { selects, tables, conditions };
+      const query: ParsedFindQuery = {
+        selects: [`${alias}.*`],
+        tables: [{ alias, join: "primary", table: meta.tableName }],
+        conditions,
+      };
 
-      addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, true);
+      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
       maybeAddNotSoftDeleted(conditions, meta, alias, softDeletes);
 
       let column: Column;
@@ -47,7 +48,7 @@ export function findByUniqueDataLoader<T extends Entity>(
           throw new Error(`Unsupported field ${field.fieldName}`);
       }
 
-      const rows = await em.driver.executeFind(em, parsed, {});
+      const rows = await em.driver.executeFind(em, query, {});
 
       const rowsByValue = groupBy(rows, (row) => row[column.columnName]);
 

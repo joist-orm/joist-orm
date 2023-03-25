@@ -81,6 +81,7 @@ export function parseFindQuery(
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
+  const query = { selects, tables, conditions };
   const complexConditions: ParsedExpressionFilter[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const {
@@ -132,7 +133,7 @@ export function parseFindQuery(
 
     // Maybe only do this if we're the primary, or have a field that needs it?
     if (needsClassPerTableJoins(meta)) {
-      addTablePerClassJoinsAndClassTag(selects, tables, meta, alias, join === "primary");
+      addTablePerClassJoinsAndClassTag(query, meta, alias, join === "primary");
     }
 
     maybeAddNotSoftDeleted(meta, alias);
@@ -316,17 +317,16 @@ export function parseFindQuery(
     addOrderBy(meta, alias, orderBy);
   }
 
-  const parsed = { selects, tables, conditions };
   if (orderBys.length > 0) {
-    Object.assign(parsed, { orderBys });
+    Object.assign(query, { orderBys });
   }
   if (complexConditions.length > 0) {
-    Object.assign(parsed, { complexConditions });
+    Object.assign(query, { complexConditions });
   }
   if (pruneJoins) {
-    pruneUnusedJoins(parsed, keepAliases);
+    pruneUnusedJoins(query, keepAliases);
   }
-  return parsed;
+  return query;
 }
 
 // Remove any joins that are not used in the select or conditions
@@ -584,12 +584,12 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
 }
 
 export function addTablePerClassJoinsAndClassTag(
-  selects: string[],
-  tables: ParsedTable[],
+  query: ParsedFindQuery,
   meta: EntityMetadata<any>,
   alias: string,
   isPrimary: boolean,
 ): void {
+  const { selects, tables } = query;
   // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
   meta.baseTypes.forEach((bt, i) => {
     if (isPrimary) {

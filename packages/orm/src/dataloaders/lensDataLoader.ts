@@ -54,8 +54,9 @@ export function lensDataLoader<T extends Entity>(
       const alias = getAlias(target.tableName);
       const selects = [`${alias}.*`];
       const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
-      addTablePerClassJoinsAndClassTag(selects, tables, target, alias, true);
       const conditions: ColumnCondition[] = [];
+      const query: ParsedFindQuery = { selects, tables, conditions };
+      addTablePerClassJoinsAndClassTag(query, target, alias, true);
 
       function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
         if (other.timestampFields.deletedAt) {
@@ -153,8 +154,7 @@ export function lensDataLoader<T extends Entity>(
       });
 
       // Get back `__source_id, target.*`
-      const parsed: ParsedFindQuery = { selects, tables, conditions };
-      const rows = await em.driver.executeFind(em, parsed, {});
+      const rows = await em.driver.executeFind(em, query, {});
 
       // Group the target entities (i.e. BookReview) by the source id we reached them from.
       const entitiesBySourceId = new Map(

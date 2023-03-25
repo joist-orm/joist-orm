@@ -14,6 +14,7 @@ const config = {
   onBrokenMarkdownLinks: "warn",
   organizationName: "stephenh",
   projectName: "joist-ts",
+  trailingSlash: false,
 
   presets: [
     [

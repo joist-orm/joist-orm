@@ -127,23 +127,6 @@ export class PostgresDriver implements Driver {
     return query.orderBy("id");
   }
 
-  loadOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    const meta = collection.otherMeta;
-    const knex = this.getMaybeInTxnKnex(em);
-    if (!needsClassPerTableJoins(meta)) {
-      return knex.select("*").from(meta.tableName).whereIn(collection.otherColumnName, untaggedIds).orderBy("id");
-    } else {
-      const q = knex.select("*").from(`${meta.tableName} AS b`);
-      addTablePerClassJoinsAndClassTag(knex, meta, q);
-      q.whereIn(collection.otherColumnName, untaggedIds).orderBy("b.id");
-      return q;
-    }
-  }
-
   findOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,

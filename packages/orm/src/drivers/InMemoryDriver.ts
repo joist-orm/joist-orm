@@ -222,16 +222,6 @@ export class InMemoryDriver implements Driver {
     });
   }
 
-  async loadOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    this.onQuery();
-    const rows = Object.values(this.rowsOfTable(collection.otherMeta.tableName));
-    return rows.filter((row) => untaggedIds.includes(String(row[collection.otherColumnName])));
-  }
-
   async findOneToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: OneToManyCollection<T, U>,

@@ -1,13 +1,5 @@
-import { Author, Book, newBook, newTag, SmallPublisher, Tag } from "@src/entities";
-import {
-  insertAuthor,
-  insertBook,
-  insertBookToTag,
-  insertImage,
-  insertPublisher,
-  insertTag,
-  select,
-} from "@src/entities/inserts";
+import { Author, Book, newBook, newTag, Tag } from "@src/entities";
+import { insertAuthor, insertBook, insertBookToTag, insertImage, insertTag, select } from "@src/entities/inserts";
 import { driver, newEntityManager } from "@src/setupDbTests";
 import { getMetadata, setField } from "joist-orm";
 
@@ -106,19 +98,6 @@ describe("Driver", () => {
       const rows = await select("books_to_tags");
       expect(rows).toMatchObject([]);
     });
-  });
-
-  it("can loadOneToMany", async () => {
-    // Given a publisher with two authors
-    await insertPublisher({ name: "p1" });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    await insertAuthor({ first_name: "a2", publisher_id: 1 });
-    // And we create a dummy publisher to get the authors
-    const em = newEntityManager();
-    const p2 = em.create(SmallPublisher, { name: "p2", city: "C1" });
-    // Purposefully using the non-dummy id 1
-    const rows = await driver.loadOneToMany(em, p2.authors as any, ["1"]);
-    expect(rows.length).toEqual(2);
   });
 
   it("can loadManyToMany", async () => {

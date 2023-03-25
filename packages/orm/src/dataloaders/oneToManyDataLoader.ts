@@ -1,7 +1,15 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { assertIdsAreTagged, deTagIds, maybeResolveReferenceToId, OneToManyCollection } from "../index";
+import {
+  abbreviation,
+  addTablePerClassJoinsAndClassTag,
+  assertIdsAreTagged,
+  deTagIds,
+  maybeResolveReferenceToId,
+  OneToManyCollection,
+  ParsedFindQuery,
+} from "../index";
 import { getOrSet, groupBy } from "../utils";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
@@ -9,21 +17,31 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   collection: OneToManyCollection<T, U>,
 ): DataLoader<string, U[]> {
   // The metadata for the entity that contains the collection
-  const { meta, fieldName } = collection;
-  const loaderName = `${meta.tableName}.${fieldName}`;
+  const { meta: oneMeta, fieldName } = collection;
+  const loaderName = `${oneMeta.tableName}.${fieldName}`;
   return getOrSet(em.loadLoaders, loaderName, () => {
     return new DataLoader<string, U[]>(async (_keys) => {
-      const { otherMeta } = collection;
+      const { otherMeta: meta } = collection;
 
       assertIdsAreTagged(_keys);
-      const keys = deTagIds(meta, _keys);
+      const keys = deTagIds(oneMeta, _keys);
 
-      const rows = await em.driver.loadOneToMany(em, collection, keys);
+      const alias = abbreviation(meta.tableName);
+      const query: ParsedFindQuery = {
+        selects: [`${alias}.*`],
+        tables: [{ alias, join: "primary", table: meta.tableName }],
+        conditions: [{ alias, column: collection.otherColumnName, cond: { kind: "in", value: keys } }],
+      };
 
-      const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
+      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+      // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
+
+      const rows = await em.driver.executeFind(em, query, {});
+
+      const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: false }));
       // .filter((e) => !e.isDeletedEntity);
 
-      const rowsById = groupBy(entities, (entity) => {
+      const entitiesById = groupBy(entities, (entity) => {
         // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
         const ownerId = maybeResolveReferenceToId(entity.__orm.data[collection.otherFieldName]);
         // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
@@ -35,7 +53,8 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
         // dummy value.
         return ownerId ?? "dummyNoLongerOwned";
       });
-      return _keys.map((k) => rowsById.get(k) || []);
+
+      return _keys.map((k) => entitiesById.get(k) || []);
     });
   });
 }

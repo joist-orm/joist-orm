@@ -98,6 +98,7 @@ export type PrimitiveField = Field & {
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
+  unique: boolean;
   superstruct: Import | undefined;
 };
 
@@ -339,6 +340,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const fieldType = mapType(table.name, columnName, columnType);
   const superstruct = superstructConfig(config, entity, fieldName);
   const maybeUserType = fieldType === "Object" && superstruct ? superstructType(superstruct) : fieldType;
+  const unique = column.uniqueIndexes.find(isOneToOneIndex) !== undefined;
   return {
     kind: "primitive",
     fieldName,
@@ -350,6 +352,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     columnDefault: column.default,
     derived: fieldDerived(config, entity, fieldName),
     protected: isProtected(config, entity, fieldName),
+    unique,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     superstruct: fieldType === "Object" && superstruct ? Import.from(superstruct) : undefined,
   };

@@ -50,9 +50,9 @@ import type { EntityManager } from "./entities";
 export type CriticId = Flavor<string, "Critic">;
 
 export interface CriticFields {
-  name: { kind: "primitive"; type: string; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined };
 }

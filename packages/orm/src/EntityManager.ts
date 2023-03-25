@@ -37,6 +37,7 @@ import {
   setField,
   setOpts,
   tagId,
+  UniqueFilter,
   ValidationError,
   ValidationErrors,
   ValidationRuleResult,
@@ -315,11 +316,11 @@ export class EntityManager<C = unknown> {
 
   public async findByUnique<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: UniqueFilter<T>,
   ): Promise<T | undefined>;
   public async findByUnique<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: UniqueFilter<T>,
     options?: {
       populate?: Const<H>;
       softDeletes?: "include" | "exclude";
@@ -327,7 +328,7 @@ export class EntityManager<C = unknown> {
   ): Promise<Loaded<T, H> | undefined>;
   async findByUnique<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: UniqueFilter<T>,
     options: {
       populate?: any;
       softDeletes?: "include" | "exclude";

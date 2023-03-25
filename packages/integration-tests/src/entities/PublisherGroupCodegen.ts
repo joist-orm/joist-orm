@@ -43,9 +43,9 @@ import type { EntityManager } from "./entities";
 export type PublisherGroupId = Flavor<string, "PublisherGroup">;
 
 export interface PublisherGroupFields {
-  name: { kind: "primitive"; type: string; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
 }
 
 export interface PublisherGroupOpts {

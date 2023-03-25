@@ -1,6 +1,6 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
-import { FilterOf, OrderOf } from "./EntityManager";
+import { FieldsOf, FilterOf, OrderOf } from "./EntityManager";
 import { ColumnCondition } from "./QueryParser";
 
 /**
@@ -42,6 +42,10 @@ export type EntityFilter<T extends Entity, I, F, N> =
 export type BooleanFilter<N> = true | false | N;
 
 export type FilterWithAlias<T extends Entity> = { as?: Alias<T> } & FilterOf<T>;
+
+export type UniqueFilter<T extends Entity> = {
+  [K in keyof FieldsOf<T> & keyof FilterOf<T> as FieldsOf<T>[K] extends { unique: true } ? K : never]?: FilterOf<T>[K];
+};
 
 /** Filters against a specific field's values within `em.find` inline conditions. */
 export type ValueFilter<V, N> =

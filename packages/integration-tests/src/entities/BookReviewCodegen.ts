@@ -49,10 +49,10 @@ import type { EntityManager } from "./entities";
 export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewFields {
-  rating: { kind: "primitive"; type: number; nullable: never };
-  isPublic: { kind: "primitive"; type: boolean; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; nullable: never };
+  rating: { kind: "primitive"; type: number; unique: false; nullable: never };
+  isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   book: { kind: "m2o"; type: Book; nullable: never };
 }
 

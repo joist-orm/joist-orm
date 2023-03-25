@@ -1,3 +1,10 @@
+# [1.65.0](https://github.com/stephenh/joist-ts/compare/v1.64.2...v1.65.0) (2023-03-25)
+
+
+### Features
+
+* Add findByUnique. ([#581](https://github.com/stephenh/joist-ts/issues/581)) ([de3c261](https://github.com/stephenh/joist-ts/commit/de3c26172541829296d249266a5cc323205c5953)), closes [#380](https://github.com/stephenh/joist-ts/issues/380)
+
 ## [1.64.2](https://github.com/stephenh/joist-ts/compare/v1.64.1...v1.64.2) (2023-03-24)
 
 

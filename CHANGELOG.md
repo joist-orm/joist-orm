@@ -1,3 +1,10 @@
+# [1.66.0](https://github.com/stephenh/joist-ts/compare/v1.65.1...v1.66.0) (2023-03-25)
+
+
+### Features
+
+* Implement oneToManyDataLoader with executeFind. ([#584](https://github.com/stephenh/joist-ts/issues/584)) ([cdaba25](https://github.com/stephenh/joist-ts/commit/cdaba25f3a56d1b3d728eee06d4f171e4439f516))
+
 ## [1.65.1](https://github.com/stephenh/joist-ts/compare/v1.65.0...v1.65.1) (2023-03-25)
 
 

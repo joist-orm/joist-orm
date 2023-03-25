@@ -13,6 +13,14 @@ describe("Book", () => {
     expect(b2.author.get.firstName).toEqual("a1");
   });
 
+  it("can save a book with existing author", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    await em.flush();
+    const b1 = em.create(Book, { title: "b1", author: a1 });
+    await em.flush();
+  });
+
   it("can update a book", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);

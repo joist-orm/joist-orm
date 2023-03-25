@@ -161,7 +161,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.#entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);
+    setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTagged ?? other : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;

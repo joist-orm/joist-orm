@@ -71,6 +71,7 @@ export type AuthorId = Flavor<string, "Author">;
 export interface AuthorFields {
   firstName: { kind: "primitive"; type: string; nullable: never };
   lastName: { kind: "primitive"; type: string; nullable: undefined };
+  ssn: { kind: "primitive"; type: string; nullable: undefined };
   initials: { kind: "primitive"; type: string; nullable: never };
   numberOfBooks: { kind: "primitive"; type: number; nullable: never };
   bookComments: { kind: "primitive"; type: string; nullable: undefined };
@@ -93,6 +94,7 @@ export interface AuthorFields {
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
+  ssn?: string | null;
   isPopular?: boolean | null;
   age?: number | null;
   graduated?: Date | null;
@@ -126,6 +128,7 @@ export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never>;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null>;
+  ssn?: ValueFilter<string, null>;
   initials?: ValueFilter<string, never>;
   numberOfBooks?: ValueFilter<number, never>;
   bookComments?: ValueFilter<string, null>;
@@ -154,6 +157,7 @@ export interface AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<AuthorId>;
   firstName?: ValueGraphQLFilter<string>;
   lastName?: ValueGraphQLFilter<string>;
+  ssn?: ValueGraphQLFilter<string>;
   initials?: ValueGraphQLFilter<string>;
   numberOfBooks?: ValueGraphQLFilter<number>;
   bookComments?: ValueGraphQLFilter<string>;
@@ -182,6 +186,7 @@ export interface AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   lastName?: OrderBy;
+  ssn?: OrderBy;
   initials?: OrderBy;
   numberOfBooks?: OrderBy;
   bookComments?: OrderBy;
@@ -284,6 +289,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   set lastName(lastName: string | undefined) {
     setField(this, "lastName", lastName);
+  }
+
+  get ssn(): string | undefined {
+    return this.__orm.data["ssn"];
+  }
+
+  set ssn(ssn: string | undefined) {
+    setField(this, "ssn", ssn);
   }
 
   abstract get initials(): string;

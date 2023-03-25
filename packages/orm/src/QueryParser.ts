@@ -633,6 +633,18 @@ export function addTablePerClassJoinsAndClassTag(
   }
 }
 
+export function maybeAddNotSoftDeleted(
+  conditions: ColumnCondition[],
+  meta: EntityMetadata<any>,
+  alias: string,
+  softDeletes: "include" | "exclude",
+): void {
+  if (softDeletes === "exclude" && meta.timestampFields.deletedAt) {
+    const column = meta.allFields[meta.timestampFields.deletedAt].serde?.columns[0].columnName!;
+    conditions.push({ alias, column, cond: { kind: "is-null" } });
+  }
+}
+
 function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
   const [op, expressions] =
     "and" in expression

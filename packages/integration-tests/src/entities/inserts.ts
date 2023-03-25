@@ -22,6 +22,7 @@ export function insertAuthor(row: {
   id?: number;
   first_name: string;
   last_name?: string | null;
+  ssn?: string | null;
   age?: number | null;
   is_popular?: boolean | null;
   publisher_id?: number | null;

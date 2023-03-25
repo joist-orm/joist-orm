@@ -3,6 +3,7 @@ import DataLoader from "dataloader";
 import { Knex } from "knex";
 import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
+import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/Driver";
@@ -310,6 +311,45 @@ export class EntityManager<C = unknown> {
       throw new TooManyError(`Found more than one: ${list.map((e) => e.toString()).join(", ")}`);
     }
     return list[0];
+  }
+
+  public async findByUnique<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+  ): Promise<T | undefined>;
+  public async findByUnique<T extends Entity, H extends LoadHint<T>>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options?: {
+      populate?: Const<H>;
+      softDeletes?: "include" | "exclude";
+    },
+  ): Promise<Loaded<T, H> | undefined>;
+  async findByUnique<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options: {
+      populate?: any;
+      softDeletes?: "include" | "exclude";
+    } = {},
+  ): Promise<T | undefined> {
+    const { populate, softDeletes = "exclude" } = options;
+    const entries = Object.entries(where);
+    if (entries.length !== 1) {
+      throw new Error("findByUnique only accepts a single field");
+    }
+    const [fieldName, value] = entries[0];
+    const field = getMetadata(type).allFields[fieldName];
+    const row = await findByUniqueDataLoader(this, type, field, softDeletes).load(value);
+    if (!row) {
+      return undefined;
+    } else {
+      const entity = this.hydrate(type, row);
+      if (populate) {
+        await this.populate(entity, populate);
+      }
+      return entity;
+    }
   }
 
   /**

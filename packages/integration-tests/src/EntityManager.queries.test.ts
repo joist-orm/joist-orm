@@ -1610,6 +1610,24 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by unique", async () => {
+    await insertAuthor({ first_name: "a1", ssn: "12" });
+    await insertAuthor({ first_name: "a2", ssn: "13" });
+    const em = newEntityManager();
+    resetQueryCount();
+    // Given two queries with exactly the same where clause
+    const [a1, a2, a3] = await Promise.all([
+      em.findByUnique(Author, { ssn: "12" }),
+      em.findByUnique(Author, { ssn: "13" }),
+      em.findByUnique(Author, { ssn: "14" }),
+    ]);
+    expect(a1!.firstName).toEqual("a1");
+    expect(a2!.firstName).toEqual("a2");
+    expect(a3).toBeUndefined();
+    // Then we only issued a single SQL query
+    expect(numberOfQueries).toEqual(1);
+  });
+
   describe("complex queries", () => {
     it("can use aliases for or", async () => {
       await insertAuthor({ first_name: "a1" });

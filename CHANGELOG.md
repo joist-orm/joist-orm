@@ -1,3 +1,10 @@
+## [1.65.1](https://github.com/stephenh/joist-ts/compare/v1.65.0...v1.65.1) (2023-03-25)
+
+
+### Bug Fixes
+
+* Fix m2o.set when using untagged ids. ([#583](https://github.com/stephenh/joist-ts/issues/583)) ([fac523b](https://github.com/stephenh/joist-ts/commit/fac523b5e48e7a387207fd34a732fa30b1ecce12))
+
 # [1.65.0](https://github.com/stephenh/joist-ts/compare/v1.64.2...v1.65.0) (2023-03-25)
 
 

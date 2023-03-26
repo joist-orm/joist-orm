@@ -57,12 +57,15 @@ export interface Config {
     deletedAt?: TimestampConfig;
   };
   /**
-   * By default, we create a `flush_database` function for super fast testing.
+   * By default, we create a `flush_database` function for fast testing.
    *
    * However, if you don't want to use this, or you have your own bespoke function like we do
    * that is more application-aware, then you can disable Joist's out-of-the-box one.
+   *
+   * If you have more than one test database, you can set `createFlushFunction` to the array
+   * of test database names, i.e. `mydb_test_1`, `mydb_test_2`, etc.
    */
-  createFlushFunction?: boolean;
+  createFlushFunction?: boolean | string[];
   entitiesDirectory: string;
   codegenPlugins: string[];
   entities: Record<string, EntityConfig>;

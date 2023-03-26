@@ -98,7 +98,7 @@ The default is `./src/entities`.
 
 ### `createFlushFunction`
 
-Joist's preferred approach to testing is to let tests `COMMIT` their code, and then use a `flush_database` stored procedure to very quickly `TRUNCATE` all tables.
+Joist's preferred approach to testing is to let tests `COMMIT` their code, and then use a `flush_database` stored procedure to very quickly `TRUNCATE` all tables between each test.
 
 This `flush_database` stored procedure if created during `npm run codegen`.
 
@@ -107,6 +107,14 @@ If you'd prefer to not use, you can set this to false:
 ```json
 {
   "createFlushFunction": false
+}
+```
+
+If you have multiple test databases (i.e. one per Jest work), you can set the parameter to an array of database names:
+
+```json
+{
+  "createFlushFunction": ["db_test_1", "db_test_2"]
 }
 ```
 

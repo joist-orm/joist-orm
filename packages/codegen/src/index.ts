@@ -63,8 +63,20 @@ if (require.main === module) {
 
     // In graphql-service we have our own custom flush function, so allow skipping this
     if (config.createFlushFunction !== false) {
-      console.log("Creating flush_database function");
-      await createFlushFunction(db, client, config);
+      if (Array.isArray(config.createFlushFunction)) {
+        console.log("Creating flush_database functions");
+        await Promise.all(
+          config.createFlushFunction.map(async (dbName) => {
+            const client = new Client({ ...pgConfig, database: dbName });
+            await client.connect();
+            await createFlushFunction(db, client, config);
+            await client.end();
+          }),
+        );
+      } else {
+        console.log("Creating flush_database function");
+        await createFlushFunction(db, client, config);
+      }
     }
 
     await client.end();

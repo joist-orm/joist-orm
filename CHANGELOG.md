@@ -1,3 +1,10 @@
+## [1.66.1](https://github.com/stephenh/joist-ts/compare/v1.66.0...v1.66.1) (2023-03-26)
+
+
+### Bug Fixes
+
+* Wrap aliases that might be keywords. ([#587](https://github.com/stephenh/joist-ts/issues/587)) ([240eccd](https://github.com/stephenh/joist-ts/commit/240eccd927a29bb6937d5fe433d1212fd3770b5f))
+
 # [1.66.0](https://github.com/stephenh/joist-ts/compare/v1.65.1...v1.66.0) (2023-03-25)
 
 

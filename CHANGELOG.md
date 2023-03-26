@@ -1,3 +1,10 @@
+# [1.67.0](https://github.com/stephenh/joist-ts/compare/v1.66.1...v1.67.0) (2023-03-26)
+
+
+### Features
+
+* Support creating `flush_database` in multiple databases. ([#588](https://github.com/stephenh/joist-ts/issues/588)) ([b51c4d0](https://github.com/stephenh/joist-ts/commit/b51c4d0680ebc02523e30586f709b9758a5c1312)), closes [#585](https://github.com/stephenh/joist-ts/issues/585)
+
 ## [1.66.1](https://github.com/stephenh/joist-ts/compare/v1.66.0...v1.66.1) (2023-03-26)
 
 

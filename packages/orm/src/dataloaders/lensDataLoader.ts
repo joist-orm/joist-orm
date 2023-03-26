@@ -52,7 +52,7 @@ export function lensDataLoader<T extends Entity>(
       let resultIsArray = startIsArray;
 
       const alias = getAlias(target.tableName);
-      const selects = [`${alias}.*`];
+      const selects = [`"${alias}".*`];
       const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
       const conditions: ColumnCondition[] = [];
       const query: ParsedFindQuery = { selects, tables, conditions };
@@ -84,7 +84,7 @@ export function lensDataLoader<T extends Entity>(
             });
             maybeAddNotSoftDeleted(other, alias);
             if (isLast) {
-              selects.push(`${alias}.id as __source_id`);
+              selects.push(`"${alias}".id as __source_id`);
               conditions.push({
                 alias,
                 column: "id",
@@ -108,7 +108,7 @@ export function lensDataLoader<T extends Entity>(
               });
               maybeAddNotSoftDeleted(other, alias);
             } else {
-              selects.push(`${lastAlias}.${field.serde.columns[0].columnName} as __source_id`);
+              selects.push(`"${lastAlias}".${field.serde.columns[0].columnName} as __source_id`);
               conditions.push({
                 alias: lastAlias,
                 column: field.serde.columns[0].columnName,
@@ -141,7 +141,7 @@ export function lensDataLoader<T extends Entity>(
             });
             maybeAddNotSoftDeleted(other, alias);
             if (isLast) {
-              selects.push(`${alias}.id as __source_id`);
+              selects.push(`"${alias}".id as __source_id`);
               conditions.push({ alias, column: "id", cond: { kind: "in", value: deTagIds(source, sourceIds) } });
             }
             resultIsArray = true;

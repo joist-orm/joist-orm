@@ -28,7 +28,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
 
       const alias = abbreviation(meta.tableName);
       const query: ParsedFindQuery = {
-        selects: [`${alias}.*`],
+        selects: [`"${alias}".*`],
         tables: [{ alias, join: "primary", table: meta.tableName }],
         conditions: [{ alias, column: collection.otherColumnName, cond: { kind: "in", value: keys } }],
       };

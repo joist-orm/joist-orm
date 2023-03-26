@@ -5,7 +5,7 @@ import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager"
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
-import { ManyToManyCollection, OneToManyCollection, OneToOneReferenceImpl } from "../relations";
+import { ManyToManyCollection, OneToManyCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { hasSerde } from "../serde";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -236,16 +236,6 @@ export class InMemoryDriver implements Driver {
       const col2 = `${collection.otherColumnName}=${tagId(collection.meta, row[collection.otherColumnName])}`;
       return set.has(`${col1},${col2}`);
     });
-  }
-
-  async loadOneToOne<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    reference: OneToOneReferenceImpl<T, U>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    this.onQuery();
-    const rows = Object.values(this.rowsOfTable(reference.otherMeta.tableName));
-    return rows.filter((row) => untaggedIds.includes(String(row[reference.otherColumnName])));
   }
 
   transaction<T>(

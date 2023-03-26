@@ -21,7 +21,7 @@ import {
   PrimitiveField,
   tagIds,
 } from "../index";
-import { ManyToManyCollection, OneToOneReferenceImpl } from "../relations";
+import { ManyToManyCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 import { getOrSet, partition, zeroTo } from "../utils";
@@ -147,19 +147,6 @@ export class PostgresDriver implements Driver {
       });
     });
     return query.orderBy("id");
-  }
-
-  loadOneToOne<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    reference: OneToOneReferenceImpl<T, U>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-    return knex
-      .select("*")
-      .from(reference.otherMeta.tableName)
-      .whereIn(reference.otherColumnName, untaggedIds)
-      .orderBy("id");
   }
 
   async find<T extends Entity>(

@@ -7,6 +7,8 @@ import { EnumTableData } from "./index";
 export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
   const { rows, extraPrimitives } = enumData;
   const detailsName = `${enumName}Details`;
+
+  // Create the `const fooDetails = code -> literal` mapping
   const detailsDefinition = [
     "id: number;",
     `code: ${enumName};`,
@@ -23,6 +25,7 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
       return `${primitive.fieldName}: ${primitive.fieldType};`;
     }),
   ].join(" ");
+
   return code`
     export enum ${enumName} {
       ${rows.map((row) => `${pascalCase(row.code)} = '${row.code}'`).join(",\n")}
@@ -42,6 +45,10 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
         })
         .join(",")}
     };
+    
+    export const ${detailsName} = {
+      ${rows.map((row) => `${pascalCase(row.code)}: details[${enumName}.${pascalCase(row.code)}]`).join(",")}
+    }
 
     export const ${pluralize(enumName)} = {
       getByCode(code: ${enumName}): ${detailsName} {

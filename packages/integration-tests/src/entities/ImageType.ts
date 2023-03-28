@@ -40,6 +40,12 @@ const details: Record<ImageType, ImageTypeDetails> = {
   },
 };
 
+export const ImageTypeDetails = {
+  BookImage: details[ImageType.BookImage],
+  AuthorImage: details[ImageType.AuthorImage],
+  PublisherImage: details[ImageType.PublisherImage],
+};
+
 export const ImageTypes = {
   getByCode(code: ImageType): ImageTypeDetails {
     return details[code];

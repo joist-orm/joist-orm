@@ -1,3 +1,10 @@
+# [1.69.0](https://github.com/stephenh/joist-ts/compare/v1.68.0...v1.69.0) (2023-03-28)
+
+
+### Features
+
+* Generate a const for enum details. ([#590](https://github.com/stephenh/joist-ts/issues/590)) ([13f2a8e](https://github.com/stephenh/joist-ts/commit/13f2a8ebb2f4247272892cec644bcc3e4708bfd0))
+
 # [1.68.0](https://github.com/stephenh/joist-ts/compare/v1.67.0...v1.68.0) (2023-03-28)
 
 

@@ -12,7 +12,7 @@ const details: Record<AdvanceStatus, AdvanceStatusDetails> = {
   [AdvanceStatus.Paid]: { id: 3, code: AdvanceStatus.Paid, name: "Paid" },
 };
 
-export const AdvanceStatusDetails = {
+export const AdvanceStatusDetails: Record<AdvanceStatus[0], AdvanceStatusDetails> = {
   Pending: details[AdvanceStatus.Pending],
   Signed: details[AdvanceStatus.Signed],
   Paid: details[AdvanceStatus.Paid],

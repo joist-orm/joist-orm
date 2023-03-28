@@ -1,5 +1,5 @@
 import { Author, Book, newBook, newTag, Tag } from "@src/entities";
-import { insertAuthor, insertBook, insertBookToTag, insertImage, insertTag, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
 import { driver, newEntityManager } from "@src/setupDbTests";
 import { getMetadata, setField } from "joist-orm";
 
@@ -114,17 +114,5 @@ describe("Driver", () => {
     // Purposefully using the non-dummy id 1
     const rows = await driver.loadManyToMany(em, b2.tags as any, ["book_id=b:1"]);
     expect(rows.length).toEqual(2);
-  });
-
-  it("can loadOneToOne", async () => {
-    // Given an author with an image
-    await insertAuthor({ first_name: "a1" });
-    await insertImage({ file_name: "f1", type_id: 2, author_id: 1 });
-    // And we create a dummy author to get the image reference
-    const em = newEntityManager();
-    const a2 = em.create(Author, { firstName: "a2" });
-    // Purposefully using the non-dummy id 1
-    const rows = (await driver.loadOneToOne(em, a2.image as any, ["1"])) as any;
-    expect(rows[0].file_name).toEqual("f1");
   });
 });

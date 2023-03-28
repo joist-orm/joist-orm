@@ -9,7 +9,6 @@ import {
   ManyToManyLargeCollection,
   OneToManyCollection,
   OneToManyLargeCollection,
-  OneToOneReferenceImpl,
 } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -44,13 +43,6 @@ export interface Driver {
     em: EntityManager,
     collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
     // encoded tuples of `id=2,bar_id=3`
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
-
-  /** Batch loads o2o rows, for all entities in `untaggedIds`. */
-  loadOneToOne<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    reference: OneToOneReferenceImpl<T, U>,
     untaggedIds: readonly string[],
   ): Promise<unknown[]>;
 

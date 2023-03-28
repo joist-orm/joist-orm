@@ -12,6 +12,12 @@ const details: Record<Color, ColorDetails> = {
   [Color.Blue]: { id: 3, code: Color.Blue, name: "Blue" },
 };
 
+export const ColorDetails: Record<Color[0], ColorDetails> = {
+  Red: details[Color.Red],
+  Green: details[Color.Green],
+  Blue: details[Color.Blue],
+};
+
 export const Colors = {
   getByCode(code: Color): ColorDetails {
     return details[code];

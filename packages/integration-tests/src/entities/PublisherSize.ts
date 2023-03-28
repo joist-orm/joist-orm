@@ -10,6 +10,11 @@ const details: Record<PublisherSize, PublisherSizeDetails> = {
   [PublisherSize.Large]: { id: 2, code: PublisherSize.Large, name: "Large" },
 };
 
+export const PublisherSizeDetails: Record<PublisherSize[0], PublisherSizeDetails> = {
+  Small: details[PublisherSize.Small],
+  Large: details[PublisherSize.Large],
+};
+
 export const PublisherSizes = {
   getByCode(code: PublisherSize): PublisherSizeDetails {
     return details[code];

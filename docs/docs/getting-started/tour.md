@@ -5,7 +5,7 @@ sidebar_position: 0
 
 Joist's docs dive into these features in more detail, but as a quick tldr...
 
-You start by creating/updating your database schema, using `node-pg-migrate` or whatever migration library you like:
+You start by creating/updating your database schema, using `node-pg-migrate` or whatever migration tool you like:
 
 ```shell
 # Apply the latest migrations
@@ -14,12 +14,17 @@ npm run migrate
 npm run joist-codegen
 ```
 
-You get clean domain objects created automatically:
+You get super-clean domain objects created automatically:
 
 ```typescript
 // src/entities/Author.ts
 export class Author extends AuthorCodegen {
-  // Where you eventually add custom methods/business logic
+  // ...empty placeholder for your custom methods/business logic...
+}
+
+// src/entities/AuthorCodegen.ts
+export class AuthorCodegen {
+  // ...has all of the boilerplate columns & m2o/o2m/m2m relations generated for you...
 }
 ```
 

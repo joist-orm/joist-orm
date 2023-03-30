@@ -1,4 +1,3 @@
-import Link from "@docusaurus/Link";
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
@@ -26,12 +25,12 @@ function Header() {
         <h1 className="hero__title">{siteConfig.title}</h1>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
-          <Link to="/docs/getting-started/tour">
-            <a className={styles.button}>Quick Tour</a>
-          </Link>
-          <Link to="/docs/getting-started">
-            <a className={styles.button}>Get Started</a>
-          </Link>
+          <a href="/docs/getting-started/tour" className={styles.button}>
+            Quick Tour
+          </a>
+          <a href="/docs/getting-started" className={styles.button}>
+            Get Started
+          </a>
         </div>
       </div>
     </header>

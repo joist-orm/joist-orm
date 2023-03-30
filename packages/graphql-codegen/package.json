@@ -18,7 +18,7 @@
   ],
   "dependencies": {
     "@dprint/formatter": "^0.2.0",
-    "@dprint/json": "^0.17.1",
+    "@dprint/json": "0.15.6",
     "@types/prettier": "^2.7.2",
     "change-case": "^4.1.2",
     "graphql": "^16.6.0",

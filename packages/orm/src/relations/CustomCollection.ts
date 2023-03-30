@@ -56,7 +56,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
         this.loadPromise = this.opts.load(this.#entity, opts);
@@ -144,7 +144,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   private doGet(opts?: { withDeleted?: boolean }): readonly U[] {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     this.ensureNewOrLoaded();
     return this.filterDeleted(this.opts.get(this.#entity), opts);
   }

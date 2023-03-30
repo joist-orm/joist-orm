@@ -83,7 +83,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.entity, "pending");
     const current = this.current();
     // Resolve the id to an entity
     if (!isEntity(current) && current !== undefined && (!this._isLoaded || opts.forceReload)) {
@@ -106,7 +106,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.entity, "pending");
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
     if (!this._isLoaded) {
@@ -130,12 +130,12 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get id(): IdOf<U> | undefined {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
 
   get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.entity, "pending");
     return this.id || fail("Reference is unset or assigned to a new entity");
   }
 
@@ -205,7 +205,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     // we may not be loaded yet, but our previous entity might already be in the UoW
     const previousLoaded = this.loaded ?? this.maybeFindExisting();
 
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.entity, "pending");
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     const changed = setField(this.entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);

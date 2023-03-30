@@ -54,7 +54,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (!this.isLoaded || opts.forceReload) {
       if (this.loadPromise === undefined) {
         this.loadPromise = this.opts.load(this.#entity, opts);
@@ -129,7 +129,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     this.ensureNewOrLoaded();
     return this.filterDeleted(this.opts.get(this.#entity), opts);
   }

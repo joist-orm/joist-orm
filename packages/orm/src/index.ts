@@ -77,7 +77,7 @@ interface Flavoring<FlavorT> {
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
 export function setField<T extends Entity>(entity: T, fieldName: keyof T & string, newValue: any): boolean {
-  ensureNotDeleted(entity, { ignore: "pending" });
+  ensureNotDeleted(entity, "pending");
   const { em } = entity;
 
   if (em.isFlushing) {
@@ -223,8 +223,8 @@ export function setOpts<T extends Entity>(
   }
 }
 
-export function ensureNotDeleted(entity: Entity, opts: { ignore?: EntityOrmField["deleted"] } = {}): void {
-  if (entity.isDeletedEntity && (opts.ignore === undefined || entity.__orm.deleted !== opts.ignore)) {
+export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {
+  if (entity.isDeletedEntity && (ignore === undefined || entity.__orm.deleted !== ignore)) {
     fail(`${entity} is marked as deleted`);
   }
 }

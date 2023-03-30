@@ -7,9 +7,8 @@ services:
       dockerfile: db.dockerfile
     ports:
       - 5435:5432
-
-  db-wait:
-    image: jwilder/dockerize
-    command: dockerize -wait tcp://db:5432 -timeout 1m
-    depends_on:
-      - db
+    healthcheck:
+      test: pg_isready
+      interval: 1s
+      timeout: 5s
+      retries: 50

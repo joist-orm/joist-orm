@@ -279,39 +279,46 @@ export class PostgresDriver implements Driver {
     const knex = this.getMaybeInTxnKnex(em);
     const now = getNow();
     await this.idAssigner.assignNewIds(knex, todos);
+
+    // Do a 1st pass for INSERTs+UPDATEs so that we avoid DELETEs triggering cascade
+    // behavior that, in conjunction with our trigger-maintained `updated_at`s, causes
+    // our oplocks to fail. See https://github.com/stephenh/joist-ts/issues/591
     for await (const todo of Object.values(todos)) {
-      if (todo) {
+      const meta = todo.metadata;
+      if (todo.inserts.length > 0) {
+        if (meta.subTypes.length > 0) {
+          await batchInsertPerTable(knex, meta, todo.inserts);
+        } else {
+          await batchInsert(knex, meta, todo.inserts);
+        }
+      }
+      if (todo.updates.length > 0) {
+        const { updatedAt } = todo.metadata.timestampFields;
+        if (updatedAt) {
+          todo.updates.forEach((e) => {
+            // Should we just go through a setter?
+            e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
+            e.__orm.data[updatedAt] = now;
+          });
+          if (meta.subTypes.length > 0) {
+            await batchUpdatePerTable(knex, meta, todo.updates);
+          } else {
+            await batchUpdate(knex, meta, todo.updates);
+          }
+        } else {
+          await batchUpdateWithoutUpdatedAt(knex, meta, todo.updates);
+        }
+      }
+    }
+
+    // Now we can issue DELETEs
+    for await (const todo of Object.values(todos)) {
+      if (todo.deletes.length > 0) {
         const meta = todo.metadata;
-        if (todo.inserts.length > 0) {
-          if (meta.subTypes.length > 0) {
-            await batchInsertPerTable(knex, meta, todo.inserts);
-          } else {
-            await batchInsert(knex, meta, todo.inserts);
-          }
-        }
-        if (todo.updates.length > 0) {
-          const { updatedAt } = todo.metadata.timestampFields;
-          if (updatedAt) {
-            todo.updates.forEach((e) => {
-              // Should we just go through a setter?
-              e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
-              e.__orm.data[updatedAt] = now;
-            });
-            if (meta.subTypes.length > 0) {
-              await batchUpdatePerTable(knex, meta, todo.updates);
-            } else {
-              await batchUpdate(knex, meta, todo.updates);
-            }
-          } else {
-            await batchUpdateWithoutUpdatedAt(knex, meta, todo.updates);
-          }
-        }
-        if (todo.deletes.length > 0) {
-          if (meta.subTypes.length > 0) {
-            await batchDeletePerTable(knex, meta, todo.deletes);
-          } else {
-            await batchDelete(knex, meta, todo.deletes);
-          }
+        if (meta.subTypes.length > 0) {
+          await batchDeletePerTable(knex, meta, todo.deletes);
+        } else {
+          await batchDelete(knex, meta, todo.deletes);
         }
       }
     }

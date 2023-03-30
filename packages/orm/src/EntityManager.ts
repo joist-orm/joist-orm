@@ -11,7 +11,6 @@ import { Entity, isEntity } from "./Entity";
 import {
   asConcreteCstr,
   assertIdIsTagged,
-  assertIdsAreTagged,
   Changes,
   CustomCollection,
   CustomReference,
@@ -185,7 +184,7 @@ export class EntityManager<C = unknown> {
 
   /** Looks up `id` in the list of already-loaded entities. */
   getEntity<T extends Entity>(id: IdOf<T>): T | undefined {
-    assertIdsAreTagged([id]);
+    assertIdIsTagged(id);
     return this._entityIndex.get(id) as T | undefined;
   }
 

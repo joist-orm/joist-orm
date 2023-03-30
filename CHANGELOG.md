@@ -1,3 +1,10 @@
+## [1.69.1](https://github.com/stephenh/joist-ts/compare/v1.69.0...v1.69.1) (2023-03-30)
+
+
+### Bug Fixes
+
+* Fix DELETEs bumping oplocks for UPDATEs. ([#593](https://github.com/stephenh/joist-ts/issues/593)) ([5817469](https://github.com/stephenh/joist-ts/commit/581746935aabe1622aaf8b4544f7a6fdc2e5b607)), closes [#591](https://github.com/stephenh/joist-ts/issues/591)
+
 # [1.69.0](https://github.com/stephenh/joist-ts/compare/v1.68.0...v1.69.0) (2023-03-28)
 
 

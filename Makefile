@@ -5,7 +5,7 @@ build:
 
 # Create/recreate the database for applying migrations from scratch.
 db:
-	docker compose up db-wait
+	docker compose up db --wait
 	docker compose exec db ./reset.sh
 	yarn migrate
 	yarn codegen

@@ -32,7 +32,7 @@ jobs:
           name: Start Postgres database
           command: |
             docker compose build db
-            docker compose up db-wait
+            docker compose up db --wait
       - run:
           name: Run migrations
           command: yarn migrate

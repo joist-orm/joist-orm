@@ -1,7 +1,7 @@
 ---
 title: Installation
 slug: /getting-started
-sidebar_position: 0
+sidebar_position: 1
 ---
 
 Installing Joist in your project has four main steps:

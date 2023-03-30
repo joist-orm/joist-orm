@@ -56,7 +56,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
       this.loaded = await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!);
       this.maybeAppendAddedBeforeLoaded();
@@ -65,7 +65,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded !== undefined) {
       return this.loaded.find((other) => other.id === id);
     } else {
@@ -96,7 +96,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private doGet(): U[] {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not preloaded");
@@ -152,7 +152,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
   // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
   remove(other: U, opts: { requireLoaded: boolean } = { requireLoaded: true }) {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }

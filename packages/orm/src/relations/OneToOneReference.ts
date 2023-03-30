@@ -127,7 +127,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (!this._isLoaded || opts.forceReload) {
       if (!this.#entity.isNewEntity) {
         this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTaggedOrFail);
@@ -138,7 +138,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   set(other: U, opts: { percolating?: boolean } = {}): void {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (other === this.loaded) {
       return;
     }
@@ -176,7 +176,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private doGet(): U | undefined {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (!this._isLoaded) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not preloaded");

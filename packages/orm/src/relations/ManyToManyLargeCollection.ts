@@ -50,7 +50,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
   ) {}
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    ensureNotDeleted(this.entity, { ignore: "pending" });
+    ensureNotDeleted(this.entity, "pending");
 
     // locallyAdded is never authorative b/c we never become fully loaded (unlike OneToManyCollection),
     // so we can probe our local collection, but if we don't find anything, we still have to query

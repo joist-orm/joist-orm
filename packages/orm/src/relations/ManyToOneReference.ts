@@ -81,7 +81,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this._isLoaded && this.loaded && !opts.forceReload) {
       return this.loaded;
     }
@@ -109,7 +109,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     // This should only be callable in the type system if we've already resolved this to an instance,
     // but, just in case we somehow got here in an unloaded state, check to see if we're already in the UoW
     if (!this._isLoaded) {
@@ -133,12 +133,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get id(): IdOf<U> | N {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
   }
 
   set id(id: IdOf<U> | N) {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
 
     const previous = this.maybeFindEntity();
     const changed = setField(this.#entity, this.fieldName, id);
@@ -154,7 +154,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | IdOf<U> | N): void {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
@@ -175,7 +175,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     return (this.id as IdOf<U> | undefined) || fail("Reference is unset or assigned to a new entity");
   }
 

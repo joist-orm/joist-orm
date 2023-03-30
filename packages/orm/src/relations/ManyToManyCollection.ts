@@ -72,7 +72,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
       const key = `${this.columnName}=${this.#entity.id}`;
       this.loaded = await manyToManyDataLoader(this.#entity.em, this).load(key);
@@ -82,7 +82,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded !== undefined) {
       return this.loaded.find((u) => u.id === id);
     } else {
@@ -98,7 +98,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async includes(other: U): Promise<boolean> {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
     if (this.loaded !== undefined) {
       return this.loaded.includes(other);
     } else {
@@ -143,7 +143,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   remove(other: U, percolated = false): void {
-    ensureNotDeleted(this.#entity, { ignore: "pending" });
+    ensureNotDeleted(this.#entity, "pending");
 
     if (!percolated) {
       const joinRows = getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []);

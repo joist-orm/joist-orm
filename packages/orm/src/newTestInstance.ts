@@ -90,9 +90,13 @@ export function newTestInstance<T extends Entity>(
           case "enum":
           case "primaryKey":
             // Look for strings that want to use the test index
-            if (typeof optValue === "string" && optValue.includes(testIndex)) {
+            if (typeof optValue === "string" && optValue.includes(testIndexString)) {
               const actualIndex = getTestIndex(em, meta.cstr);
-              return [fieldName, optValue.replace(testIndex, String(actualIndex))];
+              const value = optValue.replace(testIndexString, String(actualIndex));
+              return [fieldName, value];
+            } else if (typeof optValue === "number" && optValue === testIndex) {
+              const actualIndex = getTestIndex(em, meta.cstr);
+              return [fieldName, actualIndex];
             }
             // Otherwise just use the user's opt value as-is
             return [fieldName, optValue];
@@ -332,7 +336,9 @@ function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata<an
  * This is meant to just be a helpful identifier in fields like entity names/descriptions for
  * debugging purposes.
  */
-export const testIndex = "TEST_INDEX";
+export const testIndex: number = 1_111_111_222;
+
+const testIndexString = String(testIndex);
 
 const defaultValueMarker: any = {};
 

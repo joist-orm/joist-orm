@@ -8,13 +8,19 @@ Joist's docs dive into these features in more detail, but as a quick tldr...
 You start by creating/updating your database schema, using `node-pg-migrate` or whatever migration tool you like:
 
 ```shell
+# Start your postgres database
+docker-compose up db --wait
 # Apply the latest migrations
 npm run migrate
-# Now generate the updated domain model
+```
+
+Then invoke Joist's code generation:
+
+```shell
 npm run joist-codegen
 ```
 
-You get super-clean domain objects created automatically:
+To automatically get super-clean domain objects created (see [Code Generation](../goals/code-generation.md)):
 
 ```typescript
 // src/entities/Author.ts
@@ -24,20 +30,44 @@ export class Author extends AuthorCodegen {
 
 // src/entities/AuthorCodegen.ts
 export class AuthorCodegen {
-  // ...has all of the boilerplate columns & m2o/o2m/m2m relations generated for you...
+  // ...all the boilerplate fields & m2o/o2m/m2m relations generated for you...
+  readonly books: Collection<Author, Book> = hasOne(...);
+  get firstName(): string { ... }
+  set firstName(): string { ... }
 }
 ```
 
-You write validation rules that can be per-field, per-entity or cross-entity, i.e. in `Author.ts`:
+Joist generates both sides of relations, and will keep them automatically in sync (see [Relations](../modeling/relations.md)):
+
+```typescript
+const a1 = em.load(Author, "a:1", "books");
+// Create a new book for a1
+const b1 = new Book(em, { title: "b1", author: a1 });
+// a1.books alreddy has b1 in it
+expect(a1.books.get.includes(b1)).toBe(true);
+```
+
+You can create your own derived relations for common paths in your domain:
+
+```typescript
+class Author extends AuthorCodegen {
+  readonly reviews: Collection<Author, Review> = hasManyDerived(
+    { books: "reviews" },
+    (a) => a.flatMap(a.books.get).flatMap(b => b.reviews.get)
+  );  
+}
+```
+
+You write validation rules that can be per-field, per-entity or even _reactive across multiple entities_, i.e. in `Author.ts` (see [Validation Rules](../features/validation-rules.md)):
 
 ```typescript
 import { authorConfig as config } from "./entities";
 
-export class Author extends AuthorCodegen {
-}
+export class Author extends AuthorCodegen {}
 
-// Anytime an author gets a book added or removed (i.e. via code calling
-// `book.author.set(...)`), call this validation rule.
+// Required rules for `NOT NULL` columns are automatically added in AuthorCodegen
+
+// Anytime a book is associated/disassociated to/from this author, run this rule
 config.addRule("books", (author) => {
   if (author.books.get.length > 10) {
     return "Too many books";
@@ -45,22 +75,23 @@ config.addRule("books", (author) => {
 });
 ```
 
-You can load/save entities in a Unit of Work-style `EntityManager` that will batch save any changes made during the current request (only after running all validation rules & updating any derived values):
+You load/save entities via a per-request `EntityManager` that on `em.flush` will batch any changes made during the current request in an atomic transaction (only after running all validation rules & updating any derived values, see [Entity Manager](../features/entity-manager.md)):
 
 ```typescript
 const a1 = em.load(Author, "a:1");
 a1.firstName = "Allen";
 a2.lastName = "Zed";
-// Runs validation, lifecycle hooks, and issues INSERTs/UPDATEs
+// Runs validation against all created/updated entities, calls lifecycle hooks,
+// updates derived values, and issues bulk INSERTs/UPDATEs in a transaction
 await em.flush();
 ```
 
-You can use GraphQL-style deep preloading to de-`await` business logic:
+To avoid tedious `await` / `Promise.all`, you can use deep load a subgraph via populate hints (see [Type Safe Relations](../goals/type-safe-relations.md)):
 
 ```typescript
 // Use 1 await to preload a tree of data
 const loaded = await a1.populate({
-  books: "reviews",
+  books: { reviews: "comments" },
   publisher: {},
 });
 
@@ -72,3 +103,68 @@ loaded.books.get.forEach((book) => {
 })
 ```
 
+Loading any references or collections within the domain model is guaranteed to be N+1 safe, regardless of where the `populate` / `load` calls happen within the code-path (see [Avoiding N+1 Queries](../goals/n-plus-one-queries.md)).
+
+To find entities, you can use an ergonomic `em.find` API that combines joins and conditions (see [Finding Entities](../features/queries-find.md)):
+
+```typescript
+const books = await em.find(
+  Book,
+  {
+    author: { publisher: { name: "p1" } },
+    status: BookStatus.Published,
+  },
+  { orderBy: { name: "desc" } }
+);
+```
+
+Or if you have complex conditions, you can use dedicated conditions (also see [Finding Entities](../features/queries-find.md)):
+
+```typescript
+const [p, b] = aliases(Publisher, Book);
+const books = await em.find(
+  Book,
+  { as: b, author: { publisher: p } },
+  {
+    conditions: { or: [p.name.eq("p1"), b.status.eq(BookStatus.Published)] },     
+    orderBy: { name: "desc" },
+  }
+);
+```
+
+For lower-level, complex queries that do sums, group bys, etc., Joist currently defers to existing query builder libraries like Knex.
+
+You can test all of your behavior with integrated test factories (see [Test Factories](../testing/test-factories.md)):
+
+```typescript
+import {  newEntityManager } from "./setupTests";
+
+describe("Author", () => {
+  it("can have reactive validation rules", async () => {
+    const em = newEntityManager();
+    // Given the book and author start out with acceptable names
+    const a1 = new Author(em, { firstName: "a1" });
+    const b1 = new Book(em, { title: "b1", author: a1 });
+    await em.flush();
+    // When the book name is later changed to collide with the author
+    b1.title = "a1";
+    // Then the validation rule is ran even though it's on the author entity
+    await expect(em.flush()).rejects.toThrow(
+        "Validation error: Author:1 A book title cannot be the author's firstName",
+    );
+  });
+})
+```
+
+And tweak your factories to provide "valid by default" data to keep your tests succinct:
+
+```typescript
+export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): DeepNew<Author> {
+  return newTestInstance(em, Author, opts, {
+    // firstName has a unique constraint, so make it unique  
+    firstName: `a${testIndex}`,
+    // Authors should be popular by default, but only in tests, not prod
+    isPopular: true,
+  });
+}
+```

@@ -7575,15 +7575,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bindings@npm:1.5.0":
-  version: 1.5.0
-  resolution: "bindings@npm:1.5.0"
-  dependencies:
-    file-uri-to-path: 1.0.0
-  checksum: 65b6b48095717c2e6105a021a7da4ea435aa8d3d3cd085cb9e85bcb6e5773cf318c4745c3f7c504412855940b585bdf9b918236612a1c7a7942491de176f1ae7
-  languageName: node
-  linkType: hard
-
 "body-parser@npm:1.20.0":
   version: 1.20.0
   resolution: "body-parser@npm:1.20.0"
@@ -10196,13 +10187,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"file-uri-to-path@npm:1.0.0":
-  version: 1.0.0
-  resolution: "file-uri-to-path@npm:1.0.0"
-  checksum: b648580bdd893a008c92c7ecc96c3ee57a5e7b6c4c18a9a09b44fb5d36d79146f8e442578bc0e173dc027adf3987e254ba1dfd6e3ec998b7c282873010502144
-  languageName: node
-  linkType: hard
-
 "filesize@npm:^8.0.6":
   version: 8.0.7
   resolution: "filesize@npm:8.0.7"
@@ -11483,7 +11467,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"inherits@npm:2, inherits@npm:2.0.4, inherits@npm:^2.0.0, inherits@npm:^2.0.1, inherits@npm:^2.0.3, inherits@npm:~2.0.1, inherits@npm:~2.0.3":
+"inherits@npm:2, inherits@npm:2.0.4, inherits@npm:^2.0.0, inherits@npm:^2.0.1, inherits@npm:^2.0.3, inherits@npm:~2.0.3":
   version: 2.0.4
   resolution: "inherits@npm:2.0.4"
   checksum: 4a48a733847879d6cf6691860a6b1e3f0f4754176e4d71494c41f3475553768b10f84b5ce1d40fbd0e34e6bfbb864ee35858ad4dd2cf31e02fc4a154b724d7f1
@@ -12681,8 +12665,6 @@ __metadata:
     joist-orm: "workspace:*"
     joist-test-utils: "workspace:*"
     kelonio: ^0.8.0
-    mitata: ^0.1.6
-    pg-native: ^3.0.1
     postgres: ^3.3.2
     prettier: ^2.8.1
     prettier-plugin-organize-imports: ^3.2.1
@@ -13245,17 +13227,6 @@ __metadata:
     proc-log: ^2.0.0
     semver: ^7.3.7
   checksum: 7ac0357c2227ee07511b423d3e43231bef2ac02254e858e73ff5502eea9f2c3372747ba5152fd6952aa47b4ba9482182b64493159fa7ef20c1fbb025458cb43f
-  languageName: node
-  linkType: hard
-
-"libpq@npm:^1.8.10":
-  version: 1.8.12
-  resolution: "libpq@npm:1.8.12"
-  dependencies:
-    bindings: 1.5.0
-    nan: ^2.14.0
-    node-gyp: latest
-  checksum: c50c9ba4bcdf25a001ab26256ce1495049900543bf77649d18fa498aaa7cfdc98deae44b9e22ddb046002eebf8ced5c518075aaf879b15ebb167f628531d85e0
   languageName: node
   linkType: hard
 
@@ -14096,13 +14067,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"mitata@npm:^0.1.6":
-  version: 0.1.6
-  resolution: "mitata@npm:0.1.6"
-  checksum: fe64e22ae17bfb748a0d71b2ecf1f64da09c633520c819ac409018a49843adfd9817612a152651e5f1fa080f227fc382e0cdbb92a11e2f69f3cc9f843ba7d603
-  languageName: node
-  linkType: hard
-
 "mkdirp-infer-owner@npm:^2.0.0":
   version: 2.0.0
   resolution: "mkdirp-infer-owner@npm:2.0.0"
@@ -14167,15 +14131,6 @@ __metadata:
   version: 0.0.8
   resolution: "mute-stream@npm:0.0.8"
   checksum: ff48d251fc3f827e5b1206cda0ffdaec885e56057ee86a3155e1951bc940fd5f33531774b1cc8414d7668c10a8907f863f6561875ee6e8768931a62121a531a1
-  languageName: node
-  linkType: hard
-
-"nan@npm:^2.14.0":
-  version: 2.17.0
-  resolution: "nan@npm:2.17.0"
-  dependencies:
-    node-gyp: latest
-  checksum: ec609aeaf7e68b76592a3ba96b372aa7f5df5b056c1e37410b0f1deefbab5a57a922061e2c5b369bae9c7c6b5e6eecf4ad2dac8833a1a7d3a751e0a7c7f849ed
   languageName: node
   linkType: hard
 
@@ -15371,17 +15326,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-native@npm:^3.0.1":
-  version: 3.0.1
-  resolution: "pg-native@npm:3.0.1"
-  dependencies:
-    libpq: ^1.8.10
-    pg-types: ^1.12.1
-    readable-stream: 1.0.31
-  checksum: 1a9f6d57322c05f4752a8ad474f7da760b89c0c8cced578e9aecbf84834f822a7602c516ff0898b93af1c6f17cf58fc7b43df96e22139688bfb6d58907c00e46
-  languageName: node
-  linkType: hard
-
 "pg-pool@npm:^3.2.1":
   version: 3.2.1
   resolution: "pg-pool@npm:3.2.1"
@@ -15428,19 +15372,6 @@ __metadata:
     pg: ^8.0.3
     pg-connection-string: ^2.2.1
   checksum: 39f6c00a0c6afd433428bb6a046e80b4e95b19c6b9b48727adb0f908e66509310ccff053fcdff0c44c9f389763a7728fea6ddb168280189833bbafab4af06889
-  languageName: node
-  linkType: hard
-
-"pg-types@npm:^1.12.1":
-  version: 1.13.0
-  resolution: "pg-types@npm:1.13.0"
-  dependencies:
-    pg-int8: 1.0.1
-    postgres-array: ~1.0.0
-    postgres-bytea: ~1.0.0
-    postgres-date: ~1.0.0
-    postgres-interval: ^1.1.0
-  checksum: 8dcdeb8dcc196288305b69545d1a5c6645a57a88c90ea7637558c685ee54e0c8ed02a8a4fb5de2d26e344430ebc4ad13182ebc9c72ced5ba6337bb854b3454c0
   languageName: node
   linkType: hard
 
@@ -16059,13 +15990,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"postgres-array@npm:~1.0.0":
-  version: 1.0.3
-  resolution: "postgres-array@npm:1.0.3"
-  checksum: e7e33dcc111850b09ef3ef1a631a9dd934a61f1c953e735a7eb9a957701444e80d1c18b08f788020270b7eaba719565cf1ff8ed88616609eaf58493e4d4c9a10
-  languageName: node
-  linkType: hard
-
 "postgres-array@npm:~2.0.0":
   version: 2.0.0
   resolution: "postgres-array@npm:2.0.0"
@@ -16077,13 +16001,6 @@ __metadata:
   version: 1.0.0
   resolution: "postgres-bytea@npm:1.0.0"
   checksum: d844ae4ca7a941b70e45cac1261a73ee8ed39d72d3d74ab1d645248185a1b7f0ac91a3c63d6159441020f4e1f7fe64689ac56536a307b31cef361e5187335090
-  languageName: node
-  linkType: hard
-
-"postgres-date@npm:~1.0.0":
-  version: 1.0.7
-  resolution: "postgres-date@npm:1.0.7"
-  checksum: 5745001d47e51cd767e46bcb1710649cd705d91a24d42fa661c454b6dcbb7353c066a5047983c90a626cd3bbfea9e626cc6fa84a35ec57e5bbb28b49f78e13ed
   languageName: node
   linkType: hard
 
@@ -16730,18 +16647,6 @@ __metadata:
   dependencies:
     mute-stream: ~0.0.4
   checksum: 2777c254e5732cac96f5d0a1c0f6b836c89ae23d8febd405b206f6f24d5de1873420f1a0795e0e3721066650d19adf802c7882c4027143ee0acf942a4f34f97b
-  languageName: node
-  linkType: hard
-
-"readable-stream@npm:1.0.31":
-  version: 1.0.31
-  resolution: "readable-stream@npm:1.0.31"
-  dependencies:
-    core-util-is: ~1.0.0
-    inherits: ~2.0.1
-    isarray: 0.0.1
-    string_decoder: ~0.10.x
-  checksum: 7dbf6c9321f279d720c5de7fed57ff052db606d019df3d3a4a07be1c93326bac848bbf52fc8c7953d85a47a13e6508240674f7641df52264984c338fe1d55c04
   languageName: node
   linkType: hard
 
@@ -18219,13 +18124,6 @@ __metadata:
   dependencies:
     safe-buffer: ~5.2.0
   checksum: 8417646695a66e73aefc4420eb3b84cc9ffd89572861fe004e6aeb13c7bc00e2f616247505d2dbbef24247c372f70268f594af7126f43548565c68c117bdeb56
-  languageName: node
-  linkType: hard
-
-"string_decoder@npm:~0.10.x":
-  version: 0.10.31
-  resolution: "string_decoder@npm:0.10.31"
-  checksum: fe00f8e303647e5db919948ccb5ce0da7dea209ab54702894dd0c664edd98e5d4df4b80d6fabf7b9e92b237359d21136c95bf068b2f7760b772ca974ba970202
   languageName: node
   linkType: hard
 

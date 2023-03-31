@@ -22,7 +22,7 @@ import {
   PublisherType,
   SmallPublisher,
 } from "@src/entities";
-import { maybeNew, maybeNewPoly, newTestInstance } from "joist-orm";
+import { maybeNew, maybeNewPoly, newTestInstance, testIndex } from "joist-orm";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.factories", () => {
@@ -129,7 +129,7 @@ describe("EntityManager.factories", () => {
     newBook(em);
     // Then the newAuthor factory was told to override any `books: [{}]` defaults
     expect(lastAuthorFactoryOpts).toStrictEqual({
-      firstName: "aTEST_INDEX",
+      firstName: `a${testIndex}`,
       image: undefined,
       age: 40,
       books: [],
@@ -150,7 +150,7 @@ describe("EntityManager.factories", () => {
     expect(a1.publisher.get).toEqual(p1);
     // And we explicitly passed the publisher b/c it's an explicit `use` entry
     expect(lastAuthorFactoryOpts).toStrictEqual({
-      firstName: "aTEST_INDEX",
+      firstName: `a${testIndex}`,
       image: undefined,
       age: 40,
       books: [],
@@ -191,6 +191,7 @@ describe("EntityManager.factories", () => {
     expect(lastBookFactoryOpts).toStrictEqual({
       author: expect.any(Author),
       use: expect.any(Map),
+      order: testIndex,
     });
   });
 
@@ -259,8 +260,9 @@ describe("EntityManager.factories", () => {
     newBookReview(em, { book: {} });
     expect(lastBookFactoryOpts).toStrictEqual({
       author: maybeNew<Author>({ age: 40 }),
-      title: "Book for Review TEST_INDEX",
+      title: `Book for Review ${testIndex}`,
       reviews: [],
+      order: testIndex,
       use: expect.any(Map),
     });
   });
@@ -269,7 +271,7 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newImage(em, { author: {} });
     expect(lastAuthorFactoryOpts).toStrictEqual({
-      firstName: "aTEST_INDEX",
+      firstName: `a${testIndex}`,
       age: undefined,
       image: null,
       use: expect.any(Map),
@@ -616,5 +618,12 @@ describe("EntityManager.factories", () => {
       const br3 = newBookReview(em, { book: { author: { useFactoryDefaults: false } } });
       expect(br3.book.get.author.get.age).toBeUndefined();
     });
+  });
+
+  it("can have test indexes that are numbers", async () => {
+    const em = newEntityManager();
+    const [b1, b2] = [newBook(em), newBook(em)];
+    expect(b1.order).toBe(1);
+    expect(b2.order).toBe(2);
   });
 });

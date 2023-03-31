@@ -1,3 +1,10 @@
+# [1.70.0](https://github.com/stephenh/joist-ts/compare/v1.69.1...v1.70.0) (2023-03-31)
+
+
+### Features
+
+* Allow using testIndex for numberic fields like order. ([#598](https://github.com/stephenh/joist-ts/issues/598)) ([6d841df](https://github.com/stephenh/joist-ts/commit/6d841df5b472b3ef0362221d6f42c578472bd10b))
+
 ## [1.69.1](https://github.com/stephenh/joist-ts/compare/v1.69.0...v1.69.1) (2023-03-30)
 
 

@@ -1,3 +1,10 @@
+## [1.70.1](https://github.com/stephenh/joist-ts/compare/v1.70.0...v1.70.1) (2023-03-31)
+
+
+### Bug Fixes
+
+* Use a negative testIndex value for good measure. ([#599](https://github.com/stephenh/joist-ts/issues/599)) ([3ed80f2](https://github.com/stephenh/joist-ts/commit/3ed80f2993c9c99f618e69563319ad743bd7ca2a))
+
 # [1.70.0](https://github.com/stephenh/joist-ts/compare/v1.69.1...v1.70.0) (2023-03-31)
 
 

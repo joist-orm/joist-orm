@@ -78,7 +78,7 @@ class Author extends AuthorCodegen {
 const prolificAuthors = await em.find(Author, { numberOfBooks: { gt: 100 } });
 ```
 
-You write validation rules that can be per-field, per-entity or even _reactive across multiple entities_, i.e. in `Author.ts` (see [Validation Rules](../features/validation-rules.md)):
+You write validation rules that can be per-field, per-entity or even _reactive across multiple entities_, i.e. in `Author.ts` (see [Validation Rules](../modeling/validation-rules.md)):
 
 ```typescript
 import { authorConfig as config } from "./entities";
@@ -123,7 +123,7 @@ loaded.books.get.forEach((book) => {
 })
 ```
 
-Loading any references or collections within the domain model is guaranteed to be N+1 safe, regardless of where the `populate` / `load` calls happen within the code-path (see [Avoiding N+1 Queries](../goals/n-plus-one-queries.md)).
+Loading any references or collections within the domain model is guaranteed to be N+1 safe, regardless of where the `populate` / `load` calls happen within the code-path (see [Avoiding N+1 Queries](../goals/avoiding-n-plus-1s.md)).
 
 To find entities, you can use an ergonomic `em.find` API that combines joins and conditions in a single "join literal" (see [Finding Entities](../features/queries-find.md)):
 

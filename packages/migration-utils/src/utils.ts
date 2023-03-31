@@ -119,6 +119,11 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
+export type FieldNameOverrides = {
+  collectionName?: string;
+  referenceName?: string;
+  oneToOneName?: string;
+};
 type ForeignKeyOpts = Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">> & FieldNameOverrides;
 export function foreignKey(otherTable: string, opts: ForeignKeyOpts): ColumnDefinition {
   return {
@@ -126,31 +131,30 @@ export function foreignKey(otherTable: string, opts: ForeignKeyOpts): ColumnDefi
     references: otherTable,
     deferrable: true,
     deferred: true,
-    ...maybeForeignKeyOptsWithComment(opts),
+    ...foreignKeyOptsWithMaybeComment(opts),
   };
+}
+
+type RenameRelationOpts = FieldNameOverrides & Pick<ColumnDefinition, "comment">;
+export function renameRelation(b: MigrationBuilder, tableName: string, columnName: string, opts: RenameRelationOpts) {
+  b.alterColumn(tableName, columnName, foreignKeyOptsWithMaybeComment(opts));
 }
 
 export function commentData(data: any, comment?: string | null): string {
   return `${comment ?? ""}[pg-structure]${JSON.stringify(data)}[/pg-structure]`;
 }
 
-export type FieldNameOverrides = {
-  collectionName?: string;
-  referenceName?: string;
-  oneToOneName?: string;
-};
-export function maybeForeignKeyOptsWithComment(
-  opts: ForeignKeyOpts,
-): Exclude<ForeignKeyOpts, keyof FieldNameOverrides> {
+function foreignKeyOptsWithMaybeComment<T extends RenameRelationOpts, R extends Omit<T, keyof FieldNameOverrides>>(
+  opts: T,
+): R {
   let { comment, referenceName, collectionName, oneToOneName, ...rest } = opts;
-
   if (referenceName || collectionName || oneToOneName) {
     const overrides = { referenceName, collectionName, oneToOneName };
-    return { comment: commentData(overrides, comment), ...rest };
+    return { ...(rest as R), comment: commentData(overrides, comment) };
   } else if (comment) {
-    return { comment, ...rest };
+    return { ...(rest as R), comment };
   } else {
-    return rest;
+    return rest as R;
   }
 }
 

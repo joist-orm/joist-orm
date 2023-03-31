@@ -8,7 +8,7 @@ services:
     ports:
       - 5435:5432
     healthcheck:
-      test: pg_isready
+      test: ["CMD-SHELL", "pg_isready -U postgres -d joist"]
       interval: 1s
       timeout: 5s
       retries: 50

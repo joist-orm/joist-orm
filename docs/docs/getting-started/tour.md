@@ -43,7 +43,7 @@ Joist generates both sides of relations, and will keep them automatically in syn
 const a1 = em.load(Author, "a:1", "books");
 // Create a new book for a1
 const b1 = new Book(em, { title: "b1", author: a1 });
-// a1.books alreddy has b1 in it
+// a1.books already has b1 in it, so your view of data is always consistent
 expect(a1.books.get.includes(b1)).toBe(true);
 ```
 
@@ -51,11 +51,31 @@ You can create your own derived relations for common paths in your domain:
 
 ```typescript
 class Author extends AuthorCodegen {
-  readonly reviews: Collection<Author, Review> = hasManyDerived(
+  // Use hasManyThrough for simple paths that include everything
+  readonly reviews: Collection<Author, Review> = hasManyThrough((a) => a.books.reviews);
+  
+  // Use hasManyDerived to do filtering if needed
+  readonly publicReviews: Collection<Author, Review> = hasManyDerived(
     { books: "reviews" },
-    (a) => a.flatMap(a.books.get).flatMap(b => b.reviews.get)
+    (a) => a.flatMap(a.books.get).flatMap(b => b.reviews.get).filter(r => r.isPublic)
   );  
 }
+```
+
+Or derived fields that will be reactively calculated (and updated in the database) when their dependencies change (see [Derived Fields](../modeling/derived-fields.md)):
+
+```typescript
+class Author extends AuthorCodegen {
+  readonly numberOfBooks: PersistedAsyncProperty<Author, number> =
+    hasPersistedAsyncProperty(
+     "numberOfBooks",
+     ["books"],
+     (a) => a.books.get.length,
+    );
+}
+
+// Now we can filter/sort by numberOfBooks in queries b/c its a column in the db
+const prolificAuthors = await em.find(Author, { numberOfBooks: { gt: 100 } });
 ```
 
 You write validation rules that can be per-field, per-entity or even _reactive across multiple entities_, i.e. in `Author.ts` (see [Validation Rules](../features/validation-rules.md)):
@@ -75,7 +95,7 @@ config.addRule("books", (author) => {
 });
 ```
 
-You load/save entities via a per-request `EntityManager` that on `em.flush` will batch any changes made during the current request in an atomic transaction (only after running all validation rules & updating any derived values, see [Entity Manager](../features/entity-manager.md)):
+You load/save entities via a per-request `EntityManager` that acts as a [Unit of Work](../advanced/unit-of-work.md) and on `em.flush` will batch any changes made during the current request in an atomic transaction, only after running all validation rules & updating any derived values (see [Entity Manager](../features/entity-manager.md)):
 
 ```typescript
 const a1 = em.load(Author, "a:1");
@@ -105,7 +125,7 @@ loaded.books.get.forEach((book) => {
 
 Loading any references or collections within the domain model is guaranteed to be N+1 safe, regardless of where the `populate` / `load` calls happen within the code-path (see [Avoiding N+1 Queries](../goals/n-plus-one-queries.md)).
 
-To find entities, you can use an ergonomic `em.find` API that combines joins and conditions (see [Finding Entities](../features/queries-find.md)):
+To find entities, you can use an ergonomic `em.find` API that combines joins and conditions in a single "join literal" (see [Finding Entities](../features/queries-find.md)):
 
 ```typescript
 const books = await em.find(
@@ -118,7 +138,7 @@ const books = await em.find(
 );
 ```
 
-Or if you have complex conditions, you can use dedicated conditions (also see [Finding Entities](../features/queries-find.md)):
+Or if you have complex conditions, you can use dedicated conditions to do cross-table `AND`s and `OR`s (also see [Finding Entities](../features/queries-find.md)):
 
 ```typescript
 const [p, b] = aliases(Publisher, Book);
@@ -168,3 +188,5 @@ export function newAuthor(em: EntityManager, opts: FactoryOpts<Author> = {}): De
   });
 }
 ```
+
+Finally, Joist has a number of other nifty features, like [Tagged Ids](../advanced/tagged-ids.md), automatic handling of [Soft Deletes](../advanced/soft-deletes.md), support for [Class Table Inheritance](../advanced/class-table-inheritance.md), and more.

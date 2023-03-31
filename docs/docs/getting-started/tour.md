@@ -3,9 +3,9 @@ title: Quick Tour
 sidebar_position: 0
 ---
 
-Joist's docs dive into these features in more detail, but as a quick tldr...
+This page gives a quick overview/scan of "what using Joist looks like". Joist's docs dive into these features in more detail, and see [Installation](./installation.md) for a true "getting started".
 
-You start by creating/updating your database schema, using `node-pg-migrate` or whatever migration tool you like:
+With Joist, you start by creating/updating your database schema, using `node-pg-migrate` or whatever migration tool you like:
 
 ```shell
 # Start your postgres database

@@ -336,7 +336,7 @@ function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata<an
  * This is meant to just be a helpful identifier in fields like entity names/descriptions for
  * debugging purposes.
  */
-export const testIndex: number = 1_111_111_222;
+export const testIndex: number = -1_111_111_222;
 
 const testIndexString = String(testIndex);
 

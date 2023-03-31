@@ -120,10 +120,6 @@ export function isFieldIgnored(
   return ignore;
 }
 
-export function relationName(config: Config, entity: Entity, relationName: string): string {
-  return config.entities?.[entity.name]?.relations?.[relationName]?.name ?? relationName;
-}
-
 const configPath = "./joist-config.json";
 export async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));

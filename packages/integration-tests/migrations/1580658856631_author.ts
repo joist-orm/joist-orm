@@ -160,15 +160,6 @@ export function up(b: MigrationBuilder): void {
     is_public: { type: "boolean", notNull: true },
   });
 
-  // for testing ignore of m2m
-  createManyToManyTable(b, "critics_to_tags", "critics", "tags");
-  // for testing large m2m
-  createManyToManyTable(b, "authors_to_tags", "authors", "tags");
-  // for testing regular m2m
-  createManyToManyTable(b, "books_to_tags", "books", "tags");
-  // for testing table-per-class m2m
-  createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
-
   createEnumTable(b, "image_type", [
     ["BOOK_IMAGE", "Book Image"],
     ["AUTHOR_IMAGE", "Author Image"],
@@ -190,6 +181,18 @@ export function up(b: MigrationBuilder): void {
     publisher_id: foreignKey("publishers", { notNull: false }),
   });
 
+  createEntityTable(b, "users", {
+    name: { type: "varchar(255)", notNull: true },
+    email: { type: "varchar(255)", notNull: true },
+    // for testing o2o/m2o renames
+    author_id: foreignKey("authors", {
+      notNull: false,
+      unique: true,
+      oneToOneName: "userOneToOne",
+      referenceName: "authorManyToOne",
+    }),
+  });
+
   // for testing polymorphic references
   createEntityTable(b, "comments", {
     // inverse is o2m
@@ -198,6 +201,8 @@ export function up(b: MigrationBuilder): void {
     parent_book_review_id: foreignKey("book_reviews", { notNull: false, unique: true }),
     parent_publisher_id: foreignKey("publishers", { notNull: false }),
     parent_author_id: foreignKey("authors", { notNull: false }),
+    // for testing collection renames
+    user_id: foreignKey("users", { notNull: true, collectionName: "createdComments" }),
     text: "text",
   });
 
@@ -214,4 +219,20 @@ export function up(b: MigrationBuilder): void {
     doublePrecision: { type: "double precision", notNull: true },
     nullable_text: { type: "text", notNull: false },
   });
+
+  // for testing ignore of m2m
+  createManyToManyTable(b, "critics_to_tags", "critics", "tags");
+  // for testing large m2m
+  createManyToManyTable(b, "authors_to_tags", "authors", "tags");
+  // for testing regular m2m
+  createManyToManyTable(b, "books_to_tags", "books", "tags");
+  // for testing table-per-class m2m
+  createManyToManyTable(b, "publishers_to_tags", "publishers", "tags");
+  // for testing m2m renames and name inference
+  createManyToManyTable(
+    b,
+    "users_to_comments",
+    { table: "users", column: "liked_by_user_id" },
+    { table: "comments", collectionName: "likedComments" },
+  );
 }

@@ -1,9 +1,9 @@
 import { defaultConfig } from "./config";
-import { collectionName, makeEntity, oneToOneName } from "./EntityDbMetadata";
+import { collectionName, makeEntity, oneToOneName, referenceName } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
-const relationDummy: any = { type: "m2o", sourceTable: { m2oRelations: [] } };
-const configDummy: any = { relationNameOverrides: {}, entities: [] };
+const relationDummy: any = { type: "m2o", sourceTable: { m2oRelations: [] }, foreignKey: { columns: [{}] } };
+const configDummy: any = { entities: [] };
 const author = makeEntity("Author");
 const book = makeEntity("Book");
 const bookReview = makeEntity("BookReview");
@@ -46,6 +46,15 @@ describe("EntityDbMetadata", () => {
       const tpmc = makeEntity("TradePartnerMarketContact");
       expect(collectionName(configDummy, market, tpmc, relationDummy).fieldName).toEqual("tradePartnerMarketContacts");
     });
+
+    it("returns an override", () => {
+      // For `book_reviews.book_id` create `Book.renamedReviews`
+      const relation = {
+        ...relationDummy,
+        foreignKey: { columns: [{ commentData: { collectionName: "renamedReviews" } }] },
+      };
+      expect(collectionName(configDummy, book, bookReview, relation as any).fieldName).toEqual("renamedReviews");
+    });
   });
 
   describe("oneToOneName", () => {
@@ -70,6 +79,49 @@ describe("EntityDbMetadata", () => {
       };
       // Then we use the tweaked column name
       expect(oneToOneName(configDummy, book, author, relation as any)).toEqual("currentDraftAuthor");
+    });
+
+    it("returns an override", () => {
+      // For `images.book_id` create `Book.renamedImage`
+      const relation = {
+        foreignKey: { columns: [{ name: "book_id", commentData: { oneToOneName: "renamedImage" } }] },
+        targetTable: { name: "images" },
+        sourceTable: { m2oRelations: [] },
+      };
+      expect(oneToOneName(configDummy, book, author, relation as any)).toEqual("renamedImage");
+    });
+  });
+
+  describe("referenceName", () => {
+    it("returns the camel case of the column name without an id prefix", () => {
+      // For `image.book_id` create `Image.book`
+      const relation = {
+        type: "m2o",
+        foreignKey: { columns: [{ name: "book_id" }] },
+        sourceTable: { name: "images" },
+      };
+      expect(referenceName(configDummy, image, relation as any)).toEqual("book");
+    });
+
+    it("uses a polymorphic name if one is present", () => {
+      // For `authors.current_draft_book_id` create `Book.currentDraftAuthor`
+      const relation = {
+        type: "m2o",
+        foreignKey: { columns: [{ name: "parent_book_id" }] },
+        sourceTable: { name: "images" },
+      };
+      const config = { entities: { Image: { relations: { parent: { polymorphic: "notNull" } } } } };
+      expect(referenceName(config as any, image, relation as any)).toEqual("parent");
+    });
+
+    it("returns an override", () => {
+      // For `image.book_id` create `Image.renamedBook`
+      const relation = {
+        type: "m2o",
+        foreignKey: { columns: [{ name: "book_id", commentData: { referenceName: "renamedBook" } }] },
+        sourceTable: { name: "images" },
+      };
+      expect(referenceName(configDummy, image, relation as any)).toEqual("renamedBook");
     });
   });
 });

@@ -139,4 +139,12 @@ describe("OneToOneReference", () => {
     const a1 = await em.load(Author, "1");
     expect(() => (a1.image as any).isSet).toThrow("Author:1.image was not loaded");
   });
+
+  it("can be renamed", () => {
+    // see createTable("users",...) in 1580658856631_author.ts for the actual rename
+    const em = newEntityManager();
+    const author = em.create(Author, { firstName: "a1" });
+    expect((author as any).user).not.toBeDefined();
+    expect(author.userOneToOne).toBeDefined();
+  });
 });

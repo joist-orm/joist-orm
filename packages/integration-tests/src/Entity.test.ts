@@ -176,6 +176,15 @@ describe("Entity", () => {
           "otherFieldName": "authors",
           "removedBeforeLoaded": undefined,
         },
+        "userOneToOne": {
+          "_isLoaded": false,
+          "fieldName": "userOneToOne",
+          "isCascadeDelete": false,
+          "loaded": undefined,
+          "otherColumnName": "author_id",
+          "otherFieldName": "authorManyToOne",
+          "undefined": null,
+        },
       }
     `);
   });

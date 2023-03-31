@@ -46,10 +46,15 @@ export function insertBook(row: { id?: number; title: string; author_id: number 
 export function insertComment(row: {
   id?: number;
   text: string;
+  user_id: number;
   parent_book_id?: number;
   parent_book_review_id?: number;
 }) {
   return testDriver.insert("comments", row);
+}
+
+export function insertUser(row: { id?: number; name: string; email: string }) {
+  return testDriver.insert("users", row);
 }
 
 export function insertPublisherOnly(row: {

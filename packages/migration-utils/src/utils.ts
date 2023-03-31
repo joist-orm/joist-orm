@@ -119,11 +119,39 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
-export function foreignKey(
-  otherTable: string,
-  opts: Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">>,
-): ColumnDefinition {
-  return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
+type ForeignKeyOpts = Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">> & FieldNameOverrides;
+export function foreignKey(otherTable: string, opts: ForeignKeyOpts): ColumnDefinition {
+  return {
+    type: "integer",
+    references: otherTable,
+    deferrable: true,
+    deferred: true,
+    ...maybeForeignKeyOptsWithComment(opts),
+  };
+}
+
+export function commentData(data: any, comment?: string | null): string {
+  return `${comment ?? ""}[pg-structure]${JSON.stringify(data)}[/pg-structure]`;
+}
+
+export type FieldNameOverrides = {
+  collectionName?: string;
+  referenceName?: string;
+  oneToOneName?: string;
+};
+export function maybeForeignKeyOptsWithComment(
+  opts: ForeignKeyOpts,
+): Exclude<ForeignKeyOpts, keyof FieldNameOverrides> {
+  let { comment, referenceName, collectionName, oneToOneName, ...rest } = opts;
+
+  if (referenceName || collectionName || oneToOneName) {
+    const overrides = { referenceName, collectionName, oneToOneName };
+    return { comment: commentData(overrides, comment), ...rest };
+  } else if (comment) {
+    return { comment, ...rest };
+  } else {
+    return rest;
+  }
 }
 
 export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition, "notNull">): ColumnDefinition {
@@ -139,21 +167,64 @@ export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition,
   };
 }
 
+type ManyToManyColumn = {
+  table: string;
+  column?: string;
+  collectionName?: string;
+};
+
+function maybeTableOrColumn(maybeTableOrColumn: string | ManyToManyColumn): [string, string, string | undefined] {
+  if (typeof maybeTableOrColumn === "string") {
+    return [maybeTableOrColumn, `${singular(maybeTableOrColumn)}_id`, undefined];
+  } else {
+    const { table, column, collectionName } = maybeTableOrColumn;
+    return [table, column ?? `${singular(table)}_id`, collectionName];
+  }
+}
+
 export function createManyToManyTable(
   b: MigrationBuilder,
   tableName: string,
   table1: string,
   table2: string,
   options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  column1: ManyToManyColumn,
+  column2: ManyToManyColumn,
+  options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  table1: string,
+  column2: ManyToManyColumn,
+  options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  column1: ManyToManyColumn,
+  table2: string,
+  options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  tableOrColumn1: string | ManyToManyColumn,
+  tableOrColumn2: string | ManyToManyColumn,
+  options?: TableOptions & DropOptions,
 ) {
-  const column1 = `${singular(table1)}_id`;
-  const column2 = `${singular(table2)}_id`;
+  const [table1, column1, collectionName1] = maybeTableOrColumn(tableOrColumn1);
+  const [table2, column2, collectionName2] = maybeTableOrColumn(tableOrColumn2);
   b.createTable(
     tableName,
     {
       id: "id",
-      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE" }),
-      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE" }),
+      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE", collectionName: collectionName1 }),
+      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE", collectionName: collectionName2 }),
       created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
     },
     options,

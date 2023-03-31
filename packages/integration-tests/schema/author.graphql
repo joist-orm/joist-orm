@@ -25,6 +25,7 @@ type Author {
   deletedAt: DateTime
   numberOfPublicReviews: Int
   ssn: String
+  userOneToOne: User
 }
 
 input SaveAuthorInput {

@@ -1,12 +1,13 @@
-import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
-import { Book, BookReview, Comment, newBook } from "../entities";
+import { insertAuthor, insertBook, insertBookReview, insertComment, insertUser, select } from "@src/entities/inserts";
+import { Book, BookReview, Comment, newBook, newUser } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });
-    await insertComment({ text: "t", parent_book_id: 1 });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t", parent_book_id: 1, user_id: 1 });
 
     const em = newEntityManager();
     const comment = await em.load(Comment, "1");
@@ -15,7 +16,8 @@ describe("PolymorphicReference", () => {
   });
 
   it("can load a null foreign key", async () => {
-    await insertComment({ text: "t" });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t", user_id: 1 });
 
     const em = newEntityManager();
     const comment = await em.load(Comment, "1", "parent");
@@ -25,7 +27,8 @@ describe("PolymorphicReference", () => {
   it("can save a foreign key", async () => {
     const em = newEntityManager();
     const book = newBook(em);
-    em.create(Comment, { text: "t", parent: book });
+    const user = newUser(em);
+    em.create(Comment, { text: "t", parent: book, user });
     await em.flush();
 
     const [row] = await select("comments");
@@ -37,8 +40,9 @@ describe("PolymorphicReference", () => {
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "t1", author_id: 1 });
     await insertBook({ title: "t2", author_id: 2 });
-    await insertComment({ text: "t1", parent_book_id: 1 });
-    await insertComment({ text: "t2", parent_book_id: 2 });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t1", parent_book_id: 1, user_id: 1 });
+    await insertComment({ text: "t2", parent_book_id: 2, user_id: 1 });
 
     const em = newEntityManager();
     const [c1, c2] = await Promise.all([em.load(Comment, "1"), em.load(Comment, "2")]);
@@ -53,7 +57,8 @@ describe("PolymorphicReference", () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "t1", author_id: 1 });
     await insertBook({ title: "t2", author_id: 1 });
-    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t1", parent_book_id: 1, user_id: 1 });
 
     const em = newEntityManager();
     const book = await em.load(Book, "2");
@@ -68,7 +73,8 @@ describe("PolymorphicReference", () => {
   it("can save changes to foreign keys across different tables", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "t1", author_id: 1 });
-    await insertComment({ text: "t1", parent_book_id: 1 });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t1", parent_book_id: 1, user_id: 1 });
     await insertBookReview({ rating: 0, book_id: 1 });
 
     const em = newEntityManager();
@@ -95,7 +101,8 @@ describe("PolymorphicReference", () => {
   it("removes deleted entities", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });
-    await insertComment({ text: "t", parent_book_id: 1 });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t", parent_book_id: 1, user_id: 1 });
 
     const em = newEntityManager();
     const comment = await em.load(Comment, "1", "parent");
@@ -109,7 +116,8 @@ describe("PolymorphicReference", () => {
   it("removes itself from other relations when deleted", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });
-    await insertComment({ text: "t", parent_book_id: 1 });
+    await insertUser({ name: "test", email: "test@test.com" });
+    await insertComment({ text: "t", parent_book_id: 1, user_id: 1 });
 
     const em = newEntityManager();
     const book = await em.load(Book, "1", "comments");

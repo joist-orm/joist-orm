@@ -1,5 +1,5 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
-import { Column, EnumType, Index, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
+import { Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
 import {
@@ -12,7 +12,6 @@ import {
   isProtected,
   ormMaintainedFields,
   RelationConfig,
-  relationName,
   superstructConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
@@ -325,7 +324,7 @@ function polymorphicRelations(config: Config, table: Table) {
 
 function polymorphicFieldName(config: Config, r: M2ORelation | O2MRelation) {
   const { name } = r.foreignKey.columns[0];
-  const table = r instanceof M2ORelation ? r.sourceTable : r.targetTable;
+  const table = r.type === "m2o" ? r.sourceTable : r.targetTable;
   return polymorphicRelations(config, table).find((pr) => name.startsWith(`${snakeCase(pr.name)}_`))?.name;
 }
 
@@ -493,16 +492,8 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   const { foreignKey, targetForeignKey, targetTable } = r;
   const otherEntity = makeEntity(tableToEntityName(config, targetTable));
   // For foo_to_bar.some_foo_id use the `some_foo_id` column i.e. `someFoos`
-  const fieldName = relationName(
-    config,
-    entity,
-    camelCase(plural(targetForeignKey.columns[0].name.replace(/\_id|Id$/, ""))),
-  );
-  const otherFieldName = relationName(
-    config,
-    otherEntity,
-    camelCase(plural(foreignKey.columns[0].name.replace(/\_id|Id$/, ""))),
-  );
+  const fieldName = manyToManyName(targetForeignKey.columns[0]);
+  const otherFieldName = manyToManyName(foreignKey.columns[0]);
   return {
     kind: "m2m",
     joinTableName: r.joinTable.name,
@@ -545,6 +536,20 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   return { columnName, otherEntity, otherFieldName };
 }
 
+type FieldNameOverrides = {
+  collectionName?: string;
+  referenceName?: string;
+  oneToOneName?: string;
+};
+function isFieldNameOverrides(maybeOverride: JSONData | undefined): maybeOverride is FieldNameOverrides {
+  return (
+    maybeOverride !== null &&
+    !Array.isArray(maybeOverride) &&
+    typeof maybeOverride === "object" &&
+    Object.keys(maybeOverride).some((k) => ["collectionName", "referenceName", "oneToOneName"].includes(k))
+  );
+}
+
 /** Finds the field name for o2o side of a o2o/m2o. */
 export function oneToOneName(
   config: Config,
@@ -554,6 +559,11 @@ export function oneToOneName(
   keyEntity: Entity,
   r: M2ORelation | O2MRelation,
 ): string {
+  // If the name is overridden then use that
+  const overrides = r.foreignKey.columns[0].commentData;
+  if (isFieldNameOverrides(overrides) && overrides.oneToOneName) {
+    return overrides.oneToOneName;
+  }
   // For `comments.parent_book_review_id`, we would just use `BookReview.comment` as the name
   // For `authors.draft_current_book_id`, we would just use `Book.author` as the name
   // For `project_items.current_selection_id`, we would use `HomeownerSelection.currentProjectItem`
@@ -563,8 +573,7 @@ export function oneToOneName(
   // console.log({refTable: refTable.name, keyTable: keyTable.name, found: found?.name, fieldName});
   if (!found) {
     // If there aren't any m2os, just use the raw type name like `.image` or `.comment`
-    const fieldName = camelCase(keyEntity.name);
-    return relationName(config, refEntity, fieldName);
+    return camelCase(keyEntity.name);
   } else {
     // If there is a m2o, assume we might conflict, and use the column name to at least be unique
     // Start with `book` from `images.book_id` or `current_draft_book` from `authors.current_draft_book_id`
@@ -574,15 +583,19 @@ export function oneToOneName(
     // And drop the `book`, to `current_draft__author`
     fieldName = fieldName.replace(refEntity.name.toLowerCase(), "");
     // Then camel case, to `currentDraftAuthor`
-    fieldName = camelCase(fieldName);
-    return relationName(config, refEntity, fieldName);
+    return camelCase(fieldName);
   }
 }
 
 export function referenceName(config: Config, entity: Entity, r: M2ORelation | O2MRelation): string {
-  const column = r.foreignKey.columns[0];
-  const fieldName = polymorphicFieldName(config, r) ?? camelCase(column.name.replace(/\_id|Id$/, ""));
-  return relationName(config, entity, fieldName);
+  const [column] = r.foreignKey.columns;
+  const overrides = column.commentData;
+  return (
+    polymorphicFieldName(config, r) ??
+    // If the name is overridden then use that
+    (isFieldNameOverrides(overrides) ? overrides.referenceName : undefined) ??
+    camelCase(column.name.replace(/\_id|Id$/, ""))
+  );
 }
 
 function enumFieldName(columnName: string) {
@@ -593,6 +606,15 @@ function primitiveFieldName(columnName: string) {
   return camelCase(columnName);
 }
 
+export function manyToManyName(column: Column) {
+  const overrides = column.commentData;
+  // If the name is overridden then use that
+  if (isFieldNameOverrides(overrides) && overrides.collectionName) {
+    return overrides.collectionName;
+  }
+  return camelCase(plural(column.name.replace(/\_id|Id$/, "")));
+}
+
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
 export function collectionName(
   config: Config,
@@ -600,35 +622,33 @@ export function collectionName(
   singleEntity: Entity,
   // I.e. the Book for o2m Author.books --> books.author_id
   collectionEntity: Entity,
-  r: M2ORelation | O2MRelation,
+  r: M2ORelation | O2MRelation | M2MRelation,
 ): { fieldName: string; singularName: string } {
-  // I.e. if the m2o is `books.author_id`, use `Author.books` as the collection name (we pluralize a few lines down).
-  let fieldName = collectionEntity.name;
+  const [column] = r.foreignKey.columns;
+  const overrides = column.commentData;
+  // If the name is overridden then use that, but also singularize it
+  if (isFieldNameOverrides(overrides) && overrides.collectionName) {
+    const fieldName = overrides.collectionName;
+    return { fieldName, singularName: singular(fieldName) };
+  }
+  // I.e. if the m2o is `books.author_id`, use `Author.books` as the collection name (we pluralize at the end).
+  let singularName = collectionEntity.name;
   // Check if we have multiple FKs from collectionEntity --> singleEntity and prefix with FK name if so
   const sourceTable = r.type === "m2o" ? r.sourceTable : r.targetTable;
   const targetTable = r.type === "m2o" ? r.targetTable : r.sourceTable;
   // If `books.foo_author_id` and `books.bar_author_id` both exist
-  if (sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
+  if (r.type !== "m2m" && sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
     // Use `fooAuthorBooks`, `barAuthorBooks`
-    fieldName = `${r.foreignKey.columns[0].name.replace(/\_id|Id$/, "")}_${fieldName}`;
+    singularName = `${column.name.replace(/\_id|Id$/, "")}_${singularName}`;
   }
   // If we've guessed `Book.bookReviews` based on `book_reviews.book_id` --> `bookReviews`, strip the `Book` prefix
-  if (fieldName.length > singleEntity.name.length && fieldName.startsWith(singleEntity.name)) {
-    fieldName = fieldName.substring(singleEntity.name.length);
+  if (singularName.length > singleEntity.name.length && singularName.startsWith(singleEntity.name)) {
+    singularName = singularName.substring(singleEntity.name.length);
   }
-
   // camelize the name
-  let singularName = camelCase(fieldName);
-  fieldName = camelCase(plural(fieldName));
-
-  // If the name is overridden, use that, but also singularize it
-  const maybeOverriddenName = relationName(config, singleEntity, fieldName);
-  if (maybeOverriddenName !== fieldName) {
-    singularName = singular(maybeOverriddenName);
-    fieldName = maybeOverriddenName;
-  }
-
-  return { singularName, fieldName };
+  singularName = camelCase(singularName);
+  // and pluralize for fieldName
+  return { fieldName: plural(singularName), singularName };
 }
 
 export function makeEntity(entityName: string): Entity {

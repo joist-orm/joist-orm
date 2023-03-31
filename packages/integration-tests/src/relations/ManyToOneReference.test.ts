@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
-import { Author, Book, newAuthor } from "../entities";
+import { Author, Book, newAuthor, User } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("ManyToOneReference", () => {
@@ -129,5 +129,13 @@ describe("ManyToOneReference", () => {
     await a1.publisher.load({ forceReload: true });
     // Then it is still defined
     expect(a1.publisher.get).toBeDefined();
+  });
+
+  it("can be renamed", () => {
+    // see createTable("users",...) in 1580658856631_author.ts for the actual rename
+    const em = newEntityManager();
+    const user = em.create(User, { name: "u1", email: "test@test.com" });
+    expect((user as any).author).not.toBeDefined();
+    expect(user.authorManyToOne).toBeDefined();
   });
 });

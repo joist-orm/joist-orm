@@ -4,6 +4,8 @@ type Comment {
   createdAt: DateTime!
   updatedAt: DateTime!
   parent: CommentParent
+  user: User!
+  likedByUsers: [User!]!
 }
 
 extend type Mutation {
@@ -14,6 +16,7 @@ input SaveCommentInput {
   id: ID
   text: String
   parentId: ID
+  userId: ID
 }
 
 type SaveCommentResult {

@@ -20,6 +20,7 @@ import {
   PublisherType,
   SmallPublisher,
   Tag,
+  User,
 } from "@src/entities";
 
 export type MaybePromise<T> = T | Promise<T>;
@@ -67,6 +68,11 @@ export type CriticResolvers = {
   name: Resolver<Critic, any, string>;
 };
 
+export type UserResolvers = {
+  name: Resolver<User, any, string>;
+  email: Resolver<User, any, string>;
+};
+
 export type SaveAuthorInput = {};
 export type SaveBookInput = {};
 export type SaveAuthorStatInput = {};
@@ -80,6 +86,7 @@ export type SaveLargePublisherInput = {};
 export type SavePublisherGroupInput = {};
 export type SaveTagInput = {};
 export type SaveCriticInput = {};
+export type SaveUserInput = {};
 
 export type MutationResolvers = {
   saveAuthor(root: any, args: any, ctx: Context, info: any): any;
@@ -95,6 +102,7 @@ export type MutationResolvers = {
   savePublisherGroup(root: any, args: any, ctx: Context, info: any): any;
   saveTag(root: any, args: any, ctx: Context, info: any): any;
   saveCritic(root: any, args: any, ctx: Context, info: any): any;
+  saveUser(root: any, args: any, ctx: Context, info: any): any;
 };
 
 export type Resolvers = {

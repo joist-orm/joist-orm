@@ -77,6 +77,30 @@ console.log(a2.books.get.length);
 console.log(a2.books.get[0].title);
 ```
 
+## One To One Reference
+
+Joist distinguishes "incoming" foreign keys with a unique constraint as a one-to-one relationship rather than one-to-many and instead automatically generates a `hasOneToOne` reference as the "other side" rather than `hasMany`:
+
+```typescript
+export abstract class AuthorCodegen {
+  readonly image: OneToOneReference<Author, Image> = hasOne(imageMeta, "image", "author", "author_id");
+}
+```
+
+These references work similarly to a `hasOne` reference, but have less information available to them when in an unloaded state (such as checking if the reference is set without loading it).  Additionally, they are always assumed to be nullable.
+
+## Many to Many Collection
+
+Joist will skip generating full entity classes for any tables it considers to be a "join table" between two other entities. Instead, it will  generate matching `hasManyToMany` collections on each of the entities pointed to by the foreign keys on the join table:
+
+```typescript
+export abstract class BookCodegen {
+  readonly tags: Collection<Author, Tag> = hasManyToMany("authors_to_tags", "tags", "author_id", tagMeta, "authors", "tag_id");
+}
+```
+
+These collections work similarly to a `hasMany` collection.   When determining if a table is a "join table", joist checks if the table has a single primary key column, two foreign key columns, an optional `created_at` column, and no other columns. 
+
 ## Polymorphic References
 
 Polymorphic references model an entity (i.e. `Book`) that has a single logical field that can be set to multiple (i.e. poly) _types_ of other entities, but _only one such entity at a time_ (i.e. a reference b/c it points to only one other entity).
@@ -123,6 +147,12 @@ To use polymorphic references, there are two steps:
    ```
    
    Joist with then use the `publisher` name to scan for any other `publisher_`-prefixed foreign keys and automatically pull them in as components of this polymorphic reference.
+
+## Renaming Relations
+
+Joist will make a best effort to infer a logical name for any given relation based on the foreign key's name and the table it points to, but this is not always perfect.  Sometimes another name will be desired or two foreign keys will generate a naming collision.  In such circumstances, it's possible to provide additional data in the database schema to indicate to joist which name to use.  Joist uses `pg-structure`'s [`commentData`](https://www.pg-structure.com/nav.02.api/classes/dbobject.html#commentdata) to look for the properties `fieldName` (for renaming a m2o reference) and `otherFieldName` (for renaming the opposing m2o/m2m/o2o relation) and will prefer using these values over its own inferred name.
+
+Joist provides a helper migration function `renameRelation` that can be used to rename existing columns.  Additionally, the `foreignKey` helper supports both `fieldName` and `otherFieldName` passed as options.
 
 ## Consistent Relations
 

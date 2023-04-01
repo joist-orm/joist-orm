@@ -265,16 +265,15 @@ You can configure relations (references and collections to other entities) by se
 
 ```typescript
 export interface RelationConfig {
-  name?: string;
   polymorphic?: "notNull" | true;
   large?: true;
 }
 ```
 
-The support values are:
+The supported values are:
 
-* `name` customizing the name, i.e. if Joist guesses the name for a relation (typically the `o2o` or `o2m` side of a `m2o`), you can set a more logical name.
 * `polymorphic` creates this relation as a [polymorphic relation](/docs/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
+* `large` indicates that a collection is too big to be fully loaded into memory and changes the generated type to `LargeCollection`  
 
 ## Runtime Configuration
 

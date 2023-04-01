@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
-import { Book, BookReview, Comment, newBook, newUser } from "../entities";
+import { Book, BookReview, Comment, newBook } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("PolymorphicReference", () => {
@@ -25,8 +25,7 @@ describe("PolymorphicReference", () => {
   it("can save a foreign key", async () => {
     const em = newEntityManager();
     const book = newBook(em);
-    const user = newUser(em);
-    em.create(Comment, { text: "t", parent: book, user });
+    em.create(Comment, { text: "t", parent: book });
     await em.flush();
 
     const [row] = await select("comments");

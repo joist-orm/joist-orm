@@ -202,7 +202,7 @@ export function up(b: MigrationBuilder): void {
     parent_publisher_id: foreignKey("publishers", { notNull: false }),
     parent_author_id: foreignKey("authors", { notNull: false }),
     // for testing collection renames
-    user_id: foreignKey("users", { notNull: true, otherFieldName: "createdComments" }),
+    user_id: foreignKey("users", { notNull: false, otherFieldName: "createdComments" }),
     text: "text",
   });
 

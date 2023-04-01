@@ -1,5 +1,5 @@
 import { Author } from "@src/entities";
-import { insertAuthor, insertBook, insertBookReview, insertComment, insertUser } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertComment } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 import { isLoaded } from "joist-orm";
 
@@ -47,8 +47,7 @@ describe("isLoaded", () => {
       await insertAuthor({ first_name: "a" });
       await insertBook({ author_id: 1, title: "t" });
       await insertBookReview({ book_id: 1, rating: 5 });
-      await insertUser({ name: "test", email: "test@test.com" });
-      await insertComment({ text: "t", parent_book_review_id: 1, user_id: 1 });
+      await insertComment({ text: "t", parent_book_review_id: 1 });
       const em = newEntityManager();
       const author = await em.load(Author, "1", { books: { reviews: "comment" } });
       expect(isLoaded(author, { books: "reviews" })).toEqual(true);

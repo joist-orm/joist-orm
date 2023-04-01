@@ -234,7 +234,7 @@ export const commentMeta: EntityMetadata<Comment> = {
     "text": { kind: "primitive", fieldName: "text", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("text", "text", "text"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "user": { kind: "m2o", fieldName: "user", fieldIdName: "userId", required: true, otherMetadata: () => userMeta, otherFieldName: "createdComments", serde: new KeySerde("u", "user", "user_id", "int"), immutable: false },
+    "user": { kind: "m2o", fieldName: "user", fieldIdName: "userId", required: false, otherMetadata: () => userMeta, otherFieldName: "createdComments", serde: new KeySerde("u", "user", "user_id", "int"), immutable: false },
     "likedByUsers": { kind: "m2m", fieldName: "likedByUsers", fieldIdName: "likedByUserIds", required: false, otherMetadata: () => userMeta, otherFieldName: "likedComments", serde: undefined, immutable: false, joinTableName: "users_to_comments", columnNames: ["comment_id", "liked_by_user_id"] },
     "parent": {
       kind: "poly",

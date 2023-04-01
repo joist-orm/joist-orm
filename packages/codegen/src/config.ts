@@ -14,7 +14,6 @@ export interface FieldConfig {
 }
 
 export interface RelationConfig {
-  name?: string;
   polymorphic?: "notNull" | true;
   large?: true;
 }

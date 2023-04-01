@@ -188,8 +188,8 @@ export function up(b: MigrationBuilder): void {
     author_id: foreignKey("authors", {
       notNull: false,
       unique: true,
-      oneToOneName: "userOneToOne",
-      referenceName: "authorManyToOne",
+      fieldName: "authorManyToOne",
+      otherFieldName: "userOneToOne",
     }),
   });
 
@@ -202,7 +202,7 @@ export function up(b: MigrationBuilder): void {
     parent_publisher_id: foreignKey("publishers", { notNull: false }),
     parent_author_id: foreignKey("authors", { notNull: false }),
     // for testing collection renames
-    user_id: foreignKey("users", { notNull: true, collectionName: "createdComments" }),
+    user_id: foreignKey("users", { notNull: true, otherFieldName: "createdComments" }),
     text: "text",
   });
 

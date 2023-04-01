@@ -51,7 +51,7 @@ describe("EntityDbMetadata", () => {
       // For `book_reviews.book_id` create `Book.renamedReviews`
       const relation = {
         ...relationDummy,
-        foreignKey: { columns: [{ commentData: { collectionName: "renamedReviews" } }] },
+        foreignKey: { columns: [{ commentData: { otherFieldName: "renamedReviews" } }] },
       };
       expect(collectionName(configDummy, book, bookReview, relation as any).fieldName).toEqual("renamedReviews");
     });
@@ -84,7 +84,7 @@ describe("EntityDbMetadata", () => {
     it("returns an override", () => {
       // For `images.book_id` create `Book.renamedImage`
       const relation = {
-        foreignKey: { columns: [{ name: "book_id", commentData: { oneToOneName: "renamedImage" } }] },
+        foreignKey: { columns: [{ name: "book_id", commentData: { otherFieldName: "renamedImage" } }] },
         targetTable: { name: "images" },
         sourceTable: { m2oRelations: [] },
       };
@@ -118,7 +118,7 @@ describe("EntityDbMetadata", () => {
       // For `image.book_id` create `Image.renamedBook`
       const relation = {
         type: "m2o",
-        foreignKey: { columns: [{ name: "book_id", commentData: { referenceName: "renamedBook" } }] },
+        foreignKey: { columns: [{ name: "book_id", commentData: { fieldName: "renamedBook" } }] },
         sourceTable: { name: "images" },
       };
       expect(referenceName(configDummy, image, relation as any)).toEqual("renamedBook");

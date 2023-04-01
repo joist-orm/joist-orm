@@ -120,9 +120,8 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
 }
 
 export type FieldNameOverrides = {
-  collectionName?: string;
-  referenceName?: string;
-  oneToOneName?: string;
+  fieldName?: string;
+  otherFieldName?: string;
 };
 type ForeignKeyOpts = Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">> & FieldNameOverrides;
 export function foreignKey(otherTable: string, opts: ForeignKeyOpts): ColumnDefinition {
@@ -135,7 +134,7 @@ export function foreignKey(otherTable: string, opts: ForeignKeyOpts): ColumnDefi
   };
 }
 
-type RenameRelationOpts = FieldNameOverrides & Pick<ColumnDefinition, "comment">;
+export type RenameRelationOpts = FieldNameOverrides & Pick<ColumnDefinition, "comment">;
 export function renameRelation(b: MigrationBuilder, tableName: string, columnName: string, opts: RenameRelationOpts) {
   b.alterColumn(tableName, columnName, foreignKeyOptsWithMaybeComment(opts));
 }
@@ -147,9 +146,9 @@ export function commentData(data: any, comment?: string | null): string {
 function foreignKeyOptsWithMaybeComment<T extends RenameRelationOpts, R extends Omit<T, keyof FieldNameOverrides>>(
   opts: T,
 ): R {
-  let { comment, referenceName, collectionName, oneToOneName, ...rest } = opts;
-  if (referenceName || collectionName || oneToOneName) {
-    const overrides = { referenceName, collectionName, oneToOneName };
+  let { comment, fieldName, otherFieldName, ...rest } = opts;
+  if (fieldName || otherFieldName) {
+    const overrides = { fieldName, otherFieldName };
     return { ...(rest as R), comment: commentData(overrides, comment) };
   } else if (comment) {
     return { ...(rest as R), comment };
@@ -221,14 +220,14 @@ export function createManyToManyTable(
   tableOrColumn2: string | ManyToManyColumn,
   options?: TableOptions & DropOptions,
 ) {
-  const [table1, column1, collectionName1] = maybeTableOrColumn(tableOrColumn1);
-  const [table2, column2, collectionName2] = maybeTableOrColumn(tableOrColumn2);
+  const [table1, column1, otherFieldName1] = maybeTableOrColumn(tableOrColumn1);
+  const [table2, column2, otherFieldName2] = maybeTableOrColumn(tableOrColumn2);
   b.createTable(
     tableName,
     {
       id: "id",
-      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE", collectionName: collectionName1 }),
-      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE", collectionName: collectionName2 }),
+      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE", otherFieldName: otherFieldName1 }),
+      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE", otherFieldName: otherFieldName2 }),
       created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
     },
     options,

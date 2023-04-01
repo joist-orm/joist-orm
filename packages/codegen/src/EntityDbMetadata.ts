@@ -11,7 +11,6 @@ import {
   isLargeCollection,
   isProtected,
   ormMaintainedFields,
-  RelationConfig,
   superstructConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
@@ -178,6 +177,11 @@ export type PolymorphicFieldComponent = {
   otherEntity: Entity;
 };
 
+export type FieldNameOverrides = {
+  fieldName?: string;
+  otherFieldName?: string;
+};
+
 /** Adapts the generally-great pg-structure metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;
@@ -315,17 +319,18 @@ function isOneToOneIndex(i: Index) {
   return i.columns.length === 1 && !i.isPartial;
 }
 
-function polymorphicRelations(config: Config, table: Table) {
+type PolymorphicRelation = { fieldName: string; notNull: boolean };
+function polymorphicRelations(config: Config, table: Table): PolymorphicRelation[] {
   const entity = config.entities[tableToEntityName(config, table)];
   return Object.entries(entity?.relations ?? {})
     .filter(([, r]) => r.polymorphic)
-    .map(([name, relation]) => ({ name, ...relation }));
+    .map(([fieldName, { polymorphic }]) => ({ fieldName, notNull: polymorphic === "notNull" }));
 }
 
 function polymorphicFieldName(config: Config, r: M2ORelation | O2MRelation) {
   const { name } = r.foreignKey.columns[0];
   const table = r.type === "m2o" ? r.sourceTable : r.targetTable;
-  return polymorphicRelations(config, table).find((pr) => name.startsWith(`${snakeCase(pr.name)}_`))?.name;
+  return polymorphicRelations(config, table).find((pr) => name.startsWith(`${snakeCase(pr.fieldName)}_`))?.fieldName;
 }
 
 function isComponentOfPolymorphicRelation(config: Config, r: M2ORelation) {
@@ -508,21 +513,15 @@ function newManyToManyField(config: Config, entity: Entity, r: M2MRelation): Man
   };
 }
 
-function newPolymorphicField(config: Config, table: Table, entity: Entity, rc: RelationConfig) {
-  const { polymorphic, name } = rc;
-  const fieldName = name!;
+function newPolymorphicField(config: Config, table: Table, entity: Entity, pr: PolymorphicRelation) {
+  const { fieldName, notNull } = pr;
   const components = table.m2oRelations
     .filter((r) => !isEnumTable(config, r.targetTable))
     .filter((r) => !isMultiColumnForeignKey(r))
     .filter((r) => polymorphicFieldName(config, r) === fieldName)
     .map((r) => newPolymorphicFieldComponent(config, entity, r));
-
-  return {
-    fieldName,
-    fieldType: `${entity.name}${pascalCase(fieldName)}`,
-    notNull: polymorphic === "notNull",
-    components,
-  };
+  const fieldType = `${entity.name}${pascalCase(fieldName)}`;
+  return { fieldName, fieldType, notNull, components };
 }
 
 function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORelation): PolymorphicFieldComponent {
@@ -536,17 +535,12 @@ function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORela
   return { columnName, otherEntity, otherFieldName };
 }
 
-type FieldNameOverrides = {
-  collectionName?: string;
-  referenceName?: string;
-  oneToOneName?: string;
-};
 function isFieldNameOverrides(maybeOverride: JSONData | undefined): maybeOverride is FieldNameOverrides {
   return (
     maybeOverride !== null &&
     !Array.isArray(maybeOverride) &&
     typeof maybeOverride === "object" &&
-    Object.keys(maybeOverride).some((k) => ["collectionName", "referenceName", "oneToOneName"].includes(k))
+    Object.keys(maybeOverride).some((k) => k === "fieldName" || k === "otherFieldName")
   );
 }
 
@@ -561,8 +555,8 @@ export function oneToOneName(
 ): string {
   // If the name is overridden then use that
   const overrides = r.foreignKey.columns[0].commentData;
-  if (isFieldNameOverrides(overrides) && overrides.oneToOneName) {
-    return overrides.oneToOneName;
+  if (isFieldNameOverrides(overrides) && overrides.otherFieldName) {
+    return overrides.otherFieldName;
   }
   // For `comments.parent_book_review_id`, we would just use `BookReview.comment` as the name
   // For `authors.draft_current_book_id`, we would just use `Book.author` as the name
@@ -593,7 +587,7 @@ export function referenceName(config: Config, entity: Entity, r: M2ORelation | O
   return (
     polymorphicFieldName(config, r) ??
     // If the name is overridden then use that
-    (isFieldNameOverrides(overrides) ? overrides.referenceName : undefined) ??
+    (isFieldNameOverrides(overrides) ? overrides.fieldName : undefined) ??
     camelCase(column.name.replace(/\_id|Id$/, ""))
   );
 }
@@ -609,8 +603,8 @@ function primitiveFieldName(columnName: string) {
 export function manyToManyName(column: Column) {
   const overrides = column.commentData;
   // If the name is overridden then use that
-  if (isFieldNameOverrides(overrides) && overrides.collectionName) {
-    return overrides.collectionName;
+  if (isFieldNameOverrides(overrides) && overrides.otherFieldName) {
+    return overrides.otherFieldName;
   }
   return camelCase(plural(column.name.replace(/\_id|Id$/, "")));
 }
@@ -627,8 +621,8 @@ export function collectionName(
   const [column] = r.foreignKey.columns;
   const overrides = column.commentData;
   // If the name is overridden then use that, but also singularize it
-  if (isFieldNameOverrides(overrides) && overrides.collectionName) {
-    const fieldName = overrides.collectionName;
+  if (isFieldNameOverrides(overrides) && overrides.otherFieldName) {
+    const fieldName = overrides.otherFieldName;
     return { fieldName, singularName: singular(fieldName) };
   }
   // I.e. if the m2o is `books.author_id`, use `Author.books` as the collection name (we pluralize at the end).

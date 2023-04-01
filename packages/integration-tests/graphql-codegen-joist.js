@@ -18,6 +18,7 @@ const mappers = {
   PublisherTypeDetail: "src/entities#PublisherType",
   SmallPublisher: "src/entities#SmallPublisher",
   Tag: "src/entities#Tag",
+  User: "src/entities#User",
 };
 
 const enumValues = {

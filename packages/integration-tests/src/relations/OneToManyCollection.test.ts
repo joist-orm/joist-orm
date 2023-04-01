@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
-import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "../entities";
+import { Author, Book, newAuthor, newBook, newPublisher, Publisher, User } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToManyCollection", () => {
@@ -434,5 +434,13 @@ describe("OneToManyCollection", () => {
     const author = newAuthor(em, { books: [{}] });
     const loaded = await author.populate({ hint: "books", forceReload: true });
     expect(loaded.books.get.length).toBe(1);
+  });
+
+  it("can be renamed", () => {
+    // see createTable("comments",...) in 1580658856631_author.ts for the actual rename
+    const em = newEntityManager();
+    const user = em.create(User, { name: "u1", email: "test@test.com" });
+    expect((user as any).comments).not.toBeDefined();
+    expect(user.createdComments).toBeDefined();
   });
 });

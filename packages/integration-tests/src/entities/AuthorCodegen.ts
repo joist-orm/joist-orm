@@ -63,6 +63,9 @@ import {
   Tag,
   TagId,
   tagMeta,
+  User,
+  UserId,
+  userMeta,
 } from "./entities";
 import type { EntityManager } from "./entities";
 
@@ -107,6 +110,7 @@ export interface AuthorOpts {
   currentDraftBook?: Book | BookId | null;
   publisher?: Publisher | PublisherId | null;
   image?: Image | null;
+  userOneToOne?: User | null;
   authors?: Author[];
   books?: Book[];
   comments?: Comment[];
@@ -118,6 +122,7 @@ export interface AuthorIdsOpts {
   currentDraftBookId?: BookId | null;
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
+  userOneToOneId?: UserId | null;
   authorIds?: AuthorId[] | null;
   bookIds?: BookId[] | null;
   commentIds?: CommentId[] | null;
@@ -147,6 +152,7 @@ export interface AuthorFilter {
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
+  userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -176,6 +182,7 @@ export interface AuthorGraphQLFilter {
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
+  userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
@@ -244,6 +251,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 
   readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
+
+  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne(
+    userMeta,
+    "userOneToOne",
+    "authorManyToOne",
+    "author_id",
+  );
 
   readonly tags: Collection<Author, Tag> = hasManyToMany(
     "authors_to_tags",

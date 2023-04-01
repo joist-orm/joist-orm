@@ -14,7 +14,6 @@ export interface FieldConfig {
 }
 
 export interface RelationConfig {
-  name?: string;
   polymorphic?: "notNull" | true;
   large?: true;
 }
@@ -118,10 +117,6 @@ export function isFieldIgnored(
     );
   }
   return ignore;
-}
-
-export function relationName(config: Config, entity: Entity, relationName: string): string {
-  return config.entities?.[entity.name]?.relations?.[relationName]?.name ?? relationName;
 }
 
 const configPath = "./joist-config.json";

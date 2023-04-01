@@ -1,13 +1,18 @@
 import {
   BaseEntity,
   Changes,
+  Collection,
   ConfigApi,
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
   fail,
+  FilterOf,
   Flavor,
+  GraphQLFilterOf,
+  hasManyToMany,
+  hasOne,
   hasOnePolymorphic,
   IdOf,
   isLoaded,
@@ -15,6 +20,7 @@ import {
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
@@ -28,7 +34,19 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Author, Book, BookReview, Comment, commentMeta, newComment, Publisher } from "./entities";
+import {
+  Author,
+  Book,
+  BookReview,
+  Comment,
+  commentMeta,
+  newComment,
+  Publisher,
+  User,
+  UserId,
+  userMeta,
+  UserOrder,
+} from "./entities";
 import type { EntityManager } from "./entities";
 
 export type CommentId = Flavor<string, "Comment">;
@@ -46,16 +64,21 @@ export interface CommentFields {
   text: { kind: "primitive"; type: string; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  user: { kind: "m2o"; type: User; nullable: undefined };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
 
 export interface CommentOpts {
   text?: string | null;
+  user?: User | UserId | null;
   parent: CommentParent;
+  likedByUsers?: User[];
 }
 
 export interface CommentIdsOpts {
+  userId?: UserId | null;
   parentId?: IdOf<CommentParent> | null;
+  likedByUserIds?: UserId[] | null;
 }
 
 export interface CommentFilter {
@@ -63,6 +86,8 @@ export interface CommentFilter {
   text?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  user?: EntityFilter<User, UserId, FilterOf<User>, null>;
+  likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   parent?: EntityFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
@@ -71,6 +96,8 @@ export interface CommentGraphQLFilter {
   text?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
+  likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 
@@ -79,6 +106,7 @@ export interface CommentOrder {
   text?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  user?: UserOrder;
 }
 
 export const commentConfig = new ConfigApi<Comment, Context>();
@@ -99,6 +127,17 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   };
+
+  readonly user: ManyToOneReference<Comment, User, undefined> = hasOne(userMeta, "user", "createdComments");
+
+  readonly likedByUsers: Collection<Comment, User> = hasManyToMany(
+    "users_to_comments",
+    "likedByUsers",
+    "comment_id",
+    userMeta,
+    "likedComments",
+    "liked_by_user_id",
+  );
 
   readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
 

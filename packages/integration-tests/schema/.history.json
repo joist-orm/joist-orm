@@ -27,6 +27,7 @@
     "ssn",
     "tags",
     "updatedAt",
+    "userOneToOne",
     "wasEverPopular"
   ],
   "AuthorStat": [
@@ -65,7 +66,7 @@
   ],
   "BookAdvance": ["book", "createdAt", "id", "publisher", "status", "updatedAt"],
   "BookReview": ["book", "comment", "createdAt", "id", "isPublic", "parent", "parentComment", "rating", "updatedAt"],
-  "Comment": ["createdAt", "id", "parent", "text", "updatedAt"],
+  "Comment": ["createdAt", "id", "likedByUsers", "parent", "text", "updatedAt", "user"],
   "CommentParent": ["Author", "Book", "BookReview", "Publisher"],
   "Critic": [
     "createdAt",
@@ -113,7 +114,8 @@
     "savePublisher",
     "savePublisherGroup",
     "saveSmallPublisher",
-    "saveTag"
+    "saveTag",
+    "saveUser"
   ],
   "Publisher": [
     "authors",
@@ -182,7 +184,7 @@
   "SaveBookResult": ["book"],
   "SaveBookReviewInput": ["bookId", "createdAt", "id", "isPublic", "rating", "updatedAt"],
   "SaveBookReviewResult": ["bookReview"],
-  "SaveCommentInput": ["id", "parentId", "text"],
+  "SaveCommentInput": ["id", "parentId", "text", "userId"],
   "SaveCommentResult": ["comment"],
   "SaveCriticColumnInput": ["criticId", "id", "name"],
   "SaveCriticColumnResult": ["criticColumn"],
@@ -243,6 +245,8 @@
   "SaveSmallPublisherResult": ["smallPublisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
+  "SaveUserInput": ["authorManyToOneId", "email", "id", "name"],
+  "SaveUserResult": ["user"],
   "SmallPublisher": [
     "allAuthorNames",
     "authors",
@@ -262,5 +266,6 @@
     "type",
     "updatedAt"
   ],
-  "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"]
+  "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"],
+  "User": ["authorManyToOne", "createdAt", "createdComments", "email", "id", "likedComments", "name", "updatedAt"]
 }

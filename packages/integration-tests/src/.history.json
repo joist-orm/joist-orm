@@ -28,6 +28,8 @@
     "resolvers/mutations/smallPublisher/saveSmallPublisherResolver.ts",
     "resolvers/mutations/tag/saveTagResolver.test.ts",
     "resolvers/mutations/tag/saveTagResolver.ts",
+    "resolvers/mutations/user/saveUserResolver.test.ts",
+    "resolvers/mutations/user/saveUserResolver.ts",
     "resolvers/objects/author/authorResolvers.test.ts",
     "resolvers/objects/author/authorResolvers.ts",
     "resolvers/objects/authorStat/authorStatResolvers.test.ts",
@@ -55,6 +57,8 @@
     "resolvers/objects/smallPublisher/smallPublisherResolvers.test.ts",
     "resolvers/objects/smallPublisher/smallPublisherResolvers.ts",
     "resolvers/objects/tag/tagResolvers.test.ts",
-    "resolvers/objects/tag/tagResolvers.ts"
+    "resolvers/objects/tag/tagResolvers.ts",
+    "resolvers/objects/user/userResolvers.test.ts",
+    "resolvers/objects/user/userResolvers.ts"
   ]
 }

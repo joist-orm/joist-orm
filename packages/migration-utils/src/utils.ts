@@ -119,11 +119,42 @@ export function createCreatedAtFunction(b: MigrationBuilder): void {
   );
 }
 
-export function foreignKey(
-  otherTable: string,
-  opts: Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">>,
-): ColumnDefinition {
-  return { type: "integer", references: otherTable, deferrable: true, deferred: true, ...opts };
+export type FieldNameOverrides = {
+  fieldName?: string;
+  otherFieldName?: string;
+};
+type ForeignKeyOpts = Partial<ColumnDefinition> & Required<Pick<ColumnDefinition, "notNull">> & FieldNameOverrides;
+export function foreignKey(otherTable: string, opts: ForeignKeyOpts): ColumnDefinition {
+  return {
+    type: "integer",
+    references: otherTable,
+    deferrable: true,
+    deferred: true,
+    ...foreignKeyOptsWithMaybeComment(opts),
+  };
+}
+
+export type RenameRelationOpts = FieldNameOverrides & Pick<ColumnDefinition, "comment">;
+export function renameRelation(b: MigrationBuilder, tableName: string, columnName: string, opts: RenameRelationOpts) {
+  b.alterColumn(tableName, columnName, foreignKeyOptsWithMaybeComment(opts));
+}
+
+export function commentData(data: any, comment?: string | null): string {
+  return `${comment ?? ""}[pg-structure]${JSON.stringify(data)}[/pg-structure]`;
+}
+
+function foreignKeyOptsWithMaybeComment<T extends RenameRelationOpts, R extends Omit<T, keyof FieldNameOverrides>>(
+  opts: T,
+): R {
+  let { comment, fieldName, otherFieldName, ...rest } = opts;
+  if (fieldName || otherFieldName) {
+    const overrides = { fieldName, otherFieldName };
+    return { ...(rest as R), comment: commentData(overrides, comment) };
+  } else if (comment) {
+    return { ...(rest as R), comment };
+  } else {
+    return rest as R;
+  }
 }
 
 export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition, "notNull">): ColumnDefinition {
@@ -139,21 +170,64 @@ export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition,
   };
 }
 
+type ManyToManyColumn = {
+  table: string;
+  column?: string;
+  collectionName?: string;
+};
+
+function maybeTableOrColumn(maybeTableOrColumn: string | ManyToManyColumn): [string, string, string | undefined] {
+  if (typeof maybeTableOrColumn === "string") {
+    return [maybeTableOrColumn, `${singular(maybeTableOrColumn)}_id`, undefined];
+  } else {
+    const { table, column, collectionName } = maybeTableOrColumn;
+    return [table, column ?? `${singular(table)}_id`, collectionName];
+  }
+}
+
 export function createManyToManyTable(
   b: MigrationBuilder,
   tableName: string,
   table1: string,
   table2: string,
   options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  column1: ManyToManyColumn,
+  column2: ManyToManyColumn,
+  options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  table1: string,
+  column2: ManyToManyColumn,
+  options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  column1: ManyToManyColumn,
+  table2: string,
+  options?: TableOptions & DropOptions,
+): void;
+export function createManyToManyTable(
+  b: MigrationBuilder,
+  tableName: string,
+  tableOrColumn1: string | ManyToManyColumn,
+  tableOrColumn2: string | ManyToManyColumn,
+  options?: TableOptions & DropOptions,
 ) {
-  const column1 = `${singular(table1)}_id`;
-  const column2 = `${singular(table2)}_id`;
+  const [table1, column1, otherFieldName1] = maybeTableOrColumn(tableOrColumn1);
+  const [table2, column2, otherFieldName2] = maybeTableOrColumn(tableOrColumn2);
   b.createTable(
     tableName,
     {
       id: "id",
-      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE" }),
-      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE" }),
+      [column1]: foreignKey(table1, { notNull: true, onDelete: "CASCADE", otherFieldName: otherFieldName1 }),
+      [column2]: foreignKey(table2, { notNull: true, onDelete: "CASCADE", otherFieldName: otherFieldName2 }),
       created_at: { type: "timestamptz", notNull: true, default: b.func("NOW()") },
     },
     options,

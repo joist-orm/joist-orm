@@ -1,0 +1,25 @@
+extend type Mutation {
+  saveUser(input: SaveUserInput!): SaveUserResult!
+}
+
+type User {
+  id: ID!
+  name: String!
+  email: String!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  authorManyToOne: Author
+  createdComments: [Comment!]!
+  likedComments: [Comment!]!
+}
+
+input SaveUserInput {
+  id: ID
+  name: String
+  email: String
+  authorManyToOneId: ID
+}
+
+type SaveUserResult {
+  user: User!
+}

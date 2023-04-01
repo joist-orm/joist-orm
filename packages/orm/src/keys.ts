@@ -13,7 +13,7 @@ type HasTagName = { tagName: string; idType: "int" | "uuid" };
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
 export function maybeResolveReferenceToId(value: any): string | undefined {
-  return typeof value === "number" || typeof value === "string" ? value : value?.id;
+  return typeof value === "number" || typeof value === "string" ? value : value?.idTagged;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unless its undefined. */
@@ -63,6 +63,15 @@ export function assertIdIsTagged(key: string): void {
   if (key.indexOf(tagDelimiter) === -1) {
     throw new Error(`Key is not tagged ${key}`);
   }
+}
+
+export function ensureTagged<V extends Entity | string | number | undefined>(meta: HasTagName, maybeId: V): V {
+  if (typeof maybeId === "string") {
+    if (maybeId.indexOf(tagDelimiter) === -1) {
+      return `${meta.tagName}${tagDelimiter}${maybeId}` as V;
+    }
+  }
+  return maybeId;
 }
 
 /** Tags a potentially untagged id, while our API inputs still accept either tagged or untagged ids. */

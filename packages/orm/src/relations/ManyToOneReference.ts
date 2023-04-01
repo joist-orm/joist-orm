@@ -4,6 +4,7 @@ import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import {
   deTagIds,
   ensureNotDeleted,
+  ensureTagged,
   fail,
   maybeResolveReferenceToId,
   OneToManyLargeCollection,
@@ -132,6 +133,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this.doGet({ withDeleted: false });
   }
 
+  /** Returns the tagged id of the current value. */
   get id(): IdOf<U> | N {
     ensureNotDeleted(this.#entity, "pending");
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
@@ -158,6 +160,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
+
+    // If the project is not using tagged ids, we still want it tagged internally
+    other = ensureTagged(this.otherMeta, other);
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
@@ -189,7 +194,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   // private impl
 
-  setFromOpts(other: U): void {
+  setFromOpts(other: U | IdOf<U> | N): void {
     this.setImpl(other);
   }
 

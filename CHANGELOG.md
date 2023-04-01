@@ -1,3 +1,10 @@
+# [1.71.0](https://github.com/stephenh/joist-ts/compare/v1.70.1...v1.71.0) (2023-04-01)
+
+
+### Features
+
+* use column comments instead of joist-config for relation renames ([#600](https://github.com/stephenh/joist-ts/issues/600)) ([6767af1](https://github.com/stephenh/joist-ts/commit/6767af1c07d75e6ab77ccc0a4810862dd33fe792))
+
 ## [1.70.1](https://github.com/stephenh/joist-ts/compare/v1.70.0...v1.70.1) (2023-03-31)
 
 

@@ -1,3 +1,10 @@
+## [1.71.1](https://github.com/stephenh/joist-ts/compare/v1.71.0...v1.71.1) (2023-04-02)
+
+
+### Bug Fixes
+
+* Fix setting m2os with an untagged id. ([#601](https://github.com/stephenh/joist-ts/issues/601)) ([b725f0a](https://github.com/stephenh/joist-ts/commit/b725f0a97244f9496b18c48057201857030ea3bc))
+
 # [1.71.0](https://github.com/stephenh/joist-ts/compare/v1.70.1...v1.71.0) (2023-04-01)
 
 

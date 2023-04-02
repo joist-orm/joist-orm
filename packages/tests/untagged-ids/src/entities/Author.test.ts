@@ -1,4 +1,4 @@
-import { Author, newAuthor, newBook } from "@src/entities";
+import { Author, Book, newAuthor, newBook } from "@src/entities";
 import { insertAuthor } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 import { RandomUuidAssigner } from "joist-orm";
@@ -38,5 +38,18 @@ describe("Author", () => {
     const authors = await em.find(Author, {}, { populate: "books" });
 
     expect(authors).toHaveLength(2);
+  });
+
+  it("can save fks as ids", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    await em.flush();
+    const b1 = em.create(Book, { title: "b1", author: a1.idOrFail });
+    await em.flush();
+    expect(b1.toJSON()).toMatchObject({
+      id: "10000000-0001-0000-0000-000000000000",
+      author: "a:10000000-0000-0000-0000-000000000000",
+      title: "b1",
+    });
   });
 });

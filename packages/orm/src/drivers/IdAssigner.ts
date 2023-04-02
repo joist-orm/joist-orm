@@ -59,27 +59,30 @@ export class RandomUuidAssigner implements IdAssigner {
 /**
  * Creates deterministic / stable-ish UUIDs for test suites.
  *
- * These ids can technically change as test cases insert different types/numbers
- * of entities, in different orders, but otherwise will be stable.
+ * We use each entity's tag as the 3rd group of digits, and a per-entity incrementing integer as
+ * the 4th group of digits.
+ *
+ * E.g. a test with two Authors (tag `a`) and three Books (tag `b`) will get these ids:
+ *
+ * ```
+ * 00000000-0000-0000-000a-000000000000
+ * 00000000-0000-0000-000a-000000000001
+ * 00000000-0000-0000-000b-000000000000
+ * 00000000-0000-0000-000b-000000000001
+ * 00000000-0000-0000-000b-000000000002
+ * ```
  */
 export class TestUuidAssigner implements IdAssigner {
-  // We can be cute and create per-entity UUID spaces to be more stable
   private nextId: Record<string, number> = {};
 
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
-    Object.entries(todos).forEach(([type, todo]) => {
+    Object.entries(todos).forEach(([, todo]) => {
       if (todo.inserts.length > 0) {
-        // Each entity's uuid space is based on the slot/order it's added to nextId.
-        // This will change across tests, i.e. it's not like tagged ids, but it's
-        // an easy number to determine, and should be stable enough.
-        let entitySpace = Object.keys(this.nextId).indexOf(type);
-        if (entitySpace === -1) {
-          this.nextId[type] = 0;
-          entitySpace = Object.keys(this.nextId).indexOf(type);
-        }
+        const tag = todo.metadata.tagName.substring(0, 4).padStart(4, "0");
+        this.nextId[tag] ??= 0;
         for (const insert of todo.inserts) {
-          const id = this.nextId[type]++;
-          const uuid = `10000000-${String(entitySpace).padStart(4, "0")}-0000-0000-${String(id).padStart(12, "0")}`;
+          const id = String(this.nextId[tag]++);
+          const uuid = `00000000-0000-0000-${tag}-${id.padStart(12, "0")}`;
           insert.__orm.data["id"] = keyToString(todo.metadata, uuid);
         }
       }

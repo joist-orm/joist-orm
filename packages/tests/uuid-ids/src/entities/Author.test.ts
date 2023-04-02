@@ -16,8 +16,8 @@ describe("Author", () => {
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);
     await em.flush();
-    expect(a1.id).toEqual("a:10000000-0000-0000-0000-000000000000");
-    expect(a2.id).toEqual("a:10000000-0000-0000-0000-000000000001");
+    expect(a1.id).toEqual("a:00000000-0000-0000-000a-000000000000");
+    expect(a2.id).toEqual("a:00000000-0000-0000-000a-000000000001");
   });
 
   it("can generate random uuids", async () => {

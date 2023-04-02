@@ -16,8 +16,8 @@ describe("Author", () => {
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);
     await em.flush();
-    expect(a1.id).toEqual("10000000-0000-0000-0000-000000000000");
-    expect(a2.id).toEqual("10000000-0000-0000-0000-000000000001");
+    expect(a1.id).toEqual("00000000-0000-0000-000a-000000000000");
+    expect(a2.id).toEqual("00000000-0000-0000-000a-000000000001");
   });
 
   it("can generate random uuids", async () => {
@@ -47,8 +47,8 @@ describe("Author", () => {
     const b1 = em.create(Book, { title: "b1", author: a1.idOrFail });
     await em.flush();
     expect(b1.toJSON()).toMatchObject({
-      id: "10000000-0001-0000-0000-000000000000",
-      author: "a:10000000-0000-0000-0000-000000000000",
+      id: "00000000-0000-0000-000b-000000000000",
+      author: "a:00000000-0000-0000-000a-000000000000",
       title: "b1",
     });
   });

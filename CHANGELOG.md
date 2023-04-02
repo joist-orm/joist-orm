@@ -1,3 +1,10 @@
+# [1.72.0](https://github.com/stephenh/joist-ts/compare/v1.71.1...v1.72.0) (2023-04-02)
+
+
+### Features
+
+* Make test uuids more cute. ([#602](https://github.com/stephenh/joist-ts/issues/602)) ([38c203e](https://github.com/stephenh/joist-ts/commit/38c203e1bb0f65284dda3cd266080bcf9cf02aaf))
+
 ## [1.71.1](https://github.com/stephenh/joist-ts/compare/v1.71.0...v1.71.1) (2023-04-02)
 
 

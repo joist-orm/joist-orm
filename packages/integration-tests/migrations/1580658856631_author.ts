@@ -118,6 +118,7 @@ export function up(b: MigrationBuilder): void {
   createEntityTable(b, "books", {
     title: { type: "varchar(255)", notNull: true },
     author_id: foreignKey("authors", { notNull: true }),
+    sequel_id: foreignKey("books", { notNull: false, unique: true }),
     // for testing columns that are keywords (and testing default values)
     order: { type: "integer", notNull: true, default: 1 },
     deleted_at: { type: "timestamptz", notNull: false },

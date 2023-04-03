@@ -66,6 +66,7 @@ export interface BookFields {
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  sequel: { kind: "m2o"; type: Book; nullable: undefined };
   author: { kind: "m2o"; type: Author; nullable: never };
 }
 
@@ -73,8 +74,10 @@ export interface BookOpts {
   title: string;
   order?: number;
   deletedAt?: Date | null;
+  sequel?: Book | BookId | null;
   author: Author | AuthorId;
   currentDraftAuthor?: Author | null;
+  sequelBook?: Book | null;
   image?: Image | null;
   advances?: BookAdvance[];
   reviews?: BookReview[];
@@ -83,8 +86,10 @@ export interface BookOpts {
 }
 
 export interface BookIdsOpts {
+  sequelId?: BookId | null;
   authorId?: AuthorId | null;
   currentDraftAuthorId?: AuthorId | null;
+  sequelBookId?: BookId | null;
   imageId?: ImageId | null;
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
@@ -99,8 +104,10 @@ export interface BookFilter {
   deletedAt?: ValueFilter<Date, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
+  sequel?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
   currentDraftAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  sequelBook?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
@@ -115,8 +122,10 @@ export interface BookGraphQLFilter {
   deletedAt?: ValueGraphQLFilter<Date>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
+  sequel?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  sequelBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityGraphQLFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
@@ -131,6 +140,7 @@ export interface BookOrder {
   deletedAt?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
+  sequel?: BookOrder;
   author?: AuthorOrder;
 }
 
@@ -161,6 +171,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
 
   readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
 
+  readonly sequel: ManyToOneReference<Book, Book, undefined> = hasOne(bookMeta, "sequel", "sequelBook");
+
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 
   readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
@@ -169,6 +181,8 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     "currentDraftBook",
     "current_draft_book_id",
   );
+
+  readonly sequelBook: OneToOneReference<Book, Book> = hasOneToOne(bookMeta, "sequelBook", "sequel", "sequel_id");
 
   readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
 

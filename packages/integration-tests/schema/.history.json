@@ -51,6 +51,7 @@
     "advances",
     "author",
     "book",
+    "books",
     "comments",
     "createdAt",
     "currentDraftAuthor",
@@ -60,6 +61,8 @@
     "image",
     "order",
     "reviews",
+    "sequel",
+    "sequelBook",
     "tags",
     "title",
     "updatedAt"
@@ -80,7 +83,7 @@
     "updatedAt"
   ],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
-  "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
+  "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "sequel", "type", "updatedAt"],
   "LargePublisher": [
     "authors",
     "bookAdvances",
@@ -180,7 +183,7 @@
   "SaveAuthorStatResult": ["authorStat"],
   "SaveBookAdvanceInput": ["bookId", "createdAt", "id", "publisherId", "status", "updatedAt"],
   "SaveBookAdvanceResult": ["bookAdvance"],
-  "SaveBookInput": ["authorId", "createdAt", "deletedAt", "id", "order", "title", "updatedAt"],
+  "SaveBookInput": ["authorId", "createdAt", "deletedAt", "id", "order", "sequelId", "title", "updatedAt"],
   "SaveBookResult": ["book"],
   "SaveBookReviewInput": ["bookId", "createdAt", "id", "isPublic", "rating", "updatedAt"],
   "SaveBookReviewResult": ["bookReview"],
@@ -198,7 +201,17 @@
     "updatedAt"
   ],
   "SaveCriticResult": ["critic"],
-  "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
+  "SaveImageInput": [
+    "authorId",
+    "bookId",
+    "createdAt",
+    "fileName",
+    "id",
+    "publisherId",
+    "sequelId",
+    "type",
+    "updatedAt"
+  ],
   "SaveImageResult": ["image"],
   "SaveLargePublisherInput": [
     "country",

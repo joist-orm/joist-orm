@@ -5,7 +5,7 @@ import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager"
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
-import { ManyToManyCollection, OneToManyCollection } from "../relations";
+import { ManyToManyCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { hasSerde } from "../serde";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -178,16 +178,6 @@ export class InMemoryDriver implements Driver {
     }
   }
 
-  async load<T extends Entity>(
-    em: EntityManager,
-    meta: EntityMetadata<T>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    this.onQuery();
-    const rows = Object.values(this.data[meta.tableName] || {});
-    return rows.filter((row) => untaggedIds.includes(String(row["id"])));
-  }
-
   async loadManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: ManyToManyCollection<T, U>,
@@ -219,22 +209,6 @@ export class InMemoryDriver implements Driver {
       const key1 = `${column1}=${tagId(m1, row[column1])},${column2}=${tagId(m2, row[column2])}`;
       const key2 = `${column2}=${tagId(m2, row[column2])},${column1}=${tagId(m1, row[column1])}`;
       return set.has(key1) || set.has(key2);
-    });
-  }
-
-  async findOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<JoinRow[]> {
-    this.onQuery();
-    // If we're loading author.books, we need to look in the books table
-    const rows = Object.values(this.rowsOfTable(collection.otherMeta.tableName));
-    const set = new Set(keys);
-    return rows.filter((row) => {
-      const col1 = `id=${tagId(collection.otherMeta, row.id)}`;
-      const col2 = `${collection.otherColumnName}=${tagId(collection.meta, row[collection.otherColumnName])}`;
-      return set.has(`${col1},${col2}`);
     });
   }
 

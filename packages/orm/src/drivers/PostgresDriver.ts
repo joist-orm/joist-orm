@@ -56,22 +56,6 @@ export class PostgresDriver implements Driver {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
   }
 
-  load<T extends Entity>(
-    em: EntityManager,
-    meta: EntityMetadata<T>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-    if (!needsClassPerTableJoins(meta)) {
-      return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds).orderBy("id");
-    } else {
-      const q = knex.select("b.*").from(`${meta.tableName} AS b`);
-      addTablePerClassJoinsAndClassTag(knex, meta, q);
-      q.whereIn("b.id", untaggedIds).orderBy("b.id");
-      return q;
-    }
-  }
-
   loadManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,
     collection: ManyToManyCollection<T, U>,

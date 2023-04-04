@@ -2,50 +2,11 @@ import { Knex } from "knex";
 import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { EntityMetadata } from "../EntityMetadata";
 import { ParsedFindQuery } from "../QueryParser";
-import {
-  ManyToManyCollection,
-  ManyToManyLargeCollection,
-  OneToManyCollection,
-  OneToManyLargeCollection,
-} from "../relations";
-import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 
 /** Isolates all SQL calls that joist needs to make to fetch/save data. */
 export interface Driver {
-  /** Bulk loads all rows from the table(s) for `meta`, for all `untaggedIds`. */
-  load<T extends Entity>(
-    em: EntityManager,
-    meta: EntityMetadata<T>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
-
-  /** Loads a given m2m relation for potentially multiple entities. */
-  loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    // encoded tuples of `foo_id=2`, `bar_id=3`
-    keys: readonly string[],
-  ): Promise<JoinRow[]>;
-
-  /** Just finds presence in a m2m w/o loading the full relation. */
-  findManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U> | ManyToManyLargeCollection<T, U>,
-    // encoded tuples of `foo_id=2,bar_id=3`, `bar_id=4,foo_id=5`
-    keys: readonly string[],
-  ): Promise<JoinRow[]>;
-
-  /** Bulk loads selective rows in a m2o, for all entities encoded in `untaggedIds`. */
-  findOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
-    // encoded tuples of `id=2,bar_id=3`
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
-
   find<T extends Entity>(
     em: EntityManager,
     type: MaybeAbstractEntityConstructor<T>,

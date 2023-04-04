@@ -1,7 +1,14 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { ManyToManyCollection, ManyToManyLargeCollection, tagId } from "../index";
+import {
+  abbreviation,
+  keyToNumber,
+  ManyToManyCollection,
+  ManyToManyLargeCollection,
+  ParsedFindQuery,
+  tagId,
+} from "../index";
 import { getOrSet } from "../utils";
 
 /** Batches m2m.find/include calls (i.e. that don't fully load the m2m relation). */
@@ -23,7 +30,38 @@ async function load<T extends Entity, U extends Entity>(
   const { joinTableName } = collection;
   const { em } = collection.entity;
 
-  const rows = await em.driver.findManyToMany(em, collection, keys);
+  const alias = abbreviation(joinTableName);
+  const query: ParsedFindQuery = {
+    selects: [`"${alias}".*`],
+    tables: [{ alias, join: "primary", table: joinTableName }],
+    conditions: [],
+    // Or together `where (tag_id = X and book_id = Y)` or `(book_id = B and tag_id = A)`
+    complexConditions: [
+      {
+        op: "or",
+        conditions: keys.map((key) => {
+          const [one, two] = key.split(",");
+          const [columnOne, idOne] = one.split("=");
+          const [columnTwo, idTwo] = two.split("=");
+          // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
+          const [meta1, meta2] =
+            collection.columnName === columnOne
+              ? [collection.meta, collection.otherMeta]
+              : [collection.otherMeta, collection.meta];
+          return {
+            op: "and",
+            conditions: [
+              { alias, column: columnOne, cond: { kind: "eq", value: keyToNumber(meta1, idOne) } },
+              { alias, column: columnTwo, cond: { kind: "eq", value: keyToNumber(meta2, idTwo) } },
+            ],
+          };
+        }),
+      },
+    ],
+    orderBys: [{ alias, column: "id", order: "ASC" }],
+  };
+
+  const rows = await em.driver.executeFind(em, query, {});
 
   const column1 = collection.columnName;
   const column2 = collection.otherColumnName;

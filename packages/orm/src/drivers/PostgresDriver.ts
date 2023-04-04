@@ -16,15 +16,12 @@ import {
   hasSerde,
   keyToNumber,
   maybeResolveReferenceToId,
-  OneToManyCollection,
   ParsedFindQuery,
   PrimitiveField,
   tagIds,
 } from "../index";
-import { ManyToManyCollection } from "../relations";
-import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
-import { getOrSet, partition, zeroTo } from "../utils";
+import { partition, zeroTo } from "../utils";
 import { buildKnexQuery } from "./buildKnexQuery";
 import { Driver } from "./Driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
@@ -55,98 +52,6 @@ export class PostgresDriver implements Driver {
 
   constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
-  }
-
-  load<T extends Entity>(
-    em: EntityManager,
-    meta: EntityMetadata<T>,
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-    if (!needsClassPerTableJoins(meta)) {
-      return knex.select("*").from(meta.tableName).whereIn("id", untaggedIds).orderBy("id");
-    } else {
-      const q = knex.select("b.*").from(`${meta.tableName} AS b`);
-      addTablePerClassJoinsAndClassTag(knex, meta, q);
-      q.whereIn("b.id", untaggedIds).orderBy("b.id");
-      return q;
-    }
-  }
-
-  loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<JoinRow[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-
-    // Break out `column_id=string` keys out
-    const columns: Record<string, string[]> = {};
-    keys.forEach((key) => {
-      const [columnId, id] = key.split("=");
-      getOrSet(columns, columnId, []).push(id);
-    });
-
-    // Or together `where tag_id in (...)` or `book_id in (...)`
-    let query = knex.select("*").from(collection.joinTableName);
-    Object.entries(columns).forEach(([columnId, values]) => {
-      // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-      const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
-      query = query.orWhereIn(
-        columnId,
-        values.map((id) => keyToNumber(meta, id)!),
-      );
-    });
-
-    return query.orderBy("id");
-  }
-
-  findManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<JoinRow[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-
-    // Or together `where (tag_id = X and book_id = Y)` or `(book_id = B and tag_id = A)`
-    let query = knex.select("*").from(collection.joinTableName);
-    keys.forEach((key) => {
-      const [one, two] = key.split(",");
-      const [columnOne, idOne] = one.split("=");
-      const [columnTwo, idTwo] = two.split("=");
-      const [meta1, meta2] =
-        collection.columnName === columnOne
-          ? [collection.meta, collection.otherMeta]
-          : [collection.otherMeta, collection.meta];
-      // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-      query = query.orWhere((q) => {
-        q.where(columnOne, keyToNumber(meta1, idOne)).andWhere(columnTwo, keyToNumber(meta2, idTwo));
-      });
-    });
-
-    return query.orderBy("id");
-  }
-
-  findOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<U[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-    let query = knex.select("*").from(collection.otherMeta.tableName);
-    // Or together `where (id = X and book_id = Y)`
-    keys.forEach((key) => {
-      const [one, two] = key.split(",");
-      // columnOne is the `id=`, so is really the "other" side of the o2m
-      const [columnOne, idOne] = one.split("=");
-      const [columnTwo, idTwo] = two.split("=");
-      const [meta1, meta2] = [collection.otherMeta, collection.meta];
-      // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-      query = query.orWhere((q) => {
-        q.where(columnOne, keyToNumber(meta1, idOne)).andWhere(columnTwo, keyToNumber(meta2, idTwo));
-      });
-    });
-    return query.orderBy("id");
   }
 
   async find<T extends Entity>(
@@ -583,37 +488,6 @@ function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, E
       });
   });
   return [...entitiesByType.entries()];
-}
-
-// We should eventually delete this and have all callers use `ParsedFindQuery`
-function addTablePerClassJoinsAndClassTag(
-  knex: Knex,
-  meta: EntityMetadata<any>,
-  q: QueryBuilder,
-  mainAlias = "b",
-): void {
-  // When `.load(Publisher)` is called, join in sub-tables like `SmallPublisher` and `LargePublisher`
-  meta.subTypes.forEach((st, i) => {
-    q.select(`s${i}.*`);
-    q.leftOuterJoin(`${st.tableName} AS s${i}`, `${mainAlias}.id`, `s${i}.id`);
-  });
-  // When `.load(SmallPublisher)` is called, join in base tables like `Publisher`
-  meta.baseTypes.forEach((bt, i) => {
-    q.select(`b${i}.*`);
-    q.join(`${bt.tableName} AS b${i}`, `${mainAlias}.id`, `b${i}.id`);
-  });
-  // Add an explicit `AS id` to avoid ambiguous id columns
-  q.select(`${mainAlias}.id AS id`);
-  // We only need subtype detection if loading from the base type
-  if (meta.subTypes.length > 0) {
-    q.select(
-      knex.raw(
-        `CASE ${meta.subTypes.map((st, i) => `WHEN s${i}.id IS NOT NULL THEN '${st.type}'`).join(" ")} ELSE '${
-          meta.type
-        }' END as __class`,
-      ),
-    );
-  }
 }
 
 export function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {

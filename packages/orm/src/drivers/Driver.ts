@@ -9,14 +9,6 @@ import { JoinRowTodo, Todo } from "../Todo";
 
 /** Isolates all SQL calls that joist needs to make to fetch/save data. */
 export interface Driver {
-  /** Loads a given m2m relation for potentially multiple entities. */
-  loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    // encoded tuples of `foo_id=2`, `bar_id=3`
-    keys: readonly string[],
-  ): Promise<JoinRow[]>;
-
   /** Just finds presence in a m2m w/o loading the full relation. */
   findManyToMany<T extends Entity, U extends Entity>(
     em: EntityManager,

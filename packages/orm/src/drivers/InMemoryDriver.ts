@@ -3,7 +3,7 @@ import { Entity } from "../Entity";
 import { FilterAndSettings, ValueFilter } from "../EntityFilter";
 import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
-import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId, unsafeDeTagIds } from "../keys";
+import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId } from "../keys";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
 import { ManyToManyCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
@@ -176,23 +176,6 @@ export class InMemoryDriver implements Driver {
         });
       }
     }
-  }
-
-  async loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<JoinRow[]> {
-    this.onQuery();
-    const ids: Record<string, string[]> = {};
-    keys.forEach((key) => {
-      const [column, id] = key.split("=");
-      (ids[column] ||= []).push(unsafeDeTagIds([id])[0]);
-    });
-    const rows = Object.values(this.rowsOfTable(collection.joinTableName));
-    return rows.filter((row) => {
-      return Object.entries(ids).some(([column, ids]) => ids.includes(String(row[column])));
-    });
   }
 
   async findManyToMany<T extends Entity, U extends Entity>(

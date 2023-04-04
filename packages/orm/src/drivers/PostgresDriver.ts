@@ -23,7 +23,7 @@ import {
 import { ManyToManyCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
-import { getOrSet, partition, zeroTo } from "../utils";
+import { partition, zeroTo } from "../utils";
 import { buildKnexQuery } from "./buildKnexQuery";
 import { Driver } from "./Driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
@@ -54,34 +54,6 @@ export class PostgresDriver implements Driver {
 
   constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
-  }
-
-  loadManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<JoinRow[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-
-    // Break out `column_id=string` keys out
-    const columns: Record<string, string[]> = {};
-    keys.forEach((key) => {
-      const [columnId, id] = key.split("=");
-      getOrSet(columns, columnId, []).push(id);
-    });
-
-    // Or together `where tag_id in (...)` or `book_id in (...)`
-    let query = knex.select("*").from(collection.joinTableName);
-    Object.entries(columns).forEach(([columnId, values]) => {
-      // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-      const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
-      query = query.orWhereIn(
-        columnId,
-        values.map((id) => keyToNumber(meta, id)!),
-      );
-    });
-
-    return query.orderBy("id");
   }
 
   findManyToMany<T extends Entity, U extends Entity>(

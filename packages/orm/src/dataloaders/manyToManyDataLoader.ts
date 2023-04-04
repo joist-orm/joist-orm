@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
-import { keyToString, ManyToManyCollection } from "../index";
+import { abbreviation, getMetadata, keyToNumber, keyToString, ManyToManyCollection, ParsedFindQuery } from "../index";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { getOrSet } from "../utils";
 
@@ -40,7 +40,35 @@ async function load<T extends Entity, U extends Entity>(
   // Keep a reference to our row to track updates/deletes
   const emJoinRows = getOrSet(em.__data.joinRows, joinTableName, []);
 
-  const rows = await em.driver.loadManyToMany(em, collection, keys);
+  // Break out `column_id=string` keys out
+  const columns: Record<string, string[]> = {};
+  keys.forEach((key) => {
+    const [columnId, id] = key.split("=");
+    getOrSet(columns, columnId, []).push(id);
+  });
+
+  const alias = abbreviation(collection.joinTableName);
+  const query: ParsedFindQuery = {
+    selects: [`"${alias}".*`],
+    tables: [{ alias, join: "primary", table: collection.joinTableName }],
+    conditions: [],
+    // Or together `where tag_id in (...)` or `book_id in (...)`
+    complexConditions: [
+      {
+        op: "or",
+        conditions: Object.entries(columns).map(([columnId, values]) => {
+          // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
+          const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
+          return { alias, column: columnId, cond: { kind: "in", value: values.map((id) => keyToNumber(meta, id)!) } };
+        }),
+      },
+    ],
+    orderBys: [{ alias, column: "id", order: "ASC" }],
+  };
+
+  // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
+
+  const rows = await em.driver.executeFind(em, query, {});
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
   const column1 = collection.columnName;

@@ -1,6 +1,6 @@
 import { Author, Book, newBook, newTag, Tag } from "@src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
-import { driver, newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/setupDbTests";
 import { getMetadata, setField } from "joist-orm";
 
 // This will test whatever driver the test suite is currently being run against
@@ -98,21 +98,5 @@ describe("Driver", () => {
       const rows = await select("books_to_tags");
       expect(rows).toMatchObject([]);
     });
-  });
-
-  it("can loadManyToMany", async () => {
-    // Given a book with two tags
-    await insertAuthor({ first_name: "a1" });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertTag({ name: "t1" });
-    await insertTag({ name: "t2" });
-    await insertBookToTag({ book_id: 1, tag_id: 1 });
-    await insertBookToTag({ book_id: 1, tag_id: 2 });
-    // And we create a dummy book to get the tags collection
-    const em = newEntityManager();
-    const b2 = em.create(Book, { title: "b2", author: undefined! });
-    // Purposefully using the non-dummy id 1
-    const rows = await driver.loadManyToMany(em, b2.tags as any, ["book_id=b:1"]);
-    expect(rows.length).toEqual(2);
   });
 });

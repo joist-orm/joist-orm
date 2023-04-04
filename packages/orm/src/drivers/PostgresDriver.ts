@@ -16,7 +16,6 @@ import {
   hasSerde,
   keyToNumber,
   maybeResolveReferenceToId,
-  OneToManyCollection,
   ParsedFindQuery,
   PrimitiveField,
   tagIds,
@@ -124,28 +123,6 @@ export class PostgresDriver implements Driver {
       });
     });
 
-    return query.orderBy("id");
-  }
-
-  findOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<U[]> {
-    const knex = this.getMaybeInTxnKnex(em);
-    let query = knex.select("*").from(collection.otherMeta.tableName);
-    // Or together `where (id = X and book_id = Y)`
-    keys.forEach((key) => {
-      const [one, two] = key.split(",");
-      // columnOne is the `id=`, so is really the "other" side of the o2m
-      const [columnOne, idOne] = one.split("=");
-      const [columnTwo, idTwo] = two.split("=");
-      const [meta1, meta2] = [collection.otherMeta, collection.meta];
-      // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-      query = query.orWhere((q) => {
-        q.where(columnOne, keyToNumber(meta1, idOne)).andWhere(columnTwo, keyToNumber(meta2, idTwo));
-      });
-    });
     return query.orderBy("id");
   }
 

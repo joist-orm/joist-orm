@@ -4,12 +4,7 @@ import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ParsedFindQuery } from "../QueryParser";
-import {
-  ManyToManyCollection,
-  ManyToManyLargeCollection,
-  OneToManyCollection,
-  OneToManyLargeCollection,
-} from "../relations";
+import { ManyToManyCollection, ManyToManyLargeCollection } from "../relations";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { JoinRowTodo, Todo } from "../Todo";
 
@@ -37,14 +32,6 @@ export interface Driver {
     // encoded tuples of `foo_id=2,bar_id=3`, `bar_id=4,foo_id=5`
     keys: readonly string[],
   ): Promise<JoinRow[]>;
-
-  /** Bulk loads selective rows in a m2o, for all entities encoded in `untaggedIds`. */
-  findOneToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
-    // encoded tuples of `id=2,bar_id=3`
-    untaggedIds: readonly string[],
-  ): Promise<unknown[]>;
 
   find<T extends Entity>(
     em: EntityManager,

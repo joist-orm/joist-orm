@@ -3,10 +3,8 @@ import { Entity } from "../Entity";
 import { FilterAndSettings, ValueFilter } from "../EntityFilter";
 import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
-import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId, tagId } from "../keys";
+import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId } from "../keys";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
-import { ManyToManyCollection } from "../relations";
-import { JoinRow } from "../relations/ManyToManyCollection";
 import { hasSerde } from "../serde";
 import { JoinRowTodo, Todo } from "../Todo";
 import { fail, partition } from "../utils";
@@ -176,23 +174,6 @@ export class InMemoryDriver implements Driver {
         });
       }
     }
-  }
-
-  async findManyToMany<T extends Entity, U extends Entity>(
-    em: EntityManager,
-    collection: ManyToManyCollection<T, U>,
-    keys: readonly string[],
-  ): Promise<JoinRow[]> {
-    this.onQuery();
-    const rows = Object.values(this.rowsOfTable(collection.joinTableName));
-    const set = new Set(keys);
-    const [column1, column2] = [collection.columnName, collection.otherColumnName];
-    const [m1, m2] = [collection.meta, collection.otherMeta];
-    return rows.filter((row) => {
-      const key1 = `${column1}=${tagId(m1, row[column1])},${column2}=${tagId(m2, row[column2])}`;
-      const key2 = `${column2}=${tagId(m2, row[column2])},${column1}=${tagId(m1, row[column1])}`;
-      return set.has(key1) || set.has(key2);
-    });
   }
 
   transaction<T>(

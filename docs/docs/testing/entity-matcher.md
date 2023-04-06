@@ -10,6 +10,12 @@ There are two main benefits:
 - Automatic loading of relations
 - Prettier actual vs. expected output
 
+:::info
+
+To use `toMatchEntity`, you must have `joist-test-utils` installed, which is not installed by default with Joist.
+
+:::
+
 ### Automatic Loading of Relations
 
 A potentially unwieldy pattern in tests is asserting against a "subtree" of data that was not initially loaded, i.e.:
@@ -88,7 +94,7 @@ Note that if an entity is new, i.e. the test has not done `em.flush` (which is f
 In your `setupTests.ts`, add:
 
 ```typescript
-import { toMatchEntity } from "joist-test-utils.md";
+import { toMatchEntity } from "joist-test-utils";
 
 expect.extend({ toMatchEntity });
 ```

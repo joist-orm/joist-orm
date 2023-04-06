@@ -7,7 +7,7 @@ Joist has several ways to load entities, and which to use depends on how much co
 
 :::tip
 
-Joist's primary focus is not "_never_ having to hand-write SQL", so it is not a full-fledged query builder (like [Knex](https://knexjs.org/) or [Kelsey](https://github.com/koskimas/kysely)); instead it focuses on robust domain modeling, with validation rules, reactive derived values, etc.
+Joist's primary focus is not "_never_ having to hand-write SQL", so it is not a full-fledged query builder (like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely)); instead it focuses on robust domain modeling, with validation rules, reactive derived values, etc.
 
 So it's expected to, for advanced/complicated queries, occasionally use a 3rd party query builder in addition to Joist, as covered in Approach 3.
 
@@ -61,9 +61,9 @@ See [Find Queries](./queries-find) for more documentation and examples.
 
 ### 3. Other Query Builders
 
-For query that grow outside what `em.find` can provide, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kelsey](https://github.com/koskimas/kysely).
+For queries that grow outside what `em.find` can provide, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely).
 
-Knex would be a natural choice, because Joist uses Knex as an internal dependency, but Kelsey would be fine too.
+Knex would be a natural choice, because Joist uses Knex as an internal dependency, but Kysely would be fine too.
 
 In particular, any queries that need to:
 

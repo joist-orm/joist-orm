@@ -12,8 +12,8 @@ type HasTagName = { tagName: string; idType: "int" | "uuid" };
 
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
-export function maybeResolveReferenceToId(value: any): string | undefined {
-  return typeof value === "number" || typeof value === "string" ? value : value?.idTagged;
+export function maybeResolveReferenceToId(value: any, enforceTagged = true): string | undefined {
+  return typeof value === "number" || typeof value === "string" ? value : enforceTagged ? value?.idTagged : value?.id;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unless its undefined. */
@@ -57,6 +57,10 @@ export function assertIdsAreTagged(keys: readonly string[]): void {
   if (invalidKeys.length > 0) {
     throw new Error(`Some keys are missing tags ${invalidKeys}`);
   }
+}
+
+export function isTaggedId(id: string) {
+  return id.indexOf(tagDelimiter) !== -1;
 }
 
 export function assertIdIsTagged(key: string): void {

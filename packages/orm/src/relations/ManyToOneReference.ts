@@ -6,11 +6,13 @@ import {
   ensureNotDeleted,
   ensureTagged,
   fail,
+  isTaggedId,
   maybeResolveReferenceToId,
   OneToManyLargeCollection,
   OneToOneReferenceImpl,
   Reference,
   setField,
+  tagId,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
@@ -134,13 +136,22 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   /** Returns the tagged id of the current value. */
-  get id(): IdOf<U> | N {
+  private get idTagged(): IdOf<U> | N {
     ensureNotDeleted(this.#entity, "pending");
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
   }
 
+  /** Returns the id of the current value. */
+  get id(): IdOf<U> | N {
+    ensureNotDeleted(this.#entity, "pending");
+    return maybeResolveReferenceToId(this.current(), false) as IdOf<U> | N;
+  }
+
   set id(id: IdOf<U> | N) {
     ensureNotDeleted(this.#entity, "pending");
+    if (id && !isTaggedId(id)) {
+      id = tagId(this.otherMeta, id) as IdOf<U>;
+    }
 
     const previous = this.maybeFindEntity();
     const changed = setField(this.#entity, this.fieldName, id);
@@ -329,7 +340,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
    */
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
-    return this.loaded ?? (this.id !== undefined ? this.#entity.em.getEntity(this.id) : undefined);
+    const { idTagged } = this;
+    return this.loaded ?? (idTagged !== undefined ? this.#entity.em.getEntity(idTagged) : undefined);
   }
 
   [RelationT]: T = null!;

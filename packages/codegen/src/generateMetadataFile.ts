@@ -29,6 +29,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       type: "${entity.name}",
       baseType: ${maybeBaseType},
       idType: "${meta.idDbType}",
+      idTagged: ${config.idType !== "untagged-string"},
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
       fields: ${fields},

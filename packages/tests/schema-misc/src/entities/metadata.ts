@@ -13,6 +13,7 @@ export const artistMeta: EntityMetadata<Artist> = {
   type: "Artist",
   baseType: undefined,
   idType: "uuid",
+  idTagged: true,
   tagName: "artist",
   tableName: "artists",
   fields: {
@@ -38,6 +39,7 @@ export const authorMeta: EntityMetadata<Author> = {
   type: "Author",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "a",
   tableName: "authors",
   fields: {
@@ -63,6 +65,7 @@ export const bookMeta: EntityMetadata<Book> = {
   type: "Book",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "b",
   tableName: "book",
   fields: {
@@ -85,6 +88,7 @@ export const paintingMeta: EntityMetadata<Painting> = {
   type: "Painting",
   baseType: undefined,
   idType: "uuid",
+  idTagged: true,
   tagName: "p",
   tableName: "paintings",
   fields: {

@@ -12,8 +12,8 @@ type HasTagName = { tagName: string; idType: "int" | "uuid" };
 
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
-export function maybeResolveReferenceToId(value: any, enforceTagged = true): string | undefined {
-  return typeof value === "number" || typeof value === "string" ? value : enforceTagged ? value?.idTagged : value?.id;
+export function maybeResolveReferenceToId(value: any): string | undefined {
+  return typeof value === "number" || typeof value === "string" ? value : value?.idTagged;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unless its undefined. */

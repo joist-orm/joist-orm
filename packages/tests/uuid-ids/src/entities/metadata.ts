@@ -13,6 +13,7 @@ export const authorMeta: EntityMetadata<Author> = {
   type: "Author",
   baseType: undefined,
   idType: "uuid",
+  idTagged: true,
   tagName: "a",
   tableName: "authors",
   fields: {
@@ -38,6 +39,7 @@ export const bookMeta: EntityMetadata<Book> = {
   type: "Book",
   baseType: undefined,
   idType: "uuid",
+  idTagged: true,
   tagName: "b",
   tableName: "books",
   fields: {

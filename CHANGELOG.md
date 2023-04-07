@@ -1,3 +1,10 @@
+## [1.72.1](https://github.com/stephenh/joist-ts/compare/v1.72.0...v1.72.1) (2023-04-07)
+
+
+### Bug Fixes
+
+* Fix m2o.id can return untagged ids. ([#608](https://github.com/stephenh/joist-ts/issues/608)) ([7b5247a](https://github.com/stephenh/joist-ts/commit/7b5247ac845878fa784ef60081c4b7f738dedd5b)), closes [#607](https://github.com/stephenh/joist-ts/issues/607)
+
 # [1.72.0](https://github.com/stephenh/joist-ts/compare/v1.71.1...v1.72.0) (2023-04-02)
 
 

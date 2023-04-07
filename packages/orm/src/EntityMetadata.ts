@@ -186,6 +186,10 @@ export function getAllMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
   return [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
+export function getBaseAndSelfMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
+  return [...meta.baseTypes, meta];
+}
+
 export function getBaseMeta(meta: EntityMetadata<any>): EntityMetadata<any> {
   if (!meta.baseType) {
     return meta;

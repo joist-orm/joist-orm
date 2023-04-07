@@ -52,4 +52,17 @@ describe("Author", () => {
       title: "b1",
     });
   });
+
+  it("can get an untagged m2o.id", async () => {
+    const em = newEntityManager();
+    // Given a book with an author
+    const [a1, a2] = [newAuthor(em), newAuthor(em)];
+    const b1 = newBook(em, { author: a1 });
+    await em.flush();
+    // We can access the id and not see its tag
+    expect(b1.author.id).toBe("00000000-0000-0000-000a-000000000000");
+    // And we can change the id via a2's untagge did
+    b1.author.id = a2.idOrFail;
+    await em.flush();
+  });
 });

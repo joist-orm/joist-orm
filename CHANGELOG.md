@@ -1,3 +1,10 @@
+## [1.72.2](https://github.com/stephenh/joist-ts/compare/v1.72.1...v1.72.2) (2023-04-07)
+
+
+### Bug Fixes
+
+* Fix m2o.id when the value is still a string. ([#611](https://github.com/stephenh/joist-ts/issues/611)) ([26f8162](https://github.com/stephenh/joist-ts/commit/26f816286712522fb516f5ba427db8388b3113cd))
+
 ## [1.72.1](https://github.com/stephenh/joist-ts/compare/v1.72.0...v1.72.1) (2023-04-07)
 
 

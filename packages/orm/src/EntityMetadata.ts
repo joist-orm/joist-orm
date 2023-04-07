@@ -20,6 +20,7 @@ export interface EntityMetadata<T extends Entity> {
   cstr: MaybeAbstractEntityConstructor<T>;
   type: string;
   idType: "int" | "uuid";
+  idTagged: boolean;
   tableName: string;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;

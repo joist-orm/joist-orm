@@ -65,6 +65,7 @@ export const authorMeta: EntityMetadata<Author> = {
   type: "Author",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "a",
   tableName: "authors",
   fields: {
@@ -111,6 +112,7 @@ export const authorStatMeta: EntityMetadata<AuthorStat> = {
   type: "AuthorStat",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "as",
   tableName: "author_stats",
   fields: {
@@ -144,6 +146,7 @@ export const bookMeta: EntityMetadata<Book> = {
   type: "Book",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "b",
   tableName: "books",
   fields: {
@@ -176,6 +179,7 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   type: "BookAdvance",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "ba",
   tableName: "book_advances",
   fields: {
@@ -201,6 +205,7 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
   type: "BookReview",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "br",
   tableName: "book_reviews",
   fields: {
@@ -227,6 +232,7 @@ export const commentMeta: EntityMetadata<Comment> = {
   type: "Comment",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "comment",
   tableName: "comments",
   fields: {
@@ -265,6 +271,7 @@ export const criticMeta: EntityMetadata<Critic> = {
   type: "Critic",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "c",
   tableName: "critics",
   fields: {
@@ -291,6 +298,7 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
   type: "CriticColumn",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "cc",
   tableName: "critic_columns",
   fields: {
@@ -315,6 +323,7 @@ export const imageMeta: EntityMetadata<Image> = {
   type: "Image",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "i",
   tableName: "images",
   fields: {
@@ -342,6 +351,7 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
   type: "LargePublisher",
   baseType: "Publisher",
   idType: "int",
+  idTagged: true,
   tagName: "p",
   tableName: "large_publishers",
   fields: {
@@ -364,6 +374,7 @@ export const publisherMeta: EntityMetadata<Publisher> = {
   type: "Publisher",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "p",
   tableName: "publishers",
   fields: {
@@ -398,6 +409,7 @@ export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
   type: "PublisherGroup",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "pg",
   tableName: "publisher_groups",
   fields: {
@@ -423,6 +435,7 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   type: "SmallPublisher",
   baseType: "Publisher",
   idType: "int",
+  idTagged: true,
   tagName: "p",
   tableName: "small_publishers",
   fields: {
@@ -445,6 +458,7 @@ export const tagMeta: EntityMetadata<Tag> = {
   type: "Tag",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "t",
   tableName: "tags",
   fields: {
@@ -470,6 +484,7 @@ export const userMeta: EntityMetadata<User> = {
   type: "User",
   baseType: undefined,
   idType: "int",
+  idTagged: true,
   tagName: "u",
   tableName: "users",
   fields: {

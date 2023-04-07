@@ -63,6 +63,7 @@ describe("Author", () => {
     expect(b1.author.id).toBe("00000000-0000-0000-000a-000000000000");
     // And we can change the id via a2's untagge did
     b1.author.id = a2.idOrFail;
+    expect(b1.author.id).toBe("00000000-0000-0000-000a-000000000001");
     await em.flush();
   });
 });

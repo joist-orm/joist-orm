@@ -2,6 +2,7 @@ import { Entity, isEntity } from "../Entity";
 import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
 import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import {
+  deTagId,
   deTagIds,
   ensureNotDeleted,
   ensureTagged,
@@ -144,7 +145,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   /** Returns the id of the current value. */
   get id(): IdOf<U> | N {
     ensureNotDeleted(this.#entity, "pending");
-    return maybeResolveReferenceToId(this.current(), false) as IdOf<U> | N;
+    // If current is a string, we might need to detag it...
+    const id = maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+    if (!this.otherMeta.idTagged && id) {
+      return deTagId(this.otherMeta, id) as IdOf<U>;
+    }
+    return id;
   }
 
   set id(id: IdOf<U> | N) {

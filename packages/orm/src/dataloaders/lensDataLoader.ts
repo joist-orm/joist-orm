@@ -5,7 +5,13 @@ import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
 import { deTagIds, tagId } from "../keys";
 import { mapPathsToTarget } from "../loadLens";
 import { abbreviation } from "../QueryBuilder";
-import { addTablePerClassJoinsAndClassTag, ColumnCondition, ParsedFindQuery, ParsedTable } from "../QueryParser";
+import {
+  addTablePerClassJoinsAndClassTag,
+  ColumnCondition,
+  maybeAddOrderBy,
+  ParsedFindQuery,
+  ParsedTable,
+} from "../QueryParser";
 import { getOrSet, groupBy } from "../utils";
 
 /**
@@ -57,6 +63,7 @@ export function lensDataLoader<T extends Entity>(
       const conditions: ColumnCondition[] = [];
       const query: ParsedFindQuery = { selects, tables, conditions };
       addTablePerClassJoinsAndClassTag(query, target, alias, true);
+      maybeAddOrderBy(query, target, alias);
 
       function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
         if (other.timestampFields.deletedAt) {

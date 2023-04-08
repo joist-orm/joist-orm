@@ -151,8 +151,8 @@ export function sortKeys<T extends object>(o: T): T {
     }, {} as any as T);
 }
 
-export function q(s: string | undefined): string | undefined {
-  return s === undefined ? undefined : `"${s}"`;
+export function q(s: string | undefined): string {
+  return s === undefined ? "undefined" : `"${s}"`;
 }
 
 function isIgnored(config: Config, t: Table): boolean {

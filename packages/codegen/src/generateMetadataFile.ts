@@ -34,6 +34,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       tableName: "${meta.tableName}",
       fields: ${fields},
       allFields: {},
+      orderBy: ${q(config.entities[meta.name]?.orderBy)},
       timestampFields: {
         createdAt: ${q(createdAt?.fieldName)},
         updatedAt: ${q(updatedAt?.fieldName)},

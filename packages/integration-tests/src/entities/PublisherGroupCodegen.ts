@@ -103,6 +103,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager> {
     "publishers",
     "group",
     "group_id",
+    undefined,
   );
 
   readonly critics: LargeCollection<PublisherGroup, Critic> = hasLargeMany(criticMeta, "critics", "group", "group_id");

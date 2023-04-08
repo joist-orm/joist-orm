@@ -85,7 +85,7 @@ export function parseFindQuery(
   const complexConditions: ParsedExpressionFilter[] = [];
   const orderBys: ParsedOrderBy[] = [];
   const {
-    orderBy = {},
+    orderBy = undefined,
     conditions: expression = undefined,
     softDeletes = "exclude",
     pruneJoins = true,
@@ -315,6 +315,8 @@ export function parseFindQuery(
   }
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
+  } else {
+    maybeAddOrderBy(query, meta, alias);
   }
 
   if (orderBys.length > 0) {
@@ -580,6 +582,14 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
       return filter;
     default:
       throw assertNever(filter);
+  }
+}
+
+export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any>, alias: string): void {
+  if (meta.orderBy) {
+    const field = meta.allFields[meta.orderBy] ?? fail(`${meta.orderBy} not found on ${meta.tableName}`);
+    query.orderBys ??= [];
+    query.orderBys.push({ alias, column: field.serde!.columns[0].columnName, order: "ASC" });
   }
 }
 

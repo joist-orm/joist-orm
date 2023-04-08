@@ -50,7 +50,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "./symbols";
-import { fail } from "./utils";
+import { fail, q } from "./utils";
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
@@ -238,13 +238,14 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
   // Add OneToMany
   const o2m = meta.oneToManys.map((o2m) => {
-    const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
+    const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
     return code`
       readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasMany}(
         ${otherEntity.metaType},
         "${fieldName}",
         "${otherFieldName}",
-        "${otherColumnName}"
+        "${otherColumnName}",
+        ${q(orderBy)},
       );
     `;
   });

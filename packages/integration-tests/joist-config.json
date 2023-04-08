@@ -15,10 +15,11 @@
         "numberOfPublicReviews": { "derived": "async" },
         "wasEverPopular": { "protected": true }
       },
+      "relations": { "books": { "orderBy": "order" } },
       "tag": "a"
     },
     "AuthorStat": { "tag": "as" },
-    "Book": { "tag": "b" },
+    "Book": { "orderBy": "title", "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" } }, "tag": "br" },
     "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "comment" },

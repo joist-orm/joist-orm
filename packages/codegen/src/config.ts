@@ -16,6 +16,7 @@ export interface FieldConfig {
 export interface RelationConfig {
   polymorphic?: "notNull" | true;
   large?: true;
+  orderBy?: string;
 }
 
 export interface EntityConfig {
@@ -25,6 +26,7 @@ export interface EntityConfig {
   relations?: Record<string, RelationConfig>;
   /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
   abstract?: boolean;
+  orderBy?: string;
 }
 
 export interface TimestampConfig {

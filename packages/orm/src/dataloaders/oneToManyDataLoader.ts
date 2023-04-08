@@ -34,6 +34,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       };
 
       addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+      // Skip maybeAddOrderBy b/c we'll sort in memory anyway
       // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
       const rows = await em.driver.executeFind(em, query, {});

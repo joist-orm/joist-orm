@@ -90,6 +90,7 @@ export abstract class LargePublisherCodegen extends Publisher {
     "critics",
     "favoriteLargePublisher",
     "favorite_large_publisher_id",
+    undefined,
   );
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {

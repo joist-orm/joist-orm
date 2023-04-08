@@ -28,6 +28,7 @@ export interface EntityMetadata<T extends Entity> {
   fields: Record<string, Field>;
   allFields: Record<string, Field & { aliasSuffix: string }>;
   config: ConfigApi<T, any>;
+  orderBy: (string & keyof T) | undefined;
   timestampFields: TimestampFields;
   factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
   /** The list of base types for this subtype, e.g. for Dog it'd be [Animal, Mammal]. */

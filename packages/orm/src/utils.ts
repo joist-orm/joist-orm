@@ -1,4 +1,5 @@
 import { Entity } from "./Entity";
+import { isDefined } from "./EntityManager";
 import { New } from "./loadHints";
 
 export type MaybePromise<T> = T | Promise<T>;
@@ -103,4 +104,18 @@ export function assertNever(x: never): never {
  */
 export function asNew<T extends Entity>(entity: T): New<T> {
   return entity as New<T>;
+}
+
+export function compareValues(av: any, bv: any): number {
+  if (!isDefined(av) || !isDefined(bv)) {
+    return !av && !bv ? 0 : !av ? 1 : -1;
+  } else if (typeof av === "number" && typeof bv === "number") {
+    return av - bv;
+  } else if (typeof av === "string" && typeof bv === "string") {
+    return av.localeCompare(bv);
+  } else if (av instanceof Date && bv instanceof Date) {
+    return (av as Date).getTime() - (bv as Date).getTime();
+  } else {
+    throw new Error(`Unsupported sortBy values ${av}, ${bv}`);
+  }
 }

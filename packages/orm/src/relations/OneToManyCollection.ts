@@ -12,7 +12,7 @@ import {
   OneToManyField,
   sameEntity,
 } from "../index";
-import { remove } from "../utils";
+import { compareValues, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
@@ -23,9 +23,10 @@ export function hasMany<T extends Entity, U extends Entity>(
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
+  orderBy: keyof U | undefined,
 ): Collection<T, U> {
   const entity = currentlyInstantiatingEntity as T;
-  return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
+  return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName, orderBy);
 }
 
 export class OneToManyCollection<T extends Entity, U extends Entity>
@@ -34,6 +35,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
+  readonly #orderBy: keyof U | undefined;
   private loaded: U[] | undefined;
   // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
   // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
@@ -48,10 +50,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
+    orderBy: keyof U | undefined,
   ) {
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    this.#orderBy = orderBy;
   }
 
   // opts is an internal parameter
@@ -261,9 +265,14 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
   private filterDeleted(entities: U[], opts?: { withDeleted?: boolean }): U[] {
-    return opts?.withDeleted === true
-      ? [...entities]
-      : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    const list =
+      opts?.withDeleted === true
+        ? [...entities]
+        : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
+    if (this.#orderBy) {
+      list.sort((a, b) => compareValues(a[this.#orderBy!], b[this.#orderBy!]));
+    }
+    return list;
   }
 
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */

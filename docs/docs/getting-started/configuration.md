@@ -198,7 +198,7 @@ export interface EntityConfig {
   tableName?: string;
   fields?: Record<string, FieldConfig>;
   relations?: Record<string, RelationConfig>;
-  orderBy?: string | undefined;
+  orderBy?: string;
 }
 ```
 
@@ -241,6 +241,8 @@ Allows defining a default `orderBy` for the entity, i.e. if you want to always o
   }
 }
 ```
+
+The `orderBy` value must be the field name of a primitive, synchronous value on the entity.
 
 If unset, Joist will order by `id` by default to ensure deterministic ordering.
 

@@ -54,17 +54,19 @@ export type ValueFilter<V, N> =
   | N
   | undefined
   // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
-  | { eq: V | N | undefined }
-  | { ne: V | N | undefined }
-  | { in: (V | N)[] | undefined }
-  | { nin: (V | N)[] | undefined }
-  | { gt: V | undefined }
-  | { gte: V | undefined }
-  | { lt: V | undefined }
-  | { lte: V | undefined }
-  | { like: V | undefined }
-  | { ilike: V | undefined }
-  | { gte: V | undefined; lte: V | undefined };
+  | {
+      op?: "and" | "or";
+      eq?: V | N | undefined;
+      ne?: V | N | undefined;
+      in?: (V | N)[] | undefined;
+      nin?: (V | N)[] | undefined;
+      gt?: V | undefined;
+      gte?: V | undefined;
+      lt?: V | undefined;
+      lte?: V | undefined;
+      like?: V | undefined;
+      ilike?: V | undefined;
+    };
 
 /** Filters against complex expressions of filters. */
 export type ExpressionFilter = (

@@ -53,6 +53,7 @@ import type { EntityManager } from "./entities";
 export type ImageId = Flavor<string, "Image">;
 
 export interface ImageFields {
+  id: { kind: "primitive"; type: number; unique: true; nullable: false };
   fileName: { kind: "primitive"; type: string; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };

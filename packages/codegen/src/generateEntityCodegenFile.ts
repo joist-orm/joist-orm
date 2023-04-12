@@ -632,6 +632,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 
 // Make our fields type
 function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
+  const id = code`id: { kind: "primitive"; type: ${meta.primaryKey.fieldType}; unique: ${true}; nullable: false };`;
   const primitives = meta.primitives.map((field) => {
     const { fieldName, fieldType, notNull, unique } = field;
     return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(
@@ -657,7 +658,7 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
     return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;
   });
-  return [...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
+  return [id, ...primitives, ...enums, ...pgEnums, ...m2o, ...polys];
 }
 
 // We know the OptIds types are only used in partials, so we make everything optional.

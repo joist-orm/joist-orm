@@ -32,6 +32,7 @@ import type { EntityManager } from "./entities";
 export type ArtistId = Flavor<string, "Artist">;
 
 export interface ArtistFields {
+  id: { kind: "primitive"; type: string; unique: true; nullable: false };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never };
   lastName: { kind: "primitive"; type: string; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };

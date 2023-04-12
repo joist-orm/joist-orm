@@ -47,6 +47,7 @@ import type { EntityManager } from "./entities";
 export type UserId = Flavor<string, "User">;
 
 export interface UserFields {
+  id: { kind: "primitive"; type: number; unique: true; nullable: false };
   name: { kind: "primitive"; type: string; unique: false; nullable: never };
   email: { kind: "primitive"; type: string; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };

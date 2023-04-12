@@ -1850,6 +1850,24 @@ describe("EntityManager.queries", () => {
         conditions: [{ alias: "a", column: "deleted_at", cond: { kind: "is-null" }, pruneable: true }],
       });
     });
+
+    it("allows undefined expressions", async () => {
+      const a = alias(Author);
+      const where = { as: a };
+      const conditionalFilter: ExpressionFilter | undefined = undefined;
+      expect(
+        parseFindQuery(am, where, {
+          conditions: { and: [a.firstName.eq("a"), undefined] },
+        }),
+      ).toEqual({
+        selects: [`"a".*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        conditions: [{ alias: "a", column: "deleted_at", cond: { kind: "is-null" }, pruneable: true }],
+        complexConditions: [
+          { conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a" } }], op: "and" },
+        ],
+      });
+    });
   });
 
   describe("aliases", () => {

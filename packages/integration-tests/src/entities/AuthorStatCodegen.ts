@@ -27,6 +27,7 @@ import type { EntityManager } from "./entities";
 export type AuthorStatId = Flavor<string, "AuthorStat">;
 
 export interface AuthorStatFields {
+  id: { kind: "primitive"; type: number; unique: true; nullable: false };
   smallint: { kind: "primitive"; type: number; unique: false; nullable: never };
   integer: { kind: "primitive"; type: number; unique: false; nullable: never };
   nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined };

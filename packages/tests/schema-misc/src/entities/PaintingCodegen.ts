@@ -33,6 +33,7 @@ import type { EntityManager } from "./entities";
 export type PaintingId = Flavor<string, "Painting">;
 
 export interface PaintingFields {
+  id: { kind: "primitive"; type: string; unique: true; nullable: false };
   title: { kind: "primitive"; type: string; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };

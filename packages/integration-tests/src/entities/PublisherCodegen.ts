@@ -69,6 +69,7 @@ import type { EntityManager } from "./entities";
 export type PublisherId = Flavor<string, "Publisher">;
 
 export interface PublisherFields {
+  id: { kind: "primitive"; type: number; unique: true; nullable: false };
   name: { kind: "primitive"; type: string; unique: false; nullable: never };
   latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined };

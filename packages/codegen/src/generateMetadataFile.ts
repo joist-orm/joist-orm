@@ -28,7 +28,7 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
       cstr: ${entity.type},
       type: "${entity.name}",
       baseType: ${maybeBaseType},
-      idType: "${meta.idDbType}",
+      idType: "${meta.primaryKey.columnType}",
       idTagged: ${config.idType !== "untagged-string"},
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
@@ -58,7 +58,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.idDbType}"),
+      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.primaryKey.columnType}"),
       immutable: true,
     }
   `;

@@ -185,8 +185,7 @@ export type FieldNameOverrides = {
 /** Adapts the generally-great pg-structure metadata into our specific ORM types. */
 export class EntityDbMetadata {
   entity: Entity;
-  // I.e. id for sequences or uuid
-  idDbType: string;
+  primaryKey: PrimitiveField;
   primitives: PrimitiveField[];
   enums: EnumField[];
   pgEnums: PgEnumField[];
@@ -207,13 +206,16 @@ export class EntityDbMetadata {
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
-    this.idDbType =
-      table.columns.filter((c) => c.isPrimaryKey).map((c) => c.type.shortName)[0] ??
-      fail(`No primary key found for ${table.name}`);
 
     if (isSubClassTable(table)) {
       this.baseClassName = tableToEntityName(config, table.columns.get("id").foreignKeys[0].referencedTable);
     }
+
+    this.primaryKey =
+      table.columns
+        .filter((c) => c.isPrimaryKey)
+        .map((column) => newPrimitive(config, this.entity, column, table))[0] ||
+      fail(`No primary key found for ${table.name}`);
 
     this.primitives = table.columns
       .filter((c) => !c.isPrimaryKey && !c.isForeignKey)
@@ -234,7 +236,7 @@ export class EntityDbMetadata {
     this.pgEnums = [
       ...table.columns
         .filter((c) => isPgEnum(c))
-        .map((column) => newPgEnumField(config, this.entity, column, table))
+        .map((column) => newPgEnumField(config, this.entity, column))
         .filter((f) => !f.ignore),
     ];
 
@@ -427,7 +429,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
   };
 }
 
-function newPgEnumField(config: Config, entity: Entity, column: Column, table: Table): PgEnumField {
+function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumField {
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
   const enumName = pascalCase(column.type.name);
@@ -571,7 +573,7 @@ export function oneToOneName(
   } else {
     // If there is a m2o, assume we might conflict, and use the column name to at least be unique
     // Start with `book` from `images.book_id` or `current_draft_book` from `authors.current_draft_book_id`
-    let fieldName = r.foreignKey.columns[0].name.replace(/\_id|Id$/, "");
+    let fieldName = r.foreignKey.columns[0].name.replace(/_id|Id$/, "");
     // Suffix the new type that we're pointing to, to `current_draft_book_author`
     fieldName = `${fieldName}_${keyEntity.name}`;
     // And drop the `book`, to `current_draft__author`
@@ -588,12 +590,12 @@ export function referenceName(config: Config, entity: Entity, r: M2ORelation | O
     polymorphicFieldName(config, r) ??
     // If the name is overridden then use that
     (isFieldNameOverrides(overrides) ? overrides.fieldName : undefined) ??
-    camelCase(column.name.replace(/\_id|Id$/, ""))
+    camelCase(column.name.replace(/_id|Id$/, ""))
   );
 }
 
 function enumFieldName(columnName: string) {
-  return camelCase(columnName.replace(/\_id|Id$/, ""));
+  return camelCase(columnName.replace(/_id|Id$/, ""));
 }
 
 function primitiveFieldName(columnName: string) {
@@ -606,7 +608,7 @@ export function manyToManyName(column: Column) {
   if (isFieldNameOverrides(overrides) && overrides.otherFieldName) {
     return overrides.otherFieldName;
   }
-  return camelCase(plural(column.name.replace(/\_id|Id$/, "")));
+  return camelCase(plural(column.name.replace(/_id|Id$/, "")));
 }
 
 /** Returns the collection name to use on `entity` when referring to `otherEntity`s. */
@@ -633,7 +635,7 @@ export function collectionName(
   // If `books.foo_author_id` and `books.bar_author_id` both exist
   if (r.type !== "m2m" && sourceTable.m2oRelations.filter((r) => r.targetTable === targetTable).length > 1) {
     // Use `fooAuthorBooks`, `barAuthorBooks`
-    singularName = `${column.name.replace(/\_id|Id$/, "")}_${singularName}`;
+    singularName = `${column.name.replace(/_id|Id$/, "")}_${singularName}`;
   }
   // If we've guessed `Book.bookReviews` based on `book_reviews.book_id` --> `bookReviews`, strip the `Book` prefix
   if (singularName.length > singleEntity.name.length && singularName.startsWith(singleEntity.name)) {

@@ -61,6 +61,7 @@ export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEn
 }
 
 export interface CommentFields {
+  id: { kind: "primitive"; type: number; unique: true; nullable: false };
   text: { kind: "primitive"; type: string; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };

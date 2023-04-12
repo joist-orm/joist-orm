@@ -49,6 +49,7 @@ import type { EntityManager } from "./entities";
 export type BookReviewId = Flavor<string, "BookReview">;
 
 export interface BookReviewFields {
+  id: { kind: "primitive"; type: number; unique: true; nullable: false };
   rating: { kind: "primitive"; type: number; unique: false; nullable: never };
   isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };

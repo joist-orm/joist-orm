@@ -1,3 +1,10 @@
+## [1.72.3](https://github.com/stephenh/joist-ts/compare/v1.72.2...v1.72.3) (2023-04-12)
+
+
+### Bug Fixes
+
+* Add id to fields type. ([#614](https://github.com/stephenh/joist-ts/issues/614)) ([9cca93d](https://github.com/stephenh/joist-ts/commit/9cca93db3f7331aef626bb187ff713925ad39e80))
+
 ## [1.72.2](https://github.com/stephenh/joist-ts/compare/v1.72.1...v1.72.2) (2023-04-07)
 
 

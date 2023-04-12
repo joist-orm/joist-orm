@@ -4,6 +4,7 @@ import { keyToString } from "../keys";
 import { Todo } from "../Todo";
 
 export interface IdAssigner {
+  idType: "int" | "uuid";
   assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void>;
 }
 
@@ -14,6 +15,8 @@ export interface IdAssigner {
  * need to first be INSERTed.
  */
 export class SequenceIdAssigner implements IdAssigner {
+  idType = "int" as const;
+
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
     const seqStatements: string[] = [];
     Object.values(todos).forEach((todo) => {
@@ -47,6 +50,8 @@ export class SequenceIdAssigner implements IdAssigner {
  * See {@link TestUuidAssigner} for creating stable-ish ids for tests
  */
 export class RandomUuidAssigner implements IdAssigner {
+  idType = "uuid" as const;
+
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
@@ -73,6 +78,8 @@ export class RandomUuidAssigner implements IdAssigner {
  * ```
  */
 export class TestUuidAssigner implements IdAssigner {
+  idType = "uuid" as const;
+
   private nextId: Record<string, number> = {};
 
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {

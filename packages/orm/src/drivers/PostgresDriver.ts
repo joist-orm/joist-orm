@@ -19,6 +19,7 @@ import {
   maybeResolveReferenceToId,
   ParsedFindQuery,
   PrimitiveField,
+  RandomUuidAssigner,
   tagIds,
 } from "../index";
 import { JoinRowTodo, Todo } from "../Todo";
@@ -32,6 +33,7 @@ let lastNow = new Date();
 
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
+  idAssigners?: { int?: IdAssigner; uuid?: IdAssigner };
 }
 
 /**
@@ -49,10 +51,17 @@ export interface PostgresDriverOpts {
  * - We use a pg-specific bulk update syntax.
  */
 export class PostgresDriver implements Driver {
-  private readonly idAssigner: IdAssigner;
+  private readonly idAssigners: {
+    int?: IdAssigner;
+    uuid?: IdAssigner;
+  };
 
-  constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
-    this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
+  constructor(private readonly knex: Knex, opts: PostgresDriverOpts = {}) {
+    const assigner = opts.idAssigner;
+    this.idAssigners = {
+      int: assigner && assigner.idType === "int" ? assigner : opts.idAssigners?.int ?? new SequenceIdAssigner(),
+      uuid: assigner && assigner.idType === "uuid" ? assigner : opts.idAssigners?.uuid ?? new RandomUuidAssigner(),
+    };
   }
 
   async find<T extends Entity>(
@@ -178,6 +187,8 @@ export class PostgresDriver implements Driver {
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     const knex = this.getMaybeInTxnKnex(em);
+    // partition by idType
+    todos[0].metadata.idType;
     return this.idAssigner.assignNewIds(knex, todos);
   }
 

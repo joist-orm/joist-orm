@@ -652,7 +652,7 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
       : "or" in expression
       ? ["or" as const, expression.or]
       : fail(`Invalid expression ${expression}`);
-  const conditions = expressions.map((exp) => ("and" in exp || "or" in exp ? parseExpression(exp) : exp));
+  const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));
   const [skip, valid] = partition(conditions, (cond) => cond === undefined || cond === skipCondition);
   if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
     return undefined;

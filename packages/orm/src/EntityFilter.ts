@@ -68,6 +68,6 @@ export type ValueFilter<V, N> =
 
 /** Filters against complex expressions of filters. */
 export type ExpressionFilter = (
-  | { and: Array<ExpressionFilter | ColumnCondition> }
-  | { or: Array<ExpressionFilter | ColumnCondition> }
+  | { and: Array<ExpressionFilter | ColumnCondition | undefined> }
+  | { or: Array<ExpressionFilter | ColumnCondition | undefined> }
 ) & { pruneIfUndefined?: "any" | "all" };

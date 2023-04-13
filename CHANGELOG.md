@@ -1,3 +1,10 @@
+# [1.73.0](https://github.com/stephenh/joist-ts/compare/v1.72.5...v1.73.0) (2023-04-13)
+
+
+### Features
+
+* Allow defining a default sort to entities/collections. ([#612](https://github.com/stephenh/joist-ts/issues/612)) ([416fa3d](https://github.com/stephenh/joist-ts/commit/416fa3d37aa75a5ad7e49e862172cb4b5cb36726))
+
 ## [1.72.5](https://github.com/stephenh/joist-ts/compare/v1.72.4...v1.72.5) (2023-04-13)
 
 

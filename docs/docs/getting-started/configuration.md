@@ -242,7 +242,7 @@ Allows defining a default `orderBy` for the entity, i.e. if you want to always o
 }
 ```
 
-The `orderBy` value must be the field name of a primitive, synchronous value on the entity.
+The `orderBy` value must be the field name of a primitive, synchronous value on the entity. Or a field name with an `ASC` / `DESC` suffix, i.e. `"orderBy": "name DESC"`.
 
 If unset, Joist will order by `id` by default to ensure deterministic ordering.
 

@@ -1,4 +1,4 @@
-import { currentlyInstantiatingEntity, deTagIds, ensureNotDeleted, fail, IdOf, LoadedReference, setField } from "../";
+import { currentlyInstantiatingEntity, deTagId, ensureNotDeleted, fail, IdOf, LoadedReference, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
@@ -111,7 +111,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.#otherMeta, [this.id])[0];
+    return this.id && deTagId(this.#otherMeta, this.id);
   }
 
   get idUntaggedOrFail(): string {

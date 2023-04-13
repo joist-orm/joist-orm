@@ -198,6 +198,7 @@ export interface EntityConfig {
   tableName?: string;
   fields?: Record<string, FieldConfig>;
   relations?: Record<string, RelationConfig>;
+  orderBy?: string;
 }
 ```
 
@@ -228,6 +229,22 @@ Allows defining specific entity names for tables, for example if you had a `tbl_
 ```
 
 By default, Joist assumes table names are plural (i.e. `publishers`) and will [`singular`](https://www.npmjs.com/package/pluralize) the name for the entity name (i.e. `Publisher`).
+
+### `orderBy`
+
+Allows defining a default `orderBy` for the entity, i.e. if you want to always order `Publisher` entities by `name` by default, you could setup:
+
+```json
+{
+  "entities": {
+    "Publisher": { "orderBy": "name" }
+  }
+}
+```
+
+The `orderBy` value must be the field name of a primitive, synchronous value on the entity. Or a field name with an `ASC` / `DESC` suffix, i.e. `"orderBy": "name DESC"`.
+
+If unset, Joist will order by `id` by default to ensure deterministic ordering.
 
 ### `entities.fields`
 
@@ -267,6 +284,7 @@ You can configure relations (references and collections to other entities) by se
 export interface RelationConfig {
   polymorphic?: "notNull" | true;
   large?: true;
+  orderBy?: string;
 }
 ```
 
@@ -274,6 +292,7 @@ The supported values are:
 
 * `polymorphic` creates this relation as a [polymorphic relation](/docs/modeling/relations#polymorphic-references), which logical combines several physical foreign keys into a single field
 * `large` indicates that a collection is too big to be fully loaded into memory and changes the generated type to `LargeCollection`  
+* `orderBy` allows setting an order specific to this collection, the value must be a primitive, synchronous field on the entities within the collection
 
 ## Runtime Configuration
 

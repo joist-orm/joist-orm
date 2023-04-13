@@ -197,7 +197,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "b".*, "b".id as id, "a".publisher_id as __source_id from "books" as "b" inner join "authors" as "a" on "a"."id" = "b"."author_id" where "a"."deleted_at" is null and "a"."publisher_id" in ($1) order by "b"."id" asc limit $2"`,
+        `"select "b".*, "b".id as id, "a".publisher_id as __source_id from "books" as "b" inner join "authors" as "a" on "a"."id" = "b"."author_id" where "a"."deleted_at" is null and "a"."publisher_id" in ($1) order by "b"."title" ASC, "b"."id" asc limit $2"`,
       );
     });
 

@@ -27,6 +27,7 @@ export function loadDataLoader<T extends Entity>(
       };
 
       addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+      // Skip maybeAddOrderBy jj
       // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
       const rows = await em.driver.executeFind(em, query, {});

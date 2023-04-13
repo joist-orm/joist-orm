@@ -249,6 +249,7 @@ describe("EntityManager.clone", () => {
         { title: "b2", comments: [{ text: "Ok book" }] },
       ],
     });
+    const [b1, b2] = a1.books.get;
     await em.flush();
 
     // When I ask to clone just the books
@@ -259,8 +260,6 @@ describe("EntityManager.clone", () => {
 
     // Then we expect the author to now have 4 books
     expect(a1.books.get).toHaveLength(4);
-    // and b3/b4 have the same titles as b1/b2, but be different entities
-    const [b1, b2] = a1.books.get;
     expect(b3.title).toEqual(b1.title);
     expect(b3).not.toEqual(b1);
     expect(b4.title).toEqual(b2.title);

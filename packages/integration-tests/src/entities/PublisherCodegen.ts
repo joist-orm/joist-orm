@@ -174,18 +174,31 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
 
-  readonly authors: Collection<Publisher, Author> = hasMany(authorMeta, "authors", "publisher", "publisher_id");
+  readonly authors: Collection<Publisher, Author> = hasMany(
+    authorMeta,
+    "authors",
+    "publisher",
+    "publisher_id",
+    undefined,
+  );
 
   readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
     bookAdvanceMeta,
     "bookAdvances",
     "publisher",
     "publisher_id",
+    undefined,
   );
 
-  readonly comments: Collection<Publisher, Comment> = hasMany(commentMeta, "comments", "parent", "parent_publisher_id");
+  readonly comments: Collection<Publisher, Comment> = hasMany(
+    commentMeta,
+    "comments",
+    "parent",
+    "parent_publisher_id",
+    undefined,
+  );
 
-  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id");
+  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id", undefined);
 
   readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne(
     publisherGroupMeta,

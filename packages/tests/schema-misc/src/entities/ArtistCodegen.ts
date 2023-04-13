@@ -95,7 +95,13 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newArtist>[1];
   };
 
-  readonly paintings: Collection<Artist, Painting> = hasMany(paintingMeta, "paintings", "artist", "artistId");
+  readonly paintings: Collection<Artist, Painting> = hasMany(
+    paintingMeta,
+    "paintings",
+    "artist",
+    "artistId",
+    undefined,
+  );
 
   constructor(em: EntityManager, opts: ArtistOpts) {
     super(em, artistMeta, ArtistCodegen.defaultValues, opts);

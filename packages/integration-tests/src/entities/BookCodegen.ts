@@ -156,11 +156,17 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id");
+  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id", undefined);
 
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id");
+  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id", undefined);
 
-  readonly comments: Collection<Book, Comment> = hasMany(commentMeta, "comments", "parent", "parent_book_id");
+  readonly comments: Collection<Book, Comment> = hasMany(
+    commentMeta,
+    "comments",
+    "parent",
+    "parent_book_id",
+    undefined,
+  );
 
   readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
 

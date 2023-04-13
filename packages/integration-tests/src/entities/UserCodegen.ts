@@ -120,7 +120,13 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
     factoryOptsType: Parameters<typeof newUser>[1];
   };
 
-  readonly createdComments: Collection<User, Comment> = hasMany(commentMeta, "createdComments", "user", "user_id");
+  readonly createdComments: Collection<User, Comment> = hasMany(
+    commentMeta,
+    "createdComments",
+    "user",
+    "user_id",
+    undefined,
+  );
 
   readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne(
     authorMeta,

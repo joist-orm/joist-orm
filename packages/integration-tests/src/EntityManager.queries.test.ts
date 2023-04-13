@@ -180,6 +180,7 @@ describe("EntityManager.queries", () => {
         { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
       ],
       conditions: [{ alias: "a", column: "first_name", cond: { kind: "eq", value: "a2" } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -205,6 +206,7 @@ describe("EntityManager.queries", () => {
         { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
       ],
       conditions: [{ alias: "p", column: "name", cond: { kind: "eq", value: "p2" } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -226,6 +228,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       conditions: [{ alias: "b", column: "author_id", cond: { kind: "eq", value: 2 } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -540,6 +543,7 @@ describe("EntityManager.queries", () => {
         { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
       ],
       conditions: [{ alias: "a", column: "publisher_id", cond: { kind: "eq", value: 2 } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -565,6 +569,7 @@ describe("EntityManager.queries", () => {
         { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
       ],
       conditions: [{ alias: "i", column: "id", cond: { kind: "eq", value: 2 } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -589,6 +594,7 @@ describe("EntityManager.queries", () => {
         { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
       ],
       conditions: [{ alias: "i", column: "type_id", cond: { kind: "eq", value: 1 } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -608,6 +614,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       conditions: [{ alias: "b", column: "author_id", cond: { kind: "eq", value: 4 } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -627,6 +634,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       conditions: [{ alias: "b", column: "author_id", cond: { kind: "eq", value: 4 } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 
@@ -646,6 +654,7 @@ describe("EntityManager.queries", () => {
       selects: [`"b".*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       conditions: [{ alias: "b", column: "author_id", cond: { kind: "in", value: [4] } }],
+      orderBys: [{ alias: "b", column: "title", order: "ASC" }],
     });
   });
 

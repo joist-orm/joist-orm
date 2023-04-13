@@ -53,6 +53,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
       };
 
       addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+      // Skip maybeAddOrderBy b/c we're only returning 1 result
       // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
       const rows = await em.driver.executeFind(em, query, {});

@@ -443,4 +443,15 @@ describe("OneToManyCollection", () => {
     expect((user as any).comments).not.toBeDefined();
     expect(user.createdComments).toBeDefined();
   });
+
+  it("can sort by an specific order", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    const b1 = newBook(em, { author: a, order: 2 });
+    const b2 = newBook(em, { author: a, order: 1 });
+    await em.flush();
+    expect(b1.idOrFail).toBe("b:1");
+    expect(b2.idOrFail).toBe("b:2");
+    expect(a.books.get).toMatchEntity([b2, b1]);
+  });
 });

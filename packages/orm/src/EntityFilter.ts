@@ -1,6 +1,6 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
-import { FieldsOf, FilterOf, OrderOf } from "./EntityManager";
+import { FieldsOf, FilterOf, IdOf, OrderOf } from "./EntityManager";
 import { ColumnCondition } from "./QueryParser";
 
 /**
@@ -28,7 +28,7 @@ export type OrderBy = "ASC" | "DESC";
  * @typeparam F The filter type for the entity, i.e. `AuthorFilter`
  * @typeparam N Either `null | undefined` if the entity can be null, or `never` if it cannot.
  */
-export type EntityFilter<T extends Entity, I, F, N> =
+export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = never> =
   | T
   | T[]
   | I

@@ -10,6 +10,7 @@ import {
   IdOf,
   maybeResolveReferenceToId,
   OneToManyField,
+  OrderBy,
   sameEntity,
 } from "../index";
 import { compareValues, remove } from "../utils";
@@ -23,7 +24,7 @@ export function hasMany<T extends Entity, U extends Entity>(
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
-  orderBy: keyof U | undefined,
+  orderBy: { field: keyof U; direction: OrderBy } | undefined,
 ): Collection<T, U> {
   const entity = currentlyInstantiatingEntity as T;
   return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName, orderBy);
@@ -35,7 +36,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
-  readonly #orderBy: keyof U | undefined;
+  readonly #orderBy: { field: keyof U; direction: OrderBy } | undefined;
   private loaded: U[] | undefined;
   // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
   // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
@@ -50,7 +51,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
-    orderBy: keyof U | undefined,
+    orderBy: { field: keyof U; direction: OrderBy } | undefined,
   ) {
     super();
     this.#entity = entity;
@@ -270,7 +271,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
         ? [...entities]
         : entities.filter((e) => !e.isDeletedEntity && !(e as any).isSoftDeletedEntity);
     if (this.#orderBy) {
-      list.sort((a, b) => compareValues(a[this.#orderBy!], b[this.#orderBy!]));
+      const { field, direction } = this.#orderBy;
+      list.sort((a, b) => compareValues(a[field], b[field], direction));
     }
     return list;
   }

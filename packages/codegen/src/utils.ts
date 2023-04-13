@@ -151,6 +151,17 @@ export function sortKeys<T extends object>(o: T): T {
     }, {} as any as T);
 }
 
+export function parseOrder(order: string | undefined): { field: string; direction: "ASC" | "DESC" } | undefined {
+  if (!order) {
+    return undefined;
+  }
+  const [field, direction = "ASC"] = order.split(" ");
+  if (direction !== "ASC" && direction !== "DESC") {
+    throw new Error(`Invalid direction: ${direction} (must be "ASC" or "DESC")`);
+  }
+  return { field, direction };
+}
+
 export function q(s: string | undefined): string {
   return s === undefined ? "undefined" : `"${s}"`;
 }

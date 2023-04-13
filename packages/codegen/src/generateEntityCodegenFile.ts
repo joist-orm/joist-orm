@@ -50,7 +50,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "./symbols";
-import { fail, q } from "./utils";
+import { fail } from "./utils";
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
@@ -245,7 +245,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         "${fieldName}",
         "${otherFieldName}",
         "${otherColumnName}",
-        ${q(orderBy)},
+        ${orderBy},
       );
     `;
   });

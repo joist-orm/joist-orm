@@ -236,7 +236,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id", undefined);
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", "order");
+  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", {
+    "field": "order",
+    "direction": "ASC",
+  });
 
   readonly comments: Collection<Author, Comment> = hasMany(
     commentMeta,

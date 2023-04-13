@@ -20,6 +20,7 @@ import {
   isJoinTable,
   isSubClassTable,
   mapSimpleDbTypeToTypescriptType,
+  parseOrder,
   tableToEntityName,
 } from "./utils";
 
@@ -142,7 +143,7 @@ export type OneToManyField = Field & {
   otherColumnName: string;
   otherColumnNotNull: boolean;
   isLargeCollection: boolean;
-  orderBy: string | undefined;
+  orderBy: { field: string; direction: "ASC" | "DESC" } | undefined;
 };
 
 /** I.e. a `Author.image` reference when `image.author_id` is unique. */
@@ -480,7 +481,7 @@ function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToMany
     otherColumnNotNull: column.notNull,
     ignore: isFieldIgnored(config, entity, fieldName) || isFieldIgnored(config, otherEntity, otherFieldName),
     isLargeCollection: isLargeCollection(config, entity, fieldName),
-    orderBy,
+    orderBy: parseOrder(orderBy),
   };
 }
 

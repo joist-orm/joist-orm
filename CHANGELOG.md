@@ -1,3 +1,10 @@
+## [1.72.5](https://github.com/stephenh/joist-ts/compare/v1.72.4...v1.72.5) (2023-04-13)
+
+
+### Bug Fixes
+
+* Provide default generics for EntityFilter. ([#616](https://github.com/stephenh/joist-ts/issues/616)) ([bfafcb7](https://github.com/stephenh/joist-ts/commit/bfafcb7284a58e289b9c79ff8b75578717c4b748))
+
 ## [1.72.4](https://github.com/stephenh/joist-ts/compare/v1.72.3...v1.72.4) (2023-04-13)
 
 

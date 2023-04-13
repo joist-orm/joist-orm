@@ -1,3 +1,10 @@
+## [1.72.4](https://github.com/stephenh/joist-ts/compare/v1.72.3...v1.72.4) (2023-04-13)
+
+
+### Bug Fixes
+
+* Allow undefined expressions. ([#615](https://github.com/stephenh/joist-ts/issues/615)) ([68dedee](https://github.com/stephenh/joist-ts/commit/68dedeeddc7b7d7dec89aa1ebf01bbfeb4b09e9b))
+
 ## [1.72.3](https://github.com/stephenh/joist-ts/compare/v1.72.2...v1.72.3) (2023-04-12)
 
 

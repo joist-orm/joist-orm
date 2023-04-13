@@ -14,6 +14,7 @@ import {
 import {
   alias,
   aliases,
+  EntityFilter,
   ExpressionFilter,
   getMetadata,
   jan1,
@@ -1853,7 +1854,7 @@ describe("EntityManager.queries", () => {
 
     it("allows undefined expressions", async () => {
       const a = alias(Author);
-      const where = { as: a };
+      const where: EntityFilter<Author> = { as: a };
       const conditionalFilter: ExpressionFilter | undefined = undefined;
       expect(
         parseFindQuery(am, where, {

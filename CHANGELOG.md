@@ -1,3 +1,10 @@
+## [1.73.1](https://github.com/stephenh/joist-ts/compare/v1.73.0...v1.73.1) (2023-04-15)
+
+
+### Bug Fixes
+
+* Ignore template in the `migrations/` directory. ([#617](https://github.com/stephenh/joist-ts/issues/617)) ([07adbee](https://github.com/stephenh/joist-ts/commit/07adbee790957d18adc6280bf07fbf0369e41f8f))
+
 # [1.73.0](https://github.com/stephenh/joist-ts/compare/v1.72.5...v1.73.0) (2023-04-13)
 
 

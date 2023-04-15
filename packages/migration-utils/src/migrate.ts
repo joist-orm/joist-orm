@@ -10,7 +10,7 @@ export async function runMigrationsIfNeeded(client: Client, dir: string = produc
     dir,
     count: undefined as any as number,
     direction: "up",
-    ignorePattern: "(.*.d.ts)|(.*utils.[jt]s)|(migrate.[jt]s)|(migrate.test.[jt]s)",
+    ignorePattern: "(\\..*)|(.*\\.d\\.ts)|(.*utils\\.[jt]s)|(migrate\\.[jt]s)|(migrate\\.test\\.[jt]s)",
     decamelize: true,
   });
 }

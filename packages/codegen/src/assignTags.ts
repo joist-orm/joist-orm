@@ -21,9 +21,11 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
 
   dbMetadata.entities
     .filter((e) => !existingTags[e.name])
+    // Subclass entities share their base entity's tag
     .filter((e) => !e.baseClassName)
     .forEach((e) => {
       const abbreviatedTag = guessTagName(e.name);
+      // If the abbreviation is taken, fallback on the full name
       const tagName = existingTagNames.includes(abbreviatedTag) ? camelCase(e.name) : abbreviatedTag;
       const oc = config.entities[e.name];
       if (!oc) {
@@ -31,6 +33,7 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
       } else {
         oc.tag = tagName;
       }
+      e.tagName = tagName;
       existingTagNames.push(tagName);
     });
 
@@ -45,6 +48,7 @@ export function assignTags(config: Config, dbMetadata: DbMetadata): void {
       } else {
         oc.tag = tagName;
       }
+      e.tagName = tagName;
     });
 
   // TODO ensure tags are unique

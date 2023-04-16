@@ -1,3 +1,10 @@
+## [1.73.2](https://github.com/stephenh/joist-ts/compare/v1.73.1...v1.73.2) (2023-04-16)
+
+
+### Bug Fixes
+
+* Fix not pushing new tags into EntityDbMetadata. ([#618](https://github.com/stephenh/joist-ts/issues/618)) ([69cc23a](https://github.com/stephenh/joist-ts/commit/69cc23a948443c9928f63490d7f8c201220a53cd))
+
 ## [1.73.1](https://github.com/stephenh/joist-ts/compare/v1.73.0...v1.73.1) (2023-04-15)
 
 

@@ -89,6 +89,7 @@ describe("Entity", () => {
           },
           "loadPromise": undefined,
           "loaded": false,
+          "reactiveHint": undefined,
         },
         "latestComments": {
           "fn": {},
@@ -98,6 +99,7 @@ describe("Entity", () => {
           },
           "loadPromise": undefined,
           "loaded": false,
+          "reactiveHint": undefined,
         },
         "mentor": {
           "_isLoaded": false,
@@ -119,9 +121,14 @@ describe("Entity", () => {
         },
         "numberOfBooks2": {
           "fn": {},
-          "hint": "books",
+          "hint": {
+            "books": {},
+          },
           "loadPromise": undefined,
           "loaded": false,
+          "reactiveHint": {
+            "books": "title",
+          },
         },
         "numberOfBooksCalcInvoked": 0,
         "numberOfPublicReviews": {
@@ -133,6 +140,7 @@ describe("Entity", () => {
             "books": {
               "reviews": [
                 "isPublic",
+                "isPublic2",
                 "rating",
               ],
             },

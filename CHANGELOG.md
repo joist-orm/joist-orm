@@ -1,3 +1,10 @@
+# [1.74.0](https://github.com/stephenh/joist-ts/compare/v1.73.2...v1.74.0) (2023-04-17)
+
+
+### Features
+
+* Add hasReactiveAsyncProperty to fix reactivity on properties. ([#619](https://github.com/stephenh/joist-ts/issues/619)) ([350ef63](https://github.com/stephenh/joist-ts/commit/350ef63221ad1ce4de55b246bdb6606e8d1c846a))
+
 ## [1.73.2](https://github.com/stephenh/joist-ts/compare/v1.73.1...v1.73.2) (2023-04-16)
 
 

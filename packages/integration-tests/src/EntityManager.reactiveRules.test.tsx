@@ -3,6 +3,7 @@ import {
   Book,
   BookReview,
   Color,
+  Comment,
   newAuthor,
   newBook,
   newBookReview,
@@ -148,9 +149,9 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: sm(/Book.ts:\d+/), fields: [], path: [], fn },
       // Book's "numberOfBooks2" rule (this book + other books)
       { cstr, name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
-      { cstr, name: sm(/Book.ts:\d+/), fields: ["author"], path: ["author", "books"], fn },
+      { cstr, name: sm(/Book.ts:\d+/), fields: ["author", "title"], path: ["author", "books"], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
-      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["author"], path: ["author", "publisher"], fn },
+      { cstr, name: sm(/Publisher.ts:\d+/), fields: ["author", "title"], path: ["author", "publisher"], fn },
     ]);
 
     expect(getMetadata(BookReview).config.__data.reactiveRules).toEqual([
@@ -271,6 +272,22 @@ describe("EntityManager.reactiveRules", () => {
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
     });
+
+    it.withCtx("runs rule on async property change", async ({ em }) => {
+      // Given a publisher that has two authors
+      const p = newPublisher(em, {
+        authors: [
+          // And each author has 7 books (14 total)
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+          { books: [{}, {}, {}, {}, {}, {}, {}] },
+        ],
+      });
+      await em.flush();
+      // When we cause a book mutation that changes the Author.numberOfBooks2 async property
+      p.authors.get[0].books.get[0].title = "Ignore";
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("A publisher cannot have 13 books");
+    });
   });
 
   describe("persisted async properties", () => {
@@ -356,6 +373,21 @@ describe("EntityManager.reactiveRules", () => {
         br.rating = 1;
         await em2.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
+      });
+
+      it.withCtx("calculates on async property change", async ({ em }) => {
+        // Given a public review
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1, comment: {} }] }] });
+        await em.flush();
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
+        // Use a new em to ensure nothing is cached
+        const em2 = newEntityManager();
+        // When we cause the BookReview.isPublic2 async property to change
+        const c = await em2.load(Comment, "comment:1");
+        c.text = "Ignore";
+        await em2.flush();
+        // Then numberOfPublicReviews is updated
+        expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 0 }]);
       });
     });
   });

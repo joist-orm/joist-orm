@@ -12,6 +12,7 @@ import {
   PersistedAsyncProperty,
   Reference,
 } from "joist-orm";
+import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
 import { AuthorCodegen, authorConfig as config, Book, BookReview, Comment } from "./entities";
 
 export class Author extends AuthorCodegen {
@@ -47,11 +48,13 @@ export class Author extends AuthorCodegen {
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
-  // Example of persisted property depending on another persisted property
+  // Example of persisted property depending on another persisted property (isPublic)
+  // as well as a non-persisted property (isPublic2) and a regular primitive (rating)
   readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfPublicReviews",
-    { books: { reviews: ["isPublic", "rating"] } },
-    (a) => a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && r.rating > 0).length,
+    { books: { reviews: ["isPublic", "isPublic2", "rating"] } },
+    (a) =>
+      a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && r.isPublic2.get && r.rating > 0).length,
   );
 
   public beforeFlushRan = false;
@@ -130,8 +133,9 @@ export class Author extends AuthorCodegen {
   );
 
   /** Example of an async property that can be loaded via a populate hint. */
-  readonly numberOfBooks2: AsyncProperty<Author, number> = hasAsyncProperty("books", (a) => {
-    return a.books.get.length;
+  readonly numberOfBooks2: AsyncProperty<Author, number> = hasReactiveAsyncProperty({ books: "title" }, (a) => {
+    // Use the title to test reactivity to an hasReactiveAsyncProperty calc changing
+    return a.books.get.filter((b) => b.title !== "Ignore").length;
   });
 
   /** Example of an async property that returns an entity. */

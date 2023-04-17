@@ -1,8 +1,10 @@
 import {
+  AsyncProperty,
   cannotBeUpdated,
   hasOneDerived,
   hasOneThrough,
   hasPersistedAsyncProperty,
+  hasReactiveAsyncProperty,
   PersistedAsyncProperty,
   Reference,
 } from "joist-orm";
@@ -28,6 +30,11 @@ export class BookReview extends BookReviewCodegen {
       return !!author.age && author.age >= 21 && !!author.graduated;
     },
   );
+
+  // Used to test reactivity to hasReactiveAsyncProperty results changing.
+  readonly isPublic2: AsyncProperty<BookReview, boolean> = hasReactiveAsyncProperty({ comment: "text" }, (review) => {
+    return !review.comment.get?.text?.includes("Ignore");
+  });
 }
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)

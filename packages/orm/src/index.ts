@@ -244,7 +244,7 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 
-/** Processes the metas based on any custom calls to the `configApi` hooks. */
+/** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
@@ -264,11 +264,12 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     });
   });
 
-  // Setup subTypes/baseTypes
   const metaByName = metas.reduce((acc, m) => {
     acc[m.type] = m;
     return acc;
   }, {} as Record<string, EntityMetadata<any>>);
+
+  // Setup subTypes/baseTypes
   metas.forEach((m) => {
     const abbr = `${abbreviation(m.tableName)}0`;
     // This is basically m.fields.mapValues to assign the primary alias
@@ -301,7 +302,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     // Look for reactive validation rules to reverse
     meta.config.__data.rules.forEach(({ name, hint, fn }) => {
       if (hint) {
-        const reversals = reverseReactiveHint(meta.cstr, hint);
+        const reversals = reverseReactiveHint(meta.cstr, meta.cstr, hint);
         // For each reversal, tell its config about the reverse hint to force-re-validate
         // the original rule's instance any time it changes.
         reversals.forEach(({ entity, path, fields }) => {
@@ -323,7 +324,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
           const loadHint = convertToLoadHint(meta, ap.reactiveHint);
           getAllMetas(meta).forEach((m) => (m.config.__data.cachedReactiveLoadHints[field.fieldName] = loadHint));
 
-          const reversals = reverseReactiveHint(meta.cstr, ap.reactiveHint);
+          const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
               cstr: meta.cstr,

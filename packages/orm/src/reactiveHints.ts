@@ -62,12 +62,14 @@ export type Reacted<T extends Entity, H> = Entity & {
 };
 
 export function reverseReactiveHint<T extends Entity>(
+  rootType: MaybeAbstractEntityConstructor<T>,
   entityType: MaybeAbstractEntityConstructor<T>,
   hint: ReactiveHint<T>,
   reactForOtherSide?: string | boolean,
   isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
+  // This is the list of primitives for this `entityType` that we will react to (if any)
   const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
@@ -79,7 +81,7 @@ export function reverseReactiveHint<T extends Entity>(
           if (!isReadOnly) {
             primitives.push(field.fieldName);
           }
-          return reverseReactiveHint(field.otherMetadata().cstr, subHint, undefined, false).map(
+          return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
             ({ entity, fields, path }) => {
               return { entity, fields, path: [...path, field.otherFieldName] };
             },
@@ -95,6 +97,7 @@ export function reverseReactiveHint<T extends Entity>(
               : field.otherFieldName;
           // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
           return reverseReactiveHint(
+            rootType,
             field.otherMetadata().cstr,
             subHint,
             // For o2m/o2o/m2m, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
@@ -114,14 +117,25 @@ export function reverseReactiveHint<T extends Entity>(
           }
           return [];
         default:
-          throw new Error(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
+          throw new Error(`Invalid hint in ${rootType.name}.ts hint ${JSON.stringify(hint)}`);
       }
     } else {
+      // We only need to look for ReactiveAsyncProperties here, because PersistedAsyncProperties
+      // have primitive fields that will be handled in the ^ code. Note that we don't specifically
+      // handle them ^, because the EntityManager.flush loop will notice their primitive values
+      // changing, and kicking off any downstream reactive fields as necessary.
       const p = getProperties(meta)[key];
       if (p instanceof AsyncPropertyImpl) {
-        return reverseReactiveHint(meta.cstr, p.hint, undefined, false);
+        if (!p.reactiveHint) {
+          throw new Error(
+            `AsyncProperty ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
+              hint,
+            )}, please use hasReactiveAsyncProperty instead`,
+          );
+        }
+        return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else {
-        throw new Error(`Invalid hint ${entityType.name} ${JSON.stringify(hint)}`);
+        throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
       }
     }
   });

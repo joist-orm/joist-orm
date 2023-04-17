@@ -4,6 +4,7 @@ export { CustomReference } from "./CustomReference";
 export {
   AsyncProperty,
   hasAsyncProperty,
+  hasReactiveAsyncProperty,
   isAsyncProperty,
   isLoadedAsyncProperty,
   LoadedProperty,

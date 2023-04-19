@@ -1,3 +1,10 @@
+## [1.74.1](https://github.com/stephenh/joist-ts/compare/v1.74.0...v1.74.1) (2023-04-19)
+
+
+### Bug Fixes
+
+* add lazy conversion of reactive load hints in async props to avoid infinite recursion on entity creation ([#621](https://github.com/stephenh/joist-ts/issues/621)) ([d3ec321](https://github.com/stephenh/joist-ts/commit/d3ec32101ab97515d4747954bd72aab3b8dce873))
+
 # [1.74.0](https://github.com/stephenh/joist-ts/compare/v1.73.2...v1.74.0) (2023-04-17)
 
 

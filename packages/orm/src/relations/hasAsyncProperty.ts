@@ -29,7 +29,7 @@ export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
   fn: (entity: Loaded<T, H>) => V,
 ): AsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
-  return new AsyncPropertyImpl(entity, loadHint, undefined, fn);
+  return new AsyncPropertyImpl(entity, loadHint, fn);
 }
 
 /**
@@ -45,25 +45,26 @@ export function hasReactiveAsyncProperty<T extends Entity, H extends ReactiveHin
   fn: (entity: Reacted<T, H>) => V,
 ): AsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
-  return new AsyncPropertyImpl(
-    entity,
-    convertToLoadHint(getMetadata(entity), reactiveHint as any),
-    reactiveHint as any,
-    fn as any,
-  );
+  return new AsyncPropertyImpl(entity, reactiveHint as any, fn as any, { isReactive: true });
 }
 
 export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> implements AsyncProperty<T, V> {
   private loaded = false;
   private loadPromise: any;
+
   readonly #entity: T;
+  #hint: Const<H> | undefined;
+  #reactiveHint: ReactiveHint<T> | undefined;
   constructor(
     entity: T,
-    public hint: Const<H>,
-    public reactiveHint: ReactiveHint<T> | undefined,
+    hint: Const<H> | ReactiveHint<T>,
     private fn: (entity: Loaded<T, H>) => V,
+    private opts: { isReactive?: boolean } = {},
   ) {
+    const { isReactive = false } = opts;
     this.#entity = entity;
+    this.#hint = isReactive ? undefined : (hint as Const<H>);
+    this.#reactiveHint = isReactive ? (hint as ReactiveHint<T>) : undefined;
   }
 
   load(): Promise<V> {
@@ -75,6 +76,17 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
       }));
     }
     return Promise.resolve(this.get);
+  }
+
+  get hint(): Const<H> {
+    if (!this.#hint) {
+      this.#hint = convertToLoadHint(getMetadata(this.#entity), this.#reactiveHint as any) as Const<H>;
+    }
+    return this.#hint;
+  }
+
+  get reactiveHint(): ReactiveHint<T> | undefined {
+    return this.#reactiveHint;
   }
 
   get get(): V {

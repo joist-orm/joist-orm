@@ -83,23 +83,15 @@ describe("Entity", () => {
         },
         "latestComment2": {
           "fn": {},
-          "hint": {
-            "comments": {},
-            "publisher": "comments",
-          },
           "loadPromise": undefined,
           "loaded": false,
-          "reactiveHint": undefined,
+          "opts": {},
         },
         "latestComments": {
           "fn": {},
-          "hint": {
-            "comments": {},
-            "publisher": "comments",
-          },
           "loadPromise": undefined,
           "loaded": false,
-          "reactiveHint": undefined,
+          "opts": {},
         },
         "mentor": {
           "_isLoaded": false,
@@ -121,13 +113,10 @@ describe("Entity", () => {
         },
         "numberOfBooks2": {
           "fn": {},
-          "hint": {
-            "books": {},
-          },
           "loadPromise": undefined,
           "loaded": false,
-          "reactiveHint": {
-            "books": "title",
+          "opts": {
+            "isReactive": true,
           },
         },
         "numberOfBooksCalcInvoked": 0,

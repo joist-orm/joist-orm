@@ -17,7 +17,7 @@ When Joist loads data, it knows the `updated_at` for every row that is read, i.e
 
 ```typescript
 const author = await em.load(Author, "a:1");
-console.lot(author.updated_at); // ...10:00am...
+console.log(author.updated_at); // ...10:00am...
 ```
 
 Then when issuing `UPDATE`s, we include the `updated_at` as part of the `WHERE` clause:

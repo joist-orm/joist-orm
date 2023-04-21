@@ -1,3 +1,10 @@
+## [1.74.2](https://github.com/stephenh/joist-ts/compare/v1.74.1...v1.74.2) (2023-04-21)
+
+
+### Bug Fixes
+
+* Make a copy of opts. ([#623](https://github.com/stephenh/joist-ts/issues/623)) ([24c62b6](https://github.com/stephenh/joist-ts/commit/24c62b6c61873dce120bcf185609dd1b90e14037))
+
 ## [1.74.1](https://github.com/stephenh/joist-ts/compare/v1.74.0...v1.74.1) (2023-04-19)
 
 

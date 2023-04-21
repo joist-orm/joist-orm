@@ -129,8 +129,6 @@ describe("EntityManager.factories", () => {
     newBook(em);
     // Then the newAuthor factory was told to override any `books: [{}]` defaults
     expect(lastAuthorFactoryOpts).toStrictEqual({
-      firstName: `a${testIndex}`,
-      image: undefined,
       age: 40,
       books: [],
       use: expect.any(Map),
@@ -150,8 +148,6 @@ describe("EntityManager.factories", () => {
     expect(a1.publisher.get).toEqual(p1);
     // And we explicitly passed the publisher b/c it's an explicit `use` entry
     expect(lastAuthorFactoryOpts).toStrictEqual({
-      firstName: `a${testIndex}`,
-      image: undefined,
       age: 40,
       books: [],
       publisher: p1,
@@ -191,7 +187,6 @@ describe("EntityManager.factories", () => {
     expect(lastBookFactoryOpts).toStrictEqual({
       author: expect.any(Author),
       use: expect.any(Map),
-      order: testIndex,
     });
   });
 
@@ -259,10 +254,8 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newBookReview(em, { book: {} });
     expect(lastBookFactoryOpts).toStrictEqual({
-      author: maybeNew<Author>({ age: 40 }),
       title: `Book for Review ${testIndex}`,
       reviews: [],
-      order: testIndex,
       use: expect.any(Map),
     });
   });
@@ -271,8 +264,6 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newImage(em, { author: {} });
     expect(lastAuthorFactoryOpts).toStrictEqual({
-      firstName: `a${testIndex}`,
-      age: undefined,
       image: null,
       use: expect.any(Map),
     });

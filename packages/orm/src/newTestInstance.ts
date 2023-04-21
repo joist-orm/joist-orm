@@ -538,7 +538,7 @@ function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, an
   if (testOpts.useFactoryDefaults === false || testOpts.useFactoryDefaults === "none") {
     return testOpts;
   }
-  const opts: any = testOpts;
+  const opts: any = { ...testOpts };
   Object.entries(factoryOpts).forEach(([key, factoryValue]) => {
     const testValue = testOpts[key];
     if (testOpts[key] === undefined) {

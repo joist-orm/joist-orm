@@ -144,8 +144,8 @@ export class Author extends AuthorCodegen {
     (author) => author.publisher.get?.comments.get[0].entity ?? author.comments.get[0].entity,
   );
 
-  /** Example of an async property that has a conflicting reactive hint with ^. */
-  readonly allPublisherNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty(
+  /** Example of an async property that has a conflicting/overlapping reactive hint with ^. */
+  readonly allPublisherAuthorNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty(
     { publisher: { authors: "firstName" } },
     (author) => author.publisher.get?.authors.get.flatMap((a) => a.firstName).join(),
   );

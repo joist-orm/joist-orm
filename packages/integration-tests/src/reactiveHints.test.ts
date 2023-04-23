@@ -123,11 +123,11 @@ describe("reactiveHints", () => {
         comments: {},
       });
       // And another Author hasReactiveAsyncProperty that goes through publisher -> authors
-      expect(convertToLoadHint(am, ["allPublisherNames"])).toEqual({
+      expect(convertToLoadHint(am, ["allPublisherAuthorNames"])).toEqual({
         publisher: { authors: {} },
       });
       // When we access both of them at the same time, then the hints are merged
-      expect(convertToLoadHint(am, ["latestComment2", "allPublisherNames"])).toEqual({
+      expect(convertToLoadHint(am, ["latestComment2", "allPublisherAuthorNames"])).toEqual({
         publisher: { authors: {}, comments: {} },
         comments: {},
       });

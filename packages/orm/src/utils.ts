@@ -121,3 +121,16 @@ export function compareValues(av: any, bv: any, direction: OrderBy): number {
     throw new Error(`Unsupported sortBy values ${av}, ${bv}`);
   }
 }
+
+/** A ~naive deep merge that requires already-normalized hints and will mutate `source`. */
+// https://gist.github.com/ahtcx/0cd94e62691f539160b32ecda18af3d6
+export function mergeNormalizedHints(target: any, source: any): void {
+  for (const key of Object.keys(source)) {
+    // We assume both target & source are already normalized, i.e. we won't have
+    // source="books" and target={books: "title"}. They will both be {books: ...}.
+    if (target[key]) {
+      mergeNormalizedHints(source[key], target[key]);
+    }
+  }
+  Object.assign(target, source);
+}

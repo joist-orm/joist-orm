@@ -139,9 +139,15 @@ export class Author extends AuthorCodegen {
   });
 
   /** Example of an async property that returns an entity. */
-  readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasAsyncProperty(
+  readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty(
     { publisher: "comments", comments: {} },
-    (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
+    (author) => author.publisher.get?.comments.get[0].entity ?? author.comments.get[0].entity,
+  );
+
+  /** Example of an async property that has a conflicting reactive hint with ^. */
+  readonly allPublisherNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty(
+    { publisher: { authors: "firstName" } },
+    (author) => author.publisher.get?.authors.get.flatMap((a) => a.firstName).join(),
   );
 
   /** Example of an async property that returns a list of entities. */

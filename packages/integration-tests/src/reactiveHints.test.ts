@@ -2,6 +2,8 @@ import { Author, Book, BookReview, Comment, Image } from "@src/entities";
 import { getMetadata, Loaded, LoadHint, Reacted, ReactiveHint, reverseReactiveHint } from "joist-orm";
 import { convertToLoadHint } from "joist-orm/build/src/reactiveHints";
 
+const am = getMetadata(Author);
+
 describe("reactiveHints", () => {
   it("can do immediate primitive field names", () => {
     expect(reverseReactiveHint(Author, Author, "firstName")).toEqual([
@@ -96,6 +98,7 @@ describe("reactiveHints", () => {
       { entity: BookReview, fields: [], path: [] },
     ]);
   });
+
   describe("convertToLoadHint", () => {
     it("works with child o2o and primitive field names", () => {
       expect(convertToLoadHint(getMetadata(Author), { image: "fileName" })).toEqual({ image: {} });
@@ -110,6 +113,23 @@ describe("reactiveHints", () => {
       expect(convertToLoadHint(getMetadata(Book), { author: "firstName" })).toStrictEqual({ author: {} });
       expect(convertToLoadHint(getMetadata(BookReview), { book: { author: "firstName" } })).toStrictEqual({
         book: { author: {} },
+      });
+    });
+
+    it("does not squash multiple expanded hints", () => {
+      // Given one Author hasReactiveAsyncProperty that goes through publisher -> comments
+      expect(convertToLoadHint(am, ["latestComment2"])).toEqual({
+        publisher: { comments: {} },
+        comments: {},
+      });
+      // And another Author hasReactiveAsyncProperty that goes through publisher -> authors
+      expect(convertToLoadHint(am, ["allPublisherNames"])).toEqual({
+        publisher: { authors: {} },
+      });
+      // When we access both of them at the same time, then the hints are merged
+      expect(convertToLoadHint(am, ["latestComment2", "allPublisherNames"])).toEqual({
+        publisher: { authors: {}, comments: {} },
+        comments: {},
       });
     });
   });

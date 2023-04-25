@@ -1,3 +1,10 @@
+## [1.74.3](https://github.com/stephenh/joist-ts/compare/v1.74.2...v1.74.3) (2023-04-25)
+
+
+### Bug Fixes
+
+* Fix merging overlapping reactive hints. ([#624](https://github.com/stephenh/joist-ts/issues/624)) ([1efb74d](https://github.com/stephenh/joist-ts/commit/1efb74dccaf91f506856bfb335f65aeb9da3944c))
+
 ## [1.74.2](https://github.com/stephenh/joist-ts/compare/v1.74.1...v1.74.2) (2023-04-21)
 
 

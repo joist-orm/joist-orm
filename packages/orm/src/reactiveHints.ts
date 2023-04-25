@@ -15,7 +15,7 @@ import {
 } from "./relations";
 import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
-import { fail } from "./utils";
+import { fail, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
 export type Reactable<T extends Entity> = FieldsOf<T> & Loadable<T> & SuffixedFieldsOf<T> & SuffixedLoadable<T>;
@@ -150,35 +150,38 @@ export function reverseReactiveHint<T extends Entity>(
   ];
 }
 
+/** Converts a reactive `hint` into a load hint. */
 export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hint: ReactiveHint<T>): LoadHint<T> {
-  return Object.fromEntries(
-    Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
-      const key = keyMaybeSuffix.replace(suffixRe, "");
-      const field = meta.allFields[key];
-      if (field) {
-        switch (field.kind) {
-          case "m2m":
-          case "m2o":
-          case "o2m":
-          case "o2o": {
-            return [[key, convertToLoadHint(field.otherMetadata(), subHint)]];
-          }
-          case "primitive":
-          case "enum":
-            return [];
-          default:
-            throw new Error(`Invalid hint ${meta.tableName} ${JSON.stringify(hint)}`);
+  const loadHint = {};
+  // Process the hints individually instead of just calling Object.fromEntries so that
+  // we can handle inlined reactive hints that overlap.
+  for (const [keyMaybeSuffix, subHint] of Object.entries(normalizeHint(hint))) {
+    const key = keyMaybeSuffix.replace(suffixRe, "");
+    const field = meta.allFields[key];
+    if (field) {
+      switch (field.kind) {
+        case "m2m":
+        case "m2o":
+        case "o2m":
+        case "o2o": {
+          mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint) });
         }
-      } else {
-        const p = getProperties(meta)[key];
-        if (p && p.hint) {
-          return Object.entries(convertToLoadHint(meta, p.hint));
-        } else {
-          fail(`Invalid hint on ${meta.tableName} ${JSON.stringify(hint)}`);
-        }
+        case "primitive":
+        case "enum":
+          continue;
+        default:
+          throw new Error(`Invalid reactive hint ${meta.tableName} ${JSON.stringify(hint)}`);
       }
-    }),
-  ) as any;
+    } else {
+      const p = getProperties(meta)[key];
+      if (p && p.reactiveHint) {
+        mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint));
+      } else {
+        fail(`Invalid reactive hint on ${meta.tableName} ${JSON.stringify(hint)}`);
+      }
+    }
+  }
+  return loadHint as any;
 }
 
 export interface ReactiveTarget {

@@ -16,6 +16,14 @@ describe("Entity", () => {
         "afterCommitRan": false,
         "afterValidationRan": false,
         "ageRuleInvoked": 0,
+        "allPublisherAuthorNames": {
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": false,
+          "opts": {
+            "isReactive": true,
+          },
+        },
         "authors": {
           "fieldName": "authors",
           "loaded": undefined,
@@ -85,7 +93,9 @@ describe("Entity", () => {
           "fn": {},
           "loadPromise": undefined,
           "loaded": false,
-          "opts": {},
+          "opts": {
+            "isReactive": true,
+          },
         },
         "latestComments": {
           "fn": {},

@@ -47,6 +47,7 @@ import {
   PublisherId,
   PublisherSize,
   SmallPublisher,
+  Tag,
 } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
@@ -1725,6 +1726,32 @@ describe("EntityManager.queries", () => {
         },
       );
       expect(books.length).toEqual(2);
+    });
+
+    it("can use aliases for m2m", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertTag({ name: "t1" });
+      await insertAuthorToTag({ author_id: 1, tag_id: 1 });
+
+      const em = newEntityManager();
+      const t = alias(Tag);
+      const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] } });
+      expect(books.length).toEqual(1);
+
+      expect(parseFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] }, ...opts })).toEqual({
+        selects: [`"b".*`],
+        tables: [
+          { alias: "b", table: "books", join: "primary" },
+          { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+          { alias: "att", table: "authors_to_tags", join: "outer", col1: "a.id", col2: "att.author_id" },
+          { alias: "t", table: "tags", join: "outer", col1: "att.tag_id", col2: "t.id" },
+        ],
+        conditions: [],
+        complexConditions: [{ op: "or", conditions: [{ alias: "t", column: "id", cond: { kind: "eq", value: 1 } }] }],
+        orderBys: [{ alias: "b", column: "title", order: "ASC" }],
+      });
     });
 
     it("prunes unused joins", async () => {

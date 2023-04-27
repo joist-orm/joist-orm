@@ -238,7 +238,7 @@ export function parseFindQuery(
           const sub = (ef.subFilter as any)[key];
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "inner", `${ja}.${field.columnNames[1]}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, "outer", `${ja}.${field.columnNames[1]}`, `${a}.id`, sub);
           }
           const f = parseEntityFilter(sub);
           // Probe the filter and see if it's just an id, if so we can avoid the join

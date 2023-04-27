@@ -1,3 +1,10 @@
+## [1.74.4](https://github.com/stephenh/joist-ts/compare/v1.74.3...v1.74.4) (2023-04-27)
+
+
+### Bug Fixes
+
+* Using m2m aliases should use an outer join. ([#627](https://github.com/stephenh/joist-ts/issues/627)) ([b8d7fe6](https://github.com/stephenh/joist-ts/commit/b8d7fe6cacf92ff542cf8b1c9f5147fc75673948))
+
 ## [1.74.3](https://github.com/stephenh/joist-ts/compare/v1.74.2...v1.74.3) (2023-04-25)
 
 

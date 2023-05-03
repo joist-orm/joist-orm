@@ -19,44 +19,42 @@ export function findByUniqueDataLoader<T extends Entity>(
   softDeletes: "include" | "exclude",
 ): DataLoader<any, unknown | undefined> {
   const batchKey = `${type.name}-${field.fieldName}-${softDeletes}`;
-  return em.getLoader("find-by-unique", batchKey, () => {
-    return new DataLoader<any, T | undefined>(async (values) => {
-      const meta = getMetadata(type);
-      const alias = abbreviation(meta.tableName);
+  return em.getLoader("find-by-unique", batchKey, async (values) => {
+    const meta = getMetadata(type);
+    const alias = abbreviation(meta.tableName);
 
-      const conditions: ColumnCondition[] = [];
-      const query: ParsedFindQuery = {
-        selects: [`${alias}.*`],
-        tables: [{ alias, join: "primary", table: meta.tableName }],
-        conditions,
-      };
+    const conditions: ColumnCondition[] = [];
+    const query: ParsedFindQuery = {
+      selects: [`${alias}.*`],
+      tables: [{ alias, join: "primary", table: meta.tableName }],
+      conditions,
+    };
 
-      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
-      maybeAddNotSoftDeleted(conditions, meta, alias, softDeletes);
+    addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+    maybeAddNotSoftDeleted(conditions, meta, alias, softDeletes);
 
-      let column: Column;
-      switch (field.kind) {
-        case "primitive":
-          column = field.serde.columns[0];
-          conditions.push({
-            alias,
-            column: column.columnName,
-            cond: { kind: "in", value: values.map((v) => column.mapToDb(v)) },
-          });
-          break;
-        default:
-          throw new Error(`Unsupported field ${field.fieldName}`);
-      }
+    let column: Column;
+    switch (field.kind) {
+      case "primitive":
+        column = field.serde.columns[0];
+        conditions.push({
+          alias,
+          column: column.columnName,
+          cond: { kind: "in", value: values.map((v) => column.mapToDb(v)) },
+        });
+        break;
+      default:
+        throw new Error(`Unsupported field ${field.fieldName}`);
+    }
 
-      const rows = await em.driver.executeFind(em, query, {});
+    const rows = await em.driver.executeFind(em, query, {});
 
-      const rowsByValue = groupBy(rows, (row) => row[column.columnName]);
+    const rowsByValue = groupBy(rows, (row) => row[column.columnName]);
 
-      // Re-order the output by the batched input
-      return values.map((value) => {
-        const result = rowsByValue.get(value) ?? [];
-        return result[0];
-      });
+    // Re-order the output by the batched input
+    return values.map((value) => {
+      const result = rowsByValue.get(value) ?? [];
+      return result[0];
     });
   });
 }

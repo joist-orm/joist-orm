@@ -14,7 +14,7 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   // which side of the relation the `collection` is coming from, so
   // the `load` impl will have to handle keys that come from either
   // side of the relation.
-  return em.getLoader("m2m-load", collection.joinTableName, () => new DataLoader((keys) => load(collection, keys)));
+  return em.getLoader("m2m-load", collection.joinTableName, (keys) => load(collection, keys));
 }
 
 /**

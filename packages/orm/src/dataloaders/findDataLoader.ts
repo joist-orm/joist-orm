@@ -12,12 +12,9 @@ export function findDataLoader<T extends Entity>(
   return em.getLoader(
     "find",
     type.name,
-    () =>
-      new DataLoader<FilterAndSettings<T>, unknown[], string>(
-        (queries) => em.driver.find(em, type, queries),
-        // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
-        { cacheKeyFn: whereFilterHash },
-      ),
+    (queries) => em.driver.find(em, type, queries),
+    // Our filter/order tuple is a complex object, so object-hash it to ensure caching works
+    { cacheKeyFn: whereFilterHash },
   );
 }
 
@@ -33,6 +30,6 @@ function replacer(v: any) {
   return v;
 }
 
-export function whereFilterHash(where: FilterAndSettings<any>): string {
+export function whereFilterHash(where: FilterAndSettings<any>): any {
   return hash(where, { replacer, algorithm: "md5" });
 }

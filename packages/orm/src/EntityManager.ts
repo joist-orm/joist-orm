@@ -148,7 +148,7 @@ export class EntityManager<C = unknown> {
   private _isValidating: boolean = false;
   // TODO Make these private
   public pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
-  public dataloaders: LoaderCache = {};
+  public dataloaders: Record<string, LoaderCache> = {};
   // This is attempting to be internal/module private
   __data = {
     joinRows: {} as Record<string, JoinRow[]>,
@@ -1198,7 +1198,8 @@ export class EntityManager<C = unknown> {
     // If we wanted to, if not in a transaction, we could potentially do lookups against a global cache,
     // to achieve cross-request batching. Granted we'd need all DataLoaders to have caching disabled, see:
     // https://github.com/stephenh/joist-ts/issues/629
-    return getOrSet(this.dataloaders, `${kind}-${batchKey}`, () => new DataLoader(fn, opts));
+    const loadersForKind = (this.dataloaders[kind] ??= {});
+    return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
   }
 
   public toString(): string {

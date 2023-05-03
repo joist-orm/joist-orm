@@ -1,3 +1,10 @@
+# [1.75.0](https://github.com/stephenh/joist-ts/compare/v1.74.4...v1.75.0) (2023-05-03)
+
+
+### Features
+
+* Optimize returning only m2o ids. ([#630](https://github.com/stephenh/joist-ts/issues/630)) ([825bff9](https://github.com/stephenh/joist-ts/commit/825bff9b9c444f1101bc5d78cc3e2f483b56b56c))
+
 ## [1.74.4](https://github.com/stephenh/joist-ts/compare/v1.74.3...v1.74.4) (2023-04-27)
 
 

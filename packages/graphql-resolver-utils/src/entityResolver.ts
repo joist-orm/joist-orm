@@ -75,9 +75,9 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     .filter((ormField) => isReferenceField(ormField))
     .map((ormField) => [
       ormField.fieldName,
-      (entity: T, args, ctx, info: GraphQLResolveInfo) => {
+      (entity: T, args, ctx, info: GraphQLResolveInfo | undefined) => {
         // Use the `info` to see if the query is only returning `{ id }` and if so avoid fetching the entity
-        if ((ormField.kind === "m2o" || ormField.kind === "poly") && info.fieldNodes.length === 1) {
+        if ((ormField.kind === "m2o" || ormField.kind === "poly") && info?.fieldNodes.length === 1) {
           const selectionSet = info.fieldNodes[0].selectionSet;
           if (selectionSet) {
             if (

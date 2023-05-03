@@ -1,3 +1,4 @@
+import { GraphQLResolveInfo } from "graphql/type";
 import {
   AsyncProperty,
   Collection,
@@ -55,7 +56,9 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
   entityMetadata: EntityMetadata<T>,
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {
-  const idResolver = (entity: T) => entity.idOrFail;
+  const idResolver = (entityOrId: T | string) => {
+    return typeof entityOrId === "string" ? entityOrId : entityOrId.idOrFail;
+  };
 
   const primitiveResolvers = Object.values(entityMetadata.fields)
     .filter((ormField) => !isPrimaryKeyField(ormField) && !isReferenceField(ormField) && !isCollectionField(ormField))
@@ -68,9 +71,27 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
       }
     });
 
-  const referenceResolvers = Object.values(entityMetadata.fields)
+  const referenceResolvers: [string, Resolver<any, any, any>][] = Object.values(entityMetadata.fields)
     .filter((ormField) => isReferenceField(ormField))
-    .map((ormField) => [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName].load()]);
+    .map((ormField) => [
+      ormField.fieldName,
+      (entity: T, args, ctx, info: GraphQLResolveInfo) => {
+        // Use the `info` to see if the query is only returning `{ id }` and if so avoid fetching the entity
+        if ((ormField.kind === "m2o" || ormField.kind === "poly") && info.fieldNodes.length === 1) {
+          const selectionSet = info.fieldNodes[0].selectionSet;
+          if (selectionSet) {
+            if (
+              selectionSet.selections.length === 1 &&
+              selectionSet.selections[0].kind === "Field" &&
+              selectionSet.selections[0].name.value === "id"
+            ) {
+              return (entity as any)[ormField.fieldName].id;
+            }
+          }
+        }
+        return (entity as any)[ormField.fieldName].load();
+      },
+    ]);
 
   const collectionResolvers = Object.values(entityMetadata.fields)
     .filter((ormField) => isCollectionField(ormField))

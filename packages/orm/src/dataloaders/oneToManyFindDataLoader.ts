@@ -9,7 +9,6 @@ import {
   OneToManyLargeCollection,
   ParsedFindQuery,
 } from "../index";
-import { getOrSet } from "../utils";
 
 /** Batches o2m.find/include calls (i.e. that don't fully load the o2m relation). */
 export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
@@ -17,8 +16,8 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
   collection: OneToManyCollection<T, U> | OneToManyLargeCollection<T, U>,
 ): DataLoader<string, U | undefined> {
   const { meta } = collection;
-  const loaderName = `find-${meta.tableName}.${collection.fieldName}`;
-  return getOrSet(em.loadLoaders, loaderName, () => {
+  const batchKey = `${meta.tableName}-${collection.fieldName}`;
+  return em.getLoader("o2m-load", batchKey, () => {
     return new DataLoader<string, U | undefined>(async (keys) => {
       const { em } = collection.entity;
 

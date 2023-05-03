@@ -10,7 +10,7 @@ import {
   OneToManyCollection,
   ParsedFindQuery,
 } from "../index";
-import { getOrSet, groupBy } from "../utils";
+import { groupBy } from "../utils";
 
 export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
@@ -18,8 +18,8 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
 ): DataLoader<string, U[]> {
   // The metadata for the entity that contains the collection
   const { meta: oneMeta, fieldName } = collection;
-  const loaderName = `${oneMeta.tableName}.${fieldName}`;
-  return getOrSet(em.loadLoaders, loaderName, () => {
+  const batchKey = `${oneMeta.tableName}-${fieldName}`;
+  return em.getLoader("o2m-load", batchKey, () => {
     return new DataLoader<string, U[]>(async (_keys) => {
       const { otherMeta: meta } = collection;
 

@@ -10,7 +10,7 @@ import {
   ParsedFindQuery,
 } from "../QueryParser";
 import { Column } from "../serde";
-import { getOrSet, groupBy } from "../utils";
+import { groupBy } from "../utils";
 
 export function findByUniqueDataLoader<T extends Entity>(
   em: EntityManager,
@@ -18,8 +18,8 @@ export function findByUniqueDataLoader<T extends Entity>(
   field: Field,
   softDeletes: "include" | "exclude",
 ): DataLoader<any, unknown | undefined> {
-  const key = `${type.name}:unique:${field.fieldName}:${softDeletes}`;
-  return getOrSet(em.findLoaders, key, () => {
+  const batchKey = `${type.name}-${field.fieldName}-${softDeletes}`;
+  return em.getLoader("find-by-unique", batchKey, () => {
     return new DataLoader<any, T | undefined>(async (values) => {
       const meta = getMetadata(type);
       const alias = abbreviation(meta.tableName);

@@ -12,7 +12,7 @@ import {
   ParsedFindQuery,
   ParsedTable,
 } from "../QueryParser";
-import { getOrSet, groupBy } from "../utils";
+import { groupBy } from "../utils";
 
 /**
  * Loads lens paths via SQL.
@@ -27,8 +27,8 @@ export function lensDataLoader<T extends Entity>(
   paths: string[],
 ): DataLoader<string, T | T[]> {
   // Batch lens loads by type + path to avoid N+1s
-  const key = `${type.name}:${paths.join("/")}`;
-  return getOrSet(em.findLoaders, key, () => {
+  const batchKey = `${type.name}-${paths.join("/")}`;
+  return em.getLoader("lens", batchKey, () => {
     return new DataLoader<string, T | T[]>(async (sourceIds) => {
       const aliases: Record<string, number> = {};
       function getAlias(tableName: string): string {

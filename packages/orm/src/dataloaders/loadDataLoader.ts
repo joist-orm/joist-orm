@@ -5,13 +5,13 @@ import { EntityMetadata } from "../EntityMetadata";
 import { assertIdsAreTagged, deTagIds } from "../keys";
 import { abbreviation } from "../QueryBuilder";
 import { addTablePerClassJoinsAndClassTag, ParsedFindQuery } from "../QueryParser";
-import { getOrSet, indexBy } from "../utils";
+import { indexBy } from "../utils";
 
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,
   meta: EntityMetadata<T>,
 ): DataLoader<string, T | undefined> {
-  return getOrSet(em.loadLoaders, meta.type, () => {
+  return em.getLoader("load", meta.type, () => {
     return new DataLoader<string, T | undefined>(async (_keys) => {
       assertIdsAreTagged(_keys);
       const keys = deTagIds(meta, _keys);

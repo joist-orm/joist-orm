@@ -11,7 +11,7 @@ import {
   ParsedFindQuery,
 } from "../index";
 import { OneToOneReferenceImpl } from "../relations/OneToOneReference";
-import { getOrSet, groupBy } from "../utils";
+import { groupBy } from "../utils";
 
 export function oneToOneDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
@@ -19,8 +19,8 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
 ): DataLoader<string, U | undefined> {
   // The metadata for the entity that contains the reference
   const meta = getMetadata(reference.entity);
-  const loaderName = `${meta.tableName}.${reference.fieldName}`;
-  return getOrSet(em.loadLoaders, loaderName, () => {
+  const batchKey = `${meta.tableName}-${reference.fieldName}`;
+  return em.getLoader("o2o-load", batchKey, () => {
     return new DataLoader<string, U | undefined>(async (_keys) => {
       const { otherMeta, otherFieldName } = reference;
 

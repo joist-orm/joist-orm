@@ -1,3 +1,10 @@
+## [1.76.1](https://github.com/stephenh/joist-ts/compare/v1.76.0...v1.76.1) (2023-05-03)
+
+
+### Bug Fixes
+
+* Null check info for unit tests. ([#632](https://github.com/stephenh/joist-ts/issues/632)) ([957b330](https://github.com/stephenh/joist-ts/commit/957b330a87e32191ebbfd931728d592af5255fd7))
+
 # [1.76.0](https://github.com/stephenh/joist-ts/compare/v1.75.0...v1.76.0) (2023-05-03)
 
 

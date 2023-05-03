@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "async_hooks";
-import DataLoader from "dataloader";
+import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
@@ -148,9 +148,7 @@ export class EntityManager<C = unknown> {
   private _isValidating: boolean = false;
   // TODO Make these private
   public pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
-  public loadLoaders: LoaderCache = {};
-  public findLoaders: LoaderCache = {};
-  public populateLoaders: LoaderCache = {};
+  public dataloaders: Record<string, LoaderCache> = {};
   // This is attempting to be internal/module private
   __data = {
     joinRows: {} as Record<string, JoinRow[]>,
@@ -787,49 +785,46 @@ export class EntityManager<C = unknown> {
 
     // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
     // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
-    const key = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hintOpt)}-${opts.forceReload}`;
-    const loader = getOrSet(
-      this.populateLoaders,
-      key,
-      new DataLoader(
-        (batch) => {
-          // Because we're using `{ cache: false }`, we could have dups in the list, so unique
-          const list = [...new Set(batch)];
+    const batchKey = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hintOpt)}-${opts.forceReload}`;
+    const loader = this.getLoader(
+      "populate",
+      batchKey,
+      (batch) => {
+        // Because we're using `{ cache: false }`, we could have dups in the list, so unique
+        const list = [...new Set(batch)];
 
-          const hints = Object.entries(normalizeHint(hintOpt as any));
+        const hints = Object.entries(normalizeHint(hintOpt as any));
 
-          // One breadth-width pass to ensure each relation is loaded
-          const loadPromises = list.flatMap((entity) => {
-            return hints.map(([key]) => {
-              const relation = (entity as any)[key];
-              return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
-            });
+        // One breadth-width pass to ensure each relation is loaded
+        const loadPromises = list.flatMap((entity) => {
+          return hints.map(([key]) => {
+            const relation = (entity as any)[key];
+            return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
           });
+        });
 
-          // 2nd breadth-width pass to do nested load hints
-          return Promise.all(loadPromises).then(() => {
-            const nestedLoadPromises = hints.map(([key, nestedHint]) => {
-              if (Object.keys(nestedHint).length === 0) return;
-              // Unique for good measure?...
-              const children = [...new Set(list.map((entity) => toArray(getEvenDeleted(entity[key]))).flat())];
-              if (children.length === 0) return;
-              return this.populate(children, { hint: nestedHint, ...opts });
-            });
-            // After the nested hints are done, echo back the original now-loaded list
-            return Promise.all(nestedLoadPromises).then(() => batch);
+        // 2nd breadth-width pass to do nested load hints
+        return Promise.all(loadPromises).then(() => {
+          const nestedLoadPromises = hints.map(([key, nestedHint]) => {
+            if (Object.keys(nestedHint).length === 0) return;
+            // Unique for good measure?...
+            const children = [...new Set(list.map((entity) => toArray(getEvenDeleted((entity as any)[key]))).flat())];
+            if (children.length === 0) return;
+            return this.populate(children, { hint: nestedHint, ...opts });
           });
-        },
-
-        // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
-        // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely
-        // skip it b/c author's relations may have been changed/mutated to different not-yet-loaded
-        // entities.
-        //
-        // Even though having `{ cache: false }` looks weird here, i.e. why use dataloader at all?, it
-        // still helps us fan-in resolvers callers that are happening ~simultaneously into the same
-        // effort.
-        { cache: false },
-      ),
+          // After the nested hints are done, echo back the original now-loaded list
+          return Promise.all(nestedLoadPromises).then(() => batch);
+        });
+      },
+      // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
+      // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely
+      // skip it b/c author's relations may have been changed/mutated to different not-yet-loaded
+      // entities.
+      //
+      // Even though having `{ cache: false }` looks weird here, i.e. why use dataloader at all?, it
+      // still helps us fan-in resolvers callers that are happening ~simultaneously into the same
+      // effort.
+      { cache: false },
     );
 
     // Purposefully use `then` instead of `async` as an optimization; avoid using loader.loadMany so
@@ -1032,9 +1027,7 @@ export class EntityManager<C = unknown> {
         });
 
         // Reset the find caches b/c data will have changed in the db
-        this.loadLoaders = {};
-        this.findLoaders = {};
-        this.populateLoaders = {};
+        this.dataloaders = {};
       }
 
       return entitiesToFlush;
@@ -1082,9 +1075,7 @@ export class EntityManager<C = unknown> {
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
-    this.loadLoaders = {};
-    this.findLoaders = {};
-    this.populateLoaders = {};
+    this.dataloaders = {};
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
       param === undefined ? this._entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this._entities;
@@ -1188,6 +1179,27 @@ export class EntityManager<C = unknown> {
 
   public afterTransaction(fn: HookFn) {
     this.hooks.afterTransaction.push(fn);
+  }
+
+  /**
+   * Returns an EntityManager-scoped (i.e. request scoped) data loader.
+   *
+   * @param kind the kind of dataloader, i.e. `load` or `o2m-load`, to avoid clashing in batch keys
+   * @param batchKey within a given kind, i.e. `load`, a batch key like "batch all Author loads" together
+   * @param fn the batch load function
+   * @param opts optional DataLoader options
+   */
+  public getLoader<K, V>(
+    kind: string,
+    batchKey: string,
+    fn: BatchLoadFn<K, V>,
+    opts?: Options<K, V>,
+  ): DataLoader<K, V> {
+    // If we wanted to, if not in a transaction, we could potentially do lookups against a global cache,
+    // to achieve cross-request batching. Granted we'd need all DataLoaders to have caching disabled, see:
+    // https://github.com/stephenh/joist-ts/issues/629
+    const loadersForKind = (this.dataloaders[kind] ??= {});
+    return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
   }
 
   public toString(): string {

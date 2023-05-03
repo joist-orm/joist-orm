@@ -9,18 +9,13 @@ import {
   ParsedFindQuery,
   tagId,
 } from "../index";
-import { getOrSet } from "../utils";
 
 /** Batches m2m.find/include calls (i.e. that don't fully load the m2m relation). */
 export function manyToManyFindDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: ManyToManyCollection<T, U> | ManyToManyLargeCollection<T, U>,
 ): DataLoader<string, boolean> {
-  return getOrSet(
-    em.loadLoaders,
-    `find-${collection.joinTableName}`,
-    () => new DataLoader<string, boolean>((keys) => load(collection, keys)),
-  );
+  return em.getLoader("m2m-find", collection.joinTableName, (keys) => load(collection, keys));
 }
 
 async function load<T extends Entity, U extends Entity>(

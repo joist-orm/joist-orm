@@ -12,7 +12,7 @@ import {
   ParsedFindQuery,
   ParsedTable,
 } from "../QueryParser";
-import { getOrSet, groupBy } from "../utils";
+import { groupBy } from "../utils";
 
 /**
  * Loads lens paths via SQL.
@@ -27,156 +27,154 @@ export function lensDataLoader<T extends Entity>(
   paths: string[],
 ): DataLoader<string, T | T[]> {
   // Batch lens loads by type + path to avoid N+1s
-  const key = `${type.name}:${paths.join("/")}`;
-  return getOrSet(em.findLoaders, key, () => {
-    return new DataLoader<string, T | T[]>(async (sourceIds) => {
-      const aliases: Record<string, number> = {};
-      function getAlias(tableName: string): string {
-        const abbrev = abbreviation(tableName);
-        const i = aliases[abbrev] || 0;
-        aliases[abbrev] = i + 1;
-        return i === 0 ? abbrev : `${abbrev}${i}`;
+  const batchKey = `${type.name}-${paths.join("/")}`;
+  return em.getLoader("lens", batchKey, async (sourceIds) => {
+    const aliases: Record<string, number> = {};
+    function getAlias(tableName: string): string {
+      const abbrev = abbreviation(tableName);
+      const i = aliases[abbrev] || 0;
+      aliases[abbrev] = i + 1;
+      return i === 0 ? abbrev : `${abbrev}${i}`;
+    }
+
+    // br.load(br => br.book.author)
+    // select br.id as __source_id, a.*
+    // from authors a
+    // join books b ON b.author_id = a.id
+    // join book_reviews br ON br.book_id = br.id
+    // where br.id in (keys)
+    // source=BR, target=Author, fields=books,bookReviews
+
+    // a.load(a => a.books.reviews)
+    // select b.author_id as __source_id, br.*
+    // from book_reviews br
+    // join books b on b.id = br.book_id
+    // where b.author_id in (keys)
+
+    const source = getMetadata(type);
+    // Walk source -> paths -> the target, and return the target -> source fields
+    const [target, fields] = mapPathsToTarget(source, paths);
+    let resultIsArray = startIsArray;
+
+    const alias = getAlias(target.tableName);
+    const selects = [`"${alias}".*`];
+    const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
+    const conditions: ColumnCondition[] = [];
+    const query: ParsedFindQuery = { selects, tables, conditions };
+    addTablePerClassJoinsAndClassTag(query, target, alias, true);
+    maybeAddOrderBy(query, target, alias);
+
+    function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
+      if (other.timestampFields.deletedAt) {
+        const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
+        conditions.push({ alias, column, cond: { kind: "is-null" } });
       }
+    }
 
-      // br.load(br => br.book.author)
-      // select br.id as __source_id, a.*
-      // from authors a
-      // join books b ON b.author_id = a.id
-      // join book_reviews br ON br.book_id = br.id
-      // where br.id in (keys)
-      // source=BR, target=Author, fields=books,bookReviews
-
-      // a.load(a => a.books.reviews)
-      // select b.author_id as __source_id, br.*
-      // from book_reviews br
-      // join books b on b.id = br.book_id
-      // where b.author_id in (keys)
-
-      const source = getMetadata(type);
-      // Walk source -> paths -> the target, and return the target -> source fields
-      const [target, fields] = mapPathsToTarget(source, paths);
-      let resultIsArray = startIsArray;
-
-      const alias = getAlias(target.tableName);
-      const selects = [`"${alias}".*`];
-      const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
-      const conditions: ColumnCondition[] = [];
-      const query: ParsedFindQuery = { selects, tables, conditions };
-      addTablePerClassJoinsAndClassTag(query, target, alias, true);
-      maybeAddOrderBy(query, target, alias);
-
-      function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
-        if (other.timestampFields.deletedAt) {
-          const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
-          conditions.push({ alias, column, cond: { kind: "is-null" } });
-        }
-      }
-
-      let lastAlias = alias;
-      fields.forEach(([, field], i) => {
-        const isLast = i === fields.length - 1;
-        switch (field.kind) {
-          case "o2m": {
-            // This is `Publisher.authors` and we want to join in the authors table,
-            // so get the `Author.publisher` field to know the column name
-            const other = field.otherMetadata();
-            const m2o = other.allFields[field.otherFieldName] as ManyToOneField;
-            const alias = getAlias(other.tableName);
-            tables.push({
+    let lastAlias = alias;
+    fields.forEach(([, field], i) => {
+      const isLast = i === fields.length - 1;
+      switch (field.kind) {
+        case "o2m": {
+          // This is `Publisher.authors` and we want to join in the authors table,
+          // so get the `Author.publisher` field to know the column name
+          const other = field.otherMetadata();
+          const m2o = other.allFields[field.otherFieldName] as ManyToOneField;
+          const alias = getAlias(other.tableName);
+          tables.push({
+            alias,
+            join: "inner",
+            table: other.tableName,
+            col1: `${alias}.${m2o.serde.columns[0].columnName}`,
+            col2: `${lastAlias}.id`,
+          });
+          maybeAddNotSoftDeleted(other, alias);
+          if (isLast) {
+            selects.push(`"${alias}".id as __source_id`);
+            conditions.push({
               alias,
-              join: "inner",
-              table: other.tableName,
-              col1: `${alias}.${m2o.serde.columns[0].columnName}`,
-              col2: `${lastAlias}.id`,
+              column: "id",
+              cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
-            maybeAddNotSoftDeleted(other, alias);
-            if (isLast) {
-              selects.push(`"${alias}".id as __source_id`);
-              conditions.push({
-                alias,
-                column: "id",
-                cond: { kind: "in", value: deTagIds(source, sourceIds) },
-              });
-            }
-            lastAlias = alias;
-            break;
           }
-          case "m2o": {
-            // This is `Book.author` and we want to join in the authors table
-            const other = field.otherMetadata();
-            const alias = getAlias(other.tableName);
-            if (!isLast) {
-              tables.push({
-                alias,
-                join: "inner",
-                table: other.tableName,
-                col1: `${alias}.id`,
-                col2: `${lastAlias}.${field.serde.columns[0].columnName}`,
-              });
-              maybeAddNotSoftDeleted(other, alias);
-            } else {
-              selects.push(`"${lastAlias}".${field.serde.columns[0].columnName} as __source_id`);
-              conditions.push({
-                alias: lastAlias,
-                column: field.serde.columns[0].columnName,
-                cond: { kind: "in", value: deTagIds(source, sourceIds) },
-              });
-              // Need to add filter for soft-deleted...
-            }
-            resultIsArray = true;
-            lastAlias = alias;
-            break;
-          }
-          case "m2m": {
-            // This is `Book.tags` and we want to join through the m2m table
-            const other = field.otherMetadata();
-            const alias = getAlias(other.tableName);
-            tables.push({
-              alias: `${alias}_m2m`,
-              join: "inner",
-              table: field.joinTableName,
-              col1: `${alias}_m2m.${field.columnNames[0]}`,
-              col2: `${lastAlias}.id`,
-            });
-            // If this is the last table, we could skip this join like we do for m2os
+          lastAlias = alias;
+          break;
+        }
+        case "m2o": {
+          // This is `Book.author` and we want to join in the authors table
+          const other = field.otherMetadata();
+          const alias = getAlias(other.tableName);
+          if (!isLast) {
             tables.push({
               alias,
               join: "inner",
               table: other.tableName,
               col1: `${alias}.id`,
-              col2: `${alias}_m2m.${field.columnNames[1]}`,
+              col2: `${lastAlias}.${field.serde.columns[0].columnName}`,
             });
             maybeAddNotSoftDeleted(other, alias);
-            if (isLast) {
-              selects.push(`"${alias}".id as __source_id`);
-              conditions.push({ alias, column: "id", cond: { kind: "in", value: deTagIds(source, sourceIds) } });
-            }
-            resultIsArray = true;
-            lastAlias = alias;
-            break;
+          } else {
+            selects.push(`"${lastAlias}".${field.serde.columns[0].columnName} as __source_id`);
+            conditions.push({
+              alias: lastAlias,
+              column: field.serde.columns[0].columnName,
+              cond: { kind: "in", value: deTagIds(source, sourceIds) },
+            });
+            // Need to add filter for soft-deleted...
           }
-          default:
-            throw new Error("Unsupported field kind: " + field.kind);
+          resultIsArray = true;
+          lastAlias = alias;
+          break;
         }
-      });
+        case "m2m": {
+          // This is `Book.tags` and we want to join through the m2m table
+          const other = field.otherMetadata();
+          const alias = getAlias(other.tableName);
+          tables.push({
+            alias: `${alias}_m2m`,
+            join: "inner",
+            table: field.joinTableName,
+            col1: `${alias}_m2m.${field.columnNames[0]}`,
+            col2: `${lastAlias}.id`,
+          });
+          // If this is the last table, we could skip this join like we do for m2os
+          tables.push({
+            alias,
+            join: "inner",
+            table: other.tableName,
+            col1: `${alias}.id`,
+            col2: `${alias}_m2m.${field.columnNames[1]}`,
+          });
+          maybeAddNotSoftDeleted(other, alias);
+          if (isLast) {
+            selects.push(`"${alias}".id as __source_id`);
+            conditions.push({ alias, column: "id", cond: { kind: "in", value: deTagIds(source, sourceIds) } });
+          }
+          resultIsArray = true;
+          lastAlias = alias;
+          break;
+        }
+        default:
+          throw new Error("Unsupported field kind: " + field.kind);
+      }
+    });
 
-      // Get back `__source_id, target.*`
-      const rows = await em.driver.executeFind(em, query, {});
+    // Get back `__source_id, target.*`
+    const rows = await em.driver.executeFind(em, query, {});
 
-      // Group the target entities (i.e. BookReview) by the source id we reached them from.
-      const entitiesBySourceId = new Map(
-        [...groupBy(rows, (row) => row["__source_id"]).entries()].map(([sourceId, rows]) => {
-          // We may technically re-hydrate the same entity twice if it was reached
-          // via multiple sources, but that should be fine/get deduped by hydrate.
-          return [tagId(source, sourceId), rows.map((row) => em.hydrate(target.cstr, row))];
-        }),
-      );
+    // Group the target entities (i.e. BookReview) by the source id we reached them from.
+    const entitiesBySourceId = new Map(
+      [...groupBy(rows, (row) => row["__source_id"]).entries()].map(([sourceId, rows]) => {
+        // We may technically re-hydrate the same entity twice if it was reached
+        // via multiple sources, but that should be fine/get deduped by hydrate.
+        return [tagId(source, sourceId), rows.map((row) => em.hydrate(target.cstr, row))];
+      }),
+    );
 
-      // Re-order the output by the batched input
-      return sourceIds.map((id) => {
-        const result = entitiesBySourceId.get(id);
-        return resultIsArray ? [...new Set(result ?? [])] : result?.[0];
-      });
+    // Re-order the output by the batched input
+    return sourceIds.map((id) => {
+      const result = entitiesBySourceId.get(id);
+      return resultIsArray ? [...new Set(result ?? [])] : result?.[0];
     });
   });
 }

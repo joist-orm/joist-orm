@@ -9,16 +9,12 @@ import { getOrSet } from "../utils";
 export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   em: EntityManager,
   collection: ManyToManyCollection<T, U>,
-) {
+): DataLoader<string, U[]> {
   // Note that we cache the dataloader on the joinTableName, and not
   // which side of the relation the `collection` is coming from, so
   // the `load` impl will have to handle keys that come from either
   // side of the relation.
-  return getOrSet(
-    em.loadLoaders,
-    collection.joinTableName,
-    () => new DataLoader<string, Entity[]>((keys) => load(collection, keys)),
-  );
+  return em.getLoader("m2m-load", collection.joinTableName, (keys) => load(collection, keys));
 }
 
 /**
@@ -30,7 +26,7 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
 async function load<T extends Entity, U extends Entity>(
   collection: ManyToManyCollection<T, U>,
   keys: ReadonlyArray<string>,
-): Promise<Entity[][]> {
+): Promise<U[][]> {
   const { joinTableName } = collection;
   const { em } = collection.entity;
 
@@ -119,6 +115,6 @@ async function load<T extends Entity, U extends Entity>(
     const [column] = key.split("=");
     const joinRows = rowsByKey[key] || [];
     const otherColumn = column === collection.columnName ? collection.otherColumnName : collection.columnName;
-    return joinRows.map((joinRow) => joinRow[otherColumn] as Entity);
+    return joinRows.map((joinRow) => joinRow[otherColumn] as U);
   });
 }

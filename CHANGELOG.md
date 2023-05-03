@@ -1,3 +1,10 @@
+# [1.76.0](https://github.com/stephenh/joist-ts/compare/v1.75.0...v1.76.0) (2023-05-03)
+
+
+### Features
+
+* Refactor get loader ([#631](https://github.com/stephenh/joist-ts/issues/631)) ([d9171c8](https://github.com/stephenh/joist-ts/commit/d9171c8890695da86be0bfe104df39fa03ef5542))
+
 # [1.75.0](https://github.com/stephenh/joist-ts/compare/v1.74.4...v1.75.0) (2023-05-03)
 
 

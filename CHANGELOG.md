@@ -1,3 +1,10 @@
+## [1.76.3](https://github.com/stephenh/joist-ts/compare/v1.76.2...v1.76.3) (2023-05-05)
+
+
+### Bug Fixes
+
+* Fix batch em.finds when using uuids. ([#634](https://github.com/stephenh/joist-ts/issues/634)) ([2e8d8ba](https://github.com/stephenh/joist-ts/commit/2e8d8bae418817c4d44cf43a3cd52e50072d8f97))
+
 ## [1.76.2](https://github.com/stephenh/joist-ts/compare/v1.76.1...v1.76.2) (2023-05-05)
 
 

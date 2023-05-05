@@ -115,7 +115,7 @@ export class PostgresDriver implements Driver {
       .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
       .from(meta.tableName)
       .orderBy("__tag", "__row")
-      .where({ id: -1 });
+      .where({ id: meta.idType === "uuid" ? "00000000-0000-0000-0000-000000000000" : -1 });
 
     // Use the dummy query as a base, then `UNION ALL` in all the rest
     tagged.forEach((add) => {

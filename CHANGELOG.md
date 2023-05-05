@@ -1,3 +1,10 @@
+## [1.76.2](https://github.com/stephenh/joist-ts/compare/v1.76.1...v1.76.2) (2023-05-05)
+
+
+### Bug Fixes
+
+* Fix o2m-find typo. ([#633](https://github.com/stephenh/joist-ts/issues/633)) ([b9ca4b9](https://github.com/stephenh/joist-ts/commit/b9ca4b98892e36920b79270d49677dbbc8558262))
+
 ## [1.76.1](https://github.com/stephenh/joist-ts/compare/v1.76.0...v1.76.1) (2023-05-03)
 
 

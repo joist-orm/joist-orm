@@ -17,7 +17,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
 ): DataLoader<string, U | undefined> {
   const { meta } = collection;
   const batchKey = `${meta.tableName}-${collection.fieldName}`;
-  return em.getLoader("o2m-load", batchKey, async (keys) => {
+  return em.getLoader("o2m-find", batchKey, async (keys) => {
     const { em } = collection.entity;
 
     const meta = collection.otherMeta;

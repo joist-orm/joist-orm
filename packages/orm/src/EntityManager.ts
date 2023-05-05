@@ -1184,13 +1184,15 @@ export class EntityManager<C = unknown> {
   /**
    * Returns an EntityManager-scoped (i.e. request scoped) data loader.
    *
-   * @param kind the kind of dataloader, i.e. `load` or `o2m-load`, to avoid clashing in batch keys
-   * @param batchKey within a given kind, i.e. `load`, a batch key like "batch all Author loads" together
-   * @param fn the batch load function
+   * @param operation the operation being batched, i.e. `load` or `o2m-load`, to avoid clashing batch keys
+   *   across fundamentally different operations
+   * @param batchKey for a given operation, i.e. `load`, a batch key `Author` to batch all Author loads together
+   * @param fn the batch load function, i.e. that will accept all `.load(...)`-d Author ids to load as a single db call
    * @param opts optional DataLoader options
+   * @returns a DataLoader scoped to the `operation` + `batchKey` combination
    */
   public getLoader<K, V>(
-    kind: string,
+    operation: string,
     batchKey: string,
     fn: BatchLoadFn<K, V>,
     opts?: Options<K, V>,
@@ -1198,7 +1200,7 @@ export class EntityManager<C = unknown> {
     // If we wanted to, if not in a transaction, we could potentially do lookups against a global cache,
     // to achieve cross-request batching. Granted we'd need all DataLoaders to have caching disabled, see:
     // https://github.com/stephenh/joist-ts/issues/629
-    const loadersForKind = (this.dataloaders[kind] ??= {});
+    const loadersForKind = (this.dataloaders[operation] ??= {});
     return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
   }
 

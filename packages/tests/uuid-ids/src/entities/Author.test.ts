@@ -26,4 +26,11 @@ describe("Author", () => {
     await em.flush();
     expect(a1.idOrFail.startsWith("a:")).toBeTruthy();
   });
+
+  it("can run multiple find calls", async () => {
+    const em = newEntityManager();
+    const q1 = em.find(Author, { firstName: { eq: "a1" } });
+    const q2 = em.find(Author, { lastName: { eq: "l1" } });
+    await Promise.all([q1, q2]);
+  });
 });

@@ -43,6 +43,7 @@ const config = {
           { type: "doc", docId: "modeling/fields", position: "left", label: "Domain Modeling" },
           { type: "doc", docId: "features/entity-manager", position: "left", label: "Features" },
           { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
+          { type: "doc", docId: "faq", position: "left", label: "FAQ" },
           { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
           { href: "https://joist-ts.slack.com/ssb/redirect", label: "Slack", position: "right" },
         ],

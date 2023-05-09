@@ -86,6 +86,7 @@ export interface AuthorFields {
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
+  search: { kind: "primitive"; type: string; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
@@ -145,6 +146,7 @@ export interface AuthorFilter {
   address?: ValueFilter<Address, null>;
   deletedAt?: ValueFilter<Date, null>;
   numberOfPublicReviews?: ValueFilter<number, null>;
+  search?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   favoriteColors?: ValueFilter<Color[], null>;
@@ -175,6 +177,7 @@ export interface AuthorGraphQLFilter {
   address?: ValueGraphQLFilter<Address>;
   deletedAt?: ValueGraphQLFilter<Date>;
   numberOfPublicReviews?: ValueGraphQLFilter<number>;
+  search?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: EnumGraphQLFilter<Color>;
@@ -205,6 +208,7 @@ export interface AuthorOrder {
   address?: OrderBy;
   deletedAt?: OrderBy;
   numberOfPublicReviews?: OrderBy;
+  search?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   favoriteColors?: OrderBy;
@@ -381,6 +385,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;
+
+  abstract readonly search: PersistedAsyncProperty<Author, string | undefined>;
 
   get createdAt(): Date {
     return this.__orm.data["createdAt"];

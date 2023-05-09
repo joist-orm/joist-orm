@@ -294,7 +294,7 @@ async function batchInsert(knex: Knex, meta: EntityMetadata<any>, entities: Enti
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
-  const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data) ?? null));
+  const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data, knex) ?? null));
   const sql = `
     INSERT INTO "${meta.tableName}" (${columns.map((c) => `"${c.columnName}"`).join(", ")})
     VALUES ${entities.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
@@ -342,7 +342,7 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
   const bindings = entities.flatMap((entity) => [
-    ...columns.map((c) => c.dbValue(entity.__orm.data) ?? null),
+    ...columns.map((c) => c.dbValue(entity.__orm.data, knex) ?? null),
     entity.__orm.originalData[updatedAt],
   ]);
 
@@ -395,7 +395,7 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
 
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
-  const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data) ?? null));
+  const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data, knex) ?? null));
   const sql = `
     UPDATE "${meta.tableName}"
     SET ${columns

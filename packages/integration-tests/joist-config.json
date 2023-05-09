@@ -13,6 +13,7 @@
         "initials": { "derived": "sync" },
         "numberOfBooks": { "derived": "async" },
         "numberOfPublicReviews": { "derived": "async" },
+        "search": { "derived": "async" },
         "wasEverPopular": { "protected": true }
       },
       "relations": { "books": { "orderBy": "order" } },

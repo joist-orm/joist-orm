@@ -226,6 +226,29 @@ describe("Author", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
+  it("can have async derived tsvector values", async () => {
+    const em = newEntityManager();
+
+    // When we create an author with a first and last name
+    const a1 = new Author(em, { firstName: "Bob", lastName: "Smith" });
+    await em.flush();
+    await em.refresh();
+
+    // a1.search.get is returning "Bob Smith BS" instead of "'bob':1 'bs':3 'smith':2"
+    // expect(a1.search.get).toEqual("Bob Smith BS");
+
+    // Then we expect the firstName, lastName and initials to be cast as tsvector lexemes
+    expect(a1.__orm.data.search).toEqual("'bob':1 'bs':3 'smith':2");
+
+    // When we update the author's first name
+    a1.firstName = "Robert";
+    await em.flush();
+    await em.refresh();
+
+    // Then we expect the tsvector to be updated
+    expect(a1.__orm.data.search).toEqual("'robert':1 'rs':3 'smith':2");
+  });
+
   it("can access async derived values if loaded", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });

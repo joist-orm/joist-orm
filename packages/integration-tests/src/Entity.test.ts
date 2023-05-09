@@ -173,6 +173,17 @@ describe("Entity", () => {
             "load": {},
           },
         },
+        "search": {
+          "fieldName": "search",
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": false,
+          "reactiveHint": [
+            "firstName",
+            "lastName",
+            "initials",
+          ],
+        },
         "tags": {
           "addedBeforeLoaded": undefined,
           "columnName": "author_id",

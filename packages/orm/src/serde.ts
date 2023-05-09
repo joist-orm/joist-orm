@@ -1,3 +1,4 @@
+import { Knex } from "knex";
 import { Field, PolymorphicField, SerdeField } from "./EntityMetadata";
 import {
   EntityMetadata,
@@ -34,7 +35,7 @@ export interface FieldSerde {
 export interface Column {
   columnName: string;
   dbType: string;
-  dbValue(data: any): any;
+  dbValue(data: any, knex?: Knex): any;
   mapToDb(value: any): any;
   isArray: boolean;
 }
@@ -49,8 +50,15 @@ export class PrimitiveSerde implements FieldSerde {
     data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
   }
 
-  dbValue(data: any) {
-    return data[this.fieldName];
+  dbValue(data: any, knex?: Knex) {
+    const value = data[this.fieldName];
+
+    // Automatically wrap tsvector values in `to_tsvector`, using knex.raw so we eval the function vs wrapping it as a string
+    if (this.dbType === "tsvector" && knex && value) {
+      return knex.raw(`to_tsvector('${value}')`);
+    }
+
+    return value;
   }
 
   mapToDb(value: any) {

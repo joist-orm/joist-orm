@@ -119,6 +119,15 @@ export class Author extends AuthorCodegen {
     },
   );
 
+  /** Example of a derived async property that will be cast with to_tsvector */
+  readonly search: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+    "search",
+    ["firstName", "lastName", "initials"],
+    (a) => {
+      return `${a.firstName} ${a.lastName} ${a.initials}`;
+    },
+  );
+
   /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
   readonly bookComments: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
     "bookComments",

@@ -24,6 +24,7 @@
     "numberOfBooks",
     "numberOfPublicReviews",
     "publisher",
+    "search",
     "ssn",
     "tags",
     "updatedAt",
@@ -157,6 +158,7 @@
     "numberOfBooks",
     "numberOfPublicReviews",
     "publisherId",
+    "search",
     "ssn",
     "updatedAt",
     "wasEverPopular"

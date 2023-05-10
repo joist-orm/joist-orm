@@ -145,6 +145,7 @@ class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
     const cond: ColumnCondition = {
       alias: "unset",
       column: this.column.columnName,
+      dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
     };
     this.conditions.push(cond);
@@ -184,6 +185,7 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
     const cond: ColumnCondition = {
       alias: "unset",
       column: this.column.columnName,
+      dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
     };
     this.conditions.push(cond);

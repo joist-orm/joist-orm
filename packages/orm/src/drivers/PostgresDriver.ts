@@ -22,7 +22,7 @@ import {
   tagIds,
 } from "../index";
 import { JoinRowTodo, Todo } from "../Todo";
-import { partition, zeroTo } from "../utils";
+import { cleanSql, partition, zeroTo } from "../utils";
 import { buildKnexQuery } from "./buildKnexQuery";
 import { Driver } from "./Driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
@@ -148,6 +148,11 @@ export class PostgresDriver implements Driver {
   ): Promise<any[]> {
     const knex = this.getMaybeInTxnKnex(em);
     return buildKnexQuery(knex, parsed, settings);
+  }
+
+  async executeQuery(em: EntityManager<unknown>, sql: string, bindings: any[]): Promise<any[]> {
+    const knex = this.getMaybeInTxnKnex(em);
+    return (await knex.raw(sql, bindings)).rows;
   }
 
   async transaction<T>(
@@ -446,11 +451,6 @@ async function batchDeletePerTable(knex: Knex, meta: EntityMetadata<any>, entiti
         ),
     ),
   );
-}
-
-/** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */
-function cleanSql(sql: string): string {
-  return sql.trim().replace(/\n/g, "").replace(/  +/g, " ");
 }
 
 function ensureUnderLimit(rows: unknown[]): unknown[] {

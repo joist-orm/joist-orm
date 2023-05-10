@@ -20,6 +20,9 @@ export interface Driver {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]>;
 
+  /** Executes a raw SQL query with bindings. */
+  executeQuery(em: EntityManager, sql: string, bindings: any[]): Promise<any[]>;
+
   transaction<T>(
     em: EntityManager,
     fn: (txn: Knex.Transaction) => Promise<T>,

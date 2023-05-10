@@ -79,6 +79,10 @@ export class InMemoryDriver implements Driver {
     throw new Error("Not implemented");
   }
 
+  executeQuery(em: EntityManager<unknown>, sql: string, bindings: any[]): Promise<any[]> {
+    throw new Error("Method not implemented.");
+  }
+
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
     // do our version of assign ids
     Object.entries(todos).forEach(([_, todo]) => {

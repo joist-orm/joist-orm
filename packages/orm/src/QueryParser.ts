@@ -23,12 +23,18 @@ export interface ParsedExpressionFilter {
 export interface ColumnCondition {
   alias: string;
   column: string;
+  dbType: string;
   cond: ParsedValueFilter<any>;
   pruneable?: boolean;
 }
 
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
-export const skipCondition: ColumnCondition = { alias: "skip", column: "skip", cond: undefined as any };
+export const skipCondition: ColumnCondition = {
+  alias: "skip",
+  column: "skip",
+  dbType: "skip",
+  cond: undefined as any,
+};
 
 export interface PrimaryTable {
   join: "primary";
@@ -106,8 +112,14 @@ export function parseFindQuery(
 
   function maybeAddNotSoftDeleted(meta: EntityMetadata<any>, alias: string): void {
     if (filterSoftDeletes(meta)) {
-      const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0].columnName!;
-      conditions.push({ alias, column, cond: { kind: "is-null" }, pruneable: true });
+      const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0]!;
+      conditions.push({
+        alias,
+        column: column.columnName,
+        dbType: column.dbType,
+        cond: { kind: "is-null" },
+        pruneable: true,
+      });
     }
   }
 
@@ -160,6 +172,7 @@ export function parseFindQuery(
             conditions.push({
               alias: `${alias}${field.aliasSuffix}`,
               column: column.columnName,
+              dbType: column.dbType,
               cond: mapToDb(column, filter),
             });
           });
@@ -178,7 +191,12 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
           } else {
-            conditions.push({ alias, column: column.columnName, cond: mapToDb(column, f) });
+            conditions.push({
+              alias,
+              column: column.columnName,
+              dbType: column.dbType,
+              cond: mapToDb(column, f),
+            });
           }
         } else if (field.kind === "poly") {
           const f = parseEntityFilter((ef.subFilter as any)[key]);
@@ -195,12 +213,23 @@ export function parseFindQuery(
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              conditions.push({ alias, column: comp.columnName, cond: mapToDb(column, f) });
+              conditions.push({
+                alias,
+                column: comp.columnName,
+                dbType: column.dbType,
+                cond: mapToDb(column, f),
+              });
             } else if (f.kind === "is-null") {
               // Add a condition for every component
               // TODO ...should these be anded or ored?
               field.components.forEach((comp) => {
-                conditions.push({ alias, column: comp.columnName, cond: f });
+                const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+                conditions.push({
+                  alias,
+                  column: comp.columnName,
+                  dbType: column.dbType,
+                  cond: f,
+                });
               });
             } else if (f.kind === "in") {
               // Split up the ids by constructor
@@ -208,7 +237,12 @@ export function parseFindQuery(
               // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
               const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
                 const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
-                return { alias, column: column.columnName, cond: mapToDb(column, { kind: "in", value: ids }) };
+                return {
+                  alias,
+                  column: column.columnName,
+                  dbType: column.dbType,
+                  cond: mapToDb(column, { kind: "in", value: ids }),
+                };
               });
               complexConditions.push({ op: "or", conditions });
             } else {
@@ -261,7 +295,12 @@ export function parseFindQuery(
                 return value === null ? value : keyToNumber(meta, maybeResolveReferenceToId(value));
               },
             };
-            conditions.push({ alias: ja, column: field.columnNames[1], cond: mapToDb(column, f) });
+            conditions.push({
+              alias: ja,
+              column: field.columnNames[1],
+              dbType: "int",
+              cond: mapToDb(column, f),
+            });
           }
         } else {
           throw new Error(`Unsupported field ${key}`);
@@ -269,7 +308,7 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      conditions.push({ alias, column: "id", cond: mapToDb(column, ef) });
+      conditions.push({ alias, column: "id", dbType: "int", cond: mapToDb(column, ef) });
     }
   }
 
@@ -650,8 +689,13 @@ export function maybeAddNotSoftDeleted(
   softDeletes: "include" | "exclude",
 ): void {
   if (softDeletes === "exclude" && meta.timestampFields.deletedAt) {
-    const column = meta.allFields[meta.timestampFields.deletedAt].serde?.columns[0].columnName!;
-    conditions.push({ alias, column, cond: { kind: "is-null" } });
+    const column = meta.allFields[meta.timestampFields.deletedAt].serde?.columns[0]!;
+    conditions.push({
+      alias,
+      column: column.columnName,
+      dbType: column.dbType,
+      cond: { kind: "is-null" },
+    });
   }
 }
 

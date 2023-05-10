@@ -712,26 +712,50 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause
-    const p1p = em.find(Publisher, { id: "1" });
-    const p2p = em.find(Publisher, { id: "1" });
+    const q1p = em.find(Publisher, { id: "1" });
+    const q2p = em.find(Publisher, { id: "1" });
     // When they are executed in the same event loop
-    const [p1, p2] = await Promise.all([p1p, p2p]);
+    const [q1, q2] = await Promise.all([q1p, q2p]);
     // Then we issue a single SQL query
     expect(numberOfQueries).toEqual(1);
     // And it's the regular/sane query, i.e. not auto-batched
     expect(queries).toEqual([
       [
-        `select "p".*, p_s0.*, p_s1.*, "p".id as id,`,
+        `WITH _find (tag, arg0) AS (VALUES (0::int, $1::int) )`,
+        ` SELECT array_agg(_find.tag) as _tags, "p".*, p_s0.*, p_s1.*, "p".id as id,`,
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
-        ` from "publishers" as "p"`,
-        ` left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id"`,
-        ` left outer join "small_publishers" as "p_s1" on "p"."id" = "p_s1"."id"`,
-        ` where "p"."id" = $1 order by "p"."id" asc limit $2`,
+        ` FROM publishers as p LEFT OUTER JOIN large_publishers p_s0 ON p.id = p_s0.id`,
+        ` LEFT OUTER JOIN small_publishers p_s1 ON p.id = p_s1.id`,
+        ` JOIN _find ON p.id = _find.arg0 GROUP BY "p".id, p_s0.id, p_s1.id;`,
       ].join(""),
     ]);
     // And both results are the same
-    expect(p1.length).toEqual(1);
-    expect(p1).toEqual(p2);
+    expect(q1.length).toEqual(1);
+    expect(q1).toEqual(q2);
+  });
+
+  it.unlessInMemory("will dedup queries with multiple conditions", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2", last_name: "l2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    // Given two queries with exactly the same where clause
+    const q1p = em.find(Author, { firstName: "a1", lastName: "l1" });
+    const q2p = em.find(Author, { firstName: "a2", lastName: "l2" });
+    // When they are executed in the same event loop
+    const [q1, a2] = await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0, arg1) AS (VALUES`,
+        ` (0::int, $1::character varying, $2::character varying), (1, $3, $4) )`,
+        ` SELECT array_agg(_find.tag) as _tags, "a".*`,
+        ` FROM authors as a`,
+        ` JOIN _find ON a.deleted_at IS NULL AND a.first_name = _find.arg0 AND a.last_name = _find.arg1`,
+        ` GROUP BY "a".id;`,
+      ].join(""),
+    ]);
   });
 
   it.unlessInMemory("does dedup queries with different order bys", async () => {

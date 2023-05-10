@@ -66,8 +66,13 @@ export function lensDataLoader<T extends Entity>(
 
     function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
       if (other.timestampFields.deletedAt) {
-        const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0].columnName!;
-        conditions.push({ alias, column, cond: { kind: "is-null" } });
+        const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0]!;
+        conditions.push({
+          alias,
+          column: column.columnName,
+          dbType: column.dbType,
+          cond: { kind: "is-null" },
+        });
       }
     }
 
@@ -94,6 +99,7 @@ export function lensDataLoader<T extends Entity>(
             conditions.push({
               alias,
               column: "id",
+              dbType: "int",
               cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
           }
@@ -118,6 +124,7 @@ export function lensDataLoader<T extends Entity>(
             conditions.push({
               alias: lastAlias,
               column: field.serde.columns[0].columnName,
+              dbType: field.serde.columns[0].dbType,
               cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
             // Need to add filter for soft-deleted...
@@ -148,7 +155,12 @@ export function lensDataLoader<T extends Entity>(
           maybeAddNotSoftDeleted(other, alias);
           if (isLast) {
             selects.push(`"${alias}".id as __source_id`);
-            conditions.push({ alias, column: "id", cond: { kind: "in", value: deTagIds(source, sourceIds) } });
+            conditions.push({
+              alias,
+              column: "id",
+              dbType: "int",
+              cond: { kind: "in", value: deTagIds(source, sourceIds) },
+            });
           }
           resultIsArray = true;
           lastAlias = alias;

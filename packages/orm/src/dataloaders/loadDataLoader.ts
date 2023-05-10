@@ -21,7 +21,7 @@ export function loadDataLoader<T extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions: [{ alias, column: "id", cond: { kind: "in", value: keys } }],
+      conditions: [{ alias, column: "id", dbType: "int", cond: { kind: "in", value: keys } }],
       orderBys: [{ alias, column: "id", order: "ASC" }],
     };
 

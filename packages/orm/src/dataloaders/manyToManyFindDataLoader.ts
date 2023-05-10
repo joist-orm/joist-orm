@@ -46,8 +46,8 @@ async function load<T extends Entity, U extends Entity>(
           return {
             op: "and",
             conditions: [
-              { alias, column: columnOne, cond: { kind: "eq", value: keyToNumber(meta1, idOne) } },
-              { alias, column: columnTwo, cond: { kind: "eq", value: keyToNumber(meta2, idTwo) } },
+              { alias, column: columnOne, dbType: "int", cond: { kind: "eq", value: keyToNumber(meta1, idOne) } },
+              { alias, column: columnTwo, dbType: "int", cond: { kind: "eq", value: keyToNumber(meta2, idTwo) } },
             ],
           };
         }),

@@ -203,6 +203,7 @@ export class EntityManager<C = unknown> {
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options?: {
+      conditions?: ExpressionFilter;
       populate?: any;
       orderBy?: OrderOf<T>;
       limit?: number;
@@ -210,7 +211,9 @@ export class EntityManager<C = unknown> {
       softDeletes?: "include" | "exclude";
     },
   ): Promise<T[]> {
-    const rows = await findDataLoader(this, type).load({ where, ...options });
+    const { populate, ...rest } = options || {};
+    const settings = { where, ...rest };
+    const rows = await findDataLoader(this, type, settings).load(settings);
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
     if (options?.populate) {
       await this.populate(result, options.populate);
@@ -249,10 +252,12 @@ export class EntityManager<C = unknown> {
       softDeletes?: "include" | "exclude";
     },
   ): Promise<T[]> {
-    const rows = await findDataLoader(this, type).load({ where, ...options });
+    const { populate, ...rest } = options || {};
+    const settings = { where, ...rest };
+    const rows = await findDataLoader(this, type, settings).load(settings);
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
-    if (options?.populate) {
-      await this.populate(result, options.populate);
+    if (populate) {
+      await this.populate(result, populate);
     }
     return result;
   }

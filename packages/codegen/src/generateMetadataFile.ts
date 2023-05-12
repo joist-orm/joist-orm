@@ -118,14 +118,15 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   });
 
   dbMetadata.manyToOnes.forEach((m2o) => {
-    const { fieldName, columnName, notNull, otherEntity, otherFieldName, dbType } = m2o;
+    const { fieldName, columnName, notNull, otherEntity, otherFieldName, derived, dbType } = m2o;
     const otherTagName = config.entities[otherEntity.name].tag;
     fields[fieldName] = code`
       {
         kind: "m2o",
         fieldName: "${fieldName}",
         fieldIdName: "${fieldName}Id",
-        required: ${notNull},
+        derived: ${!derived ? false : `"${derived}"`},
+        required: ${!derived && notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),

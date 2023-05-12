@@ -113,6 +113,7 @@ export type ManyToOneField = {
   otherFieldName: string;
   serde: FieldSerde;
   immutable: boolean;
+  derived: "orm" | "async" | false;
 };
 
 export type ManyToManyField = {

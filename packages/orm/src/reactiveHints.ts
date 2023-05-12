@@ -159,6 +159,7 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.allFields[key];
     if (field) {
+      if (key === "favoriteBook")
       switch (field.kind) {
         case "m2m":
         case "m2o":

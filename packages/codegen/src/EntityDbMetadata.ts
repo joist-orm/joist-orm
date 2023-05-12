@@ -132,6 +132,7 @@ export type ManyToOneField = Field & {
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
+  derived: "orm" | "async" | false;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -378,6 +379,14 @@ function fieldDerived(config: Config, entity: Entity, fieldName: string): Primit
   }
 }
 
+function fkFieldDerived(config: Config, entity: Entity, fieldName: string): ManyToOneField["derived"] {
+  if (isAsyncDerived(config, entity, fieldName)) {
+    return "async";
+  } else {
+    return false;
+  }
+}
+
 function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: EnumMetadata): EnumField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
@@ -461,7 +470,8 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
-  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
+  const derived = fkFieldDerived(config, entity, fieldName);
+  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

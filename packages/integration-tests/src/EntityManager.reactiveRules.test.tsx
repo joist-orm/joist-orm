@@ -178,6 +178,28 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.numberOfBooks.get).toBe(0);
   });
 
+  it.withCtx("updates derived fields that are foreign keys", async ({ em }) => {
+    // Given an entity with an async derived field
+    const a = newAuthor(em);
+    const b = newBook(em, { author: a, reviews: [{ rating: 10 }] });
+    await em.flush();
+    // For some reason .toMatchEntity(b) and .toBe(b) fail here
+    // expect(a.favoriteBook.get).toMatchEntity(b);
+    expect(a.favoriteBook.get?.idOrFail).toBe(b.idOrFail);
+
+    // If there is a new favorite book
+    const b2 = newBook(em, { author: a, reviews: [{ rating: 20 }] });
+    await em.flush();
+    // Then the derived field is updated
+    expect(a.favoriteBook.get?.idOrFail).toBe(b2.idOrFail);
+
+    // If the favorite book is deleted
+    em.delete(b2);
+    await em.flush();
+    // Then the derived field is updated
+    expect(a.favoriteBook.get?.idOrFail).toBe(b.idOrFail);
+  });
+
   it.withCtx("creates the right reactive derived values", async () => {
     const cstr = expect.any(Function);
     expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([

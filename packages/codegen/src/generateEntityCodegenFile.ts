@@ -43,6 +43,7 @@ import {
   OrderBy,
   PartialOrNull,
   PersistedAsyncProperty,
+  PersistedAsyncRelation,
   PolymorphicReference,
   setField,
   setOpts,
@@ -226,6 +227,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
+
+    if (m2o.derived === "async") {
+      return code`
+        abstract readonly ${fieldName}: ${PersistedAsyncRelation}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
+      `;
+    }
+
     return code`
       readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(

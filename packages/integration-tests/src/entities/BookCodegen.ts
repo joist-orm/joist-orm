@@ -80,6 +80,7 @@ export interface BookOpts {
   advances?: BookAdvance[];
   reviews?: BookReview[];
   comments?: Comment[];
+  favoriteBookAuthors?: Author[];
   tags?: Tag[];
 }
 
@@ -90,6 +91,7 @@ export interface BookIdsOpts {
   advanceIds?: BookAdvanceId[] | null;
   reviewIds?: BookReviewId[] | null;
   commentIds?: CommentId[] | null;
+  favoriteBookAuthorIds?: AuthorId[] | null;
   tagIds?: TagId[] | null;
 }
 
@@ -106,6 +108,7 @@ export interface BookFilter {
   advances?: EntityFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  favoriteBookAuthors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
@@ -122,6 +125,7 @@ export interface BookGraphQLFilter {
   advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
   reviews?: EntityGraphQLFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  favoriteBookAuthors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
 
@@ -165,6 +169,14 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
     "comments",
     "parent",
     "parent_book_id",
+    undefined,
+  );
+
+  readonly favoriteBookAuthors: Collection<Book, Author> = hasMany(
+    authorMeta,
+    "favoriteBookAuthors",
+    "favoriteBook",
+    "favorite_book_id",
     undefined,
   );
 

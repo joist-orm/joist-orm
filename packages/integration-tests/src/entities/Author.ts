@@ -8,8 +8,10 @@ import {
   hasManyThrough,
   hasOneDerived,
   hasPersistedAsyncProperty,
+  hasPersistedAsyncRelation,
   Loaded,
   PersistedAsyncProperty,
+  PersistedAsyncRelation,
   Reference,
 } from "joist-orm";
 import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
@@ -129,6 +131,20 @@ export class Author extends AuthorCodegen {
         .flatMap((b) => b.comments.get)
         .map((c) => c.text)
         .join(", ");
+    },
+  );
+
+  readonly favoriteBook: PersistedAsyncRelation<Author, Book, undefined> = hasPersistedAsyncRelation<Author, Book, { books: { reviews_ro: "rating" } }, undefined>(
+    "favoriteBook",
+    "favoriteBookAuthors",
+    { books: { reviews_ro: "rating" } },
+    (a) => {
+      const books = a.books.get;
+      if (books.length === 0) {
+        return undefined;
+      }
+      const bestRating = Math.max(...books.flatMap((b) => b.reviews.get).map((r) => r.rating));
+      return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating)) as Book | undefined;
     },
   );
 

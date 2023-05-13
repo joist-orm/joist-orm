@@ -63,8 +63,10 @@ export function findDataLoader<T extends Entity>(
       // - adding a join onto the `em_find` table
       // Biggest wrinkle is that the join condition is non-trivial; currently the AST is only c1=c2
       const columns = ["array_agg(_find.tag) as _tags", ...query.selects];
+
       const [primary, innerJoins, outerJoins] = getTables(query);
 
+      // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings: any[] = [];
       queries.forEach((query) => {
         const { where, ...opts } = query;

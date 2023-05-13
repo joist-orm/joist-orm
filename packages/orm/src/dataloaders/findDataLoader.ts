@@ -66,15 +66,8 @@ export function findDataLoader<T extends Entity>(
       });
 
       let argsIndex = 0;
-
-      // Create the top-level a1.firstName=data.firstName AND a2.lastName=data.lastName
-      const topConditions = [] as string[];
-      query.conditions.forEach((c) => {
-        const [op, argsTaken] = makeOp(c.cond, argsIndex);
-        topConditions.push(`${c.alias}.${c.column} ${op}`);
-        argsIndex += argsTaken;
-      });
-      function parseCondition(cc: ParsedExpressionFilter): string {
+      // Create the a1.firstName=data.firstName AND a2.lastName=data.lastName
+      function buildConditions(cc: ParsedExpressionFilter): string {
         const conditions = [] as string[];
         cc.conditions.forEach((c) => {
           if ("cond" in c) {
@@ -82,14 +75,19 @@ export function findDataLoader<T extends Entity>(
             conditions.push(`${c.alias}.${c.column} ${op}`);
             argsIndex += argsTaken;
           } else {
-            conditions.push(parseCondition(c));
+            const needsWrap = !("cond" in c);
+            if (needsWrap) {
+              conditions.push(`(${buildConditions(c)})`);
+            } else {
+              conditions.push(buildConditions(c));
+            }
           }
         });
-        return `(${conditions.join(` ${cc.op} `)})`;
+        return conditions.join(` ${cc.op.toUpperCase()} `);
       }
-      // Now do any complex conditions
-      query.complexConditions?.forEach((cc) => {
-        topConditions.push(parseCondition(cc));
+      const conditions = buildConditions({
+        op: "and",
+        conditions: [...query.conditions, ...(query.complexConditions || [])],
       });
 
       const sql = `
@@ -111,7 +109,7 @@ export function findDataLoader<T extends Entity>(
         FROM ${primary.table} as ${primary.alias}
         ${innerJoins.map((j) => `JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         ${outerJoins.map((j) => `LEFT OUTER JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
-        JOIN _find ON ${topConditions.join(" AND ")}
+        JOIN _find ON ${conditions}
         GROUP BY ${query.selects
           .filter((s) => !s.includes("CASE"))
           .filter((s) => !s.includes(" as "))

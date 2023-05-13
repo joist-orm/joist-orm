@@ -777,7 +777,7 @@ describe("EntityManager", () => {
         ` (0::int, $1::character varying, $2::character varying), (1, $3, $4) )`,
         ` SELECT array_agg(_find.tag) as _tags, "a".*`,
         ` FROM authors as a`,
-        ` JOIN _find ON a.deleted_at IS NULL AND (a.first_name = _find.arg0 or a.last_name = _find.arg1)`,
+        ` JOIN _find ON a.deleted_at IS NULL AND (a.first_name = _find.arg0 OR a.last_name = _find.arg1)`,
         ` GROUP BY "a".id;`,
       ].join(""),
     ]);

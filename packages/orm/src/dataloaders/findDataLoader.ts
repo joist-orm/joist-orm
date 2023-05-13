@@ -9,7 +9,7 @@ import { getMetadata } from "../EntityMetadata";
 import {
   ColumnCondition,
   combineConditions,
-  JoinTable,
+  getTables,
   ParsedExpressionFilter,
   ParsedFindQuery,
   ParsedValueFilter,
@@ -63,9 +63,7 @@ export function findDataLoader<T extends Entity>(
       // - adding a join onto the `em_find` table
       // Biggest wrinkle is that the join condition is non-trivial; currently the AST is only c1=c2
       const columns = ["array_agg(_find.tag) as _tags", ...query.selects];
-      const primary = query.tables.find((t) => t.join === "primary")!;
-      const innerJoins = query.tables.filter((t) => t.join === "inner") as JoinTable[];
-      const outerJoins = query.tables.filter((t) => t.join === "outer") as JoinTable[];
+      const [primary, innerJoins, outerJoins] = getTables(query);
 
       const bindings: any[] = [];
       queries.forEach((query) => {

@@ -728,3 +728,19 @@ export function combineConditions(query: ParsedFindQuery): ParsedExpressionFilte
     return { op: "and", conditions: query.conditions };
   }
 }
+
+export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], JoinTable[]] {
+  let primary: PrimaryTable;
+  const innerJoins: JoinTable[] = [];
+  const outerJoins: JoinTable[] = [];
+  for (const table of query.tables) {
+    if (table.join === "primary") {
+      primary = table;
+    } else if (table.join === "inner") {
+      innerJoins.push(table);
+    } else if (table.join === "outer") {
+      outerJoins.push(table);
+    }
+  }
+  return [primary!, innerJoins, outerJoins];
+}

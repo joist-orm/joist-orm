@@ -8,6 +8,7 @@ import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager"
 import { getMetadata } from "../EntityMetadata";
 import {
   ColumnCondition,
+  combineConditions,
   JoinTable,
   ParsedExpressionFilter,
   ParsedFindQuery,
@@ -65,30 +66,8 @@ export function findDataLoader<T extends Entity>(
         collectValues(bindings, parseFindQuery(meta, where, opts));
       });
 
-      let argsIndex = 0;
-      // Create the a1.firstName=data.firstName AND a2.lastName=data.lastName
-      function buildConditions(cc: ParsedExpressionFilter): string {
-        const conditions = [] as string[];
-        cc.conditions.forEach((c) => {
-          if ("cond" in c) {
-            const [op, argsTaken] = makeOp(c.cond, argsIndex);
-            conditions.push(`${c.alias}.${c.column} ${op}`);
-            argsIndex += argsTaken;
-          } else {
-            const needsWrap = !("cond" in c);
-            if (needsWrap) {
-              conditions.push(`(${buildConditions(c)})`);
-            } else {
-              conditions.push(buildConditions(c));
-            }
-          }
-        });
-        return conditions.join(` ${cc.op.toUpperCase()} `);
-      }
-      const conditions = buildConditions({
-        op: "and",
-        conditions: [...query.conditions, ...(query.complexConditions || [])],
-      });
+      // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
+      const [conditions] = buildConditions(combineConditions(query));
 
       const sql = `
         WITH _find (tag, ${args.map((a) => a.name).join(", ")}) AS (VALUES
@@ -119,7 +98,7 @@ export function findDataLoader<T extends Entity>(
 
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
 
-      // Make an empty array for each batched query
+      // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as any[]);
       // Then put each row into the tagged query it matched
       for (const row of rows) {
@@ -215,6 +194,25 @@ function visit(query: ParsedFindQuery, visitor: Visitor): void {
   }
   query.conditions.forEach(visitCond);
   query.complexConditions?.forEach(visitExpFilter);
+}
+
+// Create the a1.firstName=data.firstName AND a2.lastName=data.lastName
+function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [string, number] {
+  const conditions = [] as string[];
+  ef.conditions.forEach((c) => {
+    if ("cond" in c) {
+      const [op, argsTaken] = makeOp(c.cond, argsIndex);
+      conditions.push(`${c.alias}.${c.column} ${op}`);
+      argsIndex += argsTaken;
+    } else {
+      let [cond, argsTaken] = buildConditions(c, argsIndex);
+      const needsWrap = !("cond" in c);
+      if (needsWrap) cond = `(${cond})`;
+      conditions.push(cond);
+      argsIndex += argsTaken;
+    }
+  });
+  return [conditions.join(` ${ef.op.toUpperCase()} `), argsIndex];
 }
 
 function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number] {

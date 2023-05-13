@@ -713,3 +713,18 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
   }
   return { op, conditions: valid.filter(isDefined) };
 }
+
+/**
+ * Combines the simple & complex compressions of `query` into a single `ParsedExpressionFilter`.
+ *
+ * The two `query.conditions` and `query.complexConditions` separated generally for historical
+ * reasons in the `parseFindQuery` implementation, but are effectively a single expression of
+ * `AND`-ing the conditions with the complex conditions.
+ */
+export function combineConditions(query: ParsedFindQuery): ParsedExpressionFilter {
+  if (query.complexConditions) {
+    return { op: "and", conditions: [...query.conditions, ...query.complexConditions] };
+  } else {
+    return { op: "and", conditions: query.conditions };
+  }
+}

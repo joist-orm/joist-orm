@@ -12,7 +12,7 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
-import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { aliases, Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Color, newAuthor, newBook, newPublisher, Publisher, PublisherSize } from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
@@ -753,6 +753,31 @@ describe("EntityManager", () => {
         ` SELECT array_agg(_find.tag) as _tags, "a".*`,
         ` FROM authors as a`,
         ` JOIN _find ON a.deleted_at IS NULL AND a.first_name = _find.arg0 AND a.last_name = _find.arg1`,
+        ` GROUP BY "a".id;`,
+      ].join(""),
+    ]);
+  });
+
+  it.unlessInMemory("will dedup queries with complex expressions", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2", last_name: "l2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    // Given two queries with exactly the same where clause
+    const [a1, a2] = aliases(Author, Author);
+    const q1p = em.find(Author, { as: a1 }, { conditions: { or: [a1.firstName.eq("a1"), a1.lastName.eq("l1")] } });
+    const q2p = em.find(Author, { as: a2 }, { conditions: { or: [a2.firstName.eq("a2"), a2.lastName.eq("l2")] } });
+    // When they are executed in the same event loop
+    const [q1, q2] = await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0, arg1) AS (VALUES`,
+        ` (0::int, $1::character varying, $2::character varying), (1, $3, $4) )`,
+        ` SELECT array_agg(_find.tag) as _tags, "a".*`,
+        ` FROM authors as a`,
+        ` JOIN _find ON a.deleted_at IS NULL AND (a.first_name = _find.arg0 or a.last_name = _find.arg1)`,
         ` GROUP BY "a".id;`,
       ].join(""),
     ]);

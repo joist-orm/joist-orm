@@ -24,7 +24,8 @@ export function findDataLoader<T extends Entity>(
   const { where, ...opts } = filter;
 
   const meta = getMetadata(type);
-  const query = parseFindQuery(meta, where, opts);
+  // Clone b/c the complex conditions are not deep copies
+  const query = structuredClone(parseFindQuery(meta, where, opts));
   stripValues(query);
   const batchKey = JSON.stringify(query);
 
@@ -73,13 +74,23 @@ export function findDataLoader<T extends Entity>(
         topConditions.push(`${c.alias}.${c.column} ${op}`);
         argsIndex += argsTaken;
       });
+      function parseCondition(cc: ParsedExpressionFilter): string {
+        const conditions = [] as string[];
+        cc.conditions.forEach((c) => {
+          if ("cond" in c) {
+            const [op, argsTaken] = makeOp(c.cond, argsIndex);
+            conditions.push(`${c.alias}.${c.column} ${op}`);
+            argsIndex += argsTaken;
+          } else {
+            conditions.push(parseCondition(c));
+          }
+        });
+        return `(${conditions.join(` ${cc.op} `)})`;
+      }
       // Now do any complex conditions
       query.complexConditions?.forEach((cc) => {
-        // const conditions = [] as string[];
-        // topConditions.push(`(${conditions.join(` ${cc.op} `)})`);
+        topConditions.push(parseCondition(cc));
       });
-
-      // visit(query, { visitCond(c: ColumnCondition) {} });
 
       const sql = `
         WITH _find (tag, ${args.map((a) => a.name).join(", ")}) AS (VALUES

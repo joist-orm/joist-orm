@@ -783,6 +783,23 @@ describe("EntityManager", () => {
     ]);
   });
 
+  it.unlessInMemory("will dedup queries with no conditions", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    // Given two queries with exactly the same where clause
+    const q1p = em.find(Author, {});
+    const q2p = em.find(Author, {});
+    // When they are executed in the same event loop
+    const [q1, q2] = await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      `select "a".* from "authors" as "a" where "a"."deleted_at" is null order by "a"."id" asc limit $1`,
+    ]);
+  });
+
   it.unlessInMemory("does dedup queries with different order bys", async () => {
     await insertPublisher({ name: "p1" });
     await insertPublisher({ id: 2, name: "p2" });

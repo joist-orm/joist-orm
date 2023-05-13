@@ -25,16 +25,23 @@ export function findDataLoader<T extends Entity>(
   const { where, ...opts } = filter;
 
   const meta = getMetadata(type);
+  const query = parseFindQuery(meta, where, opts);
   // Clone b/c the complex conditions are not deep copies
-  const query = structuredClone(parseFindQuery(meta, where, opts));
-  stripValues(query);
-  const batchKey = JSON.stringify(query);
+  const clone = structuredClone(query);
+  stripValues(clone);
+  const batchKey = JSON.stringify(clone);
 
   return em.getLoader(
     "find",
     batchKey,
     async (queries) => {
       // We're guaranteed that these queries all have the same structure
+
+      // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
+      if (queries.length === 1) {
+        const rows = await em.driver.executeFind(em, query, opts);
+        return [rows];
+      }
 
       // WITH data(tag, arg1, arg2) AS (VALUES
       //   (1, 'a', 'a'),

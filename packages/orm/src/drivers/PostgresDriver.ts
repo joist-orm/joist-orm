@@ -1,16 +1,11 @@
 import { Knex } from "knex";
-import { whereFilterHash } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
   beforeTransaction,
-  buildQuery,
   deTagId,
   Entity,
-  EntityConstructor,
-  entityLimit,
   EntityManager,
   EntityMetadata,
-  FilterAndSettings,
   getAllMetas,
   getBaseAndSelfMetas,
   getMetadata,
@@ -26,7 +21,6 @@ import { cleanSql, partition, zeroTo } from "../utils";
 import { buildKnexQuery } from "./buildKnexQuery";
 import { Driver } from "./Driver";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
-import QueryBuilder = Knex.QueryBuilder;
 
 let lastNow = new Date();
 
@@ -53,92 +47,6 @@ export class PostgresDriver implements Driver {
 
   constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
-  }
-
-  async find<T extends Entity>(
-    em: EntityManager,
-    type: EntityConstructor<T>,
-    queries: FilterAndSettings<T>[],
-  ): Promise<unknown[][]> {
-    const knex = this.getMaybeInTxnKnex(em);
-
-    // If there is only 1 query, we can skip the tagging step.
-    if (queries.length === 1) {
-      return [ensureUnderLimit(await buildQuery(knex, type, queries[0]))];
-    }
-
-    // Map each incoming query[i] to itself or a previous dup
-    const uniqueQueries: FilterAndSettings<T>[] = [];
-    const queryToUnique: Record<number, number> = {};
-    queries.forEach((q, i) => {
-      let j = uniqueQueries.findIndex((uq) => whereFilterHash(uq) === whereFilterHash(q));
-      if (j === -1) {
-        uniqueQueries.push(q);
-        j = uniqueQueries.length - 1;
-      }
-      queryToUnique[i] = j;
-    });
-
-    // There are duplicate queries, but only one unique query, so we can execute just it w/o tagging.
-    if (uniqueQueries.length === 1) {
-      const rows = ensureUnderLimit(await buildQuery(knex, type, queries[0]));
-      // Reuse this same result for however many callers asked for it.
-      return queries.map(() => rows);
-    }
-
-    // TODO: Instead of this tagged approach, we could probably check if the each
-    // where cause: a) has the same structure for joins, and b) has conditions that
-    // we can evaluate client-side, and then combine it into a query like:
-    //
-    // SELECT entity.*, t1.foo as condition1, t2.bar as condition2 FROM ...
-    // WHERE t1.foo (union of each queries condition)
-    //
-    // And then use the `condition1` and `condition2` to tease the combined result set
-    // back apart into each condition's result list.
-
-    // For each query, add an additional `__tag` column that will identify that query's
-    // corresponding rows in the combined/UNION ALL'd result set.
-    //
-    // We also add a `__row` column with that queries order, so that after we `UNION ALL`,
-    // we can order by `__tag` + `__row` and ensure we're getting back the combined rows
-    // exactly as they would be in done individually (i.e. per the docs `UNION ALL` does
-    // not guarantee order).
-    const tagged = uniqueQueries.map((queryAndSettings, i) => {
-      const query = buildQuery(knex, type, queryAndSettings) as Knex.QueryBuilder;
-      return query.select(knex.raw(`${i} as __tag`), knex.raw("row_number() over () as __row"));
-    });
-
-    const meta = getMetadata(type);
-
-    // Kind of dumb, but make a dummy row to start our query with
-    let query = knex
-      .select("*", knex.raw("-1 as __tag"), knex.raw("-1 as __row"))
-      .from(meta.tableName)
-      .orderBy("__tag", "__row")
-      .where({ id: meta.idType === "uuid" ? "00000000-0000-0000-0000-000000000000" : -1 });
-
-    // Use the dummy query as a base, then `UNION ALL` in all the rest
-    tagged.forEach((add) => {
-      query = query.unionAll(add, true);
-    });
-
-    // Issue a single SQL statement for all of them
-    const rows = ensureUnderLimit(await query);
-
-    const resultForUniques: any[][] = [];
-    uniqueQueries.forEach((q, i) => {
-      resultForUniques[i] = [];
-    });
-    rows.forEach((row: any) => {
-      resultForUniques[row["__tag"]].push(row);
-    });
-
-    // We return an array-of-arrays, where result[i] is the rows for queries[i]
-    const result: any[][] = [];
-    queries.forEach((q, i) => {
-      result[i] = resultForUniques[queryToUnique[i]];
-    });
-    return result;
   }
 
   async executeFind(
@@ -451,13 +359,6 @@ async function batchDeletePerTable(knex: Knex, meta: EntityMetadata<any>, entiti
         ),
     ),
   );
-}
-
-function ensureUnderLimit(rows: unknown[]): unknown[] {
-  if (rows.length >= entityLimit) {
-    throw new Error(`Query returned more than ${entityLimit} rows`);
-  }
-  return rows;
 }
 
 function getNow(): Date {

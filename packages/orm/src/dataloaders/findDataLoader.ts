@@ -79,11 +79,9 @@ export function findDataLoader<T extends Entity>(
         .map((s) => s.replace("*", "id"));
 
       const orderBys = query.orderBys || [{ alias: primary.alias, column: "id", order: "ASC" }];
-      if (query.orderBys) {
-        for (const o of query.orderBys) {
-          if (o.alias !== primary.alias) {
-            groupBys.push(`${o.alias}.${o.column}`);
-          }
+      for (const o of orderBys) {
+        if (o.alias !== primary.alias) {
+          groupBys.push(`${o.alias}.${o.column}`);
         }
       }
 

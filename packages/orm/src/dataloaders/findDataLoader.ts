@@ -244,9 +244,8 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
       // FIX
       return [`NOT IN _find.arg${argsIndex}`, 1];
     case "between":
-      // FIX
       const [min, max] = cond.value;
-      return [`NOT IN _find.arg${argsIndex}`, 1];
+      return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2];
     default:
       assertNever(cond);
   }

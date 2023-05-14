@@ -878,6 +878,21 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by between", async () => {
+    await insertAuthor({ first_name: "a1", age: 50 });
+
+    const em = newEntityManager();
+    const where = { age: { between: [40, 60] } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toHaveLength(1);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`"a".*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "between", value: [40, 60] } }],
+    });
+  });
+
   it("can find by less than", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });

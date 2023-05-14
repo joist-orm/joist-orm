@@ -140,4 +140,18 @@ describe("EntityManager.find.batch", () => {
     // And the results are the expected reverse of each other
     expect(a1.reverse()).toEqual(a2);
   });
+
+  it("batches queries with between", async () => {
+    const em = newEntityManager();
+    resetQueryCount();
+    const [q1, q2] = await Promise.all([
+      em.find(Author, { age: { between: [20, 30] } }),
+      em.find(Author, { age: { between: [30, 40] } }),
+    ]);
+    expect(queries).toMatchInlineSnapshot(`
+      [
+        "WITH _find (tag, arg0, arg1) AS (VALUES ($1::int, $2::int, $3::int), ($4, $5, $6) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a JOIN _find ON a.deleted_at IS NULL AND a.age BETWEEN _find.arg0 AND _find.arg1 GROUP BY "a".id ORDER BY a.id ASC;",
+      ]
+    `);
+  });
 });

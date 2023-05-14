@@ -567,6 +567,8 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
             case "like":
             case "ilike":
               return { kind: key, value: filter[key] };
+            case "between":
+              return { kind: key, value: filter[key] };
             default:
               throw new Error(`Unsupported value filter key ${key}`);
           }

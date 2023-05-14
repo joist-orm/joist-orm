@@ -64,7 +64,9 @@ export type ValueFilter<V, N> =
   | { lte: V | undefined }
   | { like: V | undefined }
   | { ilike: V | undefined }
-  | { gte: V | undefined; lte: V | undefined };
+  // this is between
+  | { gte: V | undefined; lte: V | undefined }
+  | { between: [V, V] | undefined };
 
 /** Filters against complex expressions of filters. */
 export type ExpressionFilter = (

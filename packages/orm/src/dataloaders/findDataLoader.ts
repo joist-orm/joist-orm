@@ -57,7 +57,7 @@ export function findDataLoader<T extends Entity>(
 
       // Build the list of 'arg1', 'arg2', ... strings
       const args = collectArgs(query);
-      args.unshift({ name: "tag", dbType: "int" });
+      args.unshift({ name: "tag", dbType: meta.idType });
 
       const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
       const [primary, innerJoins, outerJoins] = getTables(query);

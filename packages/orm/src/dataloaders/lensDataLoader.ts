@@ -99,7 +99,7 @@ export function lensDataLoader<T extends Entity>(
             conditions.push({
               alias,
               column: "id",
-              dbType: "int",
+              dbType: other.idType,
               cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
           }
@@ -158,7 +158,7 @@ export function lensDataLoader<T extends Entity>(
             conditions.push({
               alias,
               column: "id",
-              dbType: "int",
+              dbType: other.idType,
               cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
           }

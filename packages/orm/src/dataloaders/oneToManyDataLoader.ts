@@ -29,7 +29,9 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions: [{ alias, column: collection.otherColumnName, dbType: "int", cond: { kind: "in", value: keys } }],
+      conditions: [
+        { alias, column: collection.otherColumnName, dbType: meta.idType, cond: { kind: "in", value: keys } },
+      ],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

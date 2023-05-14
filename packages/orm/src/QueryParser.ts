@@ -298,7 +298,7 @@ export function parseFindQuery(
             conditions.push({
               alias: ja,
               column: field.columnNames[1],
-              dbType: "int",
+              dbType: meta.idType,
               cond: mapToDb(column, f),
             });
           }
@@ -308,7 +308,7 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      conditions.push({ alias, column: "id", dbType: "int", cond: mapToDb(column, ef) });
+      conditions.push({ alias, column: "id", dbType: meta.idType, cond: mapToDb(column, ef) });
     }
   }
 

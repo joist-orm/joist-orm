@@ -4,7 +4,7 @@ import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { opToFn } from "../EntityGraphQLFilter";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { entityLimit, EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import {
   ColumnCondition,
@@ -40,6 +40,7 @@ export function findDataLoader<T extends Entity>(
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
       if (queries.length === 1) {
         const rows = await em.driver.executeFind(em, query, opts);
+        ensureUnderLimit(rows);
         return [rows];
       }
 
@@ -97,6 +98,7 @@ export function findDataLoader<T extends Entity>(
       `;
 
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
+      ensureUnderLimit(rows);
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as any[]);
@@ -254,4 +256,10 @@ function buildValuesCte(name: string, columns: { name: string; dbType: string }[
   return `WITH ${name} (${columns.map((c) => c.name).join(", ")}) AS (VALUES
       ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
   )`;
+}
+
+function ensureUnderLimit(rows: unknown[]): void {
+  if (rows.length >= entityLimit) {
+    throw new Error(`Query returned more than ${entityLimit} rows`);
+  }
 }

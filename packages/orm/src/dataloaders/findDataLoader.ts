@@ -95,7 +95,8 @@ export function findDataLoader<T extends Entity>(
         ${outerJoins.map((j) => `LEFT OUTER JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")};
+        ORDER BY ${orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
+        LIMIT ${entityLimit};
       `;
 
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);

@@ -44,7 +44,7 @@ export function findDataLoader<T extends Entity>(
       }
 
       // WITH data(tag, arg1, arg2) AS (VALUES
-      //   (1, 'a', 'a'),
+      //   (1::int, 'a'::varchar, 'a'::varchar),
       //   (2, 'b', 'b'),
       //   (3, 'c', 'c')
       // )
@@ -53,23 +53,19 @@ export function findDataLoader<T extends Entity>(
       // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
       // group by a.id;
 
-      // Build the list of arg1, arg2, ... strings
+      // Build the list of 'arg1', 'arg2', ... strings
       const args = collectArgs(query);
+      args.unshift({ name: "tag", dbType: "int" });
 
-      // Mash together a SQL query ... maybe eventually we could massage the ParsedFindQuery
-      // to support this by:
-      // - pushing the `array_agg` onto the query.selects
-      // - rewriting the value conditions to use the `em_find` CTE table
-      // - adding a join onto the `em_find` table
-      // Biggest wrinkle is that the join condition is non-trivial; currently the AST is only c1=c2
       const columns = ["array_agg(_find.tag) as _tags", ...query.selects];
-
       const [primary, innerJoins, outerJoins] = getTables(query);
 
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings: any[] = [];
-      queries.forEach((query) => {
+      queries.forEach((query, i) => {
         const { where, ...opts } = query;
+        // add this query's `tag` value
+        bindings.push(i);
         collectValues(bindings, parseFindQuery(meta, where, opts));
       });
 
@@ -77,20 +73,7 @@ export function findDataLoader<T extends Entity>(
       const [conditions] = buildConditions(combineConditions(query));
 
       const sql = `
-        WITH _find (tag, ${args.map((a) => a.name).join(", ")}) AS (VALUES
-          ${queries
-            .map((_, i) => {
-              // Create each row of the CTE
-              if (i === 0) {
-                // use types for the first row
-                return `(${[`${i}::int`, ...args.map((a) => `?::${a.dbType}`)].join(", ")})`;
-              } else {
-                // we don't need types for the rest of the rows
-                return `(${[i, ...args.map(() => "?")].join(", ")})`;
-              }
-            })
-            .join(", ")}
-        )
+        ${buildValuesCte("_find", args, queries)}
         SELECT ${columns.join(", ")}
         FROM ${primary.table} as ${primary.alias}
         ${innerJoins.map((j) => `JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
@@ -255,4 +238,10 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     default:
       assertNever(cond);
   }
+}
+
+function buildValuesCte(name: string, columns: { name: string; dbType: string }[], rows: readonly any[]): string {
+  return `WITH ${name} (${columns.map((c) => c.name).join(", ")}) AS (VALUES
+      ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
+  )`;
 }

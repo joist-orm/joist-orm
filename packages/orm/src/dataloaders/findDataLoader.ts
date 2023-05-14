@@ -231,18 +231,14 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
       return [`${fn} _find.arg${argsIndex}`, 1];
     case "is-null":
       return [`IS NULL`, 0];
-      break;
     case "not-null":
       return [`IS NOT NULL`, 0];
-      break;
     case "in":
-      return [`IN _find.arg${argsIndex}`, 1];
+      throw new Error("em.find cannot batch queries with 'IN' conditions");
     case "nin":
-      return [`NOT IN _find.arg${argsIndex}`, 1];
-      break;
+      throw new Error("em.find cannot batch queries with 'NIN' conditions");
     case "@>":
-      // FIX
-      return [`NOT IN _find.arg${argsIndex}`, 1];
+      throw new Error("em.find cannot batch queries with '@>' conditions");
     case "between":
       const [min, max] = cond.value;
       return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2];

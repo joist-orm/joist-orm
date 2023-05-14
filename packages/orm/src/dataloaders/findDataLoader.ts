@@ -57,7 +57,7 @@ export function findDataLoader<T extends Entity>(
       const args = collectArgs(query);
       args.unshift({ name: "tag", dbType: "int" });
 
-      const columns = ["array_agg(_find.tag) as _tags", ...query.selects];
+      const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
       const [primary, innerJoins, outerJoins] = getTables(query);
 
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
@@ -72,18 +72,28 @@ export function findDataLoader<T extends Entity>(
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
       const [conditions] = buildConditions(combineConditions(query));
 
+      const groupBys = selects
+        .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
+        .map((s) => s.replace("*", "id"));
+
+      const orderBys = query.orderBys || [{ alias: primary.alias, column: "id", order: "ASC" }];
+      if (query.orderBys) {
+        for (const o of query.orderBys) {
+          if (o.alias !== primary.alias) {
+            groupBys.push(`${o.alias}.${o.column}`);
+          }
+        }
+      }
+
       const sql = `
         ${buildValuesCte("_find", args, queries)}
-        SELECT ${columns.join(", ")}
+        SELECT ${selects.join(", ")}
         FROM ${primary.table} as ${primary.alias}
         ${innerJoins.map((j) => `JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         ${outerJoins.map((j) => `LEFT OUTER JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
-        GROUP BY ${query.selects
-          .filter((s) => !s.includes("CASE"))
-          .filter((s) => !s.includes(" as "))
-          .map((s) => s.replace("*", "id"))
-          .join(", ")};
+        GROUP BY ${groupBys.join(", ")}
+        ORDER BY ${orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")};
       `;
 
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);

@@ -726,7 +726,8 @@ describe("EntityManager", () => {
         ` CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class`,
         ` FROM publishers as p LEFT OUTER JOIN large_publishers p_s0 ON p.id = p_s0.id`,
         ` LEFT OUTER JOIN small_publishers p_s1 ON p.id = p_s1.id`,
-        ` JOIN _find ON p.id = _find.arg0 GROUP BY "p".id, p_s0.id, p_s1.id;`,
+        ` JOIN _find ON p.id = _find.arg0 GROUP BY "p".id, p_s0.id, p_s1.id`,
+        ` ORDER BY p.id ASC;`,
       ].join(""),
     ]);
     expect(q1.length).toEqual(1);
@@ -752,7 +753,8 @@ describe("EntityManager", () => {
         ` SELECT array_agg(_find.tag) as _tags, "a".*`,
         ` FROM authors as a`,
         ` JOIN _find ON a.deleted_at IS NULL AND a.first_name = _find.arg0 AND a.last_name = _find.arg1`,
-        ` GROUP BY "a".id;`,
+        ` GROUP BY "a".id`,
+        ` ORDER BY a.id ASC;`,
       ].join(""),
     ]);
   });
@@ -777,7 +779,8 @@ describe("EntityManager", () => {
         ` SELECT array_agg(_find.tag) as _tags, "a".*`,
         ` FROM authors as a`,
         ` JOIN _find ON a.deleted_at IS NULL AND (a.first_name = _find.arg0 OR a.last_name = _find.arg1)`,
-        ` GROUP BY "a".id;`,
+        ` GROUP BY "a".id`,
+        ` ORDER BY a.id ASC;`,
       ].join(""),
     ]);
   });
@@ -799,14 +802,14 @@ describe("EntityManager", () => {
     ]);
   });
 
-  it.unlessInMemory("does dedup queries with different order bys", async () => {
+  it.unlessInMemory("does dedup queries with same order bys", async () => {
     await insertPublisher({ name: "p1" });
     await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
-    const a1p = em.find(Author, { id: "1" }, { orderBy: { id: "ASC" }, softDeletes: "include" });
-    const a2p = em.find(Author, { id: "1" }, { orderBy: { age: "DESC" }, softDeletes: "include" });
+    const a1p = em.find(Author, { id: "1" }, { orderBy: { firstName: "DESC" }, softDeletes: "include" });
+    const a2p = em.find(Author, { id: "2" }, { orderBy: { firstName: "DESC" }, softDeletes: "include" });
     // When they are executed in the same event loop
     const [a1, a2] = await Promise.all([a1p, a2p]);
     // Then we issue a single SQL query
@@ -814,25 +817,19 @@ describe("EntityManager", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $2 order by "a"."id" ASC, "a"."id" asc limit $3) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" where "a"."id" = $4 order by "a"."age" DESC, "a"."id" asc limit $5) order by "__tag" asc",
+        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a JOIN _find ON a.id = _find.arg0 GROUP BY "a".id ORDER BY a.first_name DESC;",
       ]
     `);
     // And the results are the expected reverse of each other
     expect(a1.reverse()).toEqual(a2);
   });
 
-  it.unlessInMemory("does dedup queries with different order bys via m2os", async () => {
-    await insertPublisher({ name: "p1" });
-    await insertPublisher({ id: 2, name: "p2" });
+  it.unlessInMemory("does dedup queries with same order bys via m2os", async () => {
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders
     const a1p = em.find(Author, { id: "1" }, { orderBy: { publisher: { id: "ASC" } }, softDeletes: "include" });
-    const a2p = em.find(
-      Author,
-      { id: "1" },
-      { orderBy: { currentDraftBook: { title: "DESC" } }, softDeletes: "include" },
-    );
+    const a2p = em.find(Author, { id: "2" }, { orderBy: { publisher: { id: "ASC" } }, softDeletes: "include" });
     // When they are executed in the same event loop
     const [a1, a2] = await Promise.all([a1p, a2p]);
     // Then we issue a single SQL query
@@ -840,7 +837,7 @@ describe("EntityManager", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "(select *, -1 as __tag, -1 as __row from "authors" where "id" = $1) union all (select "a".*, 0 as __tag, row_number() over () as __row from "authors" as "a" left outer join "publishers" as "p" on "a"."publisher_id" = "p"."id" where "a"."id" = $2 order by "p"."id" ASC, "a"."id" asc limit $3) union all (select "a".*, 1 as __tag, row_number() over () as __row from "authors" as "a" left outer join "books" as "b" on "a"."current_draft_book_id" = "b"."id" where "a"."id" = $4 order by "b"."title" DESC, "a"."id" asc limit $5) order by "__tag" asc",
+        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a LEFT OUTER JOIN publishers p ON a.publisher_id = p.id JOIN _find ON a.id = _find.arg0 GROUP BY "a".id, p.id ORDER BY p.id ASC;",
       ]
     `);
     // And the results are the expected reverse of each other

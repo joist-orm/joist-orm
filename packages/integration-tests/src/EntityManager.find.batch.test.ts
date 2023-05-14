@@ -4,7 +4,7 @@ import { Author, Publisher } from "./entities";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.find.batch", () => {
-  it.unlessInMemory("batches queries loaded at the same time", async () => {
+  it("batches queries loaded at the same time", async () => {
     await insertPublisher({ name: "p1" });
     const em = newEntityManager();
     resetQueryCount();
@@ -31,7 +31,7 @@ describe("EntityManager.find.batch", () => {
     expect(q2.length).toEqual(0);
   });
 
-  it.unlessInMemory("batches queries with multiple conditions", async () => {
+  it("batches queries with multiple conditions", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2", last_name: "l2" });
     const em = newEntityManager();
@@ -56,7 +56,7 @@ describe("EntityManager.find.batch", () => {
     ]);
   });
 
-  it.unlessInMemory("batches queries with complex expressions", async () => {
+  it("batches queries with complex expressions", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2", last_name: "l2" });
     const em = newEntityManager();
@@ -82,7 +82,7 @@ describe("EntityManager.find.batch", () => {
     ]);
   });
 
-  it.unlessInMemory("batches queries with no conditions", async () => {
+  it("batches queries with no conditions", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
     const em = newEntityManager();
@@ -99,7 +99,7 @@ describe("EntityManager.find.batch", () => {
     ]);
   });
 
-  it.unlessInMemory("batches queries with same order bys", async () => {
+  it("batches queries with same order bys", async () => {
     await insertPublisher({ name: "p1" });
     await insertPublisher({ id: 2, name: "p2" });
     const em = newEntityManager();
@@ -121,7 +121,7 @@ describe("EntityManager.find.batch", () => {
     expect(a1.reverse()).toEqual(a2);
   });
 
-  it.unlessInMemory("batches queries with same order bys via m2os", async () => {
+  it("batches queries with same order bys via m2os", async () => {
     const em = newEntityManager();
     resetQueryCount();
     // Given two queries with exactly the same where clause but different orders

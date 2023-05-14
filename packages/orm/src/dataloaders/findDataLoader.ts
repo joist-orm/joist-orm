@@ -26,9 +26,10 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  // Clone b/c the complex conditions are not deep copies
+  // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
   const clone = structuredClone(query);
   stripValues(clone);
+  // We could use `whereFilterHash` too if it's faster?
   const batchKey = JSON.stringify(clone);
 
   return em.getLoader(

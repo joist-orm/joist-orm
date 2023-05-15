@@ -159,8 +159,8 @@ describe("EntityManager.find.batch", () => {
     const em = newEntityManager();
     const q1 = em.find(Author, { age: { in: [20, 30] } });
     const q2 = em.find(Author, { age: { in: [30, 40] } });
-    await expect(q1).rejects.toThrow("em.find cannot batch queries with 'IN' conditions");
-    await expect(q2).rejects.toThrow("em.find cannot batch queries with 'IN' conditions");
+    await expect(q1).rejects.toThrow("em.find does not support");
+    await expect(q2).rejects.toThrow("em.find does not support");
     // findUnsafe works instead
     const q3 = await em.findUnsafe(Author, { age: { in: [30, 40] } });
     expect(q3).toHaveLength(0);
@@ -170,8 +170,8 @@ describe("EntityManager.find.batch", () => {
     const em = newEntityManager();
     const q1 = em.find(Author, { age: { nin: [20, 30] } });
     const q2 = em.find(Author, { age: { nin: [30, 40] } });
-    await expect(q1).rejects.toThrow("em.find cannot batch queries with 'NIN' conditions");
-    await expect(q2).rejects.toThrow("em.find cannot batch queries with 'NIN' conditions");
+    await expect(q1).rejects.toThrow("em.find does not support");
+    await expect(q2).rejects.toThrow("em.find does not support");
     // findUnsafe works instead
     const q3 = await em.findUnsafe(Author, { age: { nin: [30, 40] } });
     expect(q3).toHaveLength(0);

@@ -201,7 +201,8 @@ export class EntityManager<C = unknown> {
   }
 
   /**
-   * Finds entities of `type` with the `where` filter.
+   * Finds entities of `type` with the `where` filter, with auto-batching, so this method
+   * will not cause N+1s if called in a loop.
    *
    * The `where` filter is one of Joist's "join literals", which can combine both joining into
    * related entities and simple column conditions in a single literal. All conditions are ANDed.
@@ -233,7 +234,8 @@ export class EntityManager<C = unknown> {
   }
 
   /**
-   * Finds entities of `type` with the `where` filter.
+   * Finds entities of `type` with the `where` filter, without auto-batching, so this method
+   * may call N+1s if called in a loop.
    *
    * The `where` filter is one of Joist's "join literals", which can combine both joining into
    * related entities and simple column conditions in a single literal. All conditions are ANDed.

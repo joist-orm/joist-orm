@@ -29,6 +29,8 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
+  failIfUnsupportedCondition(query);
+
   // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
   const clone = structuredClone(query);
   stripValues(clone);
@@ -260,4 +262,15 @@ function ensureUnderLimit(rows: unknown[]): void {
   if (rows.length >= entityLimit) {
     throw new Error(`Query returned more than ${entityLimit} rows`);
   }
+}
+
+function failIfUnsupportedCondition(query: ParsedFindQuery): void {
+  visit(query, {
+    visitCond(c: ColumnCondition) {
+      const { kind } = c.cond;
+      if (kind === "in" || kind === "nin" || kind === "@>") {
+        throw new Error(`em.find does not support the '${kind}' operator, use 'findUnsafe' instead`);
+      }
+    },
+  });
 }

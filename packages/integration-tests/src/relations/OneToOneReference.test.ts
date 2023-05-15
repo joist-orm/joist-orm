@@ -39,7 +39,7 @@ describe("OneToOneReference", () => {
     await insertImage({ type_id: 2, file_name: "f2", author_id: 2 });
 
     const em = newEntityManager();
-    const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
+    const [a1, a2] = await em.loadAll(Author, ["1", "2"]);
     resetQueryCount();
     const [i1, i2] = await Promise.all([a1.image.load(), a2.image.load()]);
     expect(i1?.fileName).toEqual("f1");
@@ -53,7 +53,7 @@ describe("OneToOneReference", () => {
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
 
     const em = newEntityManager();
-    const [a1, a2] = await em.find(Author, { id: ["1", "2"] }, { populate: "image" });
+    const [a1, a2] = await em.loadAll(Author, ["1", "2"], "image");
     const i1 = await em.load(Image, "1", "author");
     i1.author.set(a2);
     expect(a1.image.get).toBeUndefined();

@@ -31,7 +31,7 @@ describe("hasManyDerived", () => {
     await insertBookReview({ rating: 5, book_id: 1 });
 
     const em = newEntityManager();
-    const [b1, b2] = await em.find(Book, { id: ["1", "2"] });
+    const [b1, b2] = await em.loadAll(Book, ["1", "2"]);
     const author = await em.load(Author, "1", "reviewedBooks");
     const review = await em.load(BookReview, "1");
 
@@ -47,7 +47,7 @@ describe("hasManyDerived", () => {
     await insertBookReview({ rating: 5, book_id: 1 });
 
     const em = newEntityManager();
-    const [b1, b2] = await em.find(Book, { id: ["1", "2"] });
+    const [b1, b2] = await em.loadAll(Book, ["1", "2"]);
     const author = await em.load(Author, "1", "reviewedBooks");
 
     expect(author.reviewedBooks.get).toEqual([b1]);

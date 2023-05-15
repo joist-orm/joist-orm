@@ -1,6 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { aliases } from "joist-orm";
-import { Author, Publisher } from "./entities";
+import { Author, Color, Publisher } from "./entities";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.find.batch", () => {
@@ -174,7 +174,7 @@ describe("EntityManager.find.batch", () => {
     `);
   });
 
-  it("cannot batch queries with NIN", async () => {
+  it("batches queries with NIN", async () => {
     await insertAuthor({ first_name: "a1", age: 20 });
     await insertAuthor({ first_name: "a2", age: 30 });
     await insertAuthor({ first_name: "a3", age: 40 });
@@ -193,7 +193,15 @@ describe("EntityManager.find.batch", () => {
     `);
   });
 
-  it("can batch queries with like", async () => {
+  it("batches queries with array in", async () => {
+    const em = newEntityManager();
+    const [q1, q2] = await Promise.all([
+      em.find(Author, { favoriteColors: [Color.Red] }),
+      em.find(Author, { favoriteColors: [Color.Blue] }),
+    ]);
+  });
+
+  it("batches queries with like", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     await insertAuthor({ first_name: "a2", last_name: "l2" });
     resetQueryCount();

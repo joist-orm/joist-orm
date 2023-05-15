@@ -248,7 +248,7 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "nin":
       return [`!= ALL(_find.arg${argsIndex})`, 1];
     case "@>":
-      throw new Error("em.find cannot batch queries with '@>' conditions");
+      return [`@> _find.arg${argsIndex}`, 1];
     case "between":
       return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2];
     default:
@@ -273,7 +273,7 @@ function failIfUnsupportedCondition(query: ParsedFindQuery): void {
     visitCond(c: ColumnCondition) {
       const { kind } = c.cond;
       if (kind === "@>") {
-        throw new Error(`em.find does not support the '${kind}' operator, use 'findUnsafe' instead`);
+        // throw new Error(`em.find does not support the '${kind}' operator, use 'findPaginated' instead`);
       }
     },
   });

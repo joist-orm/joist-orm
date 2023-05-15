@@ -351,7 +351,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
     const where = { publisher: { id: { in: [publisherId] } } } satisfies AuthorFilter;
-    const authors = await em.findUnsafe(Author, where);
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
@@ -388,7 +388,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
     const where = { publisher: { id: { nin: [publisherId] } } } satisfies AuthorFilter;
-    const authors = await em.findUnsafe(Author, where);
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
@@ -425,7 +425,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisherId: PublisherId = "1";
     const where = { publisher: [publisherId] } satisfies AuthorFilter;
-    const authors = await em.findUnsafe(Author, where);
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
@@ -444,7 +444,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const publisher = await em.load(Publisher, "p:1");
     const where = { publisher: [publisher] } satisfies AuthorFilter;
-    const authors = await em.findUnsafe(Author, where);
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
@@ -648,7 +648,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { author: { id: ["a:4"] } } satisfies BookFilter;
-    const books = await em.findUnsafe(Book, where);
+    const books = await em.find(Book, where);
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
@@ -666,7 +666,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { id: ["1", "2"] } satisfies PublisherFilter;
-    const pubs = await em.findUnsafe(Publisher, where);
+    const pubs = await em.find(Publisher, where);
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
@@ -682,7 +682,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { id: ["p:1", "p:2"] } satisfies PublisherFilter;
-    const pubs = await em.findUnsafe(Publisher, where);
+    const pubs = await em.find(Publisher, where);
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
@@ -702,7 +702,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { id: { in: ["1", "2"] } } satisfies PublisherFilter;
-    const pubs = await em.findUnsafe(Publisher, where);
+    const pubs = await em.find(Publisher, where);
     expect(pubs.length).toEqual(2);
 
     expect(parseFindQuery(pm, where)).toEqual({
@@ -800,7 +800,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { age: { in: [1, 2] } } satisfies AuthorFilter;
-    const authors = await em.findUnsafe(Author, where);
+    const authors = await em.find(Author, where);
     expect(authors.length).toEqual(2);
 
     expect(parseFindQuery(am, where, opts)).toEqual({
@@ -1265,7 +1265,7 @@ describe("EntityManager.queries", () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     const em = newEntityManager();
     const gqlFilter: GraphQLPublisherFilter = { size: [PublisherSize.Small] };
-    const publishers = await em.findUnsafe(Publisher, gqlFilter);
+    const publishers = await em.find(Publisher, gqlFilter);
     expect(publishers.length).toEqual(1);
   });
 
@@ -1290,7 +1290,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = newEntityManager();
     const gqlFilter: GraphQLAuthorFilter = { age: { gt: 0 } };
-    const authors = await em.findUnsafe(Author, gqlFilter, { offset: 1, limit: 1 });
+    const authors = await em.findGqlPaginated(Author, gqlFilter, { offset: 1, limit: 1 });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
@@ -1301,12 +1301,12 @@ describe("EntityManager.queries", () => {
     await insertPublisher({ id: 3, name: "p3" });
     await insertPublisher({ id: 4, name: "p4" });
     const em = newEntityManager();
-    const p23 = await em.findUnsafe(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
+    const p23 = await em.findPaginated(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
     expect(p23.length).toEqual(2);
     expect(p23[0].name).toEqual("p2");
     expect(p23[1].name).toEqual("p3");
 
-    const p43 = await em.findUnsafe(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
+    const p43 = await em.findPaginated(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
     expect(p43.length).toEqual(2);
     expect(p43[0].name).toEqual("p2");
     expect(p43[1].name).toEqual("p1");
@@ -1330,7 +1330,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
     await insertAuthor({ first_name: "a2", favorite_colors: [] });
     const em = newEntityManager();
-    const authors = await em.findUnsafe(Author, { favoriteColors: [Color.Red] });
+    const authors = await em.find(Author, { favoriteColors: [Color.Red] });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
   });
@@ -1431,7 +1431,7 @@ describe("EntityManager.queries", () => {
 
     const em = newEntityManager();
     const where = { parent: ["b:1", "br:1"] } satisfies CommentFilter;
-    const comments = await em.findUnsafe(Comment, where);
+    const comments = await em.find(Comment, where);
     const [c1, c2] = comments;
     expect(comments.length).toEqual(2);
     expect(c1.text).toEqual("t1");

@@ -68,10 +68,10 @@ export interface FindFilterOptions<T extends Entity> {
   softDeletes?: "include" | "exclude";
 }
 
-/** Options for the non-batchable `em.findUnsafe` queries, i.e. limit & offset are allowed. */
-export interface FindUnsafeFilterOptions<T extends Entity> extends FindFilterOptions<T> {
-  limit?: number;
-  offset?: number;
+/** Options for the non-batchable `em.findPaginated` queries, i.e. limit & offset are allowed. */
+export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
+  limit: number;
+  offset: number;
 }
 
 /**
@@ -210,7 +210,7 @@ export class EntityManager<C = unknown> {
    *
    * This method is batch-friendly, i.e. if called in a loop, it will be automatically batched
    * to avoid N+1s. Because of this, it cannot be used with queries that want to use `LIMIT`
-   * or `OFFSET`; for those, see `findUnsafe`.
+   * or `OFFSET`; for those, see `findPaginated`.
    */
   public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterWithAlias<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
@@ -243,21 +243,21 @@ export class EntityManager<C = unknown> {
    *
    * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
    * of this, you should prefer using `find`, unless you need something explicitly only supported
-   * by `findUnsafe`, such as `LIMIT` and `OFFSET`.
+   * by `findPaginated`, such as `LIMIT` and `OFFSET`.
    */
-  public async findUnsafe<T extends Entity>(
+  public async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
   ): Promise<T[]>;
-  public async findUnsafe<T extends Entity, H extends LoadHint<T>>(
+  public async findPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: FindUnsafeFilterOptions<T> & { populate?: Const<H> },
+    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
-  async findUnsafe<T extends Entity>(
+  async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: FindUnsafeFilterOptions<T> & { populate?: any },
+    options?: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, limit, offset, ...rest } = options || {};
     const query = parseFindQuery(getMetadata(type), where, rest);
@@ -282,24 +282,12 @@ export class EntityManager<C = unknown> {
   public async findGql<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
-    options?: {
-      populate?: Const<H>;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    options?: FindFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: {
-      populate?: any;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
@@ -309,6 +297,23 @@ export class EntityManager<C = unknown> {
       await this.populate(result, populate);
     }
     return result;
+  }
+
+  public async findGqlPaginated<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+  ): Promise<T[]>;
+  public async findGqlPaginated<T extends Entity, H extends LoadHint<T>>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterOf<T>,
+    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+  ): Promise<Loaded<T, H>[]>;
+  async findGqlPaginated<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterOf<T>,
+    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+  ): Promise<T[]> {
+    return this.findPaginated(type, where, options);
   }
 
   public async findOne<T extends Entity>(

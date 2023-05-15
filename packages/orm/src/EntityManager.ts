@@ -242,8 +242,7 @@ export class EntityManager<C = unknown> {
    * For more complex conditions, use the `find` overload that has a `conditions` option.
    *
    * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
-   * of this, you should prefer using `find`, unless you need something explicitly only supported
-   * by `findPaginated`, such as `LIMIT` and `OFFSET`.
+   * of this, you should prefer using `find`, unless you explicitly pagination support.
    */
   public async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
@@ -289,16 +288,14 @@ export class EntityManager<C = unknown> {
     where: FilterWithAlias<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    const { populate, ...rest } = options || {};
-    const settings = { where, ...rest };
-    const rows = await findDataLoader(this, type, settings).load(settings);
-    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
-    if (populate) {
-      await this.populate(result, populate);
-    }
-    return result;
+    return this.find(type, where, options);
   }
 
+  /**
+   * Works exactly like `findPaginated` but accepts "less than greatly typed" GraphQL filters.
+   *
+   * I.e. filtering by `null` on fields that are non-`nullable`.
+   */
   public async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,

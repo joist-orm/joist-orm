@@ -74,7 +74,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
     this.#fieldName = fieldName;
   }
 
-  async load(opts: { withDeleted?: true, forceReload?: true }): Promise<U | N> {
+  async load(opts?: { withDeleted?: true, forceReload?: true }): Promise<U | N> {
     // ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;
     if (!this._isLoaded) {
@@ -107,7 +107,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
     }
   }
 
-  get fieldValue(): U {
+  get fieldValue(): U | N {
     return this.#entity.__orm.data[this.fieldName];
   }
 

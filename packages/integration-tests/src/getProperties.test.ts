@@ -17,6 +17,7 @@ describe("getProperties", () => {
       comments: expect.any(OneToManyCollection),
       author: expect.any(ManyToOneReferenceImpl),
       currentDraftAuthor: expect.any(OneToOneReferenceImpl),
+      favoriteBookAuthors: expect.any(OneToManyCollection),
       image: expect.any(OneToOneReferenceImpl),
       tags: expect.any(ManyToManyCollection),
       favoriteColorsRuleInvoked: 0,

@@ -43,7 +43,7 @@ import {
 } from "./index";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
-import { ManyToOneReferenceImpl, OneToOneReferenceImpl } from "./relations";
+import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncRelationImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { assertNever, fail, getOrSet, MaybePromise, toArray } from "./utils";
@@ -1543,6 +1543,9 @@ async function crawl<T extends Entity>(
             if (related) {
               await crawl(found, [related], nested, opts);
             }
+          } else if (relation instanceof PersistedAsyncRelationImpl) {
+            const relatedEntities: readonly Entity[] = await relation.load();
+            await crawl(found, relatedEntities, nested, opts);
           } else {
             fail(`Uncloneable relation: ${relationName}`);
           }

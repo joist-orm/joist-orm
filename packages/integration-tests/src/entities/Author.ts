@@ -134,7 +134,7 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  readonly favoriteBook: PersistedAsyncRelation<Author, Book, undefined> = hasPersistedAsyncRelation<Author, Book, { books: { reviews_ro: "rating" } }, undefined>(
+  readonly favoriteBook: PersistedAsyncRelation<Author, Book, undefined> = hasPersistedAsyncRelation(
     "favoriteBook",
     "favoriteBookAuthors",
     { books: { reviews_ro: "rating" } },

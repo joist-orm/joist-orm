@@ -144,9 +144,14 @@ function collectArgs(query: ParsedFindQuery): { name: string; dbType: string }[]
   visit(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
-        args.push({ name: `arg${args.length}`, dbType: c.dbType });
-        // between has two values
-        if (c.cond.kind === "between") {
+        const { kind } = c.cond;
+        if (kind === "in" || kind === "nin") {
+          args.push({ name: `arg${args.length}`, dbType: `${c.dbType}[]` });
+        } else if (kind === "between") {
+          // between has two values
+          args.push({ name: `arg${args.length}`, dbType: c.dbType });
+          args.push({ name: `arg${args.length}`, dbType: c.dbType });
+        } else {
           args.push({ name: `arg${args.length}`, dbType: c.dbType });
         }
       }
@@ -239,13 +244,12 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "not-null":
       return [`IS NOT NULL`, 0];
     case "in":
-      throw new Error("em.find cannot batch queries with 'IN' conditions");
+      return [`= ANY(_find.arg${argsIndex})`, 1];
     case "nin":
-      throw new Error("em.find cannot batch queries with 'NIN' conditions");
+      return [`!= ALL(_find.arg${argsIndex})`, 1];
     case "@>":
       throw new Error("em.find cannot batch queries with '@>' conditions");
     case "between":
-      const [min, max] = cond.value;
       return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2];
     default:
       assertNever(cond);
@@ -268,7 +272,7 @@ function failIfUnsupportedCondition(query: ParsedFindQuery): void {
   visit(query, {
     visitCond(c: ColumnCondition) {
       const { kind } = c.cond;
-      if (kind === "in" || kind === "nin" || kind === "@>") {
+      if (kind === "@>") {
         throw new Error(`em.find does not support the '${kind}' operator, use 'findUnsafe' instead`);
       }
     },

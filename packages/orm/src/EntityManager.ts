@@ -243,7 +243,7 @@ export class EntityManager<C = unknown> {
    *
    * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
    * of this, you should prefer using `find`, unless you need something explicitly only supported
-   * by `findUnsafe`, such as `LIMIT`, `OFFSET`, or `IN` conditions.
+   * by `findUnsafe`, such as `LIMIT` and `OFFSET`.
    */
   public async findUnsafe<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,

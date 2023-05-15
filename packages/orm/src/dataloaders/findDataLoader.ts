@@ -23,6 +23,9 @@ export function findDataLoader<T extends Entity>(
   filter: FilterAndSettings<T>,
 ): DataLoader<FilterAndSettings<T>, unknown[]> {
   const { where, ...opts } = filter;
+  if (opts.limit || opts.offset) {
+    throw new Error("Cannot use limit/offset with findDataLoader");
+  }
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);

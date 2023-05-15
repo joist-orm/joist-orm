@@ -31,6 +31,7 @@ import {
   loadLens,
   ManyToOneFieldStatus,
   OneToManyCollection,
+  parseFindQuery,
   PartialOrNull,
   PolymorphicReferenceImpl,
   setField,
@@ -58,6 +59,19 @@ export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
 
   defaultValues: object;
+}
+
+/** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
+export interface FindFilterOptions<T extends Entity> {
+  conditions?: ExpressionFilter;
+  orderBy?: OrderOf<T>;
+  softDeletes?: "include" | "exclude";
+}
+
+/** Options for the non-batchable `em.findUnsafe` queries, i.e. limit & offset are allowed. */
+export interface FindUnsafeFilterOptions<T extends Entity> extends FindFilterOptions<T> {
+  limit?: number;
+  offset?: number;
 }
 
 /**
@@ -186,37 +200,70 @@ export class EntityManager<C = unknown> {
     return this._entityIndex.get(id) as T | undefined;
   }
 
+  /**
+   * Finds entities of `type` with the `where` filter.
+   *
+   * The `where` filter is one of Joist's "join literals", which can combine both joining into
+   * related entities and simple column conditions in a single literal. All conditions are ANDed.
+   * For more complex conditions, use the `find` overload that has a `conditions` option.
+   *
+   * This method is batch-friendly, i.e. if called in a loop, it will be automatically batched
+   * to avoid N+1s. Because of this, it cannot be used with queries that want to use `LIMIT`
+   * or `OFFSET`; for those, see `findUnsafe`.
+   */
   public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterWithAlias<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: {
-      conditions?: ExpressionFilter;
-      populate?: Const<H>;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    options?: FindFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: {
-      conditions?: ExpressionFilter;
-      populate?: any;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
     const rows = await findDataLoader(this, type, settings).load(settings);
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
-    if (options?.populate) {
-      await this.populate(result, options.populate);
+    if (populate) {
+      await this.populate(result, populate);
+    }
+    return result;
+  }
+
+  /**
+   * Finds entities of `type` with the `where` filter.
+   *
+   * The `where` filter is one of Joist's "join literals", which can combine both joining into
+   * related entities and simple column conditions in a single literal. All conditions are ANDed.
+   * For more complex conditions, use the `find` overload that has a `conditions` option.
+   *
+   * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
+   * of this, you should prefer using `find`, unless you need something explicitly only supported
+   * by `findUnsafe`, such as `LIMIT`, `OFFSET`, or `IN` conditions.
+   */
+  public async findUnsafe<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+  ): Promise<T[]>;
+  public async findUnsafe<T extends Entity, H extends LoadHint<T>>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterOf<T>,
+    options?: FindUnsafeFilterOptions<T> & { populate?: Const<H> },
+  ): Promise<Loaded<T, H>[]>;
+  async findUnsafe<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterOf<T>,
+    options?: FindUnsafeFilterOptions<T> & { populate?: any },
+  ): Promise<T[]> {
+    const { populate, limit, offset, ...rest } = options || {};
+    const query = parseFindQuery(getMetadata(type), where, rest);
+    const rows = await this.driver.executeFind(this, query, { limit, offset });
+    // check row limit
+    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
+    if (populate) {
+      await this.populate(result, populate);
     }
     return result;
   }

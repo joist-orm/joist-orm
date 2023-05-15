@@ -1290,7 +1290,7 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = newEntityManager();
     const gqlFilter: GraphQLAuthorFilter = { age: { gt: 0 } };
-    const authors = await em.findGql(Author, gqlFilter, { offset: 1, limit: 1 });
+    const authors = await em.findUnsafe(Author, gqlFilter, { offset: 1, limit: 1 });
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });
@@ -1301,12 +1301,12 @@ describe("EntityManager.queries", () => {
     await insertPublisher({ id: 3, name: "p3" });
     await insertPublisher({ id: 4, name: "p4" });
     const em = newEntityManager();
-    const p23 = await em.find(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
+    const p23 = await em.findUnsafe(Publisher, {}, { orderBy: { name: "ASC" }, offset: 1, limit: 2 });
     expect(p23.length).toEqual(2);
     expect(p23[0].name).toEqual("p2");
     expect(p23[1].name).toEqual("p3");
 
-    const p43 = await em.find(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
+    const p43 = await em.findUnsafe(Publisher, {}, { orderBy: { name: "DESC" }, offset: 2, limit: 2 });
     expect(p43.length).toEqual(2);
     expect(p43[0].name).toEqual("p2");
     expect(p43[1].name).toEqual("p1");

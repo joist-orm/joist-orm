@@ -216,4 +216,16 @@ describe("EntityManager.find.batch", () => {
       ]
     `);
   });
+
+  it("does not cache results incorrectly", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    // When we purposefully make two separate queries with the same structure
+    const a1 = await em.find(Author, { firstName: "a1" });
+    const a2 = await em.find(Author, { firstName: "a2" });
+    // Then they didn't share the same cache
+    expect(a1[0].firstName).toBe("a1");
+    expect(a2[0].firstName).toBe("a2");
+  });
 });

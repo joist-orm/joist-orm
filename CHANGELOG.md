@@ -1,3 +1,10 @@
+## [1.77.2](https://github.com/stephenh/joist-ts/compare/v1.77.1...v1.77.2) (2023-05-16)
+
+
+### Bug Fixes
+
+* Fix caching bug in new em.find code. ([#641](https://github.com/stephenh/joist-ts/issues/641)) ([dbc1fdd](https://github.com/stephenh/joist-ts/commit/dbc1fddca678fad1c497fc5febcd39eab532d367))
+
 ## [1.77.1](https://github.com/stephenh/joist-ts/compare/v1.77.0...v1.77.1) (2023-05-16)
 
 

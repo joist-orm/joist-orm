@@ -1,5 +1,9 @@
+import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
 import { EntityFilter } from "./EntityFilter";
+import { GraphQLFilterOf } from "./EntityManager";
+
+export type GraphQLFilterWithAlias<T extends Entity> = { as?: Alias<T> } & GraphQLFilterOf<T>;
 
 /**
  * This essentially matches the ValueFilter but with looser types to placate GraphQL.

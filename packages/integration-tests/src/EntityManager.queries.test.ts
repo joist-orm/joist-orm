@@ -1312,6 +1312,14 @@ describe("EntityManager.queries", () => {
     expect(p43[1].name).toEqual("p1");
   });
 
+  it("can offset/limit with undefined", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+    const em = newEntityManager();
+    const authors = await em.findGqlPaginated(Author, {}, { offset: undefined, limit: undefined });
+    expect(authors.length).toEqual(2);
+  });
+
   it("cannot find too many entities", async () => {
     try {
       await insertAuthor({ first_name: "a1" });

@@ -6,8 +6,8 @@ import { ColumnCondition } from "./QueryParser";
 /**
  * Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings.
  */
-export type FilterAndSettings<T> = {
-  where: FilterOf<T>;
+export type FilterAndSettings<T extends Entity> = {
+  where: FilterWithAlias<T>;
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T>;
   limit?: number;

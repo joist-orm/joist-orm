@@ -29,7 +29,6 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  failIfUnsupportedCondition(query);
 
   // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
   const clone = structuredClone(query);
@@ -45,7 +44,11 @@ export function findDataLoader<T extends Entity>(
 
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
       if (queries.length === 1) {
-        const rows = await em.driver.executeFind(em, query, opts);
+        const { where, ...opts } = queries[0];
+        // We have to parseFindQuery queries[0], b/c our query variable may be captured from
+        // a prior invocation that instantiated our dataloader instance.
+        const query = parseFindQuery(meta, where, opts);
+        const rows = await em.driver.executeFind(em, query, {});
         ensureUnderLimit(rows);
         return [rows];
       }
@@ -266,15 +269,4 @@ function ensureUnderLimit(rows: unknown[]): void {
   if (rows.length >= entityLimit) {
     throw new Error(`Query returned more than ${entityLimit} rows`);
   }
-}
-
-function failIfUnsupportedCondition(query: ParsedFindQuery): void {
-  visit(query, {
-    visitCond(c: ColumnCondition) {
-      const { kind } = c.cond;
-      if (kind === "@>") {
-        // throw new Error(`em.find does not support the '${kind}' operator, use 'findPaginated' instead`);
-      }
-    },
-  });
 }

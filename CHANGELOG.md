@@ -1,3 +1,10 @@
+## [1.77.3](https://github.com/stephenh/joist-ts/compare/v1.77.2...v1.77.3) (2023-05-16)
+
+
+### Bug Fixes
+
+* Allow 'as' in FilterAndSettings.where. ([#642](https://github.com/stephenh/joist-ts/issues/642)) ([089f625](https://github.com/stephenh/joist-ts/commit/089f6256e3491213dc532d787e198e014787de14))
+
 ## [1.77.2](https://github.com/stephenh/joist-ts/compare/v1.77.1...v1.77.2) (2023-05-16)
 
 

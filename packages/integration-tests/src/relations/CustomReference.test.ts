@@ -28,7 +28,7 @@ describe("CustomReference", () => {
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
 
     const em = newEntityManager();
-    const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
+    const [a1, a2] = await em.loadAll(Author, ["1", "2"]);
     const i1 = await em.load(Image, "1", "owner");
     expect(i1.owner.get).toEqual(a1);
     i1.author.set(a2);

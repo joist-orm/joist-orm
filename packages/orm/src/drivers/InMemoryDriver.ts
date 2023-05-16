@@ -1,7 +1,6 @@
 import { Knex } from "knex";
-import { Entity } from "../Entity";
-import { FilterAndSettings, ValueFilter } from "../EntityFilter";
-import { EntityConstructor, entityLimit, EntityManager } from "../EntityManager";
+import { ValueFilter } from "../EntityFilter";
+import { entityLimit, EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId } from "../keys";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
@@ -55,21 +54,15 @@ export class InMemoryDriver implements Driver {
     this.data = {};
   }
 
-  async find<T extends Entity>(
-    em: EntityManager,
-    type: EntityConstructor<T>,
-    queries: readonly FilterAndSettings<T>[],
-  ): Promise<unknown[][]> {
-    this.onQuery();
-    return queries.map((query) => {
-      const { where, orderBy, limit, offset = 0 } = query;
-      const meta = getMetadata(type);
-      const allRows = Object.values(this.rowsOfTable(meta.tableName));
-      const matched = allRows.filter((row) => rowMatches(this, meta, row, where));
-      const sorted = !orderBy ? matched : matched.sort((a, b) => sort(this, meta, orderBy as any, a, b));
-      return ensureUnderLimit(sorted.slice(offset, offset + (limit ?? sorted.length)));
-    });
-  }
+  // This is the old Driver.find impl, maybe use for executeFind?
+  // return queries.map((query) => {
+  //   const { where, orderBy, limit, offset = 0 } = query;
+  //   const meta = getMetadata(type);
+  //   const allRows = Object.values(this.rowsOfTable(meta.tableName));
+  //   const matched = allRows.filter((row) => rowMatches(this, meta, row, where));
+  //   const sorted = !orderBy ? matched : matched.sort((a, b) => sort(this, meta, orderBy as any, a, b));
+  //   return ensureUnderLimit(sorted.slice(offset, offset + (limit ?? sorted.length)));
+  // });
 
   async executeFind(
     em: EntityManager,
@@ -77,6 +70,10 @@ export class InMemoryDriver implements Driver {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
     throw new Error("Not implemented");
+  }
+
+  executeQuery(em: EntityManager<unknown>, sql: string, bindings: any[]): Promise<any[]> {
+    throw new Error("Method not implemented.");
   }
 
   async assignNewIds(em: EntityManager, todos: Record<string, Todo>): Promise<void> {

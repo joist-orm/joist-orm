@@ -17,12 +17,11 @@ export class SequenceIdAssigner implements IdAssigner {
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
     const seqStatements: string[] = [];
     Object.values(todos).forEach((todo) => {
-      if (todo.inserts.length > 0) {
-        const meta = todo.metadata;
-        const sequenceName = `${meta.tableName}_id_seq`;
-        const sql = `select nextval('${sequenceName}') from generate_series(1, ${
-          todo.inserts.filter((e) => e.id === undefined).length
-        })`;
+      // Even if we have INSERTs, the user may have already assigned ids...
+      const needsIds = todo.inserts.filter((e) => e.id === undefined);
+      if (needsIds.length > 0) {
+        const sequenceName = `${todo.metadata.tableName}_id_seq`;
+        const sql = `select nextval('${sequenceName}') from generate_series(1, ${needsIds.length})`;
         seqStatements.push(sql);
       }
     });

@@ -1,3 +1,10 @@
+## [1.77.1](https://github.com/stephenh/joist-ts/compare/v1.77.0...v1.77.1) (2023-05-16)
+
+
+### Bug Fixes
+
+* Fix limit/offset can be undefined. ([#640](https://github.com/stephenh/joist-ts/issues/640)) ([4a618f3](https://github.com/stephenh/joist-ts/commit/4a618f33f356ceabb3e1a2adcb87f436b04bd0f9))
+
 # [1.77.0](https://github.com/stephenh/joist-ts/compare/v1.76.3...v1.77.0) (2023-05-16)
 
 

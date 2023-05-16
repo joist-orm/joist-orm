@@ -26,6 +26,7 @@ import {
   getConstructorFromTaggedId,
   getMetadata,
   getRelations,
+  GraphQLFilterWithAlias,
   keyToString,
   Lens,
   loadLens,
@@ -68,10 +69,15 @@ export interface FindFilterOptions<T extends Entity> {
   softDeletes?: "include" | "exclude";
 }
 
-/** Options for the non-batchable `em.findPaginated` queries, i.e. limit & offset are allowed. */
+/**
+ * Options for the non-batchable `em.findPaginated` queries, i.e. limit & offset are allowed.
+ *
+ * We allow `offset` to be optional, b/c sometimes queries will just want to do a `limit`, but we
+ * require `limit` to ensure the caller is using `findPaginated` for its intended purpose.
+ */
 export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
-  limit: number;
-  offset: number;
+  limit: number | undefined;
+  offset?: number;
 }
 
 /**
@@ -250,12 +256,12 @@ export class EntityManager<C = unknown> {
   ): Promise<T[]>;
   public async findPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: FilterWithAlias<T>,
     options?: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, limit, offset, ...rest } = options || {};
@@ -276,19 +282,19 @@ export class EntityManager<C = unknown> {
    */
   public async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: GraphQLFilterWithAlias<T>,
   ): Promise<T[]>;
   public async findGql<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: GraphQLFilterWithAlias<T>,
     options?: FindFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: GraphQLFilterOf<T>,
     options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.find(type, where, options);
+    return this.find(type, where as any, options);
   }
 
   /**
@@ -298,19 +304,19 @@ export class EntityManager<C = unknown> {
    */
   public async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
+    where: GraphQLFilterWithAlias<T>,
   ): Promise<T[]>;
   public async findGqlPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: GraphQLFilterWithAlias<T>,
     options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: GraphQLFilterWithAlias<T>,
     options?: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.findPaginated(type, where, options);
+    return this.findPaginated(type, where as any, options);
   }
 
   public async findOne<T extends Entity>(

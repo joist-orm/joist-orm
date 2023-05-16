@@ -1,3 +1,10 @@
+# [1.77.0](https://github.com/stephenh/joist-ts/compare/v1.76.3...v1.77.0) (2023-05-16)
+
+
+### Features
+
+* Use CTEs instead of UNIONs to batch queries.  ([#638](https://github.com/stephenh/joist-ts/issues/638)) ([b37f61a](https://github.com/stephenh/joist-ts/commit/b37f61afd2fb93fa5ea3600d836935149b19309d))
+
 ## [1.76.3](https://github.com/stephenh/joist-ts/compare/v1.76.2...v1.76.3) (2023-05-05)
 
 

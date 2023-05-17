@@ -1389,6 +1389,12 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(2);
   });
 
+  it("can find overlaps with GQL filter", async () => {
+    const em = newEntityManager();
+    const colors: Color[] | undefined | null = [Color.Red, Color.Green];
+    await em.findGql(Publisher, { authors: { favoriteColors: { overlaps: colors } } });
+  });
+
   it("can find through a polymorphic reference by id", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });

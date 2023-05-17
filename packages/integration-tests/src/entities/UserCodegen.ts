@@ -87,8 +87,8 @@ export interface UserGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
-  createdComments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
 export interface UserOrder {

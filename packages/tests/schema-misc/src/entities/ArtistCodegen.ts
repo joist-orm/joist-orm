@@ -9,6 +9,7 @@ import {
   fail,
   FilterOf,
   Flavor,
+  GraphQLFilterOf,
   hasMany,
   isLoaded,
   Lens,
@@ -64,7 +65,7 @@ export interface ArtistGraphQLFilter {
   lastName?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  paintings?: EntityGraphQLFilter<Painting, PaintingId, FilterOf<Painting>, null | undefined>;
+  paintings?: EntityGraphQLFilter<Painting, PaintingId, GraphQLFilterOf<Painting>, null | undefined>;
 }
 
 export interface ArtistOrder {

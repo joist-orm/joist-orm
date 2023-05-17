@@ -4,10 +4,12 @@ import {
   Collection,
   ConfigApi,
   EntityFilter,
+  EntityGraphQLFilter,
   EntityOrmField,
   fail,
   FilterOf,
   Flavor,
+  GraphQLFilterOf,
   hasLargeManyToMany,
   hasManyToMany,
   isLoaded,
@@ -76,8 +78,8 @@ export interface TagGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  publishers?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
 export interface TagOrder {

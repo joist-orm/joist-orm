@@ -5,7 +5,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
-  EnumGraphQLFilter,
   fail,
   FilterOf,
   Flavor,
@@ -81,7 +80,7 @@ export interface BookAdvanceGraphQLFilter {
   id?: ValueGraphQLFilter<BookAdvanceId>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  status?: EnumGraphQLFilter<AdvanceStatus>;
+  status?: ValueGraphQLFilter<AdvanceStatus>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, never>;
 }

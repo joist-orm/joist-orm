@@ -21,6 +21,9 @@ export type ValueGraphQLFilter<V> =
       like?: V | null;
       ilike?: V | null;
       between?: V[] | null;
+      contains?: V | null;
+      overlaps?: V | null;
+      containedBy?: V | null;
     }
   | { op: Operator; value: Primitive }
   | V
@@ -63,8 +66,6 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
   containedBy: "<@",
   overlaps: "&&",
 };
-
-export type EnumGraphQLFilter<V> = V[] | null | undefined;
 
 /** A GraphQL version of EntityFilter. */
 export type EntityGraphQLFilter<T extends Entity, I, F, N> = EntityFilter<T, I, F, N> | null;

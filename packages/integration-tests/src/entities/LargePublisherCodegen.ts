@@ -8,6 +8,7 @@ import {
   fail,
   FilterOf,
   Flavor,
+  GraphQLFilterOf,
   hasMany,
   isLoaded,
   Lens,
@@ -64,7 +65,7 @@ export interface LargePublisherFilter extends PublisherFilter {
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   country?: ValueGraphQLFilter<string>;
-  critics?: EntityGraphQLFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
+  critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
 }
 
 export interface LargePublisherOrder extends PublisherOrder {

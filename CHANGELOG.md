@@ -1,3 +1,10 @@
+## [1.78.2](https://github.com/stephenh/joist-ts/compare/v1.78.1...v1.78.2) (2023-05-17)
+
+
+### Bug Fixes
+
+* Fix ValueGraphQLFilter's op/value type. ([#646](https://github.com/stephenh/joist-ts/issues/646)) ([de57182](https://github.com/stephenh/joist-ts/commit/de57182e1a5ed479959b7ad31692a6e9a335343d))
+
 ## [1.78.1](https://github.com/stephenh/joist-ts/compare/v1.78.0...v1.78.1) (2023-05-17)
 
 

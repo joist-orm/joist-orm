@@ -117,8 +117,14 @@ function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
     case "nin":
       query.whereNotIn(columnName, cond.value);
       break;
-    case "@>":
+    case "contains":
       query.where(columnName, "@>", cond.value);
+      break;
+    case "containedBy":
+      query.where(columnName, "<@", cond.value);
+      break;
+    case "overlaps":
+      query.where(columnName, "&&", cond.value);
       break;
     case "between":
       const [min, max] = cond.value;

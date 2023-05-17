@@ -1363,6 +1363,32 @@ describe("EntityManager.queries", () => {
     expect(authors[1].firstName).toEqual("a3");
   });
 
+  it("can find contains an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2, 3] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { contains: [Color.Red, Color.Green] } });
+    expect(authors.length).toEqual(1);
+    expect(authors[0].firstName).toEqual("a1");
+  });
+
+  it("can find overlaps an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2, 3] });
+    const em = newEntityManager();
+    // Look for 1 (Red) & 2 (Green)
+    const authors = await em.find(Author, { favoriteColors: { overlaps: [Color.Red, Color.Green] } });
+    expect(authors.length).toEqual(2);
+  });
+
+  it("can find containedBy an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2] });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { favoriteColors: { containedBy: [Color.Red, Color.Green] } });
+    expect(authors.length).toEqual(2);
+  });
+
   it("can find through a polymorphic reference by id", async () => {
     await insertAuthor({ first_name: "a" });
     await insertBook({ title: "t", author_id: 1 });

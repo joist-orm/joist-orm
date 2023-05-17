@@ -31,7 +31,22 @@ export type BooleanGraphQLFilter = true | false | null;
 
 export type Primitive = string | boolean | Date | number;
 
-export const operators = ["eq", "gt", "gte", "ne", "lt", "lte", "like", "ilike", "in", "nin", "between"] as const;
+export const operators = [
+  "eq",
+  "gt",
+  "gte",
+  "ne",
+  "lt",
+  "lte",
+  "like",
+  "ilike",
+  "in",
+  "nin",
+  "between",
+  "contains",
+  "overlaps",
+  "containedBy",
+] as const;
 
 export type Operator = typeof operators[number];
 
@@ -44,6 +59,9 @@ export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string>
   lte: "<=",
   like: "LIKE",
   ilike: "ILIKE",
+  contains: "@>",
+  containedBy: "<@",
+  overlaps: "&&",
 };
 
 export type EnumGraphQLFilter<V> = V[] | null | undefined;

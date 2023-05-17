@@ -64,6 +64,10 @@ export type ValueFilter<V, N> =
   | { lte: V | undefined }
   | { like: V | undefined }
   | { ilike: V | undefined }
+  // should put these in a dedicated ArrayFilter
+  | { contains: V | undefined }
+  | { overlaps: V | undefined }
+  | { containedBy: V | undefined }
   // this is between
   | { gte: V | undefined; lte: V | undefined }
   | { between: [V, V] | undefined };

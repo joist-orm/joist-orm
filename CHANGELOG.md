@@ -1,3 +1,10 @@
+# [1.78.0](https://github.com/stephenh/joist-ts/compare/v1.77.3...v1.78.0) (2023-05-17)
+
+
+### Features
+
+* Add more array operators. ([#644](https://github.com/stephenh/joist-ts/issues/644)) ([3b0775d](https://github.com/stephenh/joist-ts/commit/3b0775d0f414edf0b112a78df014853ba1190f11)), closes [#643](https://github.com/stephenh/joist-ts/issues/643)
+
 ## [1.77.3](https://github.com/stephenh/joist-ts/compare/v1.77.2...v1.77.3) (2023-05-16)
 
 

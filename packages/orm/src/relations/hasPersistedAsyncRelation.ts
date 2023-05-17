@@ -36,6 +36,7 @@ export interface PersistedAsyncRelation<T extends Entity, U extends Entity, N ex
 }
 
 export function hasPersistedAsyncRelation<T extends Entity, U extends Entity, H extends ReactiveHint<T>, N extends never | undefined>(
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   hint: Const<H>,
@@ -44,6 +45,7 @@ export function hasPersistedAsyncRelation<T extends Entity, U extends Entity, H 
   const entity = currentlyInstantiatingEntity as T;
   return new PersistedAsyncRelationImpl<T, U, H, N>(
     entity,
+    otherMeta,
     fieldName,
     otherFieldName,
     hint,
@@ -57,6 +59,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
+  readonly #reactiveHint: Const<H>;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
@@ -64,6 +67,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
   private loadPromise: any;
   constructor(
     entity: T,
+    otherMeta: EntityMetadata<U>,
     private fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public reactiveHint: Const<H>,
@@ -72,10 +76,11 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    this.#reactiveHint = reactiveHint;
   }
 
   async load(opts?: { withDeleted?: true, forceReload?: true }): Promise<U | N> {
-    // ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;
     if (!this._isLoaded) {
       return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then(() => {
@@ -89,7 +94,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     const { fn } = this;
-    // ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.#entity, "pending");
     if (this._isLoaded || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {
       const newValue = this.filterDeleted(fn(this.#entity as Reacted<T, H>), opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
@@ -107,7 +112,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
     }
   }
 
-  get fieldValue(): U | N {
+  get fieldValue(): U {
     return this.#entity.__orm.data[this.fieldName];
   }
 

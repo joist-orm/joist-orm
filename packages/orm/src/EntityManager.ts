@@ -618,7 +618,7 @@ export class EntityManager<C = unknown> {
     // and will drive percolation to keep the other-side o2m & o2o updated.
     clones.forEach(([, clone]) => {
       Object.entries(clone).forEach(([fieldName, value]) => {
-        if (value instanceof ManyToOneReferenceImpl || value instanceof PolymorphicReferenceImpl) {
+        if (value instanceof ManyToOneReferenceImpl || value instanceof PolymorphicReferenceImpl || value instanceof PersistedAsyncRelationImpl) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = clone.__orm.data[fieldName];
           const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));

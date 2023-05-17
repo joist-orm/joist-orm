@@ -183,8 +183,11 @@ describe("EntityManager.reactiveRules", () => {
     const a = newAuthor(em);
     const b = newBook(em, { author: a, reviews: [{ rating: 10 }] });
     await em.flush();
+
+    const favoriteBook = a.favoriteBook.get;
     // For some reason .toMatchEntity(b) and .toBe(b) fail here
-    // expect(a.favoriteBook.get).toMatchEntity(b);
+    // expect(b).toMatchEntity(a.favoriteBook.get!);
+    expect(favoriteBook).toMatchEntity(b);
     expect(a.favoriteBook.get?.idOrFail).toBe(b.idOrFail);
 
     // If there is a new favorite book
@@ -206,10 +209,12 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: "numberOfBooks", fields: ["author"], path: ["author"] },
       { cstr, name: "bookComments", fields: ["author"], path: ["author"] },
       { cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
+      { cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);
     expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
       { cstr, name: "numberOfPublicReviews", fields: ["isPublic", "rating"], path: ["book", "author"] },
+      { cstr, name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
       { cstr, name: "isPublic", fields: [], path: [] },
     ]);
   });

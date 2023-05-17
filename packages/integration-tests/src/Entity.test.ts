@@ -69,6 +69,20 @@ describe("Entity", () => {
           "undefined": null,
         },
         "deleteDuringFlush": false,
+        "favoriteBook": {
+          "_isLoaded": false,
+          "fieldName": "favoriteBook",
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": undefined,
+          "otherFieldName": "favoriteBookAuthors",
+          "reactiveHint": {
+            "books": {
+              "reviews_ro": "rating",
+            },
+          },
+          "undefined": null,
+        },
         "graduatedRuleInvoked": 0,
         "image": {
           "_isLoaded": false,

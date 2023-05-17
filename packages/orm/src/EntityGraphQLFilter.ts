@@ -25,14 +25,12 @@ export type ValueGraphQLFilter<V> =
       overlaps?: V | null;
       containedBy?: V | null;
     }
-  | { op: Operator; value: Primitive }
+  | { op: Operator; value: V | V[] | undefined | null }
   | V
   | V[]
   | null;
 
 export type BooleanGraphQLFilter = true | false | null;
-
-export type Primitive = string | boolean | Date | number;
 
 export const operators = [
   "eq",

@@ -98,7 +98,7 @@ export interface CommentGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   user?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null>;
-  likedByUsers?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
+  likedByUsers?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   parent?: EntityGraphQLFilter<CommentParent, IdOf<CommentParent>, never, null | undefined>;
 }
 

@@ -8,7 +8,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
-  EnumGraphQLFilter,
   fail,
   FilterOf,
   Flavor,
@@ -177,17 +176,17 @@ export interface AuthorGraphQLFilter {
   numberOfPublicReviews?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  favoriteColors?: EnumGraphQLFilter<Color>;
-  favoriteShape?: EnumGraphQLFilter<FavoriteShape>;
+  favoriteColors?: ValueGraphQLFilter<Color[]>;
+  favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
-  authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  books?: EntityGraphQLFilter<Book, BookId, FilterOf<Book>, null | undefined>;
-  comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface AuthorOrder {

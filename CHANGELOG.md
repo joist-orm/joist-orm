@@ -1,3 +1,10 @@
+## [1.78.1](https://github.com/stephenh/joist-ts/compare/v1.78.0...v1.78.1) (2023-05-17)
+
+
+### Bug Fixes
+
+* Fix typing of enum GQL filters. ([#645](https://github.com/stephenh/joist-ts/issues/645)) ([a71783f](https://github.com/stephenh/joist-ts/commit/a71783f7be405bcdff7994fd5b2950e7f01db70f))
+
 # [1.78.0](https://github.com/stephenh/joist-ts/compare/v1.77.3...v1.78.0) (2023-05-17)
 
 

@@ -14,7 +14,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
-  EnumGraphQLFilter,
   fail as failSymbol,
   FieldsOf,
   FilterOf,
@@ -706,8 +705,7 @@ function generateFilterFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${ValueFilter}<${enumType}${maybeArray}, ${nullOrNever(notNull)}>;`;
   });
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
-    const maybeArray = "";
-    return code`${fieldName}?: ${ValueFilter}<${enumType}${maybeArray}, ${nullOrNever(notNull)}>;`;
+    return code`${fieldName}?: ${ValueFilter}<${enumType}, ${nullOrNever(notNull)}>;`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${
@@ -738,11 +736,12 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
       return code`${fieldName}?: ${ValueGraphQLFilter}<${fieldType}>;`;
     }
   });
-  const enums = meta.enums.map(({ fieldName, enumType }) => {
-    return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
+  const enums = meta.enums.map(({ fieldName, enumType, isArray }) => {
+    const maybeArray = isArray ? "[]" : "";
+    return code`${fieldName}?: ${ValueGraphQLFilter}<${enumType}${maybeArray}>;`;
   });
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType }) => {
-    return code`${fieldName}?: ${EnumGraphQLFilter}<${enumType}>;`;
+    return code`${fieldName}?: ${ValueGraphQLFilter}<${enumType}>;`;
   });
   const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${
@@ -753,10 +752,10 @@ function generateGraphQLFilterFields(meta: EntityDbMetadata): Code[] {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
   const o2m = meta.oneToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
   const m2m = meta.manyToManys.map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}?: ${EntityFilter}<${otherEntity.type}, ${otherEntity.idType}, ${FilterOf}<${otherEntity.type}>, null | undefined>;`;
+    return code`${fieldName}?: ${EntityGraphQLFilter}<${otherEntity.type}, ${otherEntity.idType}, ${GraphQLFilterOf}<${otherEntity.type}>, null | undefined>;`;
   });
   const polys = meta.polymorphics.map(({ fieldName, fieldType }) => {
     return code`${fieldName}?: ${EntityGraphQLFilter}<${fieldType}, ${IdOf}<${fieldType}>, never, null | undefined>;`;

@@ -6,7 +6,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
-  EnumGraphQLFilter,
   fail,
   FieldsOf,
   FilterOf,
@@ -131,14 +130,14 @@ export interface PublisherGraphQLFilter {
   hugeNumber?: ValueGraphQLFilter<number>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  size?: EnumGraphQLFilter<PublisherSize>;
-  type?: EnumGraphQLFilter<PublisherType>;
+  size?: ValueGraphQLFilter<PublisherSize>;
+  type?: ValueGraphQLFilter<PublisherType>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
-  authors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
-  comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  images?: EntityGraphQLFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
-  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  bookAdvances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  images?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface PublisherOrder {

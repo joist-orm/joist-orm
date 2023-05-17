@@ -1,3 +1,52 @@
+## [1.78.2](https://github.com/stephenh/joist-ts/compare/v1.78.1...v1.78.2) (2023-05-17)
+
+
+### Bug Fixes
+
+* Fix ValueGraphQLFilter's op/value type. ([#646](https://github.com/stephenh/joist-ts/issues/646)) ([de57182](https://github.com/stephenh/joist-ts/commit/de57182e1a5ed479959b7ad31692a6e9a335343d))
+
+## [1.78.1](https://github.com/stephenh/joist-ts/compare/v1.78.0...v1.78.1) (2023-05-17)
+
+
+### Bug Fixes
+
+* Fix typing of enum GQL filters. ([#645](https://github.com/stephenh/joist-ts/issues/645)) ([a71783f](https://github.com/stephenh/joist-ts/commit/a71783f7be405bcdff7994fd5b2950e7f01db70f))
+
+# [1.78.0](https://github.com/stephenh/joist-ts/compare/v1.77.3...v1.78.0) (2023-05-17)
+
+
+### Features
+
+* Add more array operators. ([#644](https://github.com/stephenh/joist-ts/issues/644)) ([3b0775d](https://github.com/stephenh/joist-ts/commit/3b0775d0f414edf0b112a78df014853ba1190f11)), closes [#643](https://github.com/stephenh/joist-ts/issues/643)
+
+## [1.77.3](https://github.com/stephenh/joist-ts/compare/v1.77.2...v1.77.3) (2023-05-16)
+
+
+### Bug Fixes
+
+* Allow 'as' in FilterAndSettings.where. ([#642](https://github.com/stephenh/joist-ts/issues/642)) ([089f625](https://github.com/stephenh/joist-ts/commit/089f6256e3491213dc532d787e198e014787de14))
+
+## [1.77.2](https://github.com/stephenh/joist-ts/compare/v1.77.1...v1.77.2) (2023-05-16)
+
+
+### Bug Fixes
+
+* Fix caching bug in new em.find code. ([#641](https://github.com/stephenh/joist-ts/issues/641)) ([dbc1fdd](https://github.com/stephenh/joist-ts/commit/dbc1fddca678fad1c497fc5febcd39eab532d367))
+
+## [1.77.1](https://github.com/stephenh/joist-ts/compare/v1.77.0...v1.77.1) (2023-05-16)
+
+
+### Bug Fixes
+
+* Fix limit/offset can be undefined. ([#640](https://github.com/stephenh/joist-ts/issues/640)) ([4a618f3](https://github.com/stephenh/joist-ts/commit/4a618f33f356ceabb3e1a2adcb87f436b04bd0f9))
+
+# [1.77.0](https://github.com/stephenh/joist-ts/compare/v1.76.3...v1.77.0) (2023-05-16)
+
+
+### Features
+
+* Use CTEs instead of UNIONs to batch queries.  ([#638](https://github.com/stephenh/joist-ts/issues/638)) ([b37f61a](https://github.com/stephenh/joist-ts/commit/b37f61afd2fb93fa5ea3600d836935149b19309d))
+
 ## [1.76.3](https://github.com/stephenh/joist-ts/compare/v1.76.2...v1.76.3) (2023-05-05)
 
 

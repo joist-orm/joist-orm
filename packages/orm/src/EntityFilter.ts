@@ -6,8 +6,8 @@ import { ColumnCondition } from "./QueryParser";
 /**
  * Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings.
  */
-export type FilterAndSettings<T> = {
-  where: FilterOf<T>;
+export type FilterAndSettings<T extends Entity> = {
+  where: FilterWithAlias<T>;
   conditions?: ExpressionFilter;
   orderBy?: OrderOf<T>;
   limit?: number;
@@ -64,7 +64,13 @@ export type ValueFilter<V, N> =
   | { lte: V | undefined }
   | { like: V | undefined }
   | { ilike: V | undefined }
-  | { gte: V | undefined; lte: V | undefined };
+  // should put these in a dedicated ArrayFilter
+  | { contains: V | undefined }
+  | { overlaps: V | undefined }
+  | { containedBy: V | undefined }
+  // this is between
+  | { gte: V | undefined; lte: V | undefined }
+  | { between: [V, V] | undefined };
 
 /** Filters against complex expressions of filters. */
 export type ExpressionFilter = (

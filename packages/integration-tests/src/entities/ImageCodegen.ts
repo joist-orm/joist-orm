@@ -5,7 +5,6 @@ import {
   EntityFilter,
   EntityGraphQLFilter,
   EntityOrmField,
-  EnumGraphQLFilter,
   fail,
   FilterOf,
   Flavor,
@@ -93,7 +92,7 @@ export interface ImageGraphQLFilter {
   fileName?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  type?: EnumGraphQLFilter<ImageType>;
+  type?: ValueGraphQLFilter<ImageType>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;

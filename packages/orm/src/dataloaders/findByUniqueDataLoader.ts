@@ -40,6 +40,7 @@ export function findByUniqueDataLoader<T extends Entity>(
         conditions.push({
           alias,
           column: column.columnName,
+          dbType: column.dbType,
           cond: { kind: "in", value: values.map((v) => column.mapToDb(v)) },
         });
         break;

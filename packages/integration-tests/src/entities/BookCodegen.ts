@@ -122,11 +122,11 @@ export interface BookGraphQLFilter {
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
   currentDraftAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
-  advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, FilterOf<BookAdvance>, null | undefined>;
-  reviews?: EntityGraphQLFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
-  comments?: EntityGraphQLFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
-  favoriteBookAuthors?: EntityGraphQLFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
-  tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
+  advances?: EntityGraphQLFilter<BookAdvance, BookAdvanceId, GraphQLFilterOf<BookAdvance>, null | undefined>;
+  reviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  favoriteBookAuthors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
 
 export interface BookOrder {

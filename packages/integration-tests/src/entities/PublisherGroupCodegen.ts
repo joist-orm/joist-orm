@@ -9,6 +9,7 @@ import {
   fail,
   FilterOf,
   Flavor,
+  GraphQLFilterOf,
   hasLargeMany,
   hasMany,
   isLoaded,
@@ -71,7 +72,7 @@ export interface PublisherGroupGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  publishers?: EntityGraphQLFilter<Publisher, PublisherId, FilterOf<Publisher>, null | undefined>;
+  publishers?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null | undefined>;
 }
 
 export interface PublisherGroupOrder {

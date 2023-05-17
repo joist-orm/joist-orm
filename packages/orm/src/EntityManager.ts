@@ -26,11 +26,13 @@ import {
   getConstructorFromTaggedId,
   getMetadata,
   getRelations,
+  GraphQLFilterWithAlias,
   keyToString,
   Lens,
   loadLens,
   ManyToOneFieldStatus,
   OneToManyCollection,
+  parseFindQuery,
   PartialOrNull,
   PolymorphicReferenceImpl,
   setField,
@@ -58,6 +60,24 @@ export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
 
   defaultValues: object;
+}
+
+/** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
+export interface FindFilterOptions<T extends Entity> {
+  conditions?: ExpressionFilter;
+  orderBy?: OrderOf<T>;
+  softDeletes?: "include" | "exclude";
+}
+
+/**
+ * Options for the non-batchable `em.findPaginated` queries, i.e. limit & offset are allowed.
+ *
+ * We allow `offset` to be optional, b/c sometimes queries will just want to do a `limit`, but we
+ * require `limit` to ensure the caller is using `findPaginated` for its intended purpose.
+ */
+export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
+  limit: number | undefined;
+  offset?: number;
 }
 
 /**
@@ -186,34 +206,71 @@ export class EntityManager<C = unknown> {
     return this._entityIndex.get(id) as T | undefined;
   }
 
+  /**
+   * Finds entities of `type` with the `where` filter, with auto-batching, so this method
+   * will not cause N+1s if called in a loop.
+   *
+   * The `where` filter is one of Joist's "join literals", which can combine both joining into
+   * related entities and simple column conditions in a single literal. All conditions are ANDed.
+   * For more complex conditions, use the `find` overload that has a `conditions` option.
+   *
+   * This method is batch-friendly, i.e. if called in a loop, it will be automatically batched
+   * to avoid N+1s. Because of this, it cannot be used with queries that want to use `LIMIT`
+   * or `OFFSET`; for those, see `findPaginated`.
+   */
   public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterWithAlias<T>): Promise<T[]>;
   public async find<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: {
-      conditions?: ExpressionFilter;
-      populate?: Const<H>;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    options?: FindFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async find<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: {
-      populate?: any;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    const rows = await findDataLoader(this, type).load({ where, ...options });
+    const { populate, ...rest } = options || {};
+    const settings = { where, ...rest };
+    const rows = await findDataLoader(this, type, settings).load(settings);
     const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
-    if (options?.populate) {
-      await this.populate(result, options.populate);
+    if (populate) {
+      await this.populate(result, populate);
+    }
+    return result;
+  }
+
+  /**
+   * Finds entities of `type` with the `where` filter, without auto-batching, so this method
+   * may call N+1s if called in a loop.
+   *
+   * The `where` filter is one of Joist's "join literals", which can combine both joining into
+   * related entities and simple column conditions in a single literal. All conditions are ANDed.
+   * For more complex conditions, use the `find` overload that has a `conditions` option.
+   *
+   * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
+   * of this, you should prefer using `find`, unless you explicitly pagination support.
+   */
+  public async findPaginated<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+  ): Promise<T[]>;
+  public async findPaginated<T extends Entity, H extends LoadHint<T>>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+  ): Promise<Loaded<T, H>[]>;
+  async findPaginated<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+  ): Promise<T[]> {
+    const { populate, limit, offset, ...rest } = options || {};
+    const query = parseFindQuery(getMetadata(type), where, rest);
+    const rows = await this.driver.executeFind(this, query, { limit, offset });
+    // check row limit
+    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
+    if (populate) {
+      await this.populate(result, populate);
     }
     return result;
   }
@@ -225,36 +282,41 @@ export class EntityManager<C = unknown> {
    */
   public async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
+    where: GraphQLFilterWithAlias<T>,
   ): Promise<T[]>;
   public async findGql<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: GraphQLFilterOf<T>,
-    options?: {
-      populate?: Const<H>;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    where: GraphQLFilterWithAlias<T>,
+    options?: FindFilterOptions<T> & { populate?: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findGql<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
-    where: FilterWithAlias<T>,
-    options?: {
-      populate?: any;
-      orderBy?: OrderOf<T>;
-      limit?: number;
-      offset?: number;
-      softDeletes?: "include" | "exclude";
-    },
+    where: GraphQLFilterOf<T>,
+    options?: FindFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    const rows = await findDataLoader(this, type).load({ where, ...options });
-    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
-    if (options?.populate) {
-      await this.populate(result, options.populate);
-    }
-    return result;
+    return this.find(type, where as any, options);
+  }
+
+  /**
+   * Works exactly like `findPaginated` but accepts "less than greatly typed" GraphQL filters.
+   *
+   * I.e. filtering by `null` on fields that are non-`nullable`.
+   */
+  public async findGqlPaginated<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterWithAlias<T>,
+  ): Promise<T[]>;
+  public async findGqlPaginated<T extends Entity, H extends LoadHint<T>>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterWithAlias<T>,
+    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+  ): Promise<Loaded<T, H>[]>;
+  async findGqlPaginated<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: GraphQLFilterWithAlias<T>,
+    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+  ): Promise<T[]> {
+    return this.findPaginated(type, where as any, options);
   }
 
   public async findOne<T extends Entity>(

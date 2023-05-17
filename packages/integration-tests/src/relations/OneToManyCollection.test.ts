@@ -202,7 +202,7 @@ describe("OneToManyCollection", () => {
     await insertAuthor({ first_name: "a2" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
-    const [a1, a2] = await em.find(Author, { id: ["1", "2"] });
+    const [a1, a2] = await em.loadAll(Author, ["1", "2"]);
     const b1 = await em.load(Book, "1", "author");
 
     // When we assign a new author

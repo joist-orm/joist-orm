@@ -40,8 +40,18 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
             return {
               op: "and",
               conditions: [
-                { alias, column: columnOne, cond: { kind: "eq", value: keyToNumber(meta1, idOne) } },
-                { alias, column: columnTwo, cond: { kind: "eq", value: keyToNumber(meta2, idTwo) } },
+                {
+                  alias,
+                  column: columnOne,
+                  dbType: meta1.idType,
+                  cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
+                },
+                {
+                  alias,
+                  column: columnTwo,
+                  dbType: meta2.idType,
+                  cond: { kind: "eq", value: keyToNumber(meta2, idTwo) },
+                },
               ],
             };
           }),

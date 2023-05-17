@@ -3,9 +3,9 @@ title: Avoiding N+1s
 sidebar_position: 2
 ---
 
-Joist is built on top of Facebook's [dataloader](https://github.com/graphql/dataloader) library, which avoids N+1s in a fundamental, systematic way that almost always "just works".
+Joist is built on Facebook's [dataloader](https://github.com/graphql/dataloader) library, which means Joist avoids N+1s in a fundamental, systematic way that just works.
 
-This solid foundation comes Joist's roots as an ORM for GraphQL environments, which are particularly prone to N+1s (see section below), but is a boon to any system (REST, grpc, etc.) working with relational data. 
+This solid foundation comes Joist's roots as an ORM for GraphQL backends, which are particularly prone to N+1s (see section below), but is a boon to any system (REST, GRPC, etc.) working with relational data. 
 
 ## N+1s: Lazy Loading in a Loop
 
@@ -38,6 +38,8 @@ SELECT * FROM books WHERE author_id = 1;
 SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ...);
 ```
 
+This N+1 prevention works not only in our 3-line `await Promise.all` example, but also works in complex codepaths where the business logic of "process each book" (and any lazy loading it might trigger) is spread out across helper methods, validation rules, entity lifecycle hooks, etc.
+
 ## Type-Safe Preloading
 
 While the 1st snippet shows that Joist avoids N+1s in `async` / `Promise.all`-heavy code, Joist also supports populate hints, which not only **preload the data** but also **change the types to allow non-async access**. 
@@ -66,9 +68,11 @@ With Joist, you don't have to worry anymore: if you use populate hints, that's g
 
 ### Common/Tedious Pitfall
 
-N+1s have fundamentally plagued ORMs, not just in Node/TypeScript but many/all languages, because the defacto ORM approach of modeling "relations as fields on an object" (i.e. collections like `author1.getBooks` or references like `book1.getAuthor`) is a white lie because (unless preloaded) they are not "for free" in-memory accesses, but instead _actually_ expensive I/O calls, **leading to a leaky abstraction**.
+N+1s have fundamentally plagued ORMs, in any language, because the defacto ORM approach of "relations are just methods on an object" (i.e. `author1.getBooks()` or `book1.getAuthor()`) causes a **leaky abstraction** because the method calls are not super-cheap in-memory accesses (like most method calls), but instead actually expensive I/O calls.
 
-Unfortunately, writing `for` loops over objects, and accessing that object's fields, is an extremely common pattern, and typically is perfectly safe (cheap) to do; however, ORMs that historically "hide" the expensive I/O call break this assumption.
+Methods that issue I/O calls are powerful, however they are almost too ergonomic: it's very natural for programmers to, given a list of objects, loop over those objects and access their methods.
+
+This is an extremely common pattern (looping over objects and calling their methods), which means in most ORMs N+1s are also extremely common, without careful planning (i.e. manually-maintained preload hints).
 
 For example, in Rails ActiveRecord, N+1s happen by default, and the programmer needs to tell ActiveRecord ahead of time which collections to preload:
 
@@ -89,7 +93,7 @@ This `include(:reviews)` resolves the performance issue, but relies on the progr
 
 Joist is able to avoid N+1s **without preload hints** by leveraging Facebook's [dataloader](https://github.com/graphql/dataloader) library to automatically batch multiple `load` operations into single SQL statements.
 
-Dataloader leverages JavaScript's synchronous/single-thread model, which is where when JavaScript evaluates the `book.reviews.load()` method insdie of `books.map`:
+Dataloader leverages JavaScript's synchronous/single-thread model, which is where when JavaScript evaluates the `book.reviews.load()` method inside of `books.map`:
 
 ```typescript
 await Proimse.all(books.map(async (book) => {
@@ -97,13 +101,13 @@ await Proimse.all(books.map(async (book) => {
 }));
 ```
 
-The `load` method is fundamentally not allowed make an immediate SQL call, because it would block the thread.
+The `book.reviews.load` method is fundamentally not allowed make an immediate SQL call, because it would block the event loop.
 
 Instead, the `load` method is forced to return a `Promise`, handle the I/O off the thread, and then later return the `reviews` that have been loaded.
 
-And so the _actual_ "immediate next thing" that this code does, is that it invokes the next iteration of `books.map`, i.e. get `book 2` and immediately asks for its `reviews.load()` as well.
+And so the _actual_ "immediate next thing" that this code does is not "make a SQL call for book1's reviews", but instead is the next iteration of `books.map`, i.e. get `book 2` and asks for its `book.reviews.load()` as well.
 
-Ironically, this forced "nothing can block", that for years was the bane of JavaScript's programming model due to the pre-`Promise` callback hell it caused, gives Joist (via dataloader) an opportunity to wait just a _little bit_, until all of the `book.reviews.load()` have been "asked for", and the `books.map` iteration is finished, to only then see that "ah, we've been asked to do 10 `book.reviews.load`, let's do those as a single SQL statement", and execute a single SQL statement like:
+Ironically, this forced "nothing can block" model, that for years was the bane of JavaScript due to the pre-`Promise` callback hell it caused, gives Joist (via dataloader) an opportunity to wait just a _little bit_, until all of the `book.reviews.load()` have been "asked for", and the `books.map` iteration is finished, to only then see that "ah, we've been asked to do 10 `book.reviews.load`, let's do those as a single SQL statement", and execute a single SQL statement like:
 
 ```sql
 SELECT * FROM book_reviews WHERE book_id IN (1, 2, 3, ..., 10);
@@ -132,7 +136,7 @@ It is a little esoteric, but dataloader implements this by automatically managin
 
 Joist's auto-batching works for any `em.load` calls (or lazy-load calls `author.books.load()`, etc.) that happen synchronously within a tick of the event loop.
 
-This means that auto-batching works for either "simple/obvious" cases like calling `book.reviews.load()` in `books.map(book => ...)` lambda, or **disparately across separate methods** that are still invoked (essentially) simultaneously, which is exactly what happens with GraphQL resolvers.
+This means that auto-batching works for either simple/obvious cases like calling `book.reviews.load()` in `books.map(book => ...)` lambda, or **disparately across separate methods** that are still invoked (essentially) simultaneously, which is exactly what happens with GraphQL resolvers.
 
 For example, let's say a GraphQL client has issued a query like:
 
@@ -166,26 +170,53 @@ This looks like it could be an N+1, however because each of the `reviews(1)`, `r
 
 :::tip
 
-Granted, Joist is GraphQL agnostic, so you may use a different API layer, like REST or GRPC.
-
-But this example shows how dataloader's "batch anything that happens within a single tick" will batch many common patterns automatically/for free, in a way that is so powerful it almost seems like JavaScript's event loop was designed from day one to purposefully support this, but instead it evolved almost by accident/happenstance.
+Joist is GraphQL agnostic; you can use a different API layer, like REST or GRPC, we are just using GraphQL as an example due to its N+1 prone nature.
 
 :::
 
+## How It Works
 
-## Where It Doesn't Work
+There are two primary components to Joist's batching:
 
-As powerful as Joist's batching is, it only works on simple database queries like foreign key loads, i.e. `author.books.load()` or `book.author.load()`, which just navigate the object graph.
+1. Graph navigation, and
+2. `em.find` queries
 
-If you are doing a complex query within a loop:
+### Graph Navigation
 
-```typescript
-const books = await author.books.load();
-await Proimse.all(books.map(async (book) => {
-  await em.find(BookReview, { book, someOther: "fancyCondition" }); 
-}));
+To avoid N+1s during graph navigation (using methods `author.books.load` or `book.author.load` to lazy load data), Joist maintains a dataloader per relation/per edge. For example if you do:
+
+- `await author1.books.load()`
+- `await author2.books.load()`
+- `await author3.books.load()`
+
+In a loop, the `Author.books` o2m relation has a dataloader that collects `author1`, `author2`, and `author3` entities in a list and then issues a SQL single statement for books with `WHERE author_id IN (1, 2, 3)`.
+
+Joist has dataloader implementations for all the core relations involved in graph navigation: o2m, m2o, o2o, and m2m. Their implementations are straightforward and generally rock solid.
+
+### Find Queries
+
+Besides graph navigation, Joist will also auto-batch `em.find` queries, which are more adhoc `SELECT` queries (see [Find Queries](../features/queries-find.md)). For example if you do:
+
+- `await em.find(Author, { firstName: "a1", lastName: "l1" })`
+- `await em.find(Author, { firstName: "a2", lastName: "l2" })`
+- `await em.find(Author, { firstName: "a3", lastName: "l3" })`
+
+In a loop, then `em.find` will batch any `SELECT` statements that have the same joins and same filtering (essentially the same query structure) in a single statement that looks like:
+
+```sql
+WITH _find (tag, arg1) AS (VALUES 
+  (1, 'a1', 'l1'),
+  (2, 'a2', 'l2'),
+  (3, 'a3', 'l3')
+)
+SELECT * FROM authors a
+JOIN _find ON (a.first_name = _find.arg1 AND a.last_name = _find.arg2);
 ```
 
-Then dataloader will correctly tell Joist to execute the `em.find` for all 10 books "as a batch", however, it becomes hard to combine each of the `find` queries (each of which could have arbitrarily complex where clauses/conditions) into a single SQL statement.
+This approach leverages the Common Table Expression (CTE) of inline values and extra `JOIN` clause to essentially apply multiple `WHERE` clauses at once. This is admittedly more esoteric than Joist's graph navigation dataloaders, but it achieves the goal of de-N+1-ing the queries.
 
-As of now, Joist technically _will_ `UNION` all of these `em.find`s together into a single SQL call, but the SQL query is sufficiently complex (especially if there are ~100s of them, i.e. for 100 books) that they can often break, and the feature (batching custom `em.find`s) needs to be either removed or re-worked.
+:::note
+
+Joist's `em.find` does not support `limit` or `offset` because they cannot be applied with the `JOIN` filtering approach. Instead, for `limit` and `offset`  you can use `em.findPaginated`, although note that `findPaginated` will not auto-batch, so you should avoid calling it in a loop.
+
+:::

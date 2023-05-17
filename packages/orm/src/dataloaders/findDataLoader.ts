@@ -240,6 +240,9 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
     case "lt":
     case "like":
     case "ilike":
+    case "contains":
+    case "overlaps":
+    case "containedBy":
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
       return [`${fn} _find.arg${argsIndex}`, 1];
     case "is-null":
@@ -250,8 +253,6 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
       return [`= ANY(_find.arg${argsIndex})`, 1];
     case "nin":
       return [`!= ALL(_find.arg${argsIndex})`, 1];
-    case "@>":
-      return [`@> _find.arg${argsIndex}`, 1];
     case "between":
       return [`BETWEEN _find.arg${argsIndex} AND _find.arg${argsIndex + 1}`, 2];
     default:

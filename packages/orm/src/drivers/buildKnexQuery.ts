@@ -102,6 +102,9 @@ function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
     case "lt":
     case "like":
     case "ilike":
+    case "contains":
+    case "containedBy":
+    case "overlaps":
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
       query.where(columnName, fn, cond.value);
       break;
@@ -116,9 +119,6 @@ function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
       break;
     case "nin":
       query.whereNotIn(columnName, cond.value);
-      break;
-    case "@>":
-      query.where(columnName, "@>", cond.value);
       break;
     case "between":
       const [min, max] = cond.value;

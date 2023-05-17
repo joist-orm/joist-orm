@@ -499,7 +499,6 @@ export type ParsedValueFilter<V> =
   | { kind: "eq"; value: V }
   | { kind: "in"; value: readonly V[] }
   | { kind: "nin"; value: readonly V[] }
-  | { kind: "@>"; value: readonly V[] }
   | { kind: "gt"; value: V }
   | { kind: "gte"; value: V }
   | { kind: "ne"; value: V }
@@ -509,6 +508,9 @@ export type ParsedValueFilter<V> =
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
   | { kind: "ilike"; value: V }
+  | { kind: "contains"; value: readonly V[] }
+  | { kind: "overlaps"; value: readonly V[] }
+  | { kind: "containedBy"; value: readonly V[] }
   | { kind: "between"; value: [V, V] };
 
 /**
@@ -566,6 +568,9 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
             case "lte":
             case "like":
             case "ilike":
+            case "contains":
+            case "overlaps":
+            case "containedBy":
               return { kind: key, value: filter[key] };
             case "between":
               return { kind: key, value: filter[key] };
@@ -594,14 +599,10 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
     case "ilike":
       filter.value = column.mapToDb(filter.value);
       return filter;
-    case "@>":
     case "in":
       if (column.isArray) {
         // Arrays need a special operator
-        return {
-          kind: "@>",
-          value: column.mapToDb(filter.value),
-        };
+        return { kind: "contains", value: column.mapToDb(filter.value) };
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }
@@ -613,6 +614,14 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
       } else {
         filter.value = filter.value.map((v) => column.mapToDb(v));
       }
+      return filter;
+    case "contains":
+    case "overlaps":
+    case "containedBy":
+      if (!column.isArray) {
+        throw new Error(`${filter.kind} is only unsupported on array columns`);
+      }
+      filter.value = column.mapToDb(filter.value);
       return filter;
     case "between":
       filter.value[0] = column.mapToDb(filter.value[0]);

@@ -228,4 +228,40 @@ describe("EntityManager.find.batch", () => {
     expect(a1[0].firstName).toBe("a1");
     expect(a2[0].firstName).toBe("a2");
   });
+
+  it("batches contains an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2, 3] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [1, 2, 3] });
+    const em = newEntityManager();
+    const [q1, q2] = await Promise.all([
+      em.find(Author, { favoriteColors: { contains: [Color.Red, Color.Green] } }),
+      em.find(Author, { favoriteColors: { contains: [Color.Green, Color.Blue] } }),
+    ]);
+    expect(q1.length).toBe(2);
+    expect(q2.length).toBe(2);
+  });
+
+  it("batches find overlaps an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1, 2, 3] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2, 3] });
+    const em = newEntityManager();
+    const [q1, q2] = await Promise.all([
+      await em.find(Author, { favoriteColors: { overlaps: [Color.Red, Color.Green] } }),
+      await em.find(Author, { favoriteColors: { overlaps: [Color.Green, Color.Blue] } }),
+    ]);
+    expect(q1.length).toBe(2);
+    expect(q2.length).toBe(2);
+  });
+
+  it("batches containedBy an enum array", async () => {
+    await insertAuthor({ first_name: "a1", favorite_colors: [1] });
+    await insertAuthor({ first_name: "a2", favorite_colors: [2] });
+    const em = newEntityManager();
+    const [q1, q2] = await Promise.all([
+      await em.find(Author, { favoriteColors: { containedBy: [Color.Red, Color.Green] } }),
+      await em.find(Author, { favoriteColors: { containedBy: [Color.Green, Color.Blue] } }),
+    ]);
+    expect(q1.length).toBe(2);
+    expect(q2.length).toBe(1);
+  });
 });

@@ -184,21 +184,24 @@ describe("EntityManager.reactiveRules", () => {
     const b = newBook(em, { author: a, reviews: [{ rating: 10 }] });
     await em.flush();
 
-    const favoriteBook = a.favoriteBook.get;
     // For some reason .toMatchEntity(b) fails here
+    // expect(a.favoriteBook.get).toMatchEntity(b);
     expect(a.favoriteBook.get).toBe(b);
+    expect(await select("authors")).toMatchObject([{ id: 1, favorite_book_id: 1 }]);
 
     // If there is a new favorite book
     const b2 = newBook(em, { author: a, reviews: [{ rating: 20 }] });
     await em.flush();
     // Then the derived field is updated
     expect(a.favoriteBook.get).toBe(b2);
+    expect(await select("authors")).toMatchObject([{ id: 1, favorite_book_id: 2 }]);
 
     // If the favorite book is deleted
     em.delete(b2);
     await em.flush();
     // Then the derived field is updated
     expect(a.favoriteBook.get).toBe(b);
+    expect(await select("authors")).toMatchObject([{ id: 1, favorite_book_id: 1 }]);
   });
 
   it.withCtx("creates the right reactive derived values", async () => {

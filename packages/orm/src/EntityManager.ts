@@ -45,7 +45,7 @@ import {
 } from "./index";
 import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
-import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncRelationImpl } from "./relations";
+import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
 import { assertNever, fail, getOrSet, MaybePromise, toArray } from "./utils";
@@ -618,7 +618,11 @@ export class EntityManager<C = unknown> {
     // and will drive percolation to keep the other-side o2m & o2o updated.
     clones.forEach(([, clone]) => {
       Object.entries(clone).forEach(([fieldName, value]) => {
-        if (value instanceof ManyToOneReferenceImpl || value instanceof PolymorphicReferenceImpl || value instanceof PersistedAsyncRelationImpl) {
+        if (
+          value instanceof ManyToOneReferenceImpl ||
+          value instanceof PolymorphicReferenceImpl ||
+          value instanceof PersistedAsyncReferenceImpl
+        ) {
           // What's the existing entity? Have we cloned it?
           const existingIdOrEntity = clone.__orm.data[fieldName];
           const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
@@ -1605,7 +1609,7 @@ async function crawl<T extends Entity>(
             if (related) {
               await crawl(found, [related], nested, opts);
             }
-          } else if (relation instanceof PersistedAsyncRelationImpl) {
+          } else if (relation instanceof PersistedAsyncReferenceImpl) {
             const relatedEntities: readonly Entity[] = await relation.load();
             await crawl(found, relatedEntities, nested, opts);
           } else {

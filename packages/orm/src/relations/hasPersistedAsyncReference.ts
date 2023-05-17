@@ -1,15 +1,29 @@
-
-import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { RelationT, RelationU } from "./Relation";
-import { Reference, ReferenceN } from "./Reference";
+import {
+  deTagId,
+  deTagIds,
+  ensureNotDeleted,
+  ensureTagged,
+  EntityMetadata,
+  fail,
+  getMetadata,
+  isEntity,
+  isLoaded,
+  ManyToOneField,
+  maybeResolveReferenceToId,
+  sameEntity,
+  setField,
+} from "..";
 import { Entity } from "../Entity";
+import { Const, currentlyInstantiatingEntity, IdOf } from "../EntityManager";
 import { Reacted, ReactiveHint } from "../reactiveHints";
-import { Const, IdOf, currentlyInstantiatingEntity } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, OneToManyCollection, OneToManyLargeCollection, OneToOneReferenceImpl, deTagId, deTagIds, ensureNotDeleted, ensureTagged, getMetadata, isEntity, isLoaded, maybeResolveReferenceToId, sameEntity, setField } from "..";
+import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { Reference, ReferenceN } from "./Reference";
+import { RelationT, RelationU } from "./Relation";
 
 const I = Symbol();
 
-export interface PersistedAsyncRelation<T extends Entity, U extends Entity, N extends never | undefined> extends Reference<T, U, N> {
+export interface PersistedAsyncReference<T extends Entity, U extends Entity, N extends never | undefined>
+  extends Reference<T, U, N> {
   isLoaded: boolean;
   isSet: boolean;
 
@@ -35,27 +49,29 @@ export interface PersistedAsyncRelation<T extends Entity, U extends Entity, N ex
   [I]?: T;
 }
 
-export function hasPersistedAsyncRelation<T extends Entity, U extends Entity, H extends ReactiveHint<T>, N extends never | undefined>(
+export function hasPersistedAsyncReference<
+  T extends Entity,
+  U extends Entity,
+  H extends ReactiveHint<T>,
+  N extends never | undefined,
+>(
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
-  otherFieldName: keyof U & string,
   hint: Const<H>,
-  fn: (entity: Reacted<T, H>) => (U | N),
-): PersistedAsyncRelation<T, U, N> {
+  fn: (entity: Reacted<T, H>) => U | N,
+): PersistedAsyncReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
-  return new PersistedAsyncRelationImpl<T, U, H, N>(
-    entity,
-    otherMeta,
-    fieldName,
-    otherFieldName,
-    hint,
-    fn
-  );
+  return new PersistedAsyncReferenceImpl<T, U, H, N>(entity, fieldName, hint, fn);
 }
 
-export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H extends ReactiveHint<T>, N extends never | undefined>
+export class PersistedAsyncReferenceImpl<
+    T extends Entity,
+    U extends Entity,
+    H extends ReactiveHint<T>,
+    N extends never | undefined,
+  >
   extends AbstractRelationImpl<U>
-  implements PersistedAsyncRelation<T, U, N>
+  implements PersistedAsyncReference<T, U, N>
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
@@ -67,9 +83,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
   private loadPromise: any;
   constructor(
     entity: T,
-    otherMeta: EntityMetadata<U>,
     private fieldName: keyof T & string,
-    public otherFieldName: keyof U & string,
     public reactiveHint: Const<H>,
     private fn: (entity: Reacted<T, H>) => U | N,
   ) {
@@ -79,7 +93,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
     this.#reactiveHint = reactiveHint;
   }
 
-  async load(opts?: { withDeleted?: true, forceReload?: true }): Promise<U | N> {
+  async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;
     if (!this._isLoaded) {
@@ -102,7 +116,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
       if (!(this.#entity.em as any)._isValidating) {
-        this.set(newValue);
+        this.setImpl(newValue);
       }
       return this.maybeFindEntity();
     } else if (this.isSet) {
@@ -129,7 +143,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
   }
 
   set(other: U | N): void {
-    this.setImpl(other);
+    fail("Cannot set a persisted async relation directly.");
   }
 
   get isSet(): boolean {
@@ -157,8 +171,6 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
       this.loaded = other;
       this._isLoaded = true;
     }
-    this.maybeRemove(previous);
-    this.maybeAdd();
   }
 
   /** Returns the tagged id of the current value. */
@@ -220,64 +232,9 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
 
   async cleanupOnEntityDeleted(): Promise<void> {
     const current = await this.load({ withDeleted: true });
-    if (current !== undefined) {
-      const o2m = this.getOtherRelation(current);
-      if (o2m instanceof OneToManyCollection) {
-        o2m.remove(this.#entity, { requireLoaded: false });
-      } else if (o2m instanceof OneToManyLargeCollection) {
-        o2m.remove(this.#entity);
-      } else if (o2m instanceof OneToOneReferenceImpl) {
-        o2m.set(undefined as any);
-      } else {
-        throw new Error(`Unhandled ${o2m}`);
-      }
-    }
     setField(this.#entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = true;
-  }
-
-  maybeRemove(other: U | undefined) {
-    if (other) {
-      const prevRelation = this.getOtherRelation(other);
-      if (prevRelation instanceof OneToManyCollection) {
-        prevRelation.removeIfLoaded(this.#entity);
-      } else if (prevRelation instanceof OneToManyLargeCollection) {
-        prevRelation.remove(this.#entity);
-      } else {
-        prevRelation.set(undefined as any, { percolating: true });
-      }
-    }
-  }
-
-  maybeAdd() {
-    const id = this.current();
-    const other = this.maybeFindEntity();
-    if (other) {
-      // Other is already loaded in memory, immediately hook it up
-      const newRelation = this.getOtherRelation(other);
-      if (newRelation instanceof OneToManyCollection) {
-        newRelation.add(this.#entity);
-      } else if (newRelation instanceof OneToManyLargeCollection) {
-        newRelation.add(this.#entity);
-      } else {
-        newRelation.set(this.#entity, { percolating: true });
-      }
-    } else if (typeof id === "string") {
-      // Other is not loaded in memory, but cache it in case our other side is later loaded
-      const { em } = this.#entity;
-      let map = em.pendingChildren.get(id);
-      if (!map) {
-        map = new Map();
-        em.pendingChildren.set(id, map);
-      }
-      let list = map.get(this.otherFieldName);
-      if (!list) {
-        list = [];
-        map.set(this.otherFieldName, list);
-      }
-      list.push(this.#entity);
-    }
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
@@ -294,9 +251,11 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
   }
 
   public toString(): string {
-    return `PersistedAsyncRelation(entity: ${this.#entity}, hint: ${this.loadHint}, fieldName: ${this.fieldName}, otherMeta: {
+    return `PersistedAsyncReference(entity: ${this.#entity}, hint: ${this.loadHint}, fieldName: ${
+      this.fieldName
+    }, otherMeta: {
       this.otherMeta.type
-    }, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+    }, id: ${this.id})`;
   }
 
   /**
@@ -315,13 +274,6 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
     return entity;
   }
 
-  /** Returns the other relation that points back at us, i.e. we're `book.author_id` and this is `Author.books`. */
-  private getOtherRelation(
-    other: U,
-  ): OneToManyCollection<U, T> | OneToOneReferenceImpl<U, T> | OneToManyLargeCollection<U, T> {
-    return (other as U)[this.otherFieldName] as any;
-  }
-
   private get isCascadeDelete(): boolean {
     return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
@@ -333,7 +285,7 @@ export class PersistedAsyncRelationImpl<T extends Entity, U extends Entity, H ex
   maybeFindEntity(): U | N {
     // Check this.loaded first b/c a new entity won't have an id yet
     const { idTagged } = this;
-    return this.loaded ?? (idTagged !== undefined ? this.#entity.em.getEntity(idTagged) as U | N : undefined as N);
+    return this.loaded ?? (idTagged !== undefined ? (this.#entity.em.getEntity(idTagged) as U | N) : (undefined as N));
   }
 
   [RelationT]: T = null!;

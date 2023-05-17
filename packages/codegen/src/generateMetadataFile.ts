@@ -126,7 +126,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         fieldName: "${fieldName}",
         fieldIdName: "${fieldName}Id",
         derived: ${!derived ? false : `"${derived}"`},
-        required: ${!derived && notNull},
+        required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
         serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),

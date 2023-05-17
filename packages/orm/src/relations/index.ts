@@ -19,10 +19,10 @@ export {
   PersistedAsyncProperty,
 } from "./hasPersistedAsyncProperty";
 export {
-  hasPersistedAsyncRelation,
-  PersistedAsyncRelation,
-  PersistedAsyncRelationImpl,
-} from "./hasPersistedAsyncRelation";
+  hasPersistedAsyncReference,
+  PersistedAsyncReference,
+  PersistedAsyncReferenceImpl,
+} from "./hasPersistedAsyncReference";
 export { LargeCollection } from "./LargeCollection";
 export { hasManyToMany, ManyToManyCollection } from "./ManyToManyCollection";
 export { hasLargeManyToMany, ManyToManyLargeCollection } from "./ManyToManyLargeCollection";

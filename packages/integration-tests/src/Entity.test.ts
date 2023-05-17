@@ -75,7 +75,6 @@ describe("Entity", () => {
           "fn": {},
           "loadPromise": undefined,
           "loaded": undefined,
-          "otherFieldName": "favoriteBookAuthors",
           "reactiveHint": {
             "books": {
               "reviews_ro": "rating",

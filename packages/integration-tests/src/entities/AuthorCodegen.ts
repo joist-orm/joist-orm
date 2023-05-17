@@ -29,7 +29,7 @@ import {
   OrderBy,
   PartialOrNull,
   PersistedAsyncProperty,
-  PersistedAsyncRelation,
+  PersistedAsyncReference,
   setField,
   setOpts,
   ValueFilter,
@@ -110,7 +110,6 @@ export interface AuthorOpts {
   favoriteShape?: FavoriteShape | null;
   mentor?: Author | AuthorId | null;
   currentDraftBook?: Book | BookId | null;
-  favoriteBook?: Book | BookId | null;
   publisher?: Publisher | PublisherId | null;
   image?: Image | null;
   userOneToOne?: User | null;
@@ -123,7 +122,6 @@ export interface AuthorOpts {
 export interface AuthorIdsOpts {
   mentorId?: AuthorId | null;
   currentDraftBookId?: BookId | null;
-  favoriteBookId?: BookId | null;
   publisherId?: PublisherId | null;
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
@@ -264,7 +262,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     "currentDraftAuthor",
   );
 
-  abstract readonly favoriteBook: PersistedAsyncRelation<Author, Book, undefined>;
+  abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
 
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 

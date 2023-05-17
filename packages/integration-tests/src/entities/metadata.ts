@@ -163,7 +163,6 @@ export const bookMeta: EntityMetadata<Book> = {
     "advances": { kind: "o2m", fieldName: "advances", fieldIdName: "advanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "book", serde: undefined, immutable: false },
     "reviews": { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
-    "favoriteBookAuthors": { kind: "o2m", fieldName: "favoriteBookAuthors", fieldIdName: "favoriteBookAuthorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "favoriteBook", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined, immutable: false, joinTableName: "books_to_tags", columnNames: ["book_id", "tag_id"] },
     "currentDraftAuthor": { kind: "o2o", fieldName: "currentDraftAuthor", fieldIdName: "currentDraftAuthorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "currentDraftBook", serde: undefined, immutable: false },
     "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "book", serde: undefined, immutable: false },

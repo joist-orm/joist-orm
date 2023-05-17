@@ -68,4 +68,4 @@ export const EntityConstructor = imp("EntityConstructor@joist-orm");
 export const MaybeAbstractEntityConstructor = imp("MaybeAbstractEntityConstructor@joist-orm");
 export const deTagId = imp("deTagId@joist-orm");
 export const PersistedAsyncProperty = imp("PersistedAsyncProperty@joist-orm");
-export const PersistedAsyncRelation = imp("PersistedAsyncRelation@joist-orm");
+export const PersistedAsyncReference = imp("PersistedAsyncReference@joist-orm");

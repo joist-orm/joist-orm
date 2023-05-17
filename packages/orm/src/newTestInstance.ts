@@ -117,7 +117,7 @@ export function newTestInstance<T extends Entity>(
       ) {
         const codegenDefault = getCodegenDefault(cstr, field.fieldName);
         return [fieldName, codegenDefault ?? defaultValueForField(em, cstr, field)];
-      } else if (field.kind === "m2o") {
+      } else if (field.kind === "m2o" && !field.derived) {
         // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field,
         // then look in `use` and for an "obvious" there-is-only-one default (even for optional fields)
         const existing = getObviousDefault(em, field.otherMetadata(), opts);

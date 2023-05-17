@@ -132,7 +132,7 @@ export type ManyToOneField = Field & {
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
-  derived: "orm" | "async" | false;
+  derived: "async" | false;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -258,6 +258,8 @@ export class EntityDbMetadata {
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(config, this.entity, r))
+      // Do not generate o2m for persisted async derived fields
+      .filter((f) => !isAsyncDerived(config, f.otherEntity, f.otherFieldName))
       .filter((f) => !f.ignore);
     this.oneToManys = allOneToManys.filter((f) => !f.isLargeCollection);
     this.largeOneToManys = allOneToManys.filter((f) => f.isLargeCollection);

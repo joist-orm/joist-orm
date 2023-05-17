@@ -3,16 +3,15 @@ import {
   cannotBeUpdated,
   Collection,
   getEm,
-  getMetadata,
   hasAsyncProperty,
   hasManyDerived,
   hasManyThrough,
   hasOneDerived,
   hasPersistedAsyncProperty,
-  hasPersistedAsyncRelation,
+  hasPersistedAsyncReference,
   Loaded,
   PersistedAsyncProperty,
-  PersistedAsyncRelation,
+  PersistedAsyncReference,
   Reference,
 } from "joist-orm";
 import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
@@ -135,10 +134,9 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  readonly favoriteBook: PersistedAsyncRelation<Author, Book, undefined> = hasPersistedAsyncRelation(
+  readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined> = hasPersistedAsyncReference(
     bookMeta,
     "favoriteBook",
-    "favoriteBookAuthors",
     { books: { reviews_ro: "rating" } },
     (a) => {
       const books = a.books.get;

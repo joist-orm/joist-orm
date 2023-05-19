@@ -80,6 +80,12 @@ export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilter
   offset?: number;
 }
 
+/** Options for the `findCount`. */
+export interface FindCountFilterOptions<T extends Entity> {
+  conditions?: ExpressionFilter;
+  softDeletes?: "include" | "exclude";
+}
+
 /**
  * Constructors for either concrete or abstract entity types.
  *
@@ -410,6 +416,18 @@ export class EntityManager<C = unknown> {
       }
       return entity;
     }
+  }
+
+  async findCount<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options?: FindCountFilterOptions<T>,
+  ): Promise<number> {
+    const query = parseFindQuery(getMetadata(type), where, options);
+    query.selects = ["count(*) as count"];
+    query.orderBys = [];
+    const rows = await this.driver.executeFind(this, query, {});
+    return Number(rows[0].count);
   }
 
   /**

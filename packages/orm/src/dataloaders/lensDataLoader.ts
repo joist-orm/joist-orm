@@ -60,7 +60,8 @@ export function lensDataLoader<T extends Entity>(
     const selects = [`"${alias}".*`];
     const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
     const conditions: ColumnCondition[] = [];
-    const query: ParsedFindQuery = { selects, tables, conditions };
+    const orderBys = [{ alias, column: "id", order: "ASC" as const }];
+    const query: ParsedFindQuery = { selects, tables, conditions, orderBys };
     addTablePerClassJoinsAndClassTag(query, target, alias, true);
     maybeAddOrderBy(query, target, alias);
 

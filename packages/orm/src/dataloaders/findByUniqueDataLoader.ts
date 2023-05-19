@@ -28,6 +28,7 @@ export function findByUniqueDataLoader<T extends Entity>(
       selects: [`${alias}.*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       conditions,
+      orderBys: [],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

@@ -69,7 +69,7 @@ export interface ParsedFindQuery {
   /** Any optional complex conditions that will be ANDd with the simple conditions. */
   complexConditions?: ParsedExpressionFilter[];
   /** Any optional orders to add before the default 'order by id'. */
-  orderBys?: ParsedOrderBy[];
+  orderBys: ParsedOrderBy[];
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
@@ -87,9 +87,9 @@ export function parseFindQuery(
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
-  const query = { selects, tables, conditions };
-  const complexConditions: ParsedExpressionFilter[] = [];
   const orderBys: ParsedOrderBy[] = [];
+  const query = { selects, tables, conditions, orderBys };
+  const complexConditions: ParsedExpressionFilter[] = [];
   const {
     orderBy = undefined,
     conditions: expression = undefined,
@@ -357,10 +357,12 @@ export function parseFindQuery(
   } else {
     maybeAddOrderBy(query, meta, alias);
   }
-
-  if (orderBys.length > 0) {
-    Object.assign(query, { orderBys });
+  // Even if they already added orders, add id as the last one to get deterministic output
+  const hasIdOrder = orderBys.find((o) => o.alias === alias && o.column === "id");
+  if (!hasIdOrder) {
+    orderBys.push({ alias, column: "id", order: "ASC" });
   }
+
   if (complexConditions.length > 0) {
     Object.assign(query, { complexConditions });
   }
@@ -376,7 +378,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
   parsed.conditions.filter((c) => !c.pruneable).forEach((c) => used.add(c.alias));
-  parsed.orderBys?.forEach((o) => used.add(o.alias));
+  parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
   flattenComplexConditions(parsed.complexConditions).forEach((c) => used.add(c.alias));
   // Mark all usages via joins
@@ -635,10 +637,10 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
   }
 }
 
+/** Adds any user-configured default order. */
 export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any>, alias: string): void {
   if (meta.orderBy) {
     const field = meta.allFields[meta.orderBy] ?? fail(`${meta.orderBy} not found on ${meta.tableName}`);
-    query.orderBys ??= [];
     query.orderBys.push({ alias, column: field.serde!.columns[0].columnName, order: "ASC" });
   }
 }

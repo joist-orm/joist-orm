@@ -1,3 +1,10 @@
+## [1.81.4](https://github.com/stephenh/joist-ts/compare/v1.81.3...v1.81.4) (2023-05-19)
+
+
+### Bug Fixes
+
+* Provide a GraphQLFilterAndSettings. ([#658](https://github.com/stephenh/joist-ts/issues/658)) ([fc6aa40](https://github.com/stephenh/joist-ts/commit/fc6aa408e8f1bf69556a55990b34881a580c9317))
+
 ## [1.81.3](https://github.com/stephenh/joist-ts/compare/v1.81.2...v1.81.3) (2023-05-19)
 
 

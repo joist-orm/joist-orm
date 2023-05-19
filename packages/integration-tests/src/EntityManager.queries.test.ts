@@ -1353,7 +1353,10 @@ describe("EntityManager.queries", () => {
     await insertAuthor({ first_name: "a2", age: 2 });
     const em = newEntityManager();
     const gqlFilter: GraphQLAuthorFilter = { age: { gt: 0 } };
-    const authors = await em.findGqlPaginated(Author, gqlFilter, { offset: 1, limit: 1 });
+    // Use a typical GQL input type with optional keys + nulls
+    type GqlPage = { offset?: number | null; limit?: number | null };
+    const page: GqlPage = { offset: 1, limit: 1 };
+    const authors = await em.findGqlPaginated(Author, gqlFilter, page);
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
   });

@@ -1,3 +1,10 @@
+## [1.81.1](https://github.com/stephenh/joist-ts/compare/v1.81.0...v1.81.1) (2023-05-19)
+
+
+### Bug Fixes
+
+* Fix gatherEntities looping on cycles. ([#655](https://github.com/stephenh/joist-ts/issues/655)) ([e504271](https://github.com/stephenh/joist-ts/commit/e50427142c4c2900454e6e1d62b7f7690d319c3b))
+
 # [1.81.0](https://github.com/stephenh/joist-ts/compare/v1.80.0...v1.81.0) (2023-05-19)
 
 

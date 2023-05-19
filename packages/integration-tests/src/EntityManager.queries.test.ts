@@ -1772,6 +1772,24 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(2);
     });
 
+    it("can use primitive aliases for null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", last_name: "l2" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.lastName.eq(null)] } });
+      expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    });
+
+    it("can use primitive aliases for null", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2", last_name: "l2" });
+      const em = newEntityManager();
+      const a = alias(Author);
+      const authors = await em.find(Author, { as: a }, { conditions: { or: [a.lastName.ne(null)] } });
+      expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    });
+
     it("can use aliases for m2o", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

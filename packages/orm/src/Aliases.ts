@@ -18,16 +18,16 @@ export function aliases<T extends readonly MaybeAbstractEntityConstructor<any>[]
 }
 
 export type Alias<T extends Entity> = {
-  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V }
-    ? PrimitiveAlias<V>
+  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends { kind: "primitive" | "enum"; type: infer V; nullable: infer N }
+    ? PrimitiveAlias<V, N extends undefined ? null : never>
     : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
     ? EntityAlias<U>
     : never;
 };
 
-export interface PrimitiveAlias<V> {
-  eq(value: V | undefined): ColumnCondition;
-  ne(value: V | undefined): ColumnCondition;
+export interface PrimitiveAlias<V, N extends null | never> {
+  eq(value: V | N | undefined): ColumnCondition;
+  ne(value: V | N | undefined): ColumnCondition;
   in(values: V[] | undefined): ColumnCondition;
   gt(value: V | undefined): ColumnCondition;
   gte(value: V | undefined): ColumnCondition;
@@ -88,17 +88,27 @@ export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt 
   return obj && typeof obj === "function" && obj[aliasMgmt] !== undefined;
 }
 
-class PrimitiveAliasImpl<V> implements PrimitiveAlias<V> {
+class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V, N> {
   public constructor(private conditions: ColumnCondition[], private column: Column) {}
 
-  eq(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
-    return this.addCondition({ kind: "eq", value });
+  eq(value: V | N | undefined): ColumnCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value === null) {
+      return this.addCondition({ kind: "is-null" });
+    } else {
+      return this.addCondition({ kind: "eq", value });
+    }
   }
 
-  ne(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
-    return this.addCondition({ kind: "ne", value });
+  ne(value: V | N | undefined): ColumnCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value === null) {
+      return this.addCondition({ kind: "not-null" });
+    } else {
+      return this.addCondition({ kind: "ne", value });
+    }
   }
 
   gt(value: V | undefined): ColumnCondition {

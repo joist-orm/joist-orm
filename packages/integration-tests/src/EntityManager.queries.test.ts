@@ -1781,7 +1781,7 @@ describe("EntityManager.queries", () => {
       expect(authors).toMatchEntity([{ firstName: "a1" }]);
     });
 
-    it("can use primitive aliases for null", async () => {
+    it("can use primitive aliases for not null", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", last_name: "l2" });
       const em = newEntityManager();

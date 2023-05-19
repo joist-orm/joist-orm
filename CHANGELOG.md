@@ -1,3 +1,10 @@
+# [1.81.0](https://github.com/stephenh/joist-ts/compare/v1.80.0...v1.81.0) (2023-05-19)
+
+
+### Features
+
+* Add EntityManager-level caching for em.findCount. ([#654](https://github.com/stephenh/joist-ts/issues/654)) ([d7a469b](https://github.com/stephenh/joist-ts/commit/d7a469b194ea8c62b3c7a59f63cd16206cde57ea))
+
 # [1.80.0](https://github.com/stephenh/joist-ts/compare/v1.79.0...v1.80.0) (2023-05-19)
 
 

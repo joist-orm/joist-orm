@@ -1,3 +1,10 @@
+# [1.79.0](https://github.com/stephenh/joist-ts/compare/v1.78.3...v1.79.0) (2023-05-19)
+
+
+### Features
+
+* Add em.findCount. ([#651](https://github.com/stephenh/joist-ts/issues/651)) ([dcf361c](https://github.com/stephenh/joist-ts/commit/dcf361ce022bcee853d7fe714a96cd681185e358))
+
 ## [1.78.3](https://github.com/stephenh/joist-ts/compare/v1.78.2...v1.78.3) (2023-05-19)
 
 

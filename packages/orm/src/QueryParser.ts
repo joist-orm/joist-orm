@@ -53,7 +53,7 @@ export interface JoinTable {
 
 export type ParsedTable = PrimaryTable | JoinTable;
 
-interface ParsedOrderBy {
+export interface ParsedOrderBy {
   alias: string;
   column: string;
   order: OrderBy;

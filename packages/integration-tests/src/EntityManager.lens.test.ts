@@ -178,7 +178,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "p".*, p_s0.*, p_s1.*, "p".id as id, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "b".id as __source_id from "publishers" as "p" left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id" left outer join "small_publishers" as "p_s1" on "p"."id" = "p_s1"."id" inner join "authors" as "a" on "a"."publisher_id" = "p"."id" inner join "books" as "b" on "b"."author_id" = "a"."id" where "a"."deleted_at" is null and "b"."deleted_at" is null and "b"."id" in ($1) order by "p"."id" asc limit $2"`,
+        `"select "p".*, p_s0.*, p_s1.*, "p".id as id, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "b".id as __source_id from "publishers" as "p" left outer join "large_publishers" as "p_s0" on "p"."id" = "p_s0"."id" left outer join "small_publishers" as "p_s1" on "p"."id" = "p_s1"."id" inner join "authors" as "a" on "a"."publisher_id" = "p"."id" inner join "books" as "b" on "b"."author_id" = "a"."id" where "a"."deleted_at" is null and "b"."deleted_at" is null and "b"."id" in ($1) order by "p"."id" ASC limit $2"`,
       );
     });
 
@@ -197,7 +197,7 @@ describe("EntityManager.lens", () => {
       expect(em.entities.length).toBe(2);
 
       expect(lastQuery()).toMatchInlineSnapshot(
-        `"select "b".*, "b".id as id, "a".publisher_id as __source_id from "books" as "b" inner join "authors" as "a" on "a"."id" = "b"."author_id" where "a"."deleted_at" is null and "a"."publisher_id" in ($1) order by "b"."title" ASC, "b"."id" asc limit $2"`,
+        `"select "b".*, "b".id as id, "a".publisher_id as __source_id from "books" as "b" inner join "authors" as "a" on "a"."id" = "b"."author_id" where "a"."deleted_at" is null and "a"."publisher_id" in ($1) order by "b"."title" ASC, "b"."id" ASC limit $2"`,
       );
     });
 

@@ -418,6 +418,14 @@ export class EntityManager<C = unknown> {
     }
   }
 
+  /**
+   * Returns the count of entities that match the `where` clause.
+   *
+   * The `where` clause, and any options.conditions, matches the same syntax
+   * as `em.find`.
+   *
+   * Note: this method is not currently auto-batched, so it will cause N+1s if called in a loop.
+   */
   async findCount<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
@@ -435,7 +443,7 @@ export class EntityManager<C = unknown> {
    *
    * The types work out where the `where` + `ifNewOpts` are both subsets of the entity's `Opts`
    * type, i.e. if we have to create the entity, the combintaion of `where` + `ifNewOpts` will
-   * have all of the necessary required fields.
+   * have all the necessary required fields.
    *
    * @param type the entity type to find/create
    * @param where the fields to look up the existing entity by

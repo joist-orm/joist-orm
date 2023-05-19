@@ -1,3 +1,10 @@
+# [1.80.0](https://github.com/stephenh/joist-ts/compare/v1.79.0...v1.80.0) (2023-05-19)
+
+
+### Features
+
+* Add Entity.tagName/metadata as static fields. ([#652](https://github.com/stephenh/joist-ts/issues/652)) ([a9cab9e](https://github.com/stephenh/joist-ts/commit/a9cab9ea35166f88132467488eb28a5ec2d249ec))
+
 # [1.79.0](https://github.com/stephenh/joist-ts/compare/v1.78.3...v1.79.0) (2023-05-19)
 
 

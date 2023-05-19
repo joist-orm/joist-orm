@@ -4,6 +4,7 @@ import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { parseFindQuery } from "../QueryParser";
+import { fail } from "../utils";
 import { whereFilterHash } from "./findDataLoader";
 
 export function findCountDataLoader<T extends Entity>(
@@ -22,7 +23,8 @@ export function findCountDataLoader<T extends Entity>(
         queries.map(async (filterAndSettings) => {
           const { where, ...options } = filterAndSettings;
           const query = parseFindQuery(getMetadata(type), where, options);
-          query.selects = ["count(*) as count"];
+          const primary = query.tables.find((t) => t.join === "primary") ?? fail("No primary");
+          query.selects = [`count(distinct "${primary.alias}".id) as count`];
           query.orderBys = [];
           const rows = await em.driver.executeFind(em, query, {});
           return Number(rows[0].count);

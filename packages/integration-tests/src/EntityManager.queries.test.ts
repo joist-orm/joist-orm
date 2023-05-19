@@ -2200,6 +2200,19 @@ describe("EntityManager.queries", () => {
       expect(numberOfQueries).toBe(1);
     });
 
+    it("can count with o2m joins", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+      await insertBook({ author_id: 1, title: "b1" });
+      await insertBook({ author_id: 1, title: "b2" });
+      await insertBook({ author_id: 2, title: "b3" });
+      resetQueryCount();
+      const em = newEntityManager();
+      const count = await em.findCount(Author, { books: { title: { like: "b%" } } }, opts);
+      expect(count).toBe(2);
+    });
+
     it("can count and include new entities", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

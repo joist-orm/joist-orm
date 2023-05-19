@@ -4,6 +4,7 @@ import { Knex } from "knex";
 import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
+import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/Driver";
@@ -434,13 +435,30 @@ export class EntityManager<C = unknown> {
   async findCount<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: FindCountFilterOptions<T>,
+    options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
-    const query = parseFindQuery(getMetadata(type), where, options);
-    query.selects = ["count(*) as count"];
-    query.orderBys = [];
-    const rows = await this.driver.executeFind(this, query, {});
-    return Number(rows[0].count);
+    const { softDeletes = "exclude" } = options;
+
+    let count = await findCountDataLoader(this, type, softDeletes).load({ where, ...options });
+
+    // If the user is do "count all", we can adjust the number up/down based on
+    // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
+    // then we'd also have to eval each created/deleted entity against the WHERE
+    // clause before knowing if it should adjust teh amount.
+    const isSelectAll = Object.keys(where).length === 0;
+    if (isSelectAll) {
+      for (const entity of this._entities) {
+        if (entity instanceof type) {
+          if (entity.isNewEntity) {
+            count++;
+          } else if (entity.isDeletedEntity) {
+            count--;
+          }
+        }
+      }
+    }
+
+    return count;
   }
 
   /**

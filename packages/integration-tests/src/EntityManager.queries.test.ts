@@ -42,6 +42,7 @@ import {
   FavoriteShape,
   Image,
   ImageType,
+  newAuthor,
   Publisher,
   PublisherFilter,
   PublisherId,
@@ -2182,12 +2183,59 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("can count", async () => {
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    const em = newEntityManager();
-    const count = await em.findCount(Author, { firstName: "a1" }, opts);
-    expect(count).toBe(1);
+  describe("count", () => {
+    it("can count", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      resetQueryCount();
+      const em = newEntityManager();
+      const [c1, c2] = await Promise.all([
+        em.findCount(Author, { firstName: "a1" }, opts),
+        em.findCount(Author, { firstName: "a1" }, opts),
+      ]);
+      const c3 = await em.findCount(Author, { firstName: "a1" }, opts);
+      expect(c1).toBe(1);
+      expect(c2).toBe(1);
+      expect(c3).toBe(1);
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count and include new entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      resetQueryCount();
+      // Given we have 1 author and do a count
+      const em = newEntityManager();
+      const c1 = await em.findCount(Author, {}, opts);
+      // And we return it correctly
+      expect(c1).toBe(2);
+      // When we create a new author in-memory
+      const a = newAuthor(em, {});
+      // Then our count is updated
+      const c2 = await em.findCount(Author, {}, opts);
+      expect(c2).toBe(3);
+      // And we didn't make an extra query for it
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count and exclude deleted entities", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      // Given we have 1 author and do a count
+      const em = newEntityManager();
+      const a1 = await em.load(Author, "a:1");
+      resetQueryCount();
+      const c1 = await em.findCount(Author, {}, opts);
+      // And we return it correctly
+      expect(c1).toBe(2);
+      // When we delete an existing author
+      em.delete(a1);
+      // Then our count is updated
+      const c2 = await em.findCount(Author, {}, opts);
+      expect(c2).toBe(1);
+      // And we didn't make an extra query for it
+      expect(numberOfQueries).toBe(1);
+    });
   });
 });
 

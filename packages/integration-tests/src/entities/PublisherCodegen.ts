@@ -164,7 +164,7 @@ publisherConfig.addRule(newRequiredRule("type"));
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<Publisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherFilter;

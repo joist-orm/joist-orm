@@ -457,7 +457,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${defaultValues}
       };
       static readonly tagName = "${tagName}";
-      static readonly metadata: ${EntityMetadata}<any>;
+      static readonly metadata: ${EntityMetadata}<${entityName}>;
 
       declare readonly __orm: ${EntityOrmField} & {
         filterType: ${entityName}Filter;

@@ -73,7 +73,7 @@ smallPublisherConfig.addRule(newRequiredRule("city"));
 export abstract class SmallPublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<SmallPublisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: SmallPublisherFilter;

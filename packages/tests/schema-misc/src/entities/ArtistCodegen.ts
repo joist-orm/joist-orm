@@ -87,7 +87,7 @@ artistConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "artist";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<Artist>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ArtistFilter;

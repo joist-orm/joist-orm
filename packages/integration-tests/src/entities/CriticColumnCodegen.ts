@@ -84,7 +84,7 @@ criticColumnConfig.addRule(newRequiredRule("critic"));
 export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "cc";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<CriticColumn>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CriticColumnFilter;

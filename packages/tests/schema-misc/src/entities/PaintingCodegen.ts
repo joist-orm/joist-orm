@@ -84,7 +84,7 @@ paintingConfig.addRule(newRequiredRule("artist"));
 export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<Painting>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PaintingFilter;

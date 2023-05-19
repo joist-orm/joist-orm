@@ -120,7 +120,7 @@ commentConfig.addRule(newRequiredRule("parent"));
 export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "comment";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<Comment>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CommentFilter;

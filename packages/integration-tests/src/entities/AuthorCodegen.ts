@@ -225,7 +225,7 @@ authorConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "a";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<Author>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorFilter;

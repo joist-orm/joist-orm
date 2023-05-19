@@ -106,7 +106,7 @@ bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "ba";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<BookAdvance>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookAdvanceFilter;

@@ -120,7 +120,7 @@ imageConfig.addRule(newRequiredRule("type"));
 export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "i";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<Image>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ImageFilter;

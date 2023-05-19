@@ -78,7 +78,7 @@ export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 export abstract class LargePublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<LargePublisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: LargePublisherFilter;

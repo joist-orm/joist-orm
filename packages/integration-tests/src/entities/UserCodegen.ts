@@ -111,7 +111,7 @@ userConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class UserCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "u";
-  static readonly metadata: EntityMetadata<any>;
+  static readonly metadata: EntityMetadata<User>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: UserFilter;

@@ -86,6 +86,11 @@ export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilter
   offset?: number;
 }
 
+export interface FindGqlPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
+  limit?: number | null;
+  offset?: number | null;
+}
+
 /** Options for the `findCount`. */
 export interface FindCountFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
@@ -265,16 +270,17 @@ export class EntityManager<C = unknown> {
   public async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
+    options: FindPaginatedFilterOptions<T>,
   ): Promise<T[]>;
   public async findPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+    options: FindPaginatedFilterOptions<T> & { populate: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+    options: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, limit, offset, ...rest } = options || {};
     const query = parseFindQuery(getMetadata(type), where, rest);
@@ -317,18 +323,19 @@ export class EntityManager<C = unknown> {
   public async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
+    options: FindGqlPaginatedFilterOptions<T>,
   ): Promise<T[]>;
   public async findGqlPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+    options: FindGqlPaginatedFilterOptions<T> & { populate: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+    options: FindGqlPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.findPaginated(type, where as any, options);
+    return this.findPaginated(type, where as any, options as any);
   }
 
   public async findOne<T extends Entity>(

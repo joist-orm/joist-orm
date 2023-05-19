@@ -1,3 +1,10 @@
+## [1.78.3](https://github.com/stephenh/joist-ts/compare/v1.78.2...v1.78.3) (2023-05-19)
+
+
+### Bug Fixes
+
+* Allow primitive conditions to do is/is not null. ([#650](https://github.com/stephenh/joist-ts/issues/650)) ([995d871](https://github.com/stephenh/joist-ts/commit/995d871c95f378892e221dbdd85721bd7036a12d)), closes [#649](https://github.com/stephenh/joist-ts/issues/649)
+
 ## [1.78.2](https://github.com/stephenh/joist-ts/compare/v1.78.1...v1.78.2) (2023-05-17)
 
 

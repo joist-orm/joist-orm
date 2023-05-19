@@ -706,4 +706,12 @@ describe("Author", () => {
     // Then it should succeed
     expect(comment).toEqual(a.comments.get[0]);
   });
+
+  it("can access tagName", () => {
+    expect(Author.tagName).toBe("a");
+  });
+
+  it("can access metadata", () => {
+    expect(Author.metadata).toBe(getMetadata(Author));
+  });
 });

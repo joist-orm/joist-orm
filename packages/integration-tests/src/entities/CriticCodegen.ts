@@ -4,6 +4,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -108,6 +109,8 @@ criticConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
+  static readonly tagName = "c";
+  static readonly metadata: EntityMetadata<any>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CriticFilter;

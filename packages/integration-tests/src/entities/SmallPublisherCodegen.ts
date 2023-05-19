@@ -1,6 +1,7 @@
 import {
   Changes,
   ConfigApi,
+  EntityMetadata,
   EntityOrmField,
   fail,
   Flavor,
@@ -71,6 +72,8 @@ smallPublisherConfig.addRule(newRequiredRule("city"));
 
 export abstract class SmallPublisherCodegen extends Publisher {
   static defaultValues: object = {};
+  static readonly tagName = "p";
+  static readonly metadata: EntityMetadata<any>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: SmallPublisherFilter;

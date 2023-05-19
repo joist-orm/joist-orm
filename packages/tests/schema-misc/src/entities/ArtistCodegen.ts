@@ -5,6 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -85,6 +86,8 @@ artistConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
+  static readonly tagName = "artist";
+  static readonly metadata: EntityMetadata<any>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ArtistFilter;

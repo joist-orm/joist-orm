@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Changes,
   ConfigApi,
+  EntityMetadata,
   EntityOrmField,
   fail,
   Flavor,
@@ -127,6 +128,8 @@ authorStatConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
+  static readonly tagName = "as";
+  static readonly metadata: EntityMetadata<any>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorStatFilter;

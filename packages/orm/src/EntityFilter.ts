@@ -3,9 +3,7 @@ import { Entity } from "./Entity";
 import { FieldsOf, FilterOf, IdOf, OrderOf } from "./EntityManager";
 import { ColumnCondition } from "./QueryParser";
 
-/**
- * Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings.
- */
+/** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
 export type FilterAndSettings<T extends Entity> = {
   where: FilterWithAlias<T>;
   conditions?: ExpressionFilter;

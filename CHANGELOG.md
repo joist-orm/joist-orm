@@ -1,3 +1,10 @@
+## [1.81.2](https://github.com/stephenh/joist-ts/compare/v1.81.1...v1.81.2) (2023-05-19)
+
+
+### Bug Fixes
+
+* Fix findCount with o2m conditions. ([#656](https://github.com/stephenh/joist-ts/issues/656)) ([7a2eb6d](https://github.com/stephenh/joist-ts/commit/7a2eb6d87fd0a517a1be1f1f034dbebad606f3a9))
+
 ## [1.81.1](https://github.com/stephenh/joist-ts/compare/v1.81.0...v1.81.1) (2023-05-19)
 
 

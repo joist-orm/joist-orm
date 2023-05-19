@@ -354,14 +354,8 @@ export function parseFindQuery(
   }
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
-  } else {
-    maybeAddOrderBy(query, meta, alias);
   }
-  // Even if they already added orders, add id as the last one to get deterministic output
-  const hasIdOrder = orderBys.find((o) => o.alias === alias && o.column === "id");
-  if (!hasIdOrder) {
-    orderBys.push({ alias, column: "id", order: "ASC" });
-  }
+  maybeAddOrderBy(query, meta, alias);
 
   if (complexConditions.length > 0) {
     Object.assign(query, { complexConditions });
@@ -637,11 +631,21 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
   }
 }
 
-/** Adds any user-configured default order. */
+/** Adds any user-configured default order, plus a "always order by id" for determinism. */
 export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any>, alias: string): void {
+  const { orderBys } = query;
   if (meta.orderBy) {
     const field = meta.allFields[meta.orderBy] ?? fail(`${meta.orderBy} not found on ${meta.tableName}`);
-    query.orderBys.push({ alias, column: field.serde!.columns[0].columnName, order: "ASC" });
+    const column = field.serde!.columns[0].columnName;
+    const hasAlready = orderBys.find((o) => o.alias === alias && o.column === column);
+    if (!hasAlready) {
+      orderBys.push({ alias, column, order: "ASC" });
+    }
+  }
+  // Even if they already added orders, add id as the last one to get deterministic output
+  const hasIdOrder = orderBys.find((o) => o.alias === alias && o.column === "id");
+  if (!hasIdOrder) {
+    orderBys.push({ alias, column: "id", order: "ASC" });
   }
 }
 

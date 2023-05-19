@@ -65,7 +65,6 @@ export function lensDataLoader<T extends Entity>(
     const query: ParsedFindQuery = { selects, tables, conditions, orderBys };
     addTablePerClassJoinsAndClassTag(query, target, alias, true);
     maybeAddOrderBy(query, target, alias);
-    orderBys.push({ alias, column: "id", order: "ASC" as const });
 
     function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
       if (other.timestampFields.deletedAt) {

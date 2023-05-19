@@ -82,12 +82,13 @@ export function findDataLoader<T extends Entity>(
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
       const [conditions] = buildConditions(combineConditions(query));
 
+      // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       const groupBys = selects
         .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
         .map((s) => s.replace("*", "id"));
 
-      const orderBys = query.orderBys || [{ alias: primary.alias, column: "id", order: "ASC" }];
-      for (const o of orderBys) {
+      // Also because of our `array_agg` group by, add any order bys to the group by
+      for (const o of query.orderBys) {
         if (o.alias !== primary.alias) {
           groupBys.push(`${o.alias}.${o.column}`);
         }
@@ -101,7 +102,7 @@ export function findDataLoader<T extends Entity>(
         ${outerJoins.map((j) => `LEFT OUTER JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
+        ORDER BY ${query.orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
         LIMIT ${entityLimit};
       `;
 

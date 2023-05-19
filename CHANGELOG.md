@@ -1,3 +1,10 @@
+## [1.81.3](https://github.com/stephenh/joist-ts/compare/v1.81.2...v1.81.3) (2023-05-19)
+
+
+### Bug Fixes
+
+* Allow GQL input on limit/offset. ([#657](https://github.com/stephenh/joist-ts/issues/657)) ([a6422a4](https://github.com/stephenh/joist-ts/commit/a6422a45146fde85746c449a3beaa0d9d868ca7a))
+
 ## [1.81.2](https://github.com/stephenh/joist-ts/compare/v1.81.1...v1.81.2) (2023-05-19)
 
 

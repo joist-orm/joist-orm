@@ -10,6 +10,7 @@ import {
   ColumnCondition,
   maybeAddOrderBy,
   ParsedFindQuery,
+  ParsedOrderBy,
   ParsedTable,
 } from "../QueryParser";
 import { groupBy } from "../utils";
@@ -60,9 +61,11 @@ export function lensDataLoader<T extends Entity>(
     const selects = [`"${alias}".*`];
     const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
     const conditions: ColumnCondition[] = [];
-    const query: ParsedFindQuery = { selects, tables, conditions };
+    const orderBys: ParsedOrderBy[] = [];
+    const query: ParsedFindQuery = { selects, tables, conditions, orderBys };
     addTablePerClassJoinsAndClassTag(query, target, alias, true);
     maybeAddOrderBy(query, target, alias);
+    orderBys.push({ alias, column: "id", order: "ASC" as const });
 
     function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
       if (other.timestampFields.deletedAt) {

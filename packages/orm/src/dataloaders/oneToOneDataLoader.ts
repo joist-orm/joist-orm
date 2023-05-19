@@ -35,6 +35,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
       conditions: [
         { alias, column: reference.otherColumnName, dbType: meta.idType, cond: { kind: "in", value: keys } },
       ],
+      orderBys: [],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

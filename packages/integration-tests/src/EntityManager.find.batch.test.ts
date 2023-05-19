@@ -97,7 +97,7 @@ describe("EntityManager.find.batch", () => {
     await Promise.all([q1p, q2p]);
     // Then we issue a single SQL query without any of the CTE overhead
     expect(queries).toEqual([
-      `select "a".* from "authors" as "a" where "a"."deleted_at" is null order by "a"."id" asc limit $1`,
+      `select "a".* from "authors" as "a" where "a"."deleted_at" is null order by "a"."id" ASC limit $1`,
     ]);
   });
 
@@ -116,7 +116,7 @@ describe("EntityManager.find.batch", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a JOIN _find ON a.id = _find.arg0 GROUP BY "a".id ORDER BY a.first_name DESC LIMIT 10000;",
+        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a JOIN _find ON a.id = _find.arg0 GROUP BY "a".id ORDER BY a.first_name DESC, a.id ASC LIMIT 10000;",
       ]
     `);
     // And the results are the expected reverse of each other
@@ -135,7 +135,7 @@ describe("EntityManager.find.batch", () => {
     // And it is still auto-batched
     expect(queries).toMatchInlineSnapshot(`
       [
-        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a LEFT OUTER JOIN publishers p ON a.publisher_id = p.id JOIN _find ON a.id = _find.arg0 GROUP BY "a".id, p.id ORDER BY p.id ASC LIMIT 10000;",
+        "WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) ) SELECT array_agg(_find.tag) as _tags, "a".* FROM authors as a LEFT OUTER JOIN publishers p ON a.publisher_id = p.id JOIN _find ON a.id = _find.arg0 GROUP BY "a".id, p.id ORDER BY p.id ASC, a.id ASC LIMIT 10000;",
       ]
     `);
     // And the results are the expected reverse of each other

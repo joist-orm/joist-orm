@@ -1,6 +1,8 @@
+import { groupBy } from "joist-utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
+import { getMetadata, PolymorphicField, PolymorphicFieldComponent } from "./EntityMetadata";
+import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { ColumnCondition, mapToDb, ParsedValueFilter, skipCondition } from "./QueryParser";
 import { Column } from "./serde";
 import { fail } from "./utils";
@@ -22,6 +24,8 @@ export type Alias<T extends Entity> = {
     ? PrimitiveAlias<V, N extends undefined ? null : never>
     : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
     ? EntityAlias<U>
+    : FieldsOf<T>[P] extends { kind: "poly"; type: infer U }
+    ? PolyReferenceAlias<U>
     : never;
 };
 
@@ -54,6 +58,9 @@ export interface AliasMgmt {
 
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
+  // Keeps a list of conditions we've created for this specific proxy, so that parseFindQuery
+  // can tell us, after we've been creating via the `const a = alias(Author)` command, which
+  // alias we're actually bound to in the join literal.
   const conditions: ColumnCondition[] = [];
   // Give QueryBuilder a hook to assign our actual alias
   const mgmt: AliasMgmt = {
@@ -76,6 +83,8 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
           return new PrimitiveAliasImpl(conditions, field.serde!.columns[0]);
         case "m2o":
           return new EntityAliasImpl(conditions, field.serde!.columns[0]);
+        case "poly":
+          return new PolyReferenceAlias(conditions, field);
         default:
           throw new Error(`Unsupported alias field kind ${field.kind}`);
       }
@@ -197,6 +206,64 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
       column: this.column.columnName,
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
+    };
+    this.conditions.push(cond);
+    return cond;
+  }
+}
+
+class PolyReferenceAlias<T> {
+  public constructor(private conditions: ColumnCondition[], private field: PolymorphicField) {}
+
+  eq(value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
+    return this.addEqOrNe("eq", value);
+  }
+
+  ne(value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
+    return this.addEqOrNe("ne", value);
+  }
+
+  in(values: Array<T | IdOf<T>> | undefined): ExpressionFilter | ColumnCondition {
+    if (values === undefined) return skipCondition;
+    // Split up the ids by constructor
+    const idsByConstructor = groupBy(values, (id) => getConstructorFromTaggedId(maybeResolveReferenceToId(id)!).name);
+    // Or together `parent_book_id in (1,2,3) OR parent_author_id IN (4,5,6)`
+    return {
+      or: Object.entries(idsByConstructor).map(([cstrName, ids]) => {
+        const comp =
+          this.field.components.find((p) => p.otherMetadata().cstr.name === cstrName) ??
+          fail(`No component for ${cstrName}`);
+        return this.addCondition(comp, { kind: "in", value: ids });
+      }),
+    };
+  }
+
+  private addEqOrNe(kind: "eq" | "ne", value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value === null) {
+      // We can AND each of the components as many conditions
+      const value = kind === "eq" ? ({ kind: "is-null" } as const) : ({ kind: "not-null" } as const);
+      return {
+        and: this.field.components.map((p) => this.addCondition(p, value)),
+      };
+    } else {
+      // If we have a value, we can find the component
+      const comp =
+        this.field.components.find(
+          (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(maybeResolveReferenceToId(value) as string),
+        ) || fail(`Could not find component for ${value}`);
+      return this.addCondition(comp, { kind, value });
+    }
+  }
+
+  private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | IdOf<T>>): ColumnCondition {
+    const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
+    const cond: ColumnCondition = {
+      alias: "unset",
+      column: comp.columnName,
+      dbType: this.field.serde.columns[0].dbType,
+      cond: mapToDb(column, value),
     };
     this.conditions.push(cond);
     return cond;

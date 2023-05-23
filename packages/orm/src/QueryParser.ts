@@ -220,8 +220,7 @@ export function parseFindQuery(
                 cond: mapToDb(column, f),
               });
             } else if (f.kind === "is-null") {
-              // Add a condition for every component
-              // TODO ...should these be anded or ored?
+              // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                 conditions.push({

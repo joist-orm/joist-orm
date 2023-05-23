@@ -1831,6 +1831,43 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(1);
     });
 
+    it("can use aliases for polymorphic reference with eq", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      const em = newEntityManager();
+      const c = alias(Comment);
+      const comments = await em.find(
+        Comment,
+        { as: c },
+        {
+          conditions: { or: [c.parent.eq("b:1")] },
+        },
+      );
+      const [comment] = comments;
+      expect(comments.length).toEqual(1);
+      expect(comment.text).toEqual("t1");
+    });
+
+    it("can use aliases for polymorphic reference with in", async () => {
+      await insertAuthor({ first_name: "a" });
+      await insertBook({ title: "t", author_id: 1 });
+      await insertPublisher({ name: "p1" });
+      await insertComment({ text: "t1", parent_book_id: 1 });
+      await insertComment({ text: "t1", parent_publisher_id: 1 });
+      const em = newEntityManager();
+      const c = alias(Comment);
+      const comments = await em.find(
+        Comment,
+        { as: c },
+        {
+          conditions: { or: [c.parent.in(["b:1", "p:1"])] },
+        },
+      );
+      const [comment] = comments;
+      expect(comments.length).toEqual(2);
+    });
+
     it("can use aliases for or with nested and", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", age: 30 });

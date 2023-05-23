@@ -1,3 +1,10 @@
+## [1.81.5](https://github.com/stephenh/joist-ts/compare/v1.81.4...v1.81.5) (2023-05-23)
+
+
+### Bug Fixes
+
+* Support for polys in aliases. ([#659](https://github.com/stephenh/joist-ts/issues/659)) ([31614ef](https://github.com/stephenh/joist-ts/commit/31614ef5dde1593d09d6a91813c005ad93918048))
+
 ## [1.81.4](https://github.com/stephenh/joist-ts/compare/v1.81.3...v1.81.4) (2023-05-19)
 
 

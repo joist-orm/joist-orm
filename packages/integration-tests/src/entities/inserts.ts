@@ -49,6 +49,7 @@ export function insertComment(row: {
   user_id?: number;
   parent_book_id?: number;
   parent_book_review_id?: number;
+  parent_publisher_id?: number;
 }) {
   return testDriver.insert("comments", row);
 }

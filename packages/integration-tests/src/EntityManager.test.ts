@@ -794,6 +794,29 @@ describe("EntityManager", () => {
     expect(a1.isNewEntity).toBe(false);
   });
 
+  it("can find already new entity with findOrCreate in a loop", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { firstName: "a1" });
+    const [a1, a2] = await Promise.all([
+      em.findOrCreate(Author, { firstName: "a1" }, {}),
+      em.findOrCreate(Author, { firstName: "a1" }, {}),
+    ]);
+    expect(a1).toEqual(a);
+    expect(a2).toEqual(a);
+  });
+
+  it("can find already new entity by FK with findOrCreate in a loop", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const a = newAuthor(em, { firstName: "a1", publisher: p });
+    const [a1, a2] = await Promise.all([
+      em.findOrCreate(Author, { publisher: p }, { firstName: "b" }),
+      em.findOrCreate(Author, { publisher: p }, { firstName: "c" }),
+    ]);
+    expect(a1).toEqual(a);
+    expect(a2).toEqual(a);
+  });
+
   it("can upsert with findOrCreate in a loop", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

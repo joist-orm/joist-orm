@@ -13,13 +13,13 @@ interface Key<T extends Entity> {
 export function findOrCreateDataLoader<T extends Entity>(
   em: EntityManager,
   type: EntityConstructor<T>,
-  filter: Partial<OptsOf<T>>,
+  where: Partial<OptsOf<T>>,
   softDeletes: "include" | "exclude",
 ): DataLoader<Key<T>, T> {
-  // The findOrCreateDataLoader filter is flat (only opts are allowed), so we can use Object.keys
-  // to get `{ firstName: "a1" }` and `{ firstName: "a2" }` batched to the same dataloader,
+  // The findOrCreateDataLoader `where` is flat (only top-level opts are allowed), so we can use
+  // Object.keys to get `{ firstName: "a1" }` and `{ firstName: "a2" }` batched to the same dataloader,
   // primarily so that we can dedupe `{ firstName: "a1" }` if .load-d twice.
-  const batchKey = `${type.name}-${Object.keys(filter).join("-")}-${softDeletes}`;
+  const batchKey = `${type.name}-${Object.keys(where).join("-")}-${softDeletes}`;
   return em.getLoader<Key<T>, T>(
     "find-or-create",
     batchKey,

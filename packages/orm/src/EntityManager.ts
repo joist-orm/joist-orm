@@ -6,6 +6,7 @@ import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
+import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/Driver";
 import { Entity, isEntity } from "./Entity";
@@ -469,11 +470,18 @@ export class EntityManager<C = unknown> {
   }
 
   /**
-   * Conditionally finds or creates an Entity.
+   * Conditionally finds or creates (or upserts) an Entity.
    *
-   * The types work out where the `where` + `ifNewOpts` are both subsets of the entity's `Opts`
-   * type, i.e. if we have to create the entity, the combintaion of `where` + `ifNewOpts` will
-   * have all the necessary required fields.
+   * The `where` param is used to find the existing/if any entity; if not found,
+   * then one will be created.
+   *
+   * The `ifNew` param will be used, if no entity is found, for the `em.create` call;
+   * it is typed such that it will require all opts necessary for the `em.create` to
+   * be valid, _unless_ those opts are already included in either the `where` or
+   * `upsert` params.
+   *
+   * The optional `upsert` param are fields to always set/update, regardless of whether
+   * the entity is created or not.
    *
    * @param type the entity type to find/create
    * @param where the fields to look up the existing entity by
@@ -484,18 +492,18 @@ export class EntityManager<C = unknown> {
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>,
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U): Promise<T>;
+    N extends Omit<OptsOf<T>, keyof F | keyof U>,
+  >(type: EntityConstructor<T>, where: F, ifNew: N, upsert?: U): Promise<T>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>,
+    N extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
   >(
     type: EntityConstructor<T>,
     where: F,
-    ifNew: O,
+    ifNew: N,
     upsert?: U,
     options?: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H>>;
@@ -503,28 +511,21 @@ export class EntityManager<C = unknown> {
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>,
+    N extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
   >(
     type: EntityConstructor<T>,
     where: F,
-    ifNew: O,
+    ifNew: N,
     upsert?: U,
     options?: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
   ): Promise<T> {
-    const { softDeletes, populate } = options ?? {};
-    const entities = await this.find(type, where as FilterWithAlias<T>, { softDeletes });
-    let entity: T;
-    if (entities.length > 1) {
-      throw new TooManyError();
-    } else if (entities.length === 1) {
-      entity = entities[0];
-    } else {
-      entity = this.create(type, { ...where, ...ifNew } as OptsOf<T>);
-    }
-    if (upsert) {
-      entity.set(upsert);
-    }
+    const { softDeletes = "exclude", populate } = options ?? {};
+    const entity = await findOrCreateDataLoader(this, type, where, softDeletes).load({
+      where,
+      ifNew: ifNew as OptsOf<T>,
+      upsert,
+    });
     if (populate) {
       await this.populate(entity, populate);
     }

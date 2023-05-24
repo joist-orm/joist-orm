@@ -32,6 +32,21 @@ export function findOrCreateDataLoader<T extends Entity>(
       // asking for the entity to be created/updated slightly differently.
       return Promise.all(
         keys.map(async ({ where, ifNew, upsert }) => {
+          // Before we find/create an entity, see if we have a maybe-new one in the EM already.
+          // This will also use any WIP changes we've made to the found entity, which ideally is
+          // something `em.find` would do as well, but its queries are much more complex..
+          const inMemory = em.entities.filter((e) => e instanceof type && entityMatches(e, where));
+          if (inMemory.length > 1) {
+            throw new TooManyError();
+          } else if (inMemory.length === 1) {
+            const entity = inMemory[0] as T;
+            if (upsert) {
+              entity.set(upsert);
+            }
+            return entity;
+          }
+
+          // If we didn't find it in the EM, do the db query/em.create
           const entities = await em.find(type, where as FilterWithAlias<T>, { softDeletes });
           let entity: T;
           if (entities.length > 1) {
@@ -39,13 +54,7 @@ export function findOrCreateDataLoader<T extends Entity>(
           } else if (entities.length === 1) {
             entity = entities[0];
           } else {
-            // Before we create an entity, see if we have one in the EM already
-            const existing = em.entities.find((e) => e instanceof type && entityMatches(e, where));
-            if (existing) {
-              entity = existing as T;
-            } else {
-              entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
-            }
+            entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
           }
           if (upsert) {
             entity.set(upsert);

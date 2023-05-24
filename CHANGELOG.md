@@ -1,3 +1,10 @@
+# [1.83.0](https://github.com/stephenh/joist-ts/compare/v1.82.0...v1.83.0) (2023-05-24)
+
+
+### Features
+
+* Teach em.findOrCreate to look for newly-created/updated entities ([#661](https://github.com/stephenh/joist-ts/issues/661)) ([28bd591](https://github.com/stephenh/joist-ts/commit/28bd5915a24510df30c63d36655659cc3b69e71a))
+
 # [1.82.0](https://github.com/stephenh/joist-ts/compare/v1.81.5...v1.82.0) (2023-05-24)
 
 

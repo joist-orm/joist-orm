@@ -773,6 +773,39 @@ describe("EntityManager", () => {
     await em.findOrCreate(Author, { age: 20 }, { lastName: "l" });
   });
 
+  it("can create with findOrCreate in a loop", async () => {
+    const em = newEntityManager();
+    const [a1, a2] = await Promise.all([
+      em.findOrCreate(Author, { firstName: "a1" }, {}),
+      em.findOrCreate(Author, { firstName: "a1" }, {}),
+    ]);
+    expect(a1).toEqual(a2);
+    expect(a1.isNewEntity).toBe(true);
+  });
+
+  it("can find with findOrCreate in a loop", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const [a1, a2] = await Promise.all([
+      em.findOrCreate(Author, { firstName: "a1" }, {}),
+      em.findOrCreate(Author, { firstName: "a1" }, {}),
+    ]);
+    expect(a1).toEqual(a2);
+    expect(a1.isNewEntity).toBe(false);
+  });
+
+  it("can upsert with findOrCreate in a loop", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const [a1, a2] = await Promise.all([
+      em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "l1" }),
+      em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "l1" }),
+    ]);
+    expect(a1).toEqual(a2);
+    expect(a1.isNewEntity).toBe(false);
+    expect(a1.lastName).toBe("l1");
+  });
+
   it("can find and populate with findOrCreate", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

@@ -1,3 +1,10 @@
+# [1.82.0](https://github.com/stephenh/joist-ts/compare/v1.81.5...v1.82.0) (2023-05-24)
+
+
+### Features
+
+* Dedupe em.findOrCreates that are called in a loop. ([#660](https://github.com/stephenh/joist-ts/issues/660)) ([e7b3cd3](https://github.com/stephenh/joist-ts/commit/e7b3cd3eddc39797daf96660b5399fde7202b135))
+
 ## [1.81.5](https://github.com/stephenh/joist-ts/compare/v1.81.4...v1.81.5) (2023-05-23)
 
 

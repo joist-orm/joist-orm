@@ -1,5 +1,5 @@
 import DataLoader from "dataloader";
-import { Entity } from "../Entity";
+import { Entity, isEntity } from "../Entity";
 import { FilterWithAlias } from "../EntityFilter";
 import { EntityConstructor, EntityManager, OptsOf, sameEntity, TooManyError } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
@@ -40,6 +40,17 @@ export function findOrCreateDataLoader<T extends Entity>(
             throw new TooManyError();
           } else if (inMemory.length === 1) {
             const entity = inMemory[0] as T;
+            if (upsert) {
+              entity.set(upsert);
+            }
+            return entity;
+          }
+
+          // If there is a param like `{ publisher: newPublisherEntity }`, then we know that
+          // an entity matching this condition can't be in the db anyway, so skip the em.find
+          const hasNewParam = Object.values(where).some((v) => isEntity(v) && v.isNewEntity);
+          if (hasNewParam) {
+            const entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
             if (upsert) {
               entity.set(upsert);
             }

@@ -773,6 +773,16 @@ describe("EntityManager", () => {
     await em.findOrCreate(Author, { age: 20 }, { lastName: "l" });
   });
 
+  it("findOrCreate skips queries if an entity is new", async () => {
+    const em = newEntityManager();
+    const p = newPublisher(em);
+    const a1 = await em.findOrCreate(Author, { publisher: p }, { firstName: "a1" });
+    expect(numberOfQueries).toBe(0);
+    const a2 = await em.findOrCreate(Author, { publisher: p }, { firstName: "a1" });
+    expect(a1).toBe(a2);
+    expect(numberOfQueries).toBe(0);
+  });
+
   it("can create with findOrCreate in a loop", async () => {
     const em = newEntityManager();
     const [a1, a2] = await Promise.all([

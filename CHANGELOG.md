@@ -1,3 +1,10 @@
+## [1.83.1](https://github.com/stephenh/joist-ts/compare/v1.83.0...v1.83.1) (2023-05-25)
+
+
+### Bug Fixes
+
+* Skip em.find queries if a param is new. ([#663](https://github.com/stephenh/joist-ts/issues/663)) ([c0f45b0](https://github.com/stephenh/joist-ts/commit/c0f45b04e0c224c5f68b5750faab1399a04b7ed1))
+
 # [1.83.0](https://github.com/stephenh/joist-ts/compare/v1.82.0...v1.83.0) (2023-05-24)
 
 

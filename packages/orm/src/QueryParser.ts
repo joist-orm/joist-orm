@@ -132,7 +132,7 @@ export function parseFindQuery(
     filter: any,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
-    const ef = parseEntityFilter(filter);
+    const ef = parseEntityFilter(meta, filter);
     if (!ef && join !== "primary" && !isAlias(filter)) {
       return;
     }
@@ -183,7 +183,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
           }
-          const f = parseEntityFilter(sub);
+          const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
           if (!f) {
             // skip
@@ -199,7 +199,7 @@ export function parseFindQuery(
             });
           }
         } else if (field.kind === "poly") {
-          const f = parseEntityFilter((ef.subFilter as any)[key]);
+          const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
           if (!f) {
             // skip
           } else if (f.kind === "join") {
@@ -273,7 +273,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "outer", `${ja}.${field.columnNames[1]}`, `${a}.id`, sub);
           }
-          const f = parseEntityFilter(sub);
+          const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id, if so we can avoid the join
           if (!f) {
             // skip
@@ -426,7 +426,7 @@ export type ParsedEntityFilter =
   | { kind: "join"; subFilter: object };
 
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
+export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): ParsedEntityFilter | undefined {
   if (filter === undefined) {
     // This matches legacy `em.find(Book, { author: undefined })` behavior
     return undefined;
@@ -441,11 +441,11 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? v.id ?? -1 : v;
+        return isEntity(v) ? v.id ?? nullIdValue(meta) : v;
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: filter.id || -1 };
+    return { kind: "eq", value: filter.id || nullIdValue(meta) };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -459,7 +459,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: value.id || -1 };
+        return { kind: "ne", value: value.id || nullIdValue(meta) };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -474,7 +474,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: value.id || -1 };
+        return { kind: "eq", value: value.id || nullIdValue(meta) };
       } else {
         return parseValueFilter(value)[0] as any;
       }
@@ -482,6 +482,23 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
     return { kind: "join", subFilter: filter };
   } else {
     throw new Error(`Unrecognized filter ${filter}`);
+  }
+}
+
+/**
+ * We use this value if users include new (id-less) entities as em.find conditions.
+ *
+ * The idea is that this condition would never be met, but we still want to do the em.find
+ * query in case it's in an `OR` clause that would match false, but some other part of the
+ * clause would match. I.e. instead of just skipping the DB query all together, which is
+ * also something we could consider doing.
+ */
+function nullIdValue(meta: EntityMetadata<any>): any {
+  switch (meta.idType) {
+    case "int":
+      return -1;
+    case "uuid":
+      return "00000000-0000-0000-0000-000000000000";
   }
 }
 

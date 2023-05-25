@@ -441,11 +441,11 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? v.id ?? nullIdValue(meta) : v;
+        return isEntity(v) ? v.id ?? nilIdValue(meta) : v;
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: filter.id || nullIdValue(meta) };
+    return { kind: "eq", value: filter.id || nilIdValue(meta) };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -459,7 +459,7 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: value.id || nullIdValue(meta) };
+        return { kind: "ne", value: value.id || nilIdValue(meta) };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -474,7 +474,7 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: value.id || nullIdValue(meta) };
+        return { kind: "eq", value: value.id || nilIdValue(meta) };
       } else {
         return parseValueFilter(value)[0] as any;
       }
@@ -492,8 +492,12 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
  * query in case it's in an `OR` clause that would match false, but some other part of the
  * clause would match. I.e. instead of just skipping the DB query all together, which is
  * also something we could consider doing.
+ *
+ * For int IDs we use -1, and for uuid IDs, we use the nil UUID value:
+ *
+ * https://en.wikipedia.org/wiki/Universally_unique_identifier#Nil_UUID
  */
-function nullIdValue(meta: EntityMetadata<any>): any {
+function nilIdValue(meta: EntityMetadata<any>): any {
   switch (meta.idType) {
     case "int":
       return -1;

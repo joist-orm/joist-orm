@@ -1,3 +1,10 @@
+## [1.83.3](https://github.com/stephenh/joist-ts/compare/v1.83.2...v1.83.3) (2023-05-25)
+
+
+### Bug Fixes
+
+* Fix tags using the idType instead of just int. ([#665](https://github.com/stephenh/joist-ts/issues/665)) ([3c96feb](https://github.com/stephenh/joist-ts/commit/3c96feb7b33ccc1153890a9347aedb4a7d9cb175))
+
 ## [1.83.2](https://github.com/stephenh/joist-ts/compare/v1.83.1...v1.83.2) (2023-05-25)
 
 

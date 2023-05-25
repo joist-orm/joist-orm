@@ -1,3 +1,10 @@
+## [1.83.2](https://github.com/stephenh/joist-ts/compare/v1.83.1...v1.83.2) (2023-05-25)
+
+
+### Bug Fixes
+
+* Fix using -1 as a null condition for uuid columns. ([#664](https://github.com/stephenh/joist-ts/issues/664)) ([7aca764](https://github.com/stephenh/joist-ts/commit/7aca7644e4a89c7934879f86b45970ec87c84d89))
+
 ## [1.83.1](https://github.com/stephenh/joist-ts/compare/v1.83.0...v1.83.1) (2023-05-25)
 
 

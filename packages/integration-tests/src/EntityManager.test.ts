@@ -240,11 +240,12 @@ describe("EntityManager", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     await em.flush();
 
+    // Sleep to make sure our timestamp bumps
     await new Promise((resolve) => setTimeout(resolve, 10));
 
     const em2 = newEntityManager();
     const a2 = await em2.load(Author, "1");
-    em2.touch(a2);
+    em2.touch(a2, { forceUpdate: true });
     await em2.flush();
 
     const em3 = newEntityManager();
@@ -1151,10 +1152,10 @@ describe("EntityManager", () => {
     expect(a1.isDirtyEntity).toBeFalsy();
     expect(a1.isNewEntity).toBeFalsy();
     expect(a1.isDeletedEntity).toBeFalsy();
-    expect(a1.__orm.isTouched).toBeTruthy();
+    expect(a1.__orm.touched).toBe("recalc");
     const result = await em.flush();
     expect(result).toEqual([a1]);
-    expect(a1.__orm.isTouched).toBeFalsy();
+    expect(a1.__orm.touched).toBeUndefined();
   });
 
   it("can load a null enum array", async () => {
@@ -1342,7 +1343,7 @@ describe("EntityManager", () => {
     const em2 = newEntityManager();
     const a2 = await em2.load(Author, a1.idOrFail);
     a2.deleteDuringFlush = true;
-    em2.touch(a2);
+    em2.touch(a2, { forceUpdate: true });
     await em2.flush();
     // Then the entities were deleted
     expect(await countOfAuthors()).toBe(0);

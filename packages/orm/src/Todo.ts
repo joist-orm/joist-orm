@@ -33,11 +33,11 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
         }
       } else if (entity.isNewEntity) {
         todo.inserts.push(entity);
-      } else {
+      } else if (entity.isDirtyEntity || entity.__orm.touched === "update") {
         todo.updates.push(entity);
       }
-      // Force recalc all async fields if the user called em.touch
-      if (entity.__orm.isTouched) {
+      // Recalc all async fields if the user called em.touch
+      if (entity.__orm.touched) {
         const { asyncFields } = todo;
         if (!asyncFields.has(entity)) {
           asyncFields.set(entity, new Set());

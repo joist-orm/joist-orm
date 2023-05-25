@@ -27,7 +27,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
     Object.defineProperty(this, "__orm", {
-      value: { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false },
+      value: { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, touched: undefined },
       enumerable: false,
     });
     Object.defineProperty(this, "entity", {
@@ -84,7 +84,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   }
 
   get isPendingFlush(): boolean {
-    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.__orm.isTouched;
+    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || !!this.__orm.touched;
   }
 
   get isPendingDelete(): boolean {

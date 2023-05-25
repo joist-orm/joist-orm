@@ -52,5 +52,5 @@ export interface EntityOrmField {
   /** Whether our entity is new or not. */
   isNew: boolean;
   /** Whether our entity should flush regardless of any other changes. */
-  isTouched: boolean;
+  touched: "recalc" | "update" | undefined;
 }

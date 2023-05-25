@@ -173,6 +173,11 @@ export interface FlushOptions {
   skipValidation?: boolean;
 }
 
+export interface TouchOptions {
+  /** Run hooks and issue an `UPDATE`, instead of just recalculating derived values. */
+  forceUpdate?: boolean;
+}
+
 export class EntityManager<C = unknown> {
   public readonly ctx: C;
   public driver: Driver;
@@ -1141,7 +1146,7 @@ export class EntityManager<C = unknown> {
           });
           [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
             e.__orm.originalData = {};
-            e.__orm.isTouched = false;
+            e.__orm.touched = undefined;
           });
         });
 
@@ -1286,10 +1291,11 @@ export class EntityManager<C = unknown> {
   }
 
   /**
-   * Mark an entity as needing to be flushed regardless of its state
+   * Mark an entity as needing to be flushed regardless of its state.
    */
-  public touch(entity: Entity) {
-    entity.__orm.isTouched = true;
+  public touch(entity: Entity, opts: TouchOptions = {}) {
+    const { forceUpdate = false } = opts;
+    entity.__orm.touched = forceUpdate ? "update" : "recalc";
   }
 
   public beforeTransaction(fn: HookFn) {

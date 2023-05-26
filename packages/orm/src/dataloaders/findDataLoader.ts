@@ -129,7 +129,8 @@ export function findDataLoader<T extends Entity>(
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
 function replacer(v: any) {
   if (isEntity(v)) {
-    return v.id;
+    // Use toString() instead of id so that new entities are kept separate, i.e. `Author#2`
+    return v.toString();
   }
   // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
   if (isAlias(v)) {

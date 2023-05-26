@@ -817,46 +817,62 @@ describe("EntityManager", () => {
 
   it("can find already new entity by FK with findOrCreate in a loop", async () => {
     const em = newEntityManager();
-    const p = newPublisher(em);
-    const a = newAuthor(em, { firstName: "a1", publisher: p });
-    const [a1, a2] = await Promise.all([
-      em.findOrCreate(Author, { publisher: p }, { firstName: "b" }),
-      em.findOrCreate(Author, { publisher: p }, { firstName: "c" }),
+    const [p1, p2] = [newPublisher(em), newPublisher(em)];
+    // Given we've already created an author in-memory
+    const a = newAuthor(em, { firstName: "a1", publisher: p1 });
+    // And three findOrCreates have where clauses that match it
+    const [a1, a2, a3] = await Promise.all([
+      em.findOrCreate(Author, { publisher: p1 }, { firstName: "b" }),
+      em.findOrCreate(Author, { publisher: p1 }, { firstName: "c" }),
+      // And the 3rd is looking for a different publisher
+      em.findOrCreate(Author, { publisher: p2 }, { firstName: "c" }),
     ]);
-    expect(a1).toEqual(a);
-    expect(a2).toEqual(a);
+    // Then the first two found the existing entity
+    expect(a1).toBe(a);
+    expect(a2).toBe(a);
+    // And the third created a new entity
+    expect(a3).not.toBe(a);
   });
 
   it("can upsert with findOrCreate in a loop", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
+    // Given two findOrCreates are upserting the same entity
     const [a1, a2] = await Promise.all([
       em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "l1" }),
-      em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "l1" }),
+      // And the 2nd query has a different upsert
+      em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "l2" }),
     ]);
+    // Then they returned the same entity
     expect(a1).toEqual(a2);
     expect(a1.isNewEntity).toBe(false);
-    expect(a1.lastName).toBe("l1");
+    // And the last upsert wins
+    expect(a1.lastName).toBe("l2");
   });
 
   it("findOrCreate still creates dups with different where clauses in a loop", async () => {
     const em = newEntityManager();
+    // Given two findOrCreates that are creating two entities
     const [a1, a2] = await Promise.all([
       em.findOrCreate(Author, { firstName: "a1" }, {}),
+      // And the 2nd query's ifNew _technically_ matched the 1st query's where
       em.findOrCreate(Author, { lastName: "l1" }, { firstName: "a1" }),
     ]);
+    // Then we don't try and figure that out
     expect(a1).not.toEqual(a2);
   });
 
   it("findOrCreate resolves dups with different where clauses in a loop", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     const em = newEntityManager();
+    // Given two findOrCreates that should find the same existing entity
     const [a1, a2] = await Promise.all([
       em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "B" }),
       em.findOrCreate(Author, { lastName: "l1" }, { firstName: "a2" }, { lastName: "C" }),
     ]);
+    // Then they returned the same entity
     expect(a1).toEqual(a2);
-    // The last upsert wins
+    // And the last upsert wins
     expect(a1.lastName).toBe("C");
   });
 

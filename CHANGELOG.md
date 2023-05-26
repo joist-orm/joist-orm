@@ -1,3 +1,10 @@
+## [1.83.4](https://github.com/stephenh/joist-ts/compare/v1.83.3...v1.83.4) (2023-05-26)
+
+
+### Bug Fixes
+
+* Fix findOrCreate incorrectly matching new entities. ([#666](https://github.com/stephenh/joist-ts/issues/666)) ([73135a3](https://github.com/stephenh/joist-ts/commit/73135a328e77d44cd93e32e016f9ab2998a7928c))
+
 ## [1.83.3](https://github.com/stephenh/joist-ts/compare/v1.83.2...v1.83.3) (2023-05-25)
 
 

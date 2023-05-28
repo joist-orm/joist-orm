@@ -7,7 +7,7 @@ import { newPgConnectionConfig } from "joist-utils";
 import { knex as createKnex, Knex } from "knex";
 
 if (process.env.DATABASE_URL === undefined) {
-  config({ path: "./local.env" });
+  config({ path: "./.env" });
 }
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.

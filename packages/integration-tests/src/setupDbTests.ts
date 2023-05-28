@@ -6,7 +6,7 @@ import { toMatchEntity } from "joist-test-utils";
 import { Knex } from "knex";
 
 if (process.env.DATABASE_URL === undefined) {
-  config({ path: "./local.env" });
+  config({ path: "./.env" });
 }
 
 // Eventually set this via an env flag for dual CI builds, but for now just hard-coding

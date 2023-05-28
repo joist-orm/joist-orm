@@ -9726,13 +9726,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dotenv@npm:^16.0.3":
-  version: 16.0.3
-  resolution: "dotenv@npm:16.0.3"
-  checksum: afcf03f373d7a6d62c7e9afea6328e62851d627a4e73f2e12d0a8deae1cd375892004f3021883f8aec85932cd2834b091f568ced92b4774625b321db83b827f8
-  languageName: node
-  linkType: hard
-
 "dotenv@npm:^8.2.0":
   version: 8.2.0
   resolution: "dotenv@npm:8.2.0"
@@ -12943,7 +12936,6 @@ __metadata:
     "@swc/jest": ^0.2.24
     "@types/jest": ^29.2.5
     "@types/node": ^18.11.18
-    dotenv: ^16.0.3
     env-cmd: ^10.1.0
     jest: ^29.3.1
     jest-junit: ^14.0.1
@@ -13035,7 +13027,6 @@ __metadata:
     "@swc/jest": ^0.2.24
     "@types/jest": ^29.2.5
     "@types/node": ^18.11.18
-    dotenv: ^16.0.3
     jest: ^29.3.1
     jest-junit: ^14.0.1
     joist-codegen: "workspace:*"
@@ -13060,7 +13051,6 @@ __metadata:
     "@swc/jest": ^0.2.24
     "@types/jest": ^29.2.5
     "@types/node": ^18.11.18
-    dotenv: ^16.0.3
     env-cmd: ^10.1.0
     jest: ^29.3.1
     jest-junit: ^14.0.1
@@ -13085,7 +13075,6 @@ __metadata:
     "@swc/jest": ^0.2.24
     "@types/jest": ^29.2.5
     "@types/node": ^18.11.18
-    dotenv: ^16.0.3
     env-cmd: ^10.1.0
     jest: ^29.3.1
     jest-junit: ^14.0.1

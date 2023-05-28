@@ -1,14 +1,9 @@
 import { Context } from "@src/context";
 import { EntityManager } from "@src/entities";
-import { config } from "dotenv";
 import { PostgresDriver, PostgresDriverOpts, TestUuidAssigner } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { newPgConnectionConfig } from "joist-utils";
 import { knex as createKnex, Knex } from "knex";
-
-if (process.env.DATABASE_URL === undefined) {
-  config({ path: "./.env" });
-}
 
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;

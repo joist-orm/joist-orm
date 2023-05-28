@@ -31,6 +31,7 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^8.0.7",
     "@semantic-release/release-notes-generator": "^10.0.3",
+    "env-cmd": "^10.1.0",
     "semantic-release": "^19.0.5"
   },
   "dependencies": {

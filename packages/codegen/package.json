@@ -24,7 +24,7 @@
     "joist-utils": "workspace:*",
     "knex": "^2.3.0",
     "pg": "^8.8.0",
-    "pg-structure": "^7.13.1",
+    "pg-structure": "^7.15.0",
     "pluralize": "^8.0.0",
     "ts-poet": "^6.3.0"
   },

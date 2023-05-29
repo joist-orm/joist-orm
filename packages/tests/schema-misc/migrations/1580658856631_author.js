@@ -43,6 +43,6 @@ exports.up = (b) => {
   `);
   b.sql(`
     ALTER TABLE ONLY public."paintings"
-    ADD CONSTRAINT "paintings_artistId_fkey" FOREIGN KEY ("artistId") REFERENCES public."artists"(id) ON UPDATE CASCADE ON DELETE SET NULL;
+    ADD CONSTRAINT "paintings_artistId_fkey" FOREIGN KEY ("artistId") REFERENCES public."artists"(id) ON UPDATE CASCADE ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED;
     `);
 };

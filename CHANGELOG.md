@@ -1,3 +1,10 @@
+# [1.84.0](https://github.com/stephenh/joist-ts/compare/v1.83.4...v1.84.0) (2023-05-29)
+
+
+### Features
+
+* Warn on misconfigured foreign keys. ([#669](https://github.com/stephenh/joist-ts/issues/669)) ([aa882fa](https://github.com/stephenh/joist-ts/commit/aa882fa764c16fe2c3fceb64a8519fd90729b86d))
+
 ## [1.83.4](https://github.com/stephenh/joist-ts/compare/v1.83.3...v1.83.4) (2023-05-26)
 
 

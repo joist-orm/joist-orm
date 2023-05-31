@@ -4,14 +4,7 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import {
-  Column,
-  getConstructorFromTaggedId,
-  isDefined,
-  keyToNumber,
-  maybeResolveReferenceToId,
-  needsClassPerTableJoins,
-} from "./index";
+import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail, partition } from "./utils";
 
@@ -780,4 +773,8 @@ export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], J
     }
   }
   return [primary!, innerJoins, outerJoins];
+}
+
+function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
+  return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }

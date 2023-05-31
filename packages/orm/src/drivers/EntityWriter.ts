@@ -62,7 +62,7 @@ function addUpdates(ops: Ops, todo: Todo, now: Date): void {
     maybeBumpUpdatedAt(meta, todo, now);
     if (meta.subTypes.length > 0) {
       for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
-        const op = newUpdateOp(meta, todo.updates);
+        const op = newUpdateOp(meta, group);
         if (op) ops.updates.push(op);
       }
     } else {

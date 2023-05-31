@@ -65,7 +65,7 @@ export function findDataLoader<T extends Entity>(
 
       // Build the list of 'arg1', 'arg2', ... strings
       const args = collectArgs(query);
-      args.unshift({ name: "tag", dbType: "int" });
+      args.unshift({ columnName: "tag", dbType: "int" });
 
       const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
       const [primary, innerJoins, outerJoins] = getTables(query);
@@ -144,20 +144,20 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
 }
 
 /** Collects & names all the args in a query, i.e. `['arg1', 'arg2']`--not the actual values. */
-function collectArgs(query: ParsedFindQuery): { name: string; dbType: string }[] {
-  const args: { name: string; dbType: string }[] = [];
+function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
+  const args: { columnName: string; dbType: string }[] = [];
   visit(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         const { kind } = c.cond;
         if (kind === "in" || kind === "nin") {
-          args.push({ name: `arg${args.length}`, dbType: `${c.dbType}[]` });
+          args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
         } else if (kind === "between") {
           // between has two values
-          args.push({ name: `arg${args.length}`, dbType: c.dbType });
-          args.push({ name: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
         } else {
-          args.push({ name: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
         }
       }
     },
@@ -262,8 +262,12 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
   }
 }
 
-function buildValuesCte(name: string, columns: { name: string; dbType: string }[], rows: readonly any[]): string {
-  return `WITH ${name} (${columns.map((c) => c.name).join(", ")}) AS (VALUES
+export function buildValuesCte(
+  tableName: string,
+  columns: { columnName: string; dbType: string }[],
+  rows: readonly any[],
+): string {
+  return `WITH ${tableName} (${columns.map((c) => c.columnName).join(", ")}) AS (VALUES
       ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
   )`;
 }

@@ -1,4 +1,5 @@
 import { Knex } from "knex";
+import { buildValuesCte } from "../dataloaders/findDataLoader";
 import {
   afterTransaction,
   beforeTransaction,
@@ -259,15 +260,20 @@ async function batchUpdate(knex: Knex, meta: EntityMetadata<any>, entities: Enti
     entity.__orm.originalData[updatedAt],
   ]);
 
+  const cte = buildValuesCte(
+    "data",
+    [...columns, { columnName: "original_updated_at", dbType: "timestamptz" }],
+    entities,
+  );
+
   const sql = `
+      ${cte}
       UPDATE "${meta.tableName}"
       SET ${columns
         .filter((c) => c.columnName !== "id")
         .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
         .join(", ")}
-      FROM (
-        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")}, ?::timestamptz)`).join(",")}
-      ) AS data (${columns.map((c) => `"${c.columnName}"`).join(", ")}, original_updated_at)
+      FROM data
       WHERE
         "${meta.tableName}".id = data.id
         AND date_trunc('milliseconds', "${meta.tableName}".${updatedAtField}) = data.original_updated_at
@@ -309,18 +315,20 @@ async function batchUpdateWithoutUpdatedAt(knex: Knex, meta: EntityMetadata<any>
   // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...` clauses
   // and bindings is each individual value.
   const bindings = entities.flatMap((entity) => columns.map((c) => c.dbValue(entity.__orm.data) ?? null));
+
+  const cte = buildValuesCte("data", columns, entities);
+
   const sql = `
+    ${cte}
     UPDATE "${meta.tableName}"
     SET ${columns
       .filter((c) => c.columnName !== "id")
       .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
       .join(", ")}
-    FROM (
-        VALUES ${entities.map(() => `(${columns.map((c) => `?::${c.dbType}`).join(", ")})`).join(", ")}
-        ) AS data (${columns.map((c) => `"${c.columnName}"`).join(", ")})
+    FROM data
     WHERE
-        "${meta.tableName}".id = data.id
-        RETURNING "${meta.tableName}".id
+      "${meta.tableName}".id = data.id
+    RETURNING "${meta.tableName}".id
   `;
   await knex.raw(cleanSql(sql), bindings);
 }

@@ -1,3 +1,10 @@
+# [1.85.0](https://github.com/stephenh/joist-ts/compare/v1.84.0...v1.85.0) (2023-06-01)
+
+
+### Features
+
+* Add Ops AST/EntityWriter for writes ([#670](https://github.com/stephenh/joist-ts/issues/670)) ([8ff2937](https://github.com/stephenh/joist-ts/commit/8ff29373cd7325fe1858fdd0873df58173febab7))
+
 # [1.84.0](https://github.com/stephenh/joist-ts/compare/v1.83.4...v1.84.0) (2023-05-29)
 
 

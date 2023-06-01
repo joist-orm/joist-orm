@@ -1297,7 +1297,7 @@ describe("EntityManager", () => {
     // And before we flush, another write changes the entity
     await update("authors", { id: 1, updated_at: "2050-01-01" });
     // When we try to save our changes
-    await expect(em.flush()).rejects.toThrow("Oplock failure for a:1");
+    await expect(em.flush()).rejects.toThrow("Oplock failure for authors rows 1");
   });
 
   describe("sameEntity", () => {

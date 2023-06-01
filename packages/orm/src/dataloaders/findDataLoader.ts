@@ -267,7 +267,7 @@ export function buildValuesCte(
   columns: { columnName: string; dbType: string }[],
   rows: readonly any[],
 ): string {
-  return `WITH ${tableName} (${columns.map((c) => c.columnName).join(", ")}) AS (VALUES
+  return `WITH ${tableName} (${columns.map((c) => `"${c.columnName}"`).join(", ")}) AS (VALUES
       ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
   )`;
 }

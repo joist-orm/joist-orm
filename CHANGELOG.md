@@ -1,3 +1,10 @@
+## [1.85.1](https://github.com/stephenh/joist-ts/compare/v1.85.0...v1.85.1) (2023-06-01)
+
+
+### Bug Fixes
+
+* Fix syntax error when updating keyword-named columns. ([#671](https://github.com/stephenh/joist-ts/issues/671)) ([a6e820c](https://github.com/stephenh/joist-ts/commit/a6e820caf2da2113ca4f2a6bc1c09f3fcd84cc6c))
+
 # [1.85.0](https://github.com/stephenh/joist-ts/compare/v1.84.0...v1.85.0) (2023-06-01)
 
 

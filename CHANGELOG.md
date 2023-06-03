@@ -1,3 +1,10 @@
+## [1.85.2](https://github.com/stephenh/joist-ts/compare/v1.85.1...v1.85.2) (2023-06-03)
+
+
+### Bug Fixes
+
+* Avoid using JS keywords. Fixes [#672](https://github.com/stephenh/joist-ts/issues/672). ([#673](https://github.com/stephenh/joist-ts/issues/673)) ([eee04fe](https://github.com/stephenh/joist-ts/commit/eee04fecc1fd3beb825bf27d83cd30166b42e105))
+
 ## [1.85.1](https://github.com/stephenh/joist-ts/compare/v1.85.0...v1.85.1) (2023-06-01)
 
 

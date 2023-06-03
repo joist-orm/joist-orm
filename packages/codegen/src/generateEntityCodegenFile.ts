@@ -2,6 +2,7 @@ import { camelCase, pascalCase } from "change-case";
 import { code, Code, imp, joinCode } from "ts-poet";
 import { Config } from "./config";
 import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
+import { keywords } from "./keywords";
 import {
   BaseEntity,
   BooleanFilter,
@@ -50,7 +51,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
 } from "./symbols";
-import { fail } from "./utils";
+import { fail, uncapitalize } from "./utils";
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
@@ -60,6 +61,9 @@ export interface ColumnMetaData {
 export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, tagName } = meta;
   const entityName = entity.name;
+
+  // Avoid using `do` as a variable name b/c it's a reserved keyword
+  const varName = keywords.includes(tagName) ? uncapitalize(entityName) : tagName;
 
   // Add the primitives
   const primitives = meta.primitives.map((p) => {
@@ -510,9 +514,9 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       populate<H extends ${LoadHint}<${entityName}>>(hint: H): Promise<${Loaded}<${entityName}, H>>;
       populate<H extends ${LoadHint}<${entityName}>>(opts: { hint: H, forceReload?: boolean }): Promise<${Loaded}<${entityName}, H>>;
-      populate<H extends ${LoadHint}<${entityName}>, V>(hint: H, fn: (${tagName}: Loaded<${entityName}, H>) => V): Promise<V>;
-      populate<H extends ${LoadHint}<${entityName}>, V>(opts: { hint: H, forceReload?: boolean }, fn: (${tagName}: Loaded<${entityName}, H>) => V): Promise<V>;
-      populate<H extends ${LoadHint}<${entityName}>, V>(hintOrOpts: any, fn?: (${tagName}: Loaded<${entityName}, H>) => V): Promise<${Loaded}<${entityName}, H> | V> {
+      populate<H extends ${LoadHint}<${entityName}>, V>(hint: H, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
+      populate<H extends ${LoadHint}<${entityName}>, V>(opts: { hint: H, forceReload?: boolean }, fn: (${varName}: Loaded<${entityName}, H>) => V): Promise<V>;
+      populate<H extends ${LoadHint}<${entityName}>, V>(hintOrOpts: any, fn?: (${varName}: Loaded<${entityName}, H>) => V): Promise<${Loaded}<${entityName}, H> | V> {
         return this.em.populate(this as any as ${entityName}, hintOrOpts, fn);
       }
 

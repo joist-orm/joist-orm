@@ -150,9 +150,28 @@ To use polymorphic references, there are two steps:
 
 ## Renaming Relations
 
-Joist will make a best effort to infer a logical name for any given relation based on the foreign key's name and the table it points to, but this is not always perfect.  Sometimes another name will be desired or two foreign keys will generate a naming collision.  In such circumstances, it's possible to provide additional data in the database schema to indicate to joist which name to use.  Joist uses `pg-structure`'s [`commentData`](https://www.pg-structure.com/nav.02.api/classes/dbobject.html#commentdata) to look for the properties `fieldName` (for renaming a m2o reference) and `otherFieldName` (for renaming the opposing m2o/m2m/o2o relation) and will prefer using these values over its own inferred name.
+Joist makes a best guess for relation names, based on the foreign key's column name and the table it points to (i.e. the "other side" of `books.author_id` should be called `Author.books`), but this is not always perfect.
 
-Joist provides a helper migration function `renameRelation` that can be used to rename existing columns.  Additionally, the `foreignKey` helper supports both `fieldName` and `otherFieldName` passed as options.
+Sometimes a table will have two incoming foreign keys that cause a naming collision, or you just want a different name (self-referential foreign keys like `authors.mentor_id` are particularly hard for Joist to guess good names for).
+
+In these circumstances, you can specify which field names to use directly in the database schema. Joist uses `pg-structure`'s [`commentData`](https://www.pg-structure.com/nav.02.api/classes/dbobject.html#commentdata) convention (which is basically a JSON payload in the column's `COMMENT` metadata) to look for two properties:
+
+* `fieldName` for renaming a m2o reference, and
+* `otherFieldName` for renaming the opposing m2o/m2m/o2o relation
+
+Setting this `commentData` structure by hand can be tedious, but Joist's `joist-migration-utils` package provides both a `renameRelation` function (for renaming fields of existing columns) and a `foreignKey` helper (for renames fields on new columns) that allow easily setting the `fieldName` and `otherFieldName` keys.
+
+:::info
+
+Why `COMMENT` metadata? Putting field names in the `COMMENT` metadata is somewhat unconventional, but it has a few advantages:
+
+1. It follows Joist's overall philosophy of "the database is the source of truth", and
+
+2. Previously we put renames in the `joist-config.json` file, but that meant having to know/guess the wrong/unintuitive name, just to map it over to the correct name. Which was confusing and also did not handle collisions.
+
+  With the `COMMENT` approach, the `joist-config.json` now has only the correct/best field name for the rest of the config options you might want to specify on the relation.
+
+:::
 
 ## Consistent Relations
 

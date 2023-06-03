@@ -6,6 +6,7 @@
     "Artist": { "tag": "artist" },
     "Author": { "tag": "a" },
     "Book": { "tag": "b" },
+    "DatabaseOwner": { "tag": "do" },
     "Painting": { "tag": "p" }
   },
   "entitiesDirectory": "./src/entities",

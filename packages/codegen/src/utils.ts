@@ -166,6 +166,10 @@ export function q(s: string | undefined): string {
   return s === undefined ? "undefined" : `"${s}"`;
 }
 
+export function uncapitalize(s: string): string {
+  return s.charAt(0).toLowerCase() + s.slice(1);
+}
+
 function isIgnored(config: Config, t: Table): boolean {
   return (config.ignoredTables || ["migrations", "pgmigrations"]).includes(t.name);
 }

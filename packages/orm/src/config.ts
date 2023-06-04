@@ -65,7 +65,7 @@ export class ConfigApi<T extends Entity, C> {
         // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
         const loadHint = convertToLoadHint(getMetadata(entity), hint);
         if (Object.keys(loadHint).length > 0) {
-          return entity.em.populate(entity, loadHint).then((loaded) => maybeRule!(loaded));
+          return entity.em.populate(entity, loadHint as any).then((loaded) => maybeRule!(loaded));
         }
         return maybeRule!(entity);
       };

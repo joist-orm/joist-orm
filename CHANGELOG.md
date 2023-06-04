@@ -1,3 +1,10 @@
+# [1.86.0](https://github.com/stephenh/joist-ts/compare/v1.85.2...v1.86.0) (2023-06-04)
+
+
+### Features
+
+* Bump TypeScript, misc deps. ([#675](https://github.com/stephenh/joist-ts/issues/675)) ([e3fcb70](https://github.com/stephenh/joist-ts/commit/e3fcb7053d0ffc85592dfeba65c145740e1ef4c3))
+
 ## [1.85.2](https://github.com/stephenh/joist-ts/compare/v1.85.1...v1.85.2) (2023-06-03)
 
 

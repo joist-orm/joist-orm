@@ -186,6 +186,7 @@ describe("Entity", () => {
             "load": {},
           },
         },
+        "setGraduatedInFlush": undefined,
         "tags": {
           "addedBeforeLoaded": undefined,
           "columnName": "author_id",

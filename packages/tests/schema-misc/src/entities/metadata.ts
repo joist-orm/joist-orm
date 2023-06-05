@@ -1,6 +1,6 @@
 import { BaseEntity, configureMetadata, EntityManager as EntityManager1, EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
 import { Context } from "src/context";
-import { Artist, artistConfig, Author, authorConfig, Book, bookConfig, newArtist, newAuthor, newBook, newPainting, Painting, paintingConfig } from "./entities";
+import { Artist, artistConfig, Author, authorConfig, Book, bookConfig, DatabaseOwner, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, Painting, paintingConfig } from "./entities";
 
 export class EntityManager extends EntityManager1<Context> {}
 
@@ -86,6 +86,26 @@ export const bookMeta: EntityMetadata<Book> = {
 
 (Book as any).metadata = bookMeta;
 
+export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
+  cstr: DatabaseOwner,
+  type: "DatabaseOwner",
+  baseType: undefined,
+  idType: "int",
+  idTagged: true,
+  tagName: "do",
+  tableName: "database_owners",
+  fields: { "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("do", "id", "id", "int"), immutable: true }, "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying"), immutable: false } },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
+  config: databaseOwnerConfig,
+  factory: newDatabaseOwner,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(DatabaseOwner as any).metadata = databaseOwnerMeta;
+
 export const paintingMeta: EntityMetadata<Painting> = {
   cstr: Painting,
   type: "Painting",
@@ -112,5 +132,5 @@ export const paintingMeta: EntityMetadata<Painting> = {
 
 (Painting as any).metadata = paintingMeta;
 
-export const allMetadata = [artistMeta, authorMeta, bookMeta, paintingMeta];
+export const allMetadata = [artistMeta, authorMeta, bookMeta, databaseOwnerMeta, paintingMeta];
 configureMetadata(allMetadata);

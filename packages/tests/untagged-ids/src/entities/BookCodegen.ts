@@ -5,6 +5,7 @@ import {
   deTagId,
   EntityFilter,
   EntityGraphQLFilter,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -83,6 +84,8 @@ bookConfig.addRule(newRequiredRule("author"));
 
 export abstract class BookCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
+  static readonly tagName = "b";
+  static readonly metadata: EntityMetadata<Book>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookFilter;

@@ -7,10 +7,12 @@
 export * from "./ArtistCodegen";
 export * from "./AuthorCodegen";
 export * from "./BookCodegen";
+export * from "./DatabaseOwnerCodegen";
 export * from "./PaintingCodegen";
 export * from "./Artist";
 export * from "./Author";
 export * from "./Book";
+export * from "./DatabaseOwner";
 export * from "./Painting";
 
 export * from "./factories";

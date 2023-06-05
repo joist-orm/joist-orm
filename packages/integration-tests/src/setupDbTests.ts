@@ -1,13 +1,8 @@
 import { EntityManager } from "@src/entities";
 import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
-import { config } from "dotenv";
 import { Driver } from "joist-orm";
 import { toMatchEntity } from "joist-test-utils";
 import { Knex } from "knex";
-
-if (process.env.DATABASE_URL === undefined) {
-  config({ path: "./local.env" });
-}
 
 // Eventually set this via an env flag for dual CI builds, but for now just hard-coding
 export const inMemory = false;

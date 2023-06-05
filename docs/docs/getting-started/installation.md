@@ -61,19 +61,19 @@ And add `joist-migrate` and `joist-new-migration` commands to your `package.json
 ```json
 {
   "scripts": {
-    "joist-migrate": "./run.sh ./node_modules/joist-migration-utils",
+    "joist-migrate": "env-cmd tsx ./node_modules/joist-migration-utils",
     "joist-new-migration": "npx node-pg-migrate create"
   }
 }
 ```
 
-The sample app uses a `run.sh` helper script to load the environment variables from `env/local.env` before running `joist-migration-utils`, but if you don't like that, you can manage your application's environment variables however you like.
+The sample app uses `env-cmd` to load the environment variables from `.env` before running `joist-migration-utils`, and `tsx` to transpile the migration's `*.ts` code to JavaScript, but if you don't like that, you can manage your application's environment variables however you like.
 
 :::info
 
 Invoking Joist's `joist-migration-utils` is really just a tiny wrapper around `node-pg-migrate` that:
 
-- Reads the connection config from either a single `DATABASE_URL` or multiple `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, and `DB_PASSWORD` environment variables (as loaded by the `run.sh` script)
+- Reads the connection config from either a single `DATABASE_URL` or multiple `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USER`, and `DB_PASSWORD` environment variables
 - Runs the "up" command against the `migrations/` directory
 
 If you want to invoke `node-pg-migrate`'s [cli](https://salsita.github.io/node-pg-migrate/#/cli) directly instead, that's just fine.
@@ -117,12 +117,12 @@ npm add --save-dev joist-codegen
 ```json
 {
   "scripts": {
-    "joist-codegen": "./run.sh ./node_modules/joist-codegen"
+    "joist-codegen": "env-cmd tsx ./node_modules/joist-codegen"
   }
 }
 ```
 
-This again uses the `run.sh` script, as `joist-codegen` will use the `DATABASE_URL` environment variable to connect to your local database.
+This again uses `env-cmd`, as `joist-codegen` will use the `DATABASE_URL` environment variable to connect to your local database.
 
 Now, anytime you make schema changes (i.e. by running `npm run joist-migrate`), you can also run `joist-codegen` to create/update your domain model:
 
@@ -170,15 +170,13 @@ afterAll(async () => {
 });
 ```
 
-The `newPgConnectionConfig` helper method from `joist-utils` also uses the `DATABASE_URL` environment variable, which we can have loaded into the Jest process by using `dotenv` in a `setupTestEnv.js` file:
+The `newPgConnectionConfig` helper method from `joist-utils` also uses the `DATABASE_URL` environment variable, which we can have loaded into the Jest process by using `env-cmd` in a `setupTestEnv.js` file:
 
 ```typescript
-import { config } from "dotenv";
+import { GetEnvVars } from "env-cmd";
 
-export default () => {
-  if (process.env.STAGE === undefined) {
-    config({ path: "./env/local.env" });
-  }
+export default async function globalSetup() {
+  Object.entries(await GetEnvVars()).forEach(([key, value]) => (process.env[key] = value));
 };
 ```
 

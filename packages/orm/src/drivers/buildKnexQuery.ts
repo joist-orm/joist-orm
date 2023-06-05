@@ -67,8 +67,6 @@ export function buildKnexQuery(
       query.orderBy(`${alias}.${column}`, order);
     });
 
-  // Even if they already added orders, add id as the last one to get deterministic output
-  query.orderBy(`${primary.alias}.id`);
   query.limit(limit || entityLimit);
   if (offset) {
     query.offset(offset);

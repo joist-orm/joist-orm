@@ -4,7 +4,9 @@ import { Knex } from "knex";
 import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
+import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
+import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/Driver";
 import { Entity, isEntity } from "./Entity";
@@ -60,6 +62,11 @@ export interface EntityConstructor<T> {
   new (em: EntityManager<any>, opts: any): T;
 
   defaultValues: object;
+  // Use any for now to pass the `.includes` test in `EntityConstructor.test.ts`. We could
+  // probably do some sort of `tagOf(T)` look up, similar to filter types, which would return
+  // either the string literal for a real `T`, or `any` if using `EntityConstructor<any>`.
+  tagName: any;
+  metadata: EntityMetadata<any>;
 }
 
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
@@ -78,6 +85,17 @@ export interface FindFilterOptions<T extends Entity> {
 export interface FindPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
   limit: number | undefined;
   offset?: number;
+}
+
+export interface FindGqlPaginatedFilterOptions<T extends Entity> extends FindFilterOptions<T> {
+  limit?: number | null;
+  offset?: number | null;
+}
+
+/** Options for the `findCount`. */
+export interface FindCountFilterOptions<T extends Entity> {
+  conditions?: ExpressionFilter;
+  softDeletes?: "include" | "exclude";
 }
 
 /**
@@ -253,16 +271,17 @@ export class EntityManager<C = unknown> {
   public async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
+    options: FindPaginatedFilterOptions<T>,
   ): Promise<T[]>;
   public async findPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+    options: FindPaginatedFilterOptions<T> & { populate: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+    options: FindPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
     const { populate, limit, offset, ...rest } = options || {};
     const query = parseFindQuery(getMetadata(type), where, rest);
@@ -305,18 +324,19 @@ export class EntityManager<C = unknown> {
   public async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
+    options: FindGqlPaginatedFilterOptions<T>,
   ): Promise<T[]>;
   public async findGqlPaginated<T extends Entity, H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: Const<H> },
+    options: FindGqlPaginatedFilterOptions<T> & { populate: Const<H> },
   ): Promise<Loaded<T, H>[]>;
   async findGqlPaginated<T extends Entity>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
-    options?: FindPaginatedFilterOptions<T> & { populate?: any },
+    options: FindGqlPaginatedFilterOptions<T> & { populate?: any },
   ): Promise<T[]> {
-    return this.findPaginated(type, where as any, options);
+    return this.findPaginated(type, where as any, options as any);
   }
 
   public async findOne<T extends Entity>(
@@ -413,11 +433,55 @@ export class EntityManager<C = unknown> {
   }
 
   /**
-   * Conditionally finds or creates an Entity.
+   * Returns the count of entities that match the `where` clause.
    *
-   * The types work out where the `where` + `ifNewOpts` are both subsets of the entity's `Opts`
-   * type, i.e. if we have to create the entity, the combintaion of `where` + `ifNewOpts` will
-   * have all of the necessary required fields.
+   * The `where` clause, and any options.conditions, matches the same syntax
+   * as `em.find`.
+   *
+   * Note: this method is not currently auto-batched, so it will cause N+1s if called in a loop.
+   */
+  async findCount<T extends Entity>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+    options: FindCountFilterOptions<T> = {},
+  ): Promise<number> {
+    const { softDeletes = "exclude" } = options;
+
+    let count = await findCountDataLoader(this, type, softDeletes).load({ where, ...options });
+
+    // If the user is do "count all", we can adjust the number up/down based on
+    // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c
+    // then we'd also have to eval each created/deleted entity against the WHERE
+    // clause before knowing if it should adjust teh amount.
+    const isSelectAll = Object.keys(where).length === 0;
+    if (isSelectAll) {
+      for (const entity of this._entities) {
+        if (entity instanceof type) {
+          if (entity.isNewEntity) {
+            count++;
+          } else if (entity.isDeletedEntity) {
+            count--;
+          }
+        }
+      }
+    }
+
+    return count;
+  }
+
+  /**
+   * Conditionally finds or creates (or upserts) an Entity.
+   *
+   * The `where` param is used to find the existing/if any entity; if not found,
+   * then one will be created.
+   *
+   * The `ifNew` param will be used, if no entity is found, for the `em.create` call;
+   * it is typed such that it will require all opts necessary for the `em.create` to
+   * be valid, _unless_ those opts are already included in either the `where` or
+   * `upsert` params.
+   *
+   * The optional `upsert` param are fields to always set/update, regardless of whether
+   * the entity is created or not.
    *
    * @param type the entity type to find/create
    * @param where the fields to look up the existing entity by
@@ -428,18 +492,18 @@ export class EntityManager<C = unknown> {
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>,
-  >(type: EntityConstructor<T>, where: F, ifNew: O, upsert?: U): Promise<T>;
+    N extends Omit<OptsOf<T>, keyof F | keyof U>,
+  >(type: EntityConstructor<T>, where: F, ifNew: N, upsert?: U): Promise<T>;
   async findOrCreate<
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>,
+    N extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
   >(
     type: EntityConstructor<T>,
     where: F,
-    ifNew: O,
+    ifNew: N,
     upsert?: U,
     options?: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H>>;
@@ -447,28 +511,21 @@ export class EntityManager<C = unknown> {
     T extends Entity,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
-    O extends Omit<OptsOf<T>, keyof F | keyof U>,
+    N extends Omit<OptsOf<T>, keyof F | keyof U>,
     H extends LoadHint<T>,
   >(
     type: EntityConstructor<T>,
     where: F,
-    ifNew: O,
+    ifNew: N,
     upsert?: U,
     options?: { populate?: Const<H>; softDeletes?: "include" | "exclude" },
   ): Promise<T> {
-    const { softDeletes, populate } = options ?? {};
-    const entities = await this.find(type, where as FilterWithAlias<T>, { softDeletes });
-    let entity: T;
-    if (entities.length > 1) {
-      throw new TooManyError();
-    } else if (entities.length === 1) {
-      entity = entities[0];
-    } else {
-      entity = this.create(type, { ...where, ...ifNew } as OptsOf<T>);
-    }
-    if (upsert) {
-      entity.set(upsert);
-    }
+    const { softDeletes = "exclude", populate } = options ?? {};
+    const entity = await findOrCreateDataLoader(this, type, where, softDeletes).load({
+      where,
+      ifNew: ifNew as OptsOf<T>,
+      upsert,
+    });
     if (populate) {
       await this.populate(entity, populate);
     }

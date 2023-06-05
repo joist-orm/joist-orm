@@ -3,7 +3,7 @@ title: Schema Assumptions
 sidebar_position: 1
 ---
 
-Joist makes a few assumptions about your database schema, described below, which basically assume you have a modern/pleasant database schema that you want directly mapped to your TypeScript domain model.
+Joist makes a few assumptions about your database schema, which basically assume you have a modern/pleasant database schema that you want directly mapped to your TypeScript domain model.
 
 ## Entity Tables
 
@@ -12,7 +12,7 @@ Joist expects entity tables (i.e. `authors`, `books`) to have a single primary k
 1. A `id` / `serial` type, that uses a sequence called `${tableName}_id_seq`, or
 2. A `uuid` type
 
-And that is about it; you can:
+And that is it; you can:
 
 * Use either singular or plural table names (`author` or `authors`)
 * Use either underscore or camel cased column names (`first_name` or `firstName`)
@@ -21,13 +21,13 @@ If you use plural table names, Joist will de-pluralize them for the entity name,
 
 :::info
 
-As a disclaimer, we have only added Postgres data types to Joist as we've personally needed them; if you use a data type that Joist doesn't support yet, you'll get an error when running `joist-codegen`, but please just open an issue or PR and we'll be happy to look in to it.
+We have added Postgres data types to Joist only as we've personally needed them; if you use a data type that Joist doesn't support yet, you'll get an error when running `joist-codegen`, but please just open an issue or PR, and we'll be happy to look in to it.
 
 :::
 
 ### Deferred Constraints
 
-Joist batches all `INSERT`s and `UPDATE`s within an `EntityManager.flush`, which results in the best performance, but means that foreign keys might primarily be invalid (we've inserted a `Book` with an `author_id` before the `Author` is inserted).
+Joist batches all `INSERT`s and `UPDATE`s within an `EntityManager.flush`, which results in the best performance, but means that foreign keys might be temporarily invalid (i.e. we've inserted a `Book` with an `author_id` before the `Author` is inserted).
 
 Joist handles this by telling Postgres to _temporarily_ defer foreign key checks until the end of the transaction.
 
@@ -41,7 +41,7 @@ CREATE TABLE "authors" (
 );
 ```
 
-If you're using node-pg-migrate for your migrations, the `joist-migration-utils` NPM package has utility methods, i.e. `createEntityTable` and `foreignKey`, to always apply these defaults for you, but you should be able to do the same in any migration library.
+If you're using node-pg-migrate for your migrations, Joist's `joist-migration-utils` NPM package has utility methods, i.e. `createEntityTable` and `foreignKey`, to apply these defaults for you, but you should be able to do the same in any migration library.
 
 :::info
 

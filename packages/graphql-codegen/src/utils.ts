@@ -46,7 +46,7 @@ export function sortKeys<T extends object>(o: T): T {
         typeof value === "object" && isPlainObject(value)
           ? sortKeys(value as any as object)
           : Array.isArray(value)
-          ? value.sort()
+          ? (value as any[]).sort()
           : value;
       acc[key as keyof T] = newValue as any;
       return acc;

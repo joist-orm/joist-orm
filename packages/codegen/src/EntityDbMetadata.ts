@@ -472,6 +472,12 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
+  // Make sure the constraint is deferrable
+  if (!r.foreignKey.isDeferred || !r.foreignKey.isDeferrable) {
+    console.log(
+      `WARNING: Foreign key ${r.foreignKey.name} is not DEFERRABLE/INITIALLY DEFERRED, see https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints`,
+    );
+  }
   const derived = fkFieldDerived(config, entity, fieldName);
   return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType };
 }

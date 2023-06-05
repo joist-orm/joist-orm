@@ -252,7 +252,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
           }
         case "m2o":
           const otherMeta = field.otherMetadata();
-          const ef = parseEntityFilter(value);
+          const ef = parseEntityFilter(field.otherMetadata(), value);
           if (!ef) {
             return;
           }

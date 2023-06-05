@@ -6,6 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -107,6 +108,8 @@ bookReviewConfig.addRule(newRequiredRule("book"));
 
 export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
+  static readonly tagName = "br";
+  static readonly metadata: EntityMetadata<BookReview>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookReviewFilter;

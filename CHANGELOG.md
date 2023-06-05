@@ -1,3 +1,143 @@
+# [1.86.0](https://github.com/stephenh/joist-ts/compare/v1.85.2...v1.86.0) (2023-06-04)
+
+
+### Features
+
+* Bump TypeScript, misc deps. ([#675](https://github.com/stephenh/joist-ts/issues/675)) ([e3fcb70](https://github.com/stephenh/joist-ts/commit/e3fcb7053d0ffc85592dfeba65c145740e1ef4c3))
+
+## [1.85.2](https://github.com/stephenh/joist-ts/compare/v1.85.1...v1.85.2) (2023-06-03)
+
+
+### Bug Fixes
+
+* Avoid using JS keywords. Fixes [#672](https://github.com/stephenh/joist-ts/issues/672). ([#673](https://github.com/stephenh/joist-ts/issues/673)) ([eee04fe](https://github.com/stephenh/joist-ts/commit/eee04fecc1fd3beb825bf27d83cd30166b42e105))
+
+## [1.85.1](https://github.com/stephenh/joist-ts/compare/v1.85.0...v1.85.1) (2023-06-01)
+
+
+### Bug Fixes
+
+* Fix syntax error when updating keyword-named columns. ([#671](https://github.com/stephenh/joist-ts/issues/671)) ([a6e820c](https://github.com/stephenh/joist-ts/commit/a6e820caf2da2113ca4f2a6bc1c09f3fcd84cc6c))
+
+# [1.85.0](https://github.com/stephenh/joist-ts/compare/v1.84.0...v1.85.0) (2023-06-01)
+
+
+### Features
+
+* Add Ops AST/EntityWriter for writes ([#670](https://github.com/stephenh/joist-ts/issues/670)) ([8ff2937](https://github.com/stephenh/joist-ts/commit/8ff29373cd7325fe1858fdd0873df58173febab7))
+
+# [1.84.0](https://github.com/stephenh/joist-ts/compare/v1.83.4...v1.84.0) (2023-05-29)
+
+
+### Features
+
+* Warn on misconfigured foreign keys. ([#669](https://github.com/stephenh/joist-ts/issues/669)) ([aa882fa](https://github.com/stephenh/joist-ts/commit/aa882fa764c16fe2c3fceb64a8519fd90729b86d))
+
+## [1.83.4](https://github.com/stephenh/joist-ts/compare/v1.83.3...v1.83.4) (2023-05-26)
+
+
+### Bug Fixes
+
+* Fix findOrCreate incorrectly matching new entities. ([#666](https://github.com/stephenh/joist-ts/issues/666)) ([73135a3](https://github.com/stephenh/joist-ts/commit/73135a328e77d44cd93e32e016f9ab2998a7928c))
+
+## [1.83.3](https://github.com/stephenh/joist-ts/compare/v1.83.2...v1.83.3) (2023-05-25)
+
+
+### Bug Fixes
+
+* Fix tags using the idType instead of just int. ([#665](https://github.com/stephenh/joist-ts/issues/665)) ([3c96feb](https://github.com/stephenh/joist-ts/commit/3c96feb7b33ccc1153890a9347aedb4a7d9cb175))
+
+## [1.83.2](https://github.com/stephenh/joist-ts/compare/v1.83.1...v1.83.2) (2023-05-25)
+
+
+### Bug Fixes
+
+* Fix using -1 as a null condition for uuid columns. ([#664](https://github.com/stephenh/joist-ts/issues/664)) ([7aca764](https://github.com/stephenh/joist-ts/commit/7aca7644e4a89c7934879f86b45970ec87c84d89))
+
+## [1.83.1](https://github.com/stephenh/joist-ts/compare/v1.83.0...v1.83.1) (2023-05-25)
+
+
+### Bug Fixes
+
+* Skip em.find queries if a param is new. ([#663](https://github.com/stephenh/joist-ts/issues/663)) ([c0f45b0](https://github.com/stephenh/joist-ts/commit/c0f45b04e0c224c5f68b5750faab1399a04b7ed1))
+
+# [1.83.0](https://github.com/stephenh/joist-ts/compare/v1.82.0...v1.83.0) (2023-05-24)
+
+
+### Features
+
+* Teach em.findOrCreate to look for newly-created/updated entities ([#661](https://github.com/stephenh/joist-ts/issues/661)) ([28bd591](https://github.com/stephenh/joist-ts/commit/28bd5915a24510df30c63d36655659cc3b69e71a))
+
+# [1.82.0](https://github.com/stephenh/joist-ts/compare/v1.81.5...v1.82.0) (2023-05-24)
+
+
+### Features
+
+* Dedupe em.findOrCreates that are called in a loop. ([#660](https://github.com/stephenh/joist-ts/issues/660)) ([e7b3cd3](https://github.com/stephenh/joist-ts/commit/e7b3cd3eddc39797daf96660b5399fde7202b135))
+
+## [1.81.5](https://github.com/stephenh/joist-ts/compare/v1.81.4...v1.81.5) (2023-05-23)
+
+
+### Bug Fixes
+
+* Support for polys in aliases. ([#659](https://github.com/stephenh/joist-ts/issues/659)) ([31614ef](https://github.com/stephenh/joist-ts/commit/31614ef5dde1593d09d6a91813c005ad93918048))
+
+## [1.81.4](https://github.com/stephenh/joist-ts/compare/v1.81.3...v1.81.4) (2023-05-19)
+
+
+### Bug Fixes
+
+* Provide a GraphQLFilterAndSettings. ([#658](https://github.com/stephenh/joist-ts/issues/658)) ([fc6aa40](https://github.com/stephenh/joist-ts/commit/fc6aa408e8f1bf69556a55990b34881a580c9317))
+
+## [1.81.3](https://github.com/stephenh/joist-ts/compare/v1.81.2...v1.81.3) (2023-05-19)
+
+
+### Bug Fixes
+
+* Allow GQL input on limit/offset. ([#657](https://github.com/stephenh/joist-ts/issues/657)) ([a6422a4](https://github.com/stephenh/joist-ts/commit/a6422a45146fde85746c449a3beaa0d9d868ca7a))
+
+## [1.81.2](https://github.com/stephenh/joist-ts/compare/v1.81.1...v1.81.2) (2023-05-19)
+
+
+### Bug Fixes
+
+* Fix findCount with o2m conditions. ([#656](https://github.com/stephenh/joist-ts/issues/656)) ([7a2eb6d](https://github.com/stephenh/joist-ts/commit/7a2eb6d87fd0a517a1be1f1f034dbebad606f3a9))
+
+## [1.81.1](https://github.com/stephenh/joist-ts/compare/v1.81.0...v1.81.1) (2023-05-19)
+
+
+### Bug Fixes
+
+* Fix gatherEntities looping on cycles. ([#655](https://github.com/stephenh/joist-ts/issues/655)) ([e504271](https://github.com/stephenh/joist-ts/commit/e50427142c4c2900454e6e1d62b7f7690d319c3b))
+
+# [1.81.0](https://github.com/stephenh/joist-ts/compare/v1.80.0...v1.81.0) (2023-05-19)
+
+
+### Features
+
+* Add EntityManager-level caching for em.findCount. ([#654](https://github.com/stephenh/joist-ts/issues/654)) ([d7a469b](https://github.com/stephenh/joist-ts/commit/d7a469b194ea8c62b3c7a59f63cd16206cde57ea))
+
+# [1.80.0](https://github.com/stephenh/joist-ts/compare/v1.79.0...v1.80.0) (2023-05-19)
+
+
+### Features
+
+* Add Entity.tagName/metadata as static fields. ([#652](https://github.com/stephenh/joist-ts/issues/652)) ([a9cab9e](https://github.com/stephenh/joist-ts/commit/a9cab9ea35166f88132467488eb28a5ec2d249ec))
+
+# [1.79.0](https://github.com/stephenh/joist-ts/compare/v1.78.3...v1.79.0) (2023-05-19)
+
+
+### Features
+
+* Add em.findCount. ([#651](https://github.com/stephenh/joist-ts/issues/651)) ([dcf361c](https://github.com/stephenh/joist-ts/commit/dcf361ce022bcee853d7fe714a96cd681185e358))
+
+## [1.78.3](https://github.com/stephenh/joist-ts/compare/v1.78.2...v1.78.3) (2023-05-19)
+
+
+### Bug Fixes
+
+* Allow primitive conditions to do is/is not null. ([#650](https://github.com/stephenh/joist-ts/issues/650)) ([995d871](https://github.com/stephenh/joist-ts/commit/995d871c95f378892e221dbdd85721bd7036a12d)), closes [#649](https://github.com/stephenh/joist-ts/issues/649)
+
 ## [1.78.2](https://github.com/stephenh/joist-ts/compare/v1.78.1...v1.78.2) (2023-05-17)
 
 

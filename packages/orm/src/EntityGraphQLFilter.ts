@@ -1,9 +1,19 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
-import { EntityFilter } from "./EntityFilter";
-import { GraphQLFilterOf } from "./EntityManager";
+import { EntityFilter, ExpressionFilter } from "./EntityFilter";
+import { GraphQLFilterOf, OrderOf } from "./EntityManager";
 
 export type GraphQLFilterWithAlias<T extends Entity> = { as?: Alias<T> } & GraphQLFilterOf<T>;
+
+/** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
+export type GraphQLFilterAndSettings<T extends Entity> = {
+  where: GraphQLFilterWithAlias<T>;
+  conditions?: ExpressionFilter;
+  orderBy?: OrderOf<T>;
+  limit?: number | null;
+  offset?: number | null;
+  softDeletes?: "exclude" | "include";
+};
 
 /**
  * This essentially matches the ValueFilter but with looser types to placate GraphQL.

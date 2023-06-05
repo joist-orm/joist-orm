@@ -4,14 +4,7 @@ import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import {
-  Column,
-  getConstructorFromTaggedId,
-  isDefined,
-  keyToNumber,
-  maybeResolveReferenceToId,
-  needsClassPerTableJoins,
-} from "./index";
+import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { abbreviation } from "./QueryBuilder";
 import { assertNever, fail, partition } from "./utils";
 
@@ -53,7 +46,7 @@ export interface JoinTable {
 
 export type ParsedTable = PrimaryTable | JoinTable;
 
-interface ParsedOrderBy {
+export interface ParsedOrderBy {
   alias: string;
   column: string;
   order: OrderBy;
@@ -69,7 +62,7 @@ export interface ParsedFindQuery {
   /** Any optional complex conditions that will be ANDd with the simple conditions. */
   complexConditions?: ParsedExpressionFilter[];
   /** Any optional orders to add before the default 'order by id'. */
-  orderBys?: ParsedOrderBy[];
+  orderBys: ParsedOrderBy[];
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
@@ -87,9 +80,9 @@ export function parseFindQuery(
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
   const conditions: ColumnCondition[] = [];
-  const query = { selects, tables, conditions };
-  const complexConditions: ParsedExpressionFilter[] = [];
   const orderBys: ParsedOrderBy[] = [];
+  const query = { selects, tables, conditions, orderBys };
+  const complexConditions: ParsedExpressionFilter[] = [];
   const {
     orderBy = undefined,
     conditions: expression = undefined,
@@ -132,7 +125,7 @@ export function parseFindQuery(
     filter: any,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
-    const ef = parseEntityFilter(filter);
+    const ef = parseEntityFilter(meta, filter);
     if (!ef && join !== "primary" && !isAlias(filter)) {
       return;
     }
@@ -183,7 +176,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
           }
-          const f = parseEntityFilter(sub);
+          const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
           if (!f) {
             // skip
@@ -199,7 +192,7 @@ export function parseFindQuery(
             });
           }
         } else if (field.kind === "poly") {
-          const f = parseEntityFilter((ef.subFilter as any)[key]);
+          const f = parseEntityFilter(meta, (ef.subFilter as any)[key]);
           if (!f) {
             // skip
           } else if (f.kind === "join") {
@@ -220,8 +213,7 @@ export function parseFindQuery(
                 cond: mapToDb(column, f),
               });
             } else if (f.kind === "is-null") {
-              // Add a condition for every component
-              // TODO ...should these be anded or ored?
+              // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                 conditions.push({
@@ -274,7 +266,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, "outer", `${ja}.${field.columnNames[1]}`, `${a}.id`, sub);
           }
-          const f = parseEntityFilter(sub);
+          const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id, if so we can avoid the join
           if (!f) {
             // skip
@@ -354,13 +346,9 @@ export function parseFindQuery(
   }
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
-  } else {
-    maybeAddOrderBy(query, meta, alias);
   }
+  maybeAddOrderBy(query, meta, alias);
 
-  if (orderBys.length > 0) {
-    Object.assign(query, { orderBys });
-  }
   if (complexConditions.length > 0) {
     Object.assign(query, { complexConditions });
   }
@@ -376,7 +364,7 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
   parsed.conditions.filter((c) => !c.pruneable).forEach((c) => used.add(c.alias));
-  parsed.orderBys?.forEach((o) => used.add(o.alias));
+  parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
   flattenComplexConditions(parsed.complexConditions).forEach((c) => used.add(c.alias));
   // Mark all usages via joins
@@ -431,7 +419,7 @@ export type ParsedEntityFilter =
   | { kind: "join"; subFilter: object };
 
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
+export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): ParsedEntityFilter | undefined {
   if (filter === undefined) {
     // This matches legacy `em.find(Book, { author: undefined })` behavior
     return undefined;
@@ -446,11 +434,11 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? v.id ?? -1 : v;
+        return isEntity(v) ? v.id ?? nilIdValue(meta) : v;
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: filter.id || -1 };
+    return { kind: "eq", value: filter.id || nilIdValue(meta) };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -464,7 +452,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: value.id || -1 };
+        return { kind: "ne", value: value.id || nilIdValue(meta) };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -479,7 +467,7 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: value.id || -1 };
+        return { kind: "eq", value: value.id || nilIdValue(meta) };
       } else {
         return parseValueFilter(value)[0] as any;
       }
@@ -487,6 +475,27 @@ export function parseEntityFilter(filter: any): ParsedEntityFilter | undefined {
     return { kind: "join", subFilter: filter };
   } else {
     throw new Error(`Unrecognized filter ${filter}`);
+  }
+}
+
+/**
+ * We use this value if users include new (id-less) entities as em.find conditions.
+ *
+ * The idea is that this condition would never be met, but we still want to do the em.find
+ * query in case it's in an `OR` clause that would match false, but some other part of the
+ * clause would match. I.e. instead of just skipping the DB query all together, which is
+ * also something we could consider doing.
+ *
+ * For int IDs we use -1, and for uuid IDs, we use the nil UUID value:
+ *
+ * https://en.wikipedia.org/wiki/Universally_unique_identifier#Nil_UUID
+ */
+function nilIdValue(meta: EntityMetadata<any>): any {
+  switch (meta.idType) {
+    case "int":
+      return -1;
+    case "uuid":
+      return "00000000-0000-0000-0000-000000000000";
   }
 }
 
@@ -635,11 +644,21 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
   }
 }
 
+/** Adds any user-configured default order, plus a "always order by id" for determinism. */
 export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any>, alias: string): void {
+  const { orderBys } = query;
   if (meta.orderBy) {
     const field = meta.allFields[meta.orderBy] ?? fail(`${meta.orderBy} not found on ${meta.tableName}`);
-    query.orderBys ??= [];
-    query.orderBys.push({ alias, column: field.serde!.columns[0].columnName, order: "ASC" });
+    const column = field.serde!.columns[0].columnName;
+    const hasAlready = orderBys.find((o) => o.alias === alias && o.column === column);
+    if (!hasAlready) {
+      orderBys.push({ alias, column, order: "ASC" });
+    }
+  }
+  // Even if they already added orders, add id as the last one to get deterministic output
+  const hasIdOrder = orderBys.find((o) => o.alias === alias && o.column === "id");
+  if (!hasIdOrder) {
+    orderBys.push({ alias, column: "id", order: "ASC" });
   }
 }
 
@@ -754,4 +773,8 @@ export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], J
     }
   }
   return [primary!, innerJoins, outerJoins];
+}
+
+function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
+  return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }

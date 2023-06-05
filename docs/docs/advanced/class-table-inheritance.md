@@ -18,7 +18,7 @@ For class table inheritance, we represent this in Postgres by having three separ
 If you're using Joist's `migration-utils`, this might look like:
 
 ```typescript
-createEnumTable(b, "animals", {
+createEntityTable(b, "animals", {
   name: "text",
 })
 createSubTable(b, "animals", "dogs", {

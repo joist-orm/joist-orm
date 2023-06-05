@@ -65,7 +65,7 @@ export function findDataLoader<T extends Entity>(
 
       // Build the list of 'arg1', 'arg2', ... strings
       const args = collectArgs(query);
-      args.unshift({ name: "tag", dbType: meta.idType });
+      args.unshift({ columnName: "tag", dbType: "int" });
 
       const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
       const [primary, innerJoins, outerJoins] = getTables(query);
@@ -82,12 +82,13 @@ export function findDataLoader<T extends Entity>(
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
       const [conditions] = buildConditions(combineConditions(query));
 
+      // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       const groupBys = selects
         .filter((s) => !s.includes("array_agg") && !s.includes("CASE") && !s.includes(" as "))
         .map((s) => s.replace("*", "id"));
 
-      const orderBys = query.orderBys || [{ alias: primary.alias, column: "id", order: "ASC" }];
-      for (const o of orderBys) {
+      // Also because of our `array_agg` group by, add any order bys to the group by
+      for (const o of query.orderBys) {
         if (o.alias !== primary.alias) {
           groupBys.push(`${o.alias}.${o.column}`);
         }
@@ -101,7 +102,7 @@ export function findDataLoader<T extends Entity>(
         ${outerJoins.map((j) => `LEFT OUTER JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
+        ORDER BY ${query.orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
         LIMIT ${entityLimit};
       `;
 
@@ -128,7 +129,8 @@ export function findDataLoader<T extends Entity>(
 // If a where clause includes an entity, object-hash cannot hash it, so just use the id.
 function replacer(v: any) {
   if (isEntity(v)) {
-    return v.id;
+    // Use toString() instead of id so that new entities are kept separate, i.e. `Author#2`
+    return v.toString();
   }
   // Strip out `{ as: ...alias proxy... }` from the `em.find` inline conditions
   if (isAlias(v)) {
@@ -142,20 +144,20 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
 }
 
 /** Collects & names all the args in a query, i.e. `['arg1', 'arg2']`--not the actual values. */
-function collectArgs(query: ParsedFindQuery): { name: string; dbType: string }[] {
-  const args: { name: string; dbType: string }[] = [];
+function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
+  const args: { columnName: string; dbType: string }[] = [];
   visit(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         const { kind } = c.cond;
         if (kind === "in" || kind === "nin") {
-          args.push({ name: `arg${args.length}`, dbType: `${c.dbType}[]` });
+          args.push({ columnName: `arg${args.length}`, dbType: `${c.dbType}[]` });
         } else if (kind === "between") {
           // between has two values
-          args.push({ name: `arg${args.length}`, dbType: c.dbType });
-          args.push({ name: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
         } else {
-          args.push({ name: `arg${args.length}`, dbType: c.dbType });
+          args.push({ columnName: `arg${args.length}`, dbType: c.dbType });
         }
       }
     },
@@ -260,8 +262,12 @@ function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, numbe
   }
 }
 
-function buildValuesCte(name: string, columns: { name: string; dbType: string }[], rows: readonly any[]): string {
-  return `WITH ${name} (${columns.map((c) => c.name).join(", ")}) AS (VALUES
+export function buildValuesCte(
+  tableName: string,
+  columns: { columnName: string; dbType: string }[],
+  rows: readonly any[],
+): string {
+  return `WITH ${tableName} (${columns.map((c) => `"${c.columnName}"`).join(", ")}) AS (VALUES
       ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
   )`;
 }

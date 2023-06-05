@@ -715,11 +715,11 @@ function isPgEnum(c: Column): boolean {
 
 function superstructType(s: string): Import {
   // Assume it's `foo@...`, turn it into `Foo@...`
-  const [symbol, path] = s.split("@");
-  return Import.from(`${pascalCase(symbol)}@${path}`);
+  const [symbol, ...path] = s.split("@");
+  return Import.from(`${pascalCase(symbol)}@${path.join('@')}`);
 }
 
 function userFieldTypeType(s: string): Import {
-  const [symbol, path] = s.split("@");
-  return Import.from(`${symbol}@${path}`);
+  const [symbol, ...path] = s.split("@");
+  return Import.from(`${symbol}@${path.join('@')}`);
 }

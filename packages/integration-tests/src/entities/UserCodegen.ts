@@ -52,7 +52,7 @@ export interface UserFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };
   name: { kind: "primitive"; type: string; unique: false; nullable: never };
   email: { kind: "primitive"; type: string; unique: false; nullable: never };
-  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: never };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined };
@@ -61,7 +61,7 @@ export interface UserFields {
 export interface UserOpts {
   name: string;
   email: string;
-  ipAddress: IpAddress;
+  ipAddress?: IpAddress | null;
   authorManyToOne?: Author | AuthorId | null;
   createdComments?: Comment[];
   likedComments?: Comment[];
@@ -77,7 +77,7 @@ export interface UserFilter {
   id?: ValueFilter<UserId, never>;
   name?: ValueFilter<string, never>;
   email?: ValueFilter<string, never>;
-  ipAddress?: ValueFilter<IpAddress, never>;
+  ipAddress?: ValueFilter<IpAddress, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -111,7 +111,6 @@ export const userConfig = new ConfigApi<User, Context>();
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));
-userConfig.addRule(newRequiredRule("ipAddress"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 
@@ -190,11 +189,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
     setField(this, "email", email);
   }
 
-  get ipAddress(): IpAddress {
+  get ipAddress(): IpAddress | undefined {
     return this.__orm.data["ipAddress"];
   }
 
-  set ipAddress(ipAddress: IpAddress) {
+  set ipAddress(ipAddress: IpAddress | undefined) {
     setField(this, "ipAddress", ipAddress);
   }
 

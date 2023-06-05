@@ -8,8 +8,7 @@ describe("saveUser", () => {
     const { em } = ctx;
     const result = await runSaveUser(ctx, () => ({
       name: "test user",
-      email: "test@test.com",
-      ipAddress: "127.0.0.1",
+      email: "test@test.com"
     }));
     expect(result).toBeDefined();
   });

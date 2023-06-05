@@ -720,6 +720,5 @@ function superstructType(s: string): Import {
 }
 
 function userFieldTypeType(s: string): Import {
-  const [symbol, ...path] = s.split("@");
-  return Import.from(`${symbol}@${path.join('@')}`);
+  return Import.from(s);
 }

@@ -1,3 +1,10 @@
+# [1.87.0](https://github.com/stephenh/joist-ts/compare/v1.86.0...v1.87.0) (2023-06-05)
+
+
+### Features
+
+* Add custom type override to config & codegen ([#676](https://github.com/stephenh/joist-ts/issues/676)) ([5d90aae](https://github.com/stephenh/joist-ts/commit/5d90aaeaf7bf258fdafca281f399748f29e89339))
+
 # [1.86.0](https://github.com/stephenh/joist-ts/compare/v1.85.2...v1.86.0) (2023-06-04)
 
 

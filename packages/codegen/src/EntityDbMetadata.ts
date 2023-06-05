@@ -11,7 +11,7 @@ import {
   isLargeCollection,
   isProtected,
   ormMaintainedFields,
-  superstructConfig,
+  superstructConfig, fieldTypeConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
 import {
@@ -341,13 +341,26 @@ function isComponentOfPolymorphicRelation(config: Config, r: M2ORelation) {
   return polymorphicFieldName(config, r) !== undefined;
 }
 
+function determineUserType(fieldType: PrimitiveTypescriptType, superstruct: string | undefined, userFieldType: string | undefined) {
+  if (fieldType === 'Object' && superstruct) {
+    return superstructType(superstruct);
+  }
+
+  if (userFieldType) {
+    return userFieldTypeType(userFieldType);
+  }
+
+  return fieldType;
+}
+
 function newPrimitive(config: Config, entity: Entity, column: Column, table: Table): PrimitiveField {
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const fieldType = mapType(table.name, columnName, columnType);
   const superstruct = superstructConfig(config, entity, fieldName);
-  const maybeUserType = fieldType === "Object" && superstruct ? superstructType(superstruct) : fieldType;
+  const userFieldType = fieldTypeConfig(config, entity, fieldName);
+  const maybeUserType = determineUserType(fieldType, superstruct, userFieldType);
   const unique = column.uniqueIndexes.find(isOneToOneIndex) !== undefined;
   return {
     kind: "primitive",
@@ -696,6 +709,12 @@ function isPgEnum(c: Column): boolean {
 }
 
 function superstructType(s: string): Import {
+  // Assume it's `foo@...`, turn it into `Foo@...`
+  const [symbol, path] = s.split("@");
+  return Import.from(`${pascalCase(symbol)}@${path}`);
+}
+
+function userFieldTypeType(s: string): Import {
   // Assume it's `foo@...`, turn it into `Foo@...`
   const [symbol, path] = s.split("@");
   return Import.from(`${pascalCase(symbol)}@${path}`);

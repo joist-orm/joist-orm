@@ -6,7 +6,7 @@ import { run } from "src/resolvers/testUtils";
 describe("saveUser", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
-    const result = await runSaveUser(ctx, () => ({ name: "test user", email: "test@test.com" }));
+    const result = await runSaveUser(ctx, () => ({ name: "test user", email: "test@test.com", ipAddress: '127.0.0.1' }));
     expect(result).toBeDefined();
   });
 });

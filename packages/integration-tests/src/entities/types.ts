@@ -6,5 +6,4 @@ export const address = object({
   street: string(),
 });
 
-
-export type IpAddress = string & { __type: 'IpAddress'}
+export type IpAddress = string & { __type: "IpAddress" };

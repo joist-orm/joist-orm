@@ -4,6 +4,7 @@ import { plural, singular } from "pluralize";
 import { imp, Import } from "ts-poet";
 import {
   Config,
+  fieldTypeConfig,
   getTimestampConfig,
   isAsyncDerived,
   isDerived,
@@ -11,7 +12,7 @@ import {
   isLargeCollection,
   isProtected,
   ormMaintainedFields,
-  superstructConfig, fieldTypeConfig,
+  superstructConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
 import {
@@ -341,8 +342,12 @@ function isComponentOfPolymorphicRelation(config: Config, r: M2ORelation) {
   return polymorphicFieldName(config, r) !== undefined;
 }
 
-function determineUserType(fieldType: PrimitiveTypescriptType, superstruct: string | undefined, userFieldType: string | undefined) {
-  if (fieldType === 'Object' && superstruct) {
+function determineUserType(
+  fieldType: PrimitiveTypescriptType,
+  superstruct: string | undefined,
+  userFieldType: string | undefined,
+) {
+  if (fieldType === "Object" && superstruct) {
     return superstructType(superstruct);
   }
 

@@ -73,7 +73,7 @@ export const bookMeta: EntityMetadata<Book> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int"), immutable: true },
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "authorId", "int"), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "authorId", "int"), immutable: false },
   },
   allFields: {},
   orderBy: undefined,
@@ -119,7 +119,7 @@ export const paintingMeta: EntityMetadata<Painting> = {
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "createdAt", "timestamp without time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updatedAt", "timestamp without time zone"), immutable: false },
-    "artist": { kind: "m2o", fieldName: "artist", fieldIdName: "artistId", required: true, otherMetadata: () => artistMeta, otherFieldName: "paintings", serde: new KeySerde("artist", "artist", "artistId", "uuid"), immutable: false },
+    "artist": { kind: "m2o", fieldName: "artist", fieldIdName: "artistId", derived: false, required: true, otherMetadata: () => artistMeta, otherFieldName: "paintings", serde: new KeySerde("artist", "artist", "artistId", "uuid"), immutable: false },
   },
   allFields: {},
   orderBy: undefined,

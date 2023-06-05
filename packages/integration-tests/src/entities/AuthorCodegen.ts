@@ -30,6 +30,7 @@ import {
   OrderBy,
   PartialOrNull,
   PersistedAsyncProperty,
+  PersistedAsyncReference,
   setField,
   setOpts,
   ValueFilter,
@@ -92,6 +93,7 @@ export interface AuthorFields {
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
   mentor: { kind: "m2o"; type: Author; nullable: undefined };
   currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined };
+  favoriteBook: { kind: "m2o"; type: Book; nullable: undefined };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined };
 }
 
@@ -151,6 +153,7 @@ export interface AuthorFilter {
   favoriteShape?: ValueFilter<FavoriteShape, null>;
   mentor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   currentDraftBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
+  favoriteBook?: EntityFilter<Book, BookId, FilterOf<Book>, null>;
   publisher?: EntityFilter<Publisher, PublisherId, FilterOf<Publisher>, null>;
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
@@ -181,6 +184,7 @@ export interface AuthorGraphQLFilter {
   favoriteShape?: ValueGraphQLFilter<FavoriteShape>;
   mentor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   currentDraftBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
+  favoriteBook?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null>;
   publisher?: EntityGraphQLFilter<Publisher, PublisherId, GraphQLFilterOf<Publisher>, null>;
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
@@ -211,6 +215,7 @@ export interface AuthorOrder {
   favoriteShape?: OrderBy;
   mentor?: AuthorOrder;
   currentDraftBook?: BookOrder;
+  favoriteBook?: BookOrder;
   publisher?: PublisherOrder;
 }
 
@@ -259,6 +264,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     "currentDraftBook",
     "currentDraftAuthor",
   );
+
+  abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
 
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
 

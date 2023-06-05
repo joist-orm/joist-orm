@@ -178,16 +178,45 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.numberOfBooks.get).toBe(0);
   });
 
+  it.withCtx("updates derived fields that are foreign keys", async ({ em }) => {
+    // Given an entity with an async derived field
+    const a = newAuthor(em);
+    const b = newBook(em, { author: a, reviews: [{ rating: 10 }] });
+    await em.flush();
+
+    // Then the derived field is updated
+    // We will check the database directly to make sure the FK is updated
+    expect(await select("authors")).toMatchObject([{ id: 1, favorite_book_id: 1 }]);
+    // And then we will assert using joist's .get (as this might cause the derived field to be recalculated)
+    expect(a.favoriteBook.get).toBe(b);
+
+    // If there is a new favorite book
+    const b2 = newBook(em, { author: a, reviews: [{ rating: 20 }] });
+    await em.flush();
+    // Then the derived field is updated
+    expect(await select("authors")).toMatchObject([{ id: 1, favorite_book_id: 2 }]);
+    expect(a.favoriteBook.get).toBe(b2);
+
+    // If the favorite book is deleted
+    em.delete(b2);
+    await em.flush();
+    // Then the derived field is updated
+    expect(await select("authors")).toMatchObject([{ id: 1, favorite_book_id: 1 }]);
+    expect(a.favoriteBook.get).toBe(b);
+  });
+
   it.withCtx("creates the right reactive derived values", async () => {
     const cstr = expect.any(Function);
     expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([
       { cstr, name: "numberOfBooks", fields: ["author"], path: ["author"] },
       { cstr, name: "bookComments", fields: ["author"], path: ["author"] },
       { cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
+      { cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);
     expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
       { cstr, name: "numberOfPublicReviews", fields: ["isPublic", "rating"], path: ["book", "author"] },
+      { cstr, name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
       { cstr, name: "isPublic", fields: [], path: [] },
     ]);
   });

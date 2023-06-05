@@ -44,6 +44,7 @@ import {
   OrderBy,
   PartialOrNull,
   PersistedAsyncProperty,
+  PersistedAsyncReference,
   PolymorphicReference,
   setField,
   setOpts,
@@ -230,6 +231,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const m2o = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
+
+    if (m2o.derived === "async") {
+      return code`
+        abstract readonly ${fieldName}: ${PersistedAsyncReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
+      `;
+    }
+
     return code`
       readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
         ${hasOne}(
@@ -618,7 +626,7 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
+  const m2o = meta.manyToOnes.filter(({ derived }) => !derived).map(({ fieldName, otherEntity, notNull }) => {
     const maybeNull = maybeUnionNull(notNull);
     return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type} | ${otherEntity.idType} ${maybeNull};`;
   });
@@ -672,7 +680,7 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
 // This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
 // in the partial type and of course the caller will only be setting one.
 function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity }) => {
+  const m2o = meta.manyToOnes.filter(({ derived }) => !derived).map(({ fieldName, otherEntity }) => {
     return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
   });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {

@@ -133,6 +133,7 @@ export type ManyToOneField = Field & {
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
+  derived: "async" | false;
 };
 
 /** I.e. a `Author.books` collection. */
@@ -258,6 +259,8 @@ export class EntityDbMetadata {
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isOneToOneRelation(r))
       .map((r) => newOneToMany(config, this.entity, r))
+      // Do not generate o2m for persisted async derived fields
+      .filter((f) => !isAsyncDerived(config, f.otherEntity, f.otherFieldName))
       .filter((f) => !f.ignore);
     this.oneToManys = allOneToManys.filter((f) => !f.isLargeCollection);
     this.largeOneToManys = allOneToManys.filter((f) => f.isLargeCollection);
@@ -396,6 +399,14 @@ function fieldDerived(config: Config, entity: Entity, fieldName: string): Primit
   }
 }
 
+function fkFieldDerived(config: Config, entity: Entity, fieldName: string): ManyToOneField["derived"] {
+  if (isAsyncDerived(config, entity, fieldName)) {
+    return "async";
+  } else {
+    return false;
+  }
+}
+
 function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: EnumMetadata): EnumField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
@@ -485,7 +496,8 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
       `WARNING: Foreign key ${r.foreignKey.name} is not DEFERRABLE/INITIALLY DEFERRED, see https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints`,
     );
   }
-  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, dbType };
+  const derived = fkFieldDerived(config, entity, fieldName);
+  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

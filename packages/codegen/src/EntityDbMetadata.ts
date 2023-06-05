@@ -720,7 +720,6 @@ function superstructType(s: string): Import {
 }
 
 function userFieldTypeType(s: string): Import {
-  // Assume it's `foo@...`, turn it into `Foo@...`
   const [symbol, path] = s.split("@");
-  return Import.from(`${pascalCase(symbol)}@${path}`);
+  return Import.from(`${symbol}@${path}`);
 }

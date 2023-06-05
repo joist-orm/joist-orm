@@ -31,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { IpAddress } from "src/entities/types";
 import {
   Author,
   AuthorId,
@@ -51,6 +52,7 @@ export interface UserFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };
   name: { kind: "primitive"; type: string; unique: false; nullable: never };
   email: { kind: "primitive"; type: string; unique: false; nullable: never };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined };
@@ -59,6 +61,7 @@ export interface UserFields {
 export interface UserOpts {
   name: string;
   email: string;
+  ipAddress?: IpAddress | null;
   authorManyToOne?: Author | AuthorId | null;
   createdComments?: Comment[];
   likedComments?: Comment[];
@@ -74,6 +77,7 @@ export interface UserFilter {
   id?: ValueFilter<UserId, never>;
   name?: ValueFilter<string, never>;
   email?: ValueFilter<string, never>;
+  ipAddress?: ValueFilter<IpAddress, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -85,6 +89,7 @@ export interface UserGraphQLFilter {
   id?: ValueGraphQLFilter<UserId>;
   name?: ValueGraphQLFilter<string>;
   email?: ValueGraphQLFilter<string>;
+  ipAddress?: ValueGraphQLFilter<IpAddress>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -96,6 +101,7 @@ export interface UserOrder {
   id?: OrderBy;
   name?: OrderBy;
   email?: OrderBy;
+  ipAddress?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   authorManyToOne?: AuthorOrder;
@@ -181,6 +187,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
 
   set email(email: string) {
     setField(this, "email", email);
+  }
+
+  get ipAddress(): IpAddress | undefined {
+    return this.__orm.data["ipAddress"];
+  }
+
+  set ipAddress(ipAddress: IpAddress | undefined) {
+    setField(this, "ipAddress", ipAddress);
   }
 
   get createdAt(): Date {

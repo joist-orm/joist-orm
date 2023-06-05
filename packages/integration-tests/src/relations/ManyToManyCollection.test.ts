@@ -2,6 +2,7 @@ import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag
 import { Author, Book, newAuthor, newBook, newTag, Tag, User } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { zeroTo } from "../utils";
+import { IpAddress } from "../entities/types";
 
 describe("ManyToManyCollection", () => {
   it("can load a many-to-many", async () => {
@@ -462,7 +463,7 @@ describe("ManyToManyCollection", () => {
   it("can be renamed", () => {
     // see createManyToManyTable("users_to_comments",...) in 1580658856631_author.ts for the actual rename
     const em = newEntityManager();
-    const user = em.create(User, { name: "u1", email: "test@test.com" });
+    const user = em.create(User, { name: "u1", email: "test@test.com", ipAddress: '127.0.0.1' as IpAddress });
     expect((user as any).comments).not.toBeDefined();
     expect(user.likedComments).toBeDefined();
   });

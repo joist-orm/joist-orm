@@ -191,6 +191,7 @@ export function up(b: MigrationBuilder): void {
       fieldName: "authorManyToOne",
       otherFieldName: "userOneToOne",
     }),
+    ip_address: { type: "varchar(255)", notNull: false },
   });
 
   // for testing polymorphic references

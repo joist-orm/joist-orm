@@ -11,6 +11,7 @@ export interface FieldConfig {
   protected?: boolean;
   ignore?: true;
   superstruct?: string;
+  type?: string;
 }
 
 export interface RelationConfig {
@@ -99,6 +100,10 @@ export function isProtected(config: Config, entity: Entity, fieldName: string): 
 
 export function superstructConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
   return config.entities[entity.name]?.fields?.[fieldName]?.superstruct;
+}
+
+export function fieldTypeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
+  return config.entities[entity.name]?.fields?.[fieldName]?.type;
 }
 
 export function isLargeCollection(config: Config, entity: Entity, fieldName: string): boolean {

@@ -9,6 +9,25 @@ import { zeroTo } from "../utils";
 const inspect = Symbol.for("nodejs.util.inspect.custom");
 
 describe("Author", () => {
+  it("asdf", async () => {
+    await insertAuthor({ first_name: "m1" });
+    await insertAuthor({ first_name: "a1", mentor_id: 1 });
+
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    const a2 = await em.load(Author, "a:2");
+
+    // We ask for both promises to load
+    // Both hasAsyncProperties create loadPromises on em.populate(this, hint)
+    // a1.nameWithMentor is loading
+    // a2.nameWithMentor is loading
+    // This em.populate blocks on both properties becoming loaded
+    // populating a2.nameWithMentor, we ask a1.nameWithMentor to load, which creates a promise cycle
+    await Promise.all([a1.nameWithMentor.load(), a2.nameWithMentor.load()]);
+    // const m = await a1.nameWithMentor.load();
+    // await em.populate([a1, a2], { mentor: "nameWithMentor" });
+  });
+
   it("can have business logic methods", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

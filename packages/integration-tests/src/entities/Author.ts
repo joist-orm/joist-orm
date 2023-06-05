@@ -57,6 +57,11 @@ export class Author extends AuthorCodegen {
       a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && r.isPublic2.get && r.rating > 0).length,
   );
 
+  // Example of an AsyncProperty that refers to itself
+  readonly nameWithMentor: AsyncProperty<Author, string> = hasAsyncProperty({ mentor: "nameWithMentor" }, (a) => {
+    return a.mentor.get ? `${a.mentor.get.nameWithMentor.get}${a.firstName}` : "" + a.firstName;
+  });
+
   public beforeFlushRan = false;
   public beforeCreateRan = false;
   public beforeUpdateRan = false;

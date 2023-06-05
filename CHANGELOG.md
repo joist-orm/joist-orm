@@ -1,3 +1,10 @@
+# [1.88.0](https://github.com/stephenh/joist-ts/compare/v1.87.0...v1.88.0) (2023-06-05)
+
+
+### Features
+
+* add `PersistedAsyncReference` ([#639](https://github.com/stephenh/joist-ts/issues/639)) ([8bd9e5b](https://github.com/stephenh/joist-ts/commit/8bd9e5b6aeb3a05adc637c227fc0fd8857875fde))
+
 # [1.87.0](https://github.com/stephenh/joist-ts/compare/v1.86.0...v1.87.0) (2023-06-05)
 
 

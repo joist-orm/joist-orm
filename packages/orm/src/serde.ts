@@ -19,13 +19,6 @@ interface BaseFieldSerdeOpts {
   tagName: string;
 }
 
-interface CommonFieldSerdeOpts {
-  fieldName: string;
-  columnName: string;
-  dbType: string;
-  tagName: string;
-}
-
 interface EnumFieldSerdeOpts extends BaseFieldSerdeOpts {
   enumObject: any;
 }

@@ -11,6 +11,39 @@ export function hasSerde(field: Field): field is SerdeField {
   return !!field.serde;
 }
 
+
+interface BaseFieldSerdeOpts {
+  fieldName: string;
+  columnName: string;
+  dbType: string;
+  tagName: string;
+}
+
+interface CommonFieldSerdeOpts {
+  fieldName: string;
+  columnName: string;
+  dbType: string;
+  tagName: string;
+}
+
+interface EnumFieldSerdeOpts extends BaseFieldSerdeOpts {
+  enumObject: any;
+}
+
+interface SuperstructFieldSerdeOpts extends BaseFieldSerdeOpts {
+  superstruct: any;
+}
+
+interface KeyFieldSerdeOpts extends BaseFieldSerdeOpts {
+  dbType: 'int' | 'uuid';
+  otherTagName?: string;
+}
+
+interface PolymorphicFieldSerdeOpts extends BaseFieldSerdeOpts {
+  meta: () => EntityMetadata<any>;
+  dbType: never;
+}
+
 /**
  * The database/column serialization / deserialization details of a given field.
  *
@@ -18,16 +51,26 @@ export function hasSerde(field: Field): field is SerdeField {
  * domain fields can be mapped to multiple physical database columns, i.e. polymorphic
  * references.
  */
-export interface FieldSerde {
+export abstract class FieldSerde<FieldSerdeOpts extends BaseFieldSerdeOpts = BaseFieldSerdeOpts> {
+  public constructor(protected opts: FieldSerdeOpts) {}
+
+  get columnName() {
+    return this.opts.columnName
+  }
+
+  get dbType() {
+    return this.opts.dbType
+  }
+
   /** A single field might persist to multiple columns, i.e. polymorphic references. */
-  columns: Column[];
+  abstract columns: Column[];
 
   /**
    * Accepts a database `row` and sets the field's value(s) into the `__orm.data`.
    *
    * Used in EntityManager.hydrate to set row value on the entity
    */
-  setOnEntity(data: any, row: any): void;
+  abstract setOnEntity(data: any, row: any): void;
 }
 
 /** A specific physical column of a logical field. */
@@ -39,18 +82,17 @@ export interface Column {
   isArray: boolean;
 }
 
-export class PrimitiveSerde implements FieldSerde {
+export class PrimitiveSerde extends FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, public dbType: string) {}
-
+  // constructor(private fieldName: string, public columnName: string, public dbType: string) {}
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
+    data[this.opts.fieldName] = maybeNullToUndefined(row[this.opts.columnName]);
   }
 
   dbValue(data: any) {
-    return data[this.fieldName];
+    return data[this.opts.fieldName];
   }
 
   mapToDb(value: any) {
@@ -67,20 +109,21 @@ export class PrimitiveSerde implements FieldSerde {
  * Also note that knex/pg accept `number`s as input, so we only need
  * to handle from-database -> to JS translation.
  */
-export class DecimalToNumberSerde implements FieldSerde {
-  dbType = "decimal";
+export class DecimalToNumberSerde extends FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string) {}
+  get dbType() {
+    return "decimal"
+  }
 
   setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
-    data[this.fieldName] = value !== undefined ? Number(value) : value;
+    const value = maybeNullToUndefined(row[this.opts.columnName]);
+    data[this.opts.fieldName] = value !== undefined ? Number(value) : value;
   }
 
   dbValue(data: any) {
-    return data[this.fieldName];
+    return data[this.opts.fieldName];
   }
 
   mapToDb(value: any) {
@@ -89,21 +132,22 @@ export class DecimalToNumberSerde implements FieldSerde {
 }
 
 /** Maps physical integer keys to logical string IDs "because GraphQL". */
-export class KeySerde implements FieldSerde {
+export class KeySerde extends FieldSerde<KeyFieldSerdeOpts> {
   isArray = false;
   columns = [this];
   private meta: { tagName: string; idType: "int" | "uuid" };
 
-  constructor(tagName: string, private fieldName: string, public columnName: string, public dbType: "int" | "uuid") {
-    this.meta = { tagName, idType: dbType };
+  constructor(protected opts: KeyFieldSerdeOpts) {
+    super(opts);
+    this.meta = { tagName: opts.otherTagName ?? opts.tagName, idType: opts.dbType };
   }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(this.meta, row[this.columnName]);
+    data[this.opts.fieldName] = keyToString(this.meta, row[this.opts.columnName]);
   }
 
   dbValue(data: any) {
-    return keyToNumber(this.meta, maybeResolveReferenceToId(data[this.fieldName]));
+    return keyToNumber(this.meta, maybeResolveReferenceToId(data[this.opts.fieldName]));
   }
 
   mapToDb(value: any) {
@@ -111,20 +155,18 @@ export class KeySerde implements FieldSerde {
   }
 }
 
-export class PolymorphicKeySerde implements FieldSerde {
-  constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
-
+export class PolymorphicKeySerde extends FieldSerde<PolymorphicFieldSerdeOpts> {
   setOnEntity(data: any, row: any): void {
     this.columns
       .filter((column) => !!row[column.columnName])
       .forEach((column) => {
-        data[this.fieldName] ??= keyToString(column.otherMetadata(), row[column.columnName]);
+        data[this.opts.fieldName] ??= keyToString(column.otherMetadata(), row[column.columnName]);
       });
   }
 
   // Lazy b/c we use PolymorphicField which we can't access in our cstr
   get columns(): Array<Column & { otherMetadata: () => EntityMetadata<any> }> {
-    const { fieldName } = this;
+    const { fieldName } = this.opts;
     return this.field.components.map((comp) => ({
       columnName: comp.columnName,
       dbType: "int",
@@ -147,47 +189,47 @@ export class PolymorphicKeySerde implements FieldSerde {
 
   // Lazy b/c we use PolymorphicField which we can't access in our cstr
   private get field(): PolymorphicField {
-    return this.meta().fields[this.fieldName] as PolymorphicField;
+    return this.opts.meta().fields[this.opts.fieldName] as PolymorphicField;
   }
 }
 
-export class EnumFieldSerde implements FieldSerde {
-  dbType = "int";
+export class EnumFieldSerde extends FieldSerde<EnumFieldSerdeOpts> {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
+  get dbType() {return "int" }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
+    data[this.opts.fieldName] = this.opts.enumObject.findById(row[this.opts.columnName])?.code;
   }
 
   dbValue(data: any) {
-    return this.enumObject.findByCode(data[this.fieldName])?.id;
+    return this.opts.enumObject.findByCode(data[this.opts.fieldName])?.id;
   }
 
   mapToDb(value: any) {
-    return this.enumObject.findByCode(value)?.id;
+    return this.opts.enumObject.findByCode(value)?.id;
   }
 }
 
-export class EnumArrayFieldSerde implements FieldSerde {
-  dbType = "int[]";
+export class EnumArrayFieldSerde extends FieldSerde<EnumFieldSerdeOpts> {
   isArray = true;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
+  get dbType() {
+    return "int[]";
+  }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
+    data[this.opts.fieldName] = row[this.opts.columnName]?.map((id: any) => this.opts.enumObject.findById(id).code) || [];
   }
 
   dbValue(data: any) {
-    return data[this.fieldName]?.map((code: any) => this.enumObject.getByCode(code).id) || [];
+    return data[this.opts.fieldName]?.map((code: any) => this.opts.enumObject.getByCode(code).id) || [];
   }
 
   mapToDb(value: any) {
-    return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
+    return !value ? [] : value.map((code: any) => this.opts.enumObject.getByCode(code).id);
   }
 }
 
@@ -196,8 +238,7 @@ function maybeNullToUndefined(value: any): any {
 }
 
 /** Similar to SimpleSerde, but applies the superstruct `assert` function when reading values from the db. */
-export class SuperstructSerde implements FieldSerde {
-  dbType = "jsonb";
+export class SuperstructSerde extends FieldSerde<SuperstructFieldSerdeOpts> {
   isArray = false;
   columns = [this];
 
@@ -205,19 +246,21 @@ export class SuperstructSerde implements FieldSerde {
   // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
   private assert = require("superstruct").assert;
 
-  constructor(private fieldName: string, public columnName: string, private superstruct: any) {}
+  get dbType() {
+    return "jsonb"
+  }
 
   setOnEntity(data: any, row: any): void {
-    const value = maybeNullToUndefined(row[this.columnName]);
+    const value = maybeNullToUndefined(row[this.opts.columnName]);
     if (value) {
-      this.assert(value, this.superstruct);
+      this.assert(value, this.opts.superstruct);
     }
-    data[this.fieldName] = value;
+    data[this.opts.fieldName] = value;
   }
 
   dbValue(data: any) {
     // assume the data is already valid b/c it came from the entity
-    return data[this.fieldName];
+    return data[this.opts.fieldName];
   }
 
   mapToDb(value: any) {

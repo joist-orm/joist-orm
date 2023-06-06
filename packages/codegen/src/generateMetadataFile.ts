@@ -1,7 +1,7 @@
-import { DbMetadata } from "index";
+import {DbMetadata, EnumField, ManyToOneField, PrimitiveField} from "index";
 import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
-import { EntityDbMetadata } from "./EntityDbMetadata";
+import {EntityDbMetadata, PgEnumField, PolymorphicField} from "./EntityDbMetadata";
 import {
   DecimalToNumberSerde,
   EntityMetadata,
@@ -50,6 +50,20 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   `;
 }
 
+function generateBaseFieldSerdeOpts(dbMetadata: EntityDbMetadata, field: PolymorphicField | PrimitiveField | PgEnumField | EnumField | ManyToOneField) {
+  // The `as never` isn't great, but the alternative is separating splitting
+  // FieldSerde for PolymorphicFields vs all others
+  const columnName = 'columnName' in field ? code`"${field.columnName}"` : code`undefined as never`;
+  const dbType = 'dbType' in field ? code`"${field.dbType}"` :'enumName' in field ? code`"${field.enumName}"` : 'columnType' in field ? code`"${field.columnType}"` : code`undefined as never`;
+
+  return code`
+      fieldName: "${field.fieldName}",
+      columnName: ${columnName},
+      dbType: ${dbType},
+      tagName: "${dbMetadata.tagName}",
+  `
+}
+
 function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<string, Code> {
   const fields: Record<string, Code> = {};
 
@@ -59,59 +73,64 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       fieldName: "id",
       fieldIdName: undefined,
       required: true,
-      serde: new ${KeySerde}("${dbMetadata.tagName}", "id", "id", "${dbMetadata.primaryKey.columnType}"),
+      serde: new ${KeySerde}({
+        fieldName: "id",
+        columnName: "id",
+        dbType: "${dbMetadata.primaryKey.columnType}",
+        tagName: "${dbMetadata.tagName}"
+      }),
       immutable: true,
     }
   `;
 
-  dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnName, columnType, superstruct } = p;
+  dbMetadata.primitives.forEach((field) => {
+    const { fieldName, derived, columnName, columnType, superstruct } = field;
     const serdeType = superstruct
-      ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
+      ? code`new ${SuperstructSerde}({ ${generateBaseFieldSerdeOpts(dbMetadata, field)} superstruct: ${superstruct} })`
       : columnType === "numeric"
-      ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
-      : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
+      ? code`new ${DecimalToNumberSerde}({ ${generateBaseFieldSerdeOpts(dbMetadata, field)} })`
+      : code`new ${PrimitiveSerde}({ ${generateBaseFieldSerdeOpts(dbMetadata, field)} })`;
     fields[fieldName] = code`
       {
         kind: "primitive",
         fieldName: "${fieldName}",
         fieldIdName: undefined,
         derived: ${!derived ? false : `"${derived}"`},
-        required: ${!derived && p.notNull},
-        protected: ${p.protected},
-        type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
+        required: ${!derived && field.notNull},
+        protected: ${field.protected},
+        type: ${typeof field.rawFieldType === "string" ? `"${field.rawFieldType}"` : field.rawFieldType},
         serde: ${serdeType},
         immutable: false,
       }`;
   });
 
   // Treat native enums as primitives
-  dbMetadata.pgEnums.forEach(({ columnName, fieldName, notNull, enumName }) => {
-    fields[fieldName] = code`
+  dbMetadata.pgEnums.forEach((field) => {
+    fields[field.fieldName] = code`
       {
         kind: "primitive",
-        fieldName: "${fieldName}",
+        fieldName: "${field.fieldName}",
         fieldIdName: undefined,
         derived: false,
-        required: ${notNull},
+        required: ${field.notNull},
         protected: false,
         type: "string",
-        serde: new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${enumName}"),
+        serde: new ${PrimitiveSerde}({ ${generateBaseFieldSerdeOpts(dbMetadata, field)} }),
         immutable: false,
       }`;
   });
 
-  dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull, isArray, columnName }) => {
-    fields[fieldName] = code`
+  dbMetadata.enums.forEach((field) => {
+    fields[field.fieldName] = code`
       {
         kind: "enum",
-        fieldName: "${fieldName}",
+        fieldName: "${field.fieldName}",
         fieldIdName: undefined,
-        required: ${notNull},
-        enumDetailType: ${enumDetailType},
+        required: ${field.notNull},
+        enumDetailType: ${field.enumDetailType},
         serde: new ${
-          isArray ? EnumArrayFieldSerde : EnumFieldSerde
-        }("${fieldName}", "${columnName}", ${enumDetailType}),
+          field.isArray ? EnumArrayFieldSerde : EnumFieldSerde
+        }({ ${generateBaseFieldSerdeOpts(dbMetadata, field)} enumObject: ${field.enumDetailType } }),
         immutable: false,
       }
     `;
@@ -129,7 +148,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         required: ${notNull},
         otherMetadata: () => ${otherEntity.metaName},
         otherFieldName: "${otherFieldName}",
-        serde: new ${KeySerde}("${otherTagName}", "${fieldName}", "${columnName}", "${dbType}"),
+        serde: new ${KeySerde}({ ${generateBaseFieldSerdeOpts(dbMetadata, m2o)} otherTagName: "${otherTagName}" }),
         immutable: false,
       }
     `;
@@ -217,7 +236,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
             columnName: "${columnName}",
           },`,
         )}],
-        serde: new ${PolymorphicKeySerde}(() => ${dbMetadata.entity.metaName}, "${fieldName}"),
+        serde: new ${PolymorphicKeySerde}({ ${generateBaseFieldSerdeOpts(dbMetadata, p)} meta: () => ${dbMetadata.entity.metaName} }),
         immutable: false,
       }
     `;

@@ -1,3 +1,10 @@
+## [1.88.1](https://github.com/stephenh/joist-ts/compare/v1.88.0...v1.88.1) (2023-06-06)
+
+
+### Bug Fixes
+
+* Add support namespaced packages within config imports ([#677](https://github.com/stephenh/joist-ts/issues/677)) ([af7a344](https://github.com/stephenh/joist-ts/commit/af7a344f4cdfc98d170c85d180d55b52a8afe3e2))
+
 # [1.88.0](https://github.com/stephenh/joist-ts/compare/v1.87.0...v1.88.0) (2023-06-05)
 
 

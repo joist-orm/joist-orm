@@ -1,6 +1,8 @@
 import { AsyncLocalStorage } from "async_hooks";
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
+import { Entity, isEntity } from "./Entity";
+import { Todo, combineJoinRows, createTodos, getTodo } from "./Todo";
 import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
@@ -9,10 +11,7 @@ import { findDataLoader } from "./dataloaders/findDataLoader";
 import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/Driver";
-import { Entity, isEntity } from "./Entity";
 import {
-  asConcreteCstr,
-  assertIdIsTagged,
   Changes,
   CustomCollection,
   CustomReference,
@@ -23,34 +22,35 @@ import {
   FieldStatus,
   FilterWithAlias,
   GenericError,
+  GraphQLFilterWithAlias,
+  Lens,
+  ManyToOneFieldStatus,
+  OneToManyCollection,
+  PartialOrNull,
+  PolymorphicReferenceImpl,
+  UniqueFilter,
+  ValidationError,
+  ValidationErrors,
+  ValidationRuleResult,
+  asConcreteCstr,
+  assertIdIsTagged,
   getAllMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
   getRelations,
-  GraphQLFilterWithAlias,
   keyToString,
-  Lens,
   loadLens,
-  ManyToOneFieldStatus,
-  OneToManyCollection,
   parseFindQuery,
-  PartialOrNull,
-  PolymorphicReferenceImpl,
   setField,
   setOpts,
   tagId,
-  UniqueFilter,
-  ValidationError,
-  ValidationErrors,
-  ValidationRuleResult,
 } from "./index";
-import { Loaded, LoadHint, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
-import { combineJoinRows, createTodos, getTodo, Todo } from "./Todo";
-import { assertNever, fail, getOrSet, MaybePromise, toArray } from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -1225,14 +1225,21 @@ export class EntityManager<C = unknown> {
         todo.push(
           ...relations
             .filter((r) => "get" in r)
-            // We skip recursing into CustomCollections and CustomReferences for two reasons:
+            // We skip recursing into CustomCollections and CustomReferences and PersistedAsyncReferencesImpl for two reasons:
             // 1. It can be tricky to ensure `{ forceReload: true }` is passed all the way through their custom load
             // implementations, and so it's easy to have `.get` accidentally come across a not-yet-loaded collection, and
             // 2. Any custom load functions should use the underlying o2m/m2o/etc relations anyway, so if we crawl/refresh
             // those, then when the user calls `.get` on custom collections/references, they should be talking to always-loaded
             // relations, w/o us having to tackle the tricky bookkeeping problem passing `forceReload` all through their
             // custom load function + any other collections they call.
-            .filter((r) => !(r instanceof CustomCollection || r instanceof CustomReference))
+            .filter(
+              (r) =>
+                !(
+                  r instanceof CustomCollection ||
+                  r instanceof CustomReference ||
+                  r instanceof PersistedAsyncReferenceImpl
+                ),
+            )
             .map((r) => (r as any).get)
             .flatMap((value) => (Array.isArray(value) ? value : [value]))
             .filter((value) => isEntity(value) && !done.has(value)),

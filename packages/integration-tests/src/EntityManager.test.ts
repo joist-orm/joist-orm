@@ -13,7 +13,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Color, newAuthor, newBook, newPublisher, Publisher, PublisherSize } from "./entities";
+import { Author, Book, Color, Publisher, PublisherSize, newAuthor, newBook, newPublisher } from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -467,6 +467,23 @@ describe("EntityManager", () => {
     await em.refresh(b1);
     // Then we have the new data
     expect(b1.tags.get!.length).toEqual(2);
+  });
+
+  it("refresh an entity with a loaded PersistedAsyncReference", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 4 });
+    // Given we've loaded an entity with a
+    const em = newEntityManager();
+    const author = await em.load(Author, "1", "favoriteBook");
+    expect(author.firstName).toEqual("a1");
+    // And a new row is added by someone else
+    await insertBook({ id: 2, title: "b2", author_id: 1 });
+    await insertBookReview({ book_id: 2, rating: 5 });
+    // When we refresh the entity
+    await em.refresh({ deepLoad: true });
+    // Then we have the new data
+    expect(author.favoriteBook.get!.title).toEqual("b2");
   });
 
   it("refresh an entity that is deleted", async () => {

@@ -5,22 +5,22 @@ import {
   EntityConstructor,
   EntityManager,
   IdOf,
-  isId,
   MaybeAbstractEntityConstructor,
   OptsOf,
+  isId,
 } from "./EntityManager";
 import {
   EntityMetadata,
-  getAllMetas,
-  getMetadata,
-  isManyToOneField,
-  isOneToOneField,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PolymorphicField,
   PrimitiveField,
+  getAllMetas,
+  getMetadata,
+  isManyToOneField,
+  isOneToOneField,
 } from "./EntityMetadata";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";

@@ -2,8 +2,8 @@ import { pascalCase } from "change-case";
 import { isPlainObject } from "is-plain-object";
 import { Table } from "pg-structure";
 import pluralize from "pluralize";
-import { Config, getTimestampConfig } from "./config";
 import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
+import { Config, getTimestampConfig } from "./config";
 
 export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);

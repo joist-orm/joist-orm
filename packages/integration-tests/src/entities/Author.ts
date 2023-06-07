@@ -15,7 +15,7 @@ import {
   Reference,
 } from "joist-orm";
 import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
-import { AuthorCodegen, authorConfig as config, Book, BookReview, Comment, bookMeta } from "./entities";
+import { AuthorCodegen, Book, bookMeta, BookReview, Comment, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);

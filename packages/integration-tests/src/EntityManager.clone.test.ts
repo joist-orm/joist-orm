@@ -6,12 +6,12 @@ import {
   Comment,
   Image,
   ImageType,
+  Publisher,
+  Tag,
   newAuthor,
   newBook,
   newComment,
   newPublisher,
-  Publisher,
-  Tag,
 } from "./entities";
 import { newEntityManager } from "./setupDbTests";
 

@@ -1,16 +1,16 @@
 import { Entity, isEntity } from "../Entity";
-import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
-import { getMetadata, PolymorphicFieldComponent } from "../EntityMetadata";
+import { IdOf, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
+import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
 import {
+  OneToOneReference,
+  PolymorphicField,
+  Reference,
   deTagId,
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
-  OneToOneReference,
-  PolymorphicField,
-  Reference,
   setField,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";

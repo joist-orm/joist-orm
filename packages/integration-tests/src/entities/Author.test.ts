@@ -2,7 +2,7 @@ import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities
 import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
-import { Author, Book, BookId, BookReview, newAuthor, newBookReview, newPublisher, Publisher } from "../entities";
+import { Author, Book, BookId, BookReview, Publisher, newAuthor, newBookReview, newPublisher } from "../entities";
 import { makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 

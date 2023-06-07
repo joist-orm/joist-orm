@@ -1,7 +1,10 @@
 import { Entity, isEntity } from "../Entity";
-import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
-import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
+import { IdOf, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
+import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
+  OneToManyLargeCollection,
+  OneToOneReferenceImpl,
+  Reference,
   deTagId,
   deTagIds,
   ensureNotDeleted,
@@ -9,9 +12,6 @@ import {
   fail,
   isTaggedId,
   maybeResolveReferenceToId,
-  OneToManyLargeCollection,
-  OneToOneReferenceImpl,
-  Reference,
   setField,
   tagId,
 } from "../index";

@@ -1,9 +1,9 @@
 import DataLoader from "dataloader";
 import { Entity, isEntity } from "../Entity";
 import { FilterWithAlias } from "../EntityFilter";
-import { EntityConstructor, EntityManager, OptsOf, sameEntity, TooManyError } from "../EntityManager";
+import { EntityConstructor, EntityManager, OptsOf, TooManyError, sameEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { isLoadedReference, ManyToOneReference, PolymorphicReference } from "../relations";
+import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
 import { fail } from "../utils";
 import { whereFilterHash } from "./findDataLoader";
 

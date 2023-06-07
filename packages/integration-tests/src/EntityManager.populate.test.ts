@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { setEntityLimit } from "joist-orm";
-import { Author, Book, newAuthor, newBook, newPublisher, Publisher } from "./entities";
+import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.populate", () => {

@@ -2,9 +2,9 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
-import { assertIdsAreTagged, deTagIds } from "../keys";
 import { abbreviation } from "../QueryBuilder";
-import { addTablePerClassJoinsAndClassTag, ParsedFindQuery } from "../QueryParser";
+import { ParsedFindQuery, addTablePerClassJoinsAndClassTag } from "../QueryParser";
+import { assertIdsAreTagged, deTagIds } from "../keys";
 import { indexBy } from "../utils";
 
 export function loadDataLoader<T extends Entity>(

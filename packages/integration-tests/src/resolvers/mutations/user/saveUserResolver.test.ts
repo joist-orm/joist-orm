@@ -8,7 +8,7 @@ describe("saveUser", () => {
     const { em } = ctx;
     const result = await runSaveUser(ctx, () => ({
       name: "test user",
-      email: "test@test.com"
+      email: "test@test.com",
     }));
     expect(result).toBeDefined();
   });

@@ -1,7 +1,7 @@
 import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
-import { Author, Book, newAuthor, User } from "../entities";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+import { Author, Book, User, newAuthor } from "../entities";
 import { IpAddress } from "../entities/types";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
@@ -135,7 +135,7 @@ describe("ManyToOneReference", () => {
   it("can be renamed", () => {
     // see createTable("users",...) in 1580658856631_author.ts for the actual rename
     const em = newEntityManager();
-    const user = em.create(User, { name: "u1", email: "test@test.com",  ipAddress: '127.0.0.1' as IpAddress  });
+    const user = em.create(User, { name: "u1", email: "test@test.com", ipAddress: "127.0.0.1" as IpAddress });
     expect((user as any).author).not.toBeDefined();
     expect(user.authorManyToOne).toBeDefined();
   });

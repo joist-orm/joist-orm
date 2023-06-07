@@ -2,9 +2,9 @@ import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
+import { DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, writeConfig } from "./config";
-import { DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
@@ -13,13 +13,13 @@ import { isEntityTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 export {
   DbMetadata,
   EnumField,
-  makeEntity,
   ManyToManyField,
   ManyToOneField,
   OneToManyField,
   OneToOneField,
   PrimitiveField,
   PrimitiveTypescriptType,
+  makeEntity,
 } from "./EntityDbMetadata";
 export { EnumMetadata, EnumRow, EnumTableData, PgEnumData, PgEnumMetadata } from "./loadMetadata";
 export { Config, EntityDbMetadata, mapSimpleDbTypeToTypescriptType };

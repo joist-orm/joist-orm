@@ -1,8 +1,8 @@
 import { Entity } from "../Entity";
 import { Const, currentlyInstantiatingEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { Loaded, LoadHint } from "../loadHints";
-import { convertToLoadHint, Reacted, ReactiveHint } from "../reactiveHints";
+import { LoadHint, Loaded } from "../loadHints";
+import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 
 const I = Symbol();
 

@@ -1,7 +1,7 @@
 import { camelCase, pascalCase } from "change-case";
-import { code, Code, imp, joinCode } from "ts-poet";
-import { Config } from "./config";
+import { Code, code, imp, joinCode } from "ts-poet";
 import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
+import { Config } from "./config";
 import { keywords } from "./keywords";
 import {
   BaseEntity,
@@ -10,35 +10,22 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  deTagId,
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail as failSymbol,
   FieldsOf,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  hasLargeMany,
-  hasLargeManyToMany,
-  hasMany,
-  hasManyToMany,
-  hasOne,
-  hasOnePolymorphic,
-  hasOneToOne,
   IdOf,
-  isLoaded,
   LargeCollection,
   Lens,
-  Loaded,
   LoadHint,
-  loadLens,
+  Loaded,
   ManyToOneReference,
   MaybeAbstractEntityConstructor,
-  newChangesProxy,
-  newRequiredRule,
   OneToOneReference,
   OptsOf,
   OrderBy,
@@ -46,11 +33,24 @@ import {
   PersistedAsyncProperty,
   PersistedAsyncReference,
   PolymorphicReference,
-  setField,
-  setOpts,
   SSAssert,
   ValueFilter,
   ValueGraphQLFilter,
+  deTagId,
+  fail as failSymbol,
+  hasLargeMany,
+  hasLargeManyToMany,
+  hasMany,
+  hasManyToMany,
+  hasOne,
+  hasOnePolymorphic,
+  hasOneToOne,
+  isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
 } from "./symbols";
 import { fail, uncapitalize } from "./utils";
 
@@ -626,10 +626,12 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   const pgEnums = meta.pgEnums.map(({ fieldName, enumType, notNull }) => {
     return code`${fieldName}${maybeOptional(notNull)}: ${enumType}${maybeUnionNull(notNull)};`;
   });
-  const m2o = meta.manyToOnes.filter(({ derived }) => !derived).map(({ fieldName, otherEntity, notNull }) => {
-    const maybeNull = maybeUnionNull(notNull);
-    return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type} | ${otherEntity.idType} ${maybeNull};`;
-  });
+  const m2o = meta.manyToOnes
+    .filter(({ derived }) => !derived)
+    .map(({ fieldName, otherEntity, notNull }) => {
+      const maybeNull = maybeUnionNull(notNull);
+      return code`${fieldName}${maybeOptional(notNull)}: ${otherEntity.type} | ${otherEntity.idType} ${maybeNull};`;
+    });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}?: ${otherEntity.type} | null;`;
   });
@@ -680,9 +682,11 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
 // This especially needs to be the case b/c both `book: ...` and `bookId: ...` will be
 // in the partial type and of course the caller will only be setting one.
 function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
-  const m2o = meta.manyToOnes.filter(({ derived }) => !derived).map(({ fieldName, otherEntity }) => {
-    return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
-  });
+  const m2o = meta.manyToOnes
+    .filter(({ derived }) => !derived)
+    .map(({ fieldName, otherEntity }) => {
+      return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
+    });
   const o2o = meta.oneToOnes.map(({ fieldName, otherEntity }) => {
     return code`${fieldName}Id?: ${otherEntity.idType} | null;`;
   });

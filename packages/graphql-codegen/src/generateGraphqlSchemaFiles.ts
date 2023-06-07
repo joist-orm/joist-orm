@@ -119,10 +119,11 @@ function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName, fieldType };
     });
 
-    const inheritedFields = e.baseClassName ?
-      createEntityFields([findBaseEntity(entities, e.baseClassName)])
-      .map((f) => ({...f, ...common}))
-      .filter((f) => f.fieldName !== "id") : [];
+    const inheritedFields = e.baseClassName
+      ? createEntityFields([findBaseEntity(entities, e.baseClassName)])
+          .map((f) => ({ ...f, ...common }))
+          .filter((f) => f.fieldName !== "id")
+      : [];
 
     return [id, ...inheritedFields, ...primitives, ...enums, ...pgEnums, ...m2os, ...o2ms, ...m2ms, ...o2os, ...polys];
   });
@@ -180,10 +181,11 @@ function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
       return { ...common, fieldName: `${fieldName}Id`, fieldType: "ID" };
     });
 
-    const inherited = e.baseClassName ?
-      createSaveEntityInputFields([findBaseEntity(entities, e.baseClassName)])
-      .map((f) => ({...f, ...common}))
-      .filter((f) => f.fieldName !== "id") : [];
+    const inherited = e.baseClassName
+      ? createSaveEntityInputFields([findBaseEntity(entities, e.baseClassName)])
+          .map((f) => ({ ...f, ...common }))
+          .filter((f) => f.fieldName !== "id")
+      : [];
 
     return [id, ...inherited, ...primitives, ...enums, ...pgEnums, ...m2os, ...polys];
   });

@@ -6,7 +6,7 @@ import {
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
-import { getLens, getMetadata, Lens, testing } from "joist-orm";
+import { Lens, getLens, getMetadata, testing } from "joist-orm";
 import { Author, Book, Publisher, Tag } from "./entities";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 

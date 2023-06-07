@@ -1,9 +1,9 @@
 import { groupBy } from "joist-utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { getMetadata, PolymorphicField, PolymorphicFieldComponent } from "./EntityMetadata";
+import { PolymorphicField, PolymorphicFieldComponent, getMetadata } from "./EntityMetadata";
+import { ColumnCondition, ParsedValueFilter, mapToDb, skipCondition } from "./QueryParser";
 import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
-import { ColumnCondition, mapToDb, ParsedValueFilter, skipCondition } from "./QueryParser";
 import { Column } from "./serde";
 import { fail } from "./utils";
 

@@ -1,6 +1,6 @@
 import { camelCase, sentenceCase } from "change-case";
 import { Config, EntityDbMetadata } from "joist-codegen";
-import { code, CodegenFile, imp } from "ts-poet";
+import { CodegenFile, code, imp } from "ts-poet";
 
 const getMetadata = imp("getMetadata@joist-orm");
 const entityResolver = imp("entityResolver@src/resolvers/utils");

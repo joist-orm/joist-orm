@@ -59,7 +59,7 @@ export const operators = [
   "containedBy",
 ] as const;
 
-export type Operator = typeof operators[number];
+export type Operator = (typeof operators)[number];
 
 export const opToFn: Record<Exclude<Operator, "in" | "nin" | "between">, string> = {
   eq: "=",

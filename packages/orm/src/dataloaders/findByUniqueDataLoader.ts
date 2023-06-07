@@ -4,10 +4,10 @@ import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager"
 import { Field, getMetadata } from "../EntityMetadata";
 import { abbreviation } from "../QueryBuilder";
 import {
-  addTablePerClassJoinsAndClassTag,
   ColumnCondition,
-  maybeAddNotSoftDeleted,
   ParsedFindQuery,
+  addTablePerClassJoinsAndClassTag,
+  maybeAddNotSoftDeleted,
 } from "../QueryParser";
 import { Column } from "../serde";
 import { groupBy } from "../utils";

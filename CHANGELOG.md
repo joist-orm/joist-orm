@@ -1,3 +1,10 @@
+## [1.88.2](https://github.com/stephenh/joist-ts/compare/v1.88.1...v1.88.2) (2023-06-07)
+
+
+### Bug Fixes
+
+* ignore PersistedAsyncReference on em refresh ([#679](https://github.com/stephenh/joist-ts/issues/679)) ([cb54511](https://github.com/stephenh/joist-ts/commit/cb54511e5ef4d31d13932a7d4b9f5aa99d658973))
+
 ## [1.88.1](https://github.com/stephenh/joist-ts/compare/v1.88.0...v1.88.1) (2023-06-06)
 
 

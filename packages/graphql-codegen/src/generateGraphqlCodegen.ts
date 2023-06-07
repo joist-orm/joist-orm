@@ -1,5 +1,5 @@
 import { EntityDbMetadata, EnumMetadata } from "joist-codegen";
-import { code, CodegenFile } from "ts-poet";
+import { CodegenFile, code } from "ts-poet";
 
 /** Generates a `graphql-codegen-joist.js` with the auto-generated mapped type/enum value settings. */
 export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: EnumMetadata): CodegenFile {

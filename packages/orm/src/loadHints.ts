@@ -12,7 +12,7 @@ import {
   Relation,
 } from "./relations";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
-import { fail, MaybePromise, NullOrDefinedOr } from "./utils";
+import { MaybePromise, NullOrDefinedOr, fail } from "./utils";
 
 const deepLoad = Symbol();
 type DeepLoadHint<T extends Entity> = NestedLoadHint<T> & { [deepLoad]: true };

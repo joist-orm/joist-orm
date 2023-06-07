@@ -12,19 +12,19 @@ import {
   update,
 } from "@src/entities/inserts";
 import {
-  alias,
-  aliases,
   EntityFilter,
   ExpressionFilter,
+  NotFoundError,
+  TooManyError,
+  UniqueFilter,
+  alias,
+  aliases,
   getMetadata,
   jan1,
   jan2,
-  NotFoundError,
   parseFindQuery,
   setDefaultEntityLimit,
   setEntityLimit,
-  TooManyError,
-  UniqueFilter,
 } from "joist-orm";
 import {
   Author,
@@ -42,13 +42,13 @@ import {
   FavoriteShape,
   Image,
   ImageType,
-  newAuthor,
   Publisher,
   PublisherFilter,
   PublisherId,
   PublisherSize,
   SmallPublisher,
   Tag,
+  newAuthor,
 } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 

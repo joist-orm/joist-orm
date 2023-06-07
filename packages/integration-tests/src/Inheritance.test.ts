@@ -14,14 +14,14 @@ import {
   Author,
   Critic,
   LargePublisher,
-  newAuthor,
-  newLargePublisher,
-  newPublisher,
-  newSmallPublisher,
   Publisher,
   PublisherGroup,
   SmallPublisher,
   Tag,
+  newAuthor,
+  newLargePublisher,
+  newPublisher,
+  newSmallPublisher,
 } from "./entities";
 import { newEntityManager, testDriver } from "./setupDbTests";
 

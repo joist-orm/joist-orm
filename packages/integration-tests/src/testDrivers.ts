@@ -1,7 +1,7 @@
 import { recordQuery } from "@src/setupDbTests";
 import { Driver, InMemoryDriver, PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
-import { knex as createKnex, Knex } from "knex";
+import { Knex, knex as createKnex } from "knex";
 
 /**
  * Small abstraction to create a given driver for testing.

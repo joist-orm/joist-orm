@@ -2,11 +2,11 @@ import { authorMeta, bookMeta, bookReviewMeta, imageMeta, publisherMeta } from "
 import {
   CustomCollection,
   CustomReference,
-  getProperties,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
   OneToOneReferenceImpl,
+  getProperties,
 } from "joist-orm";
 
 describe("getProperties", () => {

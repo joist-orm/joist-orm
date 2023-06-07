@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "./Entity";
-import { FieldsOf, IdOf, isId, OptsOf } from "./EntityManager";
+import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
 import { getConstructorFromTaggedId } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */

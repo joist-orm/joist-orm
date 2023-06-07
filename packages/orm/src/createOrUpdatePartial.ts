@@ -1,7 +1,7 @@
 import { Entity, isEntity } from "./Entity";
-import { EntityManager, IdOf, isKey, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf } from "./EntityManager";
+import { EntityManager, IdOf, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf, isKey } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { asConcreteCstr, getConstructorFromTaggedId, PartialOrNull } from "./index";
+import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId } from "./index";
 import { NullOrDefinedOr } from "./utils";
 
 /**

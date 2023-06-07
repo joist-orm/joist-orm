@@ -1,6 +1,6 @@
 import { Const, currentlyInstantiatingEntity, isLoaded } from "../";
 import { Entity } from "../Entity";
-import { Loaded, LoadHint } from "../loadHints";
+import { LoadHint, Loaded } from "../loadHints";
 import { CustomReference } from "./CustomReference";
 import { Reference } from "./Reference";
 

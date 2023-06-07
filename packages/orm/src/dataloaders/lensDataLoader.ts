@@ -1,18 +1,18 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { EntityMetadata, getMetadata, ManyToOneField } from "../EntityMetadata";
-import { deTagIds, tagId } from "../keys";
-import { mapPathsToTarget } from "../loadLens";
+import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import { abbreviation } from "../QueryBuilder";
 import {
-  addTablePerClassJoinsAndClassTag,
   ColumnCondition,
-  maybeAddOrderBy,
   ParsedFindQuery,
   ParsedOrderBy,
   ParsedTable,
+  addTablePerClassJoinsAndClassTag,
+  maybeAddOrderBy,
 } from "../QueryParser";
+import { deTagIds, tagId } from "../keys";
+import { mapPathsToTarget } from "../loadLens";
 import { groupBy } from "../utils";
 
 /**

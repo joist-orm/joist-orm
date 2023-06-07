@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import { Knex } from "knex";
-import { keyToString } from "../keys";
 import { Todo } from "../Todo";
+import { keyToString } from "../keys";
 
 export interface IdAssigner {
   assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void>;

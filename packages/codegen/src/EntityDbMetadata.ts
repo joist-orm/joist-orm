@@ -1,7 +1,7 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
-import { imp, Import } from "ts-poet";
+import { Import, imp } from "ts-poet";
 import {
   Config,
   fieldTypeConfig,
@@ -728,7 +728,7 @@ function isPgEnum(c: Column): boolean {
 function superstructType(s: string): Import {
   // Assume it's `foo@...`, turn it into `Foo@...`
   const [symbol, ...path] = s.split("@");
-  return Import.from(`${pascalCase(symbol)}@${path.join('@')}`);
+  return Import.from(`${pascalCase(symbol)}@${path.join("@")}`);
 }
 
 function userFieldTypeType(s: string): Import {

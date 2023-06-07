@@ -1,9 +1,9 @@
 import { Knex } from "knex";
-import { buildKnexQuery } from "./drivers/buildKnexQuery";
 import { Entity } from "./Entity";
 import { FilterAndSettings } from "./EntityFilter";
 import { EntityConstructor } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
+import { buildKnexQuery } from "./drivers/buildKnexQuery";
 import { parseFindQuery } from "./index";
 
 /**

@@ -2,12 +2,12 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, IdOf } from "../EntityManager";
 import {
-  abbreviation,
-  addTablePerClassJoinsAndClassTag,
-  keyToNumber,
   OneToManyCollection,
   OneToManyLargeCollection,
   ParsedFindQuery,
+  abbreviation,
+  addTablePerClassJoinsAndClassTag,
+  keyToNumber,
 } from "../index";
 
 /** Batches o2m.find/include calls (i.e. that don't fully load the o2m relation). */

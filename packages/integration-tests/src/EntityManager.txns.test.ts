@@ -1,5 +1,5 @@
-import { Publisher, SmallPublisher } from "@src/entities";
 import { Stepper } from "@src/Stepper.test";
+import { Publisher, SmallPublisher } from "@src/entities";
 import { newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
 import { knex, newEntityManager } from "./setupDbTests";

@@ -1,3 +1,10 @@
+## [1.88.3](https://github.com/stephenh/joist-ts/compare/v1.88.2...v1.88.3) (2023-06-09)
+
+
+### Bug Fixes
+
+* Allow m2os to be used in filters. Fixes [#680](https://github.com/stephenh/joist-ts/issues/680). ([#683](https://github.com/stephenh/joist-ts/issues/683)) ([4c246fa](https://github.com/stephenh/joist-ts/commit/4c246fa855a1f22da5b5d5ec14e38d9f6e3f1c89))
+
 ## [1.88.2](https://github.com/stephenh/joist-ts/compare/v1.88.1...v1.88.2) (2023-06-07)
 
 

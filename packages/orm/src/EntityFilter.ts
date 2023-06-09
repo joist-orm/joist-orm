@@ -31,9 +31,12 @@ export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = nev
   | T[]
   | I
   | I[]
+  // Note that this is a weak type (all optional keys) but TS still enforces at least one overlap
   | ({ as?: Alias<T> } & F)
-  | N
+  // Always allow `undefined` for condition pruning
   | undefined
+  // But only allow `null` for `nullable` relations
+  | N
   | { ne: T | I | N | undefined }
   | Alias<T>;
 
@@ -45,7 +48,12 @@ export type UniqueFilter<T extends Entity> = {
   [K in keyof FieldsOf<T> & keyof FilterOf<T> as FieldsOf<T>[K] extends { unique: true } ? K : never]?: FilterOf<T>[K];
 };
 
-/** Filters against a specific field's values within `em.find` inline conditions. */
+/**
+ * Filters against a specific field's values within `em.find` inline conditions.
+ *
+ * We always allow `undefined` to support condition pruning, but only conditionally
+ * allow `null` if the column is actually nullable.
+ */
 export type ValueFilter<V, N> =
   | V
   | V[]

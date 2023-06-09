@@ -492,6 +492,18 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by foreign key with a m2o reference", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 1, first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ id: 2, first_name: "a2", publisher_id: 1 });
+
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    const where = { publisher: a1.publisher } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+  });
+
   it("can find by foreign key is tagged flavor", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });

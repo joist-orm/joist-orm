@@ -21,6 +21,17 @@ describe("ManyToOneReference", () => {
     expect(author.publisher.get).toBeUndefined();
   });
 
+  it("can populate a foreign key", async () => {
+    await insertAuthor({ first_name: "f" });
+    await insertBook({ title: "t", author_id: 1 });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    const author = await book.author.load({ populate: "books" });
+    expect(author.firstName).toEqual("f");
+    expect(author.books.get.length).toBe(1);
+  });
+
   it("can save a foreign key", async () => {
     const em = newEntityManager();
     const author = new Author(em, { firstName: "a1" });

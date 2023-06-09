@@ -1,11 +1,12 @@
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
+import { Loaded, LoadHint } from "../loadHints";
 import { CustomReference } from "./CustomReference";
+import { PersistedAsyncReferenceImpl } from "./hasPersistedAsyncReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
 import { PolymorphicReferenceImpl } from "./PolymorphicReference";
 import { Relation } from "./Relation";
-import { PersistedAsyncReferenceImpl } from "./hasPersistedAsyncReference";
 
 // Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031
 export const ReferenceN = Symbol();
@@ -21,6 +22,11 @@ export const ReferenceN = Symbol();
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
   readonly isLoaded: boolean;
 
+  load<H extends LoadHint<U>>(opts: {
+    withDeleted?: boolean;
+    forceReload?: true;
+    populate: H;
+  }): Promise<Loaded<U, H> | N>;
   load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   set(other: U | N): void;

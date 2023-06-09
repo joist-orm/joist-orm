@@ -1,7 +1,9 @@
 import { Entity, isEntity } from "../Entity";
-import { IdOf, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
+import { Const, IdOf, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
+  LoadHint,
+  Loaded,
   OneToManyLargeCollection,
   OneToOneReferenceImpl,
   Reference,
@@ -84,7 +86,13 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.#fieldName = fieldName;
   }
 
-  async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
+  async load<H extends LoadHint<U>>(opts: {
+    withDeleted?: boolean;
+    forceReload?: boolean;
+    populate: Const<H>;
+  }): Promise<Loaded<U, H> | N>;
+  async load(opts?: { withDeleted?: boolean; forceReload?: boolean }): Promise<U | N>;
+  async load(opts: { withDeleted?: boolean; forceReload?: boolean; populate?: any } = {}): Promise<U | N> {
     ensureNotDeleted(this.#entity, "pending");
     if (this._isLoaded && this.loaded && !opts.forceReload) {
       return this.loaded;
@@ -95,6 +103,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       this.loaded = (await this.#entity.em.load(this.otherMeta.cstr, current)) as any as U;
     } else {
       this.loaded = current;
+    }
+    if (opts.populate) {
+      await this.#entity.em.populate(this.loaded!, opts.populate);
     }
     this._isLoaded = true;
     return this.filterDeleted(this.loaded!, opts);

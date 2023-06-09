@@ -158,7 +158,7 @@ export function parseFindQuery(
       Object.keys(ef.subFilter).forEach((key) => {
         // Skip the `{ as: ... }` alias binding
         if (key === "as") return;
-        const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
+        const field = meta.allFields[key] ?? fail(`Field '${key}' not found on ${meta.tableName}`);
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
@@ -470,6 +470,14 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
         return { kind: "eq", value: value.id || nilIdValue(meta) };
       } else {
         return parseValueFilter(value)[0] as any;
+      }
+    }
+    // Look for subFilter values being EntityFilter-ish instances like ManyToOneReference
+    // that have an id, and so structurally match the entity filter without really being filters,
+    // and convert them over here before getting into parseValueFilter.
+    for (const [key, value] of Object.entries(filter)) {
+      if (value && typeof value === "object" && !isPlainObject(value) && "id" in value) {
+        filter[key] = value.id || nilIdValue(meta);
       }
     }
     return { kind: "join", subFilter: filter };

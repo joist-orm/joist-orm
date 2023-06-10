@@ -217,10 +217,10 @@ export class SuperstructSerde implements FieldSerde {
 
   dbValue(data: any) {
     // assume the data is already valid b/c it came from the entity
-    return data[this.fieldName];
+    return Array.isArray(data[this.fieldName]) ? JSON.stringify(data[this.fieldName]) : data[this.fieldName];
   }
 
   mapToDb(value: any) {
-    return value;
+    return JSON.stringify(value);
   }
 }

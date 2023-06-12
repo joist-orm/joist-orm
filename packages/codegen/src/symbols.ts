@@ -23,6 +23,7 @@ export const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
 export const EnumArrayFieldSerde = imp("EnumArrayFieldSerde@joist-orm");
 export const PolymorphicKeySerde = imp("PolymorphicKeySerde@joist-orm");
 export const PrimitiveSerde = imp("PrimitiveSerde@joist-orm");
+export const JsonSerde = imp("JsonSerde@joist-orm");
 export const SuperstructSerde = imp("SuperstructSerde@joist-orm");
 export const DecimalToNumberSerde = imp("DecimalToNumberSerde@joist-orm");
 export const fail = imp("fail@joist-orm");

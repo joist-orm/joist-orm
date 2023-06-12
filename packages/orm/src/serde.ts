@@ -216,8 +216,27 @@ export class SuperstructSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    // assume the data is already valid b/c it came from the entity
-    return Array.isArray(data[this.fieldName]) ? JSON.stringify(data[this.fieldName]) : data[this.fieldName];
+    return JSON.stringify(data[this.fieldName])
+  }
+
+  mapToDb(value: any) {
+    return JSON.stringify(value);
+  }
+}
+
+export class JsonSerde implements FieldSerde {
+  dbType = "jsonb";
+  isArray = false;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);;
+  }
+
+  dbValue(data: any) {
+    return JSON.stringify(data[this.fieldName])
   }
 
   mapToDb(value: any) {

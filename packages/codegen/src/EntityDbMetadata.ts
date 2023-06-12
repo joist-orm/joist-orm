@@ -1,7 +1,7 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
-import { Import, imp } from "ts-poet";
+import {Import, imp, code, Code} from "ts-poet";
 import {
   Config,
   fieldTypeConfig,
@@ -12,7 +12,7 @@ import {
   isLargeCollection,
   isProtected,
   ormMaintainedFields,
-  superstructConfig,
+  superstructConfig, zodSchemaConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
 import {
@@ -93,13 +93,14 @@ export type PrimitiveField = Field & {
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   // The fieldType might be code for jsonb columns
-  fieldType: PrimitiveTypescriptType | Import;
+  fieldType: PrimitiveTypescriptType | Import | Code;
   rawFieldType: PrimitiveTypescriptType;
   notNull: boolean;
   derived: "orm" | "sync" | "async" | false;
   protected: boolean;
   unique: boolean;
   superstruct: Import | undefined;
+  zodSchema: Import | undefined;
 };
 
 export type EnumField = Field & {
@@ -348,10 +349,15 @@ function isComponentOfPolymorphicRelation(config: Config, r: M2ORelation) {
 function determineUserType(
   fieldType: PrimitiveTypescriptType,
   superstruct: string | undefined,
+  zodSchema: string | undefined,
   userFieldType: string | undefined,
 ) {
   if (fieldType === "Object" && superstruct) {
     return superstructType(superstruct);
+  }
+
+  if (fieldType === "Object" && zodSchema) {
+    return zodSchemaType(zodSchema);
   }
 
   if (userFieldType) {
@@ -367,8 +373,9 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const fieldType = mapType(table.name, columnName, columnType);
   const superstruct = superstructConfig(config, entity, fieldName);
+  const zodSchema = zodSchemaConfig(config, entity, fieldName);
   const userFieldType = fieldTypeConfig(config, entity, fieldName);
-  const maybeUserType = determineUserType(fieldType, superstruct, userFieldType);
+  const maybeUserType = determineUserType(fieldType, superstruct, zodSchema, userFieldType);
   const unique = column.uniqueIndexes.find(isOneToOneIndex) !== undefined;
   return {
     kind: "primitive",
@@ -384,6 +391,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     unique,
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     superstruct: fieldType === "Object" && superstruct ? Import.from(superstruct) : undefined,
+    zodSchema: fieldType === "Object" && zodSchema ? Import.from(zodSchema) : undefined,
   };
 }
 
@@ -729,6 +737,12 @@ function superstructType(s: string): Import {
   // Assume it's `foo@...`, turn it into `Foo@...`
   const [symbol, ...path] = s.split("@");
   return Import.from(`${pascalCase(symbol)}@${path.join("@")}`);
+}
+
+function zodSchemaType(s: string): Code {
+  const schema = Import.from(s);
+  const zod = Import.from(`z@zod`);
+  return code`${zod}.infer<typeof ${schema}>`;
 }
 
 function userFieldTypeType(s: string): Import {

@@ -1,6 +1,6 @@
-import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde } from "joist-orm";
+import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
 import { Context } from "src/context";
-import { address } from "src/entities/types";
+import { address, AddressSchema } from "src/entities/types";
 import {
   AdvanceStatuses,
   Author,
@@ -81,6 +81,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "graduated": { kind: "primitive", fieldName: "graduated", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("graduated", "graduated", "date"), immutable: false },
     "wasEverPopular": { kind: "primitive", fieldName: "wasEverPopular", fieldIdName: undefined, derived: false, required: false, protected: true, type: "boolean", serde: new PrimitiveSerde("wasEverPopular", "was_ever_popular", "boolean"), immutable: false },
     "address": { kind: "primitive", fieldName: "address", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new SuperstructSerde("address", "address", address), immutable: false },
+    "businessAddress": { kind: "primitive", fieldName: "businessAddress", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new ZodSerde("businessAddress", "business_address", AddressSchema), immutable: false },
     "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("deletedAt", "deleted_at", "timestamp with time zone"), immutable: false },
     "numberOfPublicReviews": { kind: "primitive", fieldName: "numberOfPublicReviews", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews", "number_of_public_reviews", "int"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },

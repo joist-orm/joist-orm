@@ -1010,6 +1010,7 @@ describe("EntityManager", () => {
     expect(a1.toJSON()).toEqual({
       id: "a:1",
       address: null,
+      businessAddress: null,
       age: null,
       bookComments: null,
       createdAt: expect.anything(),
@@ -1273,7 +1274,7 @@ describe("EntityManager", () => {
   });
 
   describe("jsonb columns", () => {
-    it("can save values", async () => {
+    it("can save superstruct values", async () => {
       const em = newEntityManager();
       new Author(em, { firstName: "a1", address: { street: "123 Main" } });
       await em.flush();
@@ -1282,29 +1283,71 @@ describe("EntityManager", () => {
       expect(rows[0].address).toEqual({ street: "123 Main" });
     });
 
-    it("can read values", async () => {
+    it("can read superstruct values", async () => {
       await insertAuthor({ first_name: "f", address: { street: "123 Main" } });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       expect(a.address).toEqual({ street: "123 Main" });
     });
 
-    it("rejects saving invalid values", async () => {
+    it("rejects saving invalid superstruct values", async () => {
       const em = newEntityManager();
       expect(() => {
         new Author(em, { firstName: "a1", address: { street2: "123 Main" } as any });
       }).toThrow("At path: street -- Expected a string, but received: undefined");
     });
 
-    it("rejects reading invalid values", async () => {
-      await insertAuthor({ first_name: "f", address: { street2: "123 Main" } });
+    it("can save zodSchema values", async () => {
+      const em = newEntityManager();
+      new Author(em, { firstName: "a1", businessAddress: { street: "123 Main" } });
+      await em.flush();
+      const rows = await select("authors");
+      expect(rows.length).toEqual(1);
+      expect(rows[0].business_address).toEqual({ street: "123 Main" });
+    });
+
+    it("can read zodSchema values", async () => {
+      await insertAuthor({ first_name: "f", business_address: { street: "123 Main" } });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      expect(a.businessAddress).toEqual({ street: "123 Main" });
+    });
+
+    it("rejects saving invalid zodSchema values", async () => {
+      const em = newEntityManager();
+      expect(() => {
+        new Author(em, { firstName: "a1", businessAddress: { street2: "123 Main" } as any });
+      }).toThrow(JSON.stringify([
+        {
+          "code": "invalid_type",
+          "expected": "string",
+          "received": "undefined",
+          "path": [
+            "street"
+          ],
+          "message": "Required"
+        }
+      ], undefined, 2));
+    });
+
+    it("rejects reading invalid zodSchema values", async () => {
+      await insertAuthor({ first_name: "f", business_address: { street2: "123 Main" } });
       const em = newEntityManager();
       await expect(async () => {
         await em.load(Author, "a:1");
-      }).rejects.toThrow("At path: street -- Expected a string, but received: undefined");
+      }).rejects.toThrow(JSON.stringify([
+      {
+      "code": "invalid_type",
+     "expected": "string",
+     "received": "undefined",
+     "path": [
+       "street"
+      ],
+      "message": "Required"
+      }
+    ], undefined, 2));
     });
   });
-
   it("fails on optimistic lock collisions", async () => {
     // Given an existing author
     await insertAuthor({ first_name: "f" });

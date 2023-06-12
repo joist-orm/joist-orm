@@ -50,7 +50,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
-  setOpts,
+  setOpts, Zod,
 } from "./symbols";
 import { fail, uncapitalize } from "./utils";
 
@@ -79,6 +79,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     } else if (p.derived === "sync") {
       getter = code`
         abstract get ${fieldName}(): ${fieldType}${maybeOptional};
+     `;
+    } else if (p.zodSchema) {
+      getter = code`
+        get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
+          return this.__orm.data["${fieldName}"];
+        }
      `;
     } else {
       getter = code`
@@ -109,6 +115,16 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
             ${SSAssert}(_${fieldName}, ${p.superstruct});
           }
           ${setField}(this, "${fieldName}", _${fieldName});
+        }
+      `;
+    } else if (p.zodSchema) {
+      setter = code`
+        set ${fieldName}(_${fieldName}: ${Zod}.input<typeof ${p.zodSchema}>${maybeOptional}) {
+          if (_${fieldName}) {
+            ${setField}(this, "${fieldName}", ${p.zodSchema}.parse(_${fieldName}));
+          } else {
+            ${setField}(this, "${fieldName}", _${fieldName});
+          }
         }
       `;
     } else {

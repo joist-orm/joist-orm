@@ -1,3 +1,10 @@
+## [1.88.4](https://github.com/stephenh/joist-ts/compare/v1.88.3...v1.88.4) (2023-06-12)
+
+
+### Bug Fixes
+
+* jsonb top level array ([#685](https://github.com/stephenh/joist-ts/issues/685)) ([1cfa6f5](https://github.com/stephenh/joist-ts/commit/1cfa6f5d2decdc6ab9247168fc726c06b84f429d))
+
 ## [1.88.3](https://github.com/stephenh/joist-ts/compare/v1.88.2...v1.88.3) (2023-06-09)
 
 

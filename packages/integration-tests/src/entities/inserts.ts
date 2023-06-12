@@ -33,6 +33,7 @@ export function insertAuthor(row: {
   favorite_shape?: string;
   address?: object;
   business_address?: object;
+  quotes?: string;
   graduated?: any;
   updated_at?: any;
   deleted_at?: any;

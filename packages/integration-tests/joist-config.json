@@ -14,6 +14,7 @@
         "initials": { "derived": "sync" },
         "numberOfBooks": { "derived": "async" },
         "numberOfPublicReviews": { "derived": "async" },
+        "quotes": { "superstruct": "quotes@src/entities/types" },
         "wasEverPopular": { "protected": true }
       },
       "relations": { "books": { "orderBy": "order" } },

@@ -11,6 +11,7 @@ import {
   PolymorphicKeySerde,
   PrimitiveSerde,
   SuperstructSerde,
+  JsonSerde
 } from "./symbols";
 import { q } from "./utils";
 
@@ -70,6 +71,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
       : columnType === "numeric"
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
+      : columnType === 'jsonb' ? code`new ${JsonSerde}("${fieldName}", "${columnName}", ${superstruct})`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {

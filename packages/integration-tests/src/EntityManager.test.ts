@@ -1027,6 +1027,7 @@ describe("EntityManager", () => {
       numberOfBooks: null,
       numberOfPublicReviews: null,
       publisher: "p:1",
+      quotes: null,
       ssn: null,
       updatedAt: expect.anything(),
       wasEverPopular: null,
@@ -1287,6 +1288,22 @@ describe("EntityManager", () => {
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
       expect(a.address).toEqual({ street: "123 Main" });
+    });
+
+    it("can save array values", async () => {
+      const em = newEntityManager();
+      new Author(em, { firstName: "a1", quotes: ['incredible', 'funny', 'seminal'] });
+      await em.flush();
+      const rows = await select("authors");
+      expect(rows.length).toEqual(1);
+      expect(rows[0].quotes).toEqual(['incredible', 'funny', 'seminal']);
+    });
+
+    it("can read array values", async () => {
+      await insertAuthor({ first_name: "f", quotes: JSON.stringify(['incredible', 'funny', 'seminal']) });
+      const em = newEntityManager();
+      const a = await em.load(Author, "a:1");
+      expect(a.quotes).toEqual(['incredible', 'funny', 'seminal']);
     });
 
     it("rejects saving invalid values", async () => {

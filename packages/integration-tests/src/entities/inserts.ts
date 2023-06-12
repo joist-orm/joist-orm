@@ -32,6 +32,7 @@ export function insertAuthor(row: {
   favorite_colors?: number[];
   favorite_shape?: string;
   address?: object;
+  quotes?: string;
   graduated?: any;
   updated_at?: any;
   deleted_at?: any;

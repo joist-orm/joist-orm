@@ -37,7 +37,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Address, address, AddressSchema, Quotes, quotes} from "src/entities/types";
+import { Address, address, AddressSchema, Quotes, quotes } from "src/entities/types";
 import { assert } from "superstruct";
 import { z } from "zod";
 import {
@@ -403,7 +403,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
       setField(this, "businessAddress", _businessAddress);
     }
   }
-    
+
   get quotes(): Quotes | undefined {
     return this.__orm.data["quotes"];
   }

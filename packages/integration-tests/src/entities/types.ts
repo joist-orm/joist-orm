@@ -1,4 +1,4 @@
-import { Infer, object, string, quotes } from "superstruct";
+import { Infer, object, string, array } from "superstruct";
 import { z } from 'zod';
 
 export type Address = Infer<typeof address>;

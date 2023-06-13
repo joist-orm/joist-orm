@@ -40,6 +40,7 @@ export interface AuthorStatFields {
   bigserial: { kind: "primitive"; type: number; unique: false; nullable: never };
   doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never };
   nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined };
+  json: { kind: "primitive"; type: Object; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
 }
@@ -56,6 +57,7 @@ export interface AuthorStatOpts {
   bigserial: number;
   doublePrecision: number;
   nullableText?: string | null;
+  json?: Object | null;
 }
 
 export interface AuthorStatIdsOpts {
@@ -74,6 +76,7 @@ export interface AuthorStatFilter {
   bigserial?: ValueFilter<number, never>;
   doublePrecision?: ValueFilter<number, never>;
   nullableText?: ValueFilter<string, null>;
+  json?: ValueFilter<Object, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
 }
@@ -91,6 +94,7 @@ export interface AuthorStatGraphQLFilter {
   bigserial?: ValueGraphQLFilter<number>;
   doublePrecision?: ValueGraphQLFilter<number>;
   nullableText?: ValueGraphQLFilter<string>;
+  json?: ValueGraphQLFilter<Object>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
 }
@@ -108,6 +112,7 @@ export interface AuthorStatOrder {
   bigserial?: OrderBy;
   doublePrecision?: OrderBy;
   nullableText?: OrderBy;
+  json?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -248,6 +253,14 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
 
   set nullableText(nullableText: string | undefined) {
     setField(this, "nullableText", nullableText);
+  }
+
+  get json(): Object | undefined {
+    return this.__orm.data["json"];
+  }
+
+  set json(json: Object | undefined) {
+    setField(this, "json", json);
   }
 
   get createdAt(): Date {

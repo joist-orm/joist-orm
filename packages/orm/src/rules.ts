@@ -35,11 +35,13 @@ export type ValidationError = { entity: Entity } & GenericError;
 
 export class ValidationErrors extends Error {
   public errors: ValidationError[];
+  public readonly toJSON: () => string;
   constructor(errors: ValidationError[]);
   constructor(message: string);
   constructor(messageOrErrors: ValidationError[] | string) {
     super(typeof messageOrErrors === "string" ? messageOrErrors : errorMessage(messageOrErrors));
     this.errors = typeof messageOrErrors === "string" ? [] : messageOrErrors;
+    this.toJSON = () => `<ValidationErrors> ${this.message}`;
   }
 }
 

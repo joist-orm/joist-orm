@@ -1,5 +1,5 @@
-import { Infer, object, string, array } from "superstruct";
-import { z } from 'zod';
+import { Infer, array, object, string } from "superstruct";
+import { z } from "zod";
 
 export type Address = Infer<typeof address>;
 export type Quotes = Infer<typeof quotes>;
@@ -10,7 +10,7 @@ export const address = object({
 
 export const AddressSchema = z.object({
   street: z.string(),
-})
+});
 
 export const quotes = array(string());
 

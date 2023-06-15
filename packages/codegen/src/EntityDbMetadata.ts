@@ -1,7 +1,7 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
 import { Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
-import {Import, imp, code, Code} from "ts-poet";
+import { Code, Import, code, imp } from "ts-poet";
 import {
   Config,
   fieldTypeConfig,
@@ -12,7 +12,8 @@ import {
   isLargeCollection,
   isProtected,
   ormMaintainedFields,
-  superstructConfig, zodSchemaConfig,
+  superstructConfig,
+  zodSchemaConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
 import {

@@ -216,7 +216,7 @@ export class SuperstructSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    return JSON.stringify(data[this.fieldName])
+    return JSON.stringify(data[this.fieldName]);
   }
 
   mapToDb(value: any) {
@@ -232,11 +232,11 @@ export class JsonSerde implements FieldSerde {
   constructor(private fieldName: string, public columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);;
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return JSON.stringify(data[this.fieldName])
+    return JSON.stringify(data[this.fieldName]);
   }
 
   mapToDb(value: any) {
@@ -255,7 +255,7 @@ export class ZodSerde implements FieldSerde {
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
     if (value) {
-      data[this.fieldName] = this.zodSchema.parse(value)
+      data[this.fieldName] = this.zodSchema.parse(value);
     } else {
       data[this.fieldName] = value;
     }

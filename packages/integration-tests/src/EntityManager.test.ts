@@ -1293,18 +1293,18 @@ describe("EntityManager", () => {
 
     it("can save array values", async () => {
       const em = newEntityManager();
-      new Author(em, { firstName: "a1", quotes: ['incredible', 'funny', 'seminal'] });
+      new Author(em, { firstName: "a1", quotes: ["incredible", "funny", "seminal"] });
       await em.flush();
       const rows = await select("authors");
       expect(rows.length).toEqual(1);
-      expect(rows[0].quotes).toEqual(['incredible', 'funny', 'seminal']);
+      expect(rows[0].quotes).toEqual(["incredible", "funny", "seminal"]);
     });
 
     it("can read array values", async () => {
-      await insertAuthor({ first_name: "f", quotes: JSON.stringify(['incredible', 'funny', 'seminal']) });
+      await insertAuthor({ first_name: "f", quotes: JSON.stringify(["incredible", "funny", "seminal"]) });
       const em = newEntityManager();
       const a = await em.load(Author, "a:1");
-      expect(a.quotes).toEqual(['incredible', 'funny', 'seminal']);
+      expect(a.quotes).toEqual(["incredible", "funny", "seminal"]);
     });
 
     it("rejects saving invalid superstruct values", async () => {
@@ -1334,17 +1334,21 @@ describe("EntityManager", () => {
       const em = newEntityManager();
       expect(() => {
         new Author(em, { firstName: "a1", businessAddress: { street2: "123 Main" } as any });
-      }).toThrow(JSON.stringify([
-        {
-          "code": "invalid_type",
-          "expected": "string",
-          "received": "undefined",
-          "path": [
-            "street"
+      }).toThrow(
+        JSON.stringify(
+          [
+            {
+              code: "invalid_type",
+              expected: "string",
+              received: "undefined",
+              path: ["street"],
+              message: "Required",
+            },
           ],
-          "message": "Required"
-        }
-      ], undefined, 2));
+          undefined,
+          2,
+        ),
+      );
     });
 
     it("rejects reading invalid zodSchema values", async () => {
@@ -1352,17 +1356,21 @@ describe("EntityManager", () => {
       const em = newEntityManager();
       await expect(async () => {
         await em.load(Author, "a:1");
-      }).rejects.toThrow(JSON.stringify([
-      {
-      "code": "invalid_type",
-     "expected": "string",
-     "received": "undefined",
-     "path": [
-       "street"
-      ],
-      "message": "Required"
-      }
-    ], undefined, 2));
+      }).rejects.toThrow(
+        JSON.stringify(
+          [
+            {
+              code: "invalid_type",
+              expected: "string",
+              received: "undefined",
+              path: ["street"],
+              message: "Required",
+            },
+          ],
+          undefined,
+          2,
+        ),
+      );
     });
   });
   it("fails on optimistic lock collisions", async () => {

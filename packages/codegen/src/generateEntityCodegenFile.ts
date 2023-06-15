@@ -36,6 +36,7 @@ import {
   SSAssert,
   ValueFilter,
   ValueGraphQLFilter,
+  Zod,
   deTagId,
   fail as failSymbol,
   hasLargeMany,
@@ -50,7 +51,7 @@ import {
   newChangesProxy,
   newRequiredRule,
   setField,
-  setOpts, Zod,
+  setOpts,
 } from "./symbols";
 import { fail, uncapitalize } from "./utils";
 

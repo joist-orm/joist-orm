@@ -16,6 +16,7 @@ import {
   zodSchemaConfig,
 } from "./config";
 import { EnumMetadata, EnumRow, PgEnumMetadata } from "./loadMetadata";
+import { Zod } from "./symbols";
 import {
   fail,
   isEnumTable,
@@ -742,8 +743,7 @@ function superstructType(s: string): Import {
 
 function zodSchemaType(s: string): Code {
   const schema = Import.from(s);
-  const zod = Import.from(`z@zod`);
-  return code`${zod}.infer<typeof ${schema}>`;
+  return code`${Zod}.input<typeof ${schema}>`;
 }
 
 function userFieldTypeType(s: string): Import {

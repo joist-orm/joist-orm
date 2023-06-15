@@ -1,3 +1,10 @@
+## [1.88.6](https://github.com/stephenh/joist-ts/compare/v1.88.5...v1.88.6) (2023-06-15)
+
+
+### Bug Fixes
+
+* use meta.allFields for cloning ([#690](https://github.com/stephenh/joist-ts/issues/690)) ([0a78048](https://github.com/stephenh/joist-ts/commit/0a78048679ba68968c078ef0edcf19f0eae205e2))
+
 ## [1.88.5](https://github.com/stephenh/joist-ts/compare/v1.88.4...v1.88.5) (2023-06-13)
 
 

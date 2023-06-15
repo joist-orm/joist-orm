@@ -1,3 +1,10 @@
+# [1.89.0](https://github.com/stephenh/joist-ts/compare/v1.88.6...v1.89.0) (2023-06-15)
+
+
+### Features
+
+* support zodSchema for jsonb columns ([#686](https://github.com/stephenh/joist-ts/issues/686)) ([ec6ab5a](https://github.com/stephenh/joist-ts/commit/ec6ab5a23c3d796e947eb5f0dc6c31b43e83df28))
+
 ## [1.88.6](https://github.com/stephenh/joist-ts/compare/v1.88.5...v1.88.6) (2023-06-15)
 
 

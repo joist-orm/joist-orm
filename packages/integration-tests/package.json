@@ -38,6 +38,7 @@
     "superstruct": "^0.15.5",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^3.12.7",
-    "typescript": "^5.1.3"
+    "typescript": "^5.1.3",
+    "zod": "^3.21.4"
   }
 }

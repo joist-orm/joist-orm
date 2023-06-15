@@ -11,6 +11,7 @@ export interface FieldConfig {
   protected?: boolean;
   ignore?: true;
   superstruct?: string;
+  zodSchema?: string;
   type?: string;
 }
 
@@ -100,6 +101,10 @@ export function isProtected(config: Config, entity: Entity, fieldName: string): 
 
 export function superstructConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
   return config.entities[entity.name]?.fields?.[fieldName]?.superstruct;
+}
+
+export function zodSchemaConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
+  return config.entities[entity.name]?.fields?.[fieldName]?.zodSchema;
 }
 
 export function fieldTypeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {

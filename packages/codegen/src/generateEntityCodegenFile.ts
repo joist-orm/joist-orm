@@ -36,6 +36,7 @@ import {
   SSAssert,
   ValueFilter,
   ValueGraphQLFilter,
+  Zod,
   deTagId,
   fail as failSymbol,
   hasLargeMany,
@@ -80,6 +81,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       getter = code`
         abstract get ${fieldName}(): ${fieldType}${maybeOptional};
      `;
+    } else if (p.zodSchema) {
+      getter = code`
+        get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
+          return this.__orm.data["${fieldName}"];
+        }
+     `;
     } else {
       getter = code`
         get ${fieldName}(): ${fieldType}${maybeOptional} {
@@ -109,6 +116,16 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
             ${SSAssert}(_${fieldName}, ${p.superstruct});
           }
           ${setField}(this, "${fieldName}", _${fieldName});
+        }
+      `;
+    } else if (p.zodSchema) {
+      setter = code`
+        set ${fieldName}(_${fieldName}: ${Zod}.input<typeof ${p.zodSchema}>${maybeOptional}) {
+          if (_${fieldName}) {
+            ${setField}(this, "${fieldName}", ${p.zodSchema}.parse(_${fieldName}));
+          } else {
+            ${setField}(this, "${fieldName}", _${fieldName});
+          }
         }
       `;
     } else {

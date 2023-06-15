@@ -37,8 +37,9 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Address, address, Quotes, quotes } from "src/entities/types";
+import { Address, address, AddressSchema, Quotes, quotes } from "src/entities/types";
 import { assert } from "superstruct";
+import { z } from "zod";
 import {
   Author,
   authorMeta,
@@ -85,6 +86,7 @@ export interface AuthorFields {
   graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
+  businessAddress: { kind: "primitive"; type: z.infer<typeof AddressSchema>; unique: false; nullable: undefined };
   quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
@@ -107,6 +109,7 @@ export interface AuthorOpts {
   graduated?: Date | null;
   wasEverPopular?: boolean | null;
   address?: Address | null;
+  businessAddress?: z.infer<typeof AddressSchema> | null;
   quotes?: Quotes | null;
   deletedAt?: Date | null;
   favoriteColors?: Color[];
@@ -147,6 +150,7 @@ export interface AuthorFilter {
   graduated?: ValueFilter<Date, null>;
   wasEverPopular?: BooleanFilter<null>;
   address?: ValueFilter<Address, null>;
+  businessAddress?: ValueFilter<z.infer<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
   deletedAt?: ValueFilter<Date, null>;
   numberOfPublicReviews?: ValueFilter<number, null>;
@@ -179,6 +183,7 @@ export interface AuthorGraphQLFilter {
   graduated?: ValueGraphQLFilter<Date>;
   wasEverPopular?: BooleanGraphQLFilter;
   address?: ValueGraphQLFilter<Address>;
+  businessAddress?: ValueGraphQLFilter<z.infer<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
   deletedAt?: ValueGraphQLFilter<Date>;
   numberOfPublicReviews?: ValueGraphQLFilter<number>;
@@ -211,6 +216,7 @@ export interface AuthorOrder {
   graduated?: OrderBy;
   wasEverPopular?: OrderBy;
   address?: OrderBy;
+  businessAddress?: OrderBy;
   quotes?: OrderBy;
   deletedAt?: OrderBy;
   numberOfPublicReviews?: OrderBy;
@@ -384,6 +390,18 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
       assert(_address, address);
     }
     setField(this, "address", _address);
+  }
+
+  get businessAddress(): z.output<typeof AddressSchema> | undefined {
+    return this.__orm.data["businessAddress"];
+  }
+
+  set businessAddress(_businessAddress: z.input<typeof AddressSchema> | undefined) {
+    if (_businessAddress) {
+      setField(this, "businessAddress", AddressSchema.parse(_businessAddress));
+    } else {
+      setField(this, "businessAddress", _businessAddress);
+    }
   }
 
   get quotes(): Quotes | undefined {

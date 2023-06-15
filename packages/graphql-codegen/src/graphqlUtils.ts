@@ -10,7 +10,7 @@ import {
 import { PrimitiveField, PrimitiveTypescriptType } from "joist-codegen";
 import { groupBy } from "joist-utils";
 import prettier, { Options, resolveConfig } from "prettier";
-import { Import } from "ts-poet";
+import { Code, Import } from "ts-poet";
 import { Fs } from "./utils";
 
 /** A type for the fields we want to add to `*.graphql` files. */
@@ -193,7 +193,7 @@ export type SupportedTypescriptTypes = Exclude<PrimitiveTypescriptType, "Object"
 
 export function mapTypescriptTypeToGraphQLType(
   fieldName: string,
-  type: PrimitiveTypescriptType | Import,
+  type: PrimitiveTypescriptType | Import | Code,
 ): GraphQLType | undefined {
   switch (type) {
     case "string":
@@ -212,7 +212,7 @@ export function mapTypescriptTypeToGraphQLType(
       }
     default:
       // If this is a fancy import like a superstruct/something, we can't guess what it will be in GraphQL
-      if (type instanceof Import) {
+      if (type instanceof Import || type instanceof Code) {
         return undefined;
       }
       // Anything else like `jsonb` (which shows up as `Object`) is also unlikely to be a valid

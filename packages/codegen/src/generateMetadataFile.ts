@@ -7,11 +7,12 @@ import {
   EntityMetadata,
   EnumArrayFieldSerde,
   EnumFieldSerde,
+  JsonSerde,
   KeySerde,
   PolymorphicKeySerde,
   PrimitiveSerde,
   SuperstructSerde,
-  JsonSerde
+  ZodSerde,
 } from "./symbols";
 import { q } from "./utils";
 
@@ -66,12 +67,15 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnName, columnType, superstruct } = p;
+    const { fieldName, derived, columnName, columnType, superstruct, zodSchema } = p;
     const serdeType = superstruct
       ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
+      : zodSchema
+      ? code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`
       : columnType === "numeric"
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
-      : columnType === 'jsonb' ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
+      : columnType === "jsonb"
+      ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {

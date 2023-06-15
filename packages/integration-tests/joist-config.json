@@ -6,6 +6,7 @@
       "fields": {
         "address": { "superstruct": "address@src/entities/types" },
         "bookComments": { "derived": "async" },
+        "businessAddress": { "zodSchema": "AddressSchema@src/entities/types" },
         "favoriteBook": { "derived": "async" },
         "ignoreEnumFk": { "ignore": true },
         "ignoreEnumFkRequiredWithDefault": { "ignore": true },

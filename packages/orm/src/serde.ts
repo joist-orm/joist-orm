@@ -216,7 +216,7 @@ export class SuperstructSerde implements FieldSerde {
   }
 
   dbValue(data: any) {
-    return JSON.stringify(data[this.fieldName])
+    return JSON.stringify(data[this.fieldName]);
   }
 
   mapToDb(value: any) {
@@ -232,11 +232,38 @@ export class JsonSerde implements FieldSerde {
   constructor(private fieldName: string, public columnName: string) {}
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);;
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
   }
 
   dbValue(data: any) {
-    return JSON.stringify(data[this.fieldName])
+    return JSON.stringify(data[this.fieldName]);
+  }
+
+  mapToDb(value: any) {
+    return JSON.stringify(value);
+  }
+}
+
+/** Similar to SimpleSerde, but applies the zod's `parse` function when reading values from the db. */
+export class ZodSerde implements FieldSerde {
+  dbType = "jsonb";
+  isArray = false;
+  columns = [this];
+
+  constructor(private fieldName: string, public columnName: string, private zodSchema: any) {}
+
+  setOnEntity(data: any, row: any): void {
+    const value = maybeNullToUndefined(row[this.columnName]);
+    if (value) {
+      data[this.fieldName] = this.zodSchema.parse(value);
+    } else {
+      data[this.fieldName] = value;
+    }
+  }
+
+  dbValue(data: any) {
+    // assume the data is already valid b/c it came from the entity
+    return JSON.stringify(data[this.fieldName]);
   }
 
   mapToDb(value: any) {

@@ -74,7 +74,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       ? code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`
       : columnType === "numeric"
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
-      : columnType === 'jsonb' ? code`new ${JsonSerde}("${fieldName}", "${columnName}", ${superstruct})`
+      : columnType === 'jsonb' ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {

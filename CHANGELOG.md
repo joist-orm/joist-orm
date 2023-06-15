@@ -1,3 +1,10 @@
+## [1.88.5](https://github.com/stephenh/joist-ts/compare/v1.88.4...v1.88.5) (2023-06-13)
+
+
+### Bug Fixes
+
+* JsonSerde args within codegen ([#687](https://github.com/stephenh/joist-ts/issues/687)) ([36011f1](https://github.com/stephenh/joist-ts/commit/36011f1f74c946adee8891d0ef0df368c8fdb89a))
+
 ## [1.88.4](https://github.com/stephenh/joist-ts/compare/v1.88.3...v1.88.4) (2023-06-12)
 
 

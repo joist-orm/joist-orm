@@ -226,6 +226,7 @@ export function up(b: MigrationBuilder): void {
     bigserial: { type: "bigserial", notNull: true },
     doublePrecision: { type: "double precision", notNull: true },
     nullable_text: { type: "text", notNull: false },
+    json: { type: "jsonb", notNull: false },
   });
 
   // for testing ignore of m2m

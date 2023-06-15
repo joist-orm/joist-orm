@@ -637,7 +637,7 @@ export class EntityManager<C = unknown> {
       // by `em.register`).
       const meta = getMetadata(entity);
       const copy = Object.fromEntries(
-        Object.values(meta.fields)
+        Object.values(meta.allFields)
           .map((f) => {
             switch (f.kind) {
               case "primitive":

@@ -7,11 +7,13 @@ import {
   Image,
   ImageType,
   Publisher,
+  SmallPublisher,
   Tag,
   newAuthor,
   newBook,
   newComment,
   newPublisher,
+  newSmallPublisher,
 } from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
@@ -34,6 +36,23 @@ describe("EntityManager.clone", () => {
     expect(a2.id).not.toEqual(a1.id);
     expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
     expect(p1.authors.get).toEqual([a1, a2]);
+  });
+
+  it("can clones subtype entities with base fields", async () => {
+    const em = newEntityManager();
+
+    // Given an entity
+    const p1 = newSmallPublisher(em, { name: "p1" });
+    await em.flush();
+
+    // When we clone that entity
+    const p2 = await em.clone(p1);
+    await em.flush();
+
+    // Then we expect the cloned entity to have the same properties as the original
+    expect(p2.name).toEqual(p1.name);
+    expect(p2.id).not.toEqual(p1.id);
+    expect(p2).toBeInstanceOf(SmallPublisher);
   });
 
   it("can clone m2os and maintain loaded", async () => {

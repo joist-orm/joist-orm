@@ -1,3 +1,10 @@
+## [1.89.1](https://github.com/stephenh/joist-ts/compare/v1.89.0...v1.89.1) (2023-06-16)
+
+
+### Bug Fixes
+
+* Fix join order in batch finds. ([#694](https://github.com/stephenh/joist-ts/issues/694)) ([07cc043](https://github.com/stephenh/joist-ts/commit/07cc043d89fe76f62bea533a11900caebd5c88a7)), closes [#689](https://github.com/stephenh/joist-ts/issues/689)
+
 # [1.89.0](https://github.com/stephenh/joist-ts/compare/v1.88.6...v1.89.0) (2023-06-15)
 
 

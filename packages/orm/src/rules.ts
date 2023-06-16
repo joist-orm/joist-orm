@@ -43,7 +43,7 @@ export class ValidationErrors extends Error {
     this.errors = typeof messageOrErrors === "string" ? [] : messageOrErrors;
     // Jest clones without prototype, so explictly setting this as a property rather than a class method
     // https://github.com/jestjs/jest/issues/11958
-    this.toJSON = () => `<ValidationErrors> ${this.message}`;
+    this.toJSON = () => `ValidationErrors: ${this.message}`;
   }
 }
 

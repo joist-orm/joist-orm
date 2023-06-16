@@ -767,20 +767,21 @@ export function combineConditions(query: ParsedFindQuery): ParsedExpressionFilte
   }
 }
 
-export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[], JoinTable[]] {
+export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {
   let primary: PrimaryTable;
-  const innerJoins: JoinTable[] = [];
-  const outerJoins: JoinTable[] = [];
+  const joins: JoinTable[] = [];
   for (const table of query.tables) {
     if (table.join === "primary") {
       primary = table;
-    } else if (table.join === "inner") {
-      innerJoins.push(table);
-    } else if (table.join === "outer") {
-      outerJoins.push(table);
+    } else {
+      joins.push(table);
     }
   }
-  return [primary!, innerJoins, outerJoins];
+  return [primary!, joins];
+}
+
+export function joinKeywords(join: JoinTable): string {
+  return join.join === "inner" ? "JOIN" : "LEFT OUTER JOIN";
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {

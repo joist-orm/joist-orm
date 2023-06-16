@@ -1,3 +1,10 @@
+## [1.89.2](https://github.com/stephenh/joist-ts/compare/v1.89.1...v1.89.2) (2023-06-16)
+
+
+### Bug Fixes
+
+* add toJSON to ValidationErrors ([#693](https://github.com/stephenh/joist-ts/issues/693)) ([b3c49bd](https://github.com/stephenh/joist-ts/commit/b3c49bd552538acd63b8e93ea78d26cf4bd5ba8a))
+
 ## [1.89.1](https://github.com/stephenh/joist-ts/compare/v1.89.0...v1.89.1) (2023-06-16)
 
 

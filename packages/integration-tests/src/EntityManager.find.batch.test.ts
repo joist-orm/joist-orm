@@ -1,6 +1,7 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
+import { zeroTo } from "@src/utils";
 import { aliases } from "joist-orm";
-import { Author, Color, Publisher } from "./entities";
+import { AdvanceStatus, Author, Book, BookAdvance, Color, Publisher, PublisherType } from "./entities";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.find.batch", () => {
@@ -263,5 +264,24 @@ describe("EntityManager.find.batch", () => {
     ]);
     expect(q1.length).toBe(2);
     expect(q2.length).toBe(1);
+  });
+
+  it("batches joins in the right order", async () => {
+    const [ba, p] = aliases(BookAdvance, Publisher);
+    const em = newEntityManager();
+    // Given two queries that join an o2o first and then a m2o second
+    const queries = zeroTo(2).map((id) =>
+      em.find(
+        Book,
+        { advances: { as: ba, publisher: p }, id: `${id}` },
+        {
+          conditions: {
+            and: [ba.status.eq(AdvanceStatus.Paid), p.type.eq(PublisherType.Big)],
+          },
+        },
+      ),
+    );
+    // Then we don't get a syntax error
+    await Promise.all(queries);
   });
 });

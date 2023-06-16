@@ -13,6 +13,7 @@ import {
   ParsedValueFilter,
   combineConditions,
   getTables,
+  joinKeywords,
   parseFindQuery,
 } from "../QueryParser";
 import { assertNever, cleanSql } from "../utils";
@@ -68,7 +69,7 @@ export function findDataLoader<T extends Entity>(
       args.unshift({ columnName: "tag", dbType: "int" });
 
       const selects = ["array_agg(_find.tag) as _tags", ...query.selects];
-      const [primary, innerJoins, outerJoins] = getTables(query);
+      const [primary, joins] = getTables(query);
 
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings: any[] = [];
@@ -98,8 +99,7 @@ export function findDataLoader<T extends Entity>(
         ${buildValuesCte("_find", args, queries)}
         SELECT ${selects.join(", ")}
         FROM ${primary.table} as ${primary.alias}
-        ${innerJoins.map((j) => `JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
-        ${outerJoins.map((j) => `LEFT OUTER JOIN ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
+        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
         ORDER BY ${query.orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}

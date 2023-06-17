@@ -266,6 +266,8 @@ export interface FieldConfig {
   protected?: boolean;
   ignore?: true;
   superstruct?: string;
+  zodSchema?: string;
+  type?: string;
 }
 ```
 
@@ -274,7 +276,9 @@ Where:
 * `derived` controls whether this field is derived from business logic (...link to docs...)
 * `protected` controls whether this is field is `protected` and so can only be accessed internally by the domain model code
 * `ignore` controls whether to ignore the field
-* `superstruct` links to the superstruct type to use for `jsonb` columns, i.e. `commentStreamReads@src/entities/superstruct` (...link to docs...)
+* `superstruct` links to the superstruct type to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `commentStreamReads@src/entities/superstruct`
+* `zodSchema` links to the Zod schema to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `CommentStreamReads@src/entities/schemas` 
+* `type` links to an TypeScript type to use instead of the schema derived one
 
 ### `entities.relations`
 

@@ -9,14 +9,46 @@ Postgres has rich support for [storing JSON](https://www.postgresql.org/docs/cur
 
 While Postgres does not apply a schema to `jsonb` columns, this can often be useful when you do actually have/know a schema for a `jsonb` column, but are using the `jsonb` column as a more succinct/pragmatic way to store nested/hierarchical data than as strictly relational tables and columns.
 
-To support this, Joist uses the [superstruct](https://docs.superstructjs.org/) library, which can describe both the TypeScript type for a value (i.e. `Address` has both as a `street` and a `city`), as well as do runtime validation and parsing of address values.
+To support this, Joist supports both the [superstruct](https://docs.superstructjs.org/) library and [Zod](https://zod.dev/), which can describe both the TypeScript type for a value (i.e. `Address` has both as a `street` and a `city`), as well as do runtime validation and parsing of address values.
 
-That said, if you do want to use the `jsonb` column effectively as an `any` object, the superstruct typing is optional, and you'll just work with `Object`s instead.
+That said, if you do want to use the `jsonb` column effectively as an `any` object, the additional typing is optional, and you'll just work with `Object`s instead.
 
 ### Approach
 
 We'll use an example of storing an `Address` with `street` and `city` fields within a single `jsonb` column.
 
+#### Zod
+First, define a [Zod](https://zod.dev/) schema for the data you're going to store in `src/entities/types.ts`:
+
+```typescript
+import { z } from "zod";
+
+export const Address = z.object({
+  street: z.string(),
+  city: z.string(),
+});
+```
+
+Then tell Joist to use this `Address` schema for the `Author.address` field in `joist-config.json`:
+
+```json
+{
+  "entities": {
+    "Author": {
+      "fields": {
+        "address": {
+          "zodSchema": "Address@src/entities/types"
+        }
+      },
+      "tag": "a"
+    }
+  }
+}
+```
+
+Now just run `joist-codegen` and the `AuthorCodegen`'s `address` field use the `Address` schema using Zod's `z.input` and `z.output` inference in setter and getter respectively.
+
+#### Superstruct
 First, define a [superstruct](https://docs.superstructjs.org/) type for the data you're going to store in `src/entities/types.ts`:
 
 ```typescript

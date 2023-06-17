@@ -80,6 +80,6 @@ export type ValueFilter<V, N> =
 
 /** Filters against complex expressions of filters. */
 export type ExpressionFilter = (
-  | { and: Array<ExpressionFilter | ColumnCondition | undefined> }
-  | { or: Array<ExpressionFilter | ColumnCondition | undefined> }
+  | { and: Array<ExpressionFilter | ColumnCondition | undefined>; or?: never }
+  | { or: Array<ExpressionFilter | ColumnCondition | undefined>; and?: never }
 ) & { pruneIfUndefined?: "any" | "all" };

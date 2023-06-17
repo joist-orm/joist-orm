@@ -86,7 +86,7 @@ export interface AuthorFields {
   graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
-  businessAddress: { kind: "primitive"; type: z.infer<typeof AddressSchema>; unique: false; nullable: undefined };
+  businessAddress: { kind: "primitive"; type: z.input<typeof AddressSchema>; unique: false; nullable: undefined };
   quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
@@ -109,7 +109,7 @@ export interface AuthorOpts {
   graduated?: Date | null;
   wasEverPopular?: boolean | null;
   address?: Address | null;
-  businessAddress?: z.infer<typeof AddressSchema> | null;
+  businessAddress?: z.input<typeof AddressSchema> | null;
   quotes?: Quotes | null;
   deletedAt?: Date | null;
   favoriteColors?: Color[];
@@ -150,7 +150,7 @@ export interface AuthorFilter {
   graduated?: ValueFilter<Date, null>;
   wasEverPopular?: BooleanFilter<null>;
   address?: ValueFilter<Address, null>;
-  businessAddress?: ValueFilter<z.infer<typeof AddressSchema>, null>;
+  businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
   deletedAt?: ValueFilter<Date, null>;
   numberOfPublicReviews?: ValueFilter<number, null>;
@@ -183,7 +183,7 @@ export interface AuthorGraphQLFilter {
   graduated?: ValueGraphQLFilter<Date>;
   wasEverPopular?: BooleanGraphQLFilter;
   address?: ValueGraphQLFilter<Address>;
-  businessAddress?: ValueGraphQLFilter<z.infer<typeof AddressSchema>>;
+  businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
   deletedAt?: ValueGraphQLFilter<Date>;
   numberOfPublicReviews?: ValueGraphQLFilter<number>;

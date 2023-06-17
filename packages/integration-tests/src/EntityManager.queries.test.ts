@@ -1899,6 +1899,13 @@ describe("EntityManager.queries", () => {
       expect(authors.length).toEqual(2);
     });
 
+    it("can use exclusively allows or or and", async () => {
+      const em = newEntityManager();
+      const a = alias(Author);
+      // @ts-expect-error
+      await em.find(Author, { as: a }, { conditions: { and: [a.isPopular.eq(true)], or: [a.lastName.eq(null)] } });
+    });
+
     it("can use primitive aliases for null", async () => {
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2", last_name: "l2" });

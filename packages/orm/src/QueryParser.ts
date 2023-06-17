@@ -739,9 +739,9 @@ export function maybeAddNotSoftDeleted(
 
 function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter | undefined {
   const [op, expressions] =
-    "and" in expression
+    "and" in expression && expression.and
       ? ["and" as const, expression.and]
-      : "or" in expression
+      : "or" in expression && expression.or
       ? ["or" as const, expression.or]
       : fail(`Invalid expression ${expression}`);
   const conditions = expressions.map((exp) => (exp && ("and" in exp || "or" in exp) ? parseExpression(exp) : exp));

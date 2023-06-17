@@ -1,3 +1,10 @@
+## [1.89.3](https://github.com/stephenh/joist-ts/compare/v1.89.2...v1.89.3) (2023-06-17)
+
+
+### Bug Fixes
+
+* ensure exclusive `or` or `and` in ExpressionFilter ([#695](https://github.com/stephenh/joist-ts/issues/695)) ([17b6f5c](https://github.com/stephenh/joist-ts/commit/17b6f5c03a18d6a77335beca39ead726aeef392c))
+
 ## [1.89.2](https://github.com/stephenh/joist-ts/compare/v1.89.1...v1.89.2) (2023-06-16)
 
 

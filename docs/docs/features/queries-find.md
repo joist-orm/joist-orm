@@ -109,15 +109,22 @@ Inline conditions can be any of the following formats/operators:
   * `{ eq: null }` becomes `IS NULL`
   * `{ ne: null }` becomes `IS NOT NULL`
   * `{ in: ["a1", "b2", null] }`
+  * `{ nin: ["a1", "b2"] }` becomes `NOT IN`
   * `{ lt: 1 }`
   * `{ gt: 1 }`
   * `{ gte: 1 }`
   * `{ lte: 1 }`
+  * `{ like: "str" }`
+  * `{ ilike: "str" }`
 * An operator literal can also include multiple keys, i.e.:
   * `{ gt: 1, lt: 10 }` becomes `> 1 AND < 10`
 * An operator literal can also use an explicit `op` key, i.e.:
   * `{ op: "eq", value: "a1" }` 
   * `{ op: "in", value: ["a1", "a2"] }`
+* An array field can also use these additional operators, i.e.:
+  * `{ contains: ["book"] }`
+  * `{ overlaps: ["book"] }`
+  * `{ containedBy: ["book"] }`
 
 :::tip
 
@@ -222,6 +229,10 @@ You can also query based on an association
 const books = await em.find(Book, { author: { firstName: "a2" } });
 ```
 
+- Batch friendly
+- Returns
+  - Array of zero or more entities
+
 ### `#findOne`
 
 ```ts
@@ -229,12 +240,25 @@ const em = newEntityManager();
 const author = await em.findOne(Author, { email: 'foo@bar.com" });
 ```
 
+- Batch friendly
+- Returns
+  - Entity if one found
+  - `undefined` if nothing found
+  - throws `TooManyError` if more than 1 found
+
 ### `#findOneOrFail`
 
 ```ts
 const em = newEntityManager();
 const author = await em.findOneOrFail(Author, { email: "foo@bar.com" });
 ```
+
+- Batch friendly
+- Returns
+  - Entity if one found
+  - throws `NotFoundError` if nothing found
+  - throws `TooManyError` if more than 1 found
+
 
 ### `#findOrCreate`
 

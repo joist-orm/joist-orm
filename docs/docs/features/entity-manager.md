@@ -88,6 +88,11 @@ const em = newEntityManager();
 const a = await em.load(Author, "a:1");
 ```
 
+- Returns
+    - Entity if found
+    - throws `Error` if not
+
+
 ### `#loadAll`
 
 Load multiple instances of a given entity and ids, and fails if any id does not exist.
@@ -96,6 +101,11 @@ Load multiple instances of a given entity and ids, and fails if any id does not 
 const em = newEntityManager();
 const a = await em.loadAll(Author, ["a:1", "a:2"]);
 ```
+
+- Returns
+    - Array of entities if found
+    - throws `Error` if not
+
 
 ### `#loadAllIfExists`
 

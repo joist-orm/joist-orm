@@ -69,7 +69,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   dbMetadata.primitives.forEach((p) => {
     const { fieldName, derived, columnName, columnType, superstruct, zodSchema, customSerde } = p;
     const serdeType = customSerde
-      ? code`new ${customSerde}("${fieldName}", "${columnName}", ${superstruct})`
+      ? code`new ${customSerde}("${fieldName}", "${columnName}", "${columnType}")`
       : superstruct
       ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
       : zodSchema

@@ -740,7 +740,7 @@ export class EntityManager<C = unknown> {
     const tagged = tagId(meta, id);
     const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
     if (!entity) {
-      throw new Error(`${tagged} was not found`);
+      throw new NotFoundError(`${tagged} was not found`);
     }
     if (hint) {
       await this.populate(entity, hint);
@@ -769,7 +769,7 @@ export class EntityManager<C = unknown> {
     );
     const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
     if (idsNotFound.length > 0) {
-      throw new Error(`${idsNotFound.join(",")} were not found`);
+      throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
     if (hint) {
       await this.populate(entities as T[], hint);
@@ -1371,7 +1371,7 @@ export function sameEntity(a: Entity | string | undefined, b: Entity | string | 
   return aId === bId;
 }
 
-/** Thrown by `findOneOrFail` if an entity is not found. */
+/** Thrown by `findOneOrFail`, 'load' & 'loadAll' if an entity is not found. */
 export class NotFoundError extends Error {}
 
 /** Thrown by `findOne` and `findOneOrFail` if more than one entity is found. */

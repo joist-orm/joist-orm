@@ -26,6 +26,7 @@ export const PrimitiveSerde = imp("PrimitiveSerde@joist-orm");
 export const JsonSerde = imp("JsonSerde@joist-orm");
 export const SuperstructSerde = imp("SuperstructSerde@joist-orm");
 export const ZodSerde = imp("ZodSerde@joist-orm");
+export const CustomSerdeAdapter = imp("CustomSerdeAdapter@joist-orm");
 export const DecimalToNumberSerde = imp("DecimalToNumberSerde@joist-orm");
 export const fail = imp("fail@joist-orm");
 export const setOpts = imp("setOpts@joist-orm");

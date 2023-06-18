@@ -1,4 +1,4 @@
-import { Serde } from "joist-orm";
+import { CustomSerde } from "joist-orm";
 import { Infer, array, object, string } from "superstruct";
 import { z } from "zod";
 
@@ -33,17 +33,12 @@ export class PasswordValue {
   }
 }
 
-export class PasswordValueSerde extends Serde {
-  dbValue(data: any): any {
-    return PasswordValue.fromEncoded(data[this.columnName]);
-  }
+export const PasswordValueSerde: CustomSerde<PasswordValue, string> = {
+  toDb(value) {
+    return value.encoded;
+  },
 
-  mapToDb(value: any): any {
-    if (value instanceof PasswordValue) return value.encoded;
-    return value;
-  }
-
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = PasswordValue.fromEncoded(row[this.columnName]);
-  }
-}
+  fromDb(value) {
+    return PasswordValue.fromEncoded(value);
+  },
+};

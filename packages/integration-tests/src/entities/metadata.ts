@@ -1,4 +1,4 @@
-import { BaseEntity, configureMetadata, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
+import { BaseEntity, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import {
@@ -510,7 +510,7 @@ export const userMeta: EntityMetadata<User> = {
     "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying"), immutable: false },
     "email": { kind: "primitive", fieldName: "email", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("email", "email", "character varying"), immutable: false },
     "ipAddress": { kind: "primitive", fieldName: "ipAddress", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("ipAddress", "ip_address", "character varying"), immutable: false },
-    "password": { kind: "primitive", fieldName: "password", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PasswordValueSerde("password", "password", "character varying"), immutable: false },
+    "password": { kind: "primitive", fieldName: "password", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new CustomSerdeAdapter("password", "password", "character varying", PasswordValueSerde), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "authorManyToOne": { kind: "m2o", fieldName: "authorManyToOne", fieldIdName: "authorManyToOneId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "userOneToOne", serde: new KeySerde("a", "authorManyToOne", "author_id", "int"), immutable: false },

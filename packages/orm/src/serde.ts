@@ -39,16 +39,35 @@ export interface Column {
   isArray: boolean;
 }
 
-export abstract class Serde implements FieldSerde {
+export interface CustomSerde<DomainType, DbType> {
+  toDb(value: DomainType): DbType;
+  fromDb(value: DbType): DomainType;
+}
+
+export class CustomSerdeAdapter implements FieldSerde {
   columns = [this];
 
   isArray: boolean = false;
 
-  public constructor(protected fieldName: string, public columnName: string, public dbType: string) {}
+  public constructor(
+    protected fieldName: string,
+    public columnName: string,
+    public dbType: string,
+    private mapper: CustomSerde<any, any>,
+  ) {}
+  setOnEntity(data: any, row: any): void {
+    const value = maybeNullToUndefined(row[this.columnName]);
+    data[this.fieldName] = value !== undefined ? this.mapper.fromDb(value) : undefined;
+  }
 
-  abstract dbValue(data: any): any;
-  abstract setOnEntity(data: any, row: any): void;
-  abstract mapToDb(data: any): any;
+  dbValue(data: any): any {
+    const fieldData = data[this.fieldName];
+    return fieldData !== undefined ? this.mapper.toDb(data[this.fieldName]) : undefined;
+  }
+
+  mapToDb(value: any): any {
+    return value === null ? value : this.mapper.fromDb(value);
+  }
 }
 
 export class PrimitiveSerde implements FieldSerde {

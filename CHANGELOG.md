@@ -1,3 +1,10 @@
+# [1.90.0](https://github.com/stephenh/joist-ts/compare/v1.89.3...v1.90.0) (2023-06-18)
+
+
+### Features
+
+* use NotFoundError in load & loadAll ([#697](https://github.com/stephenh/joist-ts/issues/697)) ([d2de239](https://github.com/stephenh/joist-ts/commit/d2de239581ed890e4a530c16248724bf2a36125f))
+
 ## [1.89.3](https://github.com/stephenh/joist-ts/compare/v1.89.2...v1.89.3) (2023-06-17)
 
 

@@ -29,6 +29,7 @@ export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveFiel
     columnDefault: null,
     superstruct: undefined,
     zodSchema: undefined,
+    customSerde: undefined,
     ...opts,
   };
 }

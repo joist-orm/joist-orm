@@ -41,7 +41,13 @@
     "PublisherGroup": { "relations": { "critics": { "large": true } }, "tag": "pg" },
     "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
-    "User": { "fields": { "ipAddress": { "type": "IpAddress@src/entities/types" } }, "tag": "u" }
+    "User": {
+      "fields": {
+        "ipAddress": { "type": "IpAddress@src/entities/types" },
+        "password": { "serde": "PasswordValueSerde@src/entities/types", "type": "PasswordValue@src/entities/types" }
+      },
+      "tag": "u"
+    }
   },
   "entitiesDirectory": "./src/entities"
 }

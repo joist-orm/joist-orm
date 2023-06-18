@@ -31,7 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { IpAddress } from "src/entities/types";
+import { IpAddress, PasswordValue } from "src/entities/types";
 import {
   Author,
   AuthorId,
@@ -53,6 +53,7 @@ export interface UserFields {
   name: { kind: "primitive"; type: string; unique: false; nullable: never };
   email: { kind: "primitive"; type: string; unique: false; nullable: never };
   ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined };
+  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined };
@@ -62,6 +63,7 @@ export interface UserOpts {
   name: string;
   email: string;
   ipAddress?: IpAddress | null;
+  password?: PasswordValue | null;
   authorManyToOne?: Author | AuthorId | null;
   createdComments?: Comment[];
   likedComments?: Comment[];
@@ -78,6 +80,7 @@ export interface UserFilter {
   name?: ValueFilter<string, never>;
   email?: ValueFilter<string, never>;
   ipAddress?: ValueFilter<IpAddress, null>;
+  password?: ValueFilter<PasswordValue, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -90,6 +93,7 @@ export interface UserGraphQLFilter {
   name?: ValueGraphQLFilter<string>;
   email?: ValueGraphQLFilter<string>;
   ipAddress?: ValueGraphQLFilter<IpAddress>;
+  password?: ValueGraphQLFilter<PasswordValue>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -102,6 +106,7 @@ export interface UserOrder {
   name?: OrderBy;
   email?: OrderBy;
   ipAddress?: OrderBy;
+  password?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   authorManyToOne?: AuthorOrder;
@@ -195,6 +200,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
 
   set ipAddress(ipAddress: IpAddress | undefined) {
     setField(this, "ipAddress", ipAddress);
+  }
+
+  get password(): PasswordValue | undefined {
+    return this.__orm.data["password"];
+  }
+
+  set password(password: PasswordValue | undefined) {
+    setField(this, "password", password);
   }
 
   get createdAt(): Date {

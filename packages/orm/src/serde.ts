@@ -39,6 +39,18 @@ export interface Column {
   isArray: boolean;
 }
 
+export abstract class Serde implements FieldSerde {
+  columns = [this];
+
+  isArray: boolean = false;
+
+  public constructor(protected fieldName: string, public columnName: string, public dbType: string) {}
+
+  abstract dbValue(data: any): any;
+  abstract setOnEntity(data: any, row: any): void;
+  abstract mapToDb(data: any): any;
+}
+
 export class PrimitiveSerde implements FieldSerde {
   isArray = false;
   columns = [this];

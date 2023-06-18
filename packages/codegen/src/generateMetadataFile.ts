@@ -67,7 +67,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnName, columnType, superstruct, zodSchema } = p;
+    const { fieldName, derived, columnName, columnType, superstruct, zodSchema, customSerde } = p;
     const serdeType = superstruct
       ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
       : zodSchema
@@ -76,7 +76,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
       : columnType === "jsonb"
       ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
-      : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
+      : code`new ${customSerde ?? PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {
         kind: "primitive",

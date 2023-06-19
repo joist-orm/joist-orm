@@ -1,5 +1,5 @@
 import { User } from "@src/entities";
-import { insertUser } from "@src/entities/inserts";
+import {insertUser, select} from "@src/entities/inserts";
 import { PasswordValue } from "@src/entities/types";
 import { newEntityManager } from "@src/setupDbTests";
 
@@ -26,7 +26,7 @@ describe("User", () => {
   });
 
   it("loads serde values correctly", async () => {
-    insertUser({
+    await insertUser({
       id: 1,
       name: "a1",
       email: "test@test.com",
@@ -36,10 +36,12 @@ describe("User", () => {
     const em = newEntityManager();
     const a1 = await em.load(User, "u:1");
     await expect(a1.password?.encoded).toEqual(PASSWORD_ENCODED);
+
+    expect((await select("users"))[0].password).toEqual(PASSWORD_ENCODED);
   });
 
   it("can interact with serde value", async () => {
-    insertUser({
+    await insertUser({
       id: 1,
       name: "a1",
       email: "test@test.com",

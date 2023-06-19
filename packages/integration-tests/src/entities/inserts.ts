@@ -56,7 +56,7 @@ export function insertComment(row: {
   return testDriver.insert("comments", row);
 }
 
-export function insertUser(row: { id?: number; name: string; email: string }) {
+export function insertUser(row: { id?: number; name: string; email: string; password: string }) {
   return testDriver.insert("users", row);
 }
 

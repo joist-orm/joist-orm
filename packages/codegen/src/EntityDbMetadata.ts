@@ -12,6 +12,7 @@ import {
   isLargeCollection,
   isProtected,
   ormMaintainedFields,
+  serdeConfig,
   superstructConfig,
   zodSchemaConfig,
 } from "./config";
@@ -103,6 +104,7 @@ export type PrimitiveField = Field & {
   unique: boolean;
   superstruct: Import | undefined;
   zodSchema: Import | undefined;
+  customSerde: Import | undefined;
 };
 
 export type EnumField = Field & {
@@ -374,6 +376,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const columnName = column.name;
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const fieldType = mapType(table.name, columnName, columnType);
+  const customSerde = serdeConfig(config, entity, fieldName);
   const superstruct = superstructConfig(config, entity, fieldName);
   const zodSchema = zodSchemaConfig(config, entity, fieldName);
   const userFieldType = fieldTypeConfig(config, entity, fieldName);
@@ -394,6 +397,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     ignore: isFieldIgnored(config, entity, fieldName, column.notNull, column.default !== null),
     superstruct: fieldType === "Object" && superstruct ? Import.from(superstruct) : undefined,
     zodSchema: fieldType === "Object" && zodSchema ? Import.from(zodSchema) : undefined,
+    customSerde: customSerde ? serdeType(customSerde) : undefined,
   };
 }
 
@@ -747,5 +751,9 @@ function zodSchemaType(s: string): Code {
 }
 
 function userFieldTypeType(s: string): Import {
+  return Import.from(s);
+}
+
+function serdeType(s: string): Import {
   return Import.from(s);
 }

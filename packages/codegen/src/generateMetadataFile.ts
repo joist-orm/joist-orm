@@ -3,6 +3,7 @@ import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
+  CustomSerdeAdapter,
   DecimalToNumberSerde,
   EntityMetadata,
   EnumArrayFieldSerde,
@@ -67,8 +68,10 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnName, columnType, superstruct, zodSchema } = p;
-    const serdeType = superstruct
+    const { fieldName, derived, columnName, columnType, superstruct, zodSchema, customSerde } = p;
+    const serdeType = customSerde
+      ? code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde})`
+      : superstruct
       ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
       : zodSchema
       ? code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`

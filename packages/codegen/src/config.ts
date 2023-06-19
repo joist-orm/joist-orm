@@ -13,6 +13,7 @@ export interface FieldConfig {
   superstruct?: string;
   zodSchema?: string;
   type?: string;
+  serde?: string;
 }
 
 export interface RelationConfig {
@@ -97,6 +98,10 @@ export function isAsyncDerived(config: Config, entity: Entity, fieldName: string
 
 export function isProtected(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.protected === true;
+}
+
+export function serdeConfig(config: Config, entity: Entity, fieldName: string): string | undefined {
+  return config.entities[entity.name]?.fields?.[fieldName]?.serde;
 }
 
 export function superstructConfig(config: Config, entity: Entity, fieldName: string): string | undefined {

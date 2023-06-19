@@ -1,3 +1,10 @@
+# [1.91.0](https://github.com/stephenh/joist-ts/compare/v1.90.0...v1.91.0) (2023-06-19)
+
+
+### Features
+
+* add basic custom serde support ([#698](https://github.com/stephenh/joist-ts/issues/698)) ([36bdce6](https://github.com/stephenh/joist-ts/commit/36bdce6d86c12348aa3ee89e3cc19ed31c0390e7))
+
 # [1.90.0](https://github.com/stephenh/joist-ts/compare/v1.89.3...v1.90.0) (2023-06-18)
 
 

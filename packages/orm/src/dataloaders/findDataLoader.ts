@@ -216,9 +216,13 @@ function visit(query: ParsedFindQuery, visitor: Visitor): void {
 // Create the a1.firstName=data.firstName AND a2.lastName=data.lastName
 function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [string, number] {
   const conditions = [] as string[];
+  const originalIndex = argsIndex;
   ef.conditions.forEach((c) => {
     if ("cond" in c) {
       const [op, argsTaken] = makeOp(c.cond, argsIndex);
+      if (c.alias === "unset") {
+        throw new Error("Alias was not bound in em.find");
+      }
       conditions.push(`${c.alias}.${c.column} ${op}`);
       argsIndex += argsTaken;
     } else {
@@ -229,7 +233,8 @@ function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [st
       argsIndex += argsTaken;
     }
   });
-  return [conditions.join(` ${ef.op.toUpperCase()} `), argsIndex];
+  const argsTaken = argsIndex - originalIndex;
+  return [conditions.join(` ${ef.op.toUpperCase()} `), argsTaken];
 }
 
 function makeOp(cond: ParsedValueFilter<any>, argsIndex: number): [string, number] {

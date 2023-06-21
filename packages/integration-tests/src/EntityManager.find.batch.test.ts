@@ -273,7 +273,7 @@ describe("EntityManager.find.batch", () => {
     const queries = zeroTo(2).map((id) =>
       em.find(
         Book,
-        { advances: { as: ba, publisher: p }, id: `${id}` },
+        { id: `${id}`, advances: { as: ba, publisher: p } },
         {
           conditions: {
             and: [ba.status.eq(AdvanceStatus.Paid), p.type.eq(PublisherType.Big)],
@@ -286,12 +286,12 @@ describe("EntityManager.find.batch", () => {
   });
 
   it("batches multiple nested conditions", async () => {
-    const [b, ba, p] = aliases(Book, BookAdvance, Publisher);
     const em = newEntityManager();
+    const [ba, p] = aliases(BookAdvance, Publisher);
     const queries = zeroTo(2).map((id) =>
       em.find(
         Book,
-        { as: b, advances: { as: ba, publisher: p }, id: `${id}` },
+        { id: `${id}`, advances: { as: ba, publisher: p } },
         {
           conditions: {
             or: [

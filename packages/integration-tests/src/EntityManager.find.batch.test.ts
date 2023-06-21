@@ -1,6 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
-import { aliases } from "joist-orm";
+import { aliases, jan1 } from "joist-orm";
 import { AdvanceStatus, Author, Book, BookAdvance, Color, Publisher, PublisherType } from "./entities";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
@@ -282,6 +282,26 @@ describe("EntityManager.find.batch", () => {
       ),
     );
     // Then we don't get a syntax error
+    await Promise.all(queries);
+  });
+
+  it("batches multiple nested conditions", async () => {
+    const [b, ba, p] = aliases(Book, BookAdvance, Publisher);
+    const em = newEntityManager();
+    const queries = zeroTo(2).map((id) =>
+      em.find(
+        Book,
+        { as: b, advances: { as: ba, publisher: p }, id: `${id}` },
+        {
+          conditions: {
+            or: [
+              { and: [ba.createdAt.gt(jan1)] },
+              { and: [ba.status.eq(AdvanceStatus.Paid), p.type.in([PublisherType.Big])] },
+            ],
+          },
+        },
+      ),
+    );
     await Promise.all(queries);
   });
 });

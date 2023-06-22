@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -54,6 +55,7 @@ export interface UserFields {
   email: { kind: "primitive"; type: string; unique: false; nullable: never };
   ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined };
   password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined };
+  bio: { kind: "primitive"; type: string; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined };
@@ -64,6 +66,7 @@ export interface UserOpts {
   email: string;
   ipAddress?: IpAddress | null;
   password?: PasswordValue | null;
+  bio?: string;
   authorManyToOne?: Author | AuthorId | null;
   createdComments?: Comment[];
   likedComments?: Comment[];
@@ -81,6 +84,7 @@ export interface UserFilter {
   email?: ValueFilter<string, never>;
   ipAddress?: ValueFilter<IpAddress, null>;
   password?: ValueFilter<PasswordValue, null>;
+  bio?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
@@ -94,6 +98,7 @@ export interface UserGraphQLFilter {
   email?: ValueGraphQLFilter<string>;
   ipAddress?: ValueGraphQLFilter<IpAddress>;
   password?: ValueGraphQLFilter<PasswordValue>;
+  bio?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
@@ -107,6 +112,7 @@ export interface UserOrder {
   email?: OrderBy;
   ipAddress?: OrderBy;
   password?: OrderBy;
+  bio?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   authorManyToOne?: AuthorOrder;
@@ -116,11 +122,12 @@ export const userConfig = new ConfigApi<User, Context>();
 
 userConfig.addRule(newRequiredRule("name"));
 userConfig.addRule(newRequiredRule("email"));
+userConfig.addRule(newRequiredRule("bio"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 
 export abstract class UserCodegen extends BaseEntity<EntityManager> {
-  static defaultValues: object = {};
+  static defaultValues: object = { bio: "" };
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;
 
@@ -183,7 +190,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   }
 
   set name(name: string) {
-    setField(this, "name", name);
+    setField(this, "name", cleanStringValue(name));
   }
 
   get email(): string {
@@ -191,7 +198,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   }
 
   set email(email: string) {
-    setField(this, "email", email);
+    setField(this, "email", cleanStringValue(email));
   }
 
   get ipAddress(): IpAddress | undefined {
@@ -208,6 +215,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
 
   set password(password: PasswordValue | undefined) {
     setField(this, "password", password);
+  }
+
+  get bio(): string {
+    return this.__orm.data["bio"];
+  }
+
+  set bio(bio: string) {
+    setField(this, "bio", bio);
   }
 
   get createdAt(): Date {

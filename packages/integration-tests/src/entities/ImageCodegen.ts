@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -164,7 +165,7 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   }
 
   set fileName(fileName: string) {
-    setField(this, "fileName", fileName);
+    setField(this, "fileName", cleanStringValue(fileName));
   }
 
   get createdAt(): Date {

@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityMetadata,
   EntityOrmField,
@@ -99,7 +100,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager> {
   }
 
   set name(name: string) {
-    setField(this, "name", name);
+    setField(this, "name", cleanStringValue(name));
   }
 
   set(opts: Partial<DatabaseOwnerOpts>): void {

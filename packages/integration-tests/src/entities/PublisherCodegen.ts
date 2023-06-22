@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -252,7 +253,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set name(name: string) {
-    setField(this, "name", name);
+    setField(this, "name", cleanStringValue(name));
   }
 
   get latitude(): number | undefined {

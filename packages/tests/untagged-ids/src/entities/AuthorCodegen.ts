@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   deTagId,
@@ -127,7 +128,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set firstName(firstName: string) {
-    setField(this, "firstName", firstName);
+    setField(this, "firstName", cleanStringValue(firstName));
   }
 
   get lastName(): string | undefined {
@@ -135,7 +136,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set lastName(lastName: string | undefined) {
-    setField(this, "lastName", lastName);
+    setField(this, "lastName", cleanStringValue(lastName));
   }
 
   get createdAt(): Date {

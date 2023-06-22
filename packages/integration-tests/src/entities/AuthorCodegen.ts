@@ -3,6 +3,7 @@ import {
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -324,7 +325,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set firstName(firstName: string) {
-    setField(this, "firstName", firstName);
+    setField(this, "firstName", cleanStringValue(firstName));
   }
 
   get lastName(): string | undefined {
@@ -332,7 +333,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set lastName(lastName: string | undefined) {
-    setField(this, "lastName", lastName);
+    setField(this, "lastName", cleanStringValue(lastName));
   }
 
   get ssn(): string | undefined {
@@ -340,7 +341,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set ssn(ssn: string | undefined) {
-    setField(this, "ssn", ssn);
+    setField(this, "ssn", cleanStringValue(ssn));
   }
 
   abstract get initials(): string;

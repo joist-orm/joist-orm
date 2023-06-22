@@ -1,5 +1,6 @@
 import {
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityMetadata,
   EntityOrmField,
@@ -112,7 +113,7 @@ export abstract class SmallPublisherCodegen extends Publisher {
   }
 
   set city(city: string) {
-    setField(this, "city", city);
+    setField(this, "city", cleanStringValue(city));
   }
 
   abstract readonly allAuthorNames: PersistedAsyncProperty<SmallPublisher, string | undefined>;

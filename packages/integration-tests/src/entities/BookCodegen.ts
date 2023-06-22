@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -210,7 +211,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set title(title: string) {
-    setField(this, "title", title);
+    setField(this, "title", cleanStringValue(title));
   }
 
   get order(): number {

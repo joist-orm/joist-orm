@@ -138,6 +138,10 @@ export function mergeNormalizedHints(target: any, source: any): void {
 const newLine = /\n/g;
 const doubleSpace = /  +/g;
 
+export function cleanStringValue(value: unknown) {
+  return typeof value === "string" && value.trim() === "" ? undefined : value;
+}
+
 /** Strips new lines/indentation from our `UPDATE` string; doesn't do any actual SQL param escaping/etc. */
 export function cleanSql(sql: string): string {
   return sql.trim().replace(newLine, "").replace(doubleSpace, " ");

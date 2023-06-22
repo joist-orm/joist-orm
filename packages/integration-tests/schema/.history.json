@@ -248,7 +248,7 @@
   "SaveSmallPublisherResult": ["smallPublisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
-  "SaveUserInput": ["authorManyToOneId", "email", "id", "name"],
+  "SaveUserInput": ["authorManyToOneId", "bio", "email", "id", "name"],
   "SaveUserResult": ["user"],
   "SmallPublisher": [
     "allAuthorNames",
@@ -270,5 +270,15 @@
     "updatedAt"
   ],
   "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"],
-  "User": ["authorManyToOne", "createdAt", "createdComments", "email", "id", "likedComments", "name", "updatedAt"]
+  "User": [
+    "authorManyToOne",
+    "bio",
+    "createdAt",
+    "createdComments",
+    "email",
+    "id",
+    "likedComments",
+    "name",
+    "updatedAt"
+  ]
 }

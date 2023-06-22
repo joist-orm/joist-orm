@@ -1,3 +1,10 @@
+## [1.91.2](https://github.com/stephenh/joist-ts/compare/v1.91.1...v1.91.2) (2023-06-22)
+
+
+### Bug Fixes
+
+* move string/null cast to setter, herustic disable on default "" ([#705](https://github.com/stephenh/joist-ts/issues/705)) ([6ad8556](https://github.com/stephenh/joist-ts/commit/6ad855662059b8ee3ed33048f18e2ae2b4ad5e60))
+
 ## [1.91.1](https://github.com/stephenh/joist-ts/compare/v1.91.0...v1.91.1) (2023-06-21)
 
 

@@ -98,9 +98,9 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     let setter: Code | string;
     const setterValue =
-      p.fieldType === "string" && p.columnDefault === "''"
-        ? code`${fieldName}`
-        : code`${cleanStringValue}(${fieldName})`;
+      p.fieldType === "string" && p.columnDefault !== "''"
+        ? code`${cleanStringValue}(${fieldName})`
+        : code`${fieldName}`;
     if (p.protected) {
       // TODO Allow making the getter to be protected as well. And so probably remove it
       // from the Opts as well. Wonder how that works for required protected fields?

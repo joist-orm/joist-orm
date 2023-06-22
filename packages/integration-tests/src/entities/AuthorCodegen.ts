@@ -355,7 +355,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set isPopular(isPopular: boolean | undefined) {
-    setField(this, "isPopular", cleanStringValue(isPopular));
+    setField(this, "isPopular", isPopular);
   }
 
   get age(): number | undefined {
@@ -363,7 +363,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set age(age: number | undefined) {
-    setField(this, "age", cleanStringValue(age));
+    setField(this, "age", age);
   }
 
   get graduated(): Date | undefined {
@@ -371,7 +371,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set graduated(graduated: Date | undefined) {
-    setField(this, "graduated", cleanStringValue(graduated));
+    setField(this, "graduated", graduated);
   }
 
   get wasEverPopular(): boolean | undefined {
@@ -379,7 +379,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
-    setField(this, "wasEverPopular", cleanStringValue(wasEverPopular));
+    setField(this, "wasEverPopular", wasEverPopular);
   }
 
   get address(): Address | undefined {
@@ -421,7 +421,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set deletedAt(deletedAt: Date | undefined) {
-    setField(this, "deletedAt", cleanStringValue(deletedAt));
+    setField(this, "deletedAt", deletedAt);
   }
 
   abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;

@@ -206,7 +206,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   }
 
   set ipAddress(ipAddress: IpAddress | undefined) {
-    setField(this, "ipAddress", cleanStringValue(ipAddress));
+    setField(this, "ipAddress", ipAddress);
   }
 
   get password(): PasswordValue | undefined {
@@ -214,7 +214,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   }
 
   set password(password: PasswordValue | undefined) {
-    setField(this, "password", cleanStringValue(password));
+    setField(this, "password", password);
   }
 
   get bio(): string {

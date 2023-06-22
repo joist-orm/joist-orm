@@ -219,7 +219,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set order(order: number) {
-    setField(this, "order", cleanStringValue(order));
+    setField(this, "order", order);
   }
 
   get deletedAt(): Date | undefined {
@@ -227,7 +227,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set deletedAt(deletedAt: Date | undefined) {
-    setField(this, "deletedAt", cleanStringValue(deletedAt));
+    setField(this, "deletedAt", deletedAt);
   }
 
   get createdAt(): Date {

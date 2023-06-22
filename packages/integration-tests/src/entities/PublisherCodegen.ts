@@ -261,7 +261,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set latitude(latitude: number | undefined) {
-    setField(this, "latitude", cleanStringValue(latitude));
+    setField(this, "latitude", latitude);
   }
 
   get longitude(): number | undefined {
@@ -269,7 +269,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set longitude(longitude: number | undefined) {
-    setField(this, "longitude", cleanStringValue(longitude));
+    setField(this, "longitude", longitude);
   }
 
   get hugeNumber(): number | undefined {
@@ -277,7 +277,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set hugeNumber(hugeNumber: number | undefined) {
-    setField(this, "hugeNumber", cleanStringValue(hugeNumber));
+    setField(this, "hugeNumber", hugeNumber);
   }
 
   get createdAt(): Date {

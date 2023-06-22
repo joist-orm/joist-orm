@@ -1,5 +1,5 @@
 import { User } from "@src/entities";
-import {insertUser, select} from "@src/entities/inserts";
+import { insertUser, select } from "@src/entities/inserts";
 import { PasswordValue } from "@src/entities/types";
 import { newEntityManager } from "@src/setupDbTests";
 

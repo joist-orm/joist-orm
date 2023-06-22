@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -167,7 +168,7 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager> {
   }
 
   set name(name: string) {
-    setField(this, "name", name);
+    setField(this, "name", cleanStringValue(name));
   }
 
   get createdAt(): Date {

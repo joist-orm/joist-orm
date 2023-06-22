@@ -3,6 +3,7 @@ import {
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -156,7 +157,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   }
 
   set rating(rating: number) {
-    setField(this, "rating", rating);
+    setField(this, "rating", cleanStringValue(rating));
   }
 
   abstract readonly isPublic: PersistedAsyncProperty<BookReview, boolean>;

@@ -37,6 +37,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
   Zod,
+  cleanStringValue,
   deTagId,
   fail as failSymbol,
   hasLargeMany,
@@ -96,6 +97,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     }
 
     let setter: Code | string;
+    if (p.columnName === "bio") {
+      console.log(p);
+    }
+    const setterValue = p.columnDefault === "''" ? code`${fieldName}` : code`${cleanStringValue}(${fieldName})`;
     if (p.protected) {
       // TODO Allow making the getter to be protected as well. And so probably remove it
       // from the Opts as well. Wonder how that works for required protected fields?
@@ -104,7 +109,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       // same access level and currently we're leaving the getter as public.
       setter = code`
         protected set${pascalCase(fieldName)}(${fieldName}: ${fieldType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${fieldName});
+          ${setField}(this, "${fieldName}", ${setterValue});
         }
       `;
     } else if (p.derived) {
@@ -131,7 +136,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     } else {
       setter = code`
         set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
-          ${setField}(this, "${fieldName}", ${fieldName});
+          ${setField}(this, "${fieldName}", ${setterValue});
         }
       `;
     }

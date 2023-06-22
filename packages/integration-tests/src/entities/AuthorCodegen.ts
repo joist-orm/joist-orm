@@ -3,6 +3,7 @@ import {
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -324,7 +325,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set firstName(firstName: string) {
-    setField(this, "firstName", firstName);
+    setField(this, "firstName", cleanStringValue(firstName));
   }
 
   get lastName(): string | undefined {
@@ -332,7 +333,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set lastName(lastName: string | undefined) {
-    setField(this, "lastName", lastName);
+    setField(this, "lastName", cleanStringValue(lastName));
   }
 
   get ssn(): string | undefined {
@@ -340,7 +341,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set ssn(ssn: string | undefined) {
-    setField(this, "ssn", ssn);
+    setField(this, "ssn", cleanStringValue(ssn));
   }
 
   abstract get initials(): string;
@@ -354,7 +355,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set isPopular(isPopular: boolean | undefined) {
-    setField(this, "isPopular", isPopular);
+    setField(this, "isPopular", cleanStringValue(isPopular));
   }
 
   get age(): number | undefined {
@@ -362,7 +363,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set age(age: number | undefined) {
-    setField(this, "age", age);
+    setField(this, "age", cleanStringValue(age));
   }
 
   get graduated(): Date | undefined {
@@ -370,7 +371,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set graduated(graduated: Date | undefined) {
-    setField(this, "graduated", graduated);
+    setField(this, "graduated", cleanStringValue(graduated));
   }
 
   get wasEverPopular(): boolean | undefined {
@@ -378,7 +379,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
-    setField(this, "wasEverPopular", wasEverPopular);
+    setField(this, "wasEverPopular", cleanStringValue(wasEverPopular));
   }
 
   get address(): Address | undefined {
@@ -420,7 +421,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   set deletedAt(deletedAt: Date | undefined) {
-    setField(this, "deletedAt", deletedAt);
+    setField(this, "deletedAt", cleanStringValue(deletedAt));
   }
 
   abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;

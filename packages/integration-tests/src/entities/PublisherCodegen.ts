@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -252,7 +253,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set name(name: string) {
-    setField(this, "name", name);
+    setField(this, "name", cleanStringValue(name));
   }
 
   get latitude(): number | undefined {
@@ -260,7 +261,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set latitude(latitude: number | undefined) {
-    setField(this, "latitude", latitude);
+    setField(this, "latitude", cleanStringValue(latitude));
   }
 
   get longitude(): number | undefined {
@@ -268,7 +269,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set longitude(longitude: number | undefined) {
-    setField(this, "longitude", longitude);
+    setField(this, "longitude", cleanStringValue(longitude));
   }
 
   get hugeNumber(): number | undefined {
@@ -276,7 +277,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   set hugeNumber(hugeNumber: number | undefined) {
-    setField(this, "hugeNumber", hugeNumber);
+    setField(this, "hugeNumber", cleanStringValue(hugeNumber));
   }
 
   get createdAt(): Date {

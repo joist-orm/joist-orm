@@ -200,6 +200,8 @@ export function up(b: MigrationBuilder): void {
     }),
     ip_address: { type: "varchar(255)", notNull: false },
     password: { type: "varchar(255)", notNull: false },
+
+    bio: { type: "varchar(255)", notNull: true, default: "" },
   });
 
   // for testing polymorphic references

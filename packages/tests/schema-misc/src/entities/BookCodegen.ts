@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -114,7 +115,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set title(title: string) {
-    setField(this, "title", title);
+    setField(this, "title", cleanStringValue(title));
   }
 
   set(opts: Partial<BookOpts>): void {

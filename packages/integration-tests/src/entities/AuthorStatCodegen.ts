@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   ConfigApi,
   EntityMetadata,
   EntityOrmField,
@@ -172,7 +173,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set smallint(smallint: number) {
-    setField(this, "smallint", smallint);
+    setField(this, "smallint", cleanStringValue(smallint));
   }
 
   get integer(): number {
@@ -180,7 +181,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set integer(integer: number) {
-    setField(this, "integer", integer);
+    setField(this, "integer", cleanStringValue(integer));
   }
 
   get nullableInteger(): number | undefined {
@@ -188,7 +189,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set nullableInteger(nullableInteger: number | undefined) {
-    setField(this, "nullableInteger", nullableInteger);
+    setField(this, "nullableInteger", cleanStringValue(nullableInteger));
   }
 
   get bigint(): number {
@@ -196,7 +197,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set bigint(bigint: number) {
-    setField(this, "bigint", bigint);
+    setField(this, "bigint", cleanStringValue(bigint));
   }
 
   get decimal(): number {
@@ -204,7 +205,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set decimal(decimal: number) {
-    setField(this, "decimal", decimal);
+    setField(this, "decimal", cleanStringValue(decimal));
   }
 
   get real(): number {
@@ -212,7 +213,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set real(real: number) {
-    setField(this, "real", real);
+    setField(this, "real", cleanStringValue(real));
   }
 
   get smallserial(): number {
@@ -220,7 +221,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set smallserial(smallserial: number) {
-    setField(this, "smallserial", smallserial);
+    setField(this, "smallserial", cleanStringValue(smallserial));
   }
 
   get serial(): number {
@@ -228,7 +229,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set serial(serial: number) {
-    setField(this, "serial", serial);
+    setField(this, "serial", cleanStringValue(serial));
   }
 
   get bigserial(): number {
@@ -236,7 +237,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set bigserial(bigserial: number) {
-    setField(this, "bigserial", bigserial);
+    setField(this, "bigserial", cleanStringValue(bigserial));
   }
 
   get doublePrecision(): number {
@@ -244,7 +245,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set doublePrecision(doublePrecision: number) {
-    setField(this, "doublePrecision", doublePrecision);
+    setField(this, "doublePrecision", cleanStringValue(doublePrecision));
   }
 
   get nullableText(): string | undefined {
@@ -252,7 +253,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set nullableText(nullableText: string | undefined) {
-    setField(this, "nullableText", nullableText);
+    setField(this, "nullableText", cleanStringValue(nullableText));
   }
 
   get json(): Object | undefined {
@@ -260,7 +261,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   set json(json: Object | undefined) {
-    setField(this, "json", json);
+    setField(this, "json", cleanStringValue(json));
   }
 
   get createdAt(): Date {

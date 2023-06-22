@@ -66,7 +66,7 @@ export {
   ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
-export { asNew, fail } from "./utils";
+export { asNew, cleanStringValue, fail } from "./utils";
 export { ensureWithLoaded, withLoaded, WithLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
@@ -156,7 +156,7 @@ export function setOpts<T extends Entity>(
       return;
     }
     // We let optional opts fields be `| null` for convenience, and convert to undefined.
-    const value = _value === null || (typeof _value === "string" && _value.trim() === "") ? undefined : _value;
+    const value = _value === null ? undefined : _value;
     const current = (entity as any)[key];
     if (current instanceof AbstractRelationImpl) {
       if (calledFromConstructor) {

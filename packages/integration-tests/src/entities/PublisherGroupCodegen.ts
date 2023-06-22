@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -139,7 +140,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager> {
   }
 
   set name(name: string | undefined) {
-    setField(this, "name", name);
+    setField(this, "name", cleanStringValue(name));
   }
 
   get createdAt(): Date {

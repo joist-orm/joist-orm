@@ -11,6 +11,7 @@ type User {
   authorManyToOne: Author
   createdComments: [Comment!]!
   likedComments: [Comment!]!
+  bio: String!
 }
 
 input SaveUserInput {
@@ -18,6 +19,7 @@ input SaveUserInput {
   name: String
   email: String
   authorManyToOneId: ID
+  bio: String
 }
 
 type SaveUserResult {

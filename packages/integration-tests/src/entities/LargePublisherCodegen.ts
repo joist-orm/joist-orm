@@ -1,5 +1,6 @@
 import {
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -125,7 +126,7 @@ export abstract class LargePublisherCodegen extends Publisher {
   }
 
   set country(country: string | undefined) {
-    setField(this, "country", country);
+    setField(this, "country", cleanStringValue(country));
   }
 
   set(opts: Partial<LargePublisherOpts>): void {

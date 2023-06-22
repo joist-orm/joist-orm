@@ -1,6 +1,7 @@
 import {
   BaseEntity,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
   EntityFilter,
@@ -210,7 +211,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set title(title: string) {
-    setField(this, "title", title);
+    setField(this, "title", cleanStringValue(title));
   }
 
   get order(): number {
@@ -218,7 +219,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set order(order: number) {
-    setField(this, "order", order);
+    setField(this, "order", cleanStringValue(order));
   }
 
   get deletedAt(): Date | undefined {
@@ -226,7 +227,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager> {
   }
 
   set deletedAt(deletedAt: Date | undefined) {
-    setField(this, "deletedAt", deletedAt);
+    setField(this, "deletedAt", cleanStringValue(deletedAt));
   }
 
   get createdAt(): Date {

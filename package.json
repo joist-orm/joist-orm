@@ -9,7 +9,7 @@
     "format": "yarn workspaces foreach run format",
     "test": "yarn workspaces foreach run test",
     "docker": "docker-compose build",
-    "db": "docker compose up db --wait & docker compose exec db ./reset.sh & yarn migrate & yarn codegen",
+    "db": "docker compose up db --wait && docker compose exec db ./reset.sh && yarn migrate && yarn codegen",
     "psql": "docker compose exec db ./console.sh"
   },
   "private": true,

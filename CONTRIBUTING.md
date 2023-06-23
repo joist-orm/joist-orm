@@ -11,7 +11,7 @@ To get started, make sure you have all the [prerequisites](#prerequisites) insta
 1. Install dependencies: `yarn`
 1. Build Joist: `yarn build`
 1. Open Docker application
-1. Install docker image: `make db`
+1. Install docker image: `yarn db`
 
 **Consecutive Run Instruction**
 
@@ -34,7 +34,7 @@ yarn build --watch
 When updating migration files, you will need to run the `db` command to rebuild the database.
 
 ```sh
-make db
+yarn db
 ```
 
 To run the tests, run the following command:

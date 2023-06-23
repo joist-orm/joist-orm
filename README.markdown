@@ -23,8 +23,8 @@ See [joist-orm.io](https://joist-orm.io) for documentation.
 After checkout:
 
 - Run `yarn install`
-- Run `yarn build`
-- Run `make db` to boot up a Docker postgres instance w/the integration test schema.
+- Run `yarn build` to compile all packages
+- Run `yarn db` to boot up a Docker postgres instance w/the integration test schema.
 - Run `yarn test` to run the tests.
 - Prior to committing your changes, run `yarn workspaces run format`
 

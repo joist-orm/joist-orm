@@ -7,7 +7,10 @@
     "migrate": "yarn workspaces foreach run migrate",
     "codegen": "yarn workspaces foreach run codegen",
     "format": "yarn workspaces foreach run format",
-    "test": "yarn workspaces foreach run test"
+    "test": "yarn workspaces foreach run test",
+    "docker": "docker-compose build",
+    "db": "docker compose up db --wait & docker compose exec db ./reset.sh & yarn migrate & yarn codegen",
+    "psql": "docker compose exec db ./console.sh"
   },
   "private": true,
   "workspaces": [

@@ -60,6 +60,8 @@ export function newTestInstance<T extends Entity>(
   const opts = mergeOpts(testOpts, factoryOpts);
   const use = getOrCreateUseMap(opts);
 
+  const selfFields: string[] = [];
+
   // Create just the primitive and m2o fields 1st, so we can create a minimal/valid
   // instance of the entity. We'll do the o2m/other fields as a second pass.
   const initialOpts = Object.values(meta.allFields)
@@ -133,7 +135,13 @@ export function newTestInstance<T extends Entity>(
         }
         // Otherwise, only make a new entity only if the field is required
         if (required) {
-          return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+          // ...unless this is a self-referential key, in which case avoid infinite looping.
+          if (field.otherMetadata() === meta) {
+            selfFields.push(fieldName);
+            return [];
+          } else {
+            return [fieldName, resolveFactoryOpt(em, opts, field, undefined, undefined)];
+          }
         }
       } else if (field.kind === "enum" && required) {
         const codegenDefault = getCodegenDefault(cstr, field.fieldName);
@@ -179,6 +187,10 @@ export function newTestInstance<T extends Entity>(
       return [];
     }
   });
+
+  for (const fieldName of selfFields) {
+    additionalOpts.push([fieldName, entity]);
+  }
 
   entity.set(Object.fromEntries(additionalOpts.filter((t) => t.length > 0)));
 

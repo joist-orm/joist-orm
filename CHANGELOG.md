@@ -1,3 +1,10 @@
+## [1.91.3](https://github.com/stephenh/joist-ts/compare/v1.91.2...v1.91.3) (2023-06-25)
+
+
+### Bug Fixes
+
+* Don't infinite recurse on required self-ref keys. ([#710](https://github.com/stephenh/joist-ts/issues/710)) ([6a16ac2](https://github.com/stephenh/joist-ts/commit/6a16ac2db4833c97fd556423cd57feb8a63b8ff9))
+
 ## [1.91.2](https://github.com/stephenh/joist-ts/compare/v1.91.1...v1.91.2) (2023-06-22)
 
 

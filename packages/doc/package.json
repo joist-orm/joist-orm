@@ -15,9 +15,6 @@
   "files": [
     "build"
   ],
-  "resolutions": {
-    "@babel/types": "7.22.5"
-  },
   "dependencies": {
     "@babel/generator": "^7.22.5",
     "@babel/parser": "^7.22.5",

@@ -17,6 +17,7 @@
     "paths": {
       "joist-codegen": ["../codegen"],
       "joist-graphql-codegen": ["../graphql-codegen"],
+      "joist-doc": ["../doc"],
       "joist-migration-utils": ["../migration-utils"],
       "joist-test-utils": ["../test-utils"],
       "joist-orm": ["../orm"],
@@ -27,6 +28,7 @@
   "references": [
     { "path": "../codegen" },
     { "path": "../graphql-codegen" },
+    { "path": "../doc" },
     { "path": "../migration-utils" },
     { "path": "../orm" },
     { "path": "../utils" },

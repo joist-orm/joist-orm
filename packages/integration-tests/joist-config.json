@@ -1,6 +1,7 @@
 {
   "codegenPlugins": ["joist-graphql-codegen"],
   "contextType": "Context@src/context",
+  "docGen": "markdown",
   "entities": {
     "Author": {
       "fields": {

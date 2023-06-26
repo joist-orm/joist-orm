@@ -32,6 +32,11 @@ export async function generateAndSaveFiles(config: Config, dbMeta: DbMetadata): 
     directory: config.entitiesDirectory,
     files,
   });
+
+  if (config.docGen) {
+    const { tsDocIntegrate } = require("joist-doc");
+    await tsDocIntegrate(config, dbMeta);
+  }
 }
 
 if (require.main === module) {

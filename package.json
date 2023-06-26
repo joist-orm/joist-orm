@@ -16,6 +16,7 @@
   "workspaces": [
     "docs",
     "packages/codegen",
+    "packages/doc",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",
     "packages/integration-tests",

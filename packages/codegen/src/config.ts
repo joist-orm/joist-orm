@@ -46,6 +46,8 @@ export interface Config {
   /** Your application's request-level `Context` type. */
   contextType?: string;
 
+  docGen?: string;
+
   /**
    * Allows the user to specify the `updated_at` / `created_at` column names to look up, and if they're optional.
    *

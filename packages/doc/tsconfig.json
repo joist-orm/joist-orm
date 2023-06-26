@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "commonjs",
+    "strict": true,
+    "noImplicitReturns": true,
+    "types": ["jest", "node"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "sourceMap": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "./build",
+    "rootDir": "./src",
+    "baseUrl": "./src",
+    "paths": {
+      "joist-utils": ["../../utils/src"],
+      "joist-codegen": ["../codegen"],
+    }
+  },
+  "references": [{ "path": "../utils" }]
+}

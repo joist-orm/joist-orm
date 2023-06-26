@@ -66,9 +66,7 @@ import {
   tagMeta,
 } from "./entities";
 import type { EntityManager } from "./entities";
-
 export type PublisherId = Flavor<string, "Publisher">;
-
 export interface PublisherFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };
   name: { kind: "primitive"; type: string; unique: false; nullable: never };
@@ -81,7 +79,6 @@ export interface PublisherFields {
   type: { kind: "enum"; type: PublisherType; nullable: never };
   group: { kind: "m2o"; type: PublisherGroup; nullable: undefined };
 }
-
 export interface PublisherOpts {
   name: string;
   latitude?: number | null;
@@ -96,7 +93,6 @@ export interface PublisherOpts {
   images?: Image[];
   tags?: Tag[];
 }
-
 export interface PublisherIdsOpts {
   groupId?: PublisherGroupId | null;
   authorIds?: AuthorId[] | null;
@@ -105,7 +101,6 @@ export interface PublisherIdsOpts {
   imageIds?: ImageId[] | null;
   tagIds?: TagId[] | null;
 }
-
 export interface PublisherFilter {
   id?: ValueFilter<PublisherId, never>;
   name?: ValueFilter<string, never>;
@@ -123,7 +118,6 @@ export interface PublisherFilter {
   images?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
-
 export interface PublisherGraphQLFilter {
   id?: ValueGraphQLFilter<PublisherId>;
   name?: ValueGraphQLFilter<string>;
@@ -141,7 +135,6 @@ export interface PublisherGraphQLFilter {
   images?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
-
 export interface PublisherOrder {
   id?: OrderBy;
   name?: OrderBy;
@@ -154,19 +147,15 @@ export interface PublisherOrder {
   type?: OrderBy;
   group?: PublisherGroupOrder;
 }
-
 export const publisherConfig = new ConfigApi<Publisher, Context>();
-
 publisherConfig.addRule(newRequiredRule("name"));
 publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
-
 export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;
-
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherFilter;
     gqlFilterType: PublisherGraphQLFilter;
@@ -176,7 +165,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     optIdsType: PublisherIdsOpts;
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
-
   readonly authors: Collection<Publisher, Author> = hasMany(
     authorMeta,
     "authors",
@@ -184,7 +172,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "publisher_id",
     undefined,
   );
-
   readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
     bookAdvanceMeta,
     "bookAdvances",
@@ -192,7 +179,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "publisher_id",
     undefined,
   );
-
   readonly comments: Collection<Publisher, Comment> = hasMany(
     commentMeta,
     "comments",
@@ -200,15 +186,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "parent_publisher_id",
     undefined,
   );
-
   readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id", undefined);
-
   readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne(
     publisherGroupMeta,
     "group",
     "publishers",
   );
-
   readonly tags: Collection<Publisher, Tag> = hasManyToMany(
     "publishers_to_tags",
     "tags",
@@ -217,136 +200,105 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     "publishers",
     "tag_id",
   );
-
   constructor(em: EntityManager, opts: PublisherOpts) {
     if (arguments.length === 4) {
       // @ts-ignore
       super(em, arguments[1], { ...arguments[2], ...PublisherCodegen.defaultValues }, arguments[3]);
     } else {
       super(em, publisherMeta, PublisherCodegen.defaultValues, opts);
-      setOpts(this as any as Publisher, opts, { calledFromConstructor: true });
+      setOpts((this as any) as Publisher, opts, { calledFromConstructor: true });
     }
-
     if (this.constructor === Publisher && !(em as any).fakeInstance) {
       throw new Error(`Publisher ${typeof opts === "string" ? opts : ""} must be instantiated via a subtype`);
     }
   }
-
   get id(): PublisherId | undefined {
     return this.idTagged;
   }
-
   get idOrFail(): PublisherId {
     return this.id || fail("Publisher has no id yet");
   }
-
   get idTagged(): PublisherId | undefined {
     return this.__orm.data["id"];
   }
-
   get idTaggedOrFail(): PublisherId {
     return this.idTagged || fail("Publisher has no id tagged yet");
   }
-
   get name(): string {
     return this.__orm.data["name"];
   }
-
   set name(name: string) {
     setField(this, "name", cleanStringValue(name));
   }
-
   get latitude(): number | undefined {
     return this.__orm.data["latitude"];
   }
-
   set latitude(latitude: number | undefined) {
     setField(this, "latitude", latitude);
   }
-
   get longitude(): number | undefined {
     return this.__orm.data["longitude"];
   }
-
   set longitude(longitude: number | undefined) {
     setField(this, "longitude", longitude);
   }
-
   get hugeNumber(): number | undefined {
     return this.__orm.data["hugeNumber"];
   }
-
   set hugeNumber(hugeNumber: number | undefined) {
     setField(this, "hugeNumber", hugeNumber);
   }
-
   get createdAt(): Date {
     return this.__orm.data["createdAt"];
   }
-
   get updatedAt(): Date {
     return this.__orm.data["updatedAt"];
   }
-
   get size(): PublisherSize | undefined {
     return this.__orm.data["size"];
   }
-
   get sizeDetails(): PublisherSizeDetails | undefined {
     return this.size ? PublisherSizes.getByCode(this.size) : undefined;
   }
-
   set size(size: PublisherSize | undefined) {
     setField(this, "size", size);
   }
-
   get isSizeSmall(): boolean {
     return this.__orm.data["size"] === PublisherSize.Small;
   }
-
   get isSizeLarge(): boolean {
     return this.__orm.data["size"] === PublisherSize.Large;
   }
-
   get type(): PublisherType {
     return this.__orm.data["type"];
   }
-
   get typeDetails(): PublisherTypeDetails {
     return PublisherTypes.getByCode(this.type);
   }
-
   set type(type: PublisherType) {
     setField(this, "type", type);
   }
-
   get isTypeSmall(): boolean {
     return this.__orm.data["type"] === PublisherType.Small;
   }
-
   get isTypeBig(): boolean {
     return this.__orm.data["type"] === PublisherType.Big;
   }
-
   set(opts: Partial<PublisherOpts>): void {
-    setOpts(this as any as Publisher, opts);
+    setOpts((this as any) as Publisher, opts);
   }
-
   setPartial(opts: PartialOrNull<PublisherOpts>): void {
-    setOpts(this as any as Publisher, opts as OptsOf<Publisher>, { partial: true });
+    setOpts((this as any) as Publisher, opts as OptsOf<Publisher>, { partial: true });
   }
-
   get changes(): Changes<
     Publisher,
     keyof FieldsOf<Publisher> | keyof FieldsOf<LargePublisher> | keyof FieldsOf<SmallPublisher>
   > {
-    return newChangesProxy(this) as any;
+    return (newChangesProxy(this) as any);
   }
-
   load<U, V>(fn: (lens: Lens<Publisher>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
-    return loadLens(this as any as Publisher, fn, opts);
+    return loadLens((this as any) as Publisher, fn, opts);
   }
-
   populate<H extends LoadHint<Publisher>>(hint: H): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Publisher, H>>;
   populate<H extends LoadHint<Publisher>, V>(hint: H, fn: (p: Loaded<Publisher, H>) => V): Promise<V>;
@@ -358,10 +310,9 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     hintOrOpts: any,
     fn?: (p: Loaded<Publisher, H>) => V,
   ): Promise<Loaded<Publisher, H> | V> {
-    return this.em.populate(this as any as Publisher, hintOrOpts, fn);
+    return this.em.populate((this as any) as Publisher, hintOrOpts, fn);
   }
-
   isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
-    return isLoaded(this as any as Publisher, hint);
+    return isLoaded((this as any) as Publisher, hint);
   }
 }

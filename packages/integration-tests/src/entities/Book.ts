@@ -1,5 +1,4 @@
 import { BookCodegen, bookConfig as config } from "./entities";
-
 export class Book extends BookCodegen {
   rulesInvoked = 0;
   firstNameRuleInvoked = 0;
@@ -7,7 +6,6 @@ export class Book extends BookCodegen {
   reviewsRuleInvoked = 0;
   numberOfBooks2RuleInvoked = 0;
 }
-
 config.addRule((book) => {
   book.rulesInvoked++;
 });
@@ -34,5 +32,4 @@ config.addRule("reviews", (b) => {
 config.addRule({ author: "numberOfBooks2" }, (b) => {
   b.entity.numberOfBooks2RuleInvoked++;
 });
-
 config.cascadeDelete("reviews");

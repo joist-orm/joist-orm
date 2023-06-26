@@ -1,8 +1,6 @@
-import { SmallPublisherCodegen } from "./entities";
-
 import { hasPersistedAsyncProperty, PersistedAsyncProperty } from "joist-orm";
+import { SmallPublisherCodegen } from "./entities";
 import { smallPublisherConfig as config } from "./entities";
-
 export class SmallPublisher extends SmallPublisherCodegen {
   // Used for testing a derived property that only exists on a subtype
   readonly allAuthorNames: PersistedAsyncProperty<SmallPublisher, string> = hasPersistedAsyncProperty(
@@ -17,7 +15,6 @@ export class SmallPublisher extends SmallPublisherCodegen {
   public afterValidationRan = false;
   public afterCommitRan = false;
 }
-
 config.addRule((p) => {
   if (p.name === "large") {
     return "name cannot be large";
@@ -36,27 +33,21 @@ config.beforeFlush((sp) => {
   if (sp.changes.city.hasChanged || sp.changes.name.hasChanged) {
   }
 });
-
 config.beforeFlush(async (sp) => {
   sp.beforeFlushRan = true;
 });
-
 config.beforeCreate((sp) => {
   sp.beforeCreateRan = true;
 });
-
 config.beforeUpdate((sp) => {
   sp.beforeUpdateRan = true;
 });
-
 config.afterValidation((sp) => {
   sp.afterValidationRan = true;
 });
-
 config.beforeDelete((sp) => {
   sp.beforeDeleteRan = true;
 });
-
 config.afterCommit((sp) => {
   sp.afterCommitRan = true;
 });

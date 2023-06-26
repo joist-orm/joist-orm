@@ -16,8 +16,6 @@ export class Cache {
         } catch {
             this.manifest = {};
         }
-
-        console.log(this.manifest);
     }
 
     save() {
@@ -31,10 +29,8 @@ export class Cache {
 
     async get(filePath:string, hashes: HashPair) {
         const found = this.manifest[filePath];
-        if (found[0] === hashes.sourceHash && found[1] === hashes.commentStoreHash) {
+        if (found && found[0] === hashes.sourceHash && found[1] === hashes.commentStoreHash) {
             const restored = await this.fsCache.get(hashString(filePath));
-            console.log('found', !!restored)
-
             if (restored) return restored;
         }
 

@@ -35,16 +35,14 @@ export const entityCodegenIntegration: IntegrationHandler<EntityDbMetadata> = {
 
         // handle the class
         if (klass) {
-            const rootComment = await commentStore.forEntity(entity);
+            const rootComment = await commentStore.forEntity(entity, true);
             if (rootComment) {
-                // parent because the export statement is it's own node with children.
-                // a lower version of @babel/types is getting in here, which is odd.
-                (klass.parent.leadingComments as t.Comment[]) = [newComment(rootComment)];
+                klass.parent.leadingComments = [newComment(rootComment)];
             }
 
             for (const member of klass.node.body.body) {
                 if (t.isClassMethod(member) && t.isIdentifier(member.key)) {
-                    const comment = await commentStore.forField(entity, member.key.name, member.kind === "get" ? "get" : "set");
+                    const comment = await commentStore.forField(entity, member.key.name, member.kind === "get" ? "get" : "set", true);
 
                     if (comment) {
                         member.leadingComments = [newComment(comment)];
@@ -56,7 +54,7 @@ export const entityCodegenIntegration: IntegrationHandler<EntityDbMetadata> = {
         if (opts) {
             for (const property of opts.node.body.body) {
                 if (t.isTSPropertySignature(property) && t.isIdentifier(property.key)) {
-                    const comment = await commentStore.forField(entity, property.key.name, "opts");
+                    const comment = await commentStore.forField(entity, property.key.name, "opts", true);
 
                     if (comment) {
                         property.leadingComments = [newComment(comment)];

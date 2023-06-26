@@ -2,7 +2,7 @@ import { readFile } from "fs/promises";
 import { EntityDbMetadata } from "joist-codegen";
 import * as path from "path";
 import { remark } from "remark";
-import { CommentStore, FieldSourceType } from "./CommentStore";
+import {CommentStore, EnumData, FieldSourceType} from "./CommentStore";
 import {hashFile} from "./utils";
 
 /**
@@ -12,16 +12,35 @@ import {hashFile} from "./utils";
 export class MarkdownCommentStore extends CommentStore {
   private documents = new Map<string, Promise<null | ReturnType<(typeof remark)["parse"]>>>();
 
-  async forField(entity: EntityDbMetadata, fieldName: string, source: FieldSourceType) {
-    return this.findHeadingContent(entity, fieldName);
+  async forField(entity: EntityDbMetadata, fieldName: string, source: FieldSourceType, generated: boolean) {
+    return this.withGenerated(entity.name, generated, await this.findHeadingContent(entity.name, fieldName));
   }
 
-  async forEntity(entity: EntityDbMetadata): Promise<string | void> {
-    return this.findRootContent(entity);
+  async forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | void> {
+    return this.findRootContent(entity.name);
+  }
+
+
+  async forEnum(enumField: EnumData, generated: boolean): Promise<string | void> {
+    return this.findRootContent(enumField.name);
+  }
+
+  async forEnumMember(enumField: EnumData, name: string, generated: boolean): Promise<string | void> {
+    return this.withGenerated(enumField.name, generated, await this.findHeadingContent(enumField.name, name));
+  }
+
+  private withGenerated(file: string, generated: boolean, content: string | undefined) {
+    if (generated) return content;
+
+    return content ? `${content}\n\nautomatically inserted from ${file}.md.` : undefined;
   }
 
   async hashForEntity(entity:EntityDbMetadata) {
     return hashFile(path.join(this.config.entitiesDirectory, `${entity.name}.md`));
+  }
+
+  async hashForEnum(enumData: EnumData) {
+    return hashFile(path.join(this.config.entitiesDirectory, `${enumData.name}.md`));
   }
 
   private async getDocument(filename: string) {
@@ -47,12 +66,9 @@ export class MarkdownCommentStore extends CommentStore {
    * - if found, we continue to collect paragraphs until there is another node
    *   This means horizontal rules can be used to limit the amount ingested.
    *   Allowing for more in-depth documentation in the markdown file.
-   * @param entity
-   * @param heading
-   * @private
    */
-  private async findHeadingContent(entity: EntityDbMetadata, heading: string) {
-    const document = await this.getDocument(entity.name);
+  private async findHeadingContent(name: string, heading: string) {
+    const document = await this.getDocument(name);
 
     if (!document) return undefined;
 
@@ -84,11 +100,9 @@ export class MarkdownCommentStore extends CommentStore {
    * - If a starting heading is used, we will collect content from beneath there
    * - If there is no content between the first two headings, we will collect from the second
    *   if the name is blessed.
-   * @param entity
-   * @private
    */
-  private async findRootContent(entity: EntityDbMetadata) {
-    const document = await this.getDocument(entity.name);
+  private async findRootContent(name: string) {
+    const document = await this.getDocument(name);
 
     if (!document) return undefined;
 

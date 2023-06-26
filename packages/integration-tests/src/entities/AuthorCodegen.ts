@@ -71,9 +71,7 @@ import {
   userMeta,
 } from "./entities";
 import type { EntityManager } from "./entities";
-
 export type AuthorId = Flavor<string, "Author">;
-
 export interface AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never };
@@ -100,7 +98,6 @@ export interface AuthorFields {
   favoriteBook: { kind: "m2o"; type: Book; nullable: undefined };
   publisher: { kind: "m2o"; type: Publisher; nullable: undefined };
 }
-
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
@@ -125,7 +122,6 @@ export interface AuthorOpts {
   comments?: Comment[];
   tags?: Tag[];
 }
-
 export interface AuthorIdsOpts {
   mentorId?: AuthorId | null;
   currentDraftBookId?: BookId | null;
@@ -137,7 +133,6 @@ export interface AuthorIdsOpts {
   commentIds?: CommentId[] | null;
   tagIds?: TagId[] | null;
 }
-
 export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never>;
   firstName?: ValueFilter<string, never>;
@@ -170,7 +165,6 @@ export interface AuthorFilter {
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
 }
-
 export interface AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<AuthorId>;
   firstName?: ValueGraphQLFilter<string>;
@@ -203,7 +197,6 @@ export interface AuthorGraphQLFilter {
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
 }
-
 export interface AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
@@ -230,20 +223,16 @@ export interface AuthorOrder {
   favoriteBook?: BookOrder;
   publisher?: PublisherOrder;
 }
-
 export const authorConfig = new ConfigApi<Author, Context>();
-
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));
 authorConfig.addRule(newRequiredRule("numberOfBooks"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
-
 export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   static defaultValues: object = {};
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
-
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorFilter;
     gqlFilterType: AuthorGraphQLFilter;
@@ -253,14 +242,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
-
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id", undefined);
-
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", {
     "field": "order",
     "direction": "ASC",
   });
-
   readonly comments: Collection<Author, Comment> = hasMany(
     commentMeta,
     "comments",
@@ -268,28 +254,21 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     "parent_author_id",
     undefined,
   );
-
   readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
-
   readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
     bookMeta,
     "currentDraftBook",
     "currentDraftAuthor",
   );
-
   abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
-
   readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
-
   readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
-
   readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne(
     userMeta,
     "userOneToOne",
     "authorManyToOne",
     "author_id",
   );
-
   readonly tags: Collection<Author, Tag> = hasManyToMany(
     "authors_to_tags",
     "tags",
@@ -298,105 +277,79 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     "authors",
     "tag_id",
   );
-
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
-    setOpts(this as any as Author, opts, { calledFromConstructor: true });
+    setOpts((this as any) as Author, opts, { calledFromConstructor: true });
   }
-
   get id(): AuthorId | undefined {
     return this.idTagged;
   }
-
   get idOrFail(): AuthorId {
     return this.id || fail("Author has no id yet");
   }
-
   get idTagged(): AuthorId | undefined {
     return this.__orm.data["id"];
   }
-
   get idTaggedOrFail(): AuthorId {
     return this.idTagged || fail("Author has no id tagged yet");
   }
-
   get firstName(): string {
     return this.__orm.data["firstName"];
   }
-
   set firstName(firstName: string) {
     setField(this, "firstName", cleanStringValue(firstName));
   }
-
   get lastName(): string | undefined {
     return this.__orm.data["lastName"];
   }
-
   set lastName(lastName: string | undefined) {
     setField(this, "lastName", cleanStringValue(lastName));
   }
-
   get ssn(): string | undefined {
     return this.__orm.data["ssn"];
   }
-
   set ssn(ssn: string | undefined) {
     setField(this, "ssn", cleanStringValue(ssn));
   }
-
   abstract get initials(): string;
-
   abstract readonly numberOfBooks: PersistedAsyncProperty<Author, number>;
-
   abstract readonly bookComments: PersistedAsyncProperty<Author, string | undefined>;
-
   get isPopular(): boolean | undefined {
     return this.__orm.data["isPopular"];
   }
-
   set isPopular(isPopular: boolean | undefined) {
     setField(this, "isPopular", isPopular);
   }
-
   get age(): number | undefined {
     return this.__orm.data["age"];
   }
-
   set age(age: number | undefined) {
     setField(this, "age", age);
   }
-
   get graduated(): Date | undefined {
     return this.__orm.data["graduated"];
   }
-
   set graduated(graduated: Date | undefined) {
     setField(this, "graduated", graduated);
   }
-
   get wasEverPopular(): boolean | undefined {
     return this.__orm.data["wasEverPopular"];
   }
-
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
     setField(this, "wasEverPopular", wasEverPopular);
   }
-
   get address(): Address | undefined {
     return this.__orm.data["address"];
   }
-
   set address(_address: Address | undefined) {
     if (_address) {
       assert(_address, address);
     }
     setField(this, "address", _address);
   }
-
   get businessAddress(): z.output<typeof AddressSchema> | undefined {
     return this.__orm.data["businessAddress"];
   }
-
   set businessAddress(_businessAddress: z.input<typeof AddressSchema> | undefined) {
     if (_businessAddress) {
       setField(this, "businessAddress", AddressSchema.parse(_businessAddress));
@@ -404,100 +357,76 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
       setField(this, "businessAddress", _businessAddress);
     }
   }
-
   get quotes(): Quotes | undefined {
     return this.__orm.data["quotes"];
   }
-
   set quotes(_quotes: Quotes | undefined) {
     if (_quotes) {
       assert(_quotes, quotes);
     }
     setField(this, "quotes", _quotes);
   }
-
   get deletedAt(): Date | undefined {
     return this.__orm.data["deletedAt"];
   }
-
   set deletedAt(deletedAt: Date | undefined) {
     setField(this, "deletedAt", deletedAt);
   }
-
   abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;
-
   get createdAt(): Date {
     return this.__orm.data["createdAt"];
   }
-
   get updatedAt(): Date {
     return this.__orm.data["updatedAt"];
   }
-
   get favoriteColors(): Color[] {
     return this.__orm.data["favoriteColors"] || [];
   }
-
   get favoriteColorsDetails(): ColorDetails[] {
     return this.favoriteColors.map((code) => Colors.getByCode(code));
   }
-
   set favoriteColors(favoriteColors: Color[]) {
     setField(this, "favoriteColors", favoriteColors);
   }
-
   get isRed(): boolean {
     return this.favoriteColors.includes(Color.Red);
   }
-
   get isGreen(): boolean {
     return this.favoriteColors.includes(Color.Green);
   }
-
   get isBlue(): boolean {
     return this.favoriteColors.includes(Color.Blue);
   }
-
   get favoriteShape(): FavoriteShape | undefined {
     return this.__orm.data["favoriteShape"];
   }
-
   set favoriteShape(favoriteShape: FavoriteShape | undefined) {
     setField(this, "favoriteShape", favoriteShape);
   }
-
   get isCircle(): boolean {
     return this.favoriteShape === FavoriteShape.Circle;
   }
-
   get isSquare(): boolean {
     return this.favoriteShape === FavoriteShape.Square;
   }
-
   get isTriangle(): boolean {
     return this.favoriteShape === FavoriteShape.Triangle;
   }
-
   set(opts: Partial<AuthorOpts>): void {
-    setOpts(this as any as Author, opts);
+    setOpts((this as any) as Author, opts);
   }
-
   setPartial(opts: PartialOrNull<AuthorOpts>): void {
-    setOpts(this as any as Author, opts as OptsOf<Author>, { partial: true });
+    setOpts((this as any) as Author, opts as OptsOf<Author>, { partial: true });
   }
-
   get changes(): Changes<Author> {
-    return newChangesProxy(this) as any;
+    return (newChangesProxy(this) as any);
   }
-
   get isSoftDeletedEntity(): boolean {
     return this.__orm.data.deletedAt !== undefined;
   }
-
   load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
-    return loadLens(this as any as Author, fn, opts);
+    return loadLens((this as any) as Author, fn, opts);
   }
-
   populate<H extends LoadHint<Author>>(hint: H): Promise<Loaded<Author, H>>;
   populate<H extends LoadHint<Author>>(opts: { hint: H; forceReload?: boolean }): Promise<Loaded<Author, H>>;
   populate<H extends LoadHint<Author>, V>(hint: H, fn: (a: Loaded<Author, H>) => V): Promise<V>;
@@ -509,10 +438,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
     hintOrOpts: any,
     fn?: (a: Loaded<Author, H>) => V,
   ): Promise<Loaded<Author, H> | V> {
-    return this.em.populate(this as any as Author, hintOrOpts, fn);
+    return this.em.populate((this as any) as Author, hintOrOpts, fn);
   }
-
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {
-    return isLoaded(this as any as Author, hint);
+    return isLoaded((this as any) as Author, hint);
   }
 }

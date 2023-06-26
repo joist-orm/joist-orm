@@ -3,7 +3,6 @@ export enum ImageType {
   AuthorImage = "AUTHOR_IMAGE",
   PublisherImage = "PUBLISHER_IMAGE",
 }
-
 export type ImageTypeDetails = {
   id: number;
   code: ImageType;
@@ -12,7 +11,6 @@ export type ImageTypeDetails = {
   visible: boolean;
   nickname: "book_image" | "author_image" | "publisher_image";
 };
-
 const details: Record<ImageType, ImageTypeDetails> = {
   [ImageType.BookImage]: {
     id: 1,
@@ -39,30 +37,24 @@ const details: Record<ImageType, ImageTypeDetails> = {
     nickname: "publisher_image",
   },
 };
-
 export const ImageTypeDetails: Record<ImageType[0], ImageTypeDetails> = {
   BookImage: details[ImageType.BookImage],
   AuthorImage: details[ImageType.AuthorImage],
   PublisherImage: details[ImageType.PublisherImage],
 };
-
 export const ImageTypes = {
   getByCode(code: ImageType): ImageTypeDetails {
     return details[code];
   },
-
   findByCode(code: string): ImageTypeDetails | undefined {
     return details[code as ImageType];
   },
-
   findById(id: number): ImageTypeDetails | undefined {
     return Object.values(details).find((d) => d.id === id);
   },
-
   getValues(): ReadonlyArray<ImageType> {
     return Object.values(ImageType);
   },
-
   getDetails(): ReadonlyArray<ImageTypeDetails> {
     return Object.values(details);
   },

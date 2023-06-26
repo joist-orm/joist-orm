@@ -12,7 +12,7 @@ export function newComment(comment: string): CommentBlock {
         value: `*\n${comment.trim()
             .split("\n")
             .map((c) => `* ${c}`)
-            .join("\n")}`,
+            .join("\n")}\n`,
     };
 }
 

@@ -13,7 +13,7 @@ import {
   update,
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Color, Publisher, PublisherSize, newAuthor, newBook, newPublisher } from "./entities";
+import { Author, Book, Color, Comment, Publisher, PublisherSize, newAuthor, newBook, newPublisher } from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -772,6 +772,24 @@ describe("EntityManager", () => {
     expect(a.id).toBeUndefined();
     expect(a.lastName).toEqual("l");
     expect(a.age).toEqual(20);
+  });
+
+  it("can create with findOrCreate and hook up to parent", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const a = await em.findOrCreate(Author, { publisher: p1 }, { firstName: "a1" });
+    expect(a.id).toBeUndefined();
+    expect(await p1.authors.load()).toMatchEntity([a]);
+  });
+
+  it("can create with findOrCreate and hook up to poly parent", async () => {
+    await insertPublisher({ name: "p1" });
+    const em = newEntityManager();
+    const p1 = await em.load(Publisher, "p:1");
+    const c = await em.findOrCreate(Comment, { parent: p1 }, {});
+    expect(c.id).toBeUndefined();
+    expect(await p1.comments.load()).toMatchEntity([c]);
   });
 
   it("can upsert with findOrCreate", async () => {

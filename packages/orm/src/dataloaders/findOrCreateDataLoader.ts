@@ -58,7 +58,7 @@ export function findOrCreateDataLoader<T extends Entity>(
           }
 
           // If we didn't find it in the EM, do the db query/em.create
-          const entities = await em.find(type, where as FilterWithAlias<T>, { softDeletes });
+          const entities = await em.find(type, { ...(where as FilterWithAlias<T>) }, { softDeletes });
           let entity: T;
           if (entities.length > 1) {
             throw new TooManyError();

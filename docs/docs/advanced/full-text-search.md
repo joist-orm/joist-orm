@@ -34,6 +34,16 @@ export async function up(b: MigrationBuilder): Promise<void> {
 }
 ```
 
+:::info
+
+Even though two columns looks odd here, so far we've found it to be the best solution that allows both:
+
+1. Joist to control the `search` field, i.e. on both reads & writes be able to see/diff/update "just the plain text" value, while
+
+2. Letting Postgres fully control the `to_tsvector` application.
+
+:::
+
 ## Configuring the Persisted Field
 
 We'll now set up the `Book.search` field as an [Asynchronous Persisted Derived Field](../modeling/derived-fields.md#asynchronous-persisted-fields) within `joist-config.json`:
@@ -80,3 +90,11 @@ void query
 // Then load the books for the custom search query
 const books = await em.loadFromQuery(Book, query);
 ```
+
+:::info
+
+We're using Knex and `buildQuery` here because, currently, Joist's `em.find` syntax does not support raw query conditions.
+
+See [#699](https://github.com/stephenh/joist-ts/issues/699) which will add support for this.
+
+:::

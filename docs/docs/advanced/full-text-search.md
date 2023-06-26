@@ -1,10 +1,7 @@
 ---
-title: Examples
-slug: /examples
+title: Full Text Search
 sidebar_position: 35
 ---
-
-## Postgres Full Text Search
 
 Postgres has rich support for [full text search functionality](https://www.postgresql.org/docs/current/functions-textsearch.html), which can be a replacement for more dedicated solutions such as Elasticsearch.
 
@@ -12,7 +9,7 @@ One of the challenges of implementing a Postgres `tsvector` search index is keep
 
 The conventional approach would be to use triggers to react to updates and keep the index in sync, but Joist can improve on the ergonomics of this approach through the use of [Persisted Derived Fields](../modeling/derived-fields.md).
 
-#### Adding Search Index Columns
+## Adding Search Index Columns
 
 First, we'll start by creating 2 columns:
 
@@ -37,7 +34,7 @@ export async function up(b: MigrationBuilder): Promise<void> {
 }
 ```
 
-#### Configuring the Persisted Field
+## Configuring the Persisted Field
 
 We'll now set up the `Book.search` field as an [Asynchronous Persisted Derived Field](../modeling/derived-fields.md#asynchronous-persisted-fields) within `joist-config.json`:
 
@@ -68,7 +65,7 @@ readonly search: PersistedAsyncProperty<Book, string> = hasPersistedAsyncPropert
 );
 ```
 
-#### Querying the `tsvector` type `ts_search` Column
+## Querying the `tsvector` type `ts_search` Column
 
 ```ts
 // Use the buildQuery method to create a base query to build off of

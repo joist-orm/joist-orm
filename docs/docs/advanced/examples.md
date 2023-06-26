@@ -1,7 +1,7 @@
 ---
 title: Examples
 slug: /examples
-sidebar_position: 3
+sidebar_position: 35
 ---
 
 ## Postgres Full Text Search

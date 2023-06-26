@@ -1,3 +1,10 @@
+## [1.91.4](https://github.com/stephenh/joist-ts/compare/v1.91.3...v1.91.4) (2023-06-26)
+
+
+### Bug Fixes
+
+* Fix findOrCreate not hooking up both sides. ([#712](https://github.com/stephenh/joist-ts/issues/712)) ([0fb1c36](https://github.com/stephenh/joist-ts/commit/0fb1c36b31f382d1123fef77272baad0c3c292a2))
+
 ## [1.91.3](https://github.com/stephenh/joist-ts/compare/v1.91.2...v1.91.3) (2023-06-25)
 
 

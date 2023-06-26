@@ -3,6 +3,7 @@ import { EntityDbMetadata } from "joist-codegen";
 import * as path from "path";
 import { remark } from "remark";
 import { CommentStore, FieldSourceType } from "./CommentStore";
+import {hashFile} from "./utils";
 
 /**
  * A Markdown CommentStore with opinionated but loose semantics around
@@ -17,6 +18,10 @@ export class MarkdownCommentStore extends CommentStore {
 
   async forEntity(entity: EntityDbMetadata): Promise<string | void> {
     return this.findRootContent(entity);
+  }
+
+  async hashForEntity(entity:EntityDbMetadata) {
+    return hashFile(path.join(this.config.entitiesDirectory, `${entity.name}.md`));
   }
 
   private async getDocument(filename: string) {

@@ -1,110 +1,80 @@
-import generate from "@babel/generator";
-import { parse } from "@babel/parser";
-import traverse, { NodePath } from "@babel/traverse";
+import {parse} from "@babel/parser";
 import * as t from "@babel/types";
-import { CommentBlock } from "@babel/types";
 import { readFile, writeFile } from "fs/promises";
 import type { Config, DbMetadata } from "joist-codegen";
-import { EntityDbMetadata } from "joist-codegen";
-import * as path from "path";
 import { CommentStore } from "./CommentStore";
+import { Cache } from "./Cache";
 import { MarkdownCommentStore } from "./MarkdownCommentStore";
+import {entityCodegenIntegration} from "./handlers/entityCodegen";
+import generate from "@babel/generator";
+import {hashString} from "./utils";
 
-async function readAndParse(config: Config, file: string) {
-  const source = await readFile(path.join(config.entitiesDirectory, file), { encoding: "utf-8" });
+export interface IntegrationHandler<Topic> {
+  /**
+   * File this handler targets
+   */
+  file: (topic: Topic, config: Config) => string;
 
-  return parse(source, { sourceType: "module", plugins: ["typescript"] });
+  /**
+   * A hash provided by the CommentStore, or undefined to disable caching.
+   */
+  commentStoreHash: (topic: Topic, commentStore: CommentStore) => Promise<string | undefined>;
+
+  /**
+   * Executes this integration, taking in and returning a transformed ast.
+   *
+   * If there is nothing to change, the handle can return undefined to denote this and the
+   * printing and writing will be avoided.
+   */
+  handle(source: t.File, topic: Topic, commentStore: CommentStore): Promise<t.File>
 }
 
-/**
- * Builds a CommentBlock node with correct TSDoc formatting
- * across new files
- */
-function newComment(comment: string): CommentBlock {
-  return {
-    type: "CommentBlock",
-    value: `*\n${comment
-      .split("\n")
-      .map((c) => `* ${c}`)
-      .join("\n")}`,
-  };
-}
+class JoistDoc {
 
-/**
- * Handles the fully code generated *Codegen.ts files.
- *
- * Integrates docs within
- * - Field setters & getters
- * - Field properties on the Opts interface
- */
-async function forEntityCodegen(config: Config, entity: EntityDbMetadata, commentStore: CommentStore) {
-  const fileName = `${entity.name}Codegen.ts`;
-  const file = await readAndParse(config, fileName);
+  private cache = new Cache();
+  constructor(private commentStore: CommentStore, private metadata: DbMetadata, private config: Config) {}
 
-  // find nodes
-  let opts = undefined as NodePath<t.TSInterfaceDeclaration> | undefined;
-  let klass = undefined as NodePath<t.ClassDeclaration> | undefined;
+  async run<T>(integration: IntegrationHandler<T>, topic: T) {
+    const filePath = integration.file(topic, this.config);
+    const file = await readFile(filePath, { encoding: "utf-8" });
 
-  traverse(file, {
-    ClassDeclaration(path) {
-      if (path.node.id.name === `${entity.name}Codegen`) {
-        klass = path as NodePath<t.ClassDeclaration>;
-      }
-    },
-    TSInterfaceDeclaration(path) {
-      if (path.node.id.name === `${entity.name}Opts`) {
-        opts = path as NodePath<t.TSInterfaceDeclaration>;
-      }
-    },
-  });
+    // get source target hash
+    const sourceHash = hashString(file);
+    // get commentStore hash
+    const commentStoreHash = await integration.commentStoreHash(topic, this.commentStore);
 
-  // handle the class
-  if (klass) {
-    const rootComment = await commentStore.forEntity(entity);
-    if (rootComment) {
-      // parent because the export statement is it's own node with children.
-      // a lower version of @babel/types is getting in here, which is odd.
-      (klass.parent.leadingComments as t.Comment[]) = [newComment(rootComment)];
-    }
+    if (commentStoreHash) {
+      const existingCache = await this.cache.get(filePath, {sourceHash, commentStoreHash});
 
-    for (const member of klass.node.body.body) {
-      if (t.isClassMethod(member) && t.isIdentifier(member.key)) {
-        const comment = await commentStore.forField(entity, member.key.name, member.kind === "get" ? "get" : "set");
-
-        if (comment) {
-          member.leadingComments = [newComment(comment)];
-        }
+      if (existingCache) {
+        await writeFile(filePath, existingCache, { encoding: "utf-8" });
+        return;
       }
     }
+
+    const source = parse(file, { sourceType: "module", plugins: ["typescript"] });
+    const result = await integration.handle(source, topic, this.commentStore);
+
+    const generated = generate(result, {}).code;
+
+    await writeFile(filePath, generated, { encoding: "utf-8" });
+    await this.cache.set(filePath, { sourceHash, commentStoreHash }, generated);
   }
 
-  if (opts) {
-    for (const property of opts.node.body.body) {
-      if (t.isTSPropertySignature(property) && t.isIdentifier(property.key)) {
-        const comment = await commentStore.forField(entity, property.key.name, "opts");
+  async process() {
+    const entityCodegen = this.metadata.entities.map((entity) => this.run(entityCodegenIntegration, entity))
 
-        if (comment) {
-          property.leadingComments = [newComment(comment)];
-        }
-      }
-    }
+    await Promise.all([
+        ...entityCodegen,
+    ]);
+
+    this.cache.save();
   }
-
-  await writeFile(path.join(config.entitiesDirectory, fileName), generate(file, {}).code, { encoding: "utf-8" });
-}
-
-async function forEntity(config: Config, entity: EntityDbMetadata, commentStore: CommentStore) {
-  // TODO: derived properties
 }
 
 export async function tsDocIntegrate(config: Config, metadata: DbMetadata) {
   const commentStore = new MarkdownCommentStore(config);
+  const joistDoc = new JoistDoc(commentStore, metadata, config);
 
-  await Promise.all([
-    ...metadata.entities.flatMap((entity) => [
-      forEntity(config, entity, commentStore),
-      forEntityCodegen(config, entity, commentStore),
-      // TODO: Enum files
-    ]),
-  ]);
+  await joistDoc.process();
 }

@@ -1,4 +1,5 @@
 import { Config, EntityDbMetadata } from "joist-codegen";
+import {hashFile} from "./utils";
 
 /**
  * Not used within MarkdownCommentStore, but allows additional customisation
@@ -17,4 +18,6 @@ export abstract class CommentStore {
   abstract forField(entity: EntityDbMetadata, fieldName: string, source: FieldSourceType): Promise<string | void>;
 
   abstract forEntity(entity: EntityDbMetadata): Promise<string | void>;
+
+  abstract hashForEntity(entity: EntityDbMetadata): Promise<string | undefined>;
 }

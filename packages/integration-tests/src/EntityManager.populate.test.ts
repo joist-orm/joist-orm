@@ -214,4 +214,13 @@ describe("EntityManager.populate", () => {
     // Then a2.books was loaded
     expect(loaded.authors.get[1].books.get.length).toBe(1);
   });
+
+  it("gives a helpful error for invalid hints", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    // @ts-expect-error
+    const p = em.load(Author, "a:1", { publisher: "size" });
+    await expect(p).rejects.toThrow("Invalid load hint 'size' on SmallPublisher:1");
+  });
 });

@@ -56,8 +56,8 @@ export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<C
   return [Author, Book, BookReview, Publisher];
 }
 export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEntity is CommentParent {
-  return maybeEntity !== undefined && maybeEntity !== null
-    && getCommentParentConstructors().some((type) => maybeEntity instanceof type);
+  return maybeEntity !== undefined && maybeEntity !== null &&
+    getCommentParentConstructors().some((type) => maybeEntity instanceof type);
 }
 export interface CommentFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

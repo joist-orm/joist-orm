@@ -4,20 +4,14 @@
 export enum Color {
   /**
    * Stop, danger, classic cars.
-   *
-   * automatically inserted from Color.md.
    */
   Red = "RED",
   /**
    * Go! Nature and health.
-   *
-   * automatically inserted from Color.md.
    */
   Green = "GREEN",
   /**
    * Water, sea, sky.
-   *
-   * automatically inserted from Color.md.
    */
   Blue = "BLUE",
 }

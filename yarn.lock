@@ -2358,13 +2358,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@dprint/typescript@npm:^0.85.1":
-  version: 0.85.1
-  resolution: "@dprint/typescript@npm:0.85.1"
-  checksum: f3c7ddd3a8cb275fead22dc1431798d1afcd6222e97355f68ed4c55680ac7c1da9973b071a2ccdf513d929b62ea9bd0989ad8164a5a0ef4b4f4a6ec0235adbbb
-  languageName: node
-  linkType: hard
-
 "@esbuild-kit/cjs-loader@npm:^2.4.2":
   version: 2.4.2
   resolution: "@esbuild-kit/cjs-loader@npm:2.4.2"
@@ -11139,11 +11132,10 @@ __metadata:
     "@babel/parser": ^7.22.5
     "@babel/traverse": ^7.22.5
     "@babel/types": ^7.22.5
-    "@dprint/formatter": ^0.2.0
-    "@dprint/typescript": ^0.85.1
     "@swc/jest": ^0.2.26
     "@types/jest": ^29.5.2
     "@types/node": ^18.16.16
+    dprint-node: ^1.0.7
     file-system-cache: ^2.3.0
     jest: ^29.5.0
     p-limit: ^4.0.0

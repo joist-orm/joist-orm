@@ -1,23 +1,21 @@
 import generate from "@babel/generator";
 import { parse } from "@babel/parser";
-import { createFromBuffer, Formatter } from "@dprint/formatter";
-import { getPath } from "@dprint/typescript";
+import dprint from "dprint-node";
 import { readFile, writeFile } from "fs/promises";
 import type { Config, DbMetadata } from "joist-codegen";
 import pLimit from "p-limit";
 import { Cache } from "./Cache";
 import { CommentStore } from "./CommentStore";
+import { MarkdownCommentStore } from "./MarkdownCommentStore";
 import { IntegrationHandler } from "./integrationHandler";
 import { entityIntegration } from "./integrations/entity";
 import { entityCodegenIntegration } from "./integrations/entityCodegen";
 import { enumIntegration } from "./integrations/enum";
-import { MarkdownCommentStore } from "./MarkdownCommentStore";
 import { hashString } from "./utils";
 
 class JoistDoc {
   private cache = new Cache();
 
-  private formatter: undefined | Formatter;
   constructor(private commentStore: CommentStore, private metadata: DbMetadata, private config: Config) {}
 
   /**
@@ -48,11 +46,9 @@ class JoistDoc {
     const source = parse(file, { sourceType: "module", plugins: ["typescript"] });
     const result = await integration.handle(source, topic, this.commentStore);
 
-    const formatter = await this.getFormatter();
-
     // This is taken from ts-poet, which joist-codegen doesn't override. It's included here
     // to try to ensure that joist-doc isn't reformatting needlessly
-    const generated = formatter.formatText(filePath, generate(result, {}).code, {
+    const generated = dprint.format(filePath, generate(result, {}).code, {
       useTabs: false,
       useBraces: "always",
       singleBodyPosition: "nextLine",
@@ -66,18 +62,6 @@ class JoistDoc {
 
     await writeFile(filePath, generated, { encoding: "utf-8" });
     await this.cache.set(filePath, { sourceHash, commentStoreHash }, generated);
-  }
-
-  /**
-   * Lazy load this on demand, so we can avoid the cost for cached runs.
-   */
-  async getFormatter() {
-    if (this.formatter) return this.formatter;
-
-    const buffer = await readFile(getPath());
-    this.formatter = createFromBuffer(buffer);
-
-    return this.formatter;
   }
 
   async process() {

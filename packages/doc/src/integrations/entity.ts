@@ -2,15 +2,14 @@ import traverse, { NodePath } from "@babel/traverse";
 import * as t from "@babel/types";
 import { EntityDbMetadata } from "joist-codegen";
 import * as path from "path";
-import { IntegrationHandler } from "../index";
+import { IntegrationHandler } from "../integrationHandler";
 import { newComment } from "../utils";
 
 /**
  * Handles the user-land *.ts entity files.
  *
  * Integrates docs within
- * - Field setters & getters
- * - Field properties on the Opts interface
+ * - Derived properties & Methods
  */
 export const entityIntegration: IntegrationHandler<EntityDbMetadata> = {
   file: (entity, config) => path.join(config.entitiesDirectory, `${entity.name}.ts`),

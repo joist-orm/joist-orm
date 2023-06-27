@@ -2,13 +2,14 @@ import traverse, { NodePath } from "@babel/traverse";
 import * as t from "@babel/types";
 import { EntityDbMetadata } from "joist-codegen";
 import * as path from "path";
-import { IntegrationHandler } from "../index";
+import { IntegrationHandler } from "../integrationHandler";
 import { newComment } from "../utils";
 
 /**
  * Handles the fully code generated *Codegen.ts files.
  *
  * Integrates docs within
+ * - Entity class itself
  * - Field setters & getters
  * - Field properties on the Opts interface
  */

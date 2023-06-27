@@ -1,15 +1,15 @@
 import traverse, { NodePath } from "@babel/traverse";
 import * as t from "@babel/types";
 import * as path from "path";
-import { IntegrationHandler } from "../index";
+import { IntegrationHandler } from "../integrationHandler";
 import { newComment } from "../utils";
 
 /**
- * Handles the user-land *.ts entity files.
+ * Handles the generated *.ts enum files.
  *
  * Integrates docs within
- * - Field setters & getters
- * - Field properties on the Opts interface
+ * - Enum itself
+ * - Enum members
  */
 export const enumIntegration: IntegrationHandler<{ name: string }> = {
   file: (enumField, config) => path.join(config.entitiesDirectory, `${enumField.name}.ts`),

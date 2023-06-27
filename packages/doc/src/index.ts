@@ -1,38 +1,18 @@
 import generate from "@babel/generator";
 import { parse } from "@babel/parser";
-import * as t from "@babel/types";
-import { Formatter, createFromBuffer } from "@dprint/formatter";
+import { createFromBuffer, Formatter } from "@dprint/formatter";
 import { getPath } from "@dprint/typescript";
 import { readFile, writeFile } from "fs/promises";
 import type { Config, DbMetadata } from "joist-codegen";
 import pLimit from "p-limit";
 import { Cache } from "./Cache";
 import { CommentStore } from "./CommentStore";
+import { IntegrationHandler } from "./integrationHandler";
+import { entityIntegration } from "./integrations/entity";
+import { entityCodegenIntegration } from "./integrations/entityCodegen";
+import { enumIntegration } from "./integrations/enum";
 import { MarkdownCommentStore } from "./MarkdownCommentStore";
-import { entityIntegration } from "./handlers/entity";
-import { entityCodegenIntegration } from "./handlers/entityCodegen";
-import { enumIntegration } from "./handlers/enum";
 import { hashString } from "./utils";
-
-export interface IntegrationHandler<Topic> {
-  /**
-   * File this handler targets
-   */
-  file: (topic: Topic, config: Config) => string;
-
-  /**
-   * A hash provided by the CommentStore, or undefined to disable caching.
-   */
-  commentStoreHash: (topic: Topic, commentStore: CommentStore) => Promise<string | undefined>;
-
-  /**
-   * Executes this integration, taking in and returning a transformed ast.
-   *
-   * If there is nothing to change, the handle can return undefined to denote this and the
-   * printing and writing will be avoided.
-   */
-  handle(source: t.File, topic: Topic, commentStore: CommentStore): Promise<t.File>;
-}
 
 class JoistDoc {
   private cache = new Cache();
@@ -64,8 +44,6 @@ class JoistDoc {
         return;
       }
     }
-
-    console.log("Re-generating for", filePath);
 
     const source = parse(file, { sourceType: "module", plugins: ["typescript"] });
     const result = await integration.handle(source, topic, this.commentStore);
@@ -123,10 +101,8 @@ class JoistDoc {
 }
 
 export async function tsDocIntegrate(config: Config, metadata: DbMetadata) {
-  console.time("joist-doc");
   const commentStore = new MarkdownCommentStore(config);
   const joistDoc = new JoistDoc(commentStore, metadata, config);
 
   await joistDoc.process();
-  console.timeEnd("joist-doc");
 }

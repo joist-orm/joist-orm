@@ -922,6 +922,9 @@ export class EntityManager<C = unknown> {
         const loadPromises = list.flatMap((entity) => {
           return hints.map(([key]) => {
             const relation = (entity as any)[key];
+            if (!relation || typeof relation.load !== "function") {
+              throw new Error(`Invalid load hint '${key}' on ${entity}`);
+            }
             return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
           });
         });

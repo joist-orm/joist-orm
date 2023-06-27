@@ -1,3 +1,10 @@
+## [1.91.5](https://github.com/stephenh/joist-ts/compare/v1.91.4...v1.91.5) (2023-06-27)
+
+
+### Bug Fixes
+
+* Provide a nicer error with invalid hints. ([#713](https://github.com/stephenh/joist-ts/issues/713)) ([613749c](https://github.com/stephenh/joist-ts/commit/613749ccfecd57e6360fc1fb2625aad3508d88e3))
+
 ## [1.91.4](https://github.com/stephenh/joist-ts/compare/v1.91.3...v1.91.4) (2023-06-26)
 
 

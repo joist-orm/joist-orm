@@ -2,8 +2,8 @@ import { readFile } from "fs/promises";
 import { EntityDbMetadata } from "joist-codegen";
 import * as path from "path";
 import { remark } from "remark";
-import {CommentStore, EnumData, FieldSourceType} from "./CommentStore";
-import {hashFile} from "./utils";
+import { CommentStore, EnumData, FieldSourceType } from "./CommentStore";
+import { hashFile } from "./utils";
 
 /**
  * A Markdown CommentStore with opinionated but loose semantics around
@@ -20,7 +20,6 @@ export class MarkdownCommentStore extends CommentStore {
     return this.findRootContent(entity.name);
   }
 
-
   async forEnum(enumField: EnumData, generated: boolean): Promise<string | void> {
     return this.findRootContent(enumField.name);
   }
@@ -35,7 +34,7 @@ export class MarkdownCommentStore extends CommentStore {
     return content ? `${content}\n\nautomatically inserted from ${file}.md.` : undefined;
   }
 
-  async hashForEntity(entity:EntityDbMetadata) {
+  async hashForEntity(entity: EntityDbMetadata) {
     return hashFile(path.join(this.config.entitiesDirectory, `${entity.name}.md`));
   }
 

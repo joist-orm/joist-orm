@@ -1,18 +1,18 @@
-import {parse} from "@babel/parser";
+import generate from "@babel/generator";
+import { parse } from "@babel/parser";
 import * as t from "@babel/types";
+import { Formatter, createFromBuffer } from "@dprint/formatter";
+import { getPath } from "@dprint/typescript";
 import { readFile, writeFile } from "fs/promises";
 import type { Config, DbMetadata } from "joist-codegen";
-import { CommentStore } from "./CommentStore";
+import pLimit from "p-limit";
 import { Cache } from "./Cache";
+import { CommentStore } from "./CommentStore";
 import { MarkdownCommentStore } from "./MarkdownCommentStore";
-import {entityCodegenIntegration} from "./handlers/entityCodegen";
-import generate from "@babel/generator";
-import {hashString} from "./utils";
-import pLimit from 'p-limit';
-import {entityIntegration} from "./handlers/entity";
-import {createFromBuffer, Formatter} from "@dprint/formatter";
-import { getPath } from "@dprint/typescript";
-import {enumIntegration} from "./handlers/enum";
+import { entityIntegration } from "./handlers/entity";
+import { entityCodegenIntegration } from "./handlers/entityCodegen";
+import { enumIntegration } from "./handlers/enum";
+import { hashString } from "./utils";
 
 export interface IntegrationHandler<Topic> {
   /**
@@ -31,16 +31,14 @@ export interface IntegrationHandler<Topic> {
    * If there is nothing to change, the handle can return undefined to denote this and the
    * printing and writing will be avoided.
    */
-  handle(source: t.File, topic: Topic, commentStore: CommentStore): Promise<t.File>
+  handle(source: t.File, topic: Topic, commentStore: CommentStore): Promise<t.File>;
 }
 
 class JoistDoc {
-
   private cache = new Cache();
 
   private formatter: undefined | Formatter;
   constructor(private commentStore: CommentStore, private metadata: DbMetadata, private config: Config) {}
-
 
   async run<T>(integration: IntegrationHandler<T>, topic: T) {
     const filePath = integration.file(topic, this.config);
@@ -52,7 +50,7 @@ class JoistDoc {
     const commentStoreHash = await integration.commentStoreHash(topic, this.commentStore);
 
     if (commentStoreHash) {
-      const existingCache = await this.cache.get(filePath, {sourceHash, commentStoreHash});
+      const existingCache = await this.cache.get(filePath, { sourceHash, commentStoreHash });
 
       if (existingCache) {
         await writeFile(filePath, existingCache, { encoding: "utf-8" });
@@ -60,7 +58,7 @@ class JoistDoc {
       }
     }
 
-    console.log('Re-generating for', filePath)
+    console.log("Re-generating for", filePath);
 
     const source = parse(file, { sourceType: "module", plugins: ["typescript"] });
     const result = await integration.handle(source, topic, this.commentStore);
@@ -98,29 +96,30 @@ class JoistDoc {
   }
 
   async process() {
-    const limit = pLimit(16)
+    const limit = pLimit(16);
 
-    const entityCodegen = this.metadata.entities.map((entity) => limit(() => this.run(entityCodegenIntegration, entity)))
-    const entity = this.metadata.entities.map((entity) => limit(() => this.run(entityIntegration, entity)))
-    const pgEnums = Object.values(this.metadata.pgEnums).map((enumField) => limit(() => this.run(enumIntegration, enumField)))
-    const enums = Object.values(this.metadata.enums).map((enumField) => limit(() => this.run(enumIntegration, enumField)))
+    const entityCodegen = this.metadata.entities.map((entity) =>
+      limit(() => this.run(entityCodegenIntegration, entity)),
+    );
+    const entity = this.metadata.entities.map((entity) => limit(() => this.run(entityIntegration, entity)));
+    const pgEnums = Object.values(this.metadata.pgEnums).map((enumField) =>
+      limit(() => this.run(enumIntegration, enumField)),
+    );
+    const enums = Object.values(this.metadata.enums).map((enumField) =>
+      limit(() => this.run(enumIntegration, enumField)),
+    );
 
-    await Promise.all([
-        ...entityCodegen,
-        ...entity,
-        ...pgEnums,
-        ...enums,
-    ]);
+    await Promise.all([...entityCodegen, ...entity, ...pgEnums, ...enums]);
 
     this.cache.save();
   }
 }
 
 export async function tsDocIntegrate(config: Config, metadata: DbMetadata) {
-  console.time('joist-doc');
+  console.time("joist-doc");
   const commentStore = new MarkdownCommentStore(config);
   const joistDoc = new JoistDoc(commentStore, metadata, config);
 
   await joistDoc.process();
-  console.timeEnd('joist-doc');
+  console.timeEnd("joist-doc");
 }

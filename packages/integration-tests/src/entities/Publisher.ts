@@ -1,18 +1,22 @@
 import { cannotBeUpdated, Collection, CustomCollection, getEm, Loaded } from "joist-orm";
-import { Image, ImageType, ImageTypes, PublisherCodegen, publisherConfig as config } from "./entities";
+import { publisherConfig as config, Image, ImageType, ImageTypes, PublisherCodegen } from "./entities";
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 export abstract class Publisher extends PublisherCodegen {
   readonly allImages: Collection<Publisher, Image> = new CustomCollection(this, {
     load: (entity, opts) => entity.populate({ hint: allImagesHint, ...opts }),
     get: (entity) => {
       const loaded = entity as Loaded<Publisher, typeof allImagesHint>;
-      return loaded.authors.get.reduce((images, author) => {
-        images.push(author.image.get!);
-        author.books.get.forEach((book) => images.push(book.image.get!));
-        return images;
-      }, [...loaded.images.get]).filter((imageOrUndefined) => imageOrUndefined !== undefined).sort((a, b) =>
-        ImageTypes.findByCode(a.type)!.sortOrder - ImageTypes.findByCode(b.type)!.sortOrder
-      );
+      return loaded.authors.get
+        .reduce(
+          (images, author) => {
+            images.push(author.image.get!);
+            author.books.get.forEach((book) => images.push(book.image.get!));
+            return images;
+          },
+          [...loaded.images.get],
+        )
+        .filter((imageOrUndefined) => imageOrUndefined !== undefined)
+        .sort((a, b) => ImageTypes.findByCode(a.type)!.sortOrder - ImageTypes.findByCode(b.type)!.sortOrder);
     },
     add: (entity, value) => {
       const allImages = (entity as Loaded<Publisher, "allImages">).allImages;

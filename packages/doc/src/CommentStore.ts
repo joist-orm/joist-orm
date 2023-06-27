@@ -1,6 +1,4 @@
-import {Config, EntityDbMetadata, EnumField} from "joist-codegen";
-import {hashFile} from "./utils";
-import {PgEnumField} from "joist-codegen/build/EntityDbMetadata";
+import { Config, EntityDbMetadata } from "joist-codegen";
 
 /**
  * Not used within MarkdownCommentStore, but allows additional customisation
@@ -18,7 +16,12 @@ export type EnumData = { name: string };
 export abstract class CommentStore {
   constructor(protected config: Config) {}
 
-  abstract forField(entity: EntityDbMetadata, fieldName: string, source: FieldSourceType, generated: boolean): Promise<string | void>;
+  abstract forField(
+    entity: EntityDbMetadata,
+    fieldName: string,
+    source: FieldSourceType,
+    generated: boolean,
+  ): Promise<string | void>;
 
   abstract forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | void>;
 

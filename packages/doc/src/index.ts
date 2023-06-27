@@ -40,13 +40,20 @@ class JoistDoc {
   private formatter: undefined | Formatter;
   constructor(private commentStore: CommentStore, private metadata: DbMetadata, private config: Config) {}
 
+  /**
+   * Runs an integration handler, handling the common stuff
+   *
+   * - calculates source hash
+   * - asks commentStore for its hash
+   * - if nothing has changed and we have a restore, exit early and use that
+   *
+   * - otherwise: parse, run handler, generated, dprint, write, update cache
+   */
   async run<T>(integration: IntegrationHandler<T>, topic: T) {
     const filePath = integration.file(topic, this.config);
     const file = await readFile(filePath, { encoding: "utf-8" });
 
-    // get source target hash
     const sourceHash = hashString(file);
-    // get commentStore hash
     const commentStoreHash = await integration.commentStoreHash(topic, this.commentStore);
 
     if (commentStoreHash) {
@@ -84,7 +91,7 @@ class JoistDoc {
   }
 
   /**
-   * Lazy load this on demand, so we can avoid the cost cached runs.
+   * Lazy load this on demand, so we can avoid the cost for cached runs.
    */
   async getFormatter() {
     if (this.formatter) return this.formatter;

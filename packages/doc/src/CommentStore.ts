@@ -16,6 +16,9 @@ export type EnumData = { name: string };
 export abstract class CommentStore {
   constructor(protected config: Config) {}
 
+  /**
+   * Provides a comment for a Entity Field
+   */
   abstract forField(
     entity: EntityDbMetadata,
     fieldName: string,
@@ -23,13 +26,38 @@ export abstract class CommentStore {
     generated: boolean,
   ): Promise<string | void>;
 
+  /**
+   * Provides a comment for a Entity itself
+   */
   abstract forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | void>;
 
-  abstract hashForEntity(entity: EntityDbMetadata): Promise<string | undefined>;
-
-  abstract hashForEnum(enumField: EnumData): Promise<string | undefined>;
-
+  /**
+   * Provides a comment for an Enum
+   */
   abstract forEnum(enumField: EnumData, generated: boolean): Promise<string | void>;
 
+  /**
+   * Provides a comment for a Enum member
+   */
   abstract forEnumMember(enumField: EnumData, name: string, generated: boolean): Promise<string | void>;
+
+  /**
+   * Calculate a hash (or deterministic value) for the data this entity uses for comments
+   *
+   * Used for caching, if the returned hash hasn't changed from the last run,
+   * joist-doc will mark this as not needing to run (from the CommentStore side)
+   *
+   * `undefined` will opt out of caching and decrease performance
+   */
+  abstract hashForEntity(entity: EntityDbMetadata): Promise<string | undefined>;
+
+  /**
+   * Calculate a hash (or deterministic value) for the data this enum uses for comments
+   *
+   * Used for caching, if the returned hash hasn't changed from the last run,
+   * joist-doc will mark this as not needing to run (from the CommentStore side)
+   *
+   * `undefined` will opt out of caching and decrease performance
+   */
+  abstract hashForEnum(enumField: EnumData): Promise<string | undefined>;
 }

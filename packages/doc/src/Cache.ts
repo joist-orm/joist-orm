@@ -3,6 +3,19 @@ import { hashString } from "./utils";
 
 type HashPair = { sourceHash: string; commentStoreHash: string | undefined };
 
+/**
+ * Manages the cache for joist-doc
+ *
+ * joist-doc cares about two things per integration:
+ * - has the source changed
+ * - has the commentStore changed
+ *
+ * Cache holds a manifest document with these values as an object like so:
+ * Record<SourcePath, [SourceHash, CommentStoreHash]>
+ *
+ * If these, match, the previous version of the output can be restored,
+ * which is loaded separately under hash(SourcePath)
+ */
 export class Cache {
   private fsCache = fsCache({
     ns: "joist-doc",

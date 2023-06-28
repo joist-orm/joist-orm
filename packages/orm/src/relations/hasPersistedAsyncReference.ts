@@ -158,7 +158,7 @@ export class PersistedAsyncReferenceImpl<
     }
 
     // If the project is not using tagged ids, we still want it tagged internally
-    other = ensureTagged(this.otherMeta, other);
+    other = ensureTagged(this.otherMeta, other) as U | IdOf<U> | N;
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself

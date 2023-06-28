@@ -139,4 +139,19 @@ describe("ManyToOneReference", () => {
     expect((user as any).author).not.toBeDefined();
     expect(user.authorManyToOne).toBeDefined();
   });
+
+  it("can be set as an empty string", () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    a.set({ publisher: "" });
+    expect(a.publisher.id).toBe(undefined);
+  });
+
+  it("fails when set to the wrong tag", () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    expect(() => {
+      a.set({ publisher: "b:1" });
+    }).toThrow("Invalid tagged id, expected tag p, got b:1");
+  });
 });

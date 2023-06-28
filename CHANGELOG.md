@@ -1,3 +1,10 @@
+## [1.91.6](https://github.com/stephenh/joist-ts/compare/v1.91.5...v1.91.6) (2023-06-28)
+
+
+### Bug Fixes
+
+* Check tags/empty string when setting m2o.id. ([#717](https://github.com/stephenh/joist-ts/issues/717)) ([df11ec1](https://github.com/stephenh/joist-ts/commit/df11ec1e85bbd6a19d2dff4331275109e785c97e))
+
 ## [1.91.5](https://github.com/stephenh/joist-ts/compare/v1.91.4...v1.91.5) (2023-06-27)
 
 

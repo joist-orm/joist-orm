@@ -174,12 +174,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   // Internal method used by OneToManyCollection
   setImpl(other: U | IdOf<U> | N): void {
     ensureNotDeleted(this.#entity, "pending");
+    // If the project is not using tagged ids, we still want it tagged internally
+    other = ensureTagged(this.otherMeta, other) as U | IdOf<U> | N;
+
     if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
-
-    // If the project is not using tagged ids, we still want it tagged internally
-    other = ensureTagged(this.otherMeta, other);
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself

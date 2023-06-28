@@ -69,10 +69,22 @@ export function assertIdIsTagged(key: string): void {
   }
 }
 
-export function ensureTagged<V extends Entity | string | number | undefined>(meta: HasTagName, maybeId: V): V {
+export function ensureTagged<V extends Entity | string | number | undefined>(
+  meta: HasTagName,
+  maybeId: V,
+): V | undefined {
   if (typeof maybeId === "string") {
-    if (maybeId.indexOf(tagDelimiter) === -1) {
+    // Treat "" as undefined, arguably this should be an error
+    if (maybeId === "") {
+      return undefined;
+    }
+    const i = maybeId.indexOf(tagDelimiter);
+    if (i === -1) {
       return `${meta.tagName}${tagDelimiter}${maybeId}` as V;
+    }
+    const tag = maybeId.slice(0, i);
+    if (tag !== meta.tagName) {
+      throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${maybeId}`);
     }
   }
   return maybeId;

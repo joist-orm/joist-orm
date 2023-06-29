@@ -29,9 +29,9 @@ class JoistDoc {
    */
   async run<T>(integration: IntegrationHandler<T>, topic: T) {
     const filePath = integration.file(topic, this.config);
-    const file = await readFile(filePath, { encoding: "utf-8" });
+    const fileContents = await readFile(filePath, { encoding: "utf-8" });
 
-    const sourceHash = hashString(file);
+    const sourceHash = hashString(fileContents);
     const commentStoreHash = await integration.commentStoreHash(topic, this.commentStore);
 
     if (commentStoreHash) {
@@ -43,12 +43,12 @@ class JoistDoc {
       }
     }
 
-    const source = parse(file, { sourceType: "module", plugins: ["typescript"] });
+    const source = parse(fileContents, { sourceType: "module", plugins: ["typescript"] });
     const result = await integration.handle(source, topic, this.commentStore);
 
     // This is taken from ts-poet, which joist-codegen doesn't override. It's included here
     // to try to ensure that joist-doc isn't reformatting needlessly
-    const generated = dprint.format(filePath, generate(result, {}).code, {
+    const generated = dprint.format(filePath, generate(result, { retainLines: true }).code, {
       useTabs: false,
       useBraces: "always",
       singleBodyPosition: "nextLine",

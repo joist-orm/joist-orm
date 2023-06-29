@@ -1,5 +1,4 @@
 import fsCache from "file-system-cache";
-import { hashString } from "./utils";
 
 type HashPair = { sourceHash: string; commentStoreHash: string | undefined };
 
@@ -37,13 +36,13 @@ export class Cache {
 
   async set(filePath: string, { sourceHash, commentStoreHash }: HashPair, generated: string) {
     this.manifest[filePath] = [sourceHash, commentStoreHash];
-    await this.fsCache.set(hashString(filePath), generated);
+    await this.fsCache.set(filePath, generated);
   }
 
   async get(filePath: string, hashes: HashPair) {
     const found = this.manifest[filePath];
     if (found && found[0] === hashes.sourceHash && found[1] === hashes.commentStoreHash) {
-      const restored = await this.fsCache.get(hashString(filePath));
+      const restored = await this.fsCache.get(filePath);
       if (restored) return restored;
     }
 

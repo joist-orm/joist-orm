@@ -16,15 +16,15 @@ export class MarkdownCommentStore extends CommentStore {
     return this.withGenerated(entity.name, generated, await this.findHeadingContent(entity.name, fieldName));
   }
 
-  async forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | void> {
+  async forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | undefined> {
     return this.findRootContent(entity.name);
   }
 
-  async forEnum(enumField: EnumData, generated: boolean): Promise<string | void> {
+  async forEnum(enumField: EnumData, generated: boolean): Promise<string | undefined> {
     return this.findRootContent(enumField.name);
   }
 
-  async forEnumMember(enumField: EnumData, name: string, generated: boolean): Promise<string | void> {
+  async forEnumMember(enumField: EnumData, name: string, generated: boolean): Promise<string | undefined> {
     return this.withGenerated(enumField.name, generated, await this.findHeadingContent(enumField.name, name));
   }
 

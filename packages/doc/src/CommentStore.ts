@@ -24,22 +24,22 @@ export abstract class CommentStore {
     fieldName: string,
     source: FieldSourceType,
     generated: boolean,
-  ): Promise<string | void>;
+  ): Promise<string | undefined>;
 
   /**
    * Provides a comment for a Entity itself
    */
-  abstract forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | void>;
+  abstract forEntity(entity: EntityDbMetadata, generated: boolean): Promise<string | undefined>;
 
   /**
    * Provides a comment for an Enum
    */
-  abstract forEnum(enumField: EnumData, generated: boolean): Promise<string | void>;
+  abstract forEnum(enumField: EnumData, generated: boolean): Promise<string | undefined>;
 
   /**
    * Provides a comment for a Enum member
    */
-  abstract forEnumMember(enumField: EnumData, name: string, generated: boolean): Promise<string | void>;
+  abstract forEnumMember(enumField: EnumData, name: string, generated: boolean): Promise<string | undefined>;
 
   /**
    * Calculate a hash (or deterministic value) for the data this entity uses for comments

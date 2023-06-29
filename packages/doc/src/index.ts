@@ -48,7 +48,7 @@ class JoistDoc {
 
     // This is taken from ts-poet, which joist-codegen doesn't override. It's included here
     // to try to ensure that joist-doc isn't reformatting needlessly
-    const generated = dprint.format(filePath, generate(result, { retainLines: true }).code, {
+    const generated = dprint.format(filePath, generate(result, { retainLines: false }).code, {
       useTabs: false,
       useBraces: "always",
       singleBodyPosition: "nextLine",

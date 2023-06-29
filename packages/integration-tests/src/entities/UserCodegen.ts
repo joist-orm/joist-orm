@@ -60,9 +60,7 @@ export interface UserFields {
 }
 export interface UserOpts {
   name: string;
-  /**
-   * Case is preserved. If searching use an ILIKE.
-   */
+  /** Case is preserved. If searching use an ILIKE. */
   email: string;
   /**
    * This is an example of a multi
@@ -71,9 +69,7 @@ export interface UserOpts {
    * line breaks and also to show that we just use headings, and not the level, allowing for more customisation in users docs.
    */
   ipAddress?: IpAddress | null;
-  /**
-   * Hashed with ultra secure base64.
-   */
+  /** Hashed with ultra secure base64. */
   password?: PasswordValue | null;
   bio?: string;
   authorManyToOne?: Author | AuthorId | null;
@@ -188,15 +184,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   set name(name: string) {
     setField(this, "name", cleanStringValue(name));
   }
-  /**
-   * Case is preserved. If searching use an ILIKE.
-   */
+  /** Case is preserved. If searching use an ILIKE. */
   get email(): string {
     return this.__orm.data["email"];
   }
-  /**
-   * Case is preserved. If searching use an ILIKE.
-   */
+  /** Case is preserved. If searching use an ILIKE. */
   set email(email: string) {
     setField(this, "email", cleanStringValue(email));
   }
@@ -218,15 +210,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   set ipAddress(ipAddress: IpAddress | undefined) {
     setField(this, "ipAddress", ipAddress);
   }
-  /**
-   * Hashed with ultra secure base64.
-   */
+  /** Hashed with ultra secure base64. */
   get password(): PasswordValue | undefined {
     return this.__orm.data["password"];
   }
-  /**
-   * Hashed with ultra secure base64.
-   */
+  /** Hashed with ultra secure base64. */
   set password(password: PasswordValue | undefined) {
     setField(this, "password", password);
   }

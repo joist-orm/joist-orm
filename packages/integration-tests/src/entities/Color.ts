@@ -1,18 +1,10 @@
-/**
- * Detailing the important colors.
- */
+/** Detailing the important colors. */
 export enum Color {
-  /**
-   * Stop, danger, classic cars.
-   */
+  /** Stop, danger, classic cars. */
   Red = "RED",
-  /**
-   * Go! Nature and health.
-   */
+  /** Go! Nature and health. */
   Green = "GREEN",
-  /**
-   * Water, sea, sky.
-   */
+  /** Water, sea, sky. */
   Blue = "BLUE",
 }
 export type ColorDetails = { id: number; code: Color; name: string };

@@ -15,35 +15,32 @@ import {
   Reference,
 } from "joist-orm";
 import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
-import { AuthorCodegen, Book, bookMeta, BookReview, Comment, authorConfig as config } from "./entities";
+import { AuthorCodegen, authorConfig as config, Book, bookMeta, BookReview, Comment } from "./entities";
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
-  readonly reviewedBooks: Collection<Author, Book> = hasManyDerived(
-    { books: "reviews" },
-    {
-      get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
-      // set / add / remove callbacks are totally contrived to test that they work
-      set: (author, values) => {
-        values.forEach((book) => {
-          this.reviewedBooks.add(book);
-        });
-        author.books.get.filter((book) => !values.includes(book)).forEach((book) => author.reviewedBooks.remove(book));
-      },
-      // needs a Loaded<Book, "reviews"> or will throw
-      add: (author, book) => {
-        const loaded = book as Loaded<Book, "reviews">;
-        author.books.add(book);
-        if (loaded.reviews.get.length === 0) {
-          author.em.create(BookReview, { rating: 5, book });
-        }
-      },
-      // needs a Loaded<Book, "reviews"> or will throw
-      remove: (author, book) => {
-        const loaded = book as Loaded<Book, "reviews">;
-        loaded.reviews.get.forEach((r) => getEm(author).delete(r));
-      },
+  readonly reviewedBooks: Collection<Author, Book> = hasManyDerived({ books: "reviews" }, {
+    get: (author) => author.books.get.filter((b) => b.reviews.get.length > 0),
+    // set / add / remove callbacks are totally contrived to test that they work
+    set: (author, values) => {
+      values.forEach((book) => {
+        this.reviewedBooks.add(book);
+      });
+      author.books.get.filter((book) => !values.includes(book)).forEach((book) => author.reviewedBooks.remove(book));
     },
-  );
+    // needs a Loaded<Book, "reviews"> or will throw
+    add: (author, book) => {
+      const loaded = (book as Loaded<Book, "reviews">);
+      author.books.add(book);
+      if (loaded.reviews.get.length === 0) {
+        author.em.create(BookReview, { rating: 5, book });
+      }
+    },
+    // needs a Loaded<Book, "reviews"> or will throw
+    remove: (author, book) => {
+      const loaded = (book as Loaded<Book, "reviews">);
+      loaded.reviews.get.forEach((r) => getEm(author).delete(r));
+    },
+  });
   readonly latestComment: Reference<Author, Comment, undefined> = hasOneDerived(
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
@@ -118,19 +115,12 @@ export class Author extends AuthorCodegen {
   );
 
   /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
-  readonly bookComments: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
-    "bookComments",
-    {
-      books: { comments: "text" },
-    },
-    (a) => {
-      a.entity.bookCommentsCalcInvoked++;
-      return a.books.get
-        .flatMap((b) => b.comments.get)
-        .map((c) => c.text)
-        .join(", ");
-    },
-  );
+  readonly bookComments: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty("bookComments", {
+    books: { comments: "text" },
+  }, (a) => {
+    a.entity.bookCommentsCalcInvoked++;
+    return a.books.get.flatMap((b) => b.comments.get).map((c) => c.text).join(", ");
+  });
   readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined> = hasPersistedAsyncReference(
     bookMeta,
     "favoriteBook",
@@ -141,7 +131,7 @@ export class Author extends AuthorCodegen {
         return undefined;
       }
       const bestRating = Math.max(...books.flatMap((b) => b.reviews.get).map((r) => r.rating));
-      return books.find((b) => b.reviews.get.some((r) => r.rating === bestRating)) as Book | undefined;
+      return (books.find((b) => b.reviews.get.some((r) => r.rating === bestRating)) as Book | undefined);
     },
   );
 
@@ -152,21 +142,15 @@ export class Author extends AuthorCodegen {
   });
 
   /** Example of an async property that returns an entity. */
-  readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty(
-    {
-      publisher: "comments",
-      comments: {},
-    },
-    (author) => author.publisher.get?.comments.get[0].entity ?? author.comments.get[0].entity,
-  );
+  readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty({
+    publisher: "comments",
+    comments: {},
+  }, (author) => author.publisher.get?.comments.get[0].entity ?? author.comments.get[0].entity);
 
   /** Example of an async property that has a conflicting/overlapping reactive hint with ^. */
-  readonly allPublisherAuthorNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty(
-    {
-      publisher: { authors: "firstName" },
-    },
-    (author) => author.publisher.get?.authors.get.flatMap((a) => a.firstName).join(),
-  );
+  readonly allPublisherAuthorNames: AsyncProperty<Author, string | undefined> = hasReactiveAsyncProperty({
+    publisher: { authors: "firstName" },
+  }, (author) => author.publisher.get?.authors.get.flatMap((a) => a.firstName).join());
 
   /** Example of an async property that returns a list of entities. */
   readonly latestComments: AsyncProperty<Author, Comment[]> = hasAsyncProperty(

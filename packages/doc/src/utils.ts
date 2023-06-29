@@ -7,13 +7,11 @@ import { readFile } from "fs/promises";
  * across new files
  */
 export function newComment(comment: string): CommentBlock {
+  const lines = comment.trim().split("\n");
+
   return {
     type: "CommentBlock",
-    value: `*\n${comment
-      .trim()
-      .split("\n")
-      .map((c) => `* ${c}`)
-      .join("\n")}\n`,
+    value: lines.length > 1 ? `*\n${lines.map((c) => `* ${c}`).join("\n")}\n` : `* ${lines[0]} `,
   };
 }
 

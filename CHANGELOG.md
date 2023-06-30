@@ -1,3 +1,10 @@
+# [1.92.0](https://github.com/stephenh/joist-ts/compare/v1.91.6...v1.92.0) (2023-06-30)
+
+
+### Features
+
+* Updated EntityId codegen to use actual type instead of a string ([#718](https://github.com/stephenh/joist-ts/issues/718)) ([4c9d808](https://github.com/stephenh/joist-ts/commit/4c9d808cacacde6ff25afe03fe641fdff22da635))
+
 ## [1.91.6](https://github.com/stephenh/joist-ts/compare/v1.91.5...v1.91.6) (2023-06-28)
 
 

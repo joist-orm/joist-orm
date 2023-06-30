@@ -43,7 +43,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type PublisherGroupId = Flavor<string, "PublisherGroup">;
+export type PublisherGroupId = Flavor<string, PublisherGroup>;
 
 export interface PublisherGroupFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

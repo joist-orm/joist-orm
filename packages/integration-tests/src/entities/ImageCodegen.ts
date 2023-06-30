@@ -51,7 +51,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type ImageId = Flavor<string, "Image">;
+export type ImageId = Flavor<string, Image>;
 
 export interface ImageFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

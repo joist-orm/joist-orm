@@ -1,45 +1,27 @@
 import { camelCase, pascalCase } from "change-case";
 import { Code, code, imp, joinCode } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { Config } from "./config";
+import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { keywords } from "./keywords";
 import {
   BaseEntity,
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
+  cleanStringValue,
   Collection,
   ConfigApi,
+  deTagId,
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
+  fail as failSymbol,
   FieldsOf,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  IdOf,
-  LargeCollection,
-  Lens,
-  LoadHint,
-  Loaded,
-  ManyToOneReference,
-  MaybeAbstractEntityConstructor,
-  OneToOneReference,
-  OptsOf,
-  OrderBy,
-  PartialOrNull,
-  PersistedAsyncProperty,
-  PersistedAsyncReference,
-  PolymorphicReference,
-  SSAssert,
-  ValueFilter,
-  ValueGraphQLFilter,
-  Zod,
-  cleanStringValue,
-  deTagId,
-  fail as failSymbol,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -47,12 +29,30 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
+  IdOf,
   isLoaded,
+  LargeCollection,
+  Lens,
+  Loaded,
+  LoadHint,
   loadLens,
+  ManyToOneReference,
+  MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
+  OneToOneReference,
+  OptsOf,
+  OrderBy,
+  PartialOrNull,
+  PersistedAsyncProperty,
+  PersistedAsyncReference,
+  PolymorphicReference,
   setField,
   setOpts,
+  SSAssert,
+  ValueFilter,
+  ValueGraphQLFilter,
+  Zod,
 } from "./symbols";
 import { fail, uncapitalize } from "./utils";
 
@@ -454,7 +454,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   }
 
   return code`
-    export type ${entityName}Id = ${Flavor}<string, "${entityName}"> ${maybeBaseId};
+    export type ${entityName}Id = ${Flavor}<string, ${entityName}> ${maybeBaseId};
 
     ${generatePolymorphicTypes(meta)}
     

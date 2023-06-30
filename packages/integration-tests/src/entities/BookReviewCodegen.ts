@@ -47,7 +47,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type BookReviewId = Flavor<string, "BookReview">;
+export type BookReviewId = Flavor<string, BookReview>;
 
 export interface BookReviewFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

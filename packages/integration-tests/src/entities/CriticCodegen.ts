@@ -49,7 +49,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type CriticId = Flavor<string, "Critic">;
+export type CriticId = Flavor<string, Critic>;
 
 export interface CriticFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

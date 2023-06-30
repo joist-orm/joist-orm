@@ -32,7 +32,7 @@ import { Context } from "src/context";
 import { Critic, CriticColumn, criticColumnMeta, CriticId, criticMeta, CriticOrder, newCriticColumn } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type CriticColumnId = Flavor<string, "CriticColumn">;
+export type CriticColumnId = Flavor<string, CriticColumn>;
 
 export interface CriticColumnFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

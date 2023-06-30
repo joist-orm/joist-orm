@@ -32,7 +32,7 @@ import { Context } from "src/context";
 import { Artist, artistMeta, newArtist, Painting, PaintingId, paintingMeta } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type ArtistId = Flavor<string, "Artist">;
+export type ArtistId = Flavor<string, Artist>;
 
 export interface ArtistFields {
   id: { kind: "primitive"; type: string; unique: true; nullable: false };

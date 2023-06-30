@@ -26,7 +26,7 @@ import { Context } from "src/context";
 import { DatabaseOwner, databaseOwnerMeta, newDatabaseOwner } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type DatabaseOwnerId = Flavor<string, "DatabaseOwner">;
+export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;
 
 export interface DatabaseOwnerFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

@@ -51,7 +51,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type CommentId = Flavor<string, "Comment">;
+export type CommentId = Flavor<string, Comment>;
 
 export type CommentParent = Author | Book | BookReview | Publisher;
 export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<CommentParent>[] {

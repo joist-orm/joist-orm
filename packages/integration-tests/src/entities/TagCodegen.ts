@@ -46,7 +46,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type TagId = Flavor<string, "Tag">;
+export type TagId = Flavor<string, Tag>;
 
 export interface TagFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

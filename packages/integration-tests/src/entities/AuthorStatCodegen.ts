@@ -26,7 +26,7 @@ import { Context } from "src/context";
 import { AuthorStat, authorStatMeta, newAuthorStat } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type AuthorStatId = Flavor<string, "AuthorStat">;
+export type AuthorStatId = Flavor<string, AuthorStat>;
 
 export interface AuthorStatFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

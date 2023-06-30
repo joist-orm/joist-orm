@@ -72,7 +72,7 @@ import {
 } from "./entities";
 import type { EntityManager } from "./entities";
 
-export type AuthorId = Flavor<string, "Author">;
+export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };

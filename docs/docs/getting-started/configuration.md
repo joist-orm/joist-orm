@@ -230,7 +230,7 @@ Allows defining specific entity names for tables, for example if you had a `tbl_
 
 By default, Joist assumes table names are plural (i.e. `publishers`) and will [`singular`](https://www.npmjs.com/package/pluralize) the name for the entity name (i.e. `Publisher`).
 
-### `orderBy`
+### `entities.orderBy`
 
 Allows defining a default `orderBy` for the entity, i.e. if you want to always order `Publisher` entities by `name` by default, you could setup:
 
@@ -258,7 +258,7 @@ You can configure primitive fields by setting the camel-cased field name in the 
 }
 ```
 
-Within the field hash (i.e. the value of the `firstName` key), these values are supported:
+Within the field literal, these values are supported:
 
 ```ts
 export interface FieldConfig {
@@ -279,6 +279,10 @@ Where:
 * `superstruct` links to the superstruct type to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `commentStreamReads@src/entities/superstruct`
 * `zodSchema` links to the Zod schema to use for [`jsonb` columns](../modeling/jsonb-fields.md), i.e. `CommentStreamReads@src/entities/schemas` 
 * `type` links to an TypeScript type to use instead of the schema derived one
+
+   Currently, the `type` must be a [branded type](https://typescript.tv/best-practices/improve-your-type-safety-with-branded-types/) of the runtime type, b/c Joist will still instantiate the value with whatever it's schema-derived value is.
+
+   See [this discussion](https://github.com/stephenh/joist-ts/discussions/674#discussioncomment-6092907) for a future `serde` feature that would allow you to instantiate custom runtime values.
 
 ### `entities.relations`
 

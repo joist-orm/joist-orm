@@ -33,7 +33,7 @@ For example, in most ORMs a `books.author_id` foreign key column means the `Auth
 
 In all ORMs, these references & collections are inherently lazy: because you don't have your entire relational database in memory, objects start out with just a single/few rows loaded (i.e. a single `authors` row with `id=1` loaded as an `Author#1` instance) and then lazily loaded the data you need from there (i.e. you "walk the object graph" from that `Author#1` to the related data you need).
 
-## Joist Relations are Async By Default
+## Async By Default
 
 Because of the inherently lazy nature of references & collections, Joist takes the strong, type-safe opinion that if they _might_ be unloaded, then they _must_ be marked as `async/await`.
 

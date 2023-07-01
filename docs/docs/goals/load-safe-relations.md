@@ -6,14 +6,24 @@ sidebar_position: 3
 Joist models all relations as async-by-default, i.e. you must access them via `await` calls:
 
 ```ts
+const author = await em.load(Author, "a:1");
 // Returns the publisher if already fetched, otherwise makes a (batched) SQL call 
 const publisher = await author.publisher.load();
+const publisherComments = await publisher.comments.load();
 const books = await author.books.load();
 ```
 
 We call this "load safe", because you can't accidentally access unloaded data, which results in a runtime error.
 
-Which is great, but then to improve ergonomics and avoid tedious `await Promise.all` calls, Joist also supports marking, in the type system, which relations it knows are loaded, to enable synchronous `.get`, non-`await`-d access.
+Which is great, but then to improve ergonomics and avoid tedious `await Promise.all` calls, Joist also supports marking relations as explicitly loaded, to enable synchronous `.get`, non-`await`-d access:
+
+```ts
+// Preload publisher, it's comments, and books
+const author = await em.load(Author, "a:1", { publisher: "comments", books: {} });
+const publisher = author.publisher.get;
+const publisherComments = publisher.comments.get;
+const books = author.books.get;
+```
 
 ## Background
 

@@ -58,7 +58,7 @@ author.books.get.map((book) => {
 
 And it has exactly the same runtime semantics as the previous `async/await`-based code: the **same three queries** are issued for both "with populate hints" and "without populate hints" code.
 
-See [Type-Safe Relations](./load-safe-relations.md) for more information about this feature, however we point it out here because while populate hints are great for writing non-async code & avoiding N+1s (other ORMs like ActiveRecord use them), in Joist **populate hints are supported but _not required_ to avoid N+1s**.
+See [Load-Safe Relations](./load-safe-relations.md) for more information about this feature, however we point it out here because while populate hints are great for writing non-async code & avoiding N+1s (other ORMs like ActiveRecord use them), in Joist **populate hints are supported but _not required_ to avoid N+1s**.
 
 This is key, because in a sufficiently large/complex codebase, it can be **extremely hard to know ahead of time** exactly the right populate hint(s) that an endpoint should use to preload its data in an N+1 safe manner.
 

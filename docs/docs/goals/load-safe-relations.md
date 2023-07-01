@@ -1,11 +1,19 @@
 ---
-title: Type-Safe Relations
+title: Load-Safe Relations
 sidebar_position: 3
 ---
 
-Joist models all relations as async-by-default (i.e. you must access them via an `await`-d `.load()` call).
+Joist models all relations as async-by-default, i.e. you must access them via `await` calls:
 
-But then to provide better ergonomics than constant `await Promise.all` calls, Joist also provides TypeScript-magical morphing/marking of relations as loaded, which then enables synchronous `.get`, non-`await`-d access.
+```ts
+// Returns the publisher if already fetched, otherwise makes a (batched) SQL call 
+const publisher = await author.publisher.load();
+const books = await author.books.load();
+```
+
+We call this "load safe", because you can't accidentally access unloaded data, which results in a runtime error.
+
+Which is great, but then to improve ergonomics and avoid tedious `await Promise.all` calls, Joist also supports marking, in the type system, which relations it knows are loaded, to enable synchronous `.get`, non-`await`-d access.
 
 ## Background
 
@@ -32,7 +40,8 @@ And you must do this each time, even if technically in the code path that you're
 const author = await em.load(Author, "a:1");
 // Call another method that happens to loads books
 someComplicatedLogicThatLoadsBooks(author);
-// You still can't do `books.get`
+// You still can't do `books.get`, even though "we know" (but the compiler
+// does not know) that the collection is technically already cached in-memory
 const books = await author.books.load();
 ```
 
@@ -120,7 +129,7 @@ author.books.get.forEach((book) => {
 
 ## Best of Both Worlds
 
-This combination of "async-by-default" along with "hint-driven type mapping" brings the best of both worlds:
+This combination of "async by default" and "populate hint mapped types" brings the best of both worlds:
 
 - Data that we are unsure of its loaded-ness, must be `await`-d, while
 - Data that we (and, more importantly, the TypeScript compiler) are sure of its loaded-ness, can be accessed synchronously

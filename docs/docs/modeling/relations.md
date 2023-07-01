@@ -9,7 +9,7 @@ Joist's `joist-codegen` step automatically discovers the relations from your dat
 
 Two common themes for all of Joist's relations are that:
 
-1. They are by default unloaded, and require `await author.book.load()` calls to load, _but_ also all support preloading via populate hints, see [type safe relations](../goals/type-safe-relations.md) for more.
+1. They are by default unloaded, and require `await author.book.load()` calls to load, _but_ also all support preloading via populate hints, see [type safe relations](../goals/load-safe-relations.md) for more.
 
 2. Joist always keeps "both sides" of relationships in sync, for example if you add a `Book` to an `Author`, that `Author`'s list of books will automatically include that `Book`.
 

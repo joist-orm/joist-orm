@@ -106,7 +106,7 @@ a2.lastName = "Zed";
 await em.flush();
 ```
 
-To avoid tedious `await` / `Promise.all`, you can use deep load a subgraph via populate hints (see [Type Safe Relations](../goals/type-safe-relations.md)):
+To avoid tedious `await` / `Promise.all`, you can use deep load a subgraph via populate hints (see [Type Safe Relations](../goals/load-safe-relations.md)):
 
 ```typescript
 // Use 1 await to preload a tree of data

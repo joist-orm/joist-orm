@@ -11,6 +11,6 @@ Joist's primary goals/differentiators are:
 
 - Using [code generation](./code-generation.md) to move fast and remove boilerplate
 - [Avoiding N+1s](./avoiding-n-plus-1s.md) through first-class [dataloader](https://github.com/graphql/dataloader) integration
-- Strict type-safety of [loaded vs. unloaded collections](./type-safe-relations.md) in the type system
+- Strict "load-safe" tracking of [loaded vs. unloaded collections](./load-safe-relations.md) in the type system
 - Robust [domain modeling](../modeling/fields.md) and [reactive fields](../modeling/derived-fields.md)
 - [Great testing](./great-tests.md) with built-in factories and other support

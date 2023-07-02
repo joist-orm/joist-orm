@@ -101,7 +101,7 @@ For async, persisted fields, there will be a column in the database to hold the 
 }
 ```
 
-And then implement it in the `Author` domain model:
+And then implement a property in the `Author` domain model with the same name:
 
 ```typescript
 import { PersistedAsyncProperty, hasPersistedAsyncProperty } from "joist-orm";
@@ -114,16 +114,29 @@ class Author extends AuthorCodegen {
   );
 }
 ```
+The readonly property must be of type `PersistedAsyncProperty`, which has two type arguments:
+1. The type of the entity
+2. The type of the property
+
+The value is the result of the method `hasPersistedAsyncProperty` that has three arguments:
+* `fieldName`: The name of the property, this should match the name of the field in the entity and in joist-config.json.
+* `reactiveHint`: The name of the fields on the entity that should trigger a recalculation of the derived field. This can be a string(`"books"`), an array of strings (`["books", "someOtherRelationship"]`) or an object of nested relationships (`{books: ["reviews"]}`).
+* `fn` The function that calculates the value of the derived field. This function will be called with the entity as the only argument. All of the fields in the reactiveHint will be loaded before this function is called and can be accessed syncronously using `get`.
 
 Joist will call this lambda:
 
 1. When the `Author` is initially created
 2. When the `Author` is updated
 3. Whenever one of the `Author`'s books changes
+4. When a `Book` is created or deleted for the `Author`
 
 For example, in this scenario:
 
 ```typescript
 const a1 = await em.load(Author, "a:1");
 const a2 = await em.load(Author, "a:2");
+
+const b1 = em.create(Book, { author: a1 });
+
+em.flush(); // automatically updates a1.numberOfBooks
 ```

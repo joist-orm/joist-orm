@@ -3,7 +3,7 @@ title: Relations
 sidebar_position: 2
 ---
 
-Relations are relationships between entities in your domain model, for example an `Author`'s list of `Book`s or an `Author`'s current `Publisher`. 
+Relations are relationships between entities in your domain model, for example an `Author`'s list of `Book`s or an `Author`'s current `Publisher`.
 
 Joist's `joist-codegen` step automatically discovers the relations from your database schema (based on foreign keys) and generates either `Reference`s (for relations that point to a single other entity) or `Collection`s (for relations that point to multiple other entities).
 
@@ -14,6 +14,34 @@ Two common themes for all of Joist's relations are that:
 2. Joist always keeps "both sides" of relationships in sync, for example if you add a `Book` to an `Author`, that `Author`'s list of books will automatically include that `Book`.
 
    This is a big quality-of-life win, as business logic (validation rules, rendering logic) will always see the latest state of relations, and not have to worry about running against now-stale data.
+
+
+### Reading Relations
+
+In other ORMs you may be used to checking for the existings of a relation by checking for it's presence, e.g. `if (book.author) { ... }`. In Joist, all relations are always present, but may not be set to a value. To check if a relation is set use `isSet`, for example:
+
+```typescript
+const b1 = await em.load(Book, "b:1");
+
+// Always returns truthy
+if (b1.author) {
+  ...
+}
+
+// Returns true if the author is set
+if (b1.author.isSet) {
+  ...
+}
+```
+If you want to read the id of a relation without loading it, you can do so via the `id` field:
+
+```typescript
+const b1 = await em.load(Book, "b:1");
+
+// The id of the author is available without loading the author
+const authorId = b1.author.id;
+```
+
 
 ## Many To One References
 
@@ -99,7 +127,7 @@ export abstract class BookCodegen {
 }
 ```
 
-These collections work similarly to a `hasMany` collection.   When determining if a table is a "join table", joist checks if the table has a single primary key column, two foreign key columns, an optional `created_at` column, and no other columns. 
+These collections work similarly to a `hasMany` collection.   When determining if a table is a "join table", joist checks if the table has a single primary key column, two foreign key columns, an optional `created_at` column, and no other columns.
 
 ## Polymorphic References
 
@@ -131,7 +159,7 @@ Polymorphic references have two components:
 
 To use polymorphic references, there are two steps:
 
-1. Create the multiple physical foreign keys in your schema, all with a similar `publisher_*_id` naming convention.  
+1. Create the multiple physical foreign keys in your schema, all with a similar `publisher_*_id` naming convention.
 
 2. In `joist-config.json`, add a new `publisher` relation that is marked as `polymorphic`:
 
@@ -145,7 +173,7 @@ To use polymorphic references, there are two steps:
      }
    }
    ```
-   
+
    Joist with then use the `publisher` name to scan for any other `publisher_`-prefixed foreign keys and automatically pull them in as components of this polymorphic reference.
 
 ## Renaming Relations
@@ -197,7 +225,7 @@ Besides the core relations discovered from the schema's foreign keys, Joist lets
 
 These custom relations are great for defining relationships between *entities* in your domain model, like how `Author` might relate to `BookReview`.
 
-If you'd like to define custom *non-entity* fields, like derived numbers or strings, see [Derived Fields](./derived-fields). 
+If you'd like to define custom *non-entity* fields, like derived numbers or strings, see [Derived Fields](./derived-fields).
 
 :::
 

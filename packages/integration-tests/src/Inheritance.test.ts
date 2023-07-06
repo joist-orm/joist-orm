@@ -267,6 +267,17 @@ describe("Inheritance", () => {
     expect(sp).toMatchEntity({ name: "sp1", city: "city" });
   });
 
+  it("can find entities from the sub type via base type m2o", async () => {
+    await insertPublisherGroup({ name: "pg1" });
+    await insertPublisher({ name: "sp1", group_id: 1 });
+
+    const em = newEntityManager();
+    const [sp] = await em.find(SmallPublisher, { group: { name: "pg1" } });
+
+    expect(sp).toBeInstanceOf(SmallPublisher);
+    expect(sp).toMatchEntity({ name: "sp1", city: "city" });
+  });
+
   it("can find entities from the sub type via a join", async () => {
     await insertPublisher({ name: "sp1" });
     await insertLargePublisher({ id: 2, name: "lp1", country: "country" });

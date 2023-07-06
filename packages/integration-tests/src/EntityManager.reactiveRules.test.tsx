@@ -211,13 +211,16 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: "numberOfBooks", fields: ["author"], path: ["author"] },
       { cstr, name: "bookComments", fields: ["author"], path: ["author"] },
       { cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
+      { cstr, name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
       { cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);
     expect(getMetadata(BookReview).config.__data.reactiveDerivedValues).toEqual([
       { cstr, name: "numberOfPublicReviews", fields: ["isPublic", "rating"], path: ["book", "author"] },
+      { cstr, name: "numberOfPublicReviews2", fields: ["isPublic", "isTest", "rating"], path: ["book", "author"] },
       { cstr, name: "favoriteBook", fields: ["rating"], path: ["book", "author"] },
       { cstr, name: "isPublic", fields: [], path: [] },
+      { cstr, name: "isTest", fields: [], path: [] },
     ]);
   });
 

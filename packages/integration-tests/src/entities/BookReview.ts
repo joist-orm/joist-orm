@@ -31,6 +31,15 @@ export class BookReview extends BookReviewCodegen {
     },
   );
 
+  // Used to test dependent reactivity
+  readonly isTest: PersistedAsyncProperty<BookReview, boolean> = hasPersistedAsyncProperty(
+    "isTest",
+    { comment: "text" },
+    (review) => {
+      return !!review.comment.get?.text?.includes("Test");
+    },
+  );
+
   // Used to test reactivity to hasReactiveAsyncProperty results changing.
   readonly isPublic2: AsyncProperty<BookReview, boolean> = hasReactiveAsyncProperty({ comment: "text" }, (review) => {
     return !review.comment.get?.text?.includes("Ignore");

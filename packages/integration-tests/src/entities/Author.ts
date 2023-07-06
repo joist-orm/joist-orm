@@ -50,13 +50,23 @@ export class Author extends AuthorCodegen {
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
-  // Example of persisted property depending on another persisted property (isPublic)
+  // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity
   // as well as a non-persisted property (isPublic2) and a regular primitive (rating)
   readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfPublicReviews",
     { books: { reviews: ["isPublic", "isPublic2", "rating"] } },
     (a) =>
       a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && r.isPublic2.get && r.rating > 0).length,
+  );
+
+  // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity
+  // another persisted property (isTest) that is triggered off of a related entity (Review.comment.text)
+  // as well as a regular primitive (rating)
+  readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+    "numberOfPublicReviews2",
+    { books: { reviews: ["isPublic", "isTest", "rating"] } },
+    (a) =>
+      a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
   );
 
   public beforeFlushRan = false;

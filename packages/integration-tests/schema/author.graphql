@@ -27,6 +27,7 @@ type Author {
   ssn: String
   userOneToOne: User
   favoriteBook: Book
+  numberOfPublicReviews2: Int
 }
 
 input SaveAuthorInput {

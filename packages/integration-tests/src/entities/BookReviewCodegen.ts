@@ -53,6 +53,7 @@ export interface BookReviewFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: false };
   rating: { kind: "primitive"; type: number; unique: false; nullable: never };
   isPublic: { kind: "primitive"; type: boolean; unique: false; nullable: never };
+  isTest: { kind: "primitive"; type: boolean; unique: false; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   book: { kind: "m2o"; type: Book; nullable: never };
@@ -73,6 +74,7 @@ export interface BookReviewFilter {
   id?: ValueFilter<BookReviewId, never>;
   rating?: ValueFilter<number, never>;
   isPublic?: BooleanFilter<never>;
+  isTest?: BooleanFilter<never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
@@ -83,6 +85,7 @@ export interface BookReviewGraphQLFilter {
   id?: ValueGraphQLFilter<BookReviewId>;
   rating?: ValueGraphQLFilter<number>;
   isPublic?: BooleanGraphQLFilter;
+  isTest?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
@@ -93,6 +96,7 @@ export interface BookReviewOrder {
   id?: OrderBy;
   rating?: OrderBy;
   isPublic?: OrderBy;
+  isTest?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   book?: BookOrder;
@@ -102,6 +106,7 @@ export const bookReviewConfig = new ConfigApi<BookReview, Context>();
 
 bookReviewConfig.addRule(newRequiredRule("rating"));
 bookReviewConfig.addRule(newRequiredRule("isPublic"));
+bookReviewConfig.addRule(newRequiredRule("isTest"));
 bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
@@ -160,6 +165,8 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   }
 
   abstract readonly isPublic: PersistedAsyncProperty<BookReview, boolean>;
+
+  abstract readonly isTest: PersistedAsyncProperty<BookReview, boolean>;
 
   get createdAt(): Date {
     return this.__orm.data["createdAt"];

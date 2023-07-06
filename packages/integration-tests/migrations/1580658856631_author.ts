@@ -104,6 +104,8 @@ export function up(b: MigrationBuilder): void {
     deleted_at: { type: "timestamptz", notNull: false },
     // for testing derived fields using other derived fields
     number_of_public_reviews: { type: "int", notNull: false },
+    // for testing derived fields using other derived fields
+    number_of_public_reviews2: { type: "int", notNull: false },
   });
 
   // A publisher can only have one author named `Jim`, but still have other authors
@@ -165,6 +167,7 @@ export function up(b: MigrationBuilder): void {
     rating: { type: "integer", notNull: true },
     book_id: foreignKey("books", { notNull: true }),
     is_public: { type: "boolean", notNull: true },
+    is_test: { type: "boolean", notNull: true },
   });
 
   createEnumTable(b, "image_type", [

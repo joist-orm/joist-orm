@@ -1,3 +1,10 @@
+## [1.92.1](https://github.com/stephenh/joist-ts/compare/v1.92.0...v1.92.1) (2023-07-06)
+
+
+### Bug Fixes
+
+* Use base type alias when filtering. ([#723](https://github.com/stephenh/joist-ts/issues/723)) ([8269d96](https://github.com/stephenh/joist-ts/commit/8269d96bd95dd23f1e5891dac22fe82f21d3742d))
+
 # [1.92.0](https://github.com/stephenh/joist-ts/compare/v1.91.6...v1.92.0) (2023-06-30)
 
 

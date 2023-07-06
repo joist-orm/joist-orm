@@ -159,11 +159,12 @@ export function parseFindQuery(
         // Skip the `{ as: ... }` alias binding
         if (key === "as") return;
         const field = meta.allFields[key] ?? fail(`Field '${key}' not found on ${meta.tableName}`);
+        const fa = `${alias}${field.aliasSuffix}`;
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
             conditions.push({
-              alias: `${alias}${field.aliasSuffix}`,
+              alias: fa,
               column: column.columnName,
               dbType: column.dbType,
               cond: mapToDb(column, filter),
@@ -174,7 +175,7 @@ export function parseFindQuery(
           const sub = (ef.subFilter as any)[key];
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, "inner", `${fa}.${column.columnName}`, `${a}.id`, sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
@@ -182,10 +183,10 @@ export function parseFindQuery(
             // skip
           } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "inner", `${alias}.${column.columnName}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, "inner", `${fa}.${column.columnName}`, `${a}.id`, sub);
           } else {
             conditions.push({
-              alias,
+              alias: fa,
               column: column.columnName,
               dbType: column.dbType,
               cond: mapToDb(column, f),
@@ -207,7 +208,7 @@ export function parseFindQuery(
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
               conditions.push({
-                alias,
+                alias: fa,
                 column: comp.columnName,
                 dbType: column.dbType,
                 cond: mapToDb(column, f),
@@ -217,7 +218,7 @@ export function parseFindQuery(
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                 conditions.push({
-                  alias,
+                  alias: fa,
                   column: comp.columnName,
                   dbType: column.dbType,
                   cond: f,
@@ -230,7 +231,7 @@ export function parseFindQuery(
               const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
                 const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
                 return {
-                  alias,
+                  alias: fa,
                   column: column.columnName,
                   dbType: column.dbType,
                   cond: mapToDb(column, { kind: "in", value: ids }),

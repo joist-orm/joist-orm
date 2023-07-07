@@ -1425,12 +1425,12 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
  */
 async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
   const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
-    const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
+    const pending = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Use getAllMetas to ensure we pick up subtype-only fields
     const fields = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveDerivedValues);
     return fields.map(async (field) => {
-      // Of all changed entities of this type, how many specifically trigger this rule?
-      const triggered = entities.filter(
+      // Of all pending entities of this type, how many specifically trigger this rule?
+      const triggered = pending.filter(
         (e) =>
           e.isNewEntity ||
           e.isDeletedEntity ||
@@ -1595,10 +1595,58 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
 
 /** Calcs async derived fields that have been triggered by a reactive hint. */
 async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
+  // Make a copy of all the async fields that need to be recalculated
+  let recalc = Object.values(todos).flatMap(({ asyncFields }) => {
+    return [...asyncFields.entries()].filter(([e]) => !e.isDeletedEntity);
+  });
+
+  while (recalc.length > 0) {
+    // Clear out asyncFields to see if we need to loop against
+    for (const todo of Object.values(todos)) {
+      todo.asyncFields.clear();
+    }
+
+    const p = recalc.flatMap(([entity, fields]) => {
+      return [...fields].map(async (fieldName) => {
+        await (entity as any)[fieldName].load();
+        // After loading, did this field change? If so, are there reactive fields downstream from it?
+        if ((entity as any).changes.fields.includes(fieldName)) {
+          // need to follow this one
+          const rfs = getAllMetas(getMetadata(entity))
+            .flatMap((m) => m.config.__data.reactiveDerivedValues)
+            .filter((rf) => rf.fields.includes(fieldName));
+          await Promise.all(
+            rfs.map(async (rf) => {
+              // Copy/paste from addReactiveValidations
+              (await followReverseHint([entity], rf.path))
+                .filter((entity) => !entity.isDeletedEntity)
+                .filter((e) => e instanceof rf.cstr)
+                .forEach((entity) => {
+                  const { asyncFields } = getTodo(todos, entity);
+                  if (!asyncFields.has(entity)) {
+                    asyncFields.set(entity, new Set());
+                  }
+                  asyncFields.get(entity)!.add(rf.name);
+                });
+            }),
+          );
+        }
+      });
+    });
+
+    await Promise.all(p);
+
+    // Did we kick off any new async fields?
+    recalc = Object.values(todos).flatMap(({ asyncFields }) => {
+      return [...asyncFields.entries()].filter(([e]) => !e.isDeletedEntity);
+    });
+  }
+
   const p = Object.values(todos).flatMap(({ asyncFields }) => {
     return [...asyncFields.entries()]
       .filter(([e]) => !e.isDeletedEntity)
       .flatMap(([entity, fields]) => {
+        // We just asked `entity.fieldName` to recalc...it'd be great to know who else depends on this field?
         return [...fields.values()].map((fieldName) => (entity as any)[fieldName].load());
       });
   });

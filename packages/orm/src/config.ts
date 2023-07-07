@@ -145,24 +145,33 @@ export class ConfigApi<T extends Entity, C> {
  * a `ReactiveRule` with fields `["title"]`, path `books`, and rule `ruleFn`.
  */
 interface ReactiveRule {
-  cstr: MaybeAbstractEntityConstructor<any>;
-  name: string;
+  /** The fields on this source entity that would trigger the downstream rule's eval. */
   fields: string[];
+  /** The constructor of downstream entity that owns the reactive rule. */
+  cstr: MaybeAbstractEntityConstructor<any>;
+  /** The name (source location) of the downstream reactive rule. */
+  name: string;
+  /** The path from this source entity to the downstream entity that needs evaled. */
   path: string[];
+  /** The downstream validation rule to eval. */
   fn: ValidationRule<any>;
 }
 
 /**
  * Stores a path back to a reactive derived field.
  *
- * I.e. if `Book` has a `asyncField` that reacts to `Author.title`, then `Author`'s config will have
- * a `ReactiveFields` with fields `["title"]`, path `books`, and name `title`.
+ * I.e. if `Book.displayName` is an `asyncField` that reacts to `Author.title`, then `Author`'s config will have
+ * a `ReactiveFields` with fields `["title"]`, path `books`, and name `displayName`.
  */
 interface ReactiveField {
-  cstr: MaybeAbstractEntityConstructor<any>;
-  name: string;
+  /** The fields on this source entity that would trigger the downstream field's recalc. */
   fields: string[];
+  /** The constructor of downstream entity that owns the derived field. */
+  cstr: MaybeAbstractEntityConstructor<any>;
+  /** The path from this source entity to the downstream entity that needs recalced. */
   path: string[];
+  /** The name of the reactive field in the downstream entity to recalc. */
+  name: string;
 }
 
 /** The internal state of an entity's configuration data, i.e. validation rules/hooks. */

@@ -1601,7 +1601,7 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
   });
 
   while (recalc.length > 0) {
-    // Clear out asyncFields to see if we need to loop against
+    // Clear out asyncFields so that we can detect any new ones that get added during this iteration
     for (const todo of Object.values(todos)) {
       todo.asyncFields.clear();
     }
@@ -1609,12 +1609,13 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
     const p = recalc.flatMap(([entity, fields]) => {
       return [...fields].map(async (fieldName) => {
         await (entity as any)[fieldName].load();
-        // After loading, did this field change? If so, are there reactive fields downstream from it?
+        // After loading, check if this field changed, and if so, are there reactive fields downstream from it?
         if ((entity as any).changes.fields.includes(fieldName)) {
-          // need to follow this one
+          // Get all reactive fields that depend on this field
           const rfs = getAllMetas(getMetadata(entity))
             .flatMap((m) => m.config.__data.reactiveDerivedValues)
             .filter((rf) => rf.fields.includes(fieldName));
+          // Now follow each one and queue it into `asyncFields` for the next loop
           await Promise.all(
             rfs.map(async (rf) => {
               // Copy/paste from addReactiveValidations
@@ -1641,16 +1642,6 @@ async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string,
       return [...asyncFields.entries()].filter(([e]) => !e.isDeletedEntity);
     });
   }
-
-  const p = Object.values(todos).flatMap(({ asyncFields }) => {
-    return [...asyncFields.entries()]
-      .filter(([e]) => !e.isDeletedEntity)
-      .flatMap(([entity, fields]) => {
-        // We just asked `entity.fieldName` to recalc...it'd be great to know who else depends on this field?
-        return [...fields.values()].map((fieldName) => (entity as any)[fieldName].load());
-      });
-  });
-  await Promise.all(p);
 }
 
 /**

@@ -49,6 +49,7 @@ import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints"
 import { normalizeHint } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
+import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
@@ -186,6 +187,15 @@ export class EntityManager<C = unknown> {
   private _isValidating: boolean = false;
   // TODO Make these private
   public pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
+  /**
+   * Tracks cascade deletes.
+   *
+   * We originally used a beforeDelete lifecycle hook to implement this, but tracking this
+   * individually allows us to a) recursively cascade deletes even during the 1st iteration
+   * of our `flush` loop, and b) cascade deletions before we recalc fields & run user hooks,
+   * so that both see the most accurate state.
+   */
+  private pendingCascadeDeletes: Entity[] = [];
   public dataloaders: Record<string, LoaderCache> = {};
   // This is attempting to be internal/module private
   __data = {
@@ -1030,15 +1040,18 @@ export class EntityManager<C = unknown> {
    * may still point to this entity. We defer unsetting these not-currently-loaded references
    * until `EntityManager.flush`, when we can make the async calls to load-and-unset them.
    */
-  delete(deletedEntity: Entity): void {
+  delete(entity: Entity): void {
     // Early return if already deleted.
-    if (deletedEntity.__orm.deleted) {
+    if (entity.__orm.deleted) {
       return;
     }
-    deletedEntity.__orm.deleted = "pending";
-    this.__data.rm.queueAllDownstreamFields(deletedEntity);
-
-    getRelations(deletedEntity).forEach((relation) => relation.maybeCascadeDelete());
+    entity.__orm.deleted = "pending";
+    // Any derived fields that read this entity will need recalc-d
+    this.__data.rm.queueAllDownstreamFields(entity);
+    // Synchronously unhook the entity if the relations are loaded
+    getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
+    // And queue the cascade deletes
+    this.pendingCascadeDeletes.push(entity);
   }
 
   async assignNewIds() {
@@ -1085,12 +1098,12 @@ export class EntityManager<C = unknown> {
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
           let todos = createTodos(pendingEntities);
 
-          // We defer delete cascade logic until flush() so that `em.delete` can be synchronous
+          // We defer delete cascade logic until flush() so that `em.delete` can be synchronous.
           //
           // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
           // fields on entities that will be deleted (and so probably have unset/invalid FKs
           // that would NPE their logic anyway).
-          await cleanupDeletedRelations(todos);
+          await this.cascadeDeletes();
 
           // Recalc before we run hooks, so the hooks will see the latest calculated values.
           await this.__data.rm.recalcPendingDerivedValues();
@@ -1099,15 +1112,20 @@ export class EntityManager<C = unknown> {
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);
-          // Recalc todos in case one of ^ hooks did an em.delete
+          // Recalc todos in case one of ^ hooks did an em.delete that moved an
+          // entity in this pending loop from created/updated to deleted.
           todos = createTodos(pendingEntities);
           await beforeDelete(this.ctx, todos);
 
           // Call `setField` just to get the column marked as dirty if needed.
+          // This can come after the hooks, b/c if the hooks read any of these
+          // fields, they'd be via the synchronous getter and would not be stale.
           recalcSynchronousDerivedFields(todos);
 
           // The hooks could have changed more fields, so recalc again.
           await this.__data.rm.recalcPendingDerivedValues();
+          // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
+          await this.cascadeDeletes();
 
           entitiesToFlush.push(...pendingEntities);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
@@ -1353,6 +1371,23 @@ export class EntityManager<C = unknown> {
   public toString(): string {
     return "EntityManager";
   }
+
+  /** Recursively cascades any pending deletions. */
+  private async cascadeDeletes(): Promise<void> {
+    let entities = this.pendingCascadeDeletes;
+    this.pendingCascadeDeletes = [];
+    // Loop if our deletes cascade to other deletes
+    while (entities.length > 0) {
+      // For cascade delete relations, cascade the delete...
+      await Promise.all(
+        entities.flatMap(getCascadeDeleteRelations).map((r) => r.load().then(() => r.maybeCascadeDelete())),
+      );
+      // For all relations, unhook the entity from the other side
+      await Promise.all(entities.flatMap(getRelations).map((r) => r.cleanupOnEntityDeleted()));
+      entities = this.pendingCascadeDeletes;
+      this.pendingCascadeDeletes = [];
+    }
+  }
 }
 
 export let entityLimit = 10_000;
@@ -1440,12 +1475,6 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
     });
   });
   await Promise.all(p);
-}
-
-/** Find all deleted entities and ensure their references all know about their deleted-ness. */
-async function cleanupDeletedRelations(todos: Record<string, Todo>): Promise<void> {
-  const entities = Object.values(todos).flatMap((todo) => todo.deletes);
-  await Promise.all(entities.flatMap(getRelations).map((relation) => relation.cleanupOnEntityDeleted()));
 }
 
 // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
@@ -1644,4 +1673,10 @@ export function isDefined<T extends any>(param: T | undefined | null): param is 
 /** Probes `relation` to see if it's a m2o/o2m/m2m relation that supports `getWithDeleted`, otherwise calls `get`. */
 function getEvenDeleted(relation: any): any {
   return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
+}
+
+function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any>[] {
+  return getAllMetas(getMetadata(entity)).flatMap((meta) => {
+    return meta.config.__data.cascadeDeleteFields.map((fieldName) => (entity as any)[fieldName]);
+  });
 }

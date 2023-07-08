@@ -9,7 +9,6 @@ import {
   RelationsIn,
 } from "./index";
 import { convertToLoadHint } from "./reactiveHints";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { ValidationRule, ValidationRuleInternal } from "./rules";
 import { MaybePromise } from "./utils";
 
@@ -73,12 +72,9 @@ export class ConfigApi<T extends Entity, C> {
     }
   }
 
-  cascadeDelete(relationship: keyof RelationsIn<T> & LoadHint<T>): void {
-    this.__data.cascadeDeleteFields.push(relationship);
-    this.beforeDelete(relationship, (entity) => {
-      const relation = entity[relationship] as any as AbstractRelationImpl<any>;
-      relation.maybeCascadeDelete();
-    });
+  /** Deletes any entity/entities pointed to by `relation` when this entity is deleted. */
+  cascadeDelete(relation: keyof RelationsIn<T> & LoadHint<T>): void {
+    this.__data.cascadeDeleteFields.push(relation);
   }
 
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {

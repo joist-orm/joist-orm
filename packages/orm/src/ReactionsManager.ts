@@ -89,10 +89,6 @@ export class ReactionsManager {
           }
           // Walk back from the source to any downstream fields
           return (await followReverseHint(todo, rf.path))
-            .map((e) => {
-              console.log(`Reacting for ${rf.name} and found ${e} ${e.isDeletedEntity}`);
-              return e;
-            })
             .filter((entity) => !entity.isDeletedEntity)
             .filter((e) => e instanceof rf.cstr)
             .map((entity) => (entity as any)[rf.name]);

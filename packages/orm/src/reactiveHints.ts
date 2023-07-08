@@ -1,9 +1,10 @@
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getProperties } from "./getProperties";
-import { Loadable, Loaded, LoadHint } from "./loadHints";
-import { NormalizeHint, normalizeHint, suffixRe, SuffixSeperator } from "./normalizeHints";
+import { LoadHint, Loadable, Loaded } from "./loadHints";
+import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
 import {
   AsyncProperty,
   Collection,
@@ -13,8 +14,8 @@ import {
   OneToOneReference,
   Reference,
 } from "./relations";
-import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
+import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { fail, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
@@ -148,6 +149,49 @@ export function reverseReactiveHint<T extends Entity>(
       : []),
     ...subHints,
   ];
+}
+
+/**
+ * Walks `reverseHint` for every entity in `entities`.
+ *
+ * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all of the books' authors' publishers.
+ */
+export async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
+  // Start at the current entities
+  let current = [...entities];
+  const paths = [...reverseHint];
+  // And "walk backwards" through the reverse hint
+  while (paths.length) {
+    const path = paths.shift()!;
+    const [fieldName, viaPolyType] = path.split("@");
+    // The path might touch either a reference or a collection
+    const entitiesOrLists = await Promise.all(
+      current.flatMap((c: any) => {
+        async function maybeLoadedPoly(loadPromise: Promise<Entity>) {
+          if (viaPolyType) {
+            const loaded: Entity = await loadPromise;
+            return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
+          }
+          return loadPromise;
+        }
+        const currentValuePromise = maybeLoadedPoly(c[fieldName].load());
+        // If we're going from Book.author back to Author to re-validate the Author.books collection,
+        // see if Book.author has changed, so we can re-validate both the old author's books and the
+        // new author's books.
+        const fieldKind = getMetadata(c).fields[fieldName]?.kind;
+        const isReference = fieldKind === "m2o" || fieldKind === "poly";
+        const changed = c.changes[fieldName] as FieldStatus<any>;
+        if (isReference && changed.hasUpdated && changed.originalValue) {
+          return [currentValuePromise, maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity)];
+        }
+        return [currentValuePromise];
+      }),
+    );
+    // Use flat() to get them all as entities
+    const entities = entitiesOrLists.flat().filter((e) => e !== undefined);
+    current = entities as Entity[];
+  }
+  return current;
 }
 
 /** Converts a reactive `hint` into a load hint. */

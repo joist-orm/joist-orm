@@ -46,10 +46,12 @@ export class Author extends AuthorCodegen {
       },
     },
   );
+
   readonly latestComment: Reference<Author, Comment, undefined> = hasOneDerived(
     { publisher: "comments", comments: {} },
     (author) => author.publisher.get?.comments.get[0] ?? author.comments.get[0],
   );
+
   // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity
   // as well as a non-persisted property (isPublic2) and a regular primitive (rating)
   readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(

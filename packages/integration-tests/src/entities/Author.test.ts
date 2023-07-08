@@ -7,11 +7,12 @@ import {
   Book,
   BookId,
   BookReview,
-  Comment,
-  newAuthor,
-  newBookReview,
-  newPublisher,
   Publisher,
+  newAuthor,
+  newBook,
+  newBookReview,
+  newComment,
+  newPublisher,
 } from "../entities";
 import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
@@ -263,17 +264,15 @@ describe("Author", () => {
     const em = newEntityManager();
     // Given an author with a book that has a review that should be public
     const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
-    const b1 = em.create(Book, { title: "b1", author: a1 });
-    const br = em.create(BookReview, { rating: 1, book: b1 });
-    const comment = em.create(Comment, { text: "", parent: br });
+    const b1 = newBook(em, { author: a1 });
+    const br = newBookReview(em, { rating: 1, book: b1 });
+    const comment = newComment(em, { text: "", parent: br });
     await em.flush();
     expect(a1.numberOfPublicReviews2.get).toEqual(1);
     expect(br.isTest.get).toEqual(false);
-    
+
     // And the comment is set to be Test, but not calculuted
-    await knex.raw(
-      `UPDATE comments SET text ='Test' WHERE id = ${comment.idUntagged}`
-    );
+    await knex.raw(`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`);
 
     // When the objects are loaded into a new Entity Manager
     const em2 = newEntityManager();

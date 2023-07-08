@@ -2,8 +2,9 @@ import { AsyncLocalStorage } from "async_hooks";
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
+import { ReactionsManager } from "./ReactionsManager";
 import { Todo, combineJoinRows, createTodos, getTodo } from "./Todo";
-import { ReactiveField, constraintNameToValidationError } from "./config";
+import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
@@ -19,12 +20,10 @@ import {
   EntityHook,
   EntityMetadata,
   ExpressionFilter,
-  FieldStatus,
   FilterWithAlias,
   GenericError,
   GraphQLFilterWithAlias,
   Lens,
-  ManyToOneFieldStatus,
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
@@ -48,6 +47,7 @@ import {
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
+import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { JoinRow } from "./relations/ManyToManyCollection";
 import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
@@ -181,7 +181,7 @@ export class EntityManager<C = unknown> {
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
   private _entityIndex: Map<string, Entity> = new Map();
-  flushSecret: number = 0;
+  private flushSecret: number = 0;
   private _isFlushing: boolean = false;
   private _isValidating: boolean = false;
   // TODO Make these private
@@ -191,7 +191,7 @@ export class EntityManager<C = unknown> {
   __data = {
     joinRows: {} as Record<string, JoinRow[]>,
     /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
-    pendingFieldReactions: new Map() as Map<ReactiveField, { todo: Set<Entity>; done: Set<Entity> }>,
+    rm: new ReactionsManager(),
   };
   private hooks: Record<EntityManagerHook, HookFn[]> = {
     beforeTransaction: [],
@@ -1013,7 +1013,7 @@ export class EntityManager<C = unknown> {
       if (updatedAt) {
         entity.__orm.data[updatedAt] = new Date();
       }
-      queueAllDownstreamFields(this, entity);
+      this.__data.rm.queueAllDownstreamFields(entity);
     }
 
     currentlyInstantiatingEntity = entity;
@@ -1036,7 +1036,7 @@ export class EntityManager<C = unknown> {
       return;
     }
     deletedEntity.__orm.deleted = "pending";
-    queueAllDownstreamFields(this, deletedEntity);
+    this.__data.rm.queueAllDownstreamFields(deletedEntity);
 
     getRelations(deletedEntity).forEach((relation) => relation.maybeCascadeDelete());
   }
@@ -1071,11 +1071,10 @@ export class EntityManager<C = unknown> {
 
     const touched = this.entities.filter((e) => e.__orm.isTouched);
     if (touched.length > 0) {
-      await recalcTouchedEntities(this, touched);
+      await currentFlushSecret.run({ flushSecret: this.flushSecret }, () => {
+        return recalcTouchedEntities(touched);
+      });
     }
-
-    // Recalc before we run hooks, so the hooks will see updated values
-    await recalcPendingDerivedValues(this);
 
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
@@ -1086,6 +1085,16 @@ export class EntityManager<C = unknown> {
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
           let todos = createTodos(pendingEntities);
 
+          // We defer delete cascade logic until flush() so that `em.delete` can be synchronous
+          //
+          // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
+          // fields on entities that will be deleted (and so probably have unset/invalid FKs
+          // that would NPE their logic anyway).
+          await cleanupDeletedRelations(todos);
+
+          // Recalc before we run hooks, so the hooks will see the latest calculated values.
+          await this.__data.rm.recalcPendingDerivedValues();
+
           // Run our hooks
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
@@ -1094,12 +1103,11 @@ export class EntityManager<C = unknown> {
           todos = createTodos(pendingEntities);
           await beforeDelete(this.ctx, todos);
 
-          // We defer doing this cascade logic until flush() so that delete() can remain synchronous.
-          await cleanupDeletedRelations(todos);
+          // Call `setField` just to get the column marked as dirty if needed.
+          recalcSynchronousDerivedFields(todos);
 
-          recalcDerivedFields(todos);
-
-          await recalcPendingDerivedValues(this);
+          // The hooks could have changed more fields, so recalc again.
+          await this.__data.rm.recalcPendingDerivedValues();
 
           entitiesToFlush.push(...pendingEntities);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
@@ -1107,6 +1115,8 @@ export class EntityManager<C = unknown> {
         });
       }
 
+      // Recreate todos now that we've run hooks and recalculated fields so know
+      // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       const entityTodos = createTodos(entitiesToFlush);
 
       if (!skipValidation) {
@@ -1156,7 +1166,7 @@ export class EntityManager<C = unknown> {
 
         // Reset the find caches b/c data will have changed in the db
         this.dataloaders = {};
-        this.__data.pendingFieldReactions = new Map();
+        this.__data.rm.clear();
       }
 
       return entitiesToFlush;
@@ -1384,42 +1394,13 @@ export class NotFoundError extends Error {}
 export class TooManyError extends Error {}
 
 // Force recalc all async fields if the user called em.touch
-async function recalcTouchedEntities(em: EntityManager, touched: Entity[]): Promise<void> {
+async function recalcTouchedEntities(touched: Entity[]): Promise<void> {
   const relations = touched.flatMap((entity) =>
     Object.values(getMetadata(entity).allFields)
       .filter((f) => "derived" in f && f.derived === "async")
       .map((field) => (entity as any)[field.fieldName]),
   );
-  await currentFlushSecret.run({ flushSecret: em.flushSecret }, async () => {
-    await Promise.all(relations.map((r: any) => r.load()));
-  });
-}
-
-async function recalcPendingDerivedValues(em: EntityManager) {
-  let scanPending = true;
-  while (scanPending) {
-    scanPending = false;
-    const relations = await Promise.all(
-      [...em.__data.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
-        // Copy todo and clear it
-        const todo = [...pending.todo];
-        pending.todo.clear();
-        for (const entity of todo) pending.done.add(entity);
-        // If we found any todo, loop again
-        if (todo.length > 0) {
-          scanPending = true;
-        }
-        // Walk back from the source to any downstream fields
-        return (await followReverseHint(todo, rf.path))
-          .filter((entity) => !entity.isDeletedEntity)
-          .filter((e) => e instanceof rf.cstr)
-          .map((entity) => (entity as any)[rf.name]);
-      }),
-    );
-    await currentFlushSecret.run({ flushSecret: em.flushSecret }, async () => {
-      await Promise.all(relations.flat().map((r: any) => r.load()));
-    });
-  }
+  await Promise.all(relations.map((r: any) => r.load()));
 }
 
 /**
@@ -1459,20 +1440,6 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
     });
   });
   await Promise.all(p);
-}
-
-function queueAllDownstreamFields(em: EntityManager, entity: Entity): void {
-  const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
-  for (const rf of rfs) {
-    let pending = em.__data.pendingFieldReactions.get(rf);
-    if (!pending) {
-      pending = { todo: new Set(), done: new Set() };
-      em.__data.pendingFieldReactions.set(rf, pending);
-    }
-    if (!pending.done.has(entity)) {
-      pending.todo.add(entity);
-    }
-  }
 }
 
 /** Find all deleted entities and ensure their references all know about their deleted-ness. */
@@ -1593,7 +1560,7 @@ export type Const<N> =
     };
 
 /** Evaluates each (non-async) derived field to see if it's value has changed. */
-function recalcDerivedFields(todos: Record<string, Todo>) {
+function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
   const entities = Object.values(todos)
     .flatMap((todo) => [...todo.inserts, ...todo.updates])
     .filter((e) => !e.isDeletedEntity);
@@ -1615,49 +1582,6 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
       setField(entity, fieldName as any, (entity as any)[fieldName]);
     });
   }
-}
-
-/**
- * Walks `reverseHint` for every entity in `entities`.
- *
- * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all of the books' authors' publishers.
- */
-async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
-  // Start at the current entities
-  let current = [...entities];
-  const paths = [...reverseHint];
-  // And "walk backwards" through the reverse hint
-  while (paths.length) {
-    const path = paths.shift()!;
-    const [fieldName, viaPolyType] = path.split("@");
-    // The path might touch either a reference or a collection
-    const entitiesOrLists = await Promise.all(
-      current.flatMap((c: any) => {
-        async function maybeLoadedPoly(loadPromise: Promise<Entity>) {
-          if (viaPolyType) {
-            const loaded: Entity = await loadPromise;
-            return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
-          }
-          return loadPromise;
-        }
-        const currentValuePromise = maybeLoadedPoly(c[fieldName].load());
-        // If we're going from Book.author back to Author to re-validate the Author.books collection,
-        // see if Book.author has changed, so we can re-validate both the old author's books and the
-        // new author's books.
-        const fieldKind = getMetadata(c).fields[fieldName]?.kind;
-        const isReference = fieldKind === "m2o" || fieldKind === "poly";
-        const changed = c.changes[fieldName] as FieldStatus<any>;
-        if (isReference && changed.hasUpdated && changed.originalValue) {
-          return [currentValuePromise, maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity)];
-        }
-        return [currentValuePromise];
-      }),
-    );
-    // Use flat() to get them all as entities
-    const entities = entitiesOrLists.flat().filter((e) => e !== undefined);
-    current = entities as Entity[];
-  }
-  return current;
 }
 
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */

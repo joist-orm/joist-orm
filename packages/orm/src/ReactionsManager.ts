@@ -43,7 +43,13 @@ export class ReactionsManager {
     for (const rf of rfs) {
       if (rf.fields.includes(fieldName)) {
         const pending = this.getPending(rf);
-        pending.todo.delete(entity);
+        // We can only delete/dequeue a reaction if `fieldName` is the only or last field
+        // that had triggered `rf` to run. Since we don't track that currently, i.e. we'd
+        // need to have a `Pending.dirtyFields`, for now just only dequeue if `rf` only
+        // has one field (which is us) anyway.
+        if (rf.fields.length === 1) {
+          pending.todo.delete(entity);
+        }
       }
     }
   }

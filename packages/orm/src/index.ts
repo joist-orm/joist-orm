@@ -98,6 +98,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   if (fieldName in originalData) {
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
       data[fieldName] = newValue;
+      // Maybe deque any reactive fields from pendingFieldReactions
       delete originalData[fieldName];
       return true;
     }
@@ -113,8 +114,26 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   if (!(fieldName in originalData)) {
     originalData[fieldName] = currentValue;
   }
+  queueDownstreamReactiveFields(em, entity, fieldName);
   data[fieldName] = newValue;
   return true;
+}
+
+// Queue any downstream reactive fields that depend on this field
+function queueDownstreamReactiveFields(em: EntityManager, entity: Entity, fieldName: string): void {
+  const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
+  for (const rf of rfs) {
+    if (rf.fields.includes(fieldName)) {
+      let pending = em.__data.pendingFieldReactions.get(rf);
+      if (!pending) {
+        pending = { todo: new Set(), done: new Set() };
+        em.__data.pendingFieldReactions.set(rf, pending);
+      }
+      if (!pending.done.has(entity)) {
+        pending.todo.add(entity);
+      }
+    }
+  }
 }
 
 /**

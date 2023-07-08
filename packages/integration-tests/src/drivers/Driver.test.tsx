@@ -19,7 +19,6 @@ describe("Driver", () => {
           deletes: [],
           updates: [],
           validates: new Map(),
-          asyncFields: new Map(),
         },
       });
       const authors = await select("authors");
@@ -46,7 +45,6 @@ describe("Driver", () => {
           deletes: [],
           updates: [author],
           validates: new Map(),
-          asyncFields: new Map(),
         },
       });
 

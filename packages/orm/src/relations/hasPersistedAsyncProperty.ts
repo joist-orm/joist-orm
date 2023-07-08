@@ -87,6 +87,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
     return Promise.resolve(this.get);
   }
 
+  /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */
   get get(): V {
     const { fn } = this;
     if (this.loaded || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {

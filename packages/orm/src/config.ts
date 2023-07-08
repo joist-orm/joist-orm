@@ -163,7 +163,7 @@ interface ReactiveRule {
  * I.e. if `Book.displayName` is an `asyncField` that reacts to `Author.title`, then `Author`'s config will have
  * a `ReactiveFields` with fields `["title"]`, path `books`, and name `displayName`.
  */
-interface ReactiveField {
+export interface ReactiveField {
   /** The fields on this source entity that would trigger the downstream field's recalc. */
   fields: string[];
   /** The constructor of downstream entity that owns the derived field. */

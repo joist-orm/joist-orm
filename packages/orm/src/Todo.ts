@@ -10,7 +10,6 @@ export class Todo {
   updates: Entity[] = [];
   deletes: Entity[] = [];
   validates: Map<Entity, Set<Function>> = new Map();
-  asyncFields: Map<Entity, Set<string>> = new Map();
   constructor(
     /** The metadata for entities in this todo; it will be the base metadata for any subtypes. */
     public metadata: EntityMetadata<any>,
@@ -35,17 +34,6 @@ export function createTodos(entities: Entity[]): Record<string, Todo> {
         todo.inserts.push(entity);
       } else {
         todo.updates.push(entity);
-      }
-      // Force recalc all async fields if the user called em.touch
-      if (entity.__orm.isTouched) {
-        const { asyncFields } = todo;
-        if (!asyncFields.has(entity)) {
-          asyncFields.set(entity, new Set());
-        }
-        const set = asyncFields.get(entity)!;
-        Object.values(todo.metadata.fields)
-          .filter((f) => f.kind === "primitive" && f.derived === "async")
-          .forEach((field) => set.add(field.fieldName));
       }
     }
   }

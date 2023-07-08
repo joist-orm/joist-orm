@@ -3,7 +3,7 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { Todo, combineJoinRows, createTodos, getTodo } from "./Todo";
-import { constraintNameToValidationError } from "./config";
+import { ReactiveField, constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
@@ -181,7 +181,7 @@ export class EntityManager<C = unknown> {
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
   private _entityIndex: Map<string, Entity> = new Map();
-  private flushSecret: number = 0;
+  flushSecret: number = 0;
   private _isFlushing: boolean = false;
   private _isValidating: boolean = false;
   // TODO Make these private
@@ -190,6 +190,8 @@ export class EntityManager<C = unknown> {
   // This is attempting to be internal/module private
   __data = {
     joinRows: {} as Record<string, JoinRow[]>,
+    /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
+    pendingFieldReactions: new Map() as Map<ReactiveField, { todo: Set<Entity>; done: Set<Entity> }>,
   };
   private hooks: Record<EntityManagerHook, HookFn[]> = {
     beforeTransaction: [],
@@ -1011,6 +1013,7 @@ export class EntityManager<C = unknown> {
       if (updatedAt) {
         entity.__orm.data[updatedAt] = new Date();
       }
+      queueAllDownstreamFields(this, entity);
     }
 
     currentlyInstantiatingEntity = entity;
@@ -1033,6 +1036,7 @@ export class EntityManager<C = unknown> {
       return;
     }
     deletedEntity.__orm.deleted = "pending";
+    queueAllDownstreamFields(this, deletedEntity);
 
     getRelations(deletedEntity).forEach((relation) => relation.maybeCascadeDelete());
   }
@@ -1065,6 +1069,14 @@ export class EntityManager<C = unknown> {
 
     this._isFlushing = true;
 
+    const touched = this.entities.filter((e) => e.__orm.isTouched);
+    if (touched.length > 0) {
+      await recalcTouchedEntities(this, touched);
+    }
+
+    // Recalc before we run hooks, so the hooks will see updated values
+    await recalcPendingDerivedValues(this);
+
     const entitiesToFlush: Entity[] = [];
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
 
@@ -1087,17 +1099,7 @@ export class EntityManager<C = unknown> {
 
           recalcDerivedFields(todos);
 
-          // After hooks have run, and potentially updated fields, see if
-          // any async derived values depend on changed fields.
-          //
-          // Note that we defer validation until our run-hooks loop is complete,
-          // so that if a hook creates an entity, we don't invoke reactive validation
-          // rules at this point, until we give the entity a chance to run its own hooks
-          // as part of the next loop.
-          await addReactiveAsyncDerivedValues(todos);
-          // We include this inside the loop, b/c if we change values on a reacted,
-          // not-yet-mutated entity, we'll want to loop around and run its hooks
-          await recalcAsyncDerivedFields(this, todos);
+          await recalcPendingDerivedValues(this);
 
           entitiesToFlush.push(...pendingEntities);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
@@ -1154,6 +1156,7 @@ export class EntityManager<C = unknown> {
 
         // Reset the find caches b/c data will have changed in the db
         this.dataloaders = {};
+        this.__data.pendingFieldReactions = new Map();
       }
 
       return entitiesToFlush;
@@ -1380,6 +1383,45 @@ export class NotFoundError extends Error {}
 /** Thrown by `findOne` and `findOneOrFail` if more than one entity is found. */
 export class TooManyError extends Error {}
 
+// Force recalc all async fields if the user called em.touch
+async function recalcTouchedEntities(em: EntityManager, touched: Entity[]): Promise<void> {
+  const relations = touched.flatMap((entity) =>
+    Object.values(getMetadata(entity).allFields)
+      .filter((f) => "derived" in f && f.derived === "async")
+      .map((field) => (entity as any)[field.fieldName]),
+  );
+  await currentFlushSecret.run({ flushSecret: em.flushSecret }, async () => {
+    await Promise.all(relations.map((r: any) => r.load()));
+  });
+}
+
+async function recalcPendingDerivedValues(em: EntityManager) {
+  let scanPending = true;
+  while (scanPending) {
+    scanPending = false;
+    const relations = await Promise.all(
+      [...em.__data.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
+        // Copy todo and clear it
+        const todo = [...pending.todo];
+        pending.todo.clear();
+        for (const entity of todo) pending.done.add(entity);
+        // If we found any todo, loop again
+        if (todo.length > 0) {
+          scanPending = true;
+        }
+        // Walk back from the source to any downstream fields
+        return (await followReverseHint(todo, rf.path))
+          .filter((entity) => !entity.isDeletedEntity)
+          .filter((e) => e instanceof rf.cstr)
+          .map((entity) => (entity as any)[rf.name]);
+      }),
+    );
+    await currentFlushSecret.run({ flushSecret: em.flushSecret }, async () => {
+      await Promise.all(relations.flat().map((r: any) => r.load()));
+    });
+  }
+}
+
 /**
  * For the entities currently in `todos`, find any reactive validation rules that point
  * from the currently-changed entities back to each rule's originally-defined-in entity,
@@ -1419,36 +1461,18 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
   await Promise.all(p);
 }
 
-/**
- * Given the current changed entities in `todos`, use the static metadata of `reactiveDerivedValues`
- * to find any potentially-unloaded entities we should now re-calc, and add them to `todos`.
- */
-async function addReactiveAsyncDerivedValues(todos: Record<string, Todo>): Promise<void> {
-  const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
-    const pending = [...todo.inserts, ...todo.updates, ...todo.deletes];
-    // Use getAllMetas to ensure we pick up subtype-only fields
-    const fields = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveDerivedValues);
-    return fields.map(async (field) => {
-      // Of all pending entities of this type, how many specifically trigger this rule?
-      const triggered = pending.filter(
-        (e) =>
-          e.isNewEntity ||
-          e.isDeletedEntity ||
-          ((e as any).changes as Changes<any>).fields.some((f) => field.fields.includes(f)),
-      );
-      (await followReverseHint(triggered, field.path))
-        .filter((entity) => !entity.isDeletedEntity)
-        .filter((e) => e instanceof field.cstr)
-        .forEach((entity) => {
-          const { asyncFields } = getTodo(todos, entity);
-          if (!asyncFields.has(entity)) {
-            asyncFields.set(entity, new Set());
-          }
-          asyncFields.get(entity)!.add(field.name);
-        });
-    });
-  });
-  await Promise.all(p);
+function queueAllDownstreamFields(em: EntityManager, entity: Entity): void {
+  const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
+  for (const rf of rfs) {
+    let pending = em.__data.pendingFieldReactions.get(rf);
+    if (!pending) {
+      pending = { todo: new Set(), done: new Set() };
+      em.__data.pendingFieldReactions.set(rf, pending);
+    }
+    if (!pending.done.has(entity)) {
+      pending.todo.add(entity);
+    }
+  }
 }
 
 /** Find all deleted entities and ensure their references all know about their deleted-ness. */
@@ -1589,57 +1613,6 @@ function recalcDerivedFields(todos: Record<string, Todo>) {
     derivedFields.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.
       setField(entity, fieldName as any, (entity as any)[fieldName]);
-    });
-  }
-}
-
-/** Calcs async derived fields that have been triggered by a reactive hint. */
-async function recalcAsyncDerivedFields(em: EntityManager, todos: Record<string, Todo>): Promise<void> {
-  // Make a copy of all the async fields that need to be recalculated
-  let recalc = Object.values(todos).flatMap(({ asyncFields }) => {
-    return [...asyncFields.entries()].filter(([e]) => !e.isDeletedEntity);
-  });
-
-  while (recalc.length > 0) {
-    // Clear out asyncFields so that we can detect any new ones that get added during this iteration
-    for (const todo of Object.values(todos)) {
-      todo.asyncFields.clear();
-    }
-
-    const p = recalc.flatMap(([entity, fields]) => {
-      return [...fields].map(async (fieldName) => {
-        await (entity as any)[fieldName].load();
-        // After loading, check if this field changed, and if so, are there reactive fields downstream from it?
-        if ((entity as any).changes.fields.includes(fieldName)) {
-          // Get all reactive fields that depend on this field
-          const rfs = getAllMetas(getMetadata(entity))
-            .flatMap((m) => m.config.__data.reactiveDerivedValues)
-            .filter((rf) => rf.fields.includes(fieldName));
-          // Now follow each one and queue it into `asyncFields` for the next loop
-          await Promise.all(
-            rfs.map(async (rf) => {
-              // Copy/paste from addReactiveValidations
-              (await followReverseHint([entity], rf.path))
-                .filter((entity) => !entity.isDeletedEntity)
-                .filter((e) => e instanceof rf.cstr)
-                .forEach((entity) => {
-                  const { asyncFields } = getTodo(todos, entity);
-                  if (!asyncFields.has(entity)) {
-                    asyncFields.set(entity, new Set());
-                  }
-                  asyncFields.get(entity)!.add(rf.name);
-                });
-            }),
-          );
-        }
-      });
-    });
-
-    await Promise.all(p);
-
-    // Did we kick off any new async fields?
-    recalc = Object.values(todos).flatMap(({ asyncFields }) => {
-      return [...asyncFields.entries()].filter(([e]) => !e.isDeletedEntity);
     });
   }
 }

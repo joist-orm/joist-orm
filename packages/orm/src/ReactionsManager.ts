@@ -3,8 +3,6 @@ import { Entity } from "./Entity";
 import { getAllMetas, getMetadata } from "./EntityMetadata";
 import { followReverseHint } from "./reactiveHints";
 
-type Pending = { todo: Set<Entity>; done: Set<Entity> };
-
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
  * their downstream derived fields.
@@ -14,13 +12,13 @@ type Pending = { todo: Set<Entity>; done: Set<Entity> };
  */
 export class ReactionsManager {
   /** Stores all source `ReactiveField`s that have been marked for later traversal. */
-  private pendingFieldReactions: Map<ReactiveField, Pending> = new Map();
+  private pendingFieldReactions: Map<ReactiveField, Set<Entity>> = new Map();
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
    *
-   * This method can be synchronous b/c we just internally queue the `ReactiveField` reverse
-   * indexes on the given source `fieldName`, and don't crawl/walk back to the actual downstream
+   * This method can be synchronous b/c we internally queue the `ReactiveField` reverse
+   * indexes on the given source `fieldName`, and don't crawl/walk back to the downstream
    * entities/fields until `recalcPendingDerivedValues` is called.
    */
   queueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
@@ -28,10 +26,15 @@ export class ReactionsManager {
     const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       if (rf.fields.includes(fieldName)) {
-        const pending = this.getPending(rf);
-        if (!pending.done.has(entity)) {
-          pending.todo.add(entity);
-        }
+        // We always queue the RF/entity, even if we're mid-flush or even mid-recalc, to avoid:
+        // - firstName is changed from a1 to a2
+        // - this triggers firstName's RF to `Author.initials` to be queued
+        // - during the 1st em.flush loop, we recalc `Author.initials` and it didn't change
+        // - during the 1st em.flush loop, a hook changes firstName from a2 to b2
+        // - if we skip re-queuing firstName's RFs, we will miss that initials needs
+        //   its `.load()` called again so that it's `setField` marks `initials` as
+        //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
+        this.getPending(rf).add(entity);
       }
     }
   }
@@ -48,7 +51,7 @@ export class ReactionsManager {
         // need to have a `Pending.dirtyFields`, for now just only dequeue if `rf` only
         // has one field (which is us) anyway.
         if (rf.fields.length === 1) {
-          pending.todo.delete(entity);
+          pending.delete(entity);
         }
       }
     }
@@ -58,10 +61,7 @@ export class ReactionsManager {
   queueAllDownstreamFields(entity: Entity): void {
     const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
-      const pending = this.getPending(rf);
-      if (!pending.done.has(entity)) {
-        pending.todo.add(entity);
-      }
+      this.getPending(rf).add(entity);
     }
   }
 
@@ -74,14 +74,14 @@ export class ReactionsManager {
    */
   async recalcPendingDerivedValues() {
     let scanPending = true;
+    let loops = 0;
     while (scanPending) {
       scanPending = false;
       const relations = await Promise.all(
         [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
-          // Copy todo and clear it
-          const todo = [...pending.todo];
-          pending.todo.clear();
-          for (const entity of todo) pending.done.add(entity);
+          // Copy pending and clear it
+          const todo = [...pending];
+          pending.clear();
           // If we found any pending, loop again b/c we might be a dependency of another field,
           // which our `.load()` will have marked as pending by calling `queueDownstreamReactiveFields`.
           if (todo.length > 0) {
@@ -95,6 +95,12 @@ export class ReactionsManager {
         }),
       );
       await Promise.all(relations.flat().map((r: any) => r.load()));
+      // This should generally not happen, only if two reactive fields depend on each other,
+      // which in theory should probably be caught/blow up in the `configureMetadata` step,
+      // but if it's not caught sooner, at least don't infinite loop.
+      if (loops++ > 50) {
+        throw new Error("recalc looped too many times, probably a circular dependency");
+      }
     }
   }
 
@@ -103,10 +109,10 @@ export class ReactionsManager {
     this.pendingFieldReactions = new Map();
   }
 
-  private getPending(rf: ReactiveField): Pending {
+  private getPending(rf: ReactiveField): Set<Entity> {
     let pending = this.pendingFieldReactions.get(rf);
     if (!pending) {
-      pending = { todo: new Set(), done: new Set() };
+      pending = new Set();
       this.pendingFieldReactions.set(rf, pending);
     }
     return pending;

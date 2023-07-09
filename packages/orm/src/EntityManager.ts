@@ -1099,7 +1099,7 @@ export class EntityManager<C = unknown> {
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
           let todos = createTodos(pendingEntities);
 
-          // We defer delete cascade logic until flush() so that `em.delete` can be synchronous.
+          // We defer delete cascade logic until `em.flush` so that `em.delete` can be synchronous.
           //
           // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
           // fields on entities that will be deleted (and so probably have unset/invalid FKs
@@ -1428,7 +1428,7 @@ export class NotFoundError extends Error {}
 /** Thrown by `findOne` and `findOneOrFail` if more than one entity is found. */
 export class TooManyError extends Error {}
 
-// Force recalc all async fields if the user called em.touch
+/** Force recalc all async fields on entities that were `em.touch`-d. */
 async function recalcTouchedEntities(touched: Entity[]): Promise<void> {
   const relations = touched.flatMap((entity) =>
     Object.values(getMetadata(entity).allFields)
@@ -1476,6 +1476,7 @@ async function validateReactiveRules(todos: Record<string, Todo>): Promise<void>
   });
   await Promise.all(p1);
 
+  // Now that we've found the fn+entities to run, run them and collect any errors
   const p2 = [...fns.entries()].flatMap(([fn, entities]) =>
     [...entities].map(async (entity) => coerceError(entity, await fn(entity))),
   );

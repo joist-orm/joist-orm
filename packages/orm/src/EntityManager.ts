@@ -3,7 +3,7 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { ReactionsManager } from "./ReactionsManager";
-import { Todo, combineJoinRows, createTodos, getTodo } from "./Todo";
+import { Todo, combineJoinRows, createTodos } from "./Todo";
 import { constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
@@ -30,6 +30,7 @@ import {
   UniqueFilter,
   ValidationError,
   ValidationErrors,
+  ValidationRule,
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
@@ -1140,7 +1141,6 @@ export class EntityManager<C = unknown> {
       if (!skipValidation) {
         try {
           this._isValidating = true;
-          await addReactiveValidations(entityTodos);
           // Run simple rules first b/c it includes not-null/required rules, so that then when we run
           // `validateReactiveRules` next, the lambdas won't see invalid entities.
           await validateSimpleRules(entityTodos);
@@ -1442,13 +1442,13 @@ async function recalcTouchedEntities(touched: Entity[]): Promise<void> {
  * For the entities currently in `todos`, find any reactive validation rules that point
  * from the currently-changed entities back to each rule's originally-defined-in entity,
  * and ensure those entities are added to `todos`.
- *
- * Note that we don't check whether `entitiesToFlush` already the entities we're adding,
- * because rules should be side effect free, so invoking them twice, if that does happen
- * to occur, should be fine (and desirable given something about the entity has changed).
  */
-async function addReactiveValidations(todos: Record<string, Todo>): Promise<void> {
-  const p: Promise<void>[] = Object.values(todos).flatMap((todo) => {
+async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
+  // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
+  // even if it was triggered by multiple changed fields.
+  const fns: Map<ValidationRule<any>, Set<Entity>> = new Map();
+
+  const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
     const rules = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
@@ -1465,16 +1465,24 @@ async function addReactiveValidations(todos: Record<string, Todo>): Promise<void
         .filter((entity) => !entity.isDeletedEntity)
         .filter((e) => e instanceof rule.cstr)
         .forEach((entity) => {
-          const { validates } = getTodo(todos, entity);
-          // Even if the entity is in inserts/updates, we need to explicitly mark it for validation
-          if (!validates.has(entity)) {
-            validates.set(entity, new Set());
+          let entities = fns.get(rule.fn);
+          if (!entities) {
+            entities = new Set();
+            fns.set(rule.fn, entities);
           }
-          validates.get(entity)!.add(rule.fn);
+          entities.add(entity);
         });
     });
   });
-  await Promise.all(p);
+  await Promise.all(p1);
+
+  const p2 = [...fns.entries()].flatMap(([fn, entities]) =>
+    [...entities].map(async (entity) => coerceError(entity, await fn(entity))),
+  );
+  const errors = (await Promise.all(p2)).flat();
+  if (errors.length > 0) {
+    throw new ValidationErrors(errors);
+  }
 }
 
 // Run *non-reactive* (those with `fields: undefined`) rules of explicitly mutated entities,
@@ -1489,21 +1497,6 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
         return rules
           .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
-      });
-  });
-  const errors = (await Promise.all(p)).flat();
-  if (errors.length > 0) {
-    throw new ValidationErrors(errors);
-  }
-}
-
-// Run rules against unchanged-but-reacting entities
-async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
-  const p = Object.values(todos).flatMap(({ validates }) => {
-    return [...validates.entries()]
-      .filter(([e]) => !e.isDeletedEntity)
-      .flatMap(([entity, fns]) => {
-        return [...fns.values()].flatMap(async (fn) => coerceError(entity, await fn(entity)));
       });
   });
   const errors = (await Promise.all(p)).flat();

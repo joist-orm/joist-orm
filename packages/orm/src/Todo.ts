@@ -9,7 +9,6 @@ export class Todo {
   inserts: Entity[] = [];
   updates: Entity[] = [];
   deletes: Entity[] = [];
-  validates: Map<Entity, Set<Function>> = new Map();
   constructor(
     /** The metadata for entities in this todo; it will be the base metadata for any subtypes. */
     public metadata: EntityMetadata<any>,

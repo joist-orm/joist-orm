@@ -1120,10 +1120,10 @@ export class EntityManager<C = unknown> {
           // fields, they'd be via the synchronous getter and would not be stale.
           recalcSynchronousDerivedFields(todos);
 
-          // The hooks could have changed fields, so recalc again.
-          await this.__data.rm.recalcPendingDerivedValues();
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.cascadeDeletes();
+          // The hooks could have changed fields, so recalc again.
+          await this.__data.rm.recalcPendingDerivedValues();
 
           for (const e of pendingEntities) hooksInvoked.add(e);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));

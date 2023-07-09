@@ -18,7 +18,6 @@ describe("Driver", () => {
           inserts: [author],
           deletes: [],
           updates: [],
-          validates: new Map(),
         },
       });
       const authors = await select("authors");
@@ -44,7 +43,6 @@ describe("Driver", () => {
           inserts: [],
           deletes: [],
           updates: [author],
-          validates: new Map(),
         },
       });
 

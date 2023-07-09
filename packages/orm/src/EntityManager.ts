@@ -1083,30 +1083,28 @@ export class EntityManager<C = unknown> {
 
     this._isFlushing = true;
 
-    const touched = this.entities.filter((e) => e.__orm.isTouched);
-    if (touched.length > 0) {
-      await currentFlushSecret.run({ flushSecret: this.flushSecret }, () => {
-        return recalcTouchedEntities(touched);
-      });
-    }
+    await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
+      // Recalc any touched entities
+      const touched = this.entities.filter((e) => e.__orm.isTouched);
+      if (touched.length > 0) {
+        await recalcTouchedEntities(touched);
+      }
+      // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
+      // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
+      // fields on entities that will be deleted (and probably have unset/invalid FKs
+      // that would NPE their logic anyway).
+      await this.cascadeDeletes();
+      // Recalc before we run hooks, so the hooks will see the latest calculated values.
+      await this.__data.rm.recalcPendingDerivedValues();
+    });
 
-    const entitiesToFlush: Entity[] = [];
+    const hooksInvoked: Set<Entity> = new Set();
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
 
     try {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
-          // We defer delete cascade logic until `em.flush` so that `em.delete` can be synchronous.
-          //
-          // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
-          // fields on entities that will be deleted (and so probably have unset/invalid FKs
-          // that would NPE their logic anyway).
-          await this.cascadeDeletes();
-
-          // Recalc before we run hooks, so the hooks will see the latest calculated values.
-          await this.__data.rm.recalcPendingDerivedValues();
-
           // Run our hooks
           let todos = createTodos(pendingEntities);
           await beforeCreate(this.ctx, todos);
@@ -1122,19 +1120,20 @@ export class EntityManager<C = unknown> {
           // fields, they'd be via the synchronous getter and would not be stale.
           recalcSynchronousDerivedFields(todos);
 
-          // The hooks could have changed more fields, so recalc again.
+          // The hooks could have changed fields, so recalc again.
           await this.__data.rm.recalcPendingDerivedValues();
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.cascadeDeletes();
 
-          entitiesToFlush.push(...pendingEntities);
-          pendingEntities = this.entities.filter((e) => e.isPendingFlush && !entitiesToFlush.includes(e));
+          for (const e of pendingEntities) hooksInvoked.add(e);
+          pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
           this.flushSecret += 1;
         });
       }
 
       // Recreate todos now that we've run hooks and recalculated fields so know
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
+      const entitiesToFlush = [...hooksInvoked];
       const entityTodos = createTodos(entitiesToFlush);
 
       if (!skipValidation) {

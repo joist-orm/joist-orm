@@ -1097,8 +1097,6 @@ export class EntityManager<C = unknown> {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
         await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
-          let todos = createTodos(pendingEntities);
-
           // We defer delete cascade logic until `em.flush` so that `em.delete` can be synchronous.
           //
           // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
@@ -1110,6 +1108,7 @@ export class EntityManager<C = unknown> {
           await this.__data.rm.recalcPendingDerivedValues();
 
           // Run our hooks
+          let todos = createTodos(pendingEntities);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);

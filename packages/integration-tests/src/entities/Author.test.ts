@@ -285,7 +285,6 @@ describe("Author", () => {
 
     // And when the book review object is touched and flushed to have its fields recalculated
     em2.touch(br2);
-    // em2.touch(a2); // Including this line makes the test pass - but it shouldn't be necessary
     await em2.flush();
 
     // Then the value is updated on both the book review AND its dependent field on the author

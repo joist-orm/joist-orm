@@ -123,8 +123,8 @@ export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id:
   return testDriver.insert("authors_to_tags", row);
 }
 
-export function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean }) {
-  return testDriver.insert("book_reviews", { is_public: true, ...row });
+export function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean, is_test?: boolean }) {
+  return testDriver.insert("book_reviews", { is_public: true, is_test: false, ...row });
 }
 
 export function insertImage(row: {

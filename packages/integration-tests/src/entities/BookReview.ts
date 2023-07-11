@@ -27,7 +27,21 @@ export class BookReview extends BookReviewCodegen {
     { book: { author: ["age", "graduated"] } },
     (review) => {
       const author = review.book.get.author.get;
+      // Currently our multi-hop reactivity recalc is more aggressive (runs before) our multi-hop
+      // cascade deletion (which requires multiple 'pending loops' within `em.flush`), so we might
+      // be invoked when Author/Book have been marked for deletion, and we _will_ be marked for
+      // deletion soon, but have not yet.
+      if (!author) return false;
       return !!author.age && author.age >= 21 && !!author.graduated;
+    },
+  );
+
+  // Used to test dependent reactivity
+  readonly isTest: PersistedAsyncProperty<BookReview, boolean> = hasPersistedAsyncProperty(
+    "isTest",
+    { comment: "text" },
+    (review) => {
+      return !!review.comment.get?.text?.includes("Test");
     },
   );
 

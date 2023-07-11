@@ -2,8 +2,19 @@ import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities
 import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
-import { Author, Book, BookId, BookReview, Publisher, newAuthor, newBookReview, newPublisher } from "../entities";
-import { makeApiCall, newEntityManager } from "../setupDbTests";
+import {
+  Author,
+  Book,
+  BookId,
+  BookReview,
+  Publisher,
+  newAuthor,
+  newBook,
+  newBookReview,
+  newComment,
+  newPublisher,
+} from "../entities";
+import { knex, makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
 const inspect = Symbol.for("nodejs.util.inspect.custom");
@@ -247,6 +258,38 @@ describe("Author", () => {
     expect(a1.numberOfBooksCalcInvoked).toBe(4);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
+  });
+
+  it("has async derived values automatically updated when dependency touched and updated", async () => {
+    const em = newEntityManager();
+    // Given an author with a book that has a review that should be public
+    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+    const b1 = newBook(em, { author: a1 });
+    const br = newBookReview(em, { rating: 1, book: b1 });
+    const comment = newComment(em, { text: "", parent: br });
+    await em.flush();
+    expect(a1.numberOfPublicReviews2.get).toEqual(1);
+    expect(br.isTest.get).toEqual(false);
+
+    // And the comment is set to be Test, but not calculuted
+    await knex.raw(`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`);
+
+    // When the objects are loaded into a new Entity Manager
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, a1.idOrFail);
+    const br2 = await em2.load(BookReview, br.idOrFail);
+
+    // Then nothing has been touched
+    expect(a2.numberOfPublicReviews2.get).toEqual(1);
+    expect(br2.isTest.get).toEqual(false);
+
+    // And when the book review object is touched and flushed to have its fields recalculated
+    em2.touch(br2);
+    await em2.flush();
+
+    // Then the value is updated on both the book review AND its dependent field on the author
+    expect(br2.isTest.get).toEqual(true);
+    expect(a2.numberOfPublicReviews2.get).toEqual(0);
   });
 
   it("can save when async derived values don't change", async () => {

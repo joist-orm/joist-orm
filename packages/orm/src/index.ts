@@ -99,6 +99,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
       data[fieldName] = newValue;
       delete originalData[fieldName];
+      em.__data.rm.dequeueDownstreamReactiveFields(entity, fieldName);
       return true;
     }
   }
@@ -113,6 +114,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   if (!(fieldName in originalData)) {
     originalData[fieldName] = currentValue;
   }
+  em.__data.rm.queueDownstreamReactiveFields(entity, fieldName);
   data[fieldName] = newValue;
   return true;
 }

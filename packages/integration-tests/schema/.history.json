@@ -24,6 +24,7 @@
     "mentor",
     "numberOfBooks",
     "numberOfPublicReviews",
+    "numberOfPublicReviews2",
     "publisher",
     "ssn",
     "tags",
@@ -67,7 +68,18 @@
     "updatedAt"
   ],
   "BookAdvance": ["book", "createdAt", "id", "publisher", "status", "updatedAt"],
-  "BookReview": ["book", "comment", "createdAt", "id", "isPublic", "parent", "parentComment", "rating", "updatedAt"],
+  "BookReview": [
+    "book",
+    "comment",
+    "createdAt",
+    "id",
+    "isPublic",
+    "isTest",
+    "parent",
+    "parentComment",
+    "rating",
+    "updatedAt"
+  ],
   "Comment": ["createdAt", "id", "likedByUsers", "parent", "text", "updatedAt", "user"],
   "CommentParent": ["Author", "Book", "BookReview", "Publisher"],
   "Critic": [
@@ -159,6 +171,7 @@
     "mentorId",
     "numberOfBooks",
     "numberOfPublicReviews",
+    "numberOfPublicReviews2",
     "publisherId",
     "ssn",
     "updatedAt",

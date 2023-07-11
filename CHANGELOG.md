@@ -1,3 +1,10 @@
+## [1.92.2](https://github.com/stephenh/joist-ts/compare/v1.92.1...v1.92.2) (2023-07-11)
+
+
+### Bug Fixes
+
+* Refactor reactivity ([#724](https://github.com/stephenh/joist-ts/issues/724)) ([52e6ba8](https://github.com/stephenh/joist-ts/commit/52e6ba8ff2c83fdc607145c10b4ce7c795ff20d6))
+
 ## [1.92.1](https://github.com/stephenh/joist-ts/compare/v1.92.0...v1.92.1) (2023-07-06)
 
 

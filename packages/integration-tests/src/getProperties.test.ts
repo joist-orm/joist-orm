@@ -16,6 +16,7 @@ describe("getProperties", () => {
       reviews: expect.any(OneToManyCollection),
       comments: expect.any(OneToManyCollection),
       author: expect.any(ManyToOneReferenceImpl),
+      authorSetWhenDeleteRuns: undefined,
       currentDraftAuthor: expect.any(OneToOneReferenceImpl),
       image: expect.any(OneToOneReferenceImpl),
       tags: expect.any(ManyToManyCollection),

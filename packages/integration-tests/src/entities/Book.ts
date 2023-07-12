@@ -6,6 +6,7 @@ export class Book extends BookCodegen {
   favoriteColorsRuleInvoked = 0;
   reviewsRuleInvoked = 0;
   numberOfBooks2RuleInvoked = 0;
+  authorSetWhenDeleteRuns: boolean | undefined = undefined;
 }
 
 config.addRule((book) => {
@@ -36,3 +37,9 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
 });
 
 config.cascadeDelete("reviews");
+
+// Verify that beforeDelete hooks see their pre-unhooked-state, because if they run
+// after the entity is unhooked, they won't be able to access their relationships.
+config.beforeDelete("author", (b) => {
+  b.authorSetWhenDeleteRuns = b.author.getWithDeleted !== undefined;
+});

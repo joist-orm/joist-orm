@@ -1,4 +1,4 @@
-import { Author, Book, newBook } from "../entities";
+import { Author, Book, newAuthor, newBook } from "../entities";
 import { newEntityManager } from "../setupDbTests";
 
 describe("Book", () => {
@@ -23,5 +23,15 @@ describe("Book", () => {
     await em.flush();
     b.order++;
     await em.flush();
+  });
+
+  it("can observe reference from beforeDelete", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    const b = newBook(em, { author: a });
+    await em.flush();
+    em.delete(a);
+    await em.flush();
+    expect(b.authorSetWhenDeleteRuns).toBe(true);
   });
 });

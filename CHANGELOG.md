@@ -1,3 +1,10 @@
+## [1.92.3](https://github.com/stephenh/joist-ts/compare/v1.92.2...v1.92.3) (2023-07-12)
+
+
+### Bug Fixes
+
+* Run beforeDelete hooks before entities are disconnected. ([#727](https://github.com/stephenh/joist-ts/issues/727)) ([716488b](https://github.com/stephenh/joist-ts/commit/716488b82fcbd57e99561047300e585db09937d8))
+
 ## [1.92.2](https://github.com/stephenh/joist-ts/compare/v1.92.1...v1.92.2) (2023-07-11)
 
 

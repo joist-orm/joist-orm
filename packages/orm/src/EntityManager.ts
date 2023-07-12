@@ -1110,10 +1110,6 @@ export class EntityManager<C = unknown> {
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);
-          // Recalc todos in case one of ^ hooks did an em.delete that moved an
-          // entity in this pending loop from created/updated to deleted.
-          todos = createTodos(pendingEntities);
-          await beforeDelete(this.ctx, todos);
 
           // Call `setField` just to get the column marked as dirty if needed.
           // This can come after the hooks, b/c if the hooks read any of these
@@ -1380,6 +1376,9 @@ export class EntityManager<C = unknown> {
       await Promise.all(
         entities.flatMap(getCascadeDeleteRelations).map((r) => r.load().then(() => r.maybeCascadeDelete())),
       );
+      // Run the beforeDelete hook before we unhook the entity
+      const todos = createTodos(entities);
+      await beforeDelete(this.ctx, todos);
       // For all relations, unhook the entity from the other side
       await Promise.all(entities.flatMap(getRelations).map((r) => r.cleanupOnEntityDeleted()));
       entities = this.pendingCascadeDeletes;

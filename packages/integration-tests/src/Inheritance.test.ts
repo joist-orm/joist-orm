@@ -242,6 +242,17 @@ describe("Inheritance", () => {
     expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
   });
 
+  it("can order by properties from the base type", async () => {
+    await insertPublisher({ id: 1, name: "a" });
+    await insertPublisher({ id: 2, name: "b" });
+
+    const em = newEntityManager();
+    const [b, a] = await em.find(SmallPublisher, { }, { orderBy: { name: 'DESC'}});
+
+    expect(a as SmallPublisher).toMatchEntity({ name: "a" });
+    expect(b as SmallPublisher).toMatchEntity({ name: "b" });
+  });
+
   it("can find entities from the base type", async () => {
     await insertPublisher({ name: "sp1" });
     await insertLargePublisher({ id: 2, name: "lp1" });

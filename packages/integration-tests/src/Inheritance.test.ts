@@ -242,7 +242,7 @@ describe("Inheritance", () => {
     expect(lp as LargePublisher).toMatchEntity({ name: "lp1", country: "country" });
   });
 
-  it.only("can order by properties from the base type", async () => {
+  it("can order by properties from the base type", async () => {
     await insertPublisher({ id: 1, name: "a" });
     await insertPublisher({ id: 2, name: "b" });
 

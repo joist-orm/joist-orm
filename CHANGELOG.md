@@ -1,3 +1,10 @@
+## [1.92.4](https://github.com/stephenh/joist-ts/compare/v1.92.3...v1.92.4) (2023-07-13)
+
+
+### Bug Fixes
+
+* orderBy on cti base fields  ([#729](https://github.com/stephenh/joist-ts/issues/729)) ([e398cc6](https://github.com/stephenh/joist-ts/commit/e398cc6b660b5d4ac8ac5c9a386f1131c40d9d7a))
+
 ## [1.92.3](https://github.com/stephenh/joist-ts/compare/v1.92.2...v1.92.3) (2023-07-12)
 
 

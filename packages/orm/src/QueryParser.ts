@@ -315,7 +315,7 @@ export function parseFindQuery(
       const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];
-        orderBys.push({ alias, column: column.columnName, order: value as OrderBy });
+        orderBys.push({ alias: `${alias}${field.aliasSuffix ?? ''}`, column: column.columnName, order: value as OrderBy });
       } else if (field.kind === "m2o") {
         // Do we already this table joined in?
         let table = tables.find((t) => t.table === field.otherMetadata().tableName);

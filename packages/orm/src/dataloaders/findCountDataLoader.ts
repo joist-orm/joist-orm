@@ -59,8 +59,9 @@ export function findCountDataLoader<T extends Entity>(
       const args = collectArgs(query);
       args.unshift({ columnName: "tag", dbType: "int" });
 
-      const selects = ["_find.tag as tag", "count(*) as count"];
       const [primary, joins] = getTables(query);
+      // Use count(distinct id) in case two o2m joins end up duplicating rows
+      const selects = ["_find.tag as tag", `count(distinct ${primary.alias}.id) as count`];
 
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings = createBindings(meta, queries);

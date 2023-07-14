@@ -2340,6 +2340,25 @@ describe("EntityManager.queries", () => {
       expect(counts).toEqual([2, 1]);
       expect(numberOfQueries).toBe(1);
     });
+
+    it("can batch count with o2m joins", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        // one
+        em.findCount(Author, { firstName: "a1", books: { title: { like: "b1" } } }, opts),
+        // two
+        em.findCount(Author, { firstName: "a1", books: { title: { like: "b%" } } }, opts),
+        // none
+        em.findCount(Author, { firstName: "a2", books: { title: { like: "b%" } } }, opts),
+      ]);
+      expect(counts).toEqual([1, 2, 0]);
+      expect(numberOfQueries).toBe(1);
+    });
   });
 });
 

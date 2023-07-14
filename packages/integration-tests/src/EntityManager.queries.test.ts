@@ -2349,14 +2349,14 @@ describe("EntityManager.queries", () => {
       const em = newEntityManager();
       resetQueryCount();
       const counts = await Promise.all([
-        // one
+        // one book matches
         em.findCount(Author, { firstName: "a1", books: { title: { like: "b1" } } }, opts),
-        // two
+        // two books match, but only 1 author
         em.findCount(Author, { firstName: "a1", books: { title: { like: "b%" } } }, opts),
-        // none
+        // one author matches, but no books
         em.findCount(Author, { firstName: "a2", books: { title: { like: "b%" } } }, opts),
       ]);
-      expect(counts).toEqual([1, 2, 0]);
+      expect(counts).toEqual([1, 1, 0]);
       expect(numberOfQueries).toBe(1);
     });
   });

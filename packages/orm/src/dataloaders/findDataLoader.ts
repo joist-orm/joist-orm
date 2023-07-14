@@ -5,7 +5,7 @@ import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { opToFn } from "../EntityGraphQLFilter";
 import { EntityManager, MaybeAbstractEntityConstructor, entityLimit } from "../EntityManager";
-import { getMetadata } from "../EntityMetadata";
+import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import {
   ColumnCondition,
   ParsedExpressionFilter,
@@ -30,12 +30,7 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-
-  // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
-  const clone = structuredClone(query);
-  stripValues(clone);
-  // We could use `whereFilterHash` too if it's faster?
-  const batchKey = JSON.stringify(clone);
+  const batchKey = getKeyFromGenericStructure(query);
 
   return em.getLoader(
     "find",
@@ -55,9 +50,9 @@ export function findDataLoader<T extends Entity>(
       }
 
       // WITH data(tag, arg1, arg2) AS (VALUES
-      //   (1::int, 'a'::varchar, 'a'::varchar),
-      //   (2, 'b', 'b'),
-      //   (3, 'c', 'c')
+      //   (0::int, 'a'::varchar, 'a'::varchar),
+      //   (1, 'b', 'b'),
+      //   (2, 'c', 'c')
       // )
       // SELECT array_agg(d.tag), a.*
       // FROM authors a
@@ -72,14 +67,7 @@ export function findDataLoader<T extends Entity>(
       const [primary, joins] = getTables(query);
 
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
-      const bindings: any[] = [];
-      queries.forEach((query, i) => {
-        const { where, ...opts } = query;
-        // add this query's `tag` value
-        bindings.push(i);
-        collectValues(bindings, parseFindQuery(meta, where, opts));
-      });
-
+      const bindings = createBindings(meta, queries);
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
       const [conditions] = buildConditions(combineConditions(query));
 
@@ -144,7 +132,7 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
 }
 
 /** Collects & names all the args in a query, i.e. `['arg1', 'arg2']`--not the actual values. */
-function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
+export function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
   const args: { columnName: string; dbType: string }[] = [];
   visit(query, {
     visitCond(c: ColumnCondition) {
@@ -163,6 +151,17 @@ function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: stri
     },
   });
   return args;
+}
+
+export function createBindings(meta: EntityMetadata<any>, queries: readonly FilterAndSettings<any>[]): any[] {
+  const bindings: any[] = [];
+  queries.forEach((query, i) => {
+    const { where, ...opts } = query;
+    // add this query's `tag` value
+    bindings.push(i);
+    collectValues(bindings, parseFindQuery(meta, where, opts));
+  });
+  return bindings;
 }
 
 /** Pushes the arg values of a given query in the cross-query `bindings` array. */
@@ -214,7 +213,7 @@ function visit(query: ParsedFindQuery, visitor: Visitor): void {
 }
 
 // Create the a1.firstName=data.firstName AND a2.lastName=data.lastName
-function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [string, number] {
+export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 0): [string, number] {
   const conditions = [] as string[];
   const originalIndex = argsIndex;
   ef.conditions.forEach((c) => {
@@ -281,4 +280,12 @@ function ensureUnderLimit(rows: unknown[]): void {
   if (rows.length >= entityLimit) {
     throw new Error(`Query returned more than ${entityLimit} rows`);
   }
+}
+
+export function getKeyFromGenericStructure(query: ParsedFindQuery): string {
+  // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
+  const clone = structuredClone(query);
+  stripValues(clone);
+  // We could use `whereFilterHash` too if it's faster?
+  return JSON.stringify(clone);
 }

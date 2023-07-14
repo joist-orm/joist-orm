@@ -2308,6 +2308,57 @@ describe("EntityManager.queries", () => {
       // And we didn't make an extra query for it
       expect(numberOfQueries).toBe(1);
     });
+
+    it("can batch count", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        em.findCount(Author, { firstName: "a1" }, opts),
+        em.findCount(Author, { firstName: "a2" }, opts),
+        em.findCount(Author, { firstName: "a3" }, opts),
+      ]);
+      expect(counts).toEqual([1, 1, 0]);
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can batch count with m2o joins", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", last_name: "smith", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", last_name: "smith", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3", last_name: "doe", publisher_id: 2 });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        // both a1 and a2
+        em.findCount(Author, { lastName: "smith", publisher: "p:1" }, opts),
+        // only a3
+        em.findCount(Author, { lastName: "doe", publisher: "p:2" }, opts),
+      ]);
+      expect(counts).toEqual([2, 1]);
+      expect(numberOfQueries).toBe(1);
+    });
+
+    it("can batch count with o2m joins", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        // one book matches
+        em.findCount(Author, { firstName: "a1", books: { title: { like: "b1" } } }, opts),
+        // two books match, but only 1 author
+        em.findCount(Author, { firstName: "a1", books: { title: { like: "b%" } } }, opts),
+        // one author matches, but no books
+        em.findCount(Author, { firstName: "a2", books: { title: { like: "b%" } } }, opts),
+      ]);
+      expect(counts).toEqual([1, 1, 0]);
+      expect(numberOfQueries).toBe(1);
+    });
   });
 });
 

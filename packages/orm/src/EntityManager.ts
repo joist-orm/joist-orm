@@ -458,9 +458,8 @@ export class EntityManager<C = unknown> {
     where: FilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
   ): Promise<number> {
-    const { softDeletes = "exclude" } = options;
-
-    let count = await findCountDataLoader(this, type, softDeletes).load({ where, ...options });
+    const settings = { where, ...options };
+    let count = await findCountDataLoader(this, type, settings).load(settings);
 
     // If the user is do "count all", we can adjust the number up/down based on
     // WIP creates/deletes. We can't do this if the WHERE clause is populated b/c

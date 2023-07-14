@@ -2308,6 +2308,20 @@ describe("EntityManager.queries", () => {
       // And we didn't make an extra query for it
       expect(numberOfQueries).toBe(1);
     });
+
+    it("can batch count", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        em.findCount(Author, { firstName: "a1" }, opts),
+        em.findCount(Author, { firstName: "a2" }, opts),
+        em.findCount(Author, { firstName: "a3" }, opts),
+      ]);
+      expect(counts).toEqual([1, 1, 0]);
+      expect(numberOfQueries).toBe(1);
+    });
   });
 });
 

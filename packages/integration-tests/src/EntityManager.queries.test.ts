@@ -2322,6 +2322,24 @@ describe("EntityManager.queries", () => {
       expect(counts).toEqual([1, 1, 0]);
       expect(numberOfQueries).toBe(1);
     });
+
+    it("can batch count with m2o joins", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", last_name: "smith", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", last_name: "smith", publisher_id: 1 });
+      await insertAuthor({ first_name: "a3", last_name: "doe", publisher_id: 2 });
+      const em = newEntityManager();
+      resetQueryCount();
+      const counts = await Promise.all([
+        // both a1 and a2
+        em.findCount(Author, { lastName: "smith", publisher: "p:1" }, opts),
+        // only a3
+        em.findCount(Author, { lastName: "doe", publisher: "p:2" }, opts),
+      ]);
+      expect(counts).toEqual([2, 1]);
+      expect(numberOfQueries).toBe(1);
+    });
   });
 });
 

@@ -1,3 +1,10 @@
+# [1.93.0](https://github.com/stephenh/joist-ts/compare/v1.92.4...v1.93.0) (2023-07-14)
+
+
+### Features
+
+* Batch findCount queries. ([#730](https://github.com/stephenh/joist-ts/issues/730)) ([54f3e5a](https://github.com/stephenh/joist-ts/commit/54f3e5a17993bcb0cccda1fae7d042b77c276926))
+
 ## [1.92.4](https://github.com/stephenh/joist-ts/compare/v1.92.3...v1.92.4) (2023-07-13)
 
 

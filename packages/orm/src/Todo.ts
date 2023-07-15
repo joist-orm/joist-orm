@@ -14,19 +14,6 @@ export class Todo {
     /** The metadata for entities in this todo; it will be the base metadata for any subtypes. */
     public metadata: EntityMetadata<any>,
   ) {}
-
-  resetAfterFlushed(entityIndex: Map<string, Entity>): void {
-    for (const e of this.inserts) {
-      e.__orm.resetAfterFlushed();
-      entityIndex.set(e.idTagged!, e);
-    }
-    for (const e of this.deletes) {
-      e.__orm.resetAfterFlushed();
-    }
-    for (const e of this.updates) {
-      e.__orm.resetAfterFlushed();
-    }
-  }
 }
 
 /**

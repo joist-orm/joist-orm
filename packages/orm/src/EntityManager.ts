@@ -181,7 +181,7 @@ export class EntityManager<C = unknown> {
   public currentTxnKnex: Knex | undefined;
   #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
-  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
+  // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   #entityIndex: Map<string, Entity> = new Map();
   #flushSecret: number = 0;
   #isFlushing: boolean = false;
@@ -1177,7 +1177,12 @@ export class EntityManager<C = unknown> {
         await afterCommit(this.ctx, entityTodos);
 
         // Update the `__orm` to reflect the new state
-        Object.values(entityTodos).forEach((todo) => todo.resetAfterFlushed(this.#entityIndex));
+        for (const e of entitiesToFlush) {
+          if (e.isNewEntity) {
+            this.#entityIndex.set(e.idTagged!, e);
+          }
+          e.__orm.resetAfterFlushed();
+        }
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
         this.#rm.clear();

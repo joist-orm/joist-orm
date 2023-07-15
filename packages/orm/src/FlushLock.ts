@@ -1,7 +1,10 @@
 import { AsyncLocalStorage } from "async_hooks";
 
+/** A marker to prevent setter calls during `flush` calls. */
+const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
+
 /**
- * A marker to prevent setter calls during `flush` calls.
+ * Prevents entities being mutated mid-flush.
  *
  * The `flush` process does a dirty check + SQL flush and generally doesn't want
  * entities to re-dirtied after it's done the initial dirty check. So we'd like
@@ -14,20 +17,7 @@ import { AsyncLocalStorage } from "async_hooks";
  * handlers) as blessed / invoked-from-`flush`-itself, and they are allowed to call setters,
  * but any external callers (i.e. application code) will be rejected.
  */
-const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
-
-/**
- * Prevents entities being mutated mid-flush.
- *
- * During `em.flush`, Joist scans which entities are dirty and then
- * flushes any changes to the database.
- *
- * However, if the user's code makes additional, adhoc changes to the entities
- * (i.e. from code paths not explicitly driven by the `em.flush` process,
- * like hooks) then those changes could be dropped, so we pre-emptively
- * fail their write.
- */
-export class FlushLocker {
+export class FlushLock {
   #flushSecret: number = 0;
   #isFlushing: boolean = false;
 
@@ -44,7 +34,7 @@ export class FlushLocker {
   }
 
   /** Any writes that happen from `fn`, despite flush being locked, will be allowed. */
-  async allowWrites(fn: () => Promise<void>): Promise<void> {
+  allowWrites(fn: () => Promise<void>): Promise<void> {
     return currentFlushSecret.run({ flushSecret: this.#flushSecret }, () =>
       fn().then(() => {
         this.#flushSecret += 1;

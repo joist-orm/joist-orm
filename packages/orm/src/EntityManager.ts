@@ -1,7 +1,7 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
-import { FlushLocker } from "./FlushLocker";
+import { FlushLock } from "./FlushLock";
 import { ReactionsManager } from "./ReactionsManager";
 import { Todo, combineJoinRows, createTodos } from "./Todo";
 import { constraintNameToValidationError } from "./config";
@@ -183,7 +183,7 @@ export class EntityManager<C = unknown> {
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   #rm = new ReactionsManager();
   /** Ensures our `em.flush` method is not interrupted. */
-  #fl = new FlushLocker();
+  #fl = new FlushLock();
   #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
   private __api: EntityManagerInternalApi;
 

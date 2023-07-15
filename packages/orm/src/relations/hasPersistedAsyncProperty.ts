@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { Const, currentlyInstantiatingEntity } from "../EntityManager";
+import { Const, currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
@@ -96,7 +96,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
       // official "being called during em.flush" update (...unless we're accessing it
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
-      if (!(this.#entity.em as any)._isValidating) {
+      if (!getEmInternalApi(this.#entity.em).isValidating) {
         setField(this.#entity, this.fieldName, newValue);
       }
       return newValue;

@@ -201,12 +201,7 @@ export class EntityManager<C = unknown> {
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   #rm = new ReactionsManager();
   #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
-  private __api: EntityManagerInternalApi = {
-    joinRows: this.#joinRows,
-    pendingChildren: this.#pendingChildren,
-    hooks: this.#hooks,
-    rm: this.#rm,
-  };
+  private __api: EntityManagerInternalApi;
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C, driver: Driver);
@@ -223,6 +218,16 @@ export class EntityManager<C = unknown> {
       this.ctx = emOrCtx!;
       this.driver = driver!;
     }
+    const em = this;
+    this.__api = {
+      joinRows: this.#joinRows,
+      pendingChildren: this.#pendingChildren,
+      hooks: this.#hooks,
+      rm: this.#rm,
+      get isValidating() {
+        return em.#isValidating;
+      },
+    };
   }
 
   /** Returns a read-only shallow copy of the currently-loaded entities. */
@@ -1133,14 +1138,10 @@ export class EntityManager<C = unknown> {
       if (!skipValidation) {
         try {
           this.#isValidating = true;
-          // Accessing persisted properties can trigger `.set`s
-          await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
-            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-            // `validateReactiveRules` next, the lambdas won't see invalid entities.
-            await validateSimpleRules(entityTodos);
-            await validateReactiveRules(entityTodos);
-            this.#flushSecret += 1;
-          });
+          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+          // `validateReactiveRules` next, the lambdas won't see invalid entities.
+          await validateSimpleRules(entityTodos);
+          await validateReactiveRules(entityTodos);
         } finally {
           this.#isValidating = false;
         }
@@ -1401,6 +1402,7 @@ export interface EntityManagerInternalApi {
   pendingChildren: Map<string, Map<string, Entity[]>>;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
+  isValidating: boolean;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

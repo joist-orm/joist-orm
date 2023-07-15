@@ -5,6 +5,7 @@ import {
   ensureTagged,
   EntityMetadata,
   fail,
+  getEmInternalApi,
   getMetadata,
   isEntity,
   isLoaded,
@@ -115,7 +116,7 @@ export class PersistedAsyncReferenceImpl<
       // official "being called during em.flush" update (...unless we're accessing it
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
-      if (!(this.#entity.em as any)._isValidating) {
+      if (!getEmInternalApi(this.#entity.em).isValidating) {
         this.setImpl(newValue);
       }
       return this.maybeFindEntity();

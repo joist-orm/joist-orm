@@ -80,7 +80,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   ensureNotDeleted(entity, "pending");
   const { em } = entity;
 
-  em.checkWritesAllowed();
+  getEmInternalApi(em).checkWritesAllowed();
 
   const { data, originalData } = entity.__orm;
 

@@ -218,6 +218,8 @@ export class EntityManager<C = unknown> {
       this.ctx = emOrCtx!;
       this.driver = driver!;
     }
+
+    // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
     this.__api = {
       joinRows: this.#joinRows,
@@ -226,6 +228,16 @@ export class EntityManager<C = unknown> {
       rm: this.#rm,
       get isValidating() {
         return em.#isValidating;
+      },
+      checkWritesAllowed(): void {
+        if (em.#isFlushing) {
+          const { flushSecret } = currentFlushSecret.getStore() || {};
+          if (flushSecret === undefined) {
+            throw new Error(`Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit`);
+          } else if (flushSecret !== em.#flushSecret) {
+            throw new Error(`Attempting to reuse a hook context outside its flush loop`);
+          }
+        }
       },
     };
   }
@@ -1198,17 +1210,6 @@ export class EntityManager<C = unknown> {
     }
   }
 
-  checkWritesAllowed(): void {
-    if (this.#isFlushing) {
-      const { flushSecret } = currentFlushSecret.getStore() || {};
-      if (flushSecret === undefined) {
-        throw new Error(`Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit`);
-      } else if (flushSecret !== this.#flushSecret) {
-        throw new Error(`Attempting to reuse a hook context outside its flush loop`);
-      }
-    }
-  }
-
   /**
    * A very simple toJSON.
    *
@@ -1397,12 +1398,14 @@ export class EntityManager<C = unknown> {
   }
 }
 
+/** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: Record<string, JoinRow[]>;
   pendingChildren: Map<string, Map<string, Entity[]>>;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
   isValidating: boolean;
+  checkWritesAllowed: () => void;
 }
 
 export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {

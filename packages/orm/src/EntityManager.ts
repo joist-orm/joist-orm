@@ -181,7 +181,7 @@ export class EntityManager<C = unknown> {
   public currentTxnKnex: Knex | undefined;
   #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
-  // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
+  // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   #entityIndex: Map<string, Entity> = new Map();
   #flushSecret: number = 0;
   #isFlushing: boolean = false;
@@ -1095,7 +1095,6 @@ export class EntityManager<C = unknown> {
     if (this.#isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
-
     this.#isFlushing = true;
 
     await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
@@ -1177,20 +1176,13 @@ export class EntityManager<C = unknown> {
         // is going to make multiple `em.flush()` calls?
         await afterCommit(this.ctx, entityTodos);
 
-        Object.values(entityTodos).forEach((todo) => {
-          todo.inserts.forEach((e) => {
+        // Update the `__orm` to reflect the new state
+        for (const e of entitiesToFlush) {
+          if (e.isNewEntity) {
             this.#entityIndex.set(e.idTagged!, e);
-            e.__orm.isNew = false;
-          });
-          todo.deletes.forEach((e) => {
-            e.__orm.deleted = "deleted";
-          });
-          [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
-            e.__orm.originalData = {};
-            e.__orm.isTouched = false;
-          });
-        });
-
+          }
+          e.__orm.resetAfterFlushed();
+        }
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
         this.#rm.clear();

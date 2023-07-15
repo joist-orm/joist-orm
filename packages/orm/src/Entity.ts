@@ -38,19 +38,35 @@ export interface Entity {
 }
 
 /** The `__orm` metadata field we track on each instance. */
-export interface EntityOrmField {
+export class EntityOrmField {
+  /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
+  readonly em: EntityManager;
   /** A point to our entity type's metadata. */
-  metadata: EntityMetadata<Entity>;
+  readonly metadata: EntityMetadata<Entity>;
   /** A bag for our primitives/fk column values. */
   data: Record<any, any>;
   /** A bag to keep the original values, lazily populated. */
   originalData: Record<any, any>;
   /** Whether our entity has been deleted or not. */
   deleted?: "pending" | "deleted";
-  /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
-  em: EntityManager;
   /** Whether our entity is new or not. */
-  isNew: boolean;
+  isNew: boolean = true;
   /** Whether our entity should flush regardless of any other changes. */
-  isTouched: boolean;
+  isTouched: boolean = false;
+
+  constructor(em: EntityManager, metadata: EntityMetadata<Entity>, defaultValues: Record<any, any>) {
+    this.em = em;
+    this.metadata = metadata;
+    this.data = { ...defaultValues };
+    this.originalData = {};
+  }
+
+  resetAfterFlushed() {
+    this.originalData = {};
+    this.isTouched = false;
+    this.isNew = false;
+    if (this.deleted === "pending") {
+      this.deleted = "deleted";
+    }
+  }
 }

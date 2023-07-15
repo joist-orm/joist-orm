@@ -27,7 +27,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
     Object.defineProperty(this, "__orm", {
-      value: { em, metadata, data: { ...defaultValues }, originalData: {}, isNew: true, isTouched: false },
+      value: new EntityOrmField(em, metadata, defaultValues),
       enumerable: false,
     });
     Object.defineProperty(this, "entity", {

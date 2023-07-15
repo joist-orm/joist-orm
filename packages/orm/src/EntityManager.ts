@@ -1526,11 +1526,11 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
 }
 
 export function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em)["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
+  return Promise.all(getEmInternalApi(em).hooks.beforeTransaction.map((fn) => fn(em, knex)));
 }
 
 export function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
-  return Promise.all(getEmInternalApi(em)["hooks"].afterTransaction.map((fn) => fn(em, knex)));
+  return Promise.all(getEmInternalApi(em).hooks.afterTransaction.map((fn) => fn(em, knex)));
 }
 
 async function runHook(

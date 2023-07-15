@@ -16,8 +16,6 @@ import { AsyncLocalStorage } from "async_hooks";
  */
 const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
 
-type AllowWrites = (fn: () => Promise<void>) => Promise<void>;
-
 /**
  * Prevents entities being mutated mid-flush.
  *

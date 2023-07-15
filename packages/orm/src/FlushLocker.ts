@@ -52,7 +52,7 @@ export class FlushLocker {
     );
   }
 
-  /** Returns false if writes are locked and the caller is not within a `allowWrites` block. */
+  /** Blows up if writes are locked, i.e. we're flushing and the caller is not within an `allowWrites` block. */
   checkWritesAllowed(): void {
     if (this.#isFlushing) {
       const { flushSecret } = currentFlushSecret.getStore() || {};

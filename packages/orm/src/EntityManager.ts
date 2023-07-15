@@ -1075,7 +1075,7 @@ export class EntityManager<C = unknown> {
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     const { skipValidation = false } = flushOptions;
 
-    if (this.isFlushing) {
+    if (this.#isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
 
@@ -1133,10 +1133,14 @@ export class EntityManager<C = unknown> {
       if (!skipValidation) {
         try {
           this.#isValidating = true;
-          // Run simple rules first b/c it includes not-null/required rules, so that then when we run
-          // `validateReactiveRules` next, the lambdas won't see invalid entities.
-          await validateSimpleRules(entityTodos);
-          await validateReactiveRules(entityTodos);
+          // Accessing persisted properties can trigger `.set`s
+          await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
+            // Run simple rules first b/c it includes not-null/required rules, so that then when we run
+            // `validateReactiveRules` next, the lambdas won't see invalid entities.
+            await validateSimpleRules(entityTodos);
+            await validateReactiveRules(entityTodos);
+            this.#flushSecret += 1;
+          });
         } finally {
           this.#isValidating = false;
         }
@@ -1191,10 +1195,6 @@ export class EntityManager<C = unknown> {
     } finally {
       this.#isFlushing = false;
     }
-  }
-
-  get isFlushing(): boolean {
-    return this.#isFlushing;
   }
 
   checkWritesAllowed(): void {

@@ -691,7 +691,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => (author.firstName = "different name")).toThrow(
-      "Cannot set 'firstName' on Author:1 during a flush outside of a entity hook or from afterCommit",
+      "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
     );
     await flushPromise;
   });
@@ -705,7 +705,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => p1.authors.add(a1)).toThrow(
-      /Cannot set 'publisher' on Author[:#]1 during a flush outside of a entity hook or from afterCommit/,
+      "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
     );
     await flushPromise;
   });
@@ -719,7 +719,7 @@ describe("EntityManager", () => {
     const flushPromise = em.flush();
     await delay(0);
     expect(() => a1.publisher.set(p1)).toThrow(
-      "Cannot set 'publisher' on Author:1 during a flush outside of a entity hook or from afterCommit",
+      "Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit",
     );
     await flushPromise;
   });

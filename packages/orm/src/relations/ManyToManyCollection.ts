@@ -4,6 +4,7 @@ import {
   ensureNotDeleted,
   Entity,
   EntityMetadata,
+  getEmInternalApi,
   getMetadata,
   IdOf,
   ManyToManyField,
@@ -137,7 +138,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         [this.columnName]: this.#entity,
         [this.otherColumnName]: other,
       };
-      getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
+      getOrSet(getEmInternalApi(this.#entity.em).joinRows, this.joinTableName, []).push(joinRow);
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.#entity, true);
     }
   }
@@ -146,7 +147,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
 
     if (!percolated) {
-      const joinRows = getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []);
+      const joinRows = getOrSet(getEmInternalApi(this.#entity.em).joinRows, this.joinTableName, []);
       const row = joinRows.find((r) => r[this.columnName] === this.#entity && r[this.otherColumnName] === other);
       if (row) {
         row.deleted = true;
@@ -159,7 +160,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
           [this.otherColumnName]: other,
           deleted: true,
         };
-        getOrSet(this.#entity.em.__data.joinRows, this.joinTableName, []).push(joinRow);
+        getOrSet(getEmInternalApi(this.#entity.em).joinRows, this.joinTableName, []).push(joinRow);
       }
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.#entity, true);
     }
@@ -263,7 +264,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       this.removedBeforeLoaded?.forEach((e) => {
         remove(this.loaded!, e);
         const { em } = this.#entity;
-        const row = em.__data.joinRows[this.joinTableName].find(
+        const row = getEmInternalApi(em).joinRows[this.joinTableName].find(
           (r) => r[this.columnName] === this.#entity && r[this.otherColumnName] === e,
         );
         if (row) {

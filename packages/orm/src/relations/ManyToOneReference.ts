@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "../Entity";
-import { IdOf, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
+import { IdOf, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
   OneToManyLargeCollection,
@@ -280,10 +280,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     } else if (typeof id === "string") {
       // Other is not loaded in memory, but cache it in case our other side is later loaded
       const { em } = this.#entity;
-      let map = em.pendingChildren.get(id);
+      let map = getEmInternalApi(em).pendingChildren.get(id);
       if (!map) {
         map = new Map();
-        em.pendingChildren.set(id, map);
+        getEmInternalApi(em).pendingChildren.set(id, map);
       }
       let list = map.get(this.otherFieldName);
       if (!list) {

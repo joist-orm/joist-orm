@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
-import { abbreviation, getMetadata, keyToNumber, keyToString, ManyToManyCollection, ParsedFindQuery } from "../index";
+import { EntityManager, getEmInternalApi } from "../EntityManager";
+import { ManyToManyCollection, ParsedFindQuery, abbreviation, getMetadata, keyToNumber, keyToString } from "../index";
 import { JoinRow } from "../relations/ManyToManyCollection";
 import { getOrSet } from "../utils";
 
@@ -34,7 +34,7 @@ async function load<T extends Entity, U extends Entity>(
   const rowsByKey: Record<string, JoinRow[]> = {};
 
   // Keep a reference to our row to track updates/deletes
-  const emJoinRows = getOrSet(em.__data.joinRows, joinTableName, []);
+  const emJoinRows = getOrSet(getEmInternalApi(em).joinRows, joinTableName, []);
 
   // Break out `column_id=string` keys out
   const columns: Record<string, string[]> = {};

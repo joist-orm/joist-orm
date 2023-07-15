@@ -1095,7 +1095,6 @@ export class EntityManager<C = unknown> {
     if (this.#isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
-
     this.#isFlushing = true;
 
     await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
@@ -1177,20 +1176,8 @@ export class EntityManager<C = unknown> {
         // is going to make multiple `em.flush()` calls?
         await afterCommit(this.ctx, entityTodos);
 
-        Object.values(entityTodos).forEach((todo) => {
-          todo.inserts.forEach((e) => {
-            this.#entityIndex.set(e.idTagged!, e);
-            e.__orm.isNew = false;
-          });
-          todo.deletes.forEach((e) => {
-            e.__orm.deleted = "deleted";
-          });
-          [todo.inserts, todo.updates, todo.deletes].flat().forEach((e) => {
-            e.__orm.originalData = {};
-            e.__orm.isTouched = false;
-          });
-        });
-
+        // Update the `__orm` to reflect the new state
+        Object.values(entityTodos).forEach((todo) => todo.resetAfterFlushed(this.#entityIndex));
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
         this.#rm.clear();

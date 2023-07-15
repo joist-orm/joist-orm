@@ -179,15 +179,14 @@ export class EntityManager<C = unknown> {
   public readonly ctx: C;
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;
-  private _entities: Entity[] = [];
+  #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `_entities` was an `O(n^2)`.
-  private _entityIndex: Map<string, Entity> = new Map();
-  private flushSecret: number = 0;
-  private _isFlushing: boolean = false;
-  private _isValidating: boolean = false;
-  // TODO Make these private
-  public pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
+  #entityIndex: Map<string, Entity> = new Map();
+  #flushSecret: number = 0;
+  #isFlushing: boolean = false;
+  #isValidating: boolean = false;
+  #pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
    *
@@ -196,18 +195,13 @@ export class EntityManager<C = unknown> {
    * of our `flush` loop, and b) cascade deletions before we recalc fields & run user hooks,
    * so that both see the most accurate state.
    */
-  private pendingCascadeDeletes: Entity[] = [];
-  public dataloaders: Record<string, LoaderCache> = {};
-  // This is attempting to be internal/module private
-  __data = {
-    joinRows: {} as Record<string, JoinRow[]>,
-    /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
-    rm: new ReactionsManager(),
-  };
-  private hooks: Record<EntityManagerHook, HookFn[]> = {
-    beforeTransaction: [],
-    afterTransaction: [],
-  };
+  #pendingCascadeDeletes: Entity[] = [];
+  #dataloaders: Record<string, LoaderCache> = {};
+  #joinRows: Record<string, JoinRow[]> = {};
+  /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
+  #rm = new ReactionsManager();
+  #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
+  private __api: EntityManagerInternalApi;
 
   constructor(em: EntityManager<C>);
   constructor(ctx: C, driver: Driver);
@@ -215,26 +209,48 @@ export class EntityManager<C = unknown> {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
       this.driver = em.driver;
-      this.hooks = {
-        beforeTransaction: [...em.hooks.beforeTransaction],
-        afterTransaction: [...em.hooks.afterTransaction],
+      this.#hooks = {
+        beforeTransaction: [...em.#hooks.beforeTransaction],
+        afterTransaction: [...em.#hooks.afterTransaction],
       };
       this.ctx = em.ctx!;
     } else {
       this.ctx = emOrCtx!;
       this.driver = driver!;
     }
+
+    // Expose some of our private fields as the EntityManagerInternalApi
+    const em = this;
+    this.__api = {
+      joinRows: this.#joinRows,
+      pendingChildren: this.#pendingChildren,
+      hooks: this.#hooks,
+      rm: this.#rm,
+      get isValidating() {
+        return em.#isValidating;
+      },
+      checkWritesAllowed(): void {
+        if (em.#isFlushing) {
+          const { flushSecret } = currentFlushSecret.getStore() || {};
+          if (flushSecret === undefined) {
+            throw new Error(`Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit`);
+          } else if (flushSecret !== em.#flushSecret) {
+            throw new Error(`Attempting to reuse a hook context outside its flush loop`);
+          }
+        }
+      },
+    };
   }
 
   /** Returns a read-only shallow copy of the currently-loaded entities. */
   get entities(): ReadonlyArray<Entity> {
-    return [...this._entities];
+    return [...this.#entities];
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
   getEntity<T extends Entity>(id: IdOf<T>): T | undefined {
     assertIdIsTagged(id);
-    return this._entityIndex.get(id) as T | undefined;
+    return this.#entityIndex.get(id) as T | undefined;
   }
 
   /**
@@ -467,7 +483,7 @@ export class EntityManager<C = unknown> {
     // clause before knowing if it should adjust teh amount.
     const isSelectAll = Object.keys(where).length === 0;
     if (isSelectAll) {
-      for (const entity of this._entities) {
+      for (const entity of this.#entities) {
         if (entity instanceof type) {
           if (entity.isNewEntity) {
             count++;
@@ -1006,11 +1022,11 @@ export class EntityManager<C = unknown> {
       if (this.findExistingInstance(entity.idTagged) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
-      this._entityIndex.set(entity.idTagged, entity);
+      this.#entityIndex.set(entity.idTagged, entity);
     }
 
-    this._entities.push(entity);
-    if (this._entities.length >= entityLimit) {
+    this.#entities.push(entity);
+    if (this.#entities.length >= entityLimit) {
       throw new Error(`More than ${entityLimit} entities have been instantiated`);
     }
 
@@ -1023,7 +1039,7 @@ export class EntityManager<C = unknown> {
       if (updatedAt) {
         entity.__orm.data[updatedAt] = new Date();
       }
-      this.__data.rm.queueAllDownstreamFields(entity);
+      this.#rm.queueAllDownstreamFields(entity);
     }
 
     currentlyInstantiatingEntity = entity;
@@ -1047,11 +1063,11 @@ export class EntityManager<C = unknown> {
     }
     entity.__orm.deleted = "pending";
     // Any derived fields that read this entity will need recalc-d
-    this.__data.rm.queueAllDownstreamFields(entity);
+    this.#rm.queueAllDownstreamFields(entity);
     // Synchronously unhook the entity if the relations are loaded
     getCascadeDeleteRelations(entity).forEach((r) => r.maybeCascadeDelete());
     // And queue the cascade deletes
-    this.pendingCascadeDeletes.push(entity);
+    this.#pendingCascadeDeletes.push(entity);
   }
 
   async assignNewIds() {
@@ -1076,13 +1092,13 @@ export class EntityManager<C = unknown> {
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     const { skipValidation = false } = flushOptions;
 
-    if (this.isFlushing) {
+    if (this.#isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
 
-    this._isFlushing = true;
+    this.#isFlushing = true;
 
-    await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
+    await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
       // Recalc any touched entities
       const touched = this.entities.filter((e) => e.__orm.isTouched);
       if (touched.length > 0) {
@@ -1094,7 +1110,7 @@ export class EntityManager<C = unknown> {
       // that would NPE their logic anyway).
       await this.cascadeDeletes();
       // Recalc before we run hooks, so the hooks will see the latest calculated values.
-      await this.__data.rm.recalcPendingDerivedValues();
+      await this.#rm.recalcPendingDerivedValues();
     });
 
     const hooksInvoked: Set<Entity> = new Set();
@@ -1103,7 +1119,7 @@ export class EntityManager<C = unknown> {
     try {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
-        await currentFlushSecret.run({ flushSecret: this.flushSecret }, async () => {
+        await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
           // Run our hooks
           let todos = createTodos(pendingEntities);
           await beforeCreate(this.ctx, todos);
@@ -1118,11 +1134,11 @@ export class EntityManager<C = unknown> {
           // The hooks could have deleted this-loop or prior-loop entities, so re-cascade again.
           await this.cascadeDeletes();
           // The hooks could have changed fields, so recalc again.
-          await this.__data.rm.recalcPendingDerivedValues();
+          await this.#rm.recalcPendingDerivedValues();
 
           for (const e of pendingEntities) hooksInvoked.add(e);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
-          this.flushSecret += 1;
+          this.#flushSecret += 1;
         });
       }
 
@@ -1133,18 +1149,18 @@ export class EntityManager<C = unknown> {
 
       if (!skipValidation) {
         try {
-          this._isValidating = true;
+          this.#isValidating = true;
           // Run simple rules first b/c it includes not-null/required rules, so that then when we run
           // `validateReactiveRules` next, the lambdas won't see invalid entities.
           await validateSimpleRules(entityTodos);
           await validateReactiveRules(entityTodos);
         } finally {
-          this._isValidating = false;
+          this.#isValidating = false;
         }
         await afterValidation(this.ctx, entityTodos);
       }
 
-      const joinRowTodos = combineJoinRows(this.__data.joinRows);
+      const joinRowTodos = combineJoinRows(this.#joinRows);
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
@@ -1163,7 +1179,7 @@ export class EntityManager<C = unknown> {
 
         Object.values(entityTodos).forEach((todo) => {
           todo.inserts.forEach((e) => {
-            this._entityIndex.set(e.idTagged!, e);
+            this.#entityIndex.set(e.idTagged!, e);
             e.__orm.isNew = false;
           });
           todo.deletes.forEach((e) => {
@@ -1176,8 +1192,8 @@ export class EntityManager<C = unknown> {
         });
 
         // Reset the find caches b/c data will have changed in the db
-        this.dataloaders = {};
-        this.__data.rm.clear();
+        this.#dataloaders = {};
+        this.#rm.clear();
       }
 
       return entitiesToFlush;
@@ -1190,12 +1206,8 @@ export class EntityManager<C = unknown> {
       }
       throw e;
     } finally {
-      this._isFlushing = false;
+      this.#isFlushing = false;
     }
-  }
-
-  get isFlushing(): boolean {
-    return this._isFlushing;
   }
 
   /**
@@ -1225,10 +1237,10 @@ export class EntityManager<C = unknown> {
   async refresh(entity: Entity): Promise<void>;
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
-    this.dataloaders = {};
+    this.#dataloaders = {};
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
-      param === undefined ? this._entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this._entities;
+      param === undefined ? this.#entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this.#entities;
     const done = new Set<Entity>();
     while (todo.length > 0) {
       const copy = [...todo];
@@ -1283,7 +1295,7 @@ export class EntityManager<C = unknown> {
   // Currently only public for the driver impls
   public findExistingInstance<T>(id: string): T | undefined {
     assertIdIsTagged(id);
-    return this._entityIndex.get(id) as T | undefined;
+    return this.#entityIndex.get(id) as T | undefined;
   }
 
   /**
@@ -1331,11 +1343,11 @@ export class EntityManager<C = unknown> {
   }
 
   public beforeTransaction(fn: HookFn) {
-    this.hooks.beforeTransaction.push(fn);
+    this.#hooks.beforeTransaction.push(fn);
   }
 
   public afterTransaction(fn: HookFn) {
-    this.hooks.afterTransaction.push(fn);
+    this.#hooks.afterTransaction.push(fn);
   }
 
   /**
@@ -1357,7 +1369,7 @@ export class EntityManager<C = unknown> {
     // If we wanted to, if not in a transaction, we could potentially do lookups against a global cache,
     // to achieve cross-request batching. Granted we'd need all DataLoaders to have caching disabled, see:
     // https://github.com/stephenh/joist-ts/issues/629
-    const loadersForKind = (this.dataloaders[operation] ??= {});
+    const loadersForKind = (this.#dataloaders[operation] ??= {});
     return getOrSet(loadersForKind, batchKey, () => new DataLoader(fn, opts));
   }
 
@@ -1367,8 +1379,8 @@ export class EntityManager<C = unknown> {
 
   /** Recursively cascades any pending deletions. */
   private async cascadeDeletes(): Promise<void> {
-    let entities = this.pendingCascadeDeletes;
-    this.pendingCascadeDeletes = [];
+    let entities = this.#pendingCascadeDeletes;
+    this.#pendingCascadeDeletes = [];
     // Loop if our deletes cascade to other deletes
     while (entities.length > 0) {
       // For cascade delete relations, cascade the delete...
@@ -1380,10 +1392,24 @@ export class EntityManager<C = unknown> {
       await beforeDelete(this.ctx, todos);
       // For all relations, unhook the entity from the other side
       await Promise.all(entities.flatMap(getRelations).map((r) => r.cleanupOnEntityDeleted()));
-      entities = this.pendingCascadeDeletes;
-      this.pendingCascadeDeletes = [];
+      entities = this.#pendingCascadeDeletes;
+      this.#pendingCascadeDeletes = [];
     }
   }
+}
+
+/** Provides an internal API to the `EntityManager`. */
+export interface EntityManagerInternalApi {
+  joinRows: Record<string, JoinRow[]>;
+  pendingChildren: Map<string, Map<string, Entity[]>>;
+  hooks: Record<EntityManagerHook, HookFn[]>;
+  rm: ReactionsManager;
+  isValidating: boolean;
+  checkWritesAllowed: () => void;
+}
+
+export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
+  return (em as any)["__api"];
 }
 
 export let entityLimit = 10_000;
@@ -1503,11 +1529,11 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
 }
 
 export function beforeTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
-  return Promise.all(em["hooks"].beforeTransaction.map((fn) => fn(em, knex)));
+  return Promise.all(getEmInternalApi(em).hooks.beforeTransaction.map((fn) => fn(em, knex)));
 }
 
 export function afterTransaction(em: EntityManager, knex: Knex.Transaction): Promise<unknown> {
-  return Promise.all(em["hooks"].afterTransaction.map((fn) => fn(em, knex)));
+  return Promise.all(getEmInternalApi(em).hooks.afterTransaction.map((fn) => fn(em, knex)));
 }
 
 async function runHook(

@@ -6,6 +6,7 @@ import {
   ensureNotDeleted,
   Entity,
   EntityMetadata,
+  getEmInternalApi,
   getMetadata,
   IdOf,
   maybeResolveReferenceToId,
@@ -228,7 +229,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     // be handled here?)
     if (!this.#entity.isNewEntity) {
       const { em } = this.#entity;
-      const newChildren = em.pendingChildren.get(this.#entity.idTagged!)?.get(this.fieldName);
+      const newChildren = getEmInternalApi(em).pendingChildren.get(this.#entity.idTagged!)?.get(this.fieldName);
       if (newChildren) {
         (this.#addedBeforeLoaded ??= []).push(...(newChildren as U[]));
         newChildren.splice(0, newChildren.length);

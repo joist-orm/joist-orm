@@ -30,7 +30,7 @@ export function findDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  const batchKey = getKeyFromGenericStructure(query);
+  const batchKey = getBatchKeyFromGenericStructure(query);
 
   return em.getLoader(
     "find",
@@ -282,7 +282,7 @@ function ensureUnderLimit(rows: unknown[]): void {
   }
 }
 
-export function getKeyFromGenericStructure(query: ParsedFindQuery): string {
+export function getBatchKeyFromGenericStructure(query: ParsedFindQuery): string {
   // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
   const clone = structuredClone(query);
   stripValues(clone);

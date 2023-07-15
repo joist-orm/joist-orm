@@ -1,8 +1,8 @@
 import { Entity, EntityOrmField, isEntity } from "./Entity";
 import {
-  currentFlushSecret,
   EntityConstructor,
   EntityManager,
+  getEmInternalApi,
   MaybeAbstractEntityConstructor,
   OptsOf,
 } from "./EntityManager";
@@ -80,17 +80,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   ensureNotDeleted(entity, "pending");
   const { em } = entity;
 
-  if (em.isFlushing) {
-    const { flushSecret } = currentFlushSecret.getStore() || {};
-    if (flushSecret === undefined) {
-      throw new Error(
-        `Cannot set '${fieldName}' on ${entity} during a flush outside of a entity hook or from afterCommit`,
-      );
-    }
-    if (flushSecret !== em["flushSecret"]) {
-      throw new Error(`Attempting to reuse a hook context outside its flush loop`);
-    }
-  }
+  getEmInternalApi(em).checkWritesAllowed();
 
   const { data, originalData } = entity.__orm;
 
@@ -99,7 +89,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
     if (equalOrSameEntity(originalData[fieldName], newValue)) {
       data[fieldName] = newValue;
       delete originalData[fieldName];
-      em.__data.rm.dequeueDownstreamReactiveFields(entity, fieldName);
+      getEmInternalApi(em).rm.dequeueDownstreamReactiveFields(entity, fieldName);
       return true;
     }
   }
@@ -114,7 +104,7 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
   if (!(fieldName in originalData)) {
     originalData[fieldName] = currentValue;
   }
-  em.__data.rm.queueDownstreamReactiveFields(entity, fieldName);
+  getEmInternalApi(em).rm.queueDownstreamReactiveFields(entity, fieldName);
   data[fieldName] = newValue;
   return true;
 }

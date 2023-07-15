@@ -10,7 +10,7 @@ import {
   buildValuesCte,
   collectArgs,
   createBindings,
-  getKeyFromGenericStructure,
+  getBatchKeyFromGenericStructure,
   whereFilterHash,
 } from "./findDataLoader";
 
@@ -26,7 +26,7 @@ export function findCountDataLoader<T extends Entity>(
 
   const meta = getMetadata(type);
   const query = parseFindQuery(meta, where, opts);
-  const batchKey = getKeyFromGenericStructure(query);
+  const batchKey = getBatchKeyFromGenericStructure(query);
 
   return em.getLoader(
     "find-count",

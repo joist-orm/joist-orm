@@ -31,7 +31,7 @@ describe("ManyToManyCollection", () => {
     expect(tag.books.get.length).toEqual(1);
     expect(book.tags.get[0]).toStrictEqual(tag);
     expect(tag.books.get[0]).toStrictEqual(book);
-    expect(em.__data.joinRows["books_to_tags"].length).toEqual(1);
+    expect((em as any).__api.joinRows["books_to_tags"].length).toEqual(1);
   });
 
   it("can load a many-to-many with constant queries", async () => {

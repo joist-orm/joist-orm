@@ -1,7 +1,7 @@
-import { AsyncLocalStorage } from "async_hooks";
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
+import { FlushLock } from "./FlushLock";
 import { ReactionsManager } from "./ReactionsManager";
 import { Todo, combineJoinRows, createTodos } from "./Todo";
 import { constraintNameToValidationError } from "./config";
@@ -146,22 +146,6 @@ export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
-/**
- * A marker to prevent setter calls during `flush` calls.
- *
- * The `flush` process does a dirty check + SQL flush and generally doesn't want
- * entities to re-dirtied after it's done the initial dirty check. So we'd like
- * to prevent all setter calls while `flush` is running.
- *
- * That said, lifecycle code like hooks actually can make setter calls b/c `flush`
- * invokes them at a specific point in its process.
- *
- * We solve this by using node's `AsyncLocalStorage` to mark certain callbacks (promise
- * handlers) as blessed / invoked-from-`flush`-itself, and they are allowed to call setters,
- * but any external callers (i.e. application code) will be rejected.
- */
-export const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
-
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
 export type TimestampFields = {
@@ -183,8 +167,6 @@ export class EntityManager<C = unknown> {
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   #entityIndex: Map<string, Entity> = new Map();
-  #flushSecret: number = 0;
-  #isFlushing: boolean = false;
   #isValidating: boolean = false;
   #pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
   /**
@@ -200,6 +182,8 @@ export class EntityManager<C = unknown> {
   #joinRows: Record<string, JoinRow[]> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   #rm = new ReactionsManager();
+  /** Ensures our `em.flush` method is not interrupted. */
+  #fl = new FlushLock();
   #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
   private __api: EntityManagerInternalApi;
 
@@ -230,14 +214,7 @@ export class EntityManager<C = unknown> {
         return em.#isValidating;
       },
       checkWritesAllowed(): void {
-        if (em.#isFlushing) {
-          const { flushSecret } = currentFlushSecret.getStore() || {};
-          if (flushSecret === undefined) {
-            throw new Error(`Cannot mutate an entity during an em.flush outside of a entity hook or from afterCommit`);
-          } else if (flushSecret !== em.#flushSecret) {
-            throw new Error(`Attempting to reuse a hook context outside its flush loop`);
-          }
-        }
+        return em.#fl.checkWritesAllowed();
       },
     };
   }
@@ -1092,12 +1069,9 @@ export class EntityManager<C = unknown> {
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     const { skipValidation = false } = flushOptions;
 
-    if (this.#isFlushing) {
-      throw new Error("Cannot flush while another flush is already in progress");
-    }
-    this.#isFlushing = true;
+    this.#fl.startLock();
 
-    await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
+    await this.#fl.allowWrites(async () => {
       // Recalc any touched entities
       const touched = this.entities.filter((e) => e.__orm.isTouched);
       if (touched.length > 0) {
@@ -1118,7 +1092,7 @@ export class EntityManager<C = unknown> {
     try {
       while (pendingEntities.length > 0) {
         // Run hooks in a series of loops until things "settle down"
-        await currentFlushSecret.run({ flushSecret: this.#flushSecret }, async () => {
+        await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos(pendingEntities);
           await beforeCreate(this.ctx, todos);
@@ -1137,7 +1111,6 @@ export class EntityManager<C = unknown> {
 
           for (const e of pendingEntities) hooksInvoked.add(e);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
-          this.#flushSecret += 1;
         });
       }
 
@@ -1198,7 +1171,7 @@ export class EntityManager<C = unknown> {
       }
       throw e;
     } finally {
-      this.#isFlushing = false;
+      this.#fl.releaseLock();
     }
   }
 

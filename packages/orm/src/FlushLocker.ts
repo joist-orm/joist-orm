@@ -18,18 +18,30 @@ const currentFlushSecret = new AsyncLocalStorage<{ flushSecret: number }>();
 
 type AllowWrites = (fn: () => Promise<void>) => Promise<void>;
 
+/**
+ * Prevents entities being mutated mid-flush.
+ *
+ * During `em.flush`, Joist scans which entities are dirty and then
+ * flushes any changes to the database.
+ *
+ * However, if the user's code makes additional, adhoc changes to the entities
+ * (i.e. from code paths not explicitly driven by the `em.flush` process,
+ * like hooks) then those changes could be dropped, so we pre-emptively
+ * fail their write.
+ */
 export class FlushLocker {
   #flushSecret: number = 0;
   #isFlushing: boolean = false;
 
-  startFlush(): void {
+  /** This will begin any non-hook restrictions on writing to entities. */
+  startLock(): void {
     if (this.#isFlushing) {
       throw new Error("Cannot flush while another flush is already in progress");
     }
     this.#isFlushing = true;
   }
 
-  stopFlush(): void {
+  releaseLock(): void {
     this.#isFlushing = false;
   }
 

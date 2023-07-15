@@ -1069,7 +1069,7 @@ export class EntityManager<C = unknown> {
   async flush(flushOptions: FlushOptions = {}): Promise<Entity[]> {
     const { skipValidation = false } = flushOptions;
 
-    this.#fl.startFlush();
+    this.#fl.startLock();
 
     await this.#fl.allowWrites(async () => {
       // Recalc any touched entities
@@ -1171,7 +1171,7 @@ export class EntityManager<C = unknown> {
       }
       throw e;
     } finally {
-      this.#fl.stopFlush();
+      this.#fl.releaseLock();
     }
   }
 

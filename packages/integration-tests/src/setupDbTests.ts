@@ -1,7 +1,7 @@
 import { EntityManager } from "@src/entities";
 import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
+import { afterAll, beforeAll, beforeEach } from "bun:test";
 import { Driver } from "joist-orm";
-import { toMatchEntity } from "joist-test-utils";
 import { Knex } from "knex";
 
 // Eventually set this via an env flag for dual CI builds, but for now just hard-coding
@@ -11,7 +11,7 @@ export const inMemory = false;
 export let testDriver: TestDriver;
 export let driver: Driver;
 export let knex: Knex;
-export const makeApiCall = jest.fn();
+export const makeApiCall = () => {}; // jest.fn();
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
@@ -22,7 +22,7 @@ export function newEntityManager() {
   return em;
 }
 
-expect.extend({ toMatchEntity });
+// expect.extend({ toMatchEntity });
 
 beforeAll(async () => {
   testDriver = inMemory ? new InMemoryTestDriver() : new PostgresTestDriver();

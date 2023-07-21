@@ -34,7 +34,7 @@ export class PostgresTestDriver implements TestDriver {
     this.knex = createKnex({
       client: "pg",
       connection: newPgConnectionConfig(),
-      debug: false,
+      debug: true,
       asyncStackTraces: true,
     }).on("query", (e: any) => {
       recordQuery(e.sql);

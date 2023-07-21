@@ -1,4 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
+import { describe, expect, it } from "bun:test";
 import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";

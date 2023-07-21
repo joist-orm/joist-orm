@@ -1,7 +1,8 @@
-import * as console from "console";
 import { Benchmark } from "kelonio";
 import { knex as createKnex } from "knex";
 import postgres from "postgres";
+
+// Run with `yarn tsx ./benchmark.ts` or `bun ./benchmark.ts`
 
 const knex = createKnex({
   client: "pg",
@@ -17,7 +18,7 @@ async function main() {
   await knex.raw("select flush_database()");
 
   const benchmark = new Benchmark();
-  const numberOfEntities = 20;
+  const numberOfEntities = 2000;
   const iterations = 100;
 
   // Running with serial=false gives particularly bad results for the "individual" tests b/c each

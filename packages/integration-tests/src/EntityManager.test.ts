@@ -14,7 +14,7 @@ import {
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
 import { Author, Book, Color, Comment, Publisher, PublisherSize, newAuthor, newBook, newPublisher } from "./entities";
-import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
+import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {
@@ -177,6 +177,19 @@ describe("EntityManager", () => {
     resetQueryCount();
     await em.flush();
     expect(numberOfQueries).toEqual(0);
+  });
+
+  it("does not insert created-then-deleted entities", async () => {
+    const em = newEntityManager();
+    resetQueryCount();
+    const a = new Author(em, { firstName: "a1" });
+    em.delete(a);
+    await em.flush();
+    // We still issue a BEGIN/COMMIT, which is fine/doesn't matter
+    expect(queries).toEqual(["BEGIN;", "COMMIT;"]);
+    // And the sequence value did not get ticked
+    const { rows } = await knex.raw("SELECT nextval('authors_id_seq')");
+    expect(rows[0].nextval).toBe("1");
   });
 
   it("createdAt / updatedAt are always non-null", async () => {

@@ -23,6 +23,7 @@
     "packages/orm",
     "packages/utils",
     "packages/test-utils",
+    "packages/tests/sqlite",
     "packages/tests/uuid-ids",
     "packages/tests/schema-misc",
     "packages/tests/untagged-ids"

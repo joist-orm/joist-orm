@@ -47,6 +47,8 @@ export const ImageTypeDetails: Record<ImageType[0], ImageTypeDetails> = {
 };
 
 export const ImageTypes = {
+  name: "ImageType",
+
   getByCode(code: ImageType): ImageTypeDetails {
     return details[code];
   },

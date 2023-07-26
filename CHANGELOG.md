@@ -1,3 +1,10 @@
+# [1.94.0](https://github.com/stephenh/joist-ts/compare/v1.93.0...v1.94.0) (2023-07-26)
+
+
+### Features
+
+* Include enum name into enum details object ([#739](https://github.com/stephenh/joist-ts/issues/739)) ([a8ad3ca](https://github.com/stephenh/joist-ts/commit/a8ad3cab64c49a37909cde12f975c986b7dd7999))
+
 # [1.93.0](https://github.com/stephenh/joist-ts/compare/v1.92.4...v1.93.0) (2023-07-14)
 
 

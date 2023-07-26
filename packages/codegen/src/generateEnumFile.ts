@@ -51,6 +51,8 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
     };
 
     export const ${pluralize(enumName)} = {
+      name: "${enumName}",
+
       getByCode(code: ${enumName}): ${detailsName} {
         return details[code];
       },

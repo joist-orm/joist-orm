@@ -16,6 +16,8 @@ export const PublisherTypeDetails: Record<PublisherType[0], PublisherTypeDetails
 };
 
 export const PublisherTypes = {
+  name: "PublisherType",
+
   getByCode(code: PublisherType): PublisherTypeDetails {
     return details[code];
   },

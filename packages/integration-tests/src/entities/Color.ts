@@ -19,6 +19,8 @@ export const ColorDetails: Record<Color[0], ColorDetails> = {
 };
 
 export const Colors = {
+  name: "Color",
+
   getByCode(code: Color): ColorDetails {
     return details[code];
   },

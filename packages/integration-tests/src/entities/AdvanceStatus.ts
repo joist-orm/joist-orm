@@ -19,6 +19,8 @@ export const AdvanceStatusDetails: Record<AdvanceStatus[0], AdvanceStatusDetails
 };
 
 export const AdvanceStatuses = {
+  name: "AdvanceStatus",
+
   getByCode(code: AdvanceStatus): AdvanceStatusDetails {
     return details[code];
   },

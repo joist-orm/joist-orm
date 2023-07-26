@@ -16,6 +16,8 @@ export const PublisherSizeDetails: Record<PublisherSize[0], PublisherSizeDetails
 };
 
 export const PublisherSizes = {
+  name: "PublisherSize",
+
   getByCode(code: PublisherSize): PublisherSizeDetails {
     return details[code];
   },

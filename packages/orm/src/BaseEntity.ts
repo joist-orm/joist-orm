@@ -23,7 +23,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
   // that sufficiently overlaps.
-  readonly entity!: this;
+  readonly fullNonReactiveAccess!: this;
 
   protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
     Object.defineProperty(this, "__orm", {

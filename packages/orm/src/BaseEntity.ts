@@ -30,7 +30,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
       value: new EntityOrmField(em, metadata, defaultValues),
       enumerable: false,
     });
-    Object.defineProperty(this, "entity", {
+    Object.defineProperty(this, "fullNonReactiveAccess", {
       value: this,
       enumerable: false,
       writable: false,

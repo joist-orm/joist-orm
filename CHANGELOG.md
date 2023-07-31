@@ -1,3 +1,10 @@
+# [1.95.0](https://github.com/stephenh/joist-ts/compare/v1.94.0...v1.95.0) (2023-07-31)
+
+
+### Features
+
+* Rename entity to fullNonReactiveAccess. ([#741](https://github.com/stephenh/joist-ts/issues/741)) ([0abc17d](https://github.com/stephenh/joist-ts/commit/0abc17d9d6bb33bee0c31a1f5475136bda5faa02))
+
 # [1.94.0](https://github.com/stephenh/joist-ts/compare/v1.93.0...v1.94.0) (2023-07-26)
 
 

@@ -128,7 +128,7 @@ export class Author extends AuthorCodegen {
     // when evaluating whether to eval our lambda during pre-flush calls.
     ["books", "firstName"],
     (a) => {
-      a.entity.numberOfBooksCalcInvoked++;
+      a.fullNonReactiveAccess.numberOfBooksCalcInvoked++;
       return a.books.get.length;
     },
   );
@@ -138,7 +138,7 @@ export class Author extends AuthorCodegen {
     "bookComments",
     { books: { comments: "text" } },
     (a) => {
-      a.entity.bookCommentsCalcInvoked++;
+      a.fullNonReactiveAccess.bookCommentsCalcInvoked++;
       return a.books.get
         .flatMap((b) => b.comments.get)
         .map((c) => c.text)
@@ -169,7 +169,8 @@ export class Author extends AuthorCodegen {
   /** Example of an async property that returns an entity. */
   readonly latestComment2: AsyncProperty<Author, Comment | undefined> = hasReactiveAsyncProperty(
     { publisher: "comments", comments: {} },
-    (author) => author.publisher.get?.comments.get[0].entity ?? author.comments.get[0].entity,
+    (author) =>
+      author.publisher.get?.comments.get[0].fullNonReactiveAccess ?? author.comments.get[0].fullNonReactiveAccess,
   );
 
   /** Example of an async property that has a conflicting/overlapping reactive hint with ^. */
@@ -222,12 +223,12 @@ config.addRule("books", (a) => {
 
 // Example of rule that is always run even if the field is not set
 config.addRule("mentor", (a) => {
-  a.entity.mentorRuleInvoked++;
+  a.fullNonReactiveAccess.mentorRuleInvoked++;
 });
 
 // Example of rule that is run when set-via-hook field runs
 config.addRule("graduated", (a) => {
-  a.entity.graduatedRuleInvoked++;
+  a.fullNonReactiveAccess.graduatedRuleInvoked++;
 });
 
 // Example of cannotBeUpdated
@@ -235,7 +236,7 @@ config.addRule(cannotBeUpdated("age"));
 
 // Example of a rule against an immutable field
 config.addRule("age", (a) => {
-  a.entity.ageRuleInvoked++;
+  a.fullNonReactiveAccess.ageRuleInvoked++;
 });
 
 config.cascadeDelete("books");

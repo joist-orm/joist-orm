@@ -58,8 +58,14 @@ export type Reacted<T extends Entity, H> = Entity & {
     ? LoadedProperty<any, V>
     : T[K];
 } & {
-  // Give validation rules a way to get back to the full entity if they really need it
-  entity: Loaded<T, H>;
+  /**
+   * Gives reactive rules & fields a way to get the full entity if they really need it.
+   *
+   * This should be used carefully b/c it will side-step the reactive system, and instead
+   * reactive rules & fields should explicitly declare access to the fields they need, which
+   * will then allow accessing the field via the `Reacted<Author, ...>` type.
+   */
+  fullNonReactiveAccess: Loaded<T, H>;
 };
 
 export function reverseReactiveHint<T extends Entity>(

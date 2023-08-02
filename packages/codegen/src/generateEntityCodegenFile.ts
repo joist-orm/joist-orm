@@ -579,7 +579,7 @@ function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
   // try to validate that we actually got a primitive value and not arbitrary SQL
   return (
     (fieldType === "number" && !isNaN(parseInt(columnDefault))) ||
-    (fieldType === "BigInt" && !isNaN(parseInt(columnDefault))) ||
+    (fieldType === "bigint" && !isNaN(parseInt(columnDefault))) ||
     (fieldType === "string" && /^'.*'$/.test(columnDefault)) ||
     (fieldType === "boolean" && ["true", "false"].includes(columnDefault))
   );

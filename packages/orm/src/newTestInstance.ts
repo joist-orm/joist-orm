@@ -459,7 +459,7 @@ function defaultValueForField(em: EntityManager, cstr: EntityConstructor<any>, f
       return field.fieldName;
     case "number":
       return 0;
-    case "BigInt":
+    case "bigint":
       return 0n;
     case "Date":
       return testDate;

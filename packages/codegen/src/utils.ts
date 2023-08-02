@@ -106,7 +106,7 @@ export function mapSimpleDbTypeToTypescriptType(dbType: DatabaseColumnType): Pri
       return "number";
     case "bigserial":
     case "bigint":
-      return "BigInt";
+      return "bigint";
     case "text":
     case "citext":
     case "character varying":

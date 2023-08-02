@@ -80,7 +80,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
       : columnType === "jsonb"
       ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
-      : fieldType === "BigInt"
+      : fieldType === "bigint"
       ? code`new ${BigIntSerde}("${fieldName}", "${columnName}")`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`

@@ -89,6 +89,7 @@ export interface AuthorFields {
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
   businessAddress: { kind: "primitive"; type: z.input<typeof AddressSchema>; unique: false; nullable: undefined };
   quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined };
+  numberOfAtoms: { kind: "primitive"; type: bigint; unique: false; nullable: undefined };
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined };
@@ -113,6 +114,7 @@ export interface AuthorOpts {
   address?: Address | null;
   businessAddress?: z.input<typeof AddressSchema> | null;
   quotes?: Quotes | null;
+  numberOfAtoms?: bigint | null;
   deletedAt?: Date | null;
   favoriteColors?: Color[];
   favoriteShape?: FavoriteShape | null;
@@ -154,6 +156,7 @@ export interface AuthorFilter {
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
   quotes?: ValueFilter<Quotes, null>;
+  numberOfAtoms?: ValueFilter<bigint, null>;
   deletedAt?: ValueFilter<Date, null>;
   numberOfPublicReviews?: ValueFilter<number, null>;
   numberOfPublicReviews2?: ValueFilter<number, null>;
@@ -188,6 +191,7 @@ export interface AuthorGraphQLFilter {
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
   quotes?: ValueGraphQLFilter<Quotes>;
+  numberOfAtoms?: ValueGraphQLFilter<bigint>;
   deletedAt?: ValueGraphQLFilter<Date>;
   numberOfPublicReviews?: ValueGraphQLFilter<number>;
   numberOfPublicReviews2?: ValueGraphQLFilter<number>;
@@ -222,6 +226,7 @@ export interface AuthorOrder {
   address?: OrderBy;
   businessAddress?: OrderBy;
   quotes?: OrderBy;
+  numberOfAtoms?: OrderBy;
   deletedAt?: OrderBy;
   numberOfPublicReviews?: OrderBy;
   numberOfPublicReviews2?: OrderBy;
@@ -418,6 +423,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
       assert(_quotes, quotes);
     }
     setField(this, "quotes", _quotes);
+  }
+
+  get numberOfAtoms(): bigint | undefined {
+    return this.__orm.data["numberOfAtoms"];
+  }
+
+  set numberOfAtoms(numberOfAtoms: bigint | undefined) {
+    setField(this, "numberOfAtoms", numberOfAtoms);
   }
 
   get deletedAt(): Date | undefined {

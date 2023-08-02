@@ -89,6 +89,27 @@ export class PrimitiveSerde implements FieldSerde {
   }
 }
 
+export class BigIntSerde implements FieldSerde {
+  isArray = false;
+  columns = [this];
+  dbType = "bigint";
+
+  constructor(private fieldName: string, public columnName: string) {}
+
+  setOnEntity(data: any, row: any): void {
+    const value = maybeNullToUndefined(row[this.columnName]);
+    data[this.fieldName] = value ? BigInt(value) : value;
+  }
+
+  dbValue(data: any) {
+    return data[this.fieldName];
+  }
+
+  mapToDb(value: any) {
+    return value;
+  }
+}
+
 /**
  * Maps `decimal(...)` database types to the JS `number`.
  *

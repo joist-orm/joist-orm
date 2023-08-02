@@ -5,7 +5,6 @@ describe("AuthorStat", () => {
   describe("minValueRule", () => {
     it("can limit a field to a min value", async () => {
       const em = newEntityManager();
-
       // Given a new AuthorStat with an nullableInteger value of -1
       newAuthorStat(em, { nullableInteger: -1 });
       // When flushing

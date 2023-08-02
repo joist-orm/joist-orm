@@ -757,4 +757,25 @@ describe("Author", () => {
   it("can access metadata", () => {
     expect(Author.metadata).toBe(getMetadata(Author));
   });
+
+  it("can read bigints", async () => {
+    await insertAuthor({ first_name: "a1", number_of_atoms: "9223372036854775807" });
+    const em = newEntityManager();
+    const a = await em.load(Author, "a:1");
+    expect(a.numberOfAtoms).toBe(9223372036854775807n);
+  });
+
+  it("can store bigints", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em, { numberOfAtoms: 9223372036854775807n });
+    await em.flush();
+    expect((await select("authors"))[0].number_of_atoms).toBe("9223372036854775807");
+  });
+
+  it("can filter bigints", async () => {
+    await insertAuthor({ first_name: "a1", number_of_atoms: "9223372036854775807" });
+    const em = newEntityManager();
+    const authors = await em.find(Author, { numberOfAtoms: { gt: 1n } });
+    expect(authors.length).toBe(1);
+  });
 });

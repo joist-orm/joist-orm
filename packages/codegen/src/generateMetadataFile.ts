@@ -3,6 +3,7 @@ import { code, Code, imp } from "ts-poet";
 import { Config } from "./config";
 import { EntityDbMetadata } from "./EntityDbMetadata";
 import {
+  BigIntSerde,
   CustomSerdeAdapter,
   DecimalToNumberSerde,
   EntityMetadata,
@@ -68,7 +69,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
   `;
 
   dbMetadata.primitives.forEach((p) => {
-    const { fieldName, derived, columnName, columnType, superstruct, zodSchema, customSerde } = p;
+    const { fieldName, derived, columnName, columnType, fieldType, superstruct, zodSchema, customSerde } = p;
     const serdeType = customSerde
       ? code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde})`
       : superstruct
@@ -79,6 +80,8 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
       : columnType === "jsonb"
       ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
+      : fieldType === "bigint"
+      ? code`new ${BigIntSerde}("${fieldName}", "${columnName}")`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {

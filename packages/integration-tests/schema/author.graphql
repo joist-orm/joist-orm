@@ -28,6 +28,7 @@ type Author {
   userOneToOne: User
   favoriteBook: Book
   numberOfPublicReviews2: Int
+  numberOfAtoms: Int
 }
 
 input SaveAuthorInput {
@@ -50,6 +51,7 @@ input SaveAuthorInput {
   deletedAt: DateTime
   ssn: String
   favoriteBookId: ID
+  numberOfAtoms: Int
 }
 
 type SaveAuthorResult {

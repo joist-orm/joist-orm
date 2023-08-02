@@ -33,12 +33,12 @@ export interface AuthorStatFields {
   smallint: { kind: "primitive"; type: number; unique: false; nullable: never };
   integer: { kind: "primitive"; type: number; unique: false; nullable: never };
   nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  bigint: { kind: "primitive"; type: number; unique: false; nullable: never };
+  bigint: { kind: "primitive"; type: bigint; unique: false; nullable: never };
   decimal: { kind: "primitive"; type: number; unique: false; nullable: never };
   real: { kind: "primitive"; type: number; unique: false; nullable: never };
   smallserial: { kind: "primitive"; type: number; unique: false; nullable: never };
   serial: { kind: "primitive"; type: number; unique: false; nullable: never };
-  bigserial: { kind: "primitive"; type: number; unique: false; nullable: never };
+  bigserial: { kind: "primitive"; type: bigint; unique: false; nullable: never };
   doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never };
   nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined };
   json: { kind: "primitive"; type: Object; unique: false; nullable: undefined };
@@ -50,12 +50,12 @@ export interface AuthorStatOpts {
   smallint: number;
   integer: number;
   nullableInteger?: number | null;
-  bigint: number;
+  bigint: bigint;
   decimal: number;
   real: number;
   smallserial: number;
   serial: number;
-  bigserial: number;
+  bigserial: bigint;
   doublePrecision: number;
   nullableText?: string | null;
   json?: Object | null;
@@ -69,12 +69,12 @@ export interface AuthorStatFilter {
   smallint?: ValueFilter<number, never>;
   integer?: ValueFilter<number, never>;
   nullableInteger?: ValueFilter<number, null>;
-  bigint?: ValueFilter<number, never>;
+  bigint?: ValueFilter<bigint, never>;
   decimal?: ValueFilter<number, never>;
   real?: ValueFilter<number, never>;
   smallserial?: ValueFilter<number, never>;
   serial?: ValueFilter<number, never>;
-  bigserial?: ValueFilter<number, never>;
+  bigserial?: ValueFilter<bigint, never>;
   doublePrecision?: ValueFilter<number, never>;
   nullableText?: ValueFilter<string, null>;
   json?: ValueFilter<Object, null>;
@@ -87,12 +87,12 @@ export interface AuthorStatGraphQLFilter {
   smallint?: ValueGraphQLFilter<number>;
   integer?: ValueGraphQLFilter<number>;
   nullableInteger?: ValueGraphQLFilter<number>;
-  bigint?: ValueGraphQLFilter<number>;
+  bigint?: ValueGraphQLFilter<bigint>;
   decimal?: ValueGraphQLFilter<number>;
   real?: ValueGraphQLFilter<number>;
   smallserial?: ValueGraphQLFilter<number>;
   serial?: ValueGraphQLFilter<number>;
-  bigserial?: ValueGraphQLFilter<number>;
+  bigserial?: ValueGraphQLFilter<bigint>;
   doublePrecision?: ValueGraphQLFilter<number>;
   nullableText?: ValueGraphQLFilter<string>;
   json?: ValueGraphQLFilter<Object>;
@@ -192,11 +192,11 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
     setField(this, "nullableInteger", nullableInteger);
   }
 
-  get bigint(): number {
+  get bigint(): bigint {
     return this.__orm.data["bigint"];
   }
 
-  set bigint(bigint: number) {
+  set bigint(bigint: bigint) {
     setField(this, "bigint", bigint);
   }
 
@@ -232,11 +232,11 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
     setField(this, "serial", serial);
   }
 
-  get bigserial(): number {
+  get bigserial(): bigint {
     return this.__orm.data["bigserial"];
   }
 
-  set bigserial(bigserial: number) {
+  set bigserial(bigserial: bigint) {
     setField(this, "bigserial", bigserial);
   }
 

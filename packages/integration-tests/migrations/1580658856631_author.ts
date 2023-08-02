@@ -101,6 +101,7 @@ export function up(b: MigrationBuilder): void {
     address: { type: "jsonb", notNull: false },
     business_address: { type: "jsonb", notNull: false },
     quotes: { type: "jsonb", notNull: false },
+    number_of_atoms: { type: "bigint", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },
     // for testing derived fields using other derived fields
     number_of_public_reviews: { type: "int", notNull: false },

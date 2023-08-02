@@ -35,6 +35,7 @@ export function insertAuthor(row: {
   business_address?: object;
   quotes?: string;
   graduated?: any;
+  number_of_atoms?: string;
   updated_at?: any;
   deleted_at?: any;
 }) {
@@ -123,7 +124,13 @@ export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id:
   return testDriver.insert("authors_to_tags", row);
 }
 
-export function insertBookReview(row: { id?: number; book_id: number; rating: number; is_public?: boolean, is_test?: boolean }) {
+export function insertBookReview(row: {
+  id?: number;
+  book_id: number;
+  rating: number;
+  is_public?: boolean;
+  is_test?: boolean;
+}) {
   return testDriver.insert("book_reviews", { is_public: true, is_test: false, ...row });
 }
 

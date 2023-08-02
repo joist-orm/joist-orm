@@ -88,7 +88,7 @@ interface Field {
   ignore?: boolean;
 }
 
-export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object";
+export type PrimitiveTypescriptType = "boolean" | "string" | "number" | "Date" | "Object" | "BigInt";
 
 export type PrimitiveField = Field & {
   kind: "primitive";

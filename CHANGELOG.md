@@ -1,3 +1,10 @@
+# [1.96.0](https://github.com/stephenh/joist-ts/compare/v1.95.0...v1.96.0) (2023-08-02)
+
+
+### Features
+
+* Map bigints as BigInts. ([#742](https://github.com/stephenh/joist-ts/issues/742)) ([c594c3a](https://github.com/stephenh/joist-ts/commit/c594c3a097c51dd8010590587be6a0e2a3af2a7c))
+
 # [1.95.0](https://github.com/stephenh/joist-ts/compare/v1.94.0...v1.95.0) (2023-07-31)
 
 

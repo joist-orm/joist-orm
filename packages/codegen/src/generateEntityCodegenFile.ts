@@ -1,45 +1,31 @@
 import { camelCase, pascalCase } from "change-case";
 import { Code, code, imp, joinCode } from "ts-poet";
-import { Config } from "./config";
 import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
+import { Config } from "./config";
 import { keywords } from "./keywords";
 import {
   BaseEntity,
   BooleanFilter,
   BooleanGraphQLFilter,
   Changes,
-  cleanStringValue,
   Collection,
   ConfigApi,
-  deTagId,
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail as failSymbol,
   FieldsOf,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
-  hasLargeMany,
-  hasLargeManyToMany,
-  hasMany,
-  hasManyToMany,
-  hasOne,
-  hasOnePolymorphic,
-  hasOneToOne,
   IdOf,
-  isLoaded,
   LargeCollection,
   Lens,
-  Loaded,
   LoadHint,
-  loadLens,
+  Loaded,
   ManyToOneReference,
   MaybeAbstractEntityConstructor,
-  newChangesProxy,
-  newRequiredRule,
   OneToOneReference,
   OptsOf,
   OrderBy,
@@ -47,12 +33,26 @@ import {
   PersistedAsyncProperty,
   PersistedAsyncReference,
   PolymorphicReference,
-  setField,
-  setOpts,
   SSAssert,
   ValueFilter,
   ValueGraphQLFilter,
   Zod,
+  cleanStringValue,
+  deTagId,
+  fail as failSymbol,
+  hasLargeMany,
+  hasLargeManyToMany,
+  hasMany,
+  hasManyToMany,
+  hasOne,
+  hasOnePolymorphic,
+  hasOneToOne,
+  isLoaded,
+  loadLens,
+  newChangesProxy,
+  newRequiredRule,
+  setField,
+  setOpts,
 } from "./symbols";
 import { fail, uncapitalize } from "./utils";
 
@@ -579,6 +579,7 @@ function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
   // try to validate that we actually got a primitive value and not arbitrary SQL
   return (
     (fieldType === "number" && !isNaN(parseInt(columnDefault))) ||
+    (fieldType === "BigInt" && !isNaN(parseInt(columnDefault))) ||
     (fieldType === "string" && /^'.*'$/.test(columnDefault)) ||
     (fieldType === "boolean" && ["true", "false"].includes(columnDefault))
   );

@@ -200,8 +200,7 @@ function createSaveEntityResultFields(entities: EntityDbMetadata[]): GqlField[] 
     } = e;
     const objectType = "output" as const;
     const objectName = `Save${name}Result`;
-    const fieldName = camelCase(name);
-    const entity: GqlField = { file, objectType, objectName, fieldName, fieldType: `${name}!` };
+    const entity: GqlField = { file, objectType, objectName, fieldName: "entity", fieldType: `${name}!` };
     return [entity];
   });
 }

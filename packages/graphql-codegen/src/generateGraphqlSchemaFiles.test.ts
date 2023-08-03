@@ -15,7 +15,7 @@ describe("generateGraphqlSchemaFiles", () => {
       "extend type Mutation {
         saveAuthor(input: SaveAuthorInput!): SaveAuthorResult!
       }
-      
+
       type Author {
         id: ID!
       }
@@ -25,7 +25,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -63,7 +63,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -82,7 +82,7 @@ describe("generateGraphqlSchemaFiles", () => {
           "id",
         ],
         "SaveAuthorResult": [
-          "author",
+          "entity",
         ],
       }
     `);
@@ -121,7 +121,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -158,7 +158,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -200,7 +200,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -239,7 +239,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -283,7 +283,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -317,7 +317,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -351,7 +351,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveAuthorResult {
-        author: Author!
+        entity: Author!
       }
       "
     `);
@@ -390,7 +390,7 @@ describe("generateGraphqlSchemaFiles", () => {
       }
 
       type SaveSmallPublisherResult {
-        smallPublisher: SmallPublisher!
+        entity: SmallPublisher!
       }
       "
     `);

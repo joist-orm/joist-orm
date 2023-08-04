@@ -75,10 +75,17 @@ describe("getProperties", () => {
         "mentor",
         "publisher",
         "image",
-        "beforeFlushRan",
-        "beforeDeleteRan",
-        "afterCommitRan",
       ]),
     );
+  });
+
+  it("does not include fullNonReactiveAccess", () => {
+    const p = Object.keys(getProperties(authorMeta));
+    expect(p).not.toEqual(expect.arrayContaining(["fullNonReactiveAccess"]));
+  });
+
+  it("does not include transientFields", () => {
+    const p = Object.keys(getProperties(authorMeta));
+    expect(p).not.toEqual(expect.arrayContaining(["transientFields"]));
   });
 });

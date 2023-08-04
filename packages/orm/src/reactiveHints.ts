@@ -66,7 +66,13 @@ export type Reacted<T extends Entity, H> = Entity & {
    * will then allow accessing the field via the `Reacted<Author, ...>` type.
    */
   fullNonReactiveAccess: Loaded<T, H>;
-};
+} & MaybeTransientFields<T>;
+
+export type MaybeTransientFields<T> = "transientFields" extends keyof T
+  ? {
+      transientFields: T["transientFields"];
+    }
+  : {};
 
 export function reverseReactiveHint<T extends Entity>(
   rootType: MaybeAbstractEntityConstructor<T>,

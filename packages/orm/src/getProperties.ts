@@ -30,7 +30,7 @@ export function getProperties<T extends Entity>(meta: EntityMetadata<T>): Record
         }
       })
       // Purposefully return methods, primitives, etc. so that `entityResolver` can add them to the resolver
-      .filter(([key]) => key !== "entity"),
+      .filter(([key]) => key !== "fullNonReactiveAccess" && key !== "transientFields"),
   );
   return propertiesCache[meta.tagName];
 }

@@ -690,7 +690,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.firstName = "new name";
-    author.setGraduatedInFlush = true;
+    author.transientFields.setGraduatedInFlush = true;
     expect(author.graduated).toBeUndefined();
     await em.flush();
     expect(author.graduated).toBeDefined();
@@ -1476,7 +1476,7 @@ describe("EntityManager", () => {
     // When we delete the author from a beforeFlush hook
     const em2 = newEntityManager();
     const a2 = await em2.load(Author, a1.idOrFail);
-    a2.deleteDuringFlush = true;
+    a2.transientFields.deleteDuringFlush = true;
     em2.touch(a2);
     await em2.flush();
     // Then the entities were deleted
@@ -1490,7 +1490,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { books: [{ reviews: [{}] }] });
     // When we delete the author before its even been saved
-    a1.deleteDuringFlush = true;
+    a1.transientFields.deleteDuringFlush = true;
     await em.flush();
     // Then the entities were not saved
     expect(await countOfAuthors()).toBe(0);

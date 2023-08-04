@@ -71,22 +71,24 @@ export class Author extends AuthorCodegen {
       a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
   );
 
-  public beforeFlushRan = false;
-  public beforeCreateRan = false;
-  public beforeUpdateRan = false;
-  public beforeDeleteRan = false;
-  public afterValidationRan = false;
-  public afterCommitRan = false;
-  public afterCommitIdIsSet = false;
-  public afterCommitIsNewEntity = false;
-  public afterCommitIsDeletedEntity = false;
-  public setGraduatedInFlush?: boolean;
-  public mentorRuleInvoked = 0;
-  public ageRuleInvoked = 0;
-  public numberOfBooksCalcInvoked = 0;
-  public bookCommentsCalcInvoked = 0;
-  public graduatedRuleInvoked = 0;
-  public deleteDuringFlush = false;
+  public transientFields = {
+    beforeFlushRan: false,
+    beforeCreateRan: false,
+    beforeUpdateRan: false,
+    beforeDeleteRan: false,
+    afterValidationRan: false,
+    afterCommitRan: false,
+    afterCommitIdIsSet: false,
+    afterCommitIsNewEntity: false,
+    afterCommitIsDeletedEntity: false,
+    setGraduatedInFlush: false,
+    mentorRuleInvoked: 0,
+    ageRuleInvoked: 0,
+    numberOfBooksCalcInvoked: 0,
+    bookCommentsCalcInvoked: 0,
+    graduatedRuleInvoked: 0,
+    deleteDuringFlush: false,
+  };
 
   /** Example of using populate within an entity on itself. */
   get withLoadedBooks(): Promise<Loaded<Author, "books">> {
@@ -128,7 +130,7 @@ export class Author extends AuthorCodegen {
     // when evaluating whether to eval our lambda during pre-flush calls.
     ["books", "firstName"],
     (a) => {
-      a.fullNonReactiveAccess.numberOfBooksCalcInvoked++;
+      a.transientFields.numberOfBooksCalcInvoked++;
       return a.books.get.length;
     },
   );
@@ -138,7 +140,7 @@ export class Author extends AuthorCodegen {
     "bookComments",
     { books: { comments: "text" } },
     (a) => {
-      a.fullNonReactiveAccess.bookCommentsCalcInvoked++;
+      a.transientFields.bookCommentsCalcInvoked++;
       return a.books.get
         .flatMap((b) => b.comments.get)
         .map((c) => c.text)
@@ -223,12 +225,12 @@ config.addRule("books", (a) => {
 
 // Example of rule that is always run even if the field is not set
 config.addRule("mentor", (a) => {
-  a.fullNonReactiveAccess.mentorRuleInvoked++;
+  a.transientFields.mentorRuleInvoked++;
 });
 
 // Example of rule that is run when set-via-hook field runs
 config.addRule("graduated", (a) => {
-  a.fullNonReactiveAccess.graduatedRuleInvoked++;
+  a.transientFields.graduatedRuleInvoked++;
 });
 
 // Example of cannotBeUpdated
@@ -236,7 +238,7 @@ config.addRule(cannotBeUpdated("age"));
 
 // Example of a rule against an immutable field
 config.addRule("age", (a) => {
-  a.fullNonReactiveAccess.ageRuleInvoked++;
+  a.transientFields.ageRuleInvoked++;
 });
 
 config.cascadeDelete("books");
@@ -248,41 +250,41 @@ config.beforeFlush(async (author, ctx) => {
 
 // Example setting a field during flush
 config.beforeFlush(async (author) => {
-  author.beforeFlushRan = true;
-  if (author.setGraduatedInFlush) {
+  author.transientFields.beforeFlushRan = true;
+  if (author.transientFields.setGraduatedInFlush) {
     author.graduated = new Date();
   }
 });
 
 // Example deleting during a flush
 config.beforeFlush(async (author, { em }) => {
-  if (author.deleteDuringFlush) {
+  if (author.transientFields.deleteDuringFlush) {
     em.delete(author);
   }
 });
 
 config.beforeCreate((author) => {
-  author.beforeCreateRan = true;
+  author.transientFields.beforeCreateRan = true;
 });
 
 config.beforeUpdate((author) => {
-  author.beforeUpdateRan = true;
+  author.transientFields.beforeUpdateRan = true;
 });
 
 config.afterValidation((author) => {
-  author.afterValidationRan = true;
+  author.transientFields.afterValidationRan = true;
 });
 
 config.beforeDelete((author) => {
-  author.beforeDeleteRan = true;
+  author.transientFields.beforeDeleteRan = true;
 });
 
 config.afterCommit((author) => {
   // make sure we're still a new entity even though the id has been set
-  author.afterCommitRan = true;
-  author.afterCommitIdIsSet = author.id !== undefined;
-  author.afterCommitIsNewEntity = author.isNewEntity;
-  author.afterCommitIsDeletedEntity = author.isDeletedEntity;
+  author.transientFields.afterCommitRan = true;
+  author.transientFields.afterCommitIdIsSet = author.id !== undefined;
+  author.transientFields.afterCommitIsNewEntity = author.isNewEntity;
+  author.transientFields.afterCommitIsDeletedEntity = author.isDeletedEntity;
 });
 
 config.addConstraintMessage("authors_publisher_id_unique_index", "There is already a publisher with a Jim");

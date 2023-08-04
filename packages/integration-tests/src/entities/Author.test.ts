@@ -180,44 +180,44 @@ describe("Author", () => {
     // Given that a validation exists preventing the firstName and lastName from being the same values
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1", lastName: "a1" });
-    expect(a1.afterValidationRan).toBeFalsy();
+    expect(a1.transientFields.afterValidationRan).toBeFalsy();
 
     // When a flush occurs with the skipValidation option set to true
     await em.flush({ skipValidation: true });
 
     // Then it does not run afterValidation hooks
-    expect(a1.afterValidationRan).toBeFalsy();
+    expect(a1.transientFields.afterValidationRan).toBeFalsy();
   });
 
   it("can have lifecycle hooks", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
-    expect(a1.beforeFlushRan).toBeFalsy();
-    expect(a1.beforeCreateRan).toBeFalsy();
-    expect(a1.beforeUpdateRan).toBeFalsy();
-    expect(a1.afterCommitRan).toBeFalsy();
-    expect(a1.afterCommitIdIsSet).toBeFalsy();
-    expect(a1.afterCommitIsNewEntity).toBeFalsy();
-    expect(a1.afterValidationRan).toBeFalsy();
-    expect(a1.beforeDeleteRan).toBeFalsy();
+    expect(a1.transientFields.beforeFlushRan).toBeFalsy();
+    expect(a1.transientFields.beforeCreateRan).toBeFalsy();
+    expect(a1.transientFields.beforeUpdateRan).toBeFalsy();
+    expect(a1.transientFields.afterCommitRan).toBeFalsy();
+    expect(a1.transientFields.afterCommitIdIsSet).toBeFalsy();
+    expect(a1.transientFields.afterCommitIsNewEntity).toBeFalsy();
+    expect(a1.transientFields.afterValidationRan).toBeFalsy();
+    expect(a1.transientFields.beforeDeleteRan).toBeFalsy();
     await em.flush();
-    expect(a1.beforeFlushRan).toBeTruthy();
-    expect(a1.beforeCreateRan).toBeTruthy();
-    expect(a1.beforeUpdateRan).toBeFalsy();
-    expect(a1.beforeDeleteRan).toBeFalsy();
-    expect(a1.afterValidationRan).toBeTruthy();
-    expect(a1.afterCommitRan).toBeTruthy();
-    expect(a1.afterCommitIdIsSet).toBeTruthy();
-    expect(a1.afterCommitIsNewEntity).toBeTruthy();
+    expect(a1.transientFields.beforeFlushRan).toBeTruthy();
+    expect(a1.transientFields.beforeCreateRan).toBeTruthy();
+    expect(a1.transientFields.beforeUpdateRan).toBeFalsy();
+    expect(a1.transientFields.beforeDeleteRan).toBeFalsy();
+    expect(a1.transientFields.afterValidationRan).toBeTruthy();
+    expect(a1.transientFields.afterCommitRan).toBeTruthy();
+    expect(a1.transientFields.afterCommitIdIsSet).toBeTruthy();
+    expect(a1.transientFields.afterCommitIsNewEntity).toBeTruthy();
     a1.firstName = "new name";
-    a1.beforeCreateRan = false;
+    a1.transientFields.beforeCreateRan = false;
     await em.flush();
-    expect(a1.beforeCreateRan).toBeFalsy();
-    expect(a1.beforeUpdateRan).toBeTruthy();
+    expect(a1.transientFields.beforeCreateRan).toBeFalsy();
+    expect(a1.transientFields.beforeUpdateRan).toBeTruthy();
     em.delete(a1);
     await em.flush();
-    expect(a1.beforeDeleteRan).toBeTruthy();
-    expect(a1.afterCommitIsDeletedEntity).toBeTruthy();
+    expect(a1.transientFields.beforeDeleteRan).toBeTruthy();
+    expect(a1.transientFields.afterCommitIsDeletedEntity).toBeTruthy();
   });
 
   it("can access the context in hooks", async () => {
@@ -249,13 +249,13 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a1.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // When we add a book
     new Book(em, { title: "b1", author: a1 });
     // Then the author derived value is re-derived
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.numberOfBooksCalcInvoked).toBe(4);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
     const rows = await select("authors");
     expect(rows[0].number_of_books).toEqual(1);
   });
@@ -300,13 +300,13 @@ describe("Author", () => {
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
     // And we calc'd it once during flush, and again in the ^ get
-    expect(a1.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // When we change the book
     b1.title = "b12";
     await em.flush();
     // Then the author derived value didn't change
     expect(a1.numberOfBooks.get).toEqual(1);
-    expect(a1.numberOfBooksCalcInvoked).toBe(3);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
   });
 
   it("can force async derived values to recalc on touch", async () => {
@@ -315,14 +315,14 @@ describe("Author", () => {
     const a1 = newAuthor(em, { firstName: "a1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(0);
-    expect(a1.numberOfBooksCalcInvoked).toBe(2);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // When we touch the author
     em.touch(a1);
     await em.flush();
     // Then the author derived value didn't change
     expect(a1.numberOfBooks.get).toEqual(0);
     // But it was called again
-    expect(a1.numberOfBooksCalcInvoked).toBe(4);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
   });
 
   it("has async derived values triggered on both old and new value", async () => {

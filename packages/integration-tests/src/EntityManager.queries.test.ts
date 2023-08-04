@@ -1620,7 +1620,7 @@ describe("EntityManager.queries", () => {
     const em = newEntityManager();
     const review = await em.load(BookReview, "1");
     const comment = await review.comment.load();
-    expect(comment).toBeTruthy();
+    expect(comment).toBe(true);
     expect(comment!.text).toEqual("t1");
   });
 

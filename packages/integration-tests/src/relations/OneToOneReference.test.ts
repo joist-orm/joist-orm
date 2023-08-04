@@ -117,7 +117,7 @@ describe("OneToOneReference", () => {
     const a1 = await em.load(Author, "1", "image");
     await insertImage({ type_id: 2, file_name: "f1", author_id: 1 });
     await em.refresh();
-    expect(a1.image.isSet).toBeTruthy();
+    expect(a1.image.isSet).toBe(true);
     em.delete(a1);
     await em.flush();
     expect((await select("images")).length).toEqual(0);
@@ -127,7 +127,7 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1", "image");
-    expect(a1.image.isSet).toBeFalsy();
+    expect(a1.image.isSet).toBe(false);
     em.delete(a1);
     await em.flush();
     expect((await select("authors")).length).toEqual(0);

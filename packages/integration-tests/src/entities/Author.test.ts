@@ -180,44 +180,44 @@ describe("Author", () => {
     // Given that a validation exists preventing the firstName and lastName from being the same values
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1", lastName: "a1" });
-    expect(a1.transientFields.afterValidationRan).toBeFalsy();
+    expect(a1.transientFields.afterValidationRan).toBe(false);
 
     // When a flush occurs with the skipValidation option set to true
     await em.flush({ skipValidation: true });
 
     // Then it does not run afterValidation hooks
-    expect(a1.transientFields.afterValidationRan).toBeFalsy();
+    expect(a1.transientFields.afterValidationRan).toBe(false);
   });
 
   it("can have lifecycle hooks", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
-    expect(a1.transientFields.beforeFlushRan).toBeFalsy();
-    expect(a1.transientFields.beforeCreateRan).toBeFalsy();
-    expect(a1.transientFields.beforeUpdateRan).toBeFalsy();
-    expect(a1.transientFields.afterCommitRan).toBeFalsy();
-    expect(a1.transientFields.afterCommitIdIsSet).toBeFalsy();
-    expect(a1.transientFields.afterCommitIsNewEntity).toBeFalsy();
-    expect(a1.transientFields.afterValidationRan).toBeFalsy();
-    expect(a1.transientFields.beforeDeleteRan).toBeFalsy();
+    expect(a1.transientFields.beforeFlushRan).toBe(false);
+    expect(a1.transientFields.beforeCreateRan).toBe(false);
+    expect(a1.transientFields.beforeUpdateRan).toBe(false);
+    expect(a1.transientFields.afterCommitRan).toBe(false);
+    expect(a1.transientFields.afterCommitIdIsSet).toBe(false);
+    expect(a1.transientFields.afterCommitIsNewEntity).toBe(false);
+    expect(a1.transientFields.afterValidationRan).toBe(false);
+    expect(a1.transientFields.beforeDeleteRan).toBe(false);
     await em.flush();
-    expect(a1.transientFields.beforeFlushRan).toBeTruthy();
-    expect(a1.transientFields.beforeCreateRan).toBeTruthy();
-    expect(a1.transientFields.beforeUpdateRan).toBeFalsy();
-    expect(a1.transientFields.beforeDeleteRan).toBeFalsy();
-    expect(a1.transientFields.afterValidationRan).toBeTruthy();
-    expect(a1.transientFields.afterCommitRan).toBeTruthy();
-    expect(a1.transientFields.afterCommitIdIsSet).toBeTruthy();
-    expect(a1.transientFields.afterCommitIsNewEntity).toBeTruthy();
+    expect(a1.transientFields.beforeFlushRan).toBe(true);
+    expect(a1.transientFields.beforeCreateRan).toBe(true);
+    expect(a1.transientFields.beforeUpdateRan).toBe(false);
+    expect(a1.transientFields.beforeDeleteRan).toBe(false);
+    expect(a1.transientFields.afterValidationRan).toBe(true);
+    expect(a1.transientFields.afterCommitRan).toBe(true);
+    expect(a1.transientFields.afterCommitIdIsSet).toBe(true);
+    expect(a1.transientFields.afterCommitIsNewEntity).toBe(true);
     a1.firstName = "new name";
     a1.transientFields.beforeCreateRan = false;
     await em.flush();
-    expect(a1.transientFields.beforeCreateRan).toBeFalsy();
-    expect(a1.transientFields.beforeUpdateRan).toBeTruthy();
+    expect(a1.transientFields.beforeCreateRan).toBe(false);
+    expect(a1.transientFields.beforeUpdateRan).toBe(true);
     em.delete(a1);
     await em.flush();
-    expect(a1.transientFields.beforeDeleteRan).toBeTruthy();
-    expect(a1.transientFields.afterCommitIsDeletedEntity).toBeTruthy();
+    expect(a1.transientFields.beforeDeleteRan).toBe(true);
+    expect(a1.transientFields.afterCommitIsDeletedEntity).toBe(true);
   });
 
   it("can access the context in hooks", async () => {
@@ -472,12 +472,12 @@ describe("Author", () => {
       const em = newEntityManager();
       const a1 = await em.load(Author, "a:1");
       const [p1, p2] = await em.loadAll(Publisher, ["p:1", "p:2"]);
-      expect(a1.changes.publisher.hasChanged).toBeFalsy();
+      expect(a1.changes.publisher.hasChanged).toBe(false);
       expect(a1.changes.publisher.originalValue).toBe("p:1");
       expect(await a1.changes.publisher.originalEntity).toBe(p1);
       expect(a1.changes.fields).toEqual([]);
       a1.publisher.set(p2);
-      expect(a1.changes.publisher.hasChanged).toBeTruthy();
+      expect(a1.changes.publisher.hasChanged).toBe(true);
       expect(a1.changes.publisher.originalValue).toEqual("p:1");
       const op = await a1.changes.publisher.originalEntity;
       expect(op).toBeInstanceOf(Publisher);
@@ -597,7 +597,7 @@ describe("Author", () => {
     const db = await pgStructure(pgConfig);
     const t = db.tables.find((t) => t.name === "authors")!;
     const i = t.indexes.find((i) => i.name === "authors_publisher_id_idx")!;
-    expect(i).toBeTruthy();
+    expect(i).toBeDefined();
   });
 
   describe("isNewEntity", () => {
@@ -605,15 +605,15 @@ describe("Author", () => {
       await insertAuthor({ first_name: "a1" });
       const em = newEntityManager();
       const a1 = await em.findOneOrFail(Author, { firstName: "a1" });
-      expect(a1.isNewEntity).toBeFalsy();
+      expect(a1.isNewEntity).toBe(false);
     });
 
     it("is true for new entities until they are flushed", async () => {
       const em = newEntityManager();
       const a1 = await em.create(Author, { firstName: "a1" });
-      expect(a1.isNewEntity).toBeTruthy();
+      expect(a1.isNewEntity).toBe(true);
       await em.flush();
-      expect(a1.isNewEntity).toBeFalsy();
+      expect(a1.isNewEntity).toBe(false);
     });
   });
 

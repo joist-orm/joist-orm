@@ -435,7 +435,7 @@ describe("EntityManager.factories", () => {
           existingSearchOrder: [Author, Book, SmallPublisher],
         }),
       });
-      expect(ft1.parent.isSet).toBeTruthy();
+      expect(ft1.parent.isSet).toBe(true);
       const a1 = await ft1.parent.load();
       expect(a1).toBeInstanceOf(Author);
       expect((a1 as Author).firstName).toEqual("test");
@@ -446,14 +446,14 @@ describe("EntityManager.factories", () => {
       const ft1 = newTestInstance(em, Comment, {
         parent: {},
       });
-      expect(ft1.parent.isSet).toBeTruthy();
+      expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(Author);
     });
 
     it("creates a new entity if needed without an opt passed", async () => {
       const em = newEntityManager();
       const ft1 = newTestInstance(em, Comment, {});
-      expect(ft1.parent.isSet).toBeTruthy();
+      expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(Author);
     });
 
@@ -461,7 +461,7 @@ describe("EntityManager.factories", () => {
       const em = newEntityManager();
       const p = newSmallPublisher(em);
       const ft1 = newTestInstance(em, Comment, {});
-      expect(ft1.parent.isSet).toBeTruthy();
+      expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(SmallPublisher);
     });
 
@@ -473,7 +473,7 @@ describe("EntityManager.factories", () => {
           existingSearchOrder: [Author, Publisher],
         }),
       });
-      expect(ft1.parent.isSet).toBeTruthy();
+      expect(ft1.parent.isSet).toBe(true);
       expect(ft1.parent.get).toBeInstanceOf(Author);
     });
 

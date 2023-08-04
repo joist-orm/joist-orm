@@ -1154,17 +1154,17 @@ describe("EntityManager", () => {
       em.delete(b1);
       await em.flush();
     });
-    expect(b1.isDeletedEntity).toBeTruthy();
+    expect(b1.isDeletedEntity).toBe(true);
   });
 
   it("can save entities", async () => {
     const em = newEntityManager();
     const a1 = new Author(em, { firstName: "a1" });
-    expect(a1.isNewEntity).toBeTruthy();
-    expect(a1.isDirtyEntity).toBeTruthy();
+    expect(a1.isNewEntity).toBe(true);
+    expect(a1.isDirtyEntity).toBe(true);
     await em.flush();
-    expect(a1.isNewEntity).toBeFalsy();
-    expect(a1.isDirtyEntity).toBeFalsy();
+    expect(a1.isNewEntity).toBe(false);
+    expect(a1.isDirtyEntity).toBe(false);
   });
 
   it("returns newly created entities from flush()", async () => {
@@ -1217,13 +1217,13 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     em.touch(a1);
-    expect(a1.isDirtyEntity).toBeFalsy();
-    expect(a1.isNewEntity).toBeFalsy();
-    expect(a1.isDeletedEntity).toBeFalsy();
-    expect(a1.__orm.isTouched).toBeTruthy();
+    expect(a1.isDirtyEntity).toBe(false);
+    expect(a1.isNewEntity).toBe(false);
+    expect(a1.isDeletedEntity).toBe(false);
+    expect(a1.__orm.isTouched).toBe(true);
     const result = await em.flush();
     expect(result).toEqual([a1]);
-    expect(a1.__orm.isTouched).toBeFalsy();
+    expect(a1.__orm.isTouched).toBe(false);
   });
 
   it("can load a null enum array", async () => {
@@ -1239,8 +1239,8 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     expect(author.favoriteColors).toEqual([Color.Red, Color.Green]);
-    expect(author.isRed).toBeTruthy();
-    expect(author.isGreen).toBeTruthy();
+    expect(author.isRed).toBe(true);
+    expect(author.isGreen).toBe(true);
   });
 
   it("can save a populated enum array", async () => {
@@ -1256,7 +1256,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.favoriteColors = [Color.Green];
-    expect(author.changes.favoriteColors.hasChanged).toBeTruthy();
+    expect(author.changes.favoriteColors.hasChanged).toBe(true);
     await em.flush();
     const rows = await select("authors");
     expect(rows[0].favorite_colors).toEqual([2]);

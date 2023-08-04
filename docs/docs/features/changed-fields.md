@@ -9,13 +9,13 @@ Each entity tracks which of its fields has changed within the current unit of wo
 const a1 = em.load(Author, "1");
 
 // Nothing has changed at first
-expect(a1.changes.firstName.hasChanged).toBeFalsey();
+expect(a1.changes.firstName.hasChanged).toBe(false);
 
 // Now perform some business logic
 a1.firstName = "a2";
 
 // And the field shows up has changed
-expect(a1.changes.firstName.hasChanged).toBeTruthy();
+expect(a1.changes.firstName.hasChanged).toBe(true);
 expect(a1.changes.firstName.originalValue).toEqual("a1");
 ```
 

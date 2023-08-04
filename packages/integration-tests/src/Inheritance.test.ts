@@ -124,27 +124,27 @@ describe("Inheritance", () => {
   it("runs hooks on subtypes", async () => {
     const em = newEntityManager();
     const sp = new SmallPublisher(em, { name: "sp", city: "city" });
-    expect(sp.beforeFlushRan).toBeFalsy();
-    expect(sp.beforeCreateRan).toBeFalsy();
-    expect(sp.beforeUpdateRan).toBeFalsy();
-    expect(sp.afterCommitRan).toBeFalsy();
-    expect(sp.afterValidationRan).toBeFalsy();
-    expect(sp.beforeDeleteRan).toBeFalsy();
+    expect(sp.beforeFlushRan).toBe(false);
+    expect(sp.beforeCreateRan).toBe(false);
+    expect(sp.beforeUpdateRan).toBe(false);
+    expect(sp.afterCommitRan).toBe(false);
+    expect(sp.afterValidationRan).toBe(false);
+    expect(sp.beforeDeleteRan).toBe(false);
     await em.flush();
-    expect(sp.beforeFlushRan).toBeTruthy();
-    expect(sp.beforeCreateRan).toBeTruthy();
-    expect(sp.beforeUpdateRan).toBeFalsy();
-    expect(sp.beforeDeleteRan).toBeFalsy();
-    expect(sp.afterValidationRan).toBeTruthy();
-    expect(sp.afterCommitRan).toBeTruthy();
+    expect(sp.beforeFlushRan).toBe(true);
+    expect(sp.beforeCreateRan).toBe(true);
+    expect(sp.beforeUpdateRan).toBe(false);
+    expect(sp.beforeDeleteRan).toBe(false);
+    expect(sp.afterValidationRan).toBe(true);
+    expect(sp.afterCommitRan).toBe(true);
     sp.name = "new name";
     sp.beforeCreateRan = false;
     await em.flush();
-    expect(sp.beforeCreateRan).toBeFalsy();
-    expect(sp.beforeUpdateRan).toBeTruthy();
+    expect(sp.beforeCreateRan).toBe(false);
+    expect(sp.beforeUpdateRan).toBe(true);
     em.delete(sp);
     await em.flush();
-    expect(sp.beforeDeleteRan).toBeTruthy();
+    expect(sp.beforeDeleteRan).toBe(true);
   });
 
   it("can load a subtype from separate tables via the base type", async () => {
@@ -247,7 +247,7 @@ describe("Inheritance", () => {
     await insertPublisher({ id: 2, name: "b" });
 
     const em = newEntityManager();
-    const [b, a] = await em.find(SmallPublisher, { }, { orderBy: { name: 'DESC'}});
+    const [b, a] = await em.find(SmallPublisher, {}, { orderBy: { name: "DESC" } });
 
     expect(a as SmallPublisher).toMatchEntity({ name: "a" });
     expect(b as SmallPublisher).toMatchEntity({ name: "b" });

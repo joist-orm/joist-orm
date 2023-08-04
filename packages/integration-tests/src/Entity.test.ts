@@ -10,12 +10,6 @@ describe("Entity", () => {
     const copy = deepCopyAndNormalize(author);
     expect(copy).toMatchInlineSnapshot(`
       {
-        "afterCommitIdIsSet": false,
-        "afterCommitIsDeletedEntity": false,
-        "afterCommitIsNewEntity": false,
-        "afterCommitRan": false,
-        "afterValidationRan": false,
-        "ageRuleInvoked": 0,
         "allPublisherAuthorNames": {
           "fn": {},
           "loadPromise": undefined,
@@ -31,10 +25,6 @@ describe("Entity", () => {
           "otherFieldName": "mentor",
           "undefined": null,
         },
-        "beforeCreateRan": false,
-        "beforeDeleteRan": false,
-        "beforeFlushRan": false,
-        "beforeUpdateRan": false,
         "bookComments": {
           "fieldName": "bookComments",
           "fn": {},
@@ -46,7 +36,6 @@ describe("Entity", () => {
             },
           },
         },
-        "bookCommentsCalcInvoked": 0,
         "books": {
           "fieldName": "books",
           "loaded": undefined,
@@ -68,7 +57,6 @@ describe("Entity", () => {
           "otherFieldName": "currentDraftAuthor",
           "undefined": null,
         },
-        "deleteDuringFlush": false,
         "favoriteBook": {
           "_isLoaded": false,
           "fieldName": "favoriteBook",
@@ -82,7 +70,6 @@ describe("Entity", () => {
           },
           "undefined": null,
         },
-        "graduatedRuleInvoked": 0,
         "image": {
           "_isLoaded": false,
           "fieldName": "image",
@@ -123,7 +110,6 @@ describe("Entity", () => {
           "otherFieldName": "authors",
           "undefined": null,
         },
-        "mentorRuleInvoked": 0,
         "numberOfBooks": {
           "fieldName": "numberOfBooks",
           "fn": {},
@@ -142,7 +128,6 @@ describe("Entity", () => {
             "isReactive": true,
           },
         },
-        "numberOfBooksCalcInvoked": 0,
         "numberOfPublicReviews": {
           "fieldName": "numberOfPublicReviews",
           "fn": {},
@@ -201,7 +186,6 @@ describe("Entity", () => {
             "load": {},
           },
         },
-        "setGraduatedInFlush": undefined,
         "tags": {
           "addedBeforeLoaded": undefined,
           "columnName": "author_id",
@@ -211,6 +195,24 @@ describe("Entity", () => {
           "otherColumnName": "tag_id",
           "otherFieldName": "authors",
           "removedBeforeLoaded": undefined,
+        },
+        "transientFields": {
+          "afterCommitIdIsSet": false,
+          "afterCommitIsDeletedEntity": false,
+          "afterCommitIsNewEntity": false,
+          "afterCommitRan": false,
+          "afterValidationRan": false,
+          "ageRuleInvoked": 0,
+          "beforeCreateRan": false,
+          "beforeDeleteRan": false,
+          "beforeFlushRan": false,
+          "beforeUpdateRan": false,
+          "bookCommentsCalcInvoked": 0,
+          "deleteDuringFlush": false,
+          "graduatedRuleInvoked": 0,
+          "mentorRuleInvoked": 0,
+          "numberOfBooksCalcInvoked": 0,
+          "setGraduatedInFlush": false,
         },
         "userOneToOne": {
           "_isLoaded": false,

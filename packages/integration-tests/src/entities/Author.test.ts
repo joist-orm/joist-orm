@@ -597,7 +597,7 @@ describe("Author", () => {
     const db = await pgStructure(pgConfig);
     const t = db.tables.find((t) => t.name === "authors")!;
     const i = t.indexes.find((i) => i.name === "authors_publisher_id_idx")!;
-    expect(i).toBe(true);
+    expect(i).toBeDefined();
   });
 
   describe("isNewEntity", () => {

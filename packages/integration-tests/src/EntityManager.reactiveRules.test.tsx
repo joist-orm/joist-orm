@@ -66,12 +66,12 @@ describe("EntityManager.reactiveRules", () => {
     const a = newAuthor(em);
     await em.flush();
     // Then we run the mentor rule
-    expect(a.mentorRuleInvoked).toBe(1);
+    expect(a.transientFields.mentorRuleInvoked).toBe(1);
     // And when we do set the mentor
     a.mentor.set(newAuthor(em));
     await em.flush();
     // Then it runs again
-    expect(a.mentorRuleInvoked).toBe(2);
+    expect(a.transientFields.mentorRuleInvoked).toBe(2);
   });
 
   it.withCtx("runs rule triggered by a hook", async ({ em }) => {
@@ -79,15 +79,15 @@ describe("EntityManager.reactiveRules", () => {
     const a = newAuthor(em);
     await em.flush();
     // And the rule runs b/c all rules run on create
-    expect(a.graduatedRuleInvoked).toBe(1);
+    expect(a.transientFields.graduatedRuleInvoked).toBe(1);
     // When we change something about the author
     a.mentor.set(newAuthor(em));
     // And also tell the hook to change graduated
-    a.setGraduatedInFlush = true;
+    a.transientFields.setGraduatedInFlush = true;
     await em.flush();
     // Then the validation rule (or async derived field) that depends on
     // `Author.graduated` runs again
-    expect(a.graduatedRuleInvoked).toBe(2);
+    expect(a.transientFields.graduatedRuleInvoked).toBe(2);
   });
 
   it.withCtx("runs rule on parent of an immutable field", async ({ em }) => {
@@ -232,25 +232,25 @@ describe("EntityManager.reactiveRules", () => {
     // When I flush
     await em.flush();
     // Then I expect that the bookComments has been calc'd
-    expect(a.bookCommentsCalcInvoked).toEqual(1);
+    expect(a.transientFields.bookCommentsCalcInvoked).toEqual(1);
     expect(a.bookComments.fieldValue).toEqual("B1C1, B1C2, B2C1, B2C2");
     // And when a publisher with a comment is created
     const p = newPublisher(em, { authors: [a], comments: [{}, {}] });
     await em.flush();
     // Then bookComments is not recalc'd
-    expect(a.bookCommentsCalcInvoked).toEqual(1);
+    expect(a.transientFields.bookCommentsCalcInvoked).toEqual(1);
     // And when one of the authors book comments is touched
     const [commentB1C1] = a.books.get[0].comments.get;
     commentB1C1.text = "B1C1 - Updated";
     await em.flush();
     // Then I expect that bookComments was recalc'd
-    expect(a.bookCommentsCalcInvoked).toEqual(2);
+    expect(a.transientFields.bookCommentsCalcInvoked).toEqual(2);
     expect(a.bookComments.fieldValue).toEqual("B1C1 - Updated, B1C2, B2C1, B2C2");
     // And when I move the comment to be on a publisher instead
     commentB1C1.parent.set(p);
     await em.flush();
     // Then I expect that the bookComments is recalc'd
-    expect(a.bookCommentsCalcInvoked).toEqual(3);
+    expect(a.transientFields.bookCommentsCalcInvoked).toEqual(3);
     expect(a.bookComments.fieldValue).toEqual("B1C2, B2C1, B2C2");
   });
 

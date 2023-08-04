@@ -11,7 +11,7 @@ export const inMemory = false;
 export let testDriver: TestDriver;
 export let driver: Driver;
 export let knex: Knex;
-export const makeApiCall = jest.fn();
+export const makeApiCall: any = "vi" in globalThis ? vi.fn() : jest.fn();
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 

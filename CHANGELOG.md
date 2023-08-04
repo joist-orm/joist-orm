@@ -1,3 +1,10 @@
+# [1.98.0](https://github.com/stephenh/joist-ts/compare/v1.97.0...v1.98.0) (2023-08-04)
+
+
+### Features
+
+* Add changes field to Reacted. ([#744](https://github.com/stephenh/joist-ts/issues/744)) ([d5eacc8](https://github.com/stephenh/joist-ts/commit/d5eacc81338bb864ccd5d62cf076814968c6095d))
+
 # [1.97.0](https://github.com/stephenh/joist-ts/compare/v1.96.0...v1.97.0) (2023-08-04)
 
 

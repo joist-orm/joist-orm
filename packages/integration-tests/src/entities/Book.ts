@@ -15,6 +15,12 @@ config.addRule((book) => {
 
 // A noop rule to make Book reactive on author.firstName
 config.addRule({ author: "firstName" }, (b) => {
+  // Assert that this compiles
+  noop(b.author.get.changes.firstName.hasChanged);
+  // Assert this does not
+  // @ts-expect-error
+  noop(b.author.get.changes.lastName.hasChanged);
+  // And record the side effect for assertions
   b.fullNonReactiveAccess.firstNameRuleInvoked++;
 });
 
@@ -43,3 +49,5 @@ config.cascadeDelete("reviews");
 config.beforeDelete("author", (b) => {
   b.authorSetWhenDeleteRuns = b.author.getWithDeleted !== undefined;
 });
+
+function noop(param: any): void {}

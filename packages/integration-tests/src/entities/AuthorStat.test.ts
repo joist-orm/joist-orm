@@ -21,7 +21,7 @@ describe("AuthorStat", () => {
       newAuthorStat(em, { nullableInteger: null });
       // When flushing
       // Then expect no error to be thrown
-      await expect(em.flush()).resolves.toBe(true);
+      await expect(em.flush()).resolves.toBeDefined();
     });
   });
 

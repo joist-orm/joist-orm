@@ -1,7 +1,7 @@
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
-import { FieldStatus, ManyToOneFieldStatus } from "./changes";
+import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getProperties } from "./getProperties";
 import { LoadHint, Loadable, Loaded } from "./loadHints";
 import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
@@ -66,12 +66,13 @@ export type Reacted<T extends Entity, H> = Entity & {
    * will then allow accessing the field via the `Reacted<Author, ...>` type.
    */
   fullNonReactiveAccess: Loaded<T, H>;
+  /** Allow detecting if a reactive change is due to nuances like `hasUpdated` or `hasChanged`. */
+  changes: Changes<T, keyof FieldsOf<T>, keyof NormalizeHint<T, H>>;
 } & MaybeTransientFields<T>;
 
+/** If the domain model has transient fields, allow reactive behavior to see it, i.e. don't run validation rules for special operations. */
 export type MaybeTransientFields<T> = "transientFields" extends keyof T
-  ? {
-      transientFields: T["transientFields"];
-    }
+  ? { transientFields: T["transientFields"] }
   : {};
 
 export function reverseReactiveHint<T extends Entity>(

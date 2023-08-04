@@ -24,9 +24,13 @@ export interface ManyToOneFieldStatus<T extends Entity> extends FieldStatus<IdOf
  * We use `FieldsOf` because that already excludes collection, and then also
  * convert reference fields to `ManyToOneFieldStatus` to be the id type
  * because the reference may not be loaded.
+ *
+ * @type K The fields of the entity, or potentially the union of the entity and its subtypes,
+ *    i.e. `Publisher.changes` is typed as `Changes<Publisher, keyof Publisher | keyof SmallPub | keyof LargePub>`
+ * @type R An optional list of restrictions, i.e for `Reacted` for to provide `changes` to its subset of fields.
  */
-export type Changes<T extends Entity, K = keyof FieldsOf<T>> = { fields: K[] } & {
-  [P in keyof FieldsOf<T>]: FieldsOf<T>[P] extends { type: infer U | undefined }
+export type Changes<T extends Entity, K = keyof FieldsOf<T>, R = K> = { fields: K[] } & {
+  [P in keyof FieldsOf<T> & R]: FieldsOf<T>[P] extends { type: infer U | undefined }
     ? U extends Entity
       ? ManyToOneFieldStatus<U>
       : FieldStatus<U>

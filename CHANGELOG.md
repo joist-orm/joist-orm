@@ -1,3 +1,10 @@
+# [1.97.0](https://github.com/stephenh/joist-ts/compare/v1.96.0...v1.97.0) (2023-08-04)
+
+
+### Features
+
+* Add transientFields convention to Reacted. ([#745](https://github.com/stephenh/joist-ts/issues/745)) ([f809ec0](https://github.com/stephenh/joist-ts/commit/f809ec0153f1a8d9f42972719917d7eba5a58dcc))
+
 # [1.96.0](https://github.com/stephenh/joist-ts/compare/v1.95.0...v1.96.0) (2023-08-02)
 
 

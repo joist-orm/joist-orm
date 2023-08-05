@@ -75,6 +75,17 @@ export type MaybeTransientFields<T> = "transientFields" extends keyof T
   ? { transientFields: T["transientFields"] }
   : {};
 
+/**
+ * Takes a reactive hint and returns the `ReactiveTarget`s that, should they change, need to
+ * walk back to the reactive hint's
+ *
+ * @param rootType The original type that contained the reactive rule/field, used for helpful error messages
+ * @param entityType The current entity of the step we're walking
+ * @param hint The current hint we're walking
+ * @param reactForOtherSide the name of our FK column, if the previous collection needs to react to our FK changing,
+ *   or true to react simplify to new/deleted entities
+ * @param isFirst
+ */
 export function reverseReactiveHint<T extends Entity>(
   rootType: MaybeAbstractEntityConstructor<T>,
   entityType: MaybeAbstractEntityConstructor<T>,
@@ -83,8 +94,14 @@ export function reverseReactiveHint<T extends Entity>(
   isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
-  // This is the list of primitives for this `entityType` that we will react to (if any)
-  const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
+  // This is the list of fields for this `entityType` that we will react to their changing values
+  const fields: string[] = [];
+  // If the hint before us was a collection, i.e. { books: ["title"] }, besides just reacting
+  // to our `title` changing, `reactForOtherSide` tells us to react to our `author` field as well.
+  if (typeof reactForOtherSide === "string") {
+    fields.push(reactForOtherSide);
+  }
+  // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.allFields[key];
@@ -93,7 +110,7 @@ export function reverseReactiveHint<T extends Entity>(
       switch (field.kind) {
         case "m2o": {
           if (!isReadOnly) {
-            primitives.push(field.fieldName);
+            fields.push(field.fieldName);
           }
           return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
             ({ entity, fields, path }) => {
@@ -127,7 +144,7 @@ export function reverseReactiveHint<T extends Entity>(
         case "primitive":
         case "enum":
           if (!isReadOnly) {
-            primitives.push(key);
+            fields.push(key);
           }
           return [];
         default:
@@ -157,9 +174,7 @@ export function reverseReactiveHint<T extends Entity>(
     // If any of our primitives (or m2o fields) change, establish a reactive path
     // from "here" (entityType) that is initially empty (path: []) but will have
     // paths layered on by the previous callers
-    ...(primitives.length > 0 || isFirst || reactForOtherSide === true
-      ? [{ entity: entityType, fields: primitives, path: [] }]
-      : []),
+    ...(fields.length > 0 || isFirst || reactForOtherSide === true ? [{ entity: entityType, fields, path: [] }] : []),
     ...subHints,
   ];
 }
@@ -241,8 +256,12 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
   return loadHint as any;
 }
 
+/** An entity that, when `fields` change, should trigger the reactive rule/field pointed to by `path`. */
 export interface ReactiveTarget {
+  /** The entity that contains a field our reactive rule/field accesses. */
   entity: MaybeAbstractEntityConstructor<any>;
+  /** The field(s) that our reactive rule/field accesses, plus any implicit fields like FKs. */
   fields: string[];
+  /** The path from this `entity` back to the source reactive rule/field. */
   path: string[];
 }

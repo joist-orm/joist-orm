@@ -1,4 +1,5 @@
 import { Entity } from "./Entity";
+import { ReactionsManager } from "./ReactionsManager";
 import { keyToString } from "./keys";
 import { ManyToManyCollection } from "./relations/ManyToManyCollection";
 
@@ -7,12 +8,15 @@ export class JoinRows {
   // The in-memory rows for our m2m table.
   readonly rows: JoinRow[] = [];
 
-  constructor(readonly m2m: ManyToManyCollection<any, any>) {}
+  constructor(readonly m2m: ManyToManyCollection<any, any>, private rm: ReactionsManager) {}
 
   /** Adds a new join row to this table. */
   addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
     const joinRow: JoinRow = { id: undefined, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
     this.rows.push(joinRow);
+    // TODO: This is probably what will make reactive fields work
+    // this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
+    // this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
   }
 
   /** Adds a new remove to this table. */
@@ -25,6 +29,15 @@ export class JoinRows {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
       this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true });
     }
+  }
+
+  /** Return any "old values" for a m2m collection that might need reactivity checks. */
+  removedFor(m2m: ManyToManyCollection<any, any>, e1: Entity): Entity[] {
+    const { columnName, otherColumnName } = m2m;
+    // I.e. if we did `t1.books.remove(b1)` find all join rows that have
+    // `tag_id=t1`, are marked for deletion, and then `.map` them to the removed book.
+    const rows = this.rows.filter((r) => r[columnName] === e1 && r.deleted);
+    return rows.map((r) => r[otherColumnName] as Entity);
   }
 
   /**
@@ -70,7 +83,7 @@ export class JoinRows {
 export interface JoinRow {
   id: number | undefined;
   // The two columns; unfortunately the TS index signature requires unioning all possible types
-  [column: string]: number | Entity | undefined | boolean | Date | ManyToManyCollection<any, any>;
+  [column: string]: number | Entity | undefined | boolean | Date;
   created_at?: Date;
   deleted?: boolean;
 }

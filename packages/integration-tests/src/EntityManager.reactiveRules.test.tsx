@@ -10,7 +10,6 @@ import {
   newPublisher,
   newTag,
   SmallPublisher,
-  Tag,
 } from "@src/entities";
 import { select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
@@ -47,16 +46,28 @@ describe("EntityManager.reactiveRules", () => {
     expect(b.firstNameRuleInvoked).toBe(2);
   });
 
-  it.withCtx("runs m2m reactive rules", async ({ em }) => {
-    // Given a Book with two tags
-    const b = newBook(em, { tags: [{}, {}] });
-    // And a 3rd tag
-    const t3 = newTag(em, 3);
-    await em.flush();
-    // When we hook t3 up to the book
-    b.tags.add(t3);
-    // Then it fails
-    await expect(em.flush()).rejects.toThrow("Too many tags");
+  describe("m2m", () => {
+    it.withCtx("runs m2m reactive rules on add", async ({ em }) => {
+      // Given a Book with two tags
+      const b = newBook(em, { tags: [{}, {}] });
+      // And a 3rd tag
+      const t3 = newTag(em, 3);
+      await em.flush();
+      // When we hook t3 up to the book
+      b.tags.add(t3);
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("Cannot have exactly");
+    });
+
+    it.withCtx("runs m2m reactive rules on remove", async ({ em }) => {
+      // Given a Book with four tags
+      const b = newBook(em, { tags: [{}, {}, {}, {}] });
+      await em.flush();
+      // When we remove the 1st tag
+      b.tags.remove(b.tags.get[0]);
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("Cannot have exactly");
+    });
   });
 
   it.withCtx("only runs explicitly triggered rules when updating", async ({ em }) => {
@@ -149,8 +160,6 @@ describe("EntityManager.reactiveRules", () => {
       // SmallPublisher's "cannot have >5 authors" rule
       { cstr, name: sm(/Publisher.ts:\d+/), fields: ["publisher"], path: ["publisher"], fn },
     ]);
-
-    console.log(getMetadata(Tag).config.__data.reactiveRules);
 
     expect(getMetadata(Book).config.__data.reactiveRules).toEqual([
       // Author's firstName/book.title validation rule

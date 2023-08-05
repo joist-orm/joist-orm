@@ -1,12 +1,13 @@
 import { Entity } from "./Entity";
 import { ReactionsManager } from "./ReactionsManager";
+import { JoinRowTodo } from "./Todo";
 import { keyToString } from "./keys";
 import { ManyToManyCollection } from "./relations/ManyToManyCollection";
 
 /** A small holder around m2m join rows, which we treat as psuedo-entities. */
 export class JoinRows {
   // The in-memory rows for our m2m table.
-  readonly rows: JoinRow[] = [];
+  private readonly rows: JoinRow[] = [];
 
   constructor(readonly m2m: ManyToManyCollection<any, any>, private rm: ReactionsManager) {}
 
@@ -72,6 +73,16 @@ export class JoinRows {
       row.id = dbRow.id;
     }
     return row;
+  }
+
+  /** Scans our `rows` for newly-added/newly-deleted rows that need `INSERT`s/`UPDATE`s. */
+  toTodo(): JoinRowTodo | undefined {
+    const newRows = this.rows.filter((r) => r.id === undefined && r.deleted !== true);
+    const deletedRows = this.rows.filter((r) => r.id !== undefined && r.deleted === true);
+    if (newRows.length === 0 && deletedRows.length === 0) {
+      return undefined;
+    }
+    return { m2m: this.m2m, newRows, deletedRows };
   }
 }
 

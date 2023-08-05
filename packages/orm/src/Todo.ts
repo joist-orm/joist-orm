@@ -58,13 +58,9 @@ export interface JoinRowTodo {
 /** Given a list of `JoinRow`s for a given table, combine them into a single logical `JoinRowTodo`. */
 export function combineJoinRows(joinRows: Record<string, JoinRows>): Record<string, JoinRowTodo> {
   const todos: Record<string, JoinRowTodo> = {};
-  for (const [joinTableName, _rows] of Object.entries(joinRows)) {
-    const { m2m, rows } = _rows;
-    const newRows = rows.filter((r) => r.id === undefined && r.deleted !== true);
-    const deletedRows = rows.filter((r) => r.id !== undefined && r.deleted === true);
-    if (newRows.length > 0 || deletedRows.length > 0) {
-      todos[joinTableName] = { newRows, deletedRows, m2m };
-    }
+  for (const [joinTableName, rows] of Object.entries(joinRows)) {
+    const todo = rows.toTodo();
+    if (todo) todos[joinTableName] = todo;
   }
   return todos;
 }

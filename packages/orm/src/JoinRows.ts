@@ -9,13 +9,22 @@ export class JoinRows {
 
   constructor(readonly m2m: ManyToManyCollection<any, any>) {}
 
-  /**
-   * Adds a new join row to this table.
-   *
-   * Note that we might encode a "delete" w/o knowing the id.
-   */
-  addNew(joinRow: JoinRow): void {
+  /** Adds a new join row to this table. */
+  addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
+    const joinRow: JoinRow = { id: undefined, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
     this.rows.push(joinRow);
+  }
+
+  /** Adds a new remove to this table. */
+  addRemove(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
+    const { columnName, otherColumnName } = m2m;
+    const row = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    if (row) {
+      row.deleted = true;
+    } else {
+      // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
+      this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true });
+    }
   }
 
   /**

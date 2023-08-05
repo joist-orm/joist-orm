@@ -29,6 +29,7 @@
     "publisher",
     "ssn",
     "tags",
+    "tagsOfAllBooks",
     "updatedAt",
     "userOneToOne",
     "wasEverPopular"
@@ -176,6 +177,7 @@
     "numberOfPublicReviews2",
     "publisherId",
     "ssn",
+    "tagsOfAllBooks",
     "updatedAt",
     "wasEverPopular"
   ],

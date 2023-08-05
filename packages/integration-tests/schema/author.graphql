@@ -29,6 +29,7 @@ type Author {
   favoriteBook: Book
   numberOfPublicReviews2: Int
   numberOfAtoms: Int
+  tagsOfAllBooks: String!
 }
 
 input SaveAuthorInput {
@@ -52,6 +53,7 @@ input SaveAuthorInput {
   ssn: String
   favoriteBookId: ID
   numberOfAtoms: Int
+  tagsOfAllBooks: String
 }
 
 type SaveAuthorResult {

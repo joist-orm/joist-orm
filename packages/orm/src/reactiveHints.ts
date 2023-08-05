@@ -127,6 +127,11 @@ export function reverseReactiveHint<T extends Entity>(
             field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
               ? `${field.otherFieldName}@${meta.type}`
               : field.otherFieldName;
+          // While o2m and o2o can watch for just FK changes, for m2m reactivity we push the
+          // collection name into the reactive hint as well, for JoinRows to trigger.
+          if (field.kind === "m2m") {
+            fields.push(field.fieldName);
+          }
           // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
           return reverseReactiveHint(
             rootType,

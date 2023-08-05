@@ -14,9 +14,8 @@ export class JoinRows {
   addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
     const joinRow: JoinRow = { id: undefined, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
     this.rows.push(joinRow);
-    // TODO: This is probably what will make reactive fields work
-    // this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
-    // this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
+    this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
+    this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
   }
 
   /** Adds a new remove to this table. */

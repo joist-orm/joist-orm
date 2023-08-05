@@ -1060,6 +1060,7 @@ describe("EntityManager", () => {
       numberOfBooks: null,
       numberOfPublicReviews: null,
       numberOfPublicReviews2: null,
+      tagsOfAllBooks: null,
       publisher: "p:1",
       quotes: null,
       ssn: null,

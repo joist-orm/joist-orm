@@ -102,6 +102,22 @@ describe("EntityManager.reactiveRules", () => {
         },
       ]);
     });
+
+    it.withCtx("calcs m2m reactive field on change", async ({ em }) => {
+      // Given an Author with two books and one tags each
+      const a = newAuthor(em, { books: [{ tags: [1] }, { tags: [2] }] });
+      await em.flush();
+      // When we change the name of t2
+      a.books.get[1].tags.get[0].name = "3";
+      await em.flush();
+      // Then we updated the field
+      expect(await select("authors")).toMatchObject([
+        {
+          id: 1,
+          tags_of_all_books: "1, 3",
+        },
+      ]);
+    });
   });
 
   it.withCtx("only runs explicitly triggered rules when updating", async ({ em }) => {

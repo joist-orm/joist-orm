@@ -1,8 +1,8 @@
 /** The operations for a given entity type, so they can be executed in bulk. */
 import { Entity } from "./Entity";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { JoinRow, JoinRows } from "./JoinRows";
 import { ManyToManyCollection } from "./relations";
-import { JoinRow } from "./relations/ManyToManyCollection";
 
 /** A group of insert/update/delete operations for a given entity. */
 export class Todo {
@@ -56,13 +56,14 @@ export interface JoinRowTodo {
 }
 
 /** Given a list of `JoinRow`s for a given table, combine them into a single logical `JoinRowTodo`. */
-export function combineJoinRows(joinRows: Record<string, JoinRow[]>): Record<string, JoinRowTodo> {
+export function combineJoinRows(joinRows: Record<string, JoinRows>): Record<string, JoinRowTodo> {
   const todos: Record<string, JoinRowTodo> = {};
-  for (const [joinTableName, rows] of Object.entries(joinRows)) {
+  for (const [joinTableName, _rows] of Object.entries(joinRows)) {
+    const { m2m, rows } = _rows;
     const newRows = rows.filter((r) => r.id === undefined && r.deleted !== true);
     const deletedRows = rows.filter((r) => r.id !== undefined && r.deleted === true);
     if (newRows.length > 0 || deletedRows.length > 0) {
-      todos[joinTableName] = { newRows, deletedRows, m2m: rows[0].m2m };
+      todos[joinTableName] = { newRows, deletedRows, m2m };
     }
   }
   return todos;

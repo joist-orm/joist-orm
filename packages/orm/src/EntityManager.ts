@@ -2,6 +2,7 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
+import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
 import { Todo, combineJoinRows, createTodos } from "./Todo";
 import { constraintNameToValidationError } from "./config";
@@ -24,6 +25,7 @@ import {
   GenericError,
   GraphQLFilterWithAlias,
   Lens,
+  ManyToManyCollection,
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
@@ -51,7 +53,6 @@ import { normalizeHint } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { JoinRow } from "./relations/ManyToManyCollection";
 import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
@@ -179,7 +180,7 @@ export class EntityManager<C = unknown> {
    */
   #pendingCascadeDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
-  #joinRows: Record<string, JoinRow[]> = {};
+  #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   #rm = new ReactionsManager();
   /** Ensures our `em.flush` method is not interrupted. */
@@ -206,7 +207,9 @@ export class EntityManager<C = unknown> {
     // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
     this.__api = {
-      joinRows: this.#joinRows,
+      joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
+        return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m));
+      },
       pendingChildren: this.#pendingChildren,
       hooks: this.#hooks,
       rm: this.#rm,
@@ -1365,7 +1368,7 @@ export class EntityManager<C = unknown> {
 
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
-  joinRows: Record<string, JoinRow[]>;
+  joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
   pendingChildren: Map<string, Map<string, Entity[]>>;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;

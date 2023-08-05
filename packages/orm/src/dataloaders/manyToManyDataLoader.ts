@@ -1,8 +1,8 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
-import { ManyToManyCollection, ParsedFindQuery, abbreviation, getMetadata, keyToNumber, keyToString } from "../index";
-import { JoinRow } from "../relations/ManyToManyCollection";
+import { JoinRow } from "../JoinRows";
+import { ManyToManyCollection, ParsedFindQuery, abbreviation, getMetadata, keyToNumber } from "../index";
 import { getOrSet } from "../utils";
 
 /** Batches m2m.load calls. */
@@ -27,14 +27,12 @@ async function load<T extends Entity, U extends Entity>(
   collection: ManyToManyCollection<T, U>,
   keys: ReadonlyArray<string>,
 ): Promise<U[][]> {
-  const { joinTableName } = collection;
   const { em } = collection.entity;
 
   // Make a map that will be both `tag_id=t:2 -> [...]` and `book_id=b:3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};
-
   // Keep a reference to our row to track updates/deletes
-  const emJoinRows = getOrSet(getEmInternalApi(em).joinRows, joinTableName, []);
+  const joinRows = getEmInternalApi(em).joinRows(collection);
 
   // Break out `column_id=string` keys out
   const columns: Record<string, string[]> = {};
@@ -48,7 +46,7 @@ async function load<T extends Entity, U extends Entity>(
     selects: [`"${alias}".*`],
     tables: [{ alias, join: "primary", table: collection.joinTableName }],
     conditions: [],
-    // Or together `where tag_id in (...)` or `book_id in (...)`
+    // Or together `where tag_id in (...)` or `book_id in (...)` if we're loading both sides simultaneously
     complexConditions: [
       {
         op: "or",
@@ -68,14 +66,10 @@ async function load<T extends Entity, U extends Entity>(
   };
 
   // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
-
   const rows = await em.driver.executeFind(em, query, {});
 
   // The order of column1/column2 doesn't really matter, i.e. if the opposite-side collection is later used
-  const column1 = collection.columnName;
-  const meta1 = collection.entity.__orm.metadata;
-  const column2 = collection.otherColumnName;
-  const meta2 = collection.otherMeta;
+  const { columnName: column1, otherColumnName: column2 } = collection;
 
   // For each join table row, we use `EntityManager.load` to get both entities loaded.
   // This will be another 1 or 2 queries (depending on whether we're loading just
@@ -87,28 +81,7 @@ async function load<T extends Entity, U extends Entity>(
   await Promise.all(
     rows.map(async (dbRow) => {
       // We may have already loaded this join row in a prior load of the opposite side of this m2m.
-      let emRow = emJoinRows.find((jr) => {
-        return (
-          (jr[column1] as Entity).id === keyToString(meta1, dbRow[column1]) &&
-          (jr[column2] as Entity).id === keyToString(meta2, dbRow[column2])
-        );
-      });
-
-      if (!emRow) {
-        // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
-        // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
-        // we chould pull these from the row itself if we did a fancier join.
-        const p1 = em.load(meta1.cstr, keyToString(meta1, dbRow[column1])!);
-        const p2 = em.load(meta2.cstr, keyToString(meta2, dbRow[column2])!);
-        const [e1, e2] = await Promise.all([p1, p2]);
-        emRow = { id: dbRow.id, m2m: collection, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
-        emJoinRows.push(emRow);
-      } else {
-        // If a placeholder row was created while a ManyToManyCollection was unloaded, and we find it during
-        // a subsequent load/query, update its id to be what is in the database.
-        emRow.id = dbRow.id;
-      }
-
+      const emRow = await joinRows.findForRow(dbRow);
       // Put this row into the map for both join table columns, i.e. `book_id=2` and `tag_id=3`
       getOrSet(rowsByKey, `${column1}=${(emRow[column1] as Entity).id}`, []).push(emRow);
       getOrSet(rowsByKey, `${column2}=${(emRow[column2] as Entity).id}`, []).push(emRow);

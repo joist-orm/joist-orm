@@ -86,6 +86,22 @@ describe("EntityManager.reactiveRules", () => {
         },
       ]);
     });
+
+    it.withCtx("calcs m2m reactive field on remove", async ({ em }) => {
+      // Given an Author with two books and one tags each
+      const a = newAuthor(em, { books: [{ tags: [1] }, { tags: [2] }] });
+      await em.flush();
+      // When we remove t2 from the 2nd books
+      a.books.get[1].tags.removeAll();
+      await em.flush();
+      // Then we updated the field
+      expect(await select("authors")).toMatchObject([
+        {
+          id: 1,
+          tags_of_all_books: "1",
+        },
+      ]);
+    });
   });
 
   it.withCtx("only runs explicitly triggered rules when updating", async ({ em }) => {

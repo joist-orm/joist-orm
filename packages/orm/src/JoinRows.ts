@@ -28,6 +28,8 @@ export class JoinRows {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
       this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true });
     }
+    this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
+    this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
   }
 
   /** Return any "old values" for a m2m collection that might need reactivity checks. */
@@ -78,6 +80,11 @@ export class JoinRows {
  *
  * We treat this as a special entity, i.e. it has a primary key, `id`, two "relations" to each
  * entity for the current row, and an optional `created_at` column.
+ *
+ * These rows are immutable, i.e. once created we don't change either FK, and instead make
+ * collection changes only by inserting new rows and deleting old rows.
+ *
+ * This makes the column1+column2 combination a composite key.
  */
 export interface JoinRow {
   id: number | undefined;

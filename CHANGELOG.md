@@ -1,3 +1,10 @@
+# [1.99.0](https://github.com/stephenh/joist-ts/compare/v1.98.0...v1.99.0) (2023-08-06)
+
+
+### Features
+
+* Add forceReload to PersistedAsyncProperty. ([#750](https://github.com/stephenh/joist-ts/issues/750)) ([7aa51d2](https://github.com/stephenh/joist-ts/commit/7aa51d2a782e4c40a09b159934eed9f1664b93ff))
+
 # [1.98.0](https://github.com/stephenh/joist-ts/compare/v1.97.0...v1.98.0) (2023-08-04)
 
 

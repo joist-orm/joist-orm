@@ -97,8 +97,9 @@ export class PersistedAsyncReferenceImpl<
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;
-    if (!this._isLoaded) {
+    if (!this.loaded || opts?.forceReload) {
       return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then(() => {
+        this.loadPromise = undefined;
         this._isLoaded = true;
         // Go through `this.get` so that `setField` is called to set our latest value
         return this.doGet(opts);

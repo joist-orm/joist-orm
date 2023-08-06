@@ -24,7 +24,7 @@ export interface PersistedAsyncProperty<T extends Entity, V> {
   isSet: boolean;
 
   /** Calculates the latest derived value. */
-  load(): Promise<V>;
+  load(opts?: { forceReload?: boolean }): Promise<V>;
 
   /** If loaded, returns the latest derived value, or if unload returns the previously-calculated value. */
   get: V;
@@ -75,10 +75,11 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
     this.#reactiveHint = reactiveHint;
   }
 
-  load(): Promise<V> {
+  load(opts?: { forceReload?: boolean }): Promise<V> {
     const { loadHint } = this;
-    if (!this.loaded) {
+    if (!this.loaded || opts?.forceReload) {
       return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then(() => {
+        this.loadPromise = undefined;
         this.loaded = true;
         // Go through `this.get` so that `setField` is called to set our latest value
         return this.get;

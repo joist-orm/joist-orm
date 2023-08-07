@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { FieldsOf, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { FieldsOf, MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getProperties } from "./getProperties";
@@ -11,6 +11,7 @@ import {
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
+  ManyToManyCollection,
   OneToOneReference,
   Reference,
 } from "./relations";
@@ -75,6 +76,17 @@ export type MaybeTransientFields<T> = "transientFields" extends keyof T
   ? { transientFields: T["transientFields"] }
   : {};
 
+/**
+ * Takes a reactive hint and returns the `ReactiveTarget`s that, should they change, need to
+ * walk back to the reactive hint's
+ *
+ * @param rootType The original type that contained the reactive rule/field, used for helpful error messages
+ * @param entityType The current entity of the step we're walking
+ * @param hint The current hint we're walking
+ * @param reactForOtherSide the name of our FK column, if the previous collection needs to react to our FK changing,
+ *   or true to react simplify to new/deleted entities
+ * @param isFirst
+ */
 export function reverseReactiveHint<T extends Entity>(
   rootType: MaybeAbstractEntityConstructor<T>,
   entityType: MaybeAbstractEntityConstructor<T>,
@@ -83,8 +95,14 @@ export function reverseReactiveHint<T extends Entity>(
   isFirst: boolean = true,
 ): ReactiveTarget[] {
   const meta = getMetadata(entityType);
-  // This is the list of primitives for this `entityType` that we will react to (if any)
-  const primitives: string[] = typeof reactForOtherSide === "string" ? [reactForOtherSide] : [];
+  // This is the list of fields for this `entityType` that we will react to their changing values
+  const fields: string[] = [];
+  // If the hint before us was a collection, i.e. { books: ["title"] }, besides just reacting
+  // to our `title` changing, `reactForOtherSide` tells us to react to our `author` field as well.
+  if (typeof reactForOtherSide === "string") {
+    fields.push(reactForOtherSide);
+  }
+  // Look through the hint for our own fields, i.e. `["title"]`, and nested hints like `{ author: "firstName" }`.
   const subHints = Object.entries(normalizeHint(hint)).flatMap(([keyMaybeSuffix, subHint]) => {
     const key = keyMaybeSuffix.replace(suffixRe, "");
     const field = meta.allFields[key];
@@ -93,7 +111,7 @@ export function reverseReactiveHint<T extends Entity>(
       switch (field.kind) {
         case "m2o": {
           if (!isReadOnly) {
-            primitives.push(field.fieldName);
+            fields.push(field.fieldName);
           }
           return reverseReactiveHint(rootType, field.otherMetadata().cstr, subHint, undefined, false).map(
             ({ entity, fields, path }) => {
@@ -109,6 +127,11 @@ export function reverseReactiveHint<T extends Entity>(
             field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
               ? `${field.otherFieldName}@${meta.type}`
               : field.otherFieldName;
+          // While o2m and o2o can watch for just FK changes, for m2m reactivity we push the
+          // collection name into the reactive hint as well, for JoinRows to trigger.
+          if (field.kind === "m2m") {
+            fields.push(field.fieldName);
+          }
           // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
           return reverseReactiveHint(
             rootType,
@@ -127,7 +150,7 @@ export function reverseReactiveHint<T extends Entity>(
         case "primitive":
         case "enum":
           if (!isReadOnly) {
-            primitives.push(key);
+            fields.push(key);
           }
           return [];
         default:
@@ -157,9 +180,7 @@ export function reverseReactiveHint<T extends Entity>(
     // If any of our primitives (or m2o fields) change, establish a reactive path
     // from "here" (entityType) that is initially empty (path: []) but will have
     // paths layered on by the previous callers
-    ...(primitives.length > 0 || isFirst || reactForOtherSide === true
-      ? [{ entity: entityType, fields: primitives, path: [] }]
-      : []),
+    ...(fields.length > 0 || isFirst || reactForOtherSide === true ? [{ entity: entityType, fields, path: [] }] : []),
     ...subHints,
   ];
 }
@@ -180,22 +201,24 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
     // The path might touch either a reference or a collection
     const entitiesOrLists = await Promise.all(
       current.flatMap((c: any) => {
-        async function maybeLoadedPoly(loadPromise: Promise<Entity>) {
-          if (viaPolyType) {
-            const loaded: Entity = await loadPromise;
-            return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
-          }
-          return loadPromise;
-        }
-        const currentValuePromise = maybeLoadedPoly(c[fieldName].load());
+        const currentValuePromise = maybeLoadedPoly(c[fieldName].load(), viaPolyType);
         // If we're going from Book.author back to Author to re-validate the Author.books collection,
         // see if Book.author has changed, so we can re-validate both the old author's books and the
         // new author's books.
         const fieldKind = getMetadata(c).fields[fieldName]?.kind;
         const isReference = fieldKind === "m2o" || fieldKind === "poly";
+        const isManyToMany = fieldKind === "m2m";
         const changed = c.changes[fieldName] as FieldStatus<any>;
         if (isReference && changed.hasUpdated && changed.originalValue) {
-          return [currentValuePromise, maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity)];
+          return [
+            currentValuePromise,
+            maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity, viaPolyType),
+          ];
+        }
+        if (isManyToMany) {
+          const m2m = c[fieldName] as ManyToManyCollection<any, any>;
+          const joinRows = getEmInternalApi(m2m.entity.em).joinRows(m2m);
+          return [currentValuePromise, joinRows.removedFor(m2m, c)];
         }
         return [currentValuePromise];
       }),
@@ -241,8 +264,20 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
   return loadHint as any;
 }
 
+/** An entity that, when `fields` change, should trigger the reactive rule/field pointed to by `path`. */
 export interface ReactiveTarget {
+  /** The entity that contains a field our reactive rule/field accesses. */
   entity: MaybeAbstractEntityConstructor<any>;
+  /** The field(s) that our reactive rule/field accesses, plus any implicit fields like FKs. */
   fields: string[];
+  /** The path from this `entity` back to the source reactive rule/field. */
   path: string[];
+}
+
+async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string | undefined) {
+  if (viaPolyType) {
+    const loaded: Entity = await loadPromise;
+    return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
+  }
+  return loadPromise;
 }

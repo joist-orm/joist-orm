@@ -11,7 +11,7 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { getOrSet, remove } from "../utils";
+import { remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -118,27 +118,15 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity);
 
     if (this.loaded !== undefined) {
-      if (this.loaded.includes(other)) {
-        return;
-      }
+      if (this.loaded.includes(other)) return;
       this.loaded.push(other);
     } else {
-      if (this.removedBeforeLoaded) {
-        remove(this.removedBeforeLoaded, other);
-      }
-      if (!(this.addedBeforeLoaded ??= []).includes(other)) {
-        this.addedBeforeLoaded.push(other);
-      }
+      if (this.removedBeforeLoaded) remove(this.removedBeforeLoaded, other);
+      if (!(this.addedBeforeLoaded ??= []).includes(other)) this.addedBeforeLoaded.push(other);
     }
 
     if (!percolated) {
-      const joinRow: JoinRow = {
-        id: undefined,
-        m2m: this,
-        [this.columnName]: this.#entity,
-        [this.otherColumnName]: other,
-      };
-      getOrSet(getEmInternalApi(this.#entity.em).joinRows, this.joinTableName, []).push(joinRow);
+      getEmInternalApi(this.#entity.em).joinRows(this).addNew(this, this.#entity, other);
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.#entity, true);
     }
   }
@@ -147,21 +135,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
 
     if (!percolated) {
-      const joinRows = getOrSet(getEmInternalApi(this.#entity.em).joinRows, this.joinTableName, []);
-      const row = joinRows.find((r) => r[this.columnName] === this.#entity && r[this.otherColumnName] === other);
-      if (row) {
-        row.deleted = true;
-      } else {
-        const joinRow: JoinRow = {
-          // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
-          id: -1,
-          m2m: this,
-          [this.columnName]: this.#entity,
-          [this.otherColumnName]: other,
-          deleted: true,
-        };
-        getOrSet(getEmInternalApi(this.#entity.em).joinRows, this.joinTableName, []).push(joinRow);
-      }
+      getEmInternalApi(this.#entity.em).joinRows(this).addRemove(this, this.#entity, other);
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.#entity, true);
     }
 
@@ -207,14 +181,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     const loaded = [...this.loaded];
     // Remove old values
     for (const other of loaded) {
-      if (!values.includes(other)) {
-        this.remove(other);
-      }
+      if (!values.includes(other)) this.remove(other);
     }
+    // Add new values
     for (const other of values) {
-      if (!loaded.includes(other)) {
-        this.add(other);
-      }
+      if (!loaded.includes(other)) this.add(other);
     }
   }
 
@@ -261,15 +232,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded) {
       // this.loaded.unshift(...this.addedBeforeLoaded);
       // this.addedBeforeLoaded = [];
-      this.removedBeforeLoaded?.forEach((e) => {
-        remove(this.loaded!, e);
-        const { em } = this.#entity;
-        const row = getEmInternalApi(em).joinRows[this.joinTableName].find(
-          (r) => r[this.columnName] === this.#entity && r[this.otherColumnName] === e,
-        );
-        if (row) {
-          row.deleted = true;
-        }
+      this.removedBeforeLoaded?.forEach((other) => {
+        remove(this.loaded!, other);
+        getEmInternalApi(this.#entity.em).joinRows(this).addRemove(this, this.#entity, other);
       });
       this.removedBeforeLoaded = [];
     }
@@ -304,11 +269,3 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   [RelationT]: T = null!;
   [RelationU]: U = null!;
 }
-
-export type JoinRow = {
-  id: number | undefined;
-  m2m: ManyToManyCollection<any, any>;
-  created_at?: Date;
-  [column: string]: number | Entity | undefined | boolean | Date | ManyToManyCollection<any, any>;
-  deleted?: boolean;
-};

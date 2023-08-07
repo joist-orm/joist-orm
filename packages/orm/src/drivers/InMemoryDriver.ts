@@ -127,7 +127,7 @@ export class InMemoryDriver implements Driver {
         this.onQuery();
       }
       newRows.forEach((row) => {
-        const { id, created_at, deleted, m2m, ...fkColumns } = row;
+        const { id, created_at, deleted, ...fkColumns } = row;
         // The rows in EntityManager.joinRows point to entities, change those to integers
         Object.keys(fkColumns).forEach((key) => {
           const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;

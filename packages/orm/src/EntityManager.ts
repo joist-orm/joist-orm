@@ -2,9 +2,10 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
+import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
-import { Todo, combineJoinRows, createTodos } from "./Todo";
-import { constraintNameToValidationError } from "./config";
+import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
+import { ReactiveRule, constraintNameToValidationError } from "./config";
 import { createOrUpdatePartial } from "./createOrUpdatePartial";
 import { findByUniqueDataLoader } from "./dataloaders/findByUniqueDataLoader";
 import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
@@ -13,6 +14,7 @@ import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
 import { Driver } from "./drivers/Driver";
 import {
+  BaseEntity,
   Changes,
   CustomCollection,
   CustomReference,
@@ -24,6 +26,7 @@ import {
   GenericError,
   GraphQLFilterWithAlias,
   Lens,
+  ManyToManyCollection,
   OneToManyCollection,
   PartialOrNull,
   PolymorphicReferenceImpl,
@@ -51,7 +54,6 @@ import { normalizeHint } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { JoinRow } from "./relations/ManyToManyCollection";
 import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
@@ -179,7 +181,7 @@ export class EntityManager<C = unknown> {
    */
   #pendingCascadeDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
-  #joinRows: Record<string, JoinRow[]> = {};
+  #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
   #rm = new ReactionsManager();
   /** Ensures our `em.flush` method is not interrupted. */
@@ -206,7 +208,9 @@ export class EntityManager<C = unknown> {
     // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
     this.__api = {
-      joinRows: this.#joinRows,
+      joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
+        return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
+      },
       pendingChildren: this.#pendingChildren,
       hooks: this.#hooks,
       rm: this.#rm,
@@ -1118,6 +1122,7 @@ export class EntityManager<C = unknown> {
       // the full set of entities that will be INSERT/UPDATE/DELETE-d in the database.
       const entitiesToFlush = [...hooksInvoked];
       const entityTodos = createTodos(entitiesToFlush);
+      const joinRowTodos = combineJoinRows(this.#joinRows);
 
       if (!skipValidation) {
         try {
@@ -1125,14 +1130,12 @@ export class EntityManager<C = unknown> {
           // Run simple rules first b/c it includes not-null/required rules, so that then when we run
           // `validateReactiveRules` next, the lambdas won't see invalid entities.
           await validateSimpleRules(entityTodos);
-          await validateReactiveRules(entityTodos);
+          await validateReactiveRules(entityTodos, joinRowTodos);
         } finally {
           this.#isValidating = false;
         }
         await afterValidation(this.ctx, entityTodos);
       }
-
-      const joinRowTodos = combineJoinRows(this.#joinRows);
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
         // The driver will handle the right thing if we're already in an existing transaction.
@@ -1365,7 +1368,7 @@ export class EntityManager<C = unknown> {
 
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
-  joinRows: Record<string, JoinRow[]>;
+  joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
   pendingChildren: Map<string, Map<string, Entity[]>>;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
@@ -1430,16 +1433,35 @@ async function recalcTouchedEntities(touched: Entity[]): Promise<void> {
  * from the currently-changed entities back to each rule's originally-defined-in entity,
  * and ensure those entities are added to `todos`.
  */
-async function validateReactiveRules(todos: Record<string, Todo>): Promise<void> {
+async function validateReactiveRules(
+  todos: Record<string, Todo>,
+  joinRowTodos: Record<string, JoinRowTodo>,
+): Promise<void> {
   // Use a map of rule -> Set<Entity> so that we only invoke a rule once per entity,
   // even if it was triggered by multiple changed fields.
   const fns: Map<ValidationRule<any>, Set<Entity>> = new Map();
+
+  // From the given triggered entities, follow the entity's ReactiveRule back
+  // to the reactive rules that need ran, and queue them in the `fn` map
+  async function followAndQueue(triggered: Entity[], rule: ReactiveRule): Promise<void> {
+    (await followReverseHint(triggered, rule.path))
+      .filter((entity) => !entity.isDeletedEntity)
+      .filter((e) => e instanceof rule.cstr)
+      .forEach((entity) => {
+        let entities = fns.get(rule.fn);
+        if (!entities) {
+          entities = new Set();
+          fns.set(rule.fn, entities);
+        }
+        entities.add(entity);
+      });
+  }
 
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
     const rules = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
-    return rules.map(async (rule) => {
+    return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
         (e) =>
@@ -1448,26 +1470,41 @@ async function validateReactiveRules(todos: Record<string, Todo>): Promise<void>
           ((e as any).changes as Changes<any>).fields.some((f) => rule.fields.includes(f)),
       );
       // From these "triggered" entities, queue the "found"/owner entity to rerun this rule
-      (await followReverseHint(triggered, rule.path))
-        .filter((entity) => !entity.isDeletedEntity)
-        .filter((e) => e instanceof rule.cstr)
-        .forEach((entity) => {
-          let entities = fns.get(rule.fn);
-          if (!entities) {
-            entities = new Set();
-            fns.set(rule.fn, entities);
-          }
-          entities.add(entity);
-        });
+      return followAndQueue(triggered, rule);
     });
   });
-  await Promise.all(p1);
+
+  const p2 = Object.values(joinRowTodos).flatMap((todo) => {
+    // Cheat and use `Object.values` + `filter instanceof BaseEntity` to handle the variable keys
+    const entities: BaseEntity[] = [...todo.newRows, ...todo.deletedRows]
+      .flatMap((jr) => Object.values(jr))
+      .filter((e) => e instanceof BaseEntity) as any;
+    // Do the first side
+    const p1 = getAllMetas(todo.m2m.meta)
+      .flatMap((m) => m.config.__data.reactiveRules)
+      .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
+      .map((rule) => {
+        const triggered = entities.filter((e) => e instanceof todo.m2m.meta.cstr);
+        return followAndQueue(triggered, rule);
+      });
+    // And the second side
+    const p2 = getAllMetas(todo.m2m.otherMeta)
+      .flatMap((m) => m.config.__data.reactiveRules)
+      .filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
+      .map((rule) => {
+        const triggered = entities.filter((e) => e instanceof todo.m2m.otherMeta.cstr);
+        return followAndQueue(triggered, rule);
+      });
+    return [...p1, ...p2];
+  });
+
+  await Promise.all([...p1, ...p2]);
 
   // Now that we've found the fn+entities to run, run them and collect any errors
-  const p2 = [...fns.entries()].flatMap(([fn, entities]) =>
+  const p3 = [...fns.entries()].flatMap(([fn, entities]) =>
     [...entities].map(async (entity) => coerceError(entity, await fn(entity))),
   );
-  const errors = (await Promise.all(p2)).flat();
+  const errors = (await Promise.all(p3)).flat();
   if (errors.length > 0) {
     throw new ValidationErrors(errors);
   }

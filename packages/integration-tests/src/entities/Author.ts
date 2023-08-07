@@ -71,6 +71,16 @@ export class Author extends AuthorCodegen {
       a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
   );
 
+  readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+    "tagsOfAllBooks",
+    { books: { tags: "name" } },
+    (a) =>
+      a.books.get
+        .flatMap((b) => b.tags.get)
+        .map((t) => t.name)
+        .join(", "),
+  );
+
   public transientFields = {
     beforeFlushRan: false,
     beforeCreateRan: false,

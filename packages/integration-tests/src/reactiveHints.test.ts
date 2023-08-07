@@ -1,4 +1,4 @@
-import { Author, Book, BookReview, Comment, Image } from "@src/entities";
+import { Author, Book, BookReview, Comment, Image, Tag } from "@src/entities";
 import { LoadHint, Loaded, Reacted, ReactiveHint, getMetadata, reverseReactiveHint } from "joist-orm";
 import { convertToLoadHint } from "joist-orm/build/src/reactiveHints";
 
@@ -55,6 +55,21 @@ describe("reactiveHints", () => {
     expect(reverseReactiveHint(Author, Author, { image: "fileName" })).toEqual([
       { entity: Author, fields: [], path: [] },
       { entity: Image, fields: ["author", "fileName"], path: ["author"] },
+    ]);
+  });
+
+  it("can do child m2m with primitive field names", () => {
+    expect(reverseReactiveHint(Book, Book, { tags: "name" })).toEqual([
+      { entity: Book, fields: ["tags"], path: [] },
+      { entity: Tag, fields: ["books", "name"], path: ["books"] },
+    ]);
+  });
+
+  it("can do nested child m2m with primitive field names", () => {
+    expect(reverseReactiveHint(Author, Author, { books: { tags: "name" } })).toEqual([
+      { entity: Author, fields: [], path: [] },
+      { entity: Book, fields: ["author", "tags"], path: ["author"] },
+      { entity: Tag, fields: ["books", "name"], path: ["books", "author"] },
     ]);
   });
 

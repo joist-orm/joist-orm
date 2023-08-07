@@ -8,6 +8,7 @@ import {
   newBook,
   newBookReview,
   newPublisher,
+  newTag,
   SmallPublisher,
 } from "@src/entities";
 import { select } from "@src/entities/inserts";
@@ -43,6 +44,80 @@ describe("EntityManager.reactiveRules", () => {
     // Then neither rule ran
     expect(b.firstNameRuleInvoked).toBe(2);
     expect(b.firstNameRuleInvoked).toBe(2);
+  });
+
+  describe("m2m", () => {
+    it.withCtx("runs m2m reactive rules on add", async ({ em }) => {
+      // Given a Book with two tags
+      const b = newBook(em, { tags: [{}, {}] });
+      // And a 3rd tag
+      const t3 = newTag(em, 3);
+      await em.flush();
+      // When we hook t3 up to the book
+      b.tags.add(t3);
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("Cannot have exactly");
+    });
+
+    it.withCtx("runs m2m reactive rules on remove", async ({ em }) => {
+      // Given a Book with four tags
+      const b = newBook(em, { tags: [{}, {}, {}, {}] });
+      await em.flush();
+      // When we remove the 1st tag
+      b.tags.remove(b.tags.get[0]);
+      // Then it fails
+      await expect(em.flush()).rejects.toThrow("Cannot have exactly");
+    });
+
+    it.withCtx("calcs m2m reactive field on add", async ({ em }) => {
+      // Given an Author with two books and one tags each
+      const a = newAuthor(em, { books: [{ tags: [1] }, { tags: [2] }] });
+      // And a 3rd tag
+      const t3 = newTag(em, 3);
+      await em.flush();
+      // When we hook t3 up to the 2nd book
+      a.books.get[1].tags.add(t3);
+      await em.flush();
+      // Then we updated the field
+      expect(await select("authors")).toMatchObject([
+        {
+          id: 1,
+          tags_of_all_books: "1, 2, 3",
+        },
+      ]);
+    });
+
+    it.withCtx("calcs m2m reactive field on remove", async ({ em }) => {
+      // Given an Author with two books and one tags each
+      const a = newAuthor(em, { books: [{ tags: [1] }, { tags: [2] }] });
+      await em.flush();
+      // When we remove t2 from the 2nd books
+      a.books.get[1].tags.removeAll();
+      await em.flush();
+      // Then we updated the field
+      expect(await select("authors")).toMatchObject([
+        {
+          id: 1,
+          tags_of_all_books: "1",
+        },
+      ]);
+    });
+
+    it.withCtx("calcs m2m reactive field on change", async ({ em }) => {
+      // Given an Author with two books and one tags each
+      const a = newAuthor(em, { books: [{ tags: [1] }, { tags: [2] }] });
+      await em.flush();
+      // When we change the name of t2
+      a.books.get[1].tags.get[0].name = "3";
+      await em.flush();
+      // Then we updated the field
+      expect(await select("authors")).toMatchObject([
+        {
+          id: 1,
+          tags_of_all_books: "1, 3",
+        },
+      ]);
+    });
   });
 
   it.withCtx("only runs explicitly triggered rules when updating", async ({ em }) => {
@@ -150,6 +225,8 @@ describe("EntityManager.reactiveRules", () => {
       // Book's "numberOfBooks2" rule (this book + other books)
       { cstr, name: sm(/Book.ts:\d+/), fields: ["author"], path: [], fn },
       { cstr, name: sm(/Book.ts:\d+/), fields: ["author", "title"], path: ["author", "books"], fn },
+      // The tags <= 3 rule
+      { cstr, name: sm(/Book.ts:\d+/), fields: ["tags"], path: [], fn },
       // Publisher's numberOfBooks2 "cannot have 13 books" rule
       { cstr, name: sm(/Publisher.ts:\d+/), fields: ["author", "title"], path: ["author", "publisher"], fn },
     ]);
@@ -212,6 +289,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: "bookComments", fields: ["author"], path: ["author"] },
       { cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
       { cstr, name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
+      { cstr, name: "tagsOfAllBooks", fields: ["author", "tags"], path: ["author"] },
       { cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);

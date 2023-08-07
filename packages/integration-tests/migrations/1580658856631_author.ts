@@ -107,6 +107,8 @@ export function up(b: MigrationBuilder): void {
     number_of_public_reviews: { type: "int", notNull: false },
     // for testing derived fields using other derived fields
     number_of_public_reviews2: { type: "int", notNull: false },
+    // for testing derived fields through m2ms
+    tags_of_all_books: { type: "varchar", notNull: true },
   });
 
   // A publisher can only have one author named `Jim`, but still have other authors

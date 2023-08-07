@@ -140,7 +140,7 @@ export class ConfigApi<T extends Entity, C> {
  * I.e. if `Book` has a `ruleFn` that reacts to `Author.title`, then `Author`'s config will have
  * a `ReactiveRule` with fields `["title"]`, path `books`, and rule `ruleFn`.
  */
-interface ReactiveRule {
+export interface ReactiveRule {
   /** The fields on this source entity that would trigger the downstream rule's eval. */
   fields: string[];
   /** The constructor of downstream entity that owns the reactive rule. */

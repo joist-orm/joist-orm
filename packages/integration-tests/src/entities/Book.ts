@@ -50,4 +50,9 @@ config.beforeDelete("author", (b) => {
   b.authorSetWhenDeleteRuns = b.author.getWithDeleted !== undefined;
 });
 
+// Test m2m reactivity on collection size
+config.addRule("tags", (b) => {
+  return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
+});
+
 function noop(param: any): void {}

@@ -196,6 +196,17 @@ describe("Entity", () => {
           "otherFieldName": "authors",
           "removedBeforeLoaded": undefined,
         },
+        "tagsOfAllBooks": {
+          "fieldName": "tagsOfAllBooks",
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": false,
+          "reactiveHint": {
+            "books": {
+              "tags": "name",
+            },
+          },
+        },
         "transientFields": {
           "afterCommitIdIsSet": false,
           "afterCommitIsDeletedEntity": false,

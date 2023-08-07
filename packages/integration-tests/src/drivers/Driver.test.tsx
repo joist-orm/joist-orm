@@ -12,6 +12,7 @@ describe("Driver", () => {
       // Pretend EntityManager.flush ran
       setField(author, "initials", "a");
       setField(author, "numberOfBooks", 0);
+      setField(author, "tagsOfAllBooks", "");
       await em.driver.flushEntities(em, {
         Author: {
           metadata: getMetadata(Author),

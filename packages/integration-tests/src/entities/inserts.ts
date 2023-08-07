@@ -39,7 +39,12 @@ export function insertAuthor(row: {
   updated_at?: any;
   deleted_at?: any;
 }) {
-  return testDriver.insert("authors", { initials: row.first_name[0], number_of_books: 0, ...row });
+  return testDriver.insert("authors", {
+    initials: row.first_name[0],
+    number_of_books: 0,
+    tags_of_all_books: "",
+    ...row,
+  });
 }
 
 export function insertBook(row: { id?: number; title: string; author_id: number | null; deleted_at?: Date }) {

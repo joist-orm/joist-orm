@@ -1,3 +1,10 @@
+# [1.100.0](https://github.com/stephenh/joist-ts/compare/v1.99.0...v1.100.0) (2023-08-07)
+
+
+### Features
+
+* Add reactivity for m2m relations ([#748](https://github.com/stephenh/joist-ts/issues/748)) ([9282427](https://github.com/stephenh/joist-ts/commit/9282427c05f1c23b5d10c4183966e94df836540a))
+
 # [1.99.0](https://github.com/stephenh/joist-ts/compare/v1.98.0...v1.99.0) (2023-08-06)
 
 

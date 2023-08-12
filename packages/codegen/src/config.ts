@@ -1,7 +1,8 @@
 import { createFromBuffer } from "@dprint/formatter";
 import { getBuffer } from "@dprint/json";
-import { Entity } from "EntityDbMetadata";
+import { DbMetadata, Entity } from "EntityDbMetadata";
 import { promises as fs } from "fs";
+import { groupBy } from "joist-utils";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());
@@ -87,6 +88,42 @@ export const defaultConfig: Config = {
 };
 
 export const ormMaintainedFields = ["createdAt", "updatedAt"];
+
+/** Ensure the user doesn't have any typos in their config. */
+export function warnInvalidEntries(config: Config, db: DbMetadata): void {
+  const entitiesByName = groupBy(db.entities, (e) => e.name);
+  for (const [entityName, entityConfig] of Object.entries(config.entities)) {
+    const entities = entitiesByName[entityName];
+    if (!entities) {
+      console.log(`WARNING: Found config for non-existent entity ${entityName}`);
+      return;
+    }
+    // We don't have keyBy...
+    const [entity] = entities;
+
+    // Check fields
+    const fields = [...entity.primitives, ...entity.manyToOnes];
+    for (const [name, config] of Object.entries(entityConfig.fields || {})) {
+      if (config.ignore) continue;
+      const field = fields.find((f) => f.fieldName === name);
+      if (!field) console.log(`WARNING: Found config for non-existent field ${entityName}.${name}`);
+    }
+
+    // Check relations
+    const relations = [
+      ...entity.oneToManys,
+      ...entity.manyToManys,
+      ...entity.oneToOnes,
+      ...entity.largeOneToManys,
+      ...entity.largeManyToManys,
+      ...entity.polymorphics,
+    ];
+    for (const [name, config] of Object.entries(entityConfig.relations || {})) {
+      const relation = relations.find((r) => r.fieldName === name);
+      if (!relation) console.log(`WARNING: Found config for non-existent relation ${entityName}.${name}`);
+    }
+  }
+}
 
 export function isDerived(config: Config, entity: Entity, fieldName: string): boolean {
   return config.entities[entity.name]?.fields?.[fieldName]?.derived === "sync";

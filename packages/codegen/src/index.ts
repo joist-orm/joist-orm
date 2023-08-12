@@ -4,7 +4,7 @@ import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
 import { DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
-import { Config, loadConfig, writeConfig } from "./config";
+import { Config, loadConfig, warnInvalidEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
@@ -83,6 +83,8 @@ if (require.main === module) {
 
     assignTags(config, dbMetadata);
     await writeConfig(config);
+
+    warnInvalidEntries(config, dbMetadata);
 
     await generateAndSaveFiles(config, dbMetadata);
   })().catch((err) => {

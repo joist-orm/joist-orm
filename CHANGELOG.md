@@ -1,3 +1,10 @@
+# [1.101.0](https://github.com/stephenh/joist-ts/compare/v1.100.0...v1.101.0) (2023-08-12)
+
+
+### Features
+
+* Output warnings for stale/invalid config keys. ([#752](https://github.com/stephenh/joist-ts/issues/752)) ([5a45b4a](https://github.com/stephenh/joist-ts/commit/5a45b4ad4bb34af32d3bae099b7b77f668572654)), closes [#740](https://github.com/stephenh/joist-ts/issues/740)
+
 # [1.100.0](https://github.com/stephenh/joist-ts/compare/v1.99.0...v1.100.0) (2023-08-07)
 
 

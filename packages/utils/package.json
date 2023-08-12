@@ -1,6 +1,6 @@
 {
   "name": "joist-utils",
-  "version": "1.100.0",
+  "version": "1.101.0",
   "license": "MIT",
   "main": "build/index.js",
   "types": "build/index.d.ts",

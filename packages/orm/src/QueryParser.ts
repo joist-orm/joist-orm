@@ -173,9 +173,10 @@ export function parseFindQuery(
         } else if (field.kind === "m2o") {
           const column = field.serde.columns[0];
           const sub = (ef.subFilter as any)[key];
+          const joinKind = field.required ? "inner" : "outer";
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "inner", `${fa}.${column.columnName}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, joinKind, `${fa}.${column.columnName}`, `${a}.id`, sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
@@ -183,7 +184,7 @@ export function parseFindQuery(
             // skip
           } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "inner", `${fa}.${column.columnName}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, joinKind, `${fa}.${column.columnName}`, `${a}.id`, sub);
           } else {
             conditions.push({
               alias: fa,
@@ -315,7 +316,11 @@ export function parseFindQuery(
       const field = meta.allFields[key] ?? fail(`${key} not found on ${meta.tableName}`);
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];
-        orderBys.push({ alias: `${alias}${field.aliasSuffix ?? ''}`, column: column.columnName, order: value as OrderBy });
+        orderBys.push({
+          alias: `${alias}${field.aliasSuffix ?? ""}`,
+          column: column.columnName,
+          order: value as OrderBy,
+        });
       } else if (field.kind === "m2o") {
         // Do we already this table joined in?
         let table = tables.find((t) => t.table === field.otherMetadata().tableName);

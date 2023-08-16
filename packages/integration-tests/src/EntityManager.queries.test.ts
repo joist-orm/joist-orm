@@ -215,7 +215,7 @@ describe("EntityManager.queries", () => {
       tables: [
         { alias: "b", table: "books", join: "primary" },
         { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
-        { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
       ],
       conditions: [{ alias: "p", column: "name", dbType: "character varying", cond: { kind: "eq", value: "p2" } }],
       orderBys: expect.anything(),
@@ -1117,7 +1117,7 @@ describe("EntityManager.queries", () => {
       selects: [`"a".*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
+        { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
       ],
       conditions: [
         { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a" } },
@@ -1761,7 +1761,7 @@ describe("EntityManager.queries", () => {
       selects: [`"c".*`],
       tables: [
         { alias: "c", table: "critics", join: "primary" },
-        { alias: "lp", table: "large_publishers", join: "inner", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
+        { alias: "lp", table: "large_publishers", join: "outer", col1: "c.favorite_large_publisher_id", col2: "lp.id" },
         // Perhaps ideally the `col1` would be `lp_b0.id` but it doesn't matter
         { alias: "a", table: "authors", join: "outer", col1: "lp.id", col2: "a.publisher_id" },
       ],
@@ -1985,7 +1985,7 @@ describe("EntityManager.queries", () => {
         selects: [`"a".*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
-          { alias: "p", table: "publishers", join: "inner", col1: "a.publisher_id", col2: "p.id" },
+          { alias: "p", table: "publishers", join: "outer", col1: "a.publisher_id", col2: "p.id" },
           { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
         ],
         conditions: [],

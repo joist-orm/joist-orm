@@ -1,3 +1,10 @@
+## [1.101.1](https://github.com/stephenh/joist-ts/compare/v1.101.0...v1.101.1) (2023-08-16)
+
+
+### Bug Fixes
+
+* outer join on non required m2o ([#754](https://github.com/stephenh/joist-ts/issues/754)) ([e614226](https://github.com/stephenh/joist-ts/commit/e6142262375b37531e2314382bbf4fdf5746efe9))
+
 # [1.101.0](https://github.com/stephenh/joist-ts/compare/v1.100.0...v1.101.0) (2023-08-12)
 
 

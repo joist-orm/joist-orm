@@ -303,13 +303,13 @@ describe("Author", () => {
     // When we want to recalc numberOfPublicReviews2
     const em2 = newEntityManager();
     const a2 = await em2.load(Author, a1.idOrFail, "books");
-    // And we've also made a new BookReview that doesn't have an existing value calculated yet
+    // And we make a new BookReview that doesn't have isPublic calculated yet
     const br2 = em.create(BookReview, { book: a2.books.get[0], rating: 2 });
-    // Then the numberOfPublicReviews2.load will ensure isPublic is loaded first
+    // Then the numberOfPublicReviews2.load will ensure br2.isPublic is loaded first
     expect(await a2.numberOfPublicReviews2.load()).toBe(2);
     // And we calc'd the br2.isPublic b/c it's new
     expect(br2.transientFields.isPublicCalc).toBe(2);
-    // But we did not calc the br2.isPublic b/c it was already unavailable
+    // But we did not calc the br2.isPublic b/c it was already available
     const [br1] = await a2.books.get[0].reviews.load();
     expect(br1.transientFields.isPublicCalc).toBe(0);
   });

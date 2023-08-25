@@ -54,6 +54,7 @@ import { normalizeHint } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
 import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
@@ -932,7 +933,17 @@ export class EntityManager<C = unknown> {
           return hints.map(([key]) => {
             const relation = (entity as any)[key];
             if (!relation || typeof relation.load !== "function") {
+              // We let hasPersistedAsyncProperty ask us to populate field-level reactive
+              // hints, but only as an internal implementation detail.
+              if ((opts as any).allowFields && getMetadata(entity as any).allFields[key]) return;
               throw new Error(`Invalid load hint '${key}' on ${entity}`);
+            }
+            // If we're populating a hasPersistedAsyncProperty, and find an upstream
+            // property that we ourselves depend on, don't bother loading it if it's
+            // already been calculated (i.e. we have no reason to believe its value
+            // is stale, so we should avoid pulling all of its data into memory).
+            if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) {
+              return;
             }
             return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
           });

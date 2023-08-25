@@ -13,6 +13,7 @@ import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
   readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
+  transientFields = { isPublicCalc: 0 };
 
   // This is kind of silly domain wise, but used as an example of hasOneDerived with a load hint. We don't
   // technically have any conditional logic in `get` so could use a lens, but we want to test hasOneDerived.
@@ -26,6 +27,7 @@ export class BookReview extends BookReviewCodegen {
     "isPublic",
     { book: { author: ["age", "graduated"] } },
     (review) => {
+      review.transientFields.isPublicCalc++;
       const author = review.book.get.author.get;
       // Currently our multi-hop reactivity recalc is more aggressive (runs before) our multi-hop
       // cascade deletion (which requires multiple 'pending loops' within `em.flush`), so we might

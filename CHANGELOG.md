@@ -1,3 +1,10 @@
+## [1.101.2](https://github.com/stephenh/joist-ts/compare/v1.101.1...v1.101.2) (2023-08-25)
+
+
+### Bug Fixes
+
+* Dedupe relations before calling load. ([#758](https://github.com/stephenh/joist-ts/issues/758)) ([0ab3c38](https://github.com/stephenh/joist-ts/commit/0ab3c38ce4da7769a8974ebef38119d09f6b8aa4))
+
 ## [1.101.1](https://github.com/stephenh/joist-ts/compare/v1.101.0...v1.101.1) (2023-08-16)
 
 

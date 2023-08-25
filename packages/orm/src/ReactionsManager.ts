@@ -94,7 +94,10 @@ export class ReactionsManager {
             .map((entity) => (entity as any)[rf.name]);
         }),
       );
-      await Promise.all(relations.flat().map((r: any) => r.load()));
+      // Multiple reactions could have pointed back to the same reactive field, so
+      // dedupe the found relations before calling .load.
+      const unique = new Set(relations.flat());
+      await Promise.all([...unique].map((r: any) => r.load()));
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.

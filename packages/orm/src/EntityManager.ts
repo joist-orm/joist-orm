@@ -942,9 +942,11 @@ export class EntityManager<C = unknown> {
             // property that we ourselves depend on, don't bother loading it if it's
             // already been calculated (i.e. we have no reason to believe its value
             // is stale, so we should avoid pulling all of its data into memory).
-            if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) {
-              return;
-            }
+            //
+            // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
+            // then go ahead and call `.load()` so that the downstream reactive calc can
+            // call `.get` to evaluate its derived value.
+            if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
             return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
           });
         });

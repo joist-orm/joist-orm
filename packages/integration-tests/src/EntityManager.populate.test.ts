@@ -223,4 +223,11 @@ describe("EntityManager.populate", () => {
     const p = em.load(Author, "a:1", { publisher: "size" });
     await expect(p).rejects.toThrow("Invalid load hint 'size' on SmallPublisher:1");
   });
+
+  it("doesn't blow up on reactive hint tags", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    await em.populate(a, { hint: "numberOfPublicReviews2:ro", allowFields: true } as any);
+    await em.populate(a, { hint: "numberOfPublicReviews2_ro", allowFields: true } as any);
+  });
 });

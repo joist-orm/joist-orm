@@ -50,7 +50,7 @@ import {
   tagId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
-import { normalizeHint } from "./normalizeHints";
+import { normalizeHint, suffixRe } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -925,17 +925,20 @@ export class EntityManager<C = unknown> {
       (batch) => {
         // Because we're using `{ cache: false }`, we could have dups in the list, so unique
         const list = [...new Set(batch)];
+        const { allowFields } = opts as any;
 
         const hints = Object.entries(normalizeHint(hintOpt as any));
 
         // One breadth-width pass to ensure each relation is loaded
         const loadPromises = list.flatMap((entity) => {
           return hints.map(([key]) => {
+            // Watch for hasPersistedAsyncProperty passing us a reactive hint...
+            if (allowFields) key = key.replace(suffixRe, "");
             const relation = (entity as any)[key];
             if (!relation || typeof relation.load !== "function") {
               // We let hasPersistedAsyncProperty ask us to populate field-level reactive
               // hints, but only as an internal implementation detail.
-              if ((opts as any).allowFields && getMetadata(entity as any).allFields[key]) return;
+              if (allowFields && getMetadata(entity as any).allFields[key]) return;
               throw new Error(`Invalid load hint '${key}' on ${entity}`);
             }
             // If we're populating a hasPersistedAsyncProperty, and find an upstream
@@ -955,6 +958,8 @@ export class EntityManager<C = unknown> {
         return Promise.all(loadPromises).then(() => {
           const nestedLoadPromises = hints.map(([key, nestedHint]) => {
             if (Object.keys(nestedHint).length === 0) return;
+            // Watch for hasPersistedAsyncProperty passing us a reactive hint...
+            if (allowFields) key = key.replace(suffixRe, "");
             // Unique for good measure?...
             const children = [...new Set(list.map((entity) => toArray(getEvenDeleted((entity as any)[key]))).flat())];
             if (children.length === 0) return;

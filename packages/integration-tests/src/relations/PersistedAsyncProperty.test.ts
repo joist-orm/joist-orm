@@ -12,8 +12,8 @@ describe("PersistedAsyncProperty", () => {
     await insertBookReview({ rating: 1, book_id: 1 });
     const em = newEntityManager();
     // And we can load the numberOfPublicReviews tree
-    const a = await em.load(Author, "a:1", "numberOfPublicReviews");
-    expect(a.numberOfPublicReviews.get).toBe(1);
+    const a = await em.load(Author, "a:1");
+    expect(await a.numberOfPublicReviews.load()).toBe(1);
     // When we move Book b2 into a1 (instead of creating a new one, to ensure its review collection is not loaded)
     const b2 = await em.load(Book, "b:2");
     b2.author.set(a);

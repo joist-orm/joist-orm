@@ -180,6 +180,7 @@ export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hin
   } else if (typeof hint === "object") {
     return Object.entries(hint as object).every(([key, nestedHint]) => {
       const relation = (entity as any)[key];
+      if (typeof relation.load !== "function") return true;
       if (relation.isLoaded) {
         const result = relation.get;
         return Array.isArray(result)

@@ -1,3 +1,10 @@
+## [1.101.3](https://github.com/stephenh/joist-ts/compare/v1.101.2...v1.101.3) (2023-08-26)
+
+
+### Bug Fixes
+
+* Transitively load derived values when the entities are new. ([#759](https://github.com/stephenh/joist-ts/issues/759)) ([ba53e7e](https://github.com/stephenh/joist-ts/commit/ba53e7eb8909fc3fd2c2ccfd75dce2cbcba0bc47))
+
 ## [1.101.2](https://github.com/stephenh/joist-ts/compare/v1.101.1...v1.101.2) (2023-08-25)
 
 

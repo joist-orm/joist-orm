@@ -949,7 +949,7 @@ export class EntityManager<C = unknown> {
             // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
             // then go ahead and call `.load()` so that the downstream reactive calc can
             // call `.get` to evaluate its derived value.
-            if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
+            if (allowFields && relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
             return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
           });
         });

@@ -106,10 +106,10 @@ describe("PersistedAsyncProperty", () => {
     // Then the numberOfPublicReviews2.load will ensure br2.isPublic is loaded first
     expect(await a2.numberOfPublicReviews2.load()).toBe(2);
     // And we calc'd the br2.isPublic b/c it's new
-    expect(br2.transientFields.isPublicCalc).toBe(2);
+    expect(br2.transientFields.numberOfIsPublicCalcs).toBe(2);
     // But we did not calc the br2.isPublic b/c it was already available
     const [br1] = await a2.books.get[0].reviews.load();
-    expect(br1.transientFields.isPublicCalc).toBe(0);
+    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0);
   });
 
   it("can save when async derived values don't change", async () => {

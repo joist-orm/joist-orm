@@ -131,6 +131,11 @@ describe("reactiveHints", () => {
       });
     });
 
+    it("works with persisted derived fields", () => {
+      expect(convertToLoadHint(getMetadata(BookReview), { isPublic: {} })).toStrictEqual({ isPublic: {} });
+      expect(convertToLoadHint(getMetadata(BookReview), { isPublic_ro: {} })).toStrictEqual({ isPublic: {} });
+    });
+
     it("does not squash multiple expanded hints", () => {
       // Given one Author hasReactiveAsyncProperty that goes through publisher -> comments
       expect(convertToLoadHint(am, ["latestComment2"])).toEqual({

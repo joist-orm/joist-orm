@@ -91,9 +91,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
     const { loadHint } = this;
     if (!this.loaded || opts?.forceReload) {
       return (this.loadPromise ??= this.#entity.em
-        // Usually populate takes a loadHint, but cheat and give it our reactive hint
-        // to make sure any downstream reactive derived fields are themselves populated.
-        .populate(this.#entity, { hint: this.reactiveHint, allowFields: true } as any)
+        .populate(this.#entity, { hint: this.loadHint, isPersistedAsyncPropertyLoad: true } as any)
         .then(() => {
           this.loadPromise = undefined;
           this.loaded = true;

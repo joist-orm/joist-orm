@@ -230,7 +230,7 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
   return current;
 }
 
-/** Converts a reactive `hint` into a load hint. */
+/** Converts a normalized reactive `hint` into a load hint. */
 export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hint: ReactiveHint<T>): LoadHint<T> {
   const loadHint = {};
   // Process the hints individually instead of just calling Object.fromEntries so that
@@ -243,10 +243,14 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hin
         case "m2m":
         case "m2o":
         case "o2m":
-        case "o2o": {
+        case "o2o":
           mergeNormalizedHints(loadHint, { [key]: convertToLoadHint(field.otherMetadata(), subHint) });
-        }
+          break;
         case "primitive":
+          if (field.derived === "async") {
+            mergeNormalizedHints(loadHint, { [key]: {} });
+          }
+          continue;
         case "enum":
           continue;
         default:

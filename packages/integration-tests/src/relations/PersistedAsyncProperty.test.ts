@@ -92,7 +92,7 @@ describe("PersistedAsyncProperty", () => {
 
   it("can load derived fields that depend on derived fields", async () => {
     const em = newEntityManager();
-    // Given an author with a derived field that uses a derived field
+    // Given an author with a derived field, numberOfPublicReviews2, that uses a derived field on BookReview, isPublic
     const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
     const b1 = newBook(em, { author: a1 });
     const br = newBookReview(em, { rating: 1, book: b1 });
@@ -119,7 +119,7 @@ describe("PersistedAsyncProperty", () => {
     const b1 = new Book(em, { author: a1, title: "b1" });
     await em.flush();
     expect(a1.numberOfBooks.get).toEqual(1);
-    // And we calc'd it once during flush, and again in the ^ get
+    // And we calc'd it once during flush, and again in the ^ `.get`
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // When we change the book
     b1.title = "b12";
@@ -139,10 +139,50 @@ describe("PersistedAsyncProperty", () => {
     // When we touch the author
     em.touch(a1);
     await em.flush();
-    // Then the author derived value didn't change
+    // Then the derived value was recalculated
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
+    // Even though it didn't technically change
     expect(a1.numberOfBooks.get).toEqual(0);
-    // But it was called again
-    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(4);
+  });
+
+  it("can force async derived values to recalc on load", async () => {
+    // Given an author with a book
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    // When we load the author
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    // We can access the numberOfBooks without it being calculated
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+    // And when we create a new book
+    const b2 = em.create(Book, { title: "b2", author: a1 });
+    // Then numberOfBooks is initially still stale
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+    // But if we load it via a load call, then we'll get the live value
+    expect(await a1.numberOfBooks.load()).toEqual(2);
+  });
+
+  it("can force async derived values to recalc on populate", async () => {
+    // Given an author with a book
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    // When we load the author
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    // We can access the numberOfBooks without it being calculated
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+    // And when we create a new book
+    const b2 = em.create(Book, { title: "b2", author: a1 });
+    // Then numberOfBooks is initially still stale
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+    // But if we load it via a populate hint
+    await em.populate(a1, "numberOfBooks");
+    // Then we'll get the live value
+    expect(a1.numberOfBooks.get).toEqual(2);
   });
 
   it("has async derived values triggered on both old and new value", async () => {

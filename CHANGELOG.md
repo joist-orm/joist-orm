@@ -1,3 +1,10 @@
+## [1.101.4](https://github.com/stephenh/joist-ts/compare/v1.101.3...v1.101.4) (2023-08-26)
+
+
+### Bug Fixes
+
+* Don't fail on restricted reactive hints. ([#760](https://github.com/stephenh/joist-ts/issues/760)) ([98dfb94](https://github.com/stephenh/joist-ts/commit/98dfb944c2f19af5434dccf0adc144d33c95c8f5))
+
 ## [1.101.3](https://github.com/stephenh/joist-ts/compare/v1.101.2...v1.101.3) (2023-08-26)
 
 

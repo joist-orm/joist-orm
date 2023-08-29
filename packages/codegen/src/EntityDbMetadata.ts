@@ -1,4 +1,5 @@
 import { camelCase, pascalCase, snakeCase } from "change-case";
+import { groupBy } from "joist-utils";
 import { Column, EnumType, Index, JSONData, M2MRelation, M2ORelation, O2MRelation, Table } from "pg-structure";
 import { plural, singular } from "pluralize";
 import { Code, Import, code, imp } from "ts-poet";
@@ -175,6 +176,7 @@ export type ManyToManyField = Field & {
 
 /** I.e. a `Comment.parent` reference that groups `comments.parent_book_id` and `comments.parent_book_review_id`. */
 export type PolymorphicField = Field & {
+  kind: "poly";
   fieldType: string; // The name of the type union, eg `CommentParent`
   notNull: boolean;
   components: PolymorphicFieldComponent[];
@@ -578,7 +580,7 @@ function newPolymorphicField(config: Config, table: Table, entity: Entity, pr: P
     .filter((r) => polymorphicFieldName(config, r) === fieldName)
     .map((r) => newPolymorphicFieldComponent(config, entity, r));
   const fieldType = `${entity.name}${pascalCase(fieldName)}`;
-  return { fieldName, fieldType, notNull, components };
+  return { kind: "poly" as const, fieldName, fieldType, notNull, components };
 }
 
 function newPolymorphicFieldComponent(config: Config, entity: Entity, r: M2ORelation): PolymorphicFieldComponent {
@@ -700,6 +702,29 @@ export function collectionName(
   singularName = camelCase(singularName);
   // and pluralize for fieldName
   return { fieldName: plural(singularName), singularName };
+}
+
+export function failIfOverlappingFieldNames(entity: EntityDbMetadata): void {
+  const allFields = [
+    entity.primaryKey,
+    ...entity.primitives,
+    ...entity.enums,
+    ...entity.pgEnums,
+    ...entity.manyToOnes,
+    ...entity.oneToManys,
+    ...entity.largeOneToManys,
+    ...entity.oneToOnes,
+    ...entity.manyToManys,
+    ...entity.largeManyToManys,
+    ...entity.polymorphics,
+  ];
+  Object.entries(groupBy(allFields, (f) => f.fieldName)).forEach(([fieldName, fields]) => {
+    if (fields.length > 1) {
+      throw new Error(
+        `In ${entity.name}, found multiple fields named '${fieldName}': ${fields.map((f) => f.kind).join(" ")}`,
+      );
+    }
+  });
 }
 
 export function makeEntity(entityName: string): Entity {

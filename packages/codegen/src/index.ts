@@ -2,7 +2,7 @@ import { newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata } from "./EntityDbMetadata";
+import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { Config, loadConfig, warnInvalidEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
@@ -60,6 +60,8 @@ if (require.main === module) {
         Object.entries(enums).length
       } enum tables`,
     );
+
+    for (const entity of entities) failIfOverlappingFieldNames(entity);
 
     // In graphql-service we have our own custom flush function, so allow skipping this
     if (config.createFlushFunction !== false) {

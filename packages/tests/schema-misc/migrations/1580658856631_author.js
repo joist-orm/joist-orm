@@ -41,7 +41,7 @@ exports.up = (b) => {
     REFERENCES public."artists"(id) ON UPDATE CASCADE ON DELETE SET NULL DEFERRABLE INITIALLY DEFERRED;
   `);
 
-  // Create a table with a tag that is a keyword
+  // Create a table with a tag (`do`) that is a SQL keyword
   b.createTable("database_owners", {
     id: { type: "id", primaryKey: true },
     name: { type: "varchar(255)", notNull: true },

@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { Const, currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager";
+import { currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
@@ -61,9 +61,9 @@ export interface PersistedAsyncProperty<T extends Entity, V> {
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasPersistedAsyncProperty<T extends Entity, H extends ReactiveHint<T>, V>(
+export function hasPersistedAsyncProperty<T extends Entity, const H extends ReactiveHint<T>, V>(
   fieldName: keyof T & string,
-  hint: Const<H>,
+  hint: H,
   fn: (entity: Reacted<T, H>) => V,
 ): PersistedAsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
@@ -74,13 +74,13 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   implements PersistedAsyncProperty<T, V>
 {
   readonly #entity: T;
-  readonly #reactiveHint: Const<H>;
+  readonly #reactiveHint: H;
   private loaded = false;
   private loadPromise: any;
   constructor(
     entity: T,
     public fieldName: keyof T & string,
-    public reactiveHint: Const<H>,
+    public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => V,
   ) {
     this.#entity = entity;

@@ -1,3 +1,10 @@
+## [1.101.6](https://github.com/stephenh/joist-ts/compare/v1.101.5...v1.101.6) (2023-08-30)
+
+
+### Bug Fixes
+
+* Fail on overlapping field names. ([#764](https://github.com/stephenh/joist-ts/issues/764)) ([b0555ad](https://github.com/stephenh/joist-ts/commit/b0555adc571cdd59d6f5c5c51086915ab8692857)), closes [#762](https://github.com/stephenh/joist-ts/issues/762)
+
 ## [1.101.5](https://github.com/stephenh/joist-ts/compare/v1.101.4...v1.101.5) (2023-08-26)
 
 

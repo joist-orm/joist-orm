@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { Const, currentlyInstantiatingEntity } from "../EntityManager";
+import { currentlyInstantiatingEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded } from "../loadHints";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
@@ -24,8 +24,8 @@ export interface LoadedProperty<T extends Entity, V> {
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
-  loadHint: Const<H>,
+export function hasAsyncProperty<T extends Entity, const H extends LoadHint<T>, V>(
+  loadHint: H,
   fn: (entity: Loaded<T, H>) => V,
 ): AsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
@@ -40,8 +40,8 @@ export function hasAsyncProperty<T extends Entity, H extends LoadHint<T>, V>(
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasReactiveAsyncProperty<T extends Entity, H extends ReactiveHint<T>, V>(
-  reactiveHint: Const<H>,
+export function hasReactiveAsyncProperty<T extends Entity, const H extends ReactiveHint<T>, V>(
+  reactiveHint: H,
   fn: (entity: Reacted<T, H>) => V,
 ): AsyncProperty<T, V> {
   const entity = currentlyInstantiatingEntity as T;
@@ -53,17 +53,17 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   private loadPromise: any;
 
   readonly #entity: T;
-  #hint: Const<H> | undefined;
+  #hint: H | undefined;
   #reactiveHint: ReactiveHint<T> | undefined;
   constructor(
     entity: T,
-    hint: Const<H> | ReactiveHint<T>,
+    hint: H | ReactiveHint<T>,
     private fn: (entity: Loaded<T, H>) => V,
     private opts: { isReactive?: boolean } = {},
   ) {
     const { isReactive = false } = opts;
     this.#entity = entity;
-    this.#hint = isReactive ? undefined : (hint as Const<H>);
+    this.#hint = isReactive ? undefined : (hint as H);
     this.#reactiveHint = isReactive ? (hint as ReactiveHint<T>) : undefined;
   }
 
@@ -78,9 +78,9 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
     return Promise.resolve(this.get);
   }
 
-  get hint(): Const<H> {
+  get hint(): H {
     if (!this.#hint) {
-      this.#hint = convertToLoadHint(getMetadata(this.#entity), this.#reactiveHint as any) as Const<H>;
+      this.#hint = convertToLoadHint(getMetadata(this.#entity), this.#reactiveHint as any) as H;
     }
     return this.#hint;
   }

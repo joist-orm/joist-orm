@@ -15,7 +15,7 @@ import {
   setField,
 } from "..";
 import { Entity } from "../Entity";
-import { Const, currentlyInstantiatingEntity, IdOf } from "../EntityManager";
+import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { Reference, ReferenceN } from "./Reference";
@@ -53,12 +53,12 @@ export interface PersistedAsyncReference<T extends Entity, U extends Entity, N e
 export function hasPersistedAsyncReference<
   T extends Entity,
   U extends Entity,
-  H extends ReactiveHint<T>,
+  const H extends ReactiveHint<T>,
   N extends never | undefined,
 >(
   otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
-  hint: Const<H>,
+  hint: H,
   fn: (entity: Reacted<T, H>) => U | N,
 ): PersistedAsyncReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
@@ -76,7 +76,7 @@ export class PersistedAsyncReferenceImpl<
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
-  readonly #reactiveHint: Const<H>;
+  readonly #reactiveHint: H;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
@@ -85,7 +85,7 @@ export class PersistedAsyncReferenceImpl<
   constructor(
     entity: T,
     private fieldName: keyof T & string,
-    public reactiveHint: Const<H>,
+    public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => U | N,
   ) {
     super();

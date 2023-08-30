@@ -1,3 +1,10 @@
+# [1.102.0](https://github.com/stephenh/joist-ts/compare/v1.101.6...v1.102.0) (2023-08-30)
+
+
+### Features
+
+* Use `const` keyword instead of Const utility type. ([#766](https://github.com/stephenh/joist-ts/issues/766)) ([a179691](https://github.com/stephenh/joist-ts/commit/a1796917cf4a7cfd6745184c318cfe6ae1dec64a))
+
 ## [1.101.6](https://github.com/stephenh/joist-ts/compare/v1.101.5...v1.101.6) (2023-08-30)
 
 

@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
-import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
+import { defaultValue, getConstructorFromTaggedId, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, Publisher, newAuthor, newPublisher } from "../entities";
@@ -71,6 +71,7 @@ describe("Author", () => {
     await insertAuthor({ first_name: "a1" });
     await Promise.all(zeroTo(14).map((n) => insertBook({ title: `b${n}`, author_id: 1 })));
     const em = newEntityManager();
+    console.trace("FINDING IN MAP", getConstructorFromTaggedId("a:1").name);
     // When we delete the 14th book
     em.delete(await em.load(Book, "14"));
     // Then the Author validation rule fails

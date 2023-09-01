@@ -41,7 +41,7 @@
     "tsx": "^3.12.7",
     "typescript": "^5.2.2",
     "vite-tsconfig-paths": "^4.2.0",
-    "vitest": "^0.34.1",
+    "vitest": "^0.34.3",
     "zod": "^3.21.4"
   }
 }

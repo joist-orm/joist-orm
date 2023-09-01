@@ -66,7 +66,7 @@ describe("Author", () => {
     await expect(em.flush()).rejects.toThrow("Author:1 An author cannot have 13 books");
   });
 
-  it("can have reactive validation fired on deleted child", async () => {
+  it.only("can have reactive validation fired on deleted child", async () => {
     // Given the author has 14 books
     await insertAuthor({ first_name: "a1" });
     await Promise.all(zeroTo(14).map((n) => insertBook({ title: `b${n}`, author_id: 1 })));

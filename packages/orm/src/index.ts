@@ -234,6 +234,7 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
     .map((f) => f.fieldName);
 }
 
+console.trace("MAKING A NEW MAP");
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 
 /** Processes the metas for rules/reactivity based on the user's `config.*` calls. */

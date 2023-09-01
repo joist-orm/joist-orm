@@ -7927,10 +7927,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"bun-types@npm:^0.7.0":
-  version: 0.7.0
-  resolution: "bun-types@npm:0.7.0"
-  checksum: 1b6fb1ec5b8665a254cc95778121371b6ec2dac365b5aed95f8cdd2f6e2fa343fbf7e197796c10e0b97e713f0cb1aa83029f4f63cc9f81fec0073113181d4a74
+"bun-types@npm:^0.8.1":
+  version: 0.8.1
+  resolution: "bun-types@npm:0.8.1"
+  checksum: 8893ddfa40a966e46cd8bf82c8a545d4d22dff6a53093272459035951585cc66783ed6dbd9ead8f96fdb3a5ccb36e6020db19f830199fd0bddd721203f85eea7
   languageName: node
   linkType: hard
 
@@ -13023,7 +13023,7 @@ __metadata:
     "@swc/jest": ^0.2.26
     "@types/jest": ^29.5.2
     "@types/node": ^18.16.16
-    bun-types: ^0.7.0
+    bun-types: ^0.8.1
     env-cmd: ^10.1.0
     jest: ^29.5.0
     jest-junit: ^16.0.0

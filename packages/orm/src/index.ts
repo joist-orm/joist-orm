@@ -234,10 +234,14 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
     .map((f) => f.fieldName);
 }
 
+const a = process.hrtime();
+debugger;
+console.trace("MAKING A NEW MAP", a);
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 
 /** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
 export function configureMetadata(metas: EntityMetadata<any>[]): void {
+  console.trace("CONFIGURING THE MAP", a, "WITH", metas.length);
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
     if (!meta.baseType) {
@@ -340,7 +344,10 @@ export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
 
 export function getConstructorFromTaggedId(id: string): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
-  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
+  if (tagToConstructorMap.size === 0) {
+    console.trace("LOOKING UP", tag, "IN EMPTY MAP", a);
+  }
+  return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" in ${a} map`);
 }
 
 export function maybeGetConstructorFromReference(

@@ -9,12 +9,12 @@ import {
   hasOneDerived,
   hasPersistedAsyncProperty,
   hasPersistedAsyncReference,
+  hasReactiveAsyncProperty,
   Loaded,
   PersistedAsyncProperty,
   PersistedAsyncReference,
   Reference,
 } from "joist-orm";
-import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
 import { AuthorCodegen, Book, bookMeta, BookReview, Comment, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {

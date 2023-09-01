@@ -8,6 +8,7 @@ export * from "./Color";
 export * from "./ImageType";
 export * from "./PublisherSize";
 export * from "./PublisherType";
+debugger;
 export * from "./AuthorCodegen";
 export * from "./AuthorStatCodegen";
 export * from "./BookCodegen";

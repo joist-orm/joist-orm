@@ -60,8 +60,6 @@ export async function formatGraphQL(content: string): Promise<string> {
   return prettier.format(content, {
     parser: "graphql",
     ...prettierConfig,
-    // Don't load prettier-plugin-organize-imports just for GQL formatting
-    pluginSearchDirs: false,
     plugins: [],
   });
 }

@@ -14763,7 +14763,7 @@ __metadata:
     postgres: ^3.3.5
     prettier: ^3.0.3
     prettier-plugin-organize-imports: ^3.2.3
-    superstruct: ^1.0.3
+    superstruct: 0.15.5
     tsconfig-paths: ^4.2.0
     tsx: ^3.12.8
     typescript: ^5.2.2
@@ -14852,7 +14852,7 @@ __metadata:
     node-pg-migrate: ^6.2.2
     prettier: ^3.0.3
     prettier-plugin-organize-imports: ^3.2.3
-    superstruct: ^1.0.3
+    superstruct: 0.15.5
     ts-node: ^10.9.1
     tsconfig-paths: ^4.2.0
     typescript: ^5.2.2
@@ -14876,7 +14876,7 @@ __metadata:
     joist-test-utils: "workspace:*"
     prettier: ^3.0.3
     prettier-plugin-organize-imports: ^3.2.3
-    superstruct: ^1.0.3
+    superstruct: 0.15.5
     tsconfig-paths: ^4.2.0
     tsx: ^3.12.8
     typescript: ^5.2.2
@@ -14900,7 +14900,7 @@ __metadata:
     joist-test-utils: "workspace:*"
     prettier: ^3.0.3
     prettier-plugin-organize-imports: ^3.2.3
-    superstruct: ^1.0.3
+    superstruct: 0.15.5
     tsconfig-paths: ^4.2.0
     tsx: ^3.12.8
     typescript: ^5.2.2
@@ -20650,10 +20650,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"superstruct@npm:^1.0.3":
-  version: 1.0.3
-  resolution: "superstruct@npm:1.0.3"
-  checksum: 761790bb111e6e21ddd608299c252f3be35df543263a7ebbc004e840d01fcf8046794c274bcb351bdf3eae4600f79d317d085cdbb19ca05803a4361840cc9bb1
+"superstruct@npm:0.15.5":
+  version: 0.15.5
+  resolution: "superstruct@npm:0.15.5"
+  checksum: 6d1f5249fee789424b7178fa0a1ffb2ace629c5480c39505885bd8c0046a4ff8b267569a3442fa53b8c560a7ba6599cf3f8af94225aebeb2cf6023f7dd911050
   languageName: node
   linkType: hard
 

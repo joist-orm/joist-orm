@@ -35,7 +35,7 @@
     "postgres": "^3.3.5",
     "prettier": "^3.0.3",
     "prettier-plugin-organize-imports": "^3.2.3",
-    "superstruct": "^1.0.3",
+    "superstruct": "0.15.5",
     "tsconfig-paths": "^4.2.0",
     "tsx": "^3.12.8",
     "typescript": "^5.2.2",

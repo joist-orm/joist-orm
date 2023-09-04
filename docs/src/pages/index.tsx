@@ -8,7 +8,7 @@ import styles from "./index.module.css";
 export default function Index(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout title={`Hello from ${siteConfig.title}`} description="Description will go into a meta tag in <head />">
+    <Layout title="Joist" description="An idiomatic TypeScript ORM that's more than just a query builder">
       <Header />
       <main>
         <HomepageFeatures />

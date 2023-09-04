@@ -6,7 +6,7 @@ const darkCodeTheme = require("prism-react-renderer").themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Joist",
-  tagline: "An Idiomatic TypeScript ORM",
+  tagline: "More than Just a Query Builder",
   url: "https://joist-orm.io",
   baseUrl: "/",
   onBrokenLinks: "throw",
@@ -44,10 +44,10 @@ const config = {
           { type: "doc", docId: "testing/test-factories", position: "left", label: "Testing" },
           { type: "doc", docId: "faq", position: "left", label: "FAQ" },
           { href: "https://github.com/stephenh/joist-ts", label: "GitHub", position: "right" },
-          { href: "https://joist-ts.slack.com/ssb/redirect", label: "Slack", position: "right" },
+          { href: "https://discord.gg/ky9VTQugqu", label: "Discord", position: "right" },
         ],
       },
-      metadata: [{ name: "keywords", content: "TypeScript, ORM, Reactivity, Domain Driven Design" }],
+      metadata: [{ name: "keywords", content: "TypeScript, ORM, Reactivity, Domain Driven Design, Unit of Work, ActiveRecord" }],
       footer: {
         style: "dark",
         links: [
@@ -62,7 +62,7 @@ const config = {
             title: "Community",
             items: [
               { label: "GitHub Discussions", href: "https://github.com/stephenh/joist-ts/discussions" },
-              { label: "Slack", href: "https://joist-ts.slack.com/ssb/redirect" },
+              { label: "Discord", href: "https://discord.gg/ky9VTQugqu" },
             ],
           },
         ],

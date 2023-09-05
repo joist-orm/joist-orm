@@ -1080,7 +1080,7 @@ describe("EntityManager", () => {
     });
   });
 
-  it("has a simple toJSON for CTI entities", async () => {
+  it("includes parent and child properties within toJSON", async () => {
     await insertPublisher({ name: "a1" });
     await insertAuthor({ first_name: "1" });
     const em = newEntityManager();

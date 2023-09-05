@@ -121,7 +121,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
    */
   public toJSON(): object {
     return Object.fromEntries(
-      Object.values(getMetadata(this).fields)
+      Object.values(getMetadata(this).allFields)
         .map((f) => {
           switch (f.kind) {
             case "primaryKey":

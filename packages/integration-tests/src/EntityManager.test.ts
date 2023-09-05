@@ -13,7 +13,18 @@ import {
   update,
 } from "@src/entities/inserts";
 import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
-import { Author, Book, Color, Comment, Publisher, PublisherSize, PublisherType, newAuthor, newBook, newPublisher } from "./entities";
+import {
+  Author,
+  Book,
+  Color,
+  Comment,
+  Publisher,
+  PublisherSize,
+  PublisherType,
+  newAuthor,
+  newBook,
+  newPublisher,
+} from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1071,17 +1082,17 @@ describe("EntityManager", () => {
 
   it("has a simple toJSON for CTI entities", async () => {
     await insertPublisher({ name: "a1" });
-    await insertAuthor({first_name: "1"});
+    await insertAuthor({ first_name: "1" });
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "1");
     const a1 = await em.load(Author, "1");
-    a1.setPartial({publisher: p1});
-    p1.setPartial({latitude: 12, longitude: 14});
+    a1.setPartial({ publisher: p1 });
+    p1.setPartial({ latitude: 12, longitude: 14 });
     await em.flush();
     expect(p1.toJSON()).toEqual({
       id: "p:1",
-      city: 'city',
-      name: 'a1',
+      city: "city",
+      name: "a1",
       latitude: 12,
       longitude: 14,
       allAuthorNames: "1",

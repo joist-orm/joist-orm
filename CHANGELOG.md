@@ -1,3 +1,10 @@
+## [1.102.1](https://github.com/stephenh/joist-ts/compare/v1.102.0...v1.102.1) (2023-09-05)
+
+
+### Bug Fixes
+
+* CTI BaseEntity.toJSON skipping parent fields ([#775](https://github.com/stephenh/joist-ts/issues/775)) ([9bdcd66](https://github.com/stephenh/joist-ts/commit/9bdcd66db946c6bcafe63c50077b244c9f27933b))
+
 # [1.102.0](https://github.com/stephenh/joist-ts/compare/v1.101.6...v1.102.0) (2023-08-30)
 
 

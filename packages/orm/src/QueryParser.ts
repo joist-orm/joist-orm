@@ -173,7 +173,7 @@ export function parseFindQuery(
         } else if (field.kind === "m2o") {
           const column = field.serde.columns[0];
           const sub = (ef.subFilter as any)[key];
-          const joinKind = field.required ? "inner" : "outer";
+          const joinKind = field.required && join !== "outer" ? "inner" : "outer";
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, joinKind, `${fa}.${column.columnName}`, `${a}.id`, sub);
@@ -361,6 +361,7 @@ export function parseFindQuery(
   if (pruneJoins) {
     pruneUnusedJoins(query, keepAliases);
   }
+
   return query;
 }
 

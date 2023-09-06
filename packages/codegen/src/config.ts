@@ -78,6 +78,10 @@ export interface Config {
   idType?: "untagged-string";
   // We don't persist this, and instead just use it as a cache
   __tableToEntityName?: Record<string, string>;
+  /**
+   * Allows the user to specify that codegen should throw when it would normally log a warning.
+   */
+  strictMode?: boolean;
 }
 
 export const defaultConfig: Config = {

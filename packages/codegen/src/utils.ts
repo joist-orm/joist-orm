@@ -5,6 +5,14 @@ import pluralize from "pluralize";
 import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { Config, getTimestampConfig } from "./config";
 
+export function logWarning(config: Config, message: string) {
+  if(config.strictMode) {
+    throw new Error(message);
+  } else {
+    console.warn(message);
+  }
+}
+
 export function assertNever(x: never): never {
   throw new Error("Unexpected object: " + x);
 }

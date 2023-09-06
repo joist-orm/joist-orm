@@ -1,5 +1,6 @@
 import { Config, defaultConfig, FieldConfig, isFieldIgnored } from "./config";
 import { makeEntity } from "./EntityDbMetadata";
+import { logWarning } from "./utils";
 
 describe("config", () => {
   describe("isFieldIgnored", () => {
@@ -54,6 +55,14 @@ describe("config", () => {
       );
     });
   });
+  it('Config strict mode', () => {
+    it("warn util throws when config set to strict", () => {
+      expect(logWarning({...defaultConfig, strictMode: true}, 'Some Error')).toThrow();
+    });
+    it("warn util does not throws when config not set to strict", () => {
+      expect(logWarning({...defaultConfig, strictMode: false}, 'Some Error')).not.toThrow();
+    });
+  })
 });
 
 function newAuthorConfig(fields?: Record<string, FieldConfig>): Config {

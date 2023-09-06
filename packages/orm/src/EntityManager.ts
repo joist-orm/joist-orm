@@ -1102,9 +1102,9 @@ export class EntityManager<C = unknown> {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos(pendingEntities);
-          await beforeCreate(this.ctx, todos);
-          await beforeUpdate(this.ctx, todos);
-          await beforeFlush(this.ctx, todos);
+          await runHook(this.ctx, "beforeCreate", todos, ["inserts"]);
+          await runHook(this.ctx, "beforeUpdate", todos, ["updates"]);
+          await runHook(this.ctx, "beforeFlush", todos, ["inserts", "updates"]);
 
           // Call `setField` just to get the column marked as dirty if needed.
           // This can come after the hooks, b/c if the hooks read any of these
@@ -1137,7 +1137,7 @@ export class EntityManager<C = unknown> {
         } finally {
           this.#isValidating = false;
         }
-        await afterValidation(this.ctx, entityTodos);
+        await runHook(this.ctx, "afterValidation", entityTodos, ["inserts", "updates"]);
       }
 
       if (Object.keys(entityTodos).length > 0 || Object.keys(joinRowTodos).length > 0) {
@@ -1153,7 +1153,7 @@ export class EntityManager<C = unknown> {
 
         // TODO: This is really "after flush" if we're being called from a transaction that
         // is going to make multiple `em.flush()` calls?
-        await afterCommit(this.ctx, entityTodos);
+        await runHook(this.ctx, "afterCommit", entityTodos, ["inserts", "updates", "deletes"]);
 
         // Update the `__orm` to reflect the new state
         for (const e of entitiesToFlush) {
@@ -1360,7 +1360,7 @@ export class EntityManager<C = unknown> {
       );
       // Run the beforeDelete hook before we unhook the entity
       const todos = createTodos(entities);
-      await beforeDelete(this.ctx, todos);
+      await runHook(this.ctx, "beforeDelete", todos, ["deletes"]);
       // For all relations, unhook the entity from the other side
       await Promise.all(entities.flatMap(getRelations).map((r) => r.cleanupOnEntityDeleted()));
       entities = this.#pendingCascadeDeletes;
@@ -1563,30 +1563,6 @@ async function runHook(
   if (rejects.length > 0 && rejects[0].status === "rejected") {
     throw rejects[0].reason;
   }
-}
-
-function beforeDelete(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeDelete", todos, ["deletes"]);
-}
-
-function beforeFlush(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeFlush", todos, ["inserts", "updates"]);
-}
-
-function beforeCreate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeCreate", todos, ["inserts"]);
-}
-
-function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "beforeUpdate", todos, ["updates"]);
-}
-
-function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "afterValidation", todos, ["inserts", "updates"]);
-}
-
-function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return runHook(ctx, "afterCommit", todos, ["inserts", "updates", "deletes"]);
 }
 
 function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): ValidationError[] {

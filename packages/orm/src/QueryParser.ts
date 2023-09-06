@@ -361,7 +361,6 @@ export function parseFindQuery(
   if (pruneJoins) {
     pruneUnusedJoins(query, keepAliases);
   }
-
   return query;
 }
 

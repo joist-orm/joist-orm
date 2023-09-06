@@ -2157,6 +2157,23 @@ describe("EntityManager.queries", () => {
         orderBys: [expect.anything()],
       });
     });
+
+    it("allows query for nested o2m using left outer joins", async () => {
+      await insertComment({ text: "test" });
+      const em = newEntityManager();
+
+      const [c, p] = aliases(Comment, Publisher);
+      const result = await em.find(
+        Comment,
+        { as: c, user: { authorManyToOne: { books: { advances: { publisher: p } } } } },
+        {
+          conditions: { or: [p.name.eq("test"), c.text.eq("test")] },
+        },
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].text).toEqual("test");
+    });
   });
 
   describe("aliases", () => {

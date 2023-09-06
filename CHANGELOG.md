@@ -1,3 +1,10 @@
+## [1.102.2](https://github.com/stephenh/joist-ts/compare/v1.102.1...v1.102.2) (2023-09-06)
+
+
+### Bug Fixes
+
+* use left outer join for nested required fields ([#778](https://github.com/stephenh/joist-ts/issues/778)) ([b8cd022](https://github.com/stephenh/joist-ts/commit/b8cd022ed82333e47f8466d405088bac45d832c3))
+
 ## [1.102.1](https://github.com/stephenh/joist-ts/compare/v1.102.0...v1.102.1) (2023-09-05)
 
 

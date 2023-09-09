@@ -10176,7 +10176,7 @@ __metadata:
     prettier: ^3.0.3
     prettier-plugin-organize-imports: ^3.2.3
     ts-node-dev: ^2.0.0
-    ts-poet: ^6.5.0
+    ts-poet: ^6.6.0
     tsconfig-paths: ^4.2.0
     typescript: ^5.2.2
   languageName: unknown
@@ -10202,7 +10202,7 @@ __metadata:
     pluralize: ^8.0.0
     prettier: 2.8.8
     prettier-plugin-organize-imports: ^3.2.3
-    ts-poet: ^6.5.0
+    ts-poet: ^6.6.0
     tsconfig-paths: ^4.2.0
     typescript: ^5.2.2
   languageName: unknown
@@ -15934,12 +15934,12 @@ __metadata:
   languageName: node
   linkType: hard
 
-"ts-poet@npm:^6.5.0":
-  version: 6.5.0
-  resolution: "ts-poet@npm:6.5.0"
+"ts-poet@npm:^6.6.0":
+  version: 6.6.0
+  resolution: "ts-poet@npm:6.6.0"
   dependencies:
     dprint-node: ^1.0.7
-  checksum: 1a3705c7864cb0dc6f9305884a91a6582fdd93257977324cda8ea7e3e5dbd7525cbc3fb4d5753a088356a4b8b3fb9245d83c244740f52881725a79ab36d0d168
+  checksum: 23161ca7ab2de0ffa09802117e242379d89336976800c2813a2711f04d26fabaf31cfb9493a8c4a9a883b07213fead42e98ecb418a762df7dfa84a23ce737252
   languageName: node
   linkType: hard
 

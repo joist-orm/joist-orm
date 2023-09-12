@@ -1,3 +1,10 @@
+## [1.102.3](https://github.com/stephenh/joist-ts/compare/v1.102.2...v1.102.3) (2023-09-12)
+
+
+### Bug Fixes
+
+* Allow query by deep poly o2m field ([#783](https://github.com/stephenh/joist-ts/issues/783)) ([38c8ca1](https://github.com/stephenh/joist-ts/commit/38c8ca11d3431f2b7dde0b828cfc7ae5979f6f31))
+
 ## [1.102.2](https://github.com/stephenh/joist-ts/compare/v1.102.1...v1.102.2) (2023-09-06)
 
 

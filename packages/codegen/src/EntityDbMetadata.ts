@@ -214,9 +214,11 @@ export class EntityDbMetadata {
   deletedAt: PrimitiveField | undefined;
   baseClassName: string | undefined;
   abstract: boolean;
+  invalidDeferredFK: boolean;
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
+    this.invalidDeferredFK = false;
 
     if (isSubClassTable(table)) {
       this.baseClassName = tableToEntityName(config, table.columns.get("id").foreignKeys[0].referencedTable);
@@ -256,7 +258,13 @@ export class EntityDbMetadata {
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isComponentOfPolymorphicRelation(config, r))
       .filter((r) => !isBaseClassForeignKey(r))
-      .map((r) => newManyToOneField(config, this.entity, r))
+      .map((r) => {
+        const {field, invalid} = newManyToOneField(config, this.entity, r);
+        if (invalid) {
+          this.invalidDeferredFK = true;
+        }
+        return field;
+      })
       .filter((f) => !f.ignore);
 
     // We split these into regular/large...
@@ -494,7 +502,8 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   };
 }
 
-function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {
+function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): {field: ManyToOneField, invalid: boolean} {
+  let invalid = false;
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
   const dbType = r.foreignKey.columns[0].type.shortName!;
@@ -508,12 +517,13 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): Many
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
   // Make sure the constraint is deferrable
   if (!r.foreignKey.isDeferred || !r.foreignKey.isDeferrable) {
-    console.log(
+    console.warn(
       `WARNING: Foreign key ${r.foreignKey.name} is not DEFERRABLE/INITIALLY DEFERRED, see https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints`,
     );
+    invalid = true;
   }
   const derived = fkFieldDerived(config, entity, fieldName);
-  return { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType };
+  return {field: { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType }, invalid};
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

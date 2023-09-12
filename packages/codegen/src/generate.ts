@@ -56,9 +56,17 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const BaseEntity = imp("BaseEntity@joist-orm");
 
+  const invalidEntities = entities.filter((e) => e.invalidDeferredFK);
   const metadataFile: CodegenFile = {
     name: "./metadata.ts",
     contents: code`
+    ${
+      invalidEntities.length > 0
+        ? `throw new Error('Misconfigured Foreign Keys found in the following entities: ${invalidEntities
+            .map((e) => e.name)
+            .join(",")}');`
+        : ``
+    }
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
 
       export function getEm(e: ${BaseEntity}): EntityManager {

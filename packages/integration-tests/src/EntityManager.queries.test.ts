@@ -49,6 +49,7 @@ import {
   SmallPublisher,
   Tag,
   newAuthor,
+  newBook,
 } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
@@ -2173,6 +2174,16 @@ describe("EntityManager.queries", () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].text).toEqual("test");
+    });
+
+    it("allows query by o2m polymorphic field", async () => {
+      const em = newEntityManager();
+      const book = newBook(em, { comments: [{ text: "test" }] });
+      await em.flush();
+
+      const result = await em.find(Book, { comments: { text: "test" } });
+
+      expect(result).toMatchEntity([book]);
     });
   });
 

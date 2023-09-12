@@ -250,7 +250,16 @@ export function parseFindQuery(
           addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
         } else if (field.kind === "o2m") {
           const a = getAlias(field.otherMetadata().tableName);
-          const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
+          const otherField = field.otherMetadata().allFields[field.otherFieldName];
+          let otherColumn = otherField.serde!.columns[0].columnName;
+          // If the other field is a poly, we need to find the right column
+          if (otherField.kind === "poly") {
+            // For a subcomponent that matches field's metadata
+            const otherComponent =
+              otherField.components.find((c) => c.otherMetadata() === meta) ??
+              fail(`No poly component found for ${otherField.fieldName}`);
+            otherColumn = otherComponent.columnName;
+          }
           addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
         } else if (field.kind === "m2m") {
           // Always join into the m2m table

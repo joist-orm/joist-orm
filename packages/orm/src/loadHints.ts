@@ -36,8 +36,6 @@ export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReferen
   ? LoadedReference<T, Loaded<U, UH>, N>
   : P extends Collection<MaybeBaseType, infer U>
   ? LoadedCollection<T, Loaded<U, UH>>
-  : P extends AsyncMethod<T, infer A, infer V>
-  ? LoadedMethod<T, A, V>
   : P extends AsyncProperty<MaybeBaseType, infer V>
   ? // prettier-ignore
     [V] extends [(infer U extends Entity) | undefined]
@@ -45,6 +43,8 @@ export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReferen
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, UH>[]>
     : LoadedProperty<T, V>
+  : P extends AsyncMethod<T, infer A, infer V>
+  ? LoadedMethod<T, A, V>
   : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */

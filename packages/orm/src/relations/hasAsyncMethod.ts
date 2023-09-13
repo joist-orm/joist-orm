@@ -2,12 +2,12 @@ import { Entity } from "../Entity";
 import { currentlyInstantiatingEntity } from "../EntityManager";
 import { LoadHint, Loaded } from "../loadHints";
 
-const I = Symbol();
+const M = Symbol();
 
 export interface AsyncMethod<T extends Entity, A extends unknown[], V> {
   isLoaded: boolean;
   load(...args: A): Promise<V>;
-  [I]?: T;
+  [M]?: T;
 }
 
 export interface LoadedMethod<T extends Entity, A extends unknown[], V> {

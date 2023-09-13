@@ -1,21 +1,23 @@
 import {
+  AsyncMethod,
   AsyncProperty,
-  cannotBeUpdated,
   Collection,
+  Loaded,
+  PersistedAsyncProperty,
+  PersistedAsyncReference,
+  Reference,
+  cannotBeUpdated,
   getEm,
+  hasAsyncMethod,
   hasAsyncProperty,
   hasManyDerived,
   hasManyThrough,
   hasOneDerived,
   hasPersistedAsyncProperty,
   hasPersistedAsyncReference,
-  Loaded,
-  PersistedAsyncProperty,
-  PersistedAsyncReference,
-  Reference,
+  hasReactiveAsyncProperty,
 } from "joist-orm";
-import { hasReactiveAsyncProperty } from "joist-orm/build/src/relations/hasAsyncProperty";
-import { AuthorCodegen, Book, bookMeta, BookReview, Comment, authorConfig as config } from "./entities";
+import { AuthorCodegen, Book, BookReview, Comment, bookMeta, authorConfig as config } from "./entities";
 
 export class Author extends AuthorCodegen {
   readonly reviews: Collection<Author, BookReview> = hasManyThrough((author) => author.books.reviews);
@@ -195,6 +197,10 @@ export class Author extends AuthorCodegen {
   readonly latestComments: AsyncProperty<Author, Comment[]> = hasAsyncProperty(
     { publisher: "comments", comments: {} },
     (author) => [...(author.publisher.get?.comments.get ?? []), ...author.comments.get],
+  );
+
+  readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasAsyncMethod("books", (a, title) =>
+    a.books.get.filter((b) => b.title.includes(title)),
   );
 }
 

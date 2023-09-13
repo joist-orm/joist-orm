@@ -2,9 +2,11 @@ import { Entity } from "./Entity";
 import { OptsOf } from "./EntityManager";
 import { NormalizeHint } from "./normalizeHints";
 import {
+  AsyncMethod,
   AsyncProperty,
   Collection,
   LoadedCollection,
+  LoadedMethod,
   LoadedProperty,
   LoadedReference,
   OneToOneReference,
@@ -34,6 +36,8 @@ export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReferen
   ? LoadedReference<T, Loaded<U, UH>, N>
   : P extends Collection<MaybeBaseType, infer U>
   ? LoadedCollection<T, Loaded<U, UH>>
+  : P extends AsyncMethod<T, infer A, infer V>
+  ? LoadedMethod<T, A, V>
   : P extends AsyncProperty<MaybeBaseType, infer V>
   ? // prettier-ignore
     [V] extends [(infer U extends Entity) | undefined]
@@ -141,6 +145,8 @@ export type LoadableValue<V> = V extends Reference<any, infer U, any>
   ? U
   : V extends Collection<any, infer U>
   ? U
+  : V extends AsyncMethod<any, any, infer V>
+  ? V
   : V extends AsyncProperty<any, infer P>
   ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
     // prettier-ignore

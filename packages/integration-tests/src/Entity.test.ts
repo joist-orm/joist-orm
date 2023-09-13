@@ -47,7 +47,6 @@ describe("Entity", () => {
           "fn": {},
           "loadPromise": undefined,
           "loaded": false,
-          "opts": {},
         },
         "comments": {
           "fieldName": "comments",

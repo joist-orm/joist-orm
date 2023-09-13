@@ -43,6 +43,12 @@ describe("Entity", () => {
           "otherFieldName": "author",
           "undefined": null,
         },
+        "booksWithTitle": {
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": false,
+          "opts": {},
+        },
         "comments": {
           "fieldName": "comments",
           "loaded": undefined,

@@ -53,6 +53,9 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   }
 
   get(...args: A): V {
+    if (!this.loaded) {
+      throw new Error("hasAsyncMethod.get was called but not loaded");
+    }
     return this.fn(this.#entity as Loaded<T, H>, ...args);
   }
 

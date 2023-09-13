@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { currentlyInstantiatingEntity } from "../EntityManager";
-import { LoadHint, Loaded } from "../loadHints";
+import { LoadHint, Loaded, isLoaded } from "../loadHints";
 
 const M = Symbol();
 
@@ -34,9 +34,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
     entity: T,
     hint: H,
     private fn: (entity: Loaded<T, H>, ...args: A) => V,
-    private opts: { isReactive?: boolean } = {},
   ) {
-    const { isReactive = false } = opts;
     this.#entity = entity;
     this.#hint = hint;
   }
@@ -53,13 +51,13 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   }
 
   get(...args: A): V {
-    if (!this.loaded) {
+    if (!this.isLoaded) {
       throw new Error("hasAsyncMethod.get was called but not loaded");
     }
     return this.fn(this.#entity as Loaded<T, H>, ...args);
   }
 
   get isLoaded() {
-    return this.loaded;
+    return this.loaded || isLoaded(this.#entity, this.#hint);
   }
 }

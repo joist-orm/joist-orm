@@ -259,7 +259,7 @@ export class EntityDbMetadata {
       .filter((r) => !isComponentOfPolymorphicRelation(config, r))
       .filter((r) => !isBaseClassForeignKey(r))
       .map((r) => {
-        const {field, invalid} = newManyToOneField(config, this.entity, r);
+        const { field, invalid } = newManyToOneField(config, this.entity, r);
         if (invalid) {
           this.invalidDeferredFK = true;
         }
@@ -502,7 +502,11 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   };
 }
 
-function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): {field: ManyToOneField, invalid: boolean} {
+function newManyToOneField(
+  config: Config,
+  entity: Entity,
+  r: M2ORelation,
+): { field: ManyToOneField; invalid: boolean } {
   let invalid = false;
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
@@ -523,7 +527,10 @@ function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): {fie
     invalid = true;
   }
   const derived = fkFieldDerived(config, entity, fieldName);
-  return {field: { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType }, invalid};
+  return {
+    field: { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType },
+    invalid,
+  };
 }
 
 function newOneToMany(config: Config, entity: Entity, r: O2MRelation): OneToManyField {

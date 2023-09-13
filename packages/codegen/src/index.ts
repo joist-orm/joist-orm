@@ -54,7 +54,7 @@ if (require.main === module) {
 
     const entityTables = db.tables.filter((t) => isEntityTable(config, t)).sortBy("name");
     const entities = entityTables.map((table) => new EntityDbMetadata(config, table, enums));
-    if(entities.some((entity) => entity.invalidDeferredFK)){
+    if (entities.some((entity) => entity.invalidDeferredFK)) {
       safeExit = false;
     }
 
@@ -93,8 +93,8 @@ if (require.main === module) {
     warnInvalidEntries(config, dbMetadata);
 
     await generateAndSaveFiles(config, dbMetadata);
-    if (!safeExit){
-      throw new Error('A warning was generated during codegen');
+    if (!safeExit) {
+      throw new Error("A warning was generated during codegen");
     }
   })().catch((err) => {
     console.error(err);

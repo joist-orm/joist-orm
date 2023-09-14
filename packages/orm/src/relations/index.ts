@@ -22,6 +22,7 @@ export {
 } from "./PolymorphicReference";
 export { LoadedReference, Reference, isLoadedReference, isReference } from "./Reference";
 export { Relation, isRelation } from "./Relation";
+export { AsyncMethod, LoadedMethod, hasAsyncMethod } from "./hasAsyncMethod";
 export {
   AsyncProperty,
   LoadedProperty,

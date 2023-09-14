@@ -233,6 +233,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
+    // if we are going to delete this relation as well, then we don't need to clean it up
+    if (this.isCascadeDelete) return;
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
       const o2m = this.getOtherRelation(current);

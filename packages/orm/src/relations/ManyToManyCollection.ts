@@ -220,6 +220,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
+    // if we are going to delete this relation as well, then we don't need to clean it up
+    if (this.isCascadeDelete) return;
     const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;

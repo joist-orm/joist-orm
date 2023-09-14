@@ -1307,7 +1307,14 @@ export class EntityManager<C = unknown> {
   }
 
   /**
-   * Mark an entity as needing to be flushed regardless of its state
+   * Mark an entity as needing to be flushed regardless of its state.
+   *
+   * This will:
+   *
+   * - Run `beforeFlush` hooks,
+   * - Bump the entities `updated_at` timestamp,
+   * - Recalc all async derived fields stored on the entity, and
+   * - Rerun all simple & reactive rules on the entity.
    */
   public touch(entity: Entity) {
     entity.__orm.isTouched = true;
@@ -1502,6 +1509,26 @@ async function validateReactiveRules(
   });
 
   await Promise.all([...p1, ...p2]);
+
+  // Also re-validate anything that is touched
+  for (const todo of Object.values(todos)) {
+    // Get the dummy reactive rules that point to the owning entity itself, which are usually triggered on new
+    const rules = getAllMetas(todo.metadata)
+      .flatMap((m) => m.config.__data.reactiveRules)
+      .filter((r) => r.path.length === 0);
+    for (const entity of todo.updates) {
+      if (entity.__orm.isTouched) {
+        for (const rule of rules) {
+          let entities = fns.get(rule.fn);
+          if (!entities) {
+            entities = new Set();
+            fns.set(rule.fn, entities);
+          }
+          entities.add(entity);
+        }
+      }
+    }
+  }
 
   // Now that we've found the fn+entities to run, run them and collect any errors
   const p3 = [...fns.entries()].flatMap(([fn, entities]) =>

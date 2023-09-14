@@ -1261,6 +1261,7 @@ describe("EntityManager", () => {
     const result = await em.flush();
     expect(result).toEqual([a1]);
     expect(a1.__orm.isTouched).toBe(false);
+    expect(a1.transientFields.mentorRuleInvoked).toBe(1);
   });
 
   it("can load a null enum array", async () => {

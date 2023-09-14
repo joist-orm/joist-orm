@@ -207,6 +207,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   // We already unhooked all children in our addedBeforeLoaded list; now load the full list if necessary.
   async cleanupOnEntityDeleted(): Promise<void> {
+    // if we are going to delete this relation as well, then we don't need to clean it up
+    if (this.isCascadeDelete) return;
     const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
       const m2o = this.getOtherRelation(other);

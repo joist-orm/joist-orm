@@ -234,6 +234,8 @@ export class PersistedAsyncReferenceImpl<
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
+    // if we are going to delete this relation as well, then we don't need to clean it up
+    if (this.isCascadeDelete) return;
     const current = await this.load({ withDeleted: true });
     setField(this.#entity, this.fieldName, undefined);
     this.loaded = undefined as any;

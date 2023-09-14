@@ -66,7 +66,10 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   private _isLoaded = false;
   private field: PolymorphicField;
 
-  constructor(private entity: T, private fieldName: keyof T & string) {
+  constructor(
+    private entity: T,
+    private fieldName: keyof T & string,
+  ) {
     super();
     this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
   }
@@ -171,6 +174,8 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   async cleanupOnEntityDeleted(): Promise<void> {
+    // if we are going to delete this relation as well, then we don't need to clean it up
+    if (this.isCascadeDelete) return;
     const current = await this.load({ withDeleted: true });
     if (current !== undefined) {
       const o2m = this.getOtherRelation(current);
@@ -247,9 +252,10 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   public toString(): string {
-    return `PolymorphicReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.currentComponent?.otherMetadata().type
-    }, otherFieldName: ${this.currentComponent?.otherFieldName}, id: ${this.id})`;
+    return `PolymorphicReference(entity: ${this.entity}, fieldName: ${
+      this.fieldName
+    }, otherType: ${this.currentComponent?.otherMetadata().type}, otherFieldName: ${this.currentComponent
+      ?.otherFieldName}, id: ${this.id})`;
   }
 
   private filterDeleted(entity: U | N, opts?: { withDeleted?: boolean }): U | N {

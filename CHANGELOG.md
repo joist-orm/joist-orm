@@ -1,3 +1,10 @@
+## [1.104.2](https://github.com/stephenh/joist-ts/compare/v1.104.1...v1.104.2) (2023-09-14)
+
+
+### Bug Fixes
+
+* skip relation cleanup on cascade delete ([#786](https://github.com/stephenh/joist-ts/issues/786)) ([6cc2bf5](https://github.com/stephenh/joist-ts/commit/6cc2bf5bab2a1ba6f32dbc2c1873db8bb93fe7b1))
+
 ## [1.104.1](https://github.com/stephenh/joist-ts/compare/v1.104.0...v1.104.1) (2023-09-14)
 
 

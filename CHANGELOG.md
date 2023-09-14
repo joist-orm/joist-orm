@@ -1,3 +1,10 @@
+## [1.104.1](https://github.com/stephenh/joist-ts/compare/v1.104.0...v1.104.1) (2023-09-14)
+
+
+### Bug Fixes
+
+* em.touch should rerun reactive rules. ([#785](https://github.com/stephenh/joist-ts/issues/785)) ([c585e39](https://github.com/stephenh/joist-ts/commit/c585e3967fa75dc4fa15bc061b7bf308b219c4f7))
+
 # [1.104.0](https://github.com/stephenh/joist-ts/compare/v1.103.0...v1.104.0) (2023-09-14)
 
 

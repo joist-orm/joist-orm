@@ -1,3 +1,10 @@
+# [1.104.0](https://github.com/stephenh/joist-ts/compare/v1.103.0...v1.104.0) (2023-09-14)
+
+
+### Features
+
+* Add async method ([#784](https://github.com/stephenh/joist-ts/issues/784)) ([0c2a032](https://github.com/stephenh/joist-ts/commit/0c2a0327f946227797b35b65137f635575a8fe60))
+
 # [1.103.0](https://github.com/stephenh/joist-ts/compare/v1.102.3...v1.103.0) (2023-09-13)
 
 

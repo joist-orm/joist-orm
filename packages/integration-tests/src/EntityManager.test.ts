@@ -1254,6 +1254,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     em.touch(a1);
+    const { updatedAt } = a1;
     expect(a1.isDirtyEntity).toBe(false);
     expect(a1.isNewEntity).toBe(false);
     expect(a1.isDeletedEntity).toBe(false);
@@ -1261,6 +1262,13 @@ describe("EntityManager", () => {
     const result = await em.flush();
     expect(result).toEqual([a1]);
     expect(a1.__orm.isTouched).toBe(false);
+    expect(a1.transientFields).toMatchObject({
+      mentorRuleInvoked: 1,
+      beforeFlushRan: true,
+      beforeUpdateRan: true,
+      beforeCreateRan: false,
+    });
+    expect(a1.updatedAt).not.toEqual(updatedAt);
   });
 
   it("can load a null enum array", async () => {

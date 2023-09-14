@@ -1311,7 +1311,7 @@ export class EntityManager<C = unknown> {
    *
    * This will:
    *
-   * - Run `beforeFlush` hooks,
+   * - Run `beforeUpdate` and `beforeFlush` hooks,
    * - Bump the entities `updated_at` timestamp,
    * - Recalc all async derived fields stored on the entity, and
    * - Rerun all simple & reactive rules on the entity.

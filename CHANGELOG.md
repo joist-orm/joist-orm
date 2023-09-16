@@ -1,3 +1,10 @@
+# [1.106.0](https://github.com/stephenh/joist-ts/compare/v1.105.0...v1.106.0) (2023-09-16)
+
+
+### Features
+
+* Add EnumMetadata. ([#789](https://github.com/stephenh/joist-ts/issues/789)) ([df92d25](https://github.com/stephenh/joist-ts/commit/df92d257394c501c140d2a71def0f30c8b6aea3c))
+
 # [1.105.0](https://github.com/stephenh/joist-ts/compare/v1.104.2...v1.105.0) (2023-09-16)
 
 

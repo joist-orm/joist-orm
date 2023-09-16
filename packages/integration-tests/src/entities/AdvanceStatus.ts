@@ -1,3 +1,5 @@
+import { EnumMetadata } from "joist-orm";
+
 export enum AdvanceStatus {
   Pending = "PENDING",
   Signed = "SIGNED",
@@ -18,7 +20,7 @@ export const AdvanceStatusDetails: Record<AdvanceStatus[0], AdvanceStatusDetails
   Paid: details[AdvanceStatus.Paid],
 };
 
-export const AdvanceStatuses = {
+export const AdvanceStatuses: EnumMetadata<AdvanceStatus, AdvanceStatusDetails> = {
   name: "AdvanceStatus",
 
   getByCode(code: AdvanceStatus): AdvanceStatusDetails {

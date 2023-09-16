@@ -1,8 +1,8 @@
 import { BaseEntity } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityConstructor } from "./EntityManager";
-import { getMetadata } from "./EntityMetadata";
-import { fail } from "./utils";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { assertNever, fail } from "./utils";
 
 const tagDelimiter = ":";
 
@@ -59,8 +59,27 @@ export function assertIdsAreTagged(keys: readonly string[]): void {
   }
 }
 
-export function isTaggedId(id: string) {
-  return id.indexOf(tagDelimiter) !== -1;
+// Either `tag:int` or `tag:uuid`.
+const validId = /[a-z]+:([0-9a-z\-]+)/;
+// Not super strict to allow uuid-ish ides
+const uuidIshId = /[0-9a-z\-]+/i;
+
+export function isTaggedId(id: string): boolean;
+export function isTaggedId(meta: EntityMetadata<any>, id: string): boolean;
+export function isTaggedId(metaOrId: string | EntityMetadata<any>, id?: string): boolean {
+  if (typeof metaOrId === "string") {
+    return validId.test(metaOrId);
+  } else {
+    const [tag, _id] = id!.split(tagDelimiter);
+    if (metaOrId.tagName !== tag) return false;
+    if (metaOrId.idType === "int") {
+      return !Number.isNaN(Number(_id));
+    } else if (metaOrId.idType === "uuid") {
+      return uuidIshId.test(_id);
+    } else {
+      return assertNever(metaOrId.idType);
+    }
+  }
 }
 
 export function assertIdIsTagged(key: string): void {

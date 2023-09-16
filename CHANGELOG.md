@@ -1,3 +1,10 @@
+# [1.105.0](https://github.com/stephenh/joist-ts/compare/v1.104.2...v1.105.0) (2023-09-16)
+
+
+### Features
+
+* Add meta overload to isTaggedId. ([#788](https://github.com/stephenh/joist-ts/issues/788)) ([6150ad0](https://github.com/stephenh/joist-ts/commit/6150ad047337484ce8538ad72b9cee66bf5fe190))
+
 ## [1.104.2](https://github.com/stephenh/joist-ts/compare/v1.104.1...v1.104.2) (2023-09-14)
 
 

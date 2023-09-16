@@ -31,6 +31,7 @@ export * from "./EntityFilter";
 export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
+export { EnumMetadata } from "./EnumMetadata";
 export * from "./getProperties";
 export * from "./keys";
 export {
@@ -256,10 +257,13 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     });
   });
 
-  const metaByName = metas.reduce((acc, m) => {
-    acc[m.type] = m;
-    return acc;
-  }, {} as Record<string, EntityMetadata<any>>);
+  const metaByName = metas.reduce(
+    (acc, m) => {
+      acc[m.type] = m;
+      return acc;
+    },
+    {} as Record<string, EntityMetadata<any>>,
+  );
 
   // Setup subTypes/baseTypes
   metas.forEach((m) => {

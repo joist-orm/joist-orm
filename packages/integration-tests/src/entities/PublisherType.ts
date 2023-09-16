@@ -1,3 +1,5 @@
+import { EnumMetadata } from "joist-orm";
+
 export enum PublisherType {
   Small = "SMALL",
   Big = "BIG",
@@ -15,7 +17,7 @@ export const PublisherTypeDetails: Record<PublisherType[0], PublisherTypeDetails
   Big: details[PublisherType.Big],
 };
 
-export const PublisherTypes = {
+export const PublisherTypes: EnumMetadata<PublisherType, PublisherTypeDetails> = {
   name: "PublisherType",
 
   getByCode(code: PublisherType): PublisherTypeDetails {

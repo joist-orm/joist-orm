@@ -3,6 +3,7 @@ import pluralize from "pluralize";
 import { code, Code } from "ts-poet";
 import { Config } from "./config";
 import { EnumTableData } from "./index";
+import { EnumMetadata } from "./symbols";
 
 export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
   const { rows, extraPrimitives } = enumData;
@@ -50,7 +51,7 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
       ${rows.map((row) => `${pascalCase(row.code)}: details[${enumName}.${pascalCase(row.code)}]`).join(",")}
     };
 
-    export const ${pluralize(enumName)} = {
+    export const ${pluralize(enumName)}: ${EnumMetadata}<${enumName}, ${detailsName}> = {
       name: "${enumName}",
 
       getByCode(code: ${enumName}): ${detailsName} {

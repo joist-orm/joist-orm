@@ -1,3 +1,5 @@
+import { EnumMetadata } from "joist-orm";
+
 export enum Color {
   Red = "RED",
   Green = "GREEN",
@@ -18,7 +20,7 @@ export const ColorDetails: Record<Color[0], ColorDetails> = {
   Blue: details[Color.Blue],
 };
 
-export const Colors = {
+export const Colors: EnumMetadata<Color, ColorDetails> = {
   name: "Color",
 
   getByCode(code: Color): ColorDetails {

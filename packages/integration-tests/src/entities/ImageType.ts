@@ -1,3 +1,5 @@
+import { EnumMetadata } from "joist-orm";
+
 export enum ImageType {
   BookImage = "BOOK_IMAGE",
   AuthorImage = "AUTHOR_IMAGE",
@@ -46,7 +48,7 @@ export const ImageTypeDetails: Record<ImageType[0], ImageTypeDetails> = {
   PublisherImage: details[ImageType.PublisherImage],
 };
 
-export const ImageTypes = {
+export const ImageTypes: EnumMetadata<ImageType, ImageTypeDetails> = {
   name: "ImageType",
 
   getByCode(code: ImageType): ImageTypeDetails {

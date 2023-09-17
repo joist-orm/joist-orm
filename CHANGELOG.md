@@ -1,3 +1,10 @@
+## [1.106.1](https://github.com/stephenh/joist-ts/compare/v1.106.0...v1.106.1) (2023-09-17)
+
+
+### Bug Fixes
+
+* Add readonly to filter arrays. ([#792](https://github.com/stephenh/joist-ts/issues/792)) ([646617c](https://github.com/stephenh/joist-ts/commit/646617cbcd794e6b5fe39950dd951d7e56d63564))
+
 # [1.106.0](https://github.com/stephenh/joist-ts/compare/v1.105.0...v1.106.0) (2023-09-16)
 
 

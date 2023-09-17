@@ -104,20 +104,20 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as Painting, opts, { calledFromConstructor: true });
   }
 
-  get id(): PaintingId | undefined {
-    return this.idTagged;
+  get id(): PaintingId {
+    return this.idMaybe || fail("Painting has no id yet");
   }
 
-  get idOrFail(): PaintingId {
-    return this.id || fail("Painting has no id yet");
+  get idMaybe(): PaintingId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): PaintingId | undefined {
+  get idTagged(): PaintingId {
+    return this.idTaggedMaybe || fail("Painting has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): PaintingId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): PaintingId {
-    return this.idTagged || fail("Painting has no id tagged yet");
   }
 
   get title(): string {

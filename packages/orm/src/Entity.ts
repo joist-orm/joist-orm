@@ -13,11 +13,11 @@ export interface Entity {
    *
    * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-config.json`.
    */
-  id: string | undefined;
+  id: string;
+  idMaybe: string | undefined;
   /** The entity id that is always tagged, regardless of the idType config. */
-  idTagged: string | undefined;
-  idTaggedOrFail: string;
-  idOrFail: string;
+  idTagged: string;
+  idTaggedMaybe: string | undefined;
   /** Joist internal metadata, should be considered a private implementation detail. */
   readonly __orm: EntityOrmField;
   readonly em: EntityManager<any>;

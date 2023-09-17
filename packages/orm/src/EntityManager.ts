@@ -1008,7 +1008,7 @@ export class EntityManager<C = unknown> {
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
   register(meta: EntityMetadata<any>, entity: Entity): void {
-    if (entity.idTagged) {
+    if (entity.idTaggedMaybe) {
       if (this.findExistingInstance(entity.idTagged) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
       }
@@ -1061,7 +1061,7 @@ export class EntityManager<C = unknown> {
   }
 
   async assignNewIds() {
-    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.id);
+    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
     let todos = createTodos(pendingEntities);
     return this.driver.assignNewIds(this, todos);
   }
@@ -1163,8 +1163,8 @@ export class EntityManager<C = unknown> {
 
         // Update the `__orm` to reflect the new state
         for (const e of entitiesToFlush) {
-          if (e.isNewEntity) {
-            this.#entityIndex.set(e.idTagged!, e);
+          if (e.isNewEntity && !e.isDeletedEntity) {
+            this.#entityIndex.set(e.idTagged, e);
           }
           e.__orm.resetAfterFlushed();
         }
@@ -1226,7 +1226,9 @@ export class EntityManager<C = unknown> {
 
       // Clear the original cached loader result and fetch the new primitives
       const entities = await Promise.all(
-        copy.filter((e) => e.idTagged).map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.idTagged)),
+        copy
+          .filter((e) => e.idTaggedMaybe)
+          .map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.idTagged)),
       );
 
       // Then refresh any non-deleted loaded collections
@@ -1427,8 +1429,8 @@ export function sameEntity(a: Entity | string | undefined, b: Entity | string | 
     return a === b;
   }
   // Otherwise check by ID
-  const aId = isEntity(a) ? a.idTagged : a;
-  const bId = isEntity(b) ? b.idTagged : b;
+  const aId = isEntity(a) ? a.idTaggedMaybe : a;
+  const bId = isEntity(b) ? b.idTaggedMaybe : b;
   return aId === bId;
 }
 

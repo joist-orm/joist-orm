@@ -144,20 +144,20 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as Image, opts, { calledFromConstructor: true });
   }
 
-  get id(): ImageId | undefined {
-    return this.idTagged;
+  get id(): ImageId {
+    return this.idMaybe || fail("Image has no id yet");
   }
 
-  get idOrFail(): ImageId {
-    return this.id || fail("Image has no id yet");
+  get idMaybe(): ImageId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): ImageId | undefined {
+  get idTagged(): ImageId {
+    return this.idTaggedMaybe || fail("Image has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): ImageId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): ImageId {
-    return this.idTagged || fail("Image has no id tagged yet");
   }
 
   get fileName(): string {

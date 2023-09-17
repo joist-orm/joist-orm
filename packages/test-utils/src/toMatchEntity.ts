@@ -97,7 +97,7 @@ function maybeTestId(maybeEntity: any): any {
 
 /** Returns either the persisted id or `tag#<offset-in-EntityManager>`. */
 function getTestId(em: EntityManager, entity: Entity): string {
-  if (entity.id) {
+  if (entity.idMaybe) {
     return entity.id;
   }
   const meta = getMetadata(entity);

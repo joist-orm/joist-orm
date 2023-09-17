@@ -104,20 +104,20 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as CriticColumn, opts, { calledFromConstructor: true });
   }
 
-  get id(): CriticColumnId | undefined {
-    return this.idTagged;
+  get id(): CriticColumnId {
+    return this.idMaybe || fail("CriticColumn has no id yet");
   }
 
-  get idOrFail(): CriticColumnId {
-    return this.id || fail("CriticColumn has no id yet");
+  get idMaybe(): CriticColumnId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): CriticColumnId | undefined {
+  get idTagged(): CriticColumnId {
+    return this.idTaggedMaybe || fail("CriticColumn has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): CriticColumnId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): CriticColumnId {
-    return this.idTagged || fail("CriticColumn has no id tagged yet");
   }
 
   get name(): string {

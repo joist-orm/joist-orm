@@ -80,7 +80,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
         return added;
       }
       // Make a cacheable tuple to look up this specific o2m row
-      const key = `id=${id},${this.otherColumnName}=${this.#entity.idOrFail}`;
+      const key = `id=${id},${this.otherColumnName}=${this.#entity.id}`;
       return oneToManyFindDataLoader(this.#entity.em, this).load(key);
     }
   }
@@ -212,7 +212,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
       const m2o = this.getOtherRelation(other);
-      if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.#entity.id) {
+      if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.#entity.idMaybe) {
         // TODO What if other.otherFieldName is required/not-null?
         m2o.set(undefined);
       }

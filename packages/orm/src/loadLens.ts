@@ -80,10 +80,10 @@ export async function loadLens<T extends Entity, U, V>(
       // TODO We can only do this is _none_ of the paths are loaded, otherwise we'll miss WIP mutations
       if (Array.isArray(start)) {
         const em = start[0].em;
-        return (await lensDataLoader(em, meta.cstr, true, paths).loadMany(start.map((e) => e.idOrFail))) as V;
+        return (await lensDataLoader(em, meta.cstr, true, paths).loadMany(start.map((e) => e.id))) as V;
       } else {
         const em = start.em;
-        return (await lensDataLoader(em, meta.cstr, false, paths).load(start.idOrFail)) as V;
+        return (await lensDataLoader(em, meta.cstr, false, paths).load(start.id)) as V;
       }
     }
   }

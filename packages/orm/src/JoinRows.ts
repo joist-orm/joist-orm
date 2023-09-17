@@ -9,7 +9,10 @@ export class JoinRows {
   // The in-memory rows for our m2m table.
   private readonly rows: JoinRow[] = [];
 
-  constructor(readonly m2m: ManyToManyCollection<any, any>, private rm: ReactionsManager) {}
+  constructor(
+    readonly m2m: ManyToManyCollection<any, any>,
+    private rm: ReactionsManager,
+  ) {}
 
   /** Adds a new join row to this table. */
   addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
@@ -54,8 +57,9 @@ export class JoinRows {
     const { meta: meta1, otherMeta: meta2 } = this.m2m;
     let row = this.rows.find((jr) => {
       return (
-        (jr[column1] as Entity).id === keyToString(meta1, dbRow[column1]) &&
-        (jr[column2] as Entity).id === keyToString(meta2, dbRow[column2])
+        // Use idMaybe because row join might be for a not-yet-flushed new entity
+        (jr[column1] as Entity).idMaybe === keyToString(meta1, dbRow[column1]) &&
+        (jr[column2] as Entity).idMaybe === keyToString(meta2, dbRow[column2])
       );
     });
     if (!row) {

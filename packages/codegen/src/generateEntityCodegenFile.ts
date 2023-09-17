@@ -361,10 +361,10 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const factoryMethod = imp(`new${entity.name}@./entities`);
   const EntityManager = imp("t:EntityManager@./entities");
 
-  const idCode =
+  const idMaybeCode =
     config.idType === "untagged-string"
-      ? code`return ${deTagId}(${metadata}, this.idTagged);`
-      : code`return this.idTagged;`;
+      ? code`return ${deTagId}(${metadata}, this.idTaggedMaybe);`
+      : code`return this.idTaggedMaybe;`;
 
   const maybeIsSoftDeleted = meta.deletedAt
     ? code`
@@ -506,20 +506,20 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
       ${cstr}
 
-      get id(): ${entityName}Id | undefined {
-        ${idCode}
+      get id(): ${entityName}Id {
+        return this.idMaybe || ${failSymbol}("${entityName} has no id yet");
       }
 
-      get idOrFail(): ${entityName}Id {
-        return this.id || ${failSymbol}("${entityName} has no id yet");
+      get idMaybe(): ${entityName}Id | undefined {
+        ${idMaybeCode}
       }
 
-      get idTagged(): ${entityName}Id | undefined {
+      get idTagged(): ${entityName}Id {
+        return this.idTaggedMaybe || ${failSymbol}("${entityName} has no id tagged yet");
+      }
+
+      get idTaggedMaybe(): ${entityName}Id | undefined {
         return this.__orm.data["id"];
-      }
-
-      get idTaggedOrFail(): ${entityName}Id {
-        return this.idTagged || ${failSymbol}("${entityName} has no id tagged yet");
       }
 
       ${primitives}

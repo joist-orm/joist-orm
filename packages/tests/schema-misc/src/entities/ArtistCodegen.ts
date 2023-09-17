@@ -113,20 +113,20 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as Artist, opts, { calledFromConstructor: true });
   }
 
-  get id(): ArtistId | undefined {
-    return this.idTagged;
+  get id(): ArtistId {
+    return this.idMaybe || fail("Artist has no id yet");
   }
 
-  get idOrFail(): ArtistId {
-    return this.id || fail("Artist has no id yet");
+  get idMaybe(): ArtistId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): ArtistId | undefined {
+  get idTagged(): ArtistId {
+    return this.idTaggedMaybe || fail("Artist has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): ArtistId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): ArtistId {
-    return this.idTagged || fail("Artist has no id tagged yet");
   }
 
   get firstName(): string {

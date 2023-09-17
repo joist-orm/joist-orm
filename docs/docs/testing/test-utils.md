@@ -36,7 +36,7 @@ This means we can immediately assert against `a.books.get` without needing to lo
 const a1 = newAuthor(em);
 await performPostBook(em);
 // Example of what we _don't_ need to do: reload a1
-await a1_2 = em.load(Author, a1.idOrFail);
+await a1_2 = em.load(Author, a1.id);
 expect(a.books.get.length).toEqual(1);
 ```
 

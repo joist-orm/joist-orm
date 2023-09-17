@@ -18,7 +18,7 @@ export class SequenceIdAssigner implements IdAssigner {
     const seqStatements: string[] = [];
     Object.values(todos).forEach((todo) => {
       // Even if we have INSERTs, the user may have already assigned ids...
-      const needsIds = todo.inserts.filter((e) => e.id === undefined);
+      const needsIds = todo.inserts.filter((e) => e.idMaybe === undefined);
       if (needsIds.length > 0) {
         const sequenceName = `${todo.metadata.tableName}_id_seq`;
         const sql = `select nextval('${sequenceName}') from generate_series(1, ${needsIds.length})`;
@@ -31,7 +31,7 @@ export class SequenceIdAssigner implements IdAssigner {
       const result = await knex.raw(sql);
       let i = 0;
       Object.values(todos).forEach((todo) => {
-        for (const insert of todo.inserts.filter((e) => e.id === undefined)) {
+        for (const insert of todo.inserts.filter((e) => e.idMaybe === undefined)) {
           // Use todo.metadata so that all subtypes get their base type's tag
           insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
         }

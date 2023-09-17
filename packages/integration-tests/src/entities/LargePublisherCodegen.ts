@@ -105,20 +105,20 @@ export abstract class LargePublisherCodegen extends Publisher {
     setOpts(this as any as LargePublisher, opts, { calledFromConstructor: true });
   }
 
-  get id(): LargePublisherId | undefined {
-    return this.idTagged;
+  get id(): LargePublisherId {
+    return this.idMaybe || fail("LargePublisher has no id yet");
   }
 
-  get idOrFail(): LargePublisherId {
-    return this.id || fail("LargePublisher has no id yet");
+  get idMaybe(): LargePublisherId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): LargePublisherId | undefined {
+  get idTagged(): LargePublisherId {
+    return this.idTaggedMaybe || fail("LargePublisher has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): LargePublisherId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): LargePublisherId {
-    return this.idTagged || fail("LargePublisher has no id tagged yet");
   }
 
   get country(): string | undefined {

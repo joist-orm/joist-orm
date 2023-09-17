@@ -163,6 +163,25 @@ describe("ManyToManyCollection", () => {
     expect(await countOfBookToTags()).toEqual(1);
   });
 
+  it("can add a new 2nd tag to a existing book", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertTag({ name: "t1" });
+    await insertBookToTag({ book_id: 1, tag_id: 1 });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "b:1");
+    const tag = em.create(Tag, { name: "t2" });
+
+    book.tags.add(tag);
+    expect(tag.books.get).toContain(book);
+    expect((await book.tags.load()).length).toBe(1);
+
+    await em.flush();
+
+    expect(await countOfBookToTags()).toEqual(2);
+  });
+
   it("can remove a tag from a book", async () => {
     await insertAuthor({ id: 1, first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });
@@ -335,7 +354,7 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     const book = await em.load(Book, "b:2");
     const [t4, t5] = await em.loadAll(Tag, ["t:4", "t:5"]);
-    await em.createOrUpdatePartial(Book, { id: book.idOrFail, tags: [t4, t5] });
+    await em.createOrUpdatePartial(Book, { id: book.id, tags: [t4, t5] });
     await em.flush();
 
     // We could recognize when M2M.set is called w/o a load, and issue a DELETE + INSERTs.

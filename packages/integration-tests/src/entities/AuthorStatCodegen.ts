@@ -152,20 +152,20 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as AuthorStat, opts, { calledFromConstructor: true });
   }
 
-  get id(): AuthorStatId | undefined {
-    return this.idTagged;
+  get id(): AuthorStatId {
+    return this.idMaybe || fail("AuthorStat has no id yet");
   }
 
-  get idOrFail(): AuthorStatId {
-    return this.id || fail("AuthorStat has no id yet");
+  get idMaybe(): AuthorStatId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): AuthorStatId | undefined {
+  get idTagged(): AuthorStatId {
+    return this.idTaggedMaybe || fail("AuthorStat has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): AuthorStatId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): AuthorStatId {
-    return this.idTagged || fail("AuthorStat has no id tagged yet");
   }
 
   get smallint(): number {

@@ -169,20 +169,20 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as User, opts, { calledFromConstructor: true });
   }
 
-  get id(): UserId | undefined {
-    return this.idTagged;
+  get id(): UserId {
+    return this.idMaybe || fail("User has no id yet");
   }
 
-  get idOrFail(): UserId {
-    return this.id || fail("User has no id yet");
+  get idMaybe(): UserId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): UserId | undefined {
+  get idTagged(): UserId {
+    return this.idTaggedMaybe || fail("User has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): UserId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): UserId {
-    return this.idTagged || fail("User has no id tagged yet");
   }
 
   get name(): string {

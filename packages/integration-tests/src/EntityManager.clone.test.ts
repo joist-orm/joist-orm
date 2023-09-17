@@ -32,7 +32,7 @@ describe("EntityManager.clone", () => {
 
     // Then we expect the cloned entity to have the same properties as the original
     expect(a2.firstName).toEqual(a1.firstName);
-    expect(a2.publisher.idOrFail).toEqual(p1.id);
+    expect(a2.publisher.id).toEqual(p1.id);
     expect(a2.id).not.toEqual(a1.id);
     expect(await numberOf(em, Author, Publisher)).toEqual([2, 1]);
     expect(p1.authors.get).toEqual([a1, a2]);
@@ -64,7 +64,7 @@ describe("EntityManager.clone", () => {
 
     // When we clone it in a 2nd UoW
     const em2 = newEntityManager();
-    const a2 = await em2.load(Author, a1.idOrFail);
+    const a2 = await em2.load(Author, a1.id);
     const a3 = await em2.clone(a2);
 
     // Then the a3.publisher loaded state is correct
@@ -251,7 +251,7 @@ describe("EntityManager.clone", () => {
     await em.flush();
     // When we clone it in a new UoW
     const em2 = newEntityManager();
-    const c2 = await em2.load(Comment, c1.idOrFail);
+    const c2 = await em2.load(Comment, c1.id);
     const c3 = await em2.clone(c2);
     // Then the parent can be loaded
     expect(await c3.parent.load()).toBeInstanceOf(Author);

@@ -14,6 +14,7 @@ import {
   setField,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
@@ -33,14 +34,14 @@ export function isPolymorphicReference(maybeReference: any): maybeReference is P
 export interface PolymorphicReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
   /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
-  id: IdOf<U> | undefined;
+  id: IdOf<U>;
 
-  /** Returns the id of the current assigned entity or a runtime error if it's either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
-  idOrFail: IdOf<U>;
+  /** Returns the id of the current assigned entity, undefined if unset, or a runtime error if set to a new entity. */
+  idIfSet: IdOf<U> | undefined;
 
-  idUntagged: string | undefined;
+  idUntagged: string;
 
-  idUntaggedOrFail: string;
+  idUntaggedIfSet: string | undefined;
 
   /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
   readonly isSet: boolean;
@@ -132,25 +133,34 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     return this.doGet({ withDeleted: false });
   }
 
-  get id(): IdOf<U> | undefined {
+  get id(): IdOf<U> {
+    return this.idMaybe || failNoId(this.current());
+  }
+
+  get idIfSet(): IdOf<U> | N | undefined {
+    failIfNewEntity(this.current());
+    return this.idMaybe;
+  }
+
+  get idUntagged(): string {
+    return this.idUntaggedMaybe || failNoId(this.current());
+  }
+
+  get idUntaggedIfSet(): string | undefined {
+    failIfNewEntity(this.current());
+    return this.idUntaggedMaybe;
+  }
+
+  // private impl
+
+  private get idMaybe(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
 
-  get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.entity, "pending");
-    return this.id || fail("Reference is unset or assigned to a new entity");
+  private get idUntaggedMaybe(): string | undefined {
+    return this.idMaybe && deTagId(getMetadata(getConstructorFromTaggedId(this.idMaybe)), this.idMaybe);
   }
-
-  get idUntagged(): string | undefined {
-    return this.id && deTagId(getMetadata(getConstructorFromTaggedId(this.id)), this.id);
-  }
-
-  get idUntaggedOrFail(): string {
-    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
-  }
-
-  // private impl
 
   setFromOpts(other: U): void {
     this.setImpl(other);
@@ -213,7 +223,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     ensureNotDeleted(this.entity, "pending");
 
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    const changed = setField(this.entity, this.fieldName, isEntity(other) ? other?.id ?? other : other);
+    const changed = setField(this.entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;
@@ -269,7 +279,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   private maybeFindExisting(): U | undefined {
-    return this.id !== undefined ? this.entity.em.getEntity(this.id) : undefined;
+    return this.idMaybe !== undefined ? this.entity.em.getEntity(this.id) : undefined;
   }
 
   [RelationT]: T = null!;

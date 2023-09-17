@@ -8,7 +8,7 @@ describe("Image", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     const i = em.create(Image, { type: ImageType.AuthorImage, author: a1, fileName: "f1" });
     await em.flush();
-    expect(i.idOrFail).toEqual("i:1");
+    expect(i.id).toEqual("i:1");
   });
 
   it("cannot have multiple owners", async () => {

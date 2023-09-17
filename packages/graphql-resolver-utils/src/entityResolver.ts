@@ -57,7 +57,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {
   const idResolver = (entityOrId: T | string) => {
-    return typeof entityOrId === "string" ? entityOrId : entityOrId.idOrFail;
+    return typeof entityOrId === "string" ? entityOrId : entityOrId.id;
   };
 
   const primitiveResolvers = Object.values(entityMetadata.fields)

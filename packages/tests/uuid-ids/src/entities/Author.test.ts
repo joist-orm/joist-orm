@@ -24,7 +24,7 @@ describe("Author", () => {
     const em = newEntityManager({ idAssigner: new RandomUuidAssigner() });
     const a1 = newAuthor(em);
     await em.flush();
-    expect(a1.idOrFail.startsWith("a:")).toBe(true);
+    expect(a1.id.startsWith("a:")).toBe(true);
   });
 
   it("can run multiple find calls", async () => {

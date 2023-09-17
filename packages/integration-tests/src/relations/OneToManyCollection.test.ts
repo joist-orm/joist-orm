@@ -146,7 +146,7 @@ describe("OneToManyCollection", () => {
     // Then the collection has both books in it
     expect(books.length).toEqual(2);
     expect(books[0].id).toEqual("b:1");
-    expect(books[1].id).toEqual(undefined);
+    expect(books[1].idMaybe).toEqual(undefined);
   });
 
   // Skipped due to the first/naive implementation causing performance issues
@@ -417,7 +417,7 @@ describe("OneToManyCollection", () => {
     // And add the book to it
     author.books.add(book);
     // Then we can answer find
-    const book_1 = await author.books.find(book.idOrFail);
+    const book_1 = await author.books.find(book.id);
     expect(book_1).toEqual(book);
     // And we did not make any db queries
     expect(numberOfQueries).toEqual(0);
@@ -451,8 +451,8 @@ describe("OneToManyCollection", () => {
     const b1 = newBook(em, { author: a, order: 2 });
     const b2 = newBook(em, { author: a, order: 1 });
     await em.flush();
-    expect(b1.idOrFail).toBe("b:1");
-    expect(b2.idOrFail).toBe("b:2");
+    expect(b1.id).toBe("b:1");
+    expect(b2.id).toBe("b:2");
     expect(a.books.get).toMatchEntity([b2, b1]);
   });
 });

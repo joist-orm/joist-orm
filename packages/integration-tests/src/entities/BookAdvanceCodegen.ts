@@ -131,20 +131,20 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as BookAdvance, opts, { calledFromConstructor: true });
   }
 
-  get id(): BookAdvanceId | undefined {
-    return this.idTagged;
+  get id(): BookAdvanceId {
+    return this.idMaybe || fail("BookAdvance has no id yet");
   }
 
-  get idOrFail(): BookAdvanceId {
-    return this.id || fail("BookAdvance has no id yet");
+  get idMaybe(): BookAdvanceId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): BookAdvanceId | undefined {
+  get idTagged(): BookAdvanceId {
+    return this.idTaggedMaybe || fail("BookAdvance has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): BookAdvanceId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): BookAdvanceId {
-    return this.idTagged || fail("BookAdvance has no id tagged yet");
   }
 
   get createdAt(): Date {

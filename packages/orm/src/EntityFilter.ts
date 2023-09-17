@@ -28,9 +28,9 @@ export type OrderBy = "ASC" | "DESC";
  */
 export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = never> =
   | T
-  | T[]
+  | readonly T[]
   | I
-  | I[]
+  | readonly I[]
   // Note that this is a weak type (all optional keys) but TS still enforces at least one overlap
   | ({ as?: Alias<T> } & F)
   // Always allow `undefined` for condition pruning
@@ -56,14 +56,14 @@ export type UniqueFilter<T extends Entity> = {
  */
 export type ValueFilter<V, N> =
   | V
-  | V[]
+  | readonly V[]
   | N
   | undefined
   // Both eq and in are redundant with `V` and `V[]` above but are convenient for matching GQL filter APIs
   | { eq: V | N | undefined }
   | { ne: V | N | undefined }
-  | { in: (V | N)[] | undefined }
-  | { nin: (V | N)[] | undefined }
+  | { in: readonly (V | N)[] | undefined }
+  | { nin: readonly (V | N)[] | undefined }
   | { gt: V | undefined }
   | { gte: V | undefined }
   | { lt: V | undefined }

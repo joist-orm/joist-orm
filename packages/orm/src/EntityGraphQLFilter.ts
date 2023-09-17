@@ -21,8 +21,8 @@ export type GraphQLFilterAndSettings<T extends Entity> = {
 export type ValueGraphQLFilter<V> =
   | {
       eq?: V | null;
-      in?: V[] | null;
-      nin?: V[] | null;
+      in?: readonly V[] | null;
+      nin?: readonly V[] | null;
       gt?: V | null;
       gte?: V | null;
       ne?: V | null;
@@ -30,14 +30,14 @@ export type ValueGraphQLFilter<V> =
       lte?: V | null;
       like?: V | null;
       ilike?: V | null;
-      between?: V[] | null;
+      between?: readonly V[] | null;
       contains?: V | null;
       overlaps?: V | null;
       containedBy?: V | null;
     }
-  | { op: Operator; value: V | V[] | undefined | null }
+  | { op: Operator; value: V | readonly V[] | undefined | null }
   | V
-  | V[]
+  | readonly V[]
   | null;
 
 export type BooleanGraphQLFilter = true | false | null;

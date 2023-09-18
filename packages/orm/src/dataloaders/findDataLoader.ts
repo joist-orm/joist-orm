@@ -4,7 +4,7 @@ import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { opToFn } from "../EntityGraphQLFilter";
-import { EntityManager, MaybeAbstractEntityConstructor, entityLimit } from "../EntityManager";
+import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import {
   ColumnCondition,
@@ -45,7 +45,7 @@ export function findDataLoader<T extends Entity>(
         // a prior invocation that instantiated our dataloader instance.
         const query = parseFindQuery(meta, where, opts);
         const rows = await em.driver.executeFind(em, query, {});
-        ensureUnderLimit(rows);
+        ensureUnderLimit(em, rows);
         return [rows];
       }
 
@@ -91,11 +91,11 @@ export function findDataLoader<T extends Entity>(
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
         ORDER BY ${query.orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
-        LIMIT ${entityLimit};
+        LIMIT ${em.entityLimit};
       `;
 
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
-      ensureUnderLimit(rows);
+      ensureUnderLimit(em, rows);
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as any[]);
@@ -276,9 +276,9 @@ export function buildValuesCte(
   )`;
 }
 
-function ensureUnderLimit(rows: unknown[]): void {
-  if (rows.length >= entityLimit) {
-    throw new Error(`Query returned more than ${entityLimit} rows`);
+function ensureUnderLimit(em: EntityManager, rows: unknown[]): void {
+  if (rows.length >= em.entityLimit) {
+    throw new Error(`Query returned more than ${em.entityLimit} rows`);
   }
 }
 

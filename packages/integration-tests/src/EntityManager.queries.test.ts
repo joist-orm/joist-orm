@@ -23,8 +23,6 @@ import {
   jan1,
   jan2,
   parseFindQuery,
-  setDefaultEntityLimit,
-  setEntityLimit,
 } from "joist-orm";
 import {
   Author,
@@ -1400,17 +1398,12 @@ describe("EntityManager.queries", () => {
   });
 
   it("cannot find too many entities", async () => {
-    try {
-      await insertAuthor({ first_name: "a1" });
-      await insertAuthor({ first_name: "a2" });
-      await insertAuthor({ first_name: "a3" });
-
-      setEntityLimit(3);
-      const em = newEntityManager();
-      await expect(em.find(Author, {})).rejects.toThrow("Query returned more than 3 rows");
-    } finally {
-      setDefaultEntityLimit();
-    }
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertAuthor({ first_name: "a3" });
+    const em = newEntityManager();
+    em.entityLimit = 3;
+    await expect(em.find(Author, {})).rejects.toThrow("Query returned more than 3 rows");
   });
 
   it("can find in an enum array", async () => {

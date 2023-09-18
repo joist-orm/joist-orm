@@ -1,11 +1,11 @@
 import { Knex } from "knex";
 import { ValueFilter } from "../EntityFilter";
-import { entityLimit, EntityManager } from "../EntityManager";
+import { EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
-import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId } from "../keys";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
-import { hasSerde } from "../serde";
 import { JoinRowTodo, Todo } from "../Todo";
+import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId } from "../keys";
+import { hasSerde } from "../serde";
 import { fail, partition } from "../utils";
 import { Driver } from "./Driver";
 
@@ -300,9 +300,9 @@ function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object
   return a[key].localeCompare(b[key]) * flip;
 }
 
-function ensureUnderLimit(rows: unknown[]): unknown[] {
-  if (rows.length >= entityLimit) {
-    throw new Error(`Query returned more than ${entityLimit} rows`);
+function ensureUnderLimit(em: EntityManager, rows: unknown[]): unknown[] {
+  if (rows.length >= em.entityLimit) {
+    throw new Error(`Query returned more than ${em.entityLimit} rows`);
   }
   return rows;
 }

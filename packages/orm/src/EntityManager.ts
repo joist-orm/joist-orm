@@ -842,6 +842,11 @@ export class EntityManager<C = unknown> {
     query: Knex.QueryBuilder,
     populate?: any,
   ): Promise<T[]> {
+    // Enforce this em's entity limit if this query doesn't already have a limit present.
+    // Knex doesn't have an api to inspect a query, so we have to go through its internal `_single` property
+    if ((query as any)._single.limit === undefined) {
+      query.limit(this.entityLimit);
+    }
     const rows = await query;
     const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
     if (populate) {
@@ -1402,7 +1407,7 @@ export function setDefaultEntityLimit(limit: number) {
 }
 
 export function resetDefaultEntityLimit() {
-  defaultEntityLimit = 10_000;
+  defaultEntityLimit = 50_000;
 }
 
 export function isKey(k: any): k is string {

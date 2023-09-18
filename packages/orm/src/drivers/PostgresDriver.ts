@@ -40,7 +40,10 @@ export interface PostgresDriverOpts {
 export class PostgresDriver implements Driver {
   private readonly idAssigner: IdAssigner;
 
-  constructor(private readonly knex: Knex, opts?: PostgresDriverOpts) {
+  constructor(
+    private readonly knex: Knex,
+    opts?: PostgresDriverOpts,
+  ) {
     this.idAssigner = opts?.idAssigner ?? new SequenceIdAssigner();
   }
 
@@ -50,7 +53,7 @@ export class PostgresDriver implements Driver {
     settings: { limit?: number; offset?: number },
   ): Promise<any[]> {
     const knex = this.getMaybeInTxnKnex(em);
-    return buildKnexQuery(knex, parsed, settings);
+    return buildKnexQuery(knex, parsed, { limit: em.entityLimit, ...settings });
   }
 
   async executeQuery(em: EntityManager<unknown>, sql: string, bindings: any[]): Promise<any[]> {

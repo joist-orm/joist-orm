@@ -1,6 +1,5 @@
 import { Knex } from "knex";
 import { opToFn } from "../EntityGraphQLFilter";
-import { entityLimit } from "../EntityManager";
 import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery } from "../QueryParser";
 import { assertNever, fail } from "../utils";
 import QueryBuilder = Knex.QueryBuilder;
@@ -67,7 +66,10 @@ export function buildKnexQuery(
       query.orderBy(`${alias}.${column}`, order);
     });
 
-  query.limit(limit || entityLimit);
+  if (limit) {
+    query.limit(limit);
+  }
+
   if (offset) {
     query.offset(offset);
   }

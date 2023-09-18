@@ -12,7 +12,7 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
-import { Loaded, sameEntity, setDefaultEntityLimit, setEntityLimit } from "joist-orm";
+import { Loaded, sameEntity } from "joist-orm";
 import {
   Author,
   Book,
@@ -1106,18 +1106,14 @@ describe("EntityManager", () => {
   });
 
   it("cannot load too many entities", async () => {
-    try {
-      await insertAuthor({ first_name: "a1" });
-      await insertAuthor({ first_name: "a2" });
-      await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertPublisher({ name: "p1" });
 
-      setEntityLimit(3);
-      const em = newEntityManager();
-      await em.find(Author, {});
-      await expect(em.find(Publisher, {})).rejects.toThrow("More than 3 entities have been instantiated");
-    } finally {
-      setDefaultEntityLimit();
-    }
+    const em = newEntityManager();
+    em.entityLimit = 3;
+    await em.find(Author, {});
+    await expect(em.find(Publisher, {})).rejects.toThrow("More than 3 entities have been instantiated");
   });
 
   it("doesnt allow unknown fields to create", async () => {

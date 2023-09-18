@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
-import { setEntityLimit } from "joist-orm";
+import { setDefaultEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
@@ -173,7 +173,7 @@ describe("EntityManager.populate", () => {
 
   it.skip("can be huge", async () => {
     jest.setTimeout(1_000_000);
-    setEntityLimit(100_000);
+    setDefaultEntityLimit(100_000);
     const em1 = newEntityManager();
     // Create 10,000 entities
     for (let i = 0; i < 10; i++) {

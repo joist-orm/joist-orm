@@ -166,6 +166,7 @@ export class EntityManager<C = unknown> {
   public readonly ctx: C;
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;
+  public entityLimit: number = defaultEntityLimit;
   #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
@@ -1010,8 +1011,8 @@ export class EntityManager<C = unknown> {
     }
 
     this.#entities.push(entity);
-    if (this.#entities.length >= entityLimit) {
-      throw new Error(`More than ${entityLimit} entities have been instantiated`);
+    if (this.#entities.length >= this.entityLimit) {
+      throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
     }
 
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
@@ -1390,14 +1391,18 @@ export function getEmInternalApi(em: EntityManager): EntityManagerInternalApi {
   return (em as any)["__api"];
 }
 
-export let entityLimit = 10_000;
+let defaultEntityLimit = 50_000;
 
-export function setEntityLimit(limit: number) {
-  entityLimit = limit;
+export function getDefaultEntityLimit() {
+  return defaultEntityLimit;
 }
 
-export function setDefaultEntityLimit() {
-  entityLimit = 10_000;
+export function setDefaultEntityLimit(limit: number) {
+  defaultEntityLimit = limit;
+}
+
+export function resetDefaultEntityLimit() {
+  defaultEntityLimit = 10_000;
 }
 
 export function isKey(k: any): k is string {

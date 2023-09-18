@@ -1,3 +1,10 @@
+# [1.107.0](https://github.com/stephenh/joist-ts/compare/v1.106.1...v1.107.0) (2023-09-18)
+
+
+### Features
+
+* Added per entity manager entity limit ([#794](https://github.com/stephenh/joist-ts/issues/794)) ([19786f4](https://github.com/stephenh/joist-ts/commit/19786f4a5b925b305bd5a66515e30c002bebdeb3))
+
 ## [1.106.1](https://github.com/stephenh/joist-ts/compare/v1.106.0...v1.106.1) (2023-09-17)
 
 

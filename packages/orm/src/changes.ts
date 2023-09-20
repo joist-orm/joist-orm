@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
-import { getConstructorFromTaggedId, getMetadata } from "./index";
+import { Field, getConstructorFromTaggedId, getMetadata } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -88,7 +88,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
       // Only conditionally add `originalEntity` to avoid non-entities fields having a field that
       // a deep-cyclic formatter (like Jest) will blindly call and blow up.
       const meta = getMetadata(entity);
-      if (meta && meta.allFields[p] && meta.allFields[p].kind === "m2o") {
+      if (meta && meta.allFields[p] && addOriginalEntity[meta.allFields[p].kind]) {
         Object.assign(fields, {
           get originalEntity() {
             if (isEntity(originalValue)) {
@@ -106,3 +106,15 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
     },
   }) as any;
 }
+
+const addOriginalEntity: Record<Field["kind"], boolean> = {
+  m2o: true,
+  poly: true,
+  enum: false,
+  lo2m: false,
+  m2m: false,
+  o2m: false,
+  o2o: false,
+  primaryKey: false,
+  primitive: false,
+};

@@ -85,7 +85,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
               selectionSet.selections[0].kind === "Field" &&
               selectionSet.selections[0].name.value === "id"
             ) {
-              return (entity as any)[ormField.fieldName].id;
+              return (entity as any)[ormField.fieldName].idMaybe;
             }
           }
         }

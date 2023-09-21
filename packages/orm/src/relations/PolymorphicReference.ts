@@ -39,6 +39,9 @@ export interface PolymorphicReference<T extends Entity, U extends Entity, N exte
   /** Returns the id of the current assigned entity, undefined if unset, or a runtime error if set to a new entity. */
   idIfSet: IdOf<U> | undefined;
 
+  /** Returns the id of the current assigned entity, undefined if unset, or undefined if set to a new entity. */
+  idMaybe: IdOf<U> | undefined;
+
   idUntagged: string;
 
   idUntaggedIfSet: string | undefined;
@@ -151,12 +154,12 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     return this.idUntaggedMaybe;
   }
 
-  // private impl
-
-  private get idMaybe(): IdOf<U> | undefined {
+  get idMaybe(): IdOf<U> | undefined {
     ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | undefined;
   }
+
+  // private impl
 
   private get idUntaggedMaybe(): string | undefined {
     return this.idMaybe && deTagId(getMetadata(getConstructorFromTaggedId(this.idMaybe)), this.idMaybe);

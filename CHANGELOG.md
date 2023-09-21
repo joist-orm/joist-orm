@@ -1,3 +1,10 @@
+## [1.107.1](https://github.com/stephenh/joist-ts/compare/v1.107.0...v1.107.1) (2023-09-21)
+
+
+### Bug Fixes
+
+* Keep Jest from crawling into originalEntity. ([#796](https://github.com/stephenh/joist-ts/issues/796)) ([a508ee4](https://github.com/stephenh/joist-ts/commit/a508ee4209a16475c15aab97a39fa6fbeac22169))
+
 # [1.107.0](https://github.com/stephenh/joist-ts/compare/v1.106.1...v1.107.0) (2023-09-18)
 
 

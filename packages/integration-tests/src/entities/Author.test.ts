@@ -2,7 +2,7 @@ import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities
 import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
-import { Author, Book, BookId, Publisher, newAuthor, newPublisher } from "../entities";
+import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher } from "../entities";
 import { makeApiCall, newEntityManager } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
@@ -327,6 +327,21 @@ describe("Author", () => {
       expect(a1.changes.graduated.hasUpdated).toBe(true);
       expect(a1.changes.graduated.originalValue).toEqual(jan1);
       expect(a1.changes.fields).toEqual(["graduated"]);
+    });
+
+    it("works for enums", async () => {
+      await insertPublisher({ name: "p1", size_id: 1 });
+      const em = newEntityManager();
+      const a1 = await em.load(Publisher, "1");
+      expect(a1.changes.size.originalValue).toEqual(PublisherSize.Small);
+      expect(a1.changes.fields).toEqual([]);
+      a1.size = PublisherSize.Large;
+      expect(a1.changes.size.hasChanged).toBe(true);
+      expect(a1.changes.size.hasUpdated).toBe(true);
+      expect(a1.changes.size.originalValue).toEqual(PublisherSize.Small);
+      expect(a1.changes.fields).toEqual(["size"]);
+      // Make sure we don't put this key here, otherwise deep copies (like Jest diff failures) will fail
+      expect("originalEntity" in a1.changes.size).toBe(false);
     });
 
     it("works for references with new entity", async () => {

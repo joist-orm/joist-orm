@@ -215,7 +215,7 @@ export function assertLoaded<T extends Entity, H extends LoadHint<T>, L extends 
   entity: T,
   hint: H,
 ): asserts entity is L {
-  if (!isLoaded(entity, hint)) fail(`${entity.idOrFail} is not loaded for ${JSON.stringify(hint)}`);
+  if (!isLoaded(entity, hint)) fail(`${entity.id} is not loaded for ${JSON.stringify(hint)}`);
 }
 
 export function ensureLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded<T, H>>(entity: T, hint: H): L {

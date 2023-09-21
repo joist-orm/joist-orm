@@ -140,20 +140,20 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as BookReview, opts, { calledFromConstructor: true });
   }
 
-  get id(): BookReviewId | undefined {
-    return this.idTagged;
+  get id(): BookReviewId {
+    return this.idMaybe || fail("BookReview has no id yet");
   }
 
-  get idOrFail(): BookReviewId {
-    return this.id || fail("BookReview has no id yet");
+  get idMaybe(): BookReviewId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): BookReviewId | undefined {
+  get idTagged(): BookReviewId {
+    return this.idTaggedMaybe || fail("BookReview has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): BookReviewId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): BookReviewId {
-    return this.idTagged || fail("BookReview has no id tagged yet");
   }
 
   get rating(): number {

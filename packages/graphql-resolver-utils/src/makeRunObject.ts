@@ -23,7 +23,7 @@ type RunResolverMethod<T, R> = <K extends keyof T, A extends ResolverArgs<T, K>>
 export function makeRunObject<T, R extends ResolverRoot<T>>(resolvers: T): RunResolverMethod<T, R> {
   return (ctx, root, key, args) =>
     run(ctx, async (ctx) => {
-      const _root = isEntity(root) ? await ctx.em.load((root as any).idOrFail) : root;
+      const _root = isEntity(root) ? await ctx.em.load((root as any).id) : root;
       return (resolvers[key] as any)(_root, args instanceof Function ? args() : args ?? {}, ctx, undefined!);
     });
 }

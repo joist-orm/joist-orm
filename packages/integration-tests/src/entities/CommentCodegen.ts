@@ -151,20 +151,20 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as Comment, opts, { calledFromConstructor: true });
   }
 
-  get id(): CommentId | undefined {
-    return this.idTagged;
+  get id(): CommentId {
+    return this.idMaybe || fail("Comment has no id yet");
   }
 
-  get idOrFail(): CommentId {
-    return this.id || fail("Comment has no id yet");
+  get idMaybe(): CommentId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): CommentId | undefined {
+  get idTagged(): CommentId {
+    return this.idTaggedMaybe || fail("Comment has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): CommentId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): CommentId {
-    return this.idTagged || fail("Comment has no id tagged yet");
   }
 
   get text(): string | undefined {

@@ -7,7 +7,7 @@ import { ResolverResult, ResolverRoot } from "./makeRunObject";
 export function makeRunObjectFields<T, R extends ResolverRoot<T>>(resolver: T): RunKeysResolverMethod<T, R> {
   return (ctx, root, keys) => {
     return run(ctx, async (ctx) => {
-      const _root = isEntity(root) ? await ctx.em.load((root as any).idOrFail) : root;
+      const _root = isEntity(root) ? await ctx.em.load((root as any).id) : root;
       // Build a result with each key, where keys might return a promise, so we `await` to make assertions easier
       return Object.fromEntries(
         await Promise.all(keys.map(async (key) => [key, await (resolver[key] as any)(_root, {}, ctx, undefined!)])),

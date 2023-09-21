@@ -143,7 +143,7 @@ describe("OneToManyLargeCollection", () => {
     // And we put the critic in it
     c1.group.set(pg);
     // Then we can answer find
-    const c1_2 = await pg.critics.find(c1.idOrFail);
+    const c1_2 = await pg.critics.find(c1.id);
     expect(c1_2).toEqual(c1);
     // And we did not make any db queries
     expect(numberOfQueries).toEqual(0);

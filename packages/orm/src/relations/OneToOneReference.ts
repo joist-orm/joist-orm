@@ -1,9 +1,9 @@
-import { currentlyInstantiatingEntity, deTagId, ensureNotDeleted, fail, IdOf, LoadedReference, setField } from "../";
+import { currentlyInstantiatingEntity, deTagId, ensureNotDeleted, IdOf, LoadedReference, setField } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
-import { ManyToOneReference } from "./ManyToOneReference";
+import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
@@ -25,11 +25,13 @@ export interface LoadedOneToOneReference<T extends Entity, U extends Entity> ext
   // are available even in an unloaded state; below is mostly a copy/paste of those.
 
   /** Returns the id of the current assigned entity or a runtime error if it's either a) unset or b) set to a new entity that doesn't have an `id` yet. */
-  idOrFail: IdOf<U>;
+  id: IdOf<U>;
 
-  idUntagged: string | undefined;
+  idIfSet: IdOf<U> | undefined;
 
-  idUntaggedOrFail: string;
+  idUntagged: string;
+
+  idUntaggedMaybe: string | undefined;
 
   /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
   readonly isSet: boolean;
@@ -99,23 +101,37 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
   }
 
-  get id(): IdOf<U> | undefined {
+  get id(): IdOf<U> {
+    return this.idMaybe || failNoId(this.loaded);
+  }
+
+  get idIfSet(): IdOf<U> | undefined {
     if (this._isLoaded) {
-      return this.loaded?.id as IdOf<U> | undefined;
+      failIfNewEntity(this.loaded);
+      return this.idMaybe;
     }
     throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
   }
 
-  get idOrFail(): IdOf<U> {
-    return this.id || fail(`${this.#entity}.${this.fieldName} has no id yet`);
+  get idUntagged(): string {
+    return this.idUntaggedMaybe || failNoId(this.loaded);
   }
 
-  get idUntagged(): string | undefined {
-    return this.id && deTagId(this.#otherMeta, this.id);
+  get idUntaggedIfSet(): string | undefined {
+    failIfNewEntity(this.loaded);
+    return this.idUntaggedMaybe;
   }
 
-  get idUntaggedOrFail(): string {
-    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
+  private get idMaybe(): IdOf<U> | undefined {
+    ensureNotDeleted(this.#entity, "pending");
+    if (this._isLoaded) {
+      return this.loaded?.idMaybe as IdOf<U> | undefined;
+    }
+    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
+  }
+
+  private get idUntaggedMaybe(): string | undefined {
+    return deTagId(this.#otherMeta, this.idMaybe);
   }
 
   get isSet(): boolean {
@@ -130,7 +146,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
     if (!this._isLoaded || opts.forceReload) {
       if (!this.#entity.isNewEntity) {
-        this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTaggedOrFail);
+        this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
       }
       this._isLoaded = true;
     }

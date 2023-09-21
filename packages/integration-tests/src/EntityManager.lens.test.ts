@@ -158,7 +158,7 @@ describe("EntityManager.lens", () => {
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     const b1 = await em.load(Book, "1");
-    const p1Id = await b1.load((b) => b.author.publisher.idOrFail);
+    const p1Id = await b1.load((b) => b.author.publisher.id);
     expect(p1Id).toEqual("p:1");
   });
 

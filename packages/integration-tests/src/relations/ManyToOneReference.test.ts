@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
-import { Author, Book, User, newAuthor } from "../entities";
+import { Author, Book, User, newAuthor, newPublisher } from "../entities";
 import { IpAddress } from "../entities/types";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
@@ -12,6 +12,34 @@ describe("ManyToOneReference", () => {
     const book = await em.load(Book, "1");
     const author = await book.author.load();
     expect(author.firstName).toEqual("f");
+  });
+
+  it("can return the id when set", async () => {
+    await insertAuthor({ first_name: "f" });
+    await insertBook({ title: "t", author_id: 1 });
+    const em = newEntityManager();
+    const book = await em.load(Book, "1");
+    expect(book.author.id).toBe("a:1");
+    expect(book.author.idIfSet).toBe("a:1");
+  });
+
+  it("cannot return the id when unset", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    expect(() => author.publisher.id).toThrow("Reference is unset");
+    expect(author.publisher.idIfSet).toBe(undefined);
+    expect(author.publisher.idMaybe).toBeUndefined();
+  });
+
+  it("cannot return the id when set to new entity", async () => {
+    await insertAuthor({ first_name: "f" });
+    const em = newEntityManager();
+    const author = await em.load(Author, "1");
+    author.publisher.set(newPublisher(em));
+    expect(() => author.publisher.id).toThrow("Reference is assigned to a new entity");
+    expect(() => author.publisher.idIfSet).toThrow("Reference is assigned to a new entity");
+    expect(author.publisher.idMaybe).toBeUndefined();
   });
 
   it("can load a null foreign key", async () => {
@@ -144,7 +172,7 @@ describe("ManyToOneReference", () => {
     const em = newEntityManager();
     const a = newAuthor(em);
     a.set({ publisher: "" });
-    expect(a.publisher.id).toBe(undefined);
+    expect(a.publisher.idIfSet).toBe(undefined);
   });
 
   it("fails when set to the wrong tag", () => {

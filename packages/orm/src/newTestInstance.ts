@@ -224,7 +224,7 @@ function resolveFactoryOpt<T extends Entity>(
     return opt as T;
   } else if (isId(opt)) {
     // Try finding the entity in the UoW, otherwise fallback on just setting it as the id (which we support that now)
-    return (em.entities.find((e) => e.idTagged === opt || getTestId(em, e) === opt) as T) || opt;
+    return (em.entities.find((e) => e.idTaggedMaybe === opt || getTestId(em, e) === opt) as T) || opt;
   } else if (opt && !isPlainObject(opt) && !(opt instanceof MaybeNew)) {
     // If opt isn't a POJO, assume this is a completely-custom factory
     return meta.factory(em, opt);
@@ -426,7 +426,10 @@ export function maybeNewPoly<T extends Entity, NewT extends T = T>(
 }
 
 class MaybeNew<T extends Entity> {
-  constructor(public opts: FactoryOpts<T>, public polyRefPreferredOrder: MaybeAbstractEntityConstructor<T>[] = []) {}
+  constructor(
+    public opts: FactoryOpts<T>,
+    public polyRefPreferredOrder: MaybeAbstractEntityConstructor<T>[] = [],
+  ) {}
 }
 
 /**

@@ -92,20 +92,20 @@ export abstract class SmallPublisherCodegen extends Publisher {
     setOpts(this as any as SmallPublisher, opts, { calledFromConstructor: true });
   }
 
-  get id(): SmallPublisherId | undefined {
-    return this.idTagged;
+  get id(): SmallPublisherId {
+    return this.idMaybe || fail("SmallPublisher has no id yet");
   }
 
-  get idOrFail(): SmallPublisherId {
-    return this.id || fail("SmallPublisher has no id yet");
+  get idMaybe(): SmallPublisherId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): SmallPublisherId | undefined {
+  get idTagged(): SmallPublisherId {
+    return this.idTaggedMaybe || fail("SmallPublisher has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): SmallPublisherId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): SmallPublisherId {
-    return this.idTagged || fail("SmallPublisher has no id tagged yet");
   }
 
   get city(): string {

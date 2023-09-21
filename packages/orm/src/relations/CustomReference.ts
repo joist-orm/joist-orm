@@ -36,7 +36,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   private loadPromise: Promise<unknown> | undefined;
   private _isLoaded = false;
 
-  constructor(entity: T, private opts: CustomReferenceOpts<T, U, N>) {
+  constructor(
+    entity: T,
+    private opts: CustomReferenceOpts<T, U, N>,
+  ) {
     super();
     this.#entity = entity;
   }
@@ -76,21 +79,20 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     // this._isLoaded = true;
   }
 
-  get id(): IdOf<U> | undefined {
+  get id(): IdOf<U> {
     return fail(`CustomReference cannot resolve 'id'`);
   }
 
-  get idOrFail(): IdOf<U> {
-    return fail(`CustomReference cannot resolve 'idOrFail'`);
+  get idMaybe(): IdOf<U> | undefined {
+    return fail(`CustomReference cannot resolve 'idMaybe'`);
   }
 
-  get idUntagged(): string | undefined {
-    // We don't know the meta here but that is probably a feature in case this is polymorphic
-    return this.id && unsafeDeTagIds([this.id])[0];
+  get idUntagged(): string {
+    return fail(`CustomReference cannot resolve 'idUntagged'`);
   }
 
-  get idUntaggedOrFail(): string {
-    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
+  get idUntaggedMaybe(): string | undefined {
+    return fail(`CustomReference cannot resolve 'idUntaggedMaybe'`);
   }
 
   get isSet(): boolean {

@@ -2,11 +2,11 @@ import { Entity, isEntity } from "../Entity";
 import { IdOf, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
+  BaseEntity,
   OneToManyLargeCollection,
   OneToOneReferenceImpl,
   Reference,
   deTagId,
-  deTagIds,
   ensureNotDeleted,
   ensureTagged,
   fail,
@@ -37,15 +37,19 @@ export function isManyToOneReference(maybeReference: any): maybeReference is Man
 
 export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
-  /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
-  id: IdOf<U> | undefined;
 
-  /** Returns the id of the current assigned entity or a runtime error if it's either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
-  idOrFail: IdOf<U>;
+  /** Returns the id of the current assigned entity, or a runtime error if either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
+  id: IdOf<U>;
 
-  idUntagged: string | undefined;
+  /** Returns the id of the current assigned entity, undefined if unset, or a runtime error if set to a new entity. */
+  idIfSet: IdOf<U> | undefined;
 
-  idUntaggedOrFail: string;
+  /** Returns the id of the current assigned entity, undefined if unset, or undefined if set to a new entity. */
+  idMaybe: IdOf<U> | undefined;
+
+  idUntagged: string;
+
+  idUntaggedIfSet: string | undefined;
 
   /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
   readonly isSet: boolean;
@@ -136,23 +140,12 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return this.doGet({ withDeleted: false });
   }
 
-  /** Returns the tagged id of the current value. */
-  private get idTagged(): IdOf<U> | N {
-    ensureNotDeleted(this.#entity, "pending");
-    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
-  }
-
   /** Returns the id of the current value. */
-  get id(): IdOf<U> | N {
-    ensureNotDeleted(this.#entity, "pending");
-    // If current is a string, we might need to detag it...
-    const id = maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
-    if (!this.otherMeta.idTagged && id) {
-      return deTagId(this.otherMeta, id) as IdOf<U>;
-    }
-    return id;
+  get id(): IdOf<U> {
+    return this.idMaybe || failNoId(this.current());
   }
 
+  /** Sets the m2o to `id`, and allows accepting `undefined` (`N`) if this is a nullable relation. */
   set id(id: IdOf<U> | N) {
     ensureNotDeleted(this.#entity, "pending");
     if (id && !isTaggedId(id)) {
@@ -171,6 +164,40 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.maybeAdd();
   }
 
+  get idIfSet(): IdOf<U> | N | undefined {
+    failIfNewEntity(this.current());
+    return this.idMaybe;
+  }
+
+  get idUntagged(): string {
+    return this.idUntaggedMaybe || failNoId(this.current());
+  }
+
+  get idUntaggedIfSet(): string | undefined {
+    failIfNewEntity(this.current());
+    return this.idUntaggedMaybe;
+  }
+
+  get idMaybe(): IdOf<U> | N | undefined {
+    ensureNotDeleted(this.#entity, "pending");
+    // If current is a string, we might need to detag it...
+    let id = maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+    if (!this.otherMeta.idTagged && id) {
+      id = deTagId(this.otherMeta, id) as IdOf<U>;
+    }
+    return id;
+  }
+
+  private get idUntaggedMaybe(): string | undefined {
+    return deTagId(this.otherMeta, this.idMaybe);
+  }
+
+  /** Returns the tagged id of the current value. */
+  private get idTagged(): IdOf<U> | N {
+    ensureNotDeleted(this.#entity, "pending");
+    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+  }
+
   // Internal method used by OneToManyCollection
   setImpl(other: U | IdOf<U> | N): void {
     ensureNotDeleted(this.#entity, "pending");
@@ -183,7 +210,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTagged ?? other : other);
+    setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;
@@ -194,19 +221,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     }
     this.maybeRemove(previous);
     this.maybeAdd();
-  }
-
-  get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.#entity, "pending");
-    return (this.id as IdOf<U> | undefined) || fail("Reference is unset or assigned to a new entity");
-  }
-
-  get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.otherMeta, [this.id])[0];
-  }
-
-  get idUntaggedOrFail(): string {
-    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
   }
 
   // private impl
@@ -355,4 +369,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   [RelationT]: T = null!;
   [RelationU]: U = null!;
   [ReferenceN]: N = null!;
+}
+
+/** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
+export function failNoId(current: string | Entity | undefined): never {
+  if (!current) fail("Reference is unset");
+  if (current instanceof BaseEntity && current.isNewEntity) fail("Reference is assigned to a new entity");
+  fail("Reference is unset or assigned to a new entity");
+}
+
+/** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
+export function failIfNewEntity<U>(current: string | Entity | undefined): void {
+  if (current instanceof BaseEntity && current.isNewEntity) fail("Reference is assigned to a new entity");
 }

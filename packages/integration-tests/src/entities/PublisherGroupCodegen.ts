@@ -119,20 +119,20 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as PublisherGroup, opts, { calledFromConstructor: true });
   }
 
-  get id(): PublisherGroupId | undefined {
-    return this.idTagged;
+  get id(): PublisherGroupId {
+    return this.idMaybe || fail("PublisherGroup has no id yet");
   }
 
-  get idOrFail(): PublisherGroupId {
-    return this.id || fail("PublisherGroup has no id yet");
+  get idMaybe(): PublisherGroupId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): PublisherGroupId | undefined {
+  get idTagged(): PublisherGroupId {
+    return this.idTaggedMaybe || fail("PublisherGroup has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): PublisherGroupId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): PublisherGroupId {
-    return this.idTagged || fail("PublisherGroup has no id tagged yet");
   }
 
   get name(): string | undefined {

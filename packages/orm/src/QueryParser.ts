@@ -491,8 +491,8 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
     // that have an id, and so structurally match the entity filter without really being filters,
     // and convert them over here before getting into parseValueFilter.
     for (const [key, value] of Object.entries(filter)) {
-      if (value && typeof value === "object" && !isPlainObject(value) && "id" in value) {
-        filter[key] = value.id || nilIdValue(meta);
+      if (value && typeof value === "object" && !isPlainObject(value) && "idMaybe" in value) {
+        filter[key] = value.idMaybe || nilIdValue(meta);
       }
     }
     return { kind: "join", subFilter: filter };

@@ -73,14 +73,12 @@ function gatherEntities(result: any): Entity[] {
 async function mapResultToOriginalEm<R>(em: EntityManager, result: R): Promise<R> {
   const newEmEntities = gatherEntities(result);
   // load any entities that don't exist in the original em
-  await Promise.all(newEmEntities.filter((e) => !em.findExistingInstance(e.idOrFail)).map((e) => em.load(e.idOrFail)));
+  await Promise.all(newEmEntities.filter((e) => !em.findExistingInstance(e.id)).map((e) => em.load(e.id)));
   // generate a cache of id -> entity in original em
-  const cache = Object.fromEntries(
-    newEmEntities.map((e) => [e.idOrFail, em.findExistingInstance(e.idOrFail) as Entity]),
-  );
+  const cache = Object.fromEntries(newEmEntities.map((e) => [e.id, em.findExistingInstance(e.id) as Entity]));
   function doMap(value: any): any {
     if (isEntity(value)) {
-      return cache[value.idOrFail];
+      return cache[value.id];
     } else if (Array.isArray(value)) {
       return value.map(doMap) as any;
     } else if (typeof value === "object" && value?.constructor === Object) {

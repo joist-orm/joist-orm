@@ -1,6 +1,5 @@
 import {
   deTagId,
-  deTagIds,
   ensureNotDeleted,
   ensureTagged,
   EntityMetadata,
@@ -18,6 +17,7 @@ import { Entity } from "../Entity";
 import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
@@ -37,15 +37,15 @@ export interface PersistedAsyncReference<T extends Entity, U extends Entity, N e
    * */
   fieldValue: U | N;
 
-  /** Returns the id of the current assigned entity (or `undefined` if its new and has no id yet), or `undefined` if this column is nullable and currently unset. */
-  id: IdOf<U> | undefined;
+  /** Returns the id of the current assigned entity, or a runtime error if either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
+  id: IdOf<U>;
 
-  /** Returns the id of the current assigned entity or a runtime error if it's either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
-  idOrFail: IdOf<U>;
+  /** Returns the id of the current assigned entity, undefined if unset, or a runtime error if set to a new entity. */
+  idIfSet: IdOf<U> | undefined;
 
-  idUntagged: string | undefined;
+  idUntagged: string;
 
-  idUntaggedOrFail: string;
+  idUntaggedIfSet: string | undefined;
 
   [I]?: T;
 }
@@ -165,7 +165,7 @@ export class PersistedAsyncReferenceImpl<
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTagged ?? other : other);
+    setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
 
     if (typeof other === "string") {
       this.loaded = undefined;
@@ -182,8 +182,32 @@ export class PersistedAsyncReferenceImpl<
     return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
   }
 
+  get id(): IdOf<U> {
+    return this.idMaybe || failNoId(this.current());
+  }
+
+  get idUntagged(): string {
+    return this.idUntaggedMaybe || failNoId(this.current());
+  }
+
+  get idIfSet(): IdOf<U> | N | undefined {
+    failIfNewEntity(this.current());
+    return this.idMaybe;
+  }
+
+  get idUntaggedIfSet(): string | undefined {
+    failIfNewEntity(this.current());
+    return this.idUntaggedMaybe;
+  }
+
+  get loadHint(): any {
+    return getMetadata(this.#entity).config.__data.cachedReactiveLoadHints[this.fieldName];
+  }
+
+  // private impl
+
   /** Returns the id of the current value. */
-  get id(): IdOf<U> | N {
+  private get idMaybe(): IdOf<U> | N {
     ensureNotDeleted(this.#entity, "pending");
     // If current is a string, we might need to detag it...
     const id = maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
@@ -193,24 +217,9 @@ export class PersistedAsyncReferenceImpl<
     return id;
   }
 
-  get idOrFail(): IdOf<U> {
-    ensureNotDeleted(this.#entity, "pending");
-    return (this.id as IdOf<U> | undefined) || fail("Reference is unset or assigned to a new entity");
+  private get idUntaggedMaybe(): string | undefined {
+    return deTagId(this.otherMeta, this.idMaybe);
   }
-
-  get idUntagged(): string | undefined {
-    return this.id && deTagIds(this.otherMeta, [this.id])[0];
-  }
-
-  get idUntaggedOrFail(): string {
-    return this.idUntagged || fail("Reference is unset or assigned to a new entity");
-  }
-
-  get loadHint(): any {
-    return getMetadata(this.#entity).config.__data.cachedReactiveLoadHints[this.fieldName];
-  }
-
-  // private impl
 
   setFromOpts(other: U | IdOf<U> | N): void {
     this.setImpl(other);

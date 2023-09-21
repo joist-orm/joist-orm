@@ -79,20 +79,20 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as DatabaseOwner, opts, { calledFromConstructor: true });
   }
 
-  get id(): DatabaseOwnerId | undefined {
-    return this.idTagged;
+  get id(): DatabaseOwnerId {
+    return this.idMaybe || fail("DatabaseOwner has no id yet");
   }
 
-  get idOrFail(): DatabaseOwnerId {
-    return this.id || fail("DatabaseOwner has no id yet");
+  get idMaybe(): DatabaseOwnerId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): DatabaseOwnerId | undefined {
+  get idTagged(): DatabaseOwnerId {
+    return this.idTaggedMaybe || fail("DatabaseOwner has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): DatabaseOwnerId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): DatabaseOwnerId {
-    return this.idTagged || fail("DatabaseOwner has no id tagged yet");
   }
 
   get name(): string {

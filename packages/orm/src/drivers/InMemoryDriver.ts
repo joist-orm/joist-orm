@@ -101,7 +101,7 @@ export class InMemoryDriver implements Driver {
         this.onQuery();
         // TODO Do this in EntityManager instead of the drivers
         u.__orm.data["updatedAt"] = updatedAt;
-        const id = deTagId(todo.metadata, u.idOrFail);
+        const id = deTagId(todo.metadata, u.id);
         const row: Record<string, any> = {};
         Object.values(todo.metadata.fields)
           .filter(hasSerde)
@@ -114,7 +114,7 @@ export class InMemoryDriver implements Driver {
       });
       todo.deletes.forEach((d) => {
         this.onQuery();
-        const id = deTagId(todo.metadata, d.idOrFail);
+        const id = deTagId(todo.metadata, d.id);
         delete this.rowsOfTable(todo.metadata.tableName)[id];
       });
     });

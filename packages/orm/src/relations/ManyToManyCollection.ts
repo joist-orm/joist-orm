@@ -109,7 +109,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         return false;
       }
       // Make a cacheable tuple to look up this specific m2m row
-      const key = `${this.columnName}=${this.#entity.idOrFail},${this.otherColumnName}=${other.idOrFail}`;
+      const key = `${this.columnName}=${this.#entity.id},${this.otherColumnName}=${other.id}`;
       return manyToManyFindDataLoader(this.#entity.em, this).load(key);
     }
   }

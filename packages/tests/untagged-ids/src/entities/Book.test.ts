@@ -8,7 +8,7 @@ describe("Book", () => {
     await em1.flush();
 
     const em2 = newEntityManager();
-    const b2 = await em2.load(Book, b1.idOrFail, "author");
+    const b2 = await em2.load(Book, b1.id, "author");
     expect(b2.title).toEqual("b1");
     expect(b2.author.get.firstName).toEqual("a1");
   });

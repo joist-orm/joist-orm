@@ -24,7 +24,7 @@ describe("Author", () => {
     const em = newEntityManager({ idAssigner: new RandomUuidAssigner() });
     const a1 = newAuthor(em);
     await em.flush();
-    expect(a1.idOrFail.startsWith("a:")).toBe(false);
+    expect(a1.id.startsWith("a:")).toBe(false);
   });
 
   it("can load author and books", async () => {
@@ -44,7 +44,7 @@ describe("Author", () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     await em.flush();
-    const b1 = em.create(Book, { title: "b1", author: a1.idOrFail });
+    const b1 = em.create(Book, { title: "b1", author: a1.id });
     await em.flush();
     expect(b1.toJSON()).toMatchObject({
       id: "00000000-0000-0000-000b-000000000000",
@@ -62,7 +62,7 @@ describe("Author", () => {
     // We can access the id and not see its tag
     expect(b1.author.id).toBe("00000000-0000-0000-000a-000000000000");
     // And we can change the id via a2's untagge did
-    b1.author.id = a2.idOrFail;
+    b1.author.id = a2.id;
     expect(b1.author.id).toBe("00000000-0000-0000-000a-000000000001");
     await em.flush();
   });

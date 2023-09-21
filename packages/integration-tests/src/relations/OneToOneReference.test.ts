@@ -1,5 +1,5 @@
 import { insertAuthor, insertImage, select } from "@src/entities/inserts";
-import { Author, Image, ImageType, newAuthor } from "../entities";
+import { Author, Image, ImageType, newAuthor, newImage } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("OneToOneReference", () => {
@@ -106,9 +106,23 @@ describe("OneToOneReference", () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
+    // Use `as any` b/c we're purposefully not loading the o2o
     expect(() => (a1.image as any).id).toThrow("Author:1.image was not loaded");
+    expect(() => (a1.image as any).idMaybe).toThrow("Author:1.image was not loaded");
+    expect(() => (a1.image as any).idIfSet).toThrow("Author:1.image was not loaded");
     await a1.image.load();
-    expect((a1.image as any).id).toBeUndefined();
+    expect(() => (a1.image as any).id).toThrow("Reference is unset");
+    expect((a1.image as any).idMaybe).toBeUndefined();
+    expect((a1.image as any).idIfSet).toBeUndefined();
+  });
+
+  it("id fails if set to a new entity loaded", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "1", "image");
+    a1.image.set(newImage(em));
+    expect(() => a1.image.id).toThrow("Reference is assigned to a new entity");
+    expect(() => a1.image.idIfSet).toThrow("Reference is assigned to a new entity");
   });
 
   it("can cascade delete", async () => {

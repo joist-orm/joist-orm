@@ -144,20 +144,20 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
     setOpts(this as any as Tag, opts, { calledFromConstructor: true });
   }
 
-  get id(): TagId | undefined {
-    return this.idTagged;
+  get id(): TagId {
+    return this.idMaybe || fail("Tag has no id yet");
   }
 
-  get idOrFail(): TagId {
-    return this.id || fail("Tag has no id yet");
+  get idMaybe(): TagId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): TagId | undefined {
+  get idTagged(): TagId {
+    return this.idTaggedMaybe || fail("Tag has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): TagId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): TagId {
-    return this.idTagged || fail("Tag has no id tagged yet");
   }
 
   get name(): string {

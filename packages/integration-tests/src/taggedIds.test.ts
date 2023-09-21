@@ -22,7 +22,7 @@ describe("taggedIds", () => {
     expect(tagIds(getMetadata(Author), ["1", "2"])).toEqual(["a:1", "a:2"]);
   });
 
-  it("is type-safe with id and idOrFail", async () => {
+  it("is type-safe with id and idMaybe", async () => {
     // Given we have an author
     const em = newEntityManager();
     const a = newAuthor(em);
@@ -33,7 +33,7 @@ describe("taggedIds", () => {
     // @ts-expect-error
     a2 = a.id;
     // @ts-expect-error
-    a2 = a.idOrFail;
+    a2 = a.idMaybe;
   });
 
   it("can detag ids", async () => {

@@ -232,20 +232,20 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
     }
   }
 
-  get id(): PublisherId | undefined {
-    return this.idTagged;
+  get id(): PublisherId {
+    return this.idMaybe || fail("Publisher has no id yet");
   }
 
-  get idOrFail(): PublisherId {
-    return this.id || fail("Publisher has no id yet");
+  get idMaybe(): PublisherId | undefined {
+    return this.idTaggedMaybe;
   }
 
-  get idTagged(): PublisherId | undefined {
+  get idTagged(): PublisherId {
+    return this.idTaggedMaybe || fail("Publisher has no id tagged yet");
+  }
+
+  get idTaggedMaybe(): PublisherId | undefined {
     return this.__orm.data["id"];
-  }
-
-  get idTaggedOrFail(): PublisherId {
-    return this.idTagged || fail("Publisher has no id tagged yet");
   }
 
   get name(): string {

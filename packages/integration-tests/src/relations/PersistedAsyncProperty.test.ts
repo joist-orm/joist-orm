@@ -74,8 +74,8 @@ describe("PersistedAsyncProperty", () => {
 
     // When the objects are loaded into a new Entity Manager
     const em2 = newEntityManager();
-    const a2 = await em2.load(Author, a1.idOrFail);
-    const br2 = await em2.load(BookReview, br.idOrFail);
+    const a2 = await em2.load(Author, a1.id);
+    const br2 = await em2.load(BookReview, br.id);
 
     // Then nothing has been touched
     expect(a2.numberOfPublicReviews2.get).toEqual(1);
@@ -100,7 +100,7 @@ describe("PersistedAsyncProperty", () => {
     await em.flush();
     // When we want to recalc numberOfPublicReviews2
     const em2 = newEntityManager();
-    const a2 = await em2.load(Author, a1.idOrFail, "books");
+    const a2 = await em2.load(Author, a1.id, "books");
     // And we make a new BookReview that doesn't have isPublic calculated yet
     const br2 = em.create(BookReview, { book: a2.books.get[0], rating: 2 });
     // Then the numberOfPublicReviews2.load will ensure br2.isPublic is loaded first

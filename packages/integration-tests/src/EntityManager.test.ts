@@ -793,7 +793,7 @@ describe("EntityManager", () => {
     new Author(em, { firstName: "a1" });
     await em.flush();
     const a = await em.findOrCreate(Author, { firstName: "a2" }, { age: 20 }, { lastName: "l" });
-    expect(a.id).toBeUndefined();
+    expect(a.idMaybe).toBeUndefined();
     expect(a.lastName).toEqual("l");
     expect(a.age).toEqual(20);
   });
@@ -803,7 +803,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "p:1");
     const a = await em.findOrCreate(Author, { publisher: p1 }, { firstName: "a1" });
-    expect(a.id).toBeUndefined();
+    expect(a.idMaybe).toBeUndefined();
     expect(await p1.authors.load()).toMatchEntity([a]);
   });
 
@@ -812,7 +812,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const p1 = await em.load(Publisher, "p:1");
     const c = await em.findOrCreate(Comment, { parent: p1 }, {});
-    expect(c.id).toBeUndefined();
+    expect(c.idMaybe).toBeUndefined();
     expect(await p1.comments.load()).toMatchEntity([c]);
   });
 
@@ -1489,8 +1489,8 @@ describe("EntityManager", () => {
       await em.assignNewIds();
 
       expect(sameEntity(a1, a1)).toEqual(true);
-      expect(sameEntity(a1, a1.idOrFail)).toEqual(true);
-      expect(sameEntity(a1.idOrFail, a1)).toEqual(true);
+      expect(sameEntity(a1, a1.id)).toEqual(true);
+      expect(sameEntity(a1.id, a1)).toEqual(true);
     });
 
     it("handles existing entities", async () => {
@@ -1516,7 +1516,7 @@ describe("EntityManager", () => {
     await em.flush();
     // When we delete the author from a beforeFlush hook
     const em2 = newEntityManager();
-    const a2 = await em2.load(Author, a1.idOrFail);
+    const a2 = await em2.load(Author, a1.id);
     a2.transientFields.deleteDuringFlush = true;
     em2.touch(a2);
     await em2.flush();

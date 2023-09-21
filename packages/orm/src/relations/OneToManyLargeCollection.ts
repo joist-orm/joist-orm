@@ -53,7 +53,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
     }
 
     // Make a cacheable tuple to look up this specific o2m row
-    const key = `id=${id},${this.otherColumnName}=${this.entity.idOrFail}`;
+    const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
     return oneToManyFindDataLoader(this.entity.em, this).load(key);
   }
 

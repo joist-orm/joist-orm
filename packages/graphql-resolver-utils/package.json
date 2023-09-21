@@ -20,7 +20,7 @@
     "build"
   ],
   "dependencies": {
-    "graphql": "^16.8.0",
+    "graphql": "^16.8.1",
     "joist-orm": "workspace:*",
     "joist-test-utils": "workspace:*"
   },

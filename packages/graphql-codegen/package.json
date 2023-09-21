@@ -21,7 +21,7 @@
     "@dprint/json": "0.15.6",
     "@types/prettier": "^3.0.0",
     "change-case": "^4.1.2",
-    "graphql": "^16.8.0",
+    "graphql": "^16.8.1",
     "is-plain-object": "^5.0.0",
     "joist-codegen": "workspace:*",
     "joist-utils": "workspace:*",

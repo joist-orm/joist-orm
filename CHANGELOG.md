@@ -1,3 +1,10 @@
+# [1.108.0](https://github.com/stephenh/joist-ts/compare/v1.107.1...v1.108.0) (2023-09-21)
+
+
+### Features
+
+* Change id to behave like idOrFail. ([#791](https://github.com/stephenh/joist-ts/issues/791)) ([13e2ee8](https://github.com/stephenh/joist-ts/commit/13e2ee842133bab208ee29eb81d6907dc058f29d))
+
 ## [1.107.1](https://github.com/stephenh/joist-ts/compare/v1.107.0...v1.107.1) (2023-09-21)
 
 

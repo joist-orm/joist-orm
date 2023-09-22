@@ -4,6 +4,7 @@ import matchers from "expect/build/matchers";
 import { isPlainObject } from "is-plain-object";
 import {
   AsyncProperty,
+  BaseEntity,
   Collection,
   Entity,
   EntityManager,
@@ -16,79 +17,36 @@ import {
   Reference,
 } from "joist-orm";
 
-export function toMatchEntity<T>(actual: Entity, expected: MatchedEntity<T>): CustomMatcherResult {
-  // Because the `actual` entity has lots of __orm, Reference, Collection, etc cruft in it,
-  // we make a simplified copy of it, where we use the keys in `expected` to pull out/eval a
-  // subset of the complex keys in an entity to be "dumb data" versions of themselves.
-  const clean = Array.isArray(expected) ? [] : {};
-
-  // Because we might assert again `expect(entity).toMatchEntity({ children: [{ name: "p1" }])`, we keep
-  // a queue of entities/copies to make, and work through it as we recurse through the expected/actual pair.
-  const queue: [any, any, any][] = [[actual, expected, clean]];
-  while (queue.length > 0) {
-    const [actual, expected, clean] = queue.pop()!;
-
-    // If our top-level toMatchEntity was passed an array, make sure we compare all entries
-    // in both arrays, basically like the zip down below.
-    const keys =
-      actual instanceof Array ? [...Array(Math.max(actual.length, expected.length)).keys()] : Object.keys(expected);
-
-    for (const key of keys) {
-      let actualValue = actual ? actual[key] : undefined;
-      const expectedValue = expected?.[key];
-
-      // We assume the test is asserting already-loaded / DeepNew entities, so just call .get
-      if (
-        isReference(actualValue) ||
-        isCollection(actualValue) ||
-        isAsyncProperty(actualValue) ||
-        isPersistedAsyncProperty(actualValue)
-      ) {
-        actualValue = getWithSoftDeleted(actualValue);
-      }
-
-      if (actualValue instanceof Array) {
-        const actualList = actualValue;
-        const expectedList = expectedValue;
-        const cleanList = [];
-        // Do a hacky zip of each actual/expected pair
-        for (let i = 0; i < Math.max(actualList.length, expectedList.length); i++) {
-          const actualI = actualList[i];
-          const expectedI = expectedList[i];
-          // If actual is a list of entities (and expected is not), make a copy of each
-          // so that we can recurse into their `{ title: ... }` properties.
-          if (isEntity(actualI) && isPlainObject(expectedI)) {
-            const cleanI = Array.isArray(expectedI) ? [] : {};
-            queue.push([actualI, expectedI, cleanI]);
-            cleanList.push(cleanI);
-          } else {
-            // Given we're stopping here, make sure neither side is an entity
-            if (i < expectedList.length) {
-              expectedList[i] = maybeTestId(expectedI);
-            }
-            if (i < actualList.length) {
-              cleanList.push(maybeTestId(actualI));
-            }
-          }
-        }
-        clean[key] = cleanList;
-      } else if (isPlainObject(expectedValue)) {
-        // We have an expected value that the user wants to fuzzy match against, so recurse
-        // to pick out a subset of clean values (i.e. not the connection pool) to assert against.
-        const cleanValue = Array.isArray(expectedValue) ? [] : {};
-        queue.push([actualValue, expectedValue, cleanValue]);
-        clean[key] = cleanValue;
-      } else {
-        // We've hit a non-list/non-object literal expected value, so clean both
-        // expected+clean keys to make sure they're not entities, and stop recursion.
-        if (key in expected) expected[key] = maybeTestId(expectedValue);
-        if (actual && key in actual) clean[key] = maybeTestId(actualValue);
-      }
-    }
+/**
+ * Provides convenient `toMatchObject`-style matching for Joist entities.
+ *
+ * The biggest differences over `toMatchObject` are:
+ *
+ * - We un-wrap relations like m2o/o2m to just the underlying object/arrays, to make
+ *   asserting against the entities look like asserting against POJOs
+ * - We prune the expected/actual values to be as minimal as possible, to avoid Jest
+ *   recursively crawling into connection pools or other misc non-useful things in the diffs
+ */
+export function toMatchEntity<T extends object>(actual: T, expected: MatchedEntity<T>): CustomMatcherResult {
+  // We're given expected, which is an object literal of what the user wants to match
+  // against (some intermixed POJOs & entities) and actual (which similarly could be
+  // intermixed POJOs & entities, but will likely be more sprawling because it's the
+  // full result, and not the subset we're asserting against).
+  //
+  // Given this, first make a safe clone of `expected`, i.e. turn entities into strings.
+  // After that, use `expected` as a template to pick keys out of actual. Finally, do the
+  // same "clean clone" of actual, and compare the two.
+  const cleanExpected = deepClone(expected);
+  const cleanActual = deepClone(deepMirror(expected, actual));
+  // Watch for `expect(someAuthor).toMatchEntity(a1)` as we'll turn `someAuthor` into "a:1`,
+  // so can't use toMatchObject anymore.
+  if (typeof cleanActual !== "object") {
+    // @ts-ignore
+    return matchers.toEqual.call(this, cleanActual, cleanExpected);
+  } else {
+    // @ts-ignore
+    return matchers.toMatchObject.call(this, cleanActual, cleanExpected);
   }
-
-  // @ts-ignore
-  return matchers.toMatchObject.call(this, clean, expected);
 }
 
 function maybeTestId(maybeEntity: any): any {
@@ -132,6 +90,62 @@ export type MatchedEntity<T> =
         : // We recurse similar to a DeepPartial
           MatchedEntity<T[K]> | null;
     };
+
+/**
+ * Make a "new actual" based on the subset shape of expected.
+ *
+ * We don't have cycle detection, but that should be fine b/c the user types
+ * out the expected as an object literal, so it shouldn't have cycles
+ */
+function deepMirror(expected: any, actual: any): any {
+  // If we've hit a point where the `expected` input is not a POJO object literal
+  // declaring the subset of the shape to assert against, just return actual as-is.
+  // This might be a Date or an Entity or something else, but if so it will get
+  // cleaned up by the deepClone pass.
+  if (!isPlainObject(expected) && !Array.isArray(expected)) return actual;
+  // Make a new actual that is a subset that matches expected
+  const subset: any = Array.isArray(expected) ? [] : ({} as any);
+  // If both are arrays, fill out the whole array
+  const keys =
+    Array.isArray(actual) && Array.isArray(expected)
+      ? [...Array(Math.max(actual.length, expected.length)).keys()]
+      : Object.keys(expected);
+  for (const key of keys) {
+    if (key in actual) {
+      // Even if actualValue is an Entity, if expected has a key drilling in to it, we want to object literal-ize it
+      subset[key] = deepMirror(expected[key], maybeGetRelation(actual[key]));
+    }
+  }
+  return subset;
+}
+
+/** Make a clone of `obj`, but only recurse into POJOs and Arrays, and replace entities if we find them. */
+function deepClone(obj: unknown, map = new WeakMap()): unknown {
+  if (obj instanceof BaseEntity) {
+    return maybeTestId(obj);
+  } else if (obj && typeof obj === "object" && (isPlainObject(obj) || Array.isArray(obj))) {
+    if (map.has(obj)) return map.get(obj);
+    const result = Array.isArray(obj) ? [] : {};
+    map.set(obj, result);
+    Object.assign(result, ...Object.keys(obj).map((key) => ({ [key]: deepClone((obj as any)[key], map) })));
+    return result;
+  } else {
+    return obj;
+  }
+}
+
+/** Flattens/simplifies relations into their actual value, i.e. "calls get". */
+function maybeGetRelation(actualValue: unknown): unknown {
+  if (
+    isReference(actualValue) ||
+    isCollection(actualValue) ||
+    isAsyncProperty(actualValue) ||
+    isPersistedAsyncProperty(actualValue)
+  ) {
+    return getWithSoftDeleted(actualValue);
+  }
+  return actualValue;
+}
 
 /**
  * Adds back soft-deleted to `.get`.

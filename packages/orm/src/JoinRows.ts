@@ -3,6 +3,7 @@ import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
 import { keyToString } from "./keys";
 import { ManyToManyCollection } from "./relations/ManyToManyCollection";
+import { remove } from "./utils";
 
 /** A small holder around m2m join rows, which we treat as psuedo-entities. */
 export class JoinRows {
@@ -16,8 +17,14 @@ export class JoinRows {
 
   /** Adds a new join row to this table. */
   addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
-    const joinRow: JoinRow = { id: undefined, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
-    this.rows.push(joinRow);
+    const { columnName, otherColumnName } = m2m;
+    const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    if (existing) {
+      existing.deleted = false;
+    } else {
+      const joinRow: JoinRow = { id: undefined, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
+      this.rows.push(joinRow);
+    }
     this.rm.queueDownstreamReactiveFields(e1, m2m.fieldName);
     this.rm.queueDownstreamReactiveFields(e2, m2m.otherFieldName);
   }
@@ -25,9 +32,13 @@ export class JoinRows {
   /** Adds a new remove to this table. */
   addRemove(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
     const { columnName, otherColumnName } = m2m;
-    const row = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
-    if (row) {
-      row.deleted = true;
+    const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    if (existing) {
+      if (!existing.id) {
+        remove(this.rows, existing);
+      } else {
+        existing.deleted = true;
+      }
     } else {
       // Use -1 to force the sortJoinRows to notice us as dirty ("delete: true but id is set")
       this.rows.push({ id: -1, [columnName]: e1, [otherColumnName]: e2, deleted: true });

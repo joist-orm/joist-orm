@@ -1,3 +1,10 @@
+## [1.108.2](https://github.com/stephenh/joist-ts/compare/v1.108.1...v1.108.2) (2023-09-23)
+
+
+### Bug Fixes
+
+* Fix BaseEntity.toJSON with new entities. ([#800](https://github.com/stephenh/joist-ts/issues/800)) ([bb61f12](https://github.com/stephenh/joist-ts/commit/bb61f12823bb91998fcccc845471e57e8feef114))
+
 ## [1.108.1](https://github.com/stephenh/joist-ts/compare/v1.108.0...v1.108.1) (2023-09-23)
 
 

@@ -124,6 +124,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
         .map((f) => {
           switch (f.kind) {
             case "primaryKey":
+              return [[f.fieldName, (this as any).idMaybe || null]];
             case "enum":
               return [[f.fieldName, (this as any)[f.fieldName] || null]];
             case "primitive":
@@ -136,7 +137,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
             case "m2o":
               // Don't recurse into new entities b/c the point is to stay shallow
               const value = (this as any)[f.fieldName].current();
-              return [[f.fieldName, isEntity(value) ? value.id : value || null]];
+              return [[f.fieldName, isEntity(value) ? value.idMaybe || null : value || null]];
             default:
               return [];
           }

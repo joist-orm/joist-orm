@@ -905,8 +905,8 @@ describe("EntityManager", () => {
     // Then they returned the same entity
     expect(a1).toEqual(a2);
     expect(a1.isNewEntity).toBe(false);
-    // And the last upsert wins
-    expect(a1.lastName).toBe("l2");
+    // And the first upsert wins
+    expect(a1.lastName).toBe("l1");
   });
 
   it("findOrCreate still creates dups with different where clauses in a loop", async () => {
@@ -924,7 +924,7 @@ describe("EntityManager", () => {
   it("findOrCreate resolves dups with different where clauses in a loop", async () => {
     await insertAuthor({ first_name: "a1", last_name: "l1" });
     const em = newEntityManager();
-    // Given two findOrCreates that should find the same existing entity
+    // Given two findOrCreates that should create the same new entity
     const [a1, a2] = await Promise.all([
       em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "B" }),
       em.findOrCreate(Author, { lastName: "l1" }, { firstName: "a2" }, { lastName: "C" }),
@@ -933,6 +933,19 @@ describe("EntityManager", () => {
     expect(a1).toEqual(a2);
     // And the last upsert wins
     expect(a1.lastName).toBe("C");
+  });
+
+  it("findOrCreate resolves dups with different upsert clauses in a loop", async () => {
+    const em = newEntityManager();
+    // Given two findOrCreates that should create the same existing entity
+    const [a1, a2] = await Promise.all([
+      em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "B" }),
+      em.findOrCreate(Author, { firstName: "a1" }, {}, { lastName: "C" }),
+    ]);
+    // Then they returned the same entity
+    expect(em.entities.filter((e) => e instanceof Author).length).toBe(1);
+    // And the first upsert wins
+    expect(a1.lastName).toBe("B");
   });
 
   it("findOrCreate fails if duplicates in the db are found", async () => {

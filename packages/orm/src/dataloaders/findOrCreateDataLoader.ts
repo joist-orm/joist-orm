@@ -19,60 +19,61 @@ export function findOrCreateDataLoader<T extends Entity>(
   where: Partial<OptsOf<T>>,
   softDeletes: "include" | "exclude",
 ): DataLoader<Key<T>, T> {
-  // The findOrCreateDataLoader `where` is flat (only top-level opts are allowed), so we can use
-  // Object.keys to get `{ firstName: "a1" }` and `{ firstName: "a2" }` batched to the same dataloader,
-  // primarily so that we can dedupe `{ firstName: "a1" }` if .load-d twice.
-  const batchKey = `${type.name}-${Object.keys(where).join("-")}-${softDeletes}`;
+  // Use `whereFilterHash` to batch the same `findOrCreate` `where: { firstName: "a1" }` calls together
+  // to avoid creating duplicates. Also use `whereFilterHash` b/c if a new enity is included in `where`,
+  // it will use `entity.toString()` to keep it unique from other new entities.
+  const batchKey = `${type.name}-${whereFilterHash(where as any)}-${softDeletes}`;
   return em.getLoader<Key<T>, T>(
     "find-or-create",
     batchKey,
     async (keys) => {
-      // Ideally we would check `keys` for the same `where` clause with different
-      // ifNew+upsert combinations, and then blow up/tell the user, because they're
-      // asking for the entity to be created/updated slightly differently.
-      return Promise.all(
-        keys.map(async ({ where, ifNew, upsert }) => {
-          // Before we find/create an entity, see if we have a maybe-new one in the EM already.
-          // This will also use any WIP changes we've made to the found entity, which ideally is
-          // something `em.find` would do as well, but its queries are much more complex..
-          const inMemory = em.entities.filter((e) => e instanceof type && entityMatches(e, where));
-          if (inMemory.length > 1) {
-            throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
-          } else if (inMemory.length === 1) {
-            const entity = inMemory[0] as T;
-            if (upsert) {
-              entity.set(upsert);
-            }
-            return entity;
-          }
+      // Because our `batchKey` is based only on the `where` clause, if the user called
+      // `findOrCreate({ firstName: a1 })` multiple times, but with different ifNew/upsert
+      // conditions, we'll end up with multiple keys...
+      //
+      // This is fundamentally asking to create the same entity, but with different ifNew/upsert
+      // conditions, which we could fail on, but for now just take the first tuple of
+      // {where/ifNew/upsert} and assume it wins
+      const [{ where, ifNew, upsert }] = keys;
+      // Before we find/create an entity, see if we have a maybe-new one in the EM already.
+      // This will also use any WIP changes we've made to the found entity, which ideally is
+      // something `em.find` would do as well, but its queries are much more complex..
+      const inMemory = em.entities.filter((e) => e instanceof type && entityMatches(e, where));
+      if (inMemory.length > 1) {
+        throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
+      } else if (inMemory.length === 1) {
+        const entity = inMemory[0] as T;
+        if (upsert) {
+          entity.set(upsert);
+        }
+        return keys.map(() => entity);
+      }
 
-          // If there is a param like `{ publisher: newPublisherEntity }`, then we know that
-          // an entity matching this condition can't be in the db anyway, so skip the em.find
-          const hasNewParam = Object.values(where).some((v) => isEntity(v) && v.isNewEntity);
-          if (hasNewParam) {
-            const entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
-            if (upsert) {
-              entity.set(upsert);
-            }
-            return entity;
-          }
+      // If there is a param like `{ publisher: newPublisherEntity }`, then we know that
+      // an entity matching this condition can't be in the db anyway, so skip the em.find
+      const hasNewParam = Object.values(where).some((v) => isEntity(v) && v.isNewEntity);
+      if (hasNewParam) {
+        const entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
+        if (upsert) {
+          entity.set(upsert);
+        }
+        return keys.map(() => entity);
+      }
 
-          // If we didn't find it in the EM, do the db query/em.create
-          const entities = await em.find(type, { ...(where as FilterWithAlias<T>) }, { softDeletes });
-          let entity: T;
-          if (entities.length > 1) {
-            throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
-          } else if (entities.length === 1) {
-            entity = entities[0];
-          } else {
-            entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
-          }
-          if (upsert) {
-            entity.set(upsert);
-          }
-          return entity;
-        }),
-      );
+      // If we didn't find it in the EM, do the db query/em.create
+      const entities = await em.find(type, { ...(where as FilterWithAlias<T>) }, { softDeletes });
+      let entity: T;
+      if (entities.length > 1) {
+        throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
+      } else if (entities.length === 1) {
+        entity = entities[0];
+      } else {
+        entity = em.create(type, { ...where, ...(ifNew as object) } as OptsOf<T>);
+      }
+      if (upsert) {
+        entity.set(upsert);
+      }
+      return keys.map(() => entity);
     },
     // Our filter tuple is a complex object, so object-hash it to ensure caching works
     { cacheKeyFn: whereFilterHash },

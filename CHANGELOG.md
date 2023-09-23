@@ -1,3 +1,10 @@
+## [1.108.1](https://github.com/stephenh/joist-ts/compare/v1.108.0...v1.108.1) (2023-09-23)
+
+
+### Bug Fixes
+
+* Fix findOrCreate's opaque error message. ([#799](https://github.com/stephenh/joist-ts/issues/799)) ([5ac0ada](https://github.com/stephenh/joist-ts/commit/5ac0adabdb6438cca401b4ecaaddba48838c55c5))
+
 # [1.108.0](https://github.com/stephenh/joist-ts/compare/v1.107.1...v1.108.0) (2023-09-21)
 
 

@@ -37,7 +37,7 @@ export function findOrCreateDataLoader<T extends Entity>(
           // something `em.find` would do as well, but its queries are much more complex..
           const inMemory = em.entities.filter((e) => e instanceof type && entityMatches(e, where));
           if (inMemory.length > 1) {
-            throw new TooManyError();
+            throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
           } else if (inMemory.length === 1) {
             const entity = inMemory[0] as T;
             if (upsert) {
@@ -61,7 +61,7 @@ export function findOrCreateDataLoader<T extends Entity>(
           const entities = await em.find(type, { ...(where as FilterWithAlias<T>) }, { softDeletes });
           let entity: T;
           if (entities.length > 1) {
-            throw new TooManyError();
+            throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
           } else if (entities.length === 1) {
             entity = entities[0];
           } else {
@@ -104,4 +104,10 @@ function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<T>>): b
         throw new Error(`Unsupported field ${fieldName}`);
     }
   });
+}
+
+function whereAsString(where: object): string {
+  return Object.entries(where)
+    .map(([key, value]) => `${key}=${value}`)
+    .join(", ");
 }

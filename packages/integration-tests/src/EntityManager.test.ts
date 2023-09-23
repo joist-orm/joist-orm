@@ -935,6 +935,24 @@ describe("EntityManager", () => {
     expect(a1.lastName).toBe("C");
   });
 
+  it("findOrCreate fails if duplicates in the db are found", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1" });
+    await insertAuthor({ first_name: "a2", last_name: "l1" });
+    const em = newEntityManager();
+    await expect(em.findOrCreate(Author, { lastName: "l1" }, { firstName: "a3" })).rejects.toThrow(
+      "Found more than one existing Author with lastName=l1",
+    );
+  });
+
+  it("findOrCreate fails if duplicates in the em are found", async () => {
+    const em = newEntityManager();
+    newAuthor(em, { lastName: "l1" });
+    newAuthor(em, { lastName: "l1" });
+    await expect(em.findOrCreate(Author, { lastName: "l1" }, { firstName: "a3" })).rejects.toThrow(
+      "Found more than one existing Author with lastName=l1",
+    );
+  });
+
   it("can find and populate with findOrCreate", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

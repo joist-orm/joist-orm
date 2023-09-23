@@ -1438,7 +1438,11 @@ export function sameEntity(a: Entity | string | undefined, b: Entity | string | 
 export class NotFoundError extends Error {}
 
 /** Thrown by `findOne` and `findOneOrFail` if more than one entity is found. */
-export class TooManyError extends Error {}
+export class TooManyError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
 
 /** Force recalc all async fields on entities that were `em.touch`-d. */
 async function recalcTouchedEntities(touched: Entity[]): Promise<void> {

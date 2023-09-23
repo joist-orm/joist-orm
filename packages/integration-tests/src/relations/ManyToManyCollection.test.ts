@@ -78,12 +78,14 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     const book = await em.load(Book, "2");
     const tag = await em.load(Tag, "3");
+
     // Spam adding/removing to repro a bug that only happened after 3x add/removes
     book.tags.add(tag);
     book.tags.remove(tag);
     book.tags.add(tag);
     book.tags.remove(tag);
     book.tags.add(tag);
+
     await em.flush();
     const rows = await select("books_to_tags");
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
@@ -93,12 +95,26 @@ describe("ManyToManyCollection", () => {
     const em = newEntityManager();
     const book = newBook(em);
     const tag = newTag(em, 1);
+
     // Spam adding/removing to repro a bug that only happened after 3x add/removes
     book.tags.add(tag);
+    expect(book.tags.get).toMatchEntity([tag]);
+    expect(tag.books.get).toMatchEntity([book]);
     book.tags.remove(tag);
+    expect(book.tags.get).toMatchEntity([]);
+    expect(tag.books.get).toMatchEntity([]);
+
     book.tags.add(tag);
+    expect(book.tags.get).toMatchEntity([tag]);
+    expect(tag.books.get).toMatchEntity([book]);
     book.tags.remove(tag);
+    expect(book.tags.get).toMatchEntity([]);
+    expect(tag.books.get).toMatchEntity([]);
+
     book.tags.add(tag);
+    expect(book.tags.get).toMatchEntity([tag]);
+    expect(tag.books.get).toMatchEntity([book]);
+
     await em.flush();
     const rows = await select("books_to_tags");
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 1, tag_id: 1 }));

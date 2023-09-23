@@ -1,3 +1,10 @@
+## [1.108.4](https://github.com/stephenh/joist-ts/compare/v1.108.3...v1.108.4) (2023-09-23)
+
+
+### Bug Fixes
+
+* Fix m2m add/remove bug. ([#802](https://github.com/stephenh/joist-ts/issues/802)) ([ee6fab6](https://github.com/stephenh/joist-ts/commit/ee6fab607f375767a9b48343be4b35f87c7a1570))
+
 ## [1.108.3](https://github.com/stephenh/joist-ts/compare/v1.108.2...v1.108.3) (2023-09-23)
 
 

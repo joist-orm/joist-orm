@@ -1,3 +1,10 @@
+## [1.108.3](https://github.com/stephenh/joist-ts/compare/v1.108.2...v1.108.3) (2023-09-23)
+
+
+### Bug Fixes
+
+* Avoid creating dups if different upsert clauses. ([#801](https://github.com/stephenh/joist-ts/issues/801)) ([2830eb1](https://github.com/stephenh/joist-ts/commit/2830eb1d1248d00151ea3ebedea38930fb442753))
+
 ## [1.108.2](https://github.com/stephenh/joist-ts/compare/v1.108.1...v1.108.2) (2023-09-23)
 
 

@@ -1,7 +1,7 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
 import { aliases, jan1 } from "joist-orm";
-import { AdvanceStatus, Author, Book, BookAdvance, Color, Publisher, PublisherType } from "./entities";
+import { AdvanceStatus, Author, Book, BookAdvance, Color, FavoriteShape, Publisher, PublisherType } from "./entities";
 import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.find.batch", () => {
@@ -264,6 +264,32 @@ describe("EntityManager.find.batch", () => {
     ]);
     expect(q1.length).toBe(2);
     expect(q2.length).toBe(1);
+  });
+
+  it("batches queries with native enum", async () => {
+    await insertAuthor({ first_name: "a1", last_name: "l1", favorite_shape: "circle" });
+    await insertAuthor({ first_name: "a2", last_name: "l2", favorite_shape: "square" });
+    resetQueryCount();
+    const em = newEntityManager();
+    // Given two queries with exactly the same where clause
+    const q1p = em.find(Author, { favoriteShape: FavoriteShape.Circle });
+    const q2p = em.find(Author, { favoriteShape: FavoriteShape.Square });
+    // When they are executed in the same event loop
+    await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    expect(queries).toEqual([
+      [
+        `WITH _find ("tag", "arg0") AS (VALUES`,
+        ` ($1::int, $2::favorite_shape), ($3, $4) )`,
+        ` SELECT array_agg(_find.tag) as _tags, "a".*`,
+        ` FROM authors as a`,
+        ` JOIN _find ON a.deleted_at IS NULL AND a.favorite_shape = _find.arg0`,
+        ` GROUP BY "a".id`,
+        ` ORDER BY a.id ASC`,
+        ` LIMIT 50000;`,
+      ].join(""),
+    ]);
   });
 
   it("batches joins in the right order", async () => {

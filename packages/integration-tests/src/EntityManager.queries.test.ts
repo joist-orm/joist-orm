@@ -2206,7 +2206,7 @@ describe("EntityManager.queries", () => {
       expect(a.favoriteShape.ne(FavoriteShape.Square)).toEqual({
         alias: "unset",
         column: "favorite_shape",
-        dbType: "FavoriteShape",
+        dbType: "favorite_shape",
         cond: { kind: "ne", value: "square" },
       });
     });

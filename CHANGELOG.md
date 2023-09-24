@@ -1,3 +1,10 @@
+## [1.108.5](https://github.com/stephenh/joist-ts/compare/v1.108.4...v1.108.5) (2023-09-24)
+
+
+### Bug Fixes
+
+* Fix em.find batching with native enums. ([#803](https://github.com/stephenh/joist-ts/issues/803)) ([1289a73](https://github.com/stephenh/joist-ts/commit/1289a73f7fa1db8b90050f9c77b4918913978f97))
+
 ## [1.108.4](https://github.com/stephenh/joist-ts/compare/v1.108.3...v1.108.4) (2023-09-23)
 
 

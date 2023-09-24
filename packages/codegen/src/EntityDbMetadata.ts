@@ -125,6 +125,9 @@ export type PgEnumField = Field & {
   kind: "pg-enum";
   columnName: string;
   columnDefault: number | boolean | string | null;
+  /** I.e. `favorite_shape`. */
+  dbType: string;
+  /** I.e. `FavoriteShape`. */
   enumName: string;
   enumType: Import;
   enumValues: string[];
@@ -493,6 +496,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
     kind: "pg-enum",
     fieldName,
     columnName,
+    dbType: column.type.name,
     enumType,
     enumName,
     enumValues: (column.type as EnumType).values,

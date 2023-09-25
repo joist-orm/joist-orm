@@ -20,6 +20,13 @@ describe("toMatchEntity", () => {
     expect(b1).toMatchEntity({ author: { firstName: "a1" } });
   });
 
+  it("can match entity", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    await em.flush();
+    expect(b1).toMatchEntity(b1);
+  });
+
   it("can match loaded references", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, {});
@@ -184,6 +191,39 @@ describe("toMatchEntity", () => {
     `);
   });
 
+  it("can fail with missing entity in pojo", async () => {
+    const em = newEntityManager();
+    // Given an author with two books
+    const a1 = newAuthor(em, { books: [{}, {}] });
+    const b2 = a1.books.get[1];
+    // And an assertion against a POJO of author + a list of books, but the actual doesn't have any books
+    expect(() =>
+      expect({
+        author: a1,
+        books: [] as Array<{ bestSelling: Book }>,
+      }).toMatchEntity({
+        author: a1,
+        // So because the actual array is [],
+        books: [{ bestSelling: b2 }],
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 5
+      + Received  + 1
+
+        Object {
+          "author": "a#1",
+      -   "books": Array [
+      -     Object {
+      -       "bestSelling": "b#2",
+      -     },
+      -   ],
+      +   "books": Array [],
+        }
+    `);
+  });
+
   it("is strongly typed", async () => {
     const em = newEntityManager();
     const p1 = newAuthor(em);
@@ -311,15 +351,15 @@ describe("toMatchEntity", () => {
     expect(() => expect([] as any).toMatchEntity([{ author1: a1 }])).toThrowErrorMatchingInlineSnapshot(`
       expect(received).toMatchObject(expected)
 
-      - Expected  - 3
+      - Expected  - 5
       + Received  + 1
 
-        Array [
+      - Array [
       -   Object {
       -     "author1": "a#1",
       -   },
-      +   Object {},
-        ]
+      - ]
+      + Array []
     `);
   });
 });

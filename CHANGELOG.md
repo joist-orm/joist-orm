@@ -1,3 +1,10 @@
+## [1.108.6](https://github.com/stephenh/joist-ts/compare/v1.108.5...v1.108.6) (2023-09-25)
+
+
+### Bug Fixes
+
+* Fix toMatchEntity failing with pojos. ([#798](https://github.com/stephenh/joist-ts/issues/798)) ([770ff98](https://github.com/stephenh/joist-ts/commit/770ff983ded16742657f01bc48ecb51ede930788))
+
 ## [1.108.5](https://github.com/stephenh/joist-ts/compare/v1.108.4...v1.108.5) (2023-09-24)
 
 

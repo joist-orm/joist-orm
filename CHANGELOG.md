@@ -1,3 +1,10 @@
+## [1.108.7](https://github.com/stephenh/joist-ts/compare/v1.108.6...v1.108.7) (2023-09-25)
+
+
+### Bug Fixes
+
+* Allow calling AsyncMethod.get on DeepNew entities. ([#804](https://github.com/stephenh/joist-ts/issues/804)) ([44544e0](https://github.com/stephenh/joist-ts/commit/44544e02f0d3d50f0292656f2bb582196f25e506))
+
 ## [1.108.6](https://github.com/stephenh/joist-ts/compare/v1.108.5...v1.108.6) (2023-09-25)
 
 

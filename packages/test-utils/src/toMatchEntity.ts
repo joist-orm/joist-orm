@@ -106,10 +106,7 @@ function deepMirror(expected: any, actual: any): any {
   // Make a new actual that is a subset that matches expected
   const subset: any = Array.isArray(expected) ? [] : ({} as any);
   // If both are arrays, fill out the whole array
-  const keys =
-    Array.isArray(actual) && Array.isArray(expected)
-      ? [...Array(Math.max(actual.length, expected.length)).keys()]
-      : Object.keys(expected);
+  const keys = Array.isArray(actual) ? Object.keys(actual) : Object.keys(expected);
   for (const key of keys) {
     if (key in actual) {
       // Even if actualValue is an Entity, if expected has a key drilling in to it, we want to object literal-ize it

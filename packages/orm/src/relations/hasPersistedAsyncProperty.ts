@@ -35,6 +35,9 @@ export interface PersistedAsyncProperty<T extends Entity, V> {
    * Note that persisted properties used in load hints, i.e. `em.populate`s that
    * accidentally list reactive fields (instead of just relations) will not have
    * `.load()` invoked, and will instead use the previously-calculated value.
+   * The rationale is that one persisted property should be able to declare its
+   * dependency on another persisted property (for its reactive field-level hint)
+   * without causing that dependent property's populate hint to itself be loaded.
    */
   load(opts?: { forceReload?: boolean }): Promise<V>;
 

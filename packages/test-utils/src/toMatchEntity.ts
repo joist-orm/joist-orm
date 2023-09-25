@@ -98,10 +98,10 @@ export type MatchedEntity<T> =
  * out the expected as an object literal, so it shouldn't have cycles
  */
 function deepMirror(expected: any, actual: any): any {
-  // If we've hit a point where the `expected` input is not a POJO object literal
+  // If we've hit a point where the `expected` input is not a POJO object literal/array
   // declaring the subset of the shape to assert against, just return actual as-is.
-  // This might be a Date or an Entity or something else, but if so it will get
-  // cleaned up by the deepClone pass.
+  // This might be a Date (safe) or an Entity (unsafe) or something else, but if so it will
+  // get cleaned up by the `deepClone` pass.
   if (!isPlainObject(expected) && !Array.isArray(expected)) return actual;
   // Make a new actual that is a subset that matches expected
   const subset: any = Array.isArray(expected) ? [] : ({} as any);

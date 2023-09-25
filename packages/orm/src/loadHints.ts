@@ -61,6 +61,8 @@ type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBase
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>>[]>
     : LoadedProperty<T, V>
+  : P extends AsyncMethod<T, infer A, infer V>
+  ? LoadedMethod<T, A, V>
   : unknown;
 
 /**

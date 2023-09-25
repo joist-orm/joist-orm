@@ -1,4 +1,4 @@
-import { Author } from "@src/entities";
+import { Author, newAuthor } from "@src/entities";
 import { insertAuthor, insertBook } from "@src/entities/inserts";
 import { newEntityManager } from "@src/setupDbTests";
 
@@ -38,5 +38,15 @@ describe("hasAsyncMethod", () => {
     const books = a1.booksWithTitle.get("programming");
     // Then we get back the expected value
     expect(books).toMatchEntity([{ title: "programming in action" }]);
+  });
+
+  it("can be accessed via a get deep new", async () => {
+    const em = newEntityManager();
+    // Given a factory-created author
+    const a1 = newAuthor(em);
+    // When we access an async method via get
+    const books = a1.booksWithTitle.get("programming");
+    // Then we get back the expected value
+    expect(books).toMatchEntity([]);
   });
 });

@@ -902,6 +902,9 @@ export class EntityManager<C = unknown> {
       // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
+    // Tell `AsyncMethodImpl.load` to not invoke its function
+    (opts as any)["populate"] = true;
+
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
     // But since it's a public API, we should just early exit.

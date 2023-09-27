@@ -1,3 +1,10 @@
+## [1.108.8](https://github.com/stephenh/joist-ts/compare/v1.108.7...v1.108.8) (2023-09-27)
+
+
+### Bug Fixes
+
+* Avoid invoking AsyncMethod fns during populate. ([#805](https://github.com/stephenh/joist-ts/issues/805)) ([12e42d4](https://github.com/stephenh/joist-ts/commit/12e42d41a63ea83ae00ded7486dcb0497a484b72))
+
 ## [1.108.7](https://github.com/stephenh/joist-ts/compare/v1.108.6...v1.108.7) (2023-09-25)
 
 

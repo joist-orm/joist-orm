@@ -39,15 +39,18 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
     this.#hint = hint;
   }
 
+  /** Args might be either the user-provided args, or the populate `opts` if we're being preloaded. */
   load(...args: A): Promise<V> {
+    // Are we being called by `em.populate`? If so, we don't have the real args, so avoid invoking fn
+    const isPopulate = args && typeof args[0] === "object" && "populate" in (args as any)[0];
     const { fn } = this;
     if (!this.loaded) {
       return (this.loadPromise ??= this.#entity.em.populate(this.#entity, this.#hint!).then((loaded) => {
         this.loaded = true;
-        return fn(loaded, ...args);
+        return isPopulate ? undefined : fn(loaded, ...args);
       }));
     }
-    return Promise.resolve(this.get(...args));
+    return Promise.resolve(isPopulate ? (undefined as any) : this.get(...args));
   }
 
   get(...args: A): V {

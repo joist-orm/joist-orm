@@ -98,8 +98,12 @@ export async function loadLens<T extends Entity, U, V>(
     } else {
       current = await maybeLoad(current, path, opts);
       seenSoftDeleted ||= (current as any)?.isSoftDeletedEntity;
-      // If we had been traversing m2o -> m2o and just hit an o2m/m2m, and any of our
-      // prior m2os had been soft deleted, just filter everything out.
+      // If we had been traversing m2o -> m2o (i.e. book -> author) and just hit an o2m/m2m (i.e.
+      // book -> author -> comments), and any of our prior m2os like `author` had been soft deleted,
+      // just filter everything out.
+      //
+      // Otherwise, we keep `book -> author`, even if author is soft-deleted, b/c it changes the return
+      // type from "author" to "author | undefined".
       if (Array.isArray(current) && seenSoftDeleted) {
         return [] as any;
       }

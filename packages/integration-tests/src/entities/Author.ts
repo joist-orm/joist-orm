@@ -200,7 +200,8 @@ export class Author extends AuthorCodegen {
   );
 
   readonly booksWithTitle: AsyncMethod<Author, [string], Book[]> = hasAsyncMethod("books", (a, title) =>
-    a.books.get.filter((b) => b.title.includes(title)),
+    // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
+    title.trim().length > 0 ? a.books.get.filter((b) => b.title.includes(title)) : [],
   );
 }
 

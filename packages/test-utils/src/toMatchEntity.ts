@@ -11,6 +11,7 @@ import {
   getMetadata,
   isAsyncProperty,
   isCollection,
+  isDefined,
   isEntity,
   isPersistedAsyncProperty,
   isReference,
@@ -103,6 +104,7 @@ function deepMirror(expected: any, actual: any): any {
   // This might be a Date (safe) or an Entity (unsafe) or something else, but if so it will
   // get cleaned up by the `deepClone` pass.
   if (!isPlainObject(expected) && !Array.isArray(expected)) return actual;
+  if (!isDefined(actual)) return actual;
   // Make a new actual that is a subset that matches expected
   const subset: any = Array.isArray(expected) ? [] : ({} as any);
   // If both are arrays, fill out the whole array

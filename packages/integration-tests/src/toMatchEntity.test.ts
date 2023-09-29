@@ -85,7 +85,26 @@ describe("toMatchEntity", () => {
     `);
   });
 
-  it("can fail match reference with undefined", async () => {
+  it("can fail match reference with actual undefined", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em);
+    await em.flush();
+    expect(() => expect(a1).toMatchEntity({ publisher: { name: "p1" } })).toThrowErrorMatchingInlineSnapshot(`
+      expect(received).toMatchObject(expected)
+
+      - Expected  - 3
+      + Received  + 1
+
+        Object {
+      -   "publisher": Object {
+      -     "name": "p1",
+      -   },
+      +   "publisher": undefined,
+        }
+    `);
+  });
+
+  it("can fail match reference with expected undefined", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);

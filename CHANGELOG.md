@@ -1,3 +1,10 @@
+## [1.108.9](https://github.com/stephenh/joist-ts/compare/v1.108.8...v1.108.9) (2023-09-29)
+
+
+### Bug Fixes
+
+* Fix NPE in toMatchEntity on null references. ([#809](https://github.com/stephenh/joist-ts/issues/809)) ([c7d525e](https://github.com/stephenh/joist-ts/commit/c7d525e6934d772064db12c35ccf261a140f5103))
+
 ## [1.108.8](https://github.com/stephenh/joist-ts/compare/v1.108.7...v1.108.8) (2023-09-27)
 
 

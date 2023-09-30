@@ -6,6 +6,7 @@ import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
+import {kq, kqDot} from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
 export interface ParsedExpressionFilter {
@@ -260,7 +261,14 @@ export function parseFindQuery(
               fail(`No poly component found for ${otherField.fieldName}`);
             otherColumn = otherComponent.columnName;
           }
-          addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
+          addTable(
+            field.otherMetadata(),
+            a,
+            "outer",
+            kqDot(alias, "id"),
+            kqDot(a, otherColumn),
+            (ef.subFilter as any)[key],
+          );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
           const ja = getAlias(field.joinTableName);
@@ -268,8 +276,8 @@ export function parseFindQuery(
             alias: ja,
             join: "outer",
             table: field.joinTableName,
-            col1: `${alias}.id`,
-            col2: `${ja}.${field.columnNames[0]}`,
+            col1: kqDot(alias, "id"),
+            col2: kqDot(ja, field.columnNames[0]),
           });
           // But conditionally join into the alias table
           const sub = (ef.subFilter as any)[key];
@@ -340,7 +348,14 @@ export function parseFindQuery(
           const a = getAlias(table);
           const column = field.serde.columns[0].columnName;
           // If we don't have a join, don't force this to be an inner join
-          tables.push({ alias: a, table, join: "outer", col1: `${alias}.${column}`, col2: `${a}.id`, distinct: false });
+          tables.push({
+            alias: a,
+            table,
+            join: "outer",
+            col1: kqDot(alias, column),
+            col2: kqDot(a, "id"),
+            distinct: false,
+          });
           addOrderBy(field.otherMetadata(), a, value);
         }
       } else {
@@ -351,7 +366,7 @@ export function parseFindQuery(
 
   // always add the main table
   const alias = getAlias(meta.tableName);
-  selects.push(`"${alias}".*`);
+  selects.push(kqDot(alias, "*"));
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (expression) {
     const parsed = parseExpression(expression);
@@ -701,7 +716,7 @@ export function addTablePerClassJoinsAndClassTag(
       alias: `${alias}_b${i}`,
       table: bt.tableName,
       join: "outer",
-      col1: `${alias}.id`,
+      col1: kqDot(alias, "id"),
       col2: `${alias}_b${i}.id`,
       distinct: false,
     });
@@ -718,14 +733,14 @@ export function addTablePerClassJoinsAndClassTag(
         alias: `${alias}_s${i}`,
         table: st.tableName,
         join: "outer",
-        col1: `${alias}.id`,
+        col1: kqDot(alias, "id"),
         col2: `${alias}_s${i}.id`,
         distinct: false,
       });
     });
 
     // Nominate a specific `id` column to avoid ambiguity
-    selects.push(`"${alias}".id as id`);
+    selects.push(`${kq(alias)}.id as id`);
 
     // If our meta has no subtypes, we're a left type and don't need a __class
     const cases = meta.subTypes.map((st, i) => `WHEN ${alias}_s${i}.id IS NOT NULL THEN '${st.type}'`);

@@ -27,6 +27,7 @@
     "numberOfPublicReviews",
     "numberOfPublicReviews2",
     "publisher",
+    "schedules",
     "ssn",
     "tags",
     "tagsOfAllBooks",
@@ -34,6 +35,7 @@
     "userOneToOne",
     "wasEverPopular"
   ],
+  "AuthorSchedule": ["author", "createdAt", "id", "overview", "updatedAt"],
   "AuthorStat": [
     "bigint",
     "bigserial",
@@ -118,6 +120,7 @@
   ],
   "Mutation": [
     "saveAuthor",
+    "saveAuthorSchedule",
     "saveAuthorStat",
     "saveBook",
     "saveBookAdvance",
@@ -182,6 +185,8 @@
     "wasEverPopular"
   ],
   "SaveAuthorResult": ["author"],
+  "SaveAuthorScheduleInput": ["authorId", "id", "overview"],
+  "SaveAuthorScheduleResult": ["authorSchedule"],
   "SaveAuthorStatInput": [
     "bigint",
     "bigserial",

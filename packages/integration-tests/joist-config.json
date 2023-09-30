@@ -23,6 +23,7 @@
       "relations": { "books": { "orderBy": "order" } },
       "tag": "a"
     },
+    "AuthorSchedule": { "tag": "authorSchedule" },
     "AuthorStat": { "tag": "as" },
     "Book": { "orderBy": "title", "tag": "b" },
     "BookAdvance": { "tag": "ba" },

@@ -5,6 +5,8 @@ import {
   AdvanceStatuses,
   Author,
   authorConfig,
+  AuthorSchedule,
+  authorScheduleConfig,
   AuthorStat,
   authorStatConfig,
   Book,
@@ -26,6 +28,7 @@ import {
   LargePublisher,
   largePublisherConfig,
   newAuthor,
+  newAuthorSchedule,
   newAuthorStat,
   newBook,
   newBookAdvance,
@@ -97,6 +100,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: "async", required: false, otherMetadata: () => bookMeta, otherFieldName: "favoriteBookAuthors", serde: new KeySerde("b", "favoriteBook", "favorite_book_id", "int"), immutable: false },
     "publisher": { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", derived: false, required: false, otherMetadata: () => publisherMeta, otherFieldName: "authors", serde: new KeySerde("p", "publisher", "publisher_id", "int"), immutable: false },
     "authors": { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "mentor", serde: undefined, immutable: false },
+    "schedules": { kind: "o2m", fieldName: "schedules", fieldIdName: "scheduleIds", required: false, otherMetadata: () => authorScheduleMeta, otherFieldName: "author", serde: undefined, immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "authors_to_tags", columnNames: ["author_id", "tag_id"] },
@@ -113,6 +117,32 @@ export const authorMeta: EntityMetadata<Author> = {
 };
 
 (Author as any).metadata = authorMeta;
+
+export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
+  cstr: AuthorSchedule,
+  type: "AuthorSchedule",
+  baseType: undefined,
+  idType: "int",
+  idTagged: true,
+  tagName: "authorSchedule",
+  tableName: "author_schedules",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("authorSchedule", "id", "id", "int"), immutable: true },
+    "overview": { kind: "primitive", fieldName: "overview", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("overview", "overview", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "schedules", serde: new KeySerde("a", "author", "author_id", "int"), immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: authorScheduleConfig,
+  factory: newAuthorSchedule,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(AuthorSchedule as any).metadata = authorScheduleMeta;
 
 export const authorStatMeta: EntityMetadata<AuthorStat> = {
   cstr: AuthorStat,
@@ -533,5 +563,5 @@ export const userMeta: EntityMetadata<User> = {
 
 (User as any).metadata = userMeta;
 
-export const allMetadata = [authorMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
+export const allMetadata = [authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
 configureMetadata(allMetadata);

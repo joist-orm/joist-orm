@@ -1,6 +1,7 @@
 const mappers = {
   AdvanceStatusDetail: "src/entities#AdvanceStatus",
   Author: "src/entities#Author",
+  AuthorSchedule: "src/entities#AuthorSchedule",
   AuthorStat: "src/entities#AuthorStat",
   Book: "src/entities#Book",
   BookAdvance: "src/entities#BookAdvance",

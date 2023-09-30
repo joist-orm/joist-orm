@@ -16,6 +16,7 @@ import {
   joinKeywords,
   parseFindQuery,
 } from "../QueryParser";
+import { kq, kqDot } from "../keywords";
 import { assertNever, cleanSql } from "../utils";
 
 export function findDataLoader<T extends Entity>(
@@ -79,18 +80,18 @@ export function findDataLoader<T extends Entity>(
       // Also because of our `array_agg` group by, add any order bys to the group by
       for (const o of query.orderBys) {
         if (o.alias !== primary.alias) {
-          groupBys.push(`${o.alias}.${o.column}`);
+          groupBys.push(kqDot(o.alias, o.column));
         }
       }
 
       const sql = `
         ${buildValuesCte("_find", args, queries)}
         SELECT ${selects.join(", ")}
-        FROM ${primary.table} as ${primary.alias}
-        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
+        FROM ${primary.table} as ${kq(primary.alias)}
+        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${query.orderBys.map((o) => `${o.alias}.${o.column} ${o.order}`).join(", ")}
+        ORDER BY ${query.orderBys.map((o) => `${kq(o.alias)}.${o.column} ${o.order}`).join(", ")}
         LIMIT ${em.entityLimit};
       `;
 
@@ -222,7 +223,7 @@ export function buildConditions(ef: ParsedExpressionFilter, argsIndex: number = 
       if (c.alias === "unset") {
         throw new Error("Alias was not bound in em.find");
       }
-      conditions.push(`${c.alias}.${c.column} ${op}`);
+      conditions.push(`${kqDot(c.alias, c.column)} ${op}`);
       argsIndex += argsTaken;
     } else {
       let [cond, argsTaken] = buildConditions(c, argsIndex);
@@ -271,7 +272,7 @@ export function buildValuesCte(
   columns: { columnName: string; dbType: string }[],
   rows: readonly any[],
 ): string {
-  return `WITH ${tableName} (${columns.map((c) => `"${c.columnName}"`).join(", ")}) AS (VALUES
+  return `WITH ${tableName} (${columns.map((c) => `${kq(c.columnName)}`).join(", ")}) AS (VALUES
       ${rows.map((_, i) => `(${columns.map((c) => (i === 0 ? `?::${c.dbType}` : `?`)).join(", ")})`).join(", ")}
   )`;
 }

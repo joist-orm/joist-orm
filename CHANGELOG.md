@@ -1,3 +1,10 @@
+## [1.108.10](https://github.com/stephenh/joist-ts/compare/v1.108.9...v1.108.10) (2023-09-30)
+
+
+### Bug Fixes
+
+* Quote abbreviations that are keywords. ([#810](https://github.com/stephenh/joist-ts/issues/810)) ([b3f891b](https://github.com/stephenh/joist-ts/commit/b3f891b25b7ca2ea034120a796d7127f2a324dbc))
+
 ## [1.108.9](https://github.com/stephenh/joist-ts/compare/v1.108.8...v1.108.9) (2023-09-29)
 
 

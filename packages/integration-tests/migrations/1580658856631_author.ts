@@ -253,4 +253,10 @@ export function up(b: MigrationBuilder): void {
     { table: "users", column: "liked_by_user_id" },
     { table: "comments", collectionName: "likedComments" },
   );
+
+  // for testing abbreviations that are SQL keywords
+  createEntityTable(b, "author_schedules", {
+    author_id: foreignKey("authors", { notNull: true }),
+    overview: "text",
+  });
 }

@@ -235,6 +235,13 @@ describe("Entity", () => {
             "load": {},
           },
         },
+        "schedules": {
+          "fieldName": "schedules",
+          "loaded": undefined,
+          "otherColumnName": "author_id",
+          "otherFieldName": "author",
+          "undefined": null,
+        },
         "tags": {
           "addedBeforeLoaded": undefined,
           "columnName": "author_id",

@@ -44,6 +44,9 @@ import { z } from "zod";
 import {
   Author,
   authorMeta,
+  AuthorSchedule,
+  AuthorScheduleId,
+  authorScheduleMeta,
   Book,
   BookId,
   bookMeta,
@@ -125,6 +128,7 @@ export interface AuthorOpts {
   image?: Image | null;
   userOneToOne?: User | null;
   authors?: Author[];
+  schedules?: AuthorSchedule[];
   books?: Book[];
   comments?: Comment[];
   tags?: Tag[];
@@ -137,6 +141,7 @@ export interface AuthorIdsOpts {
   imageId?: ImageId | null;
   userOneToOneId?: UserId | null;
   authorIds?: AuthorId[] | null;
+  scheduleIds?: AuthorScheduleId[] | null;
   bookIds?: BookId[] | null;
   commentIds?: CommentId[] | null;
   tagIds?: TagId[] | null;
@@ -173,6 +178,7 @@ export interface AuthorFilter {
   image?: EntityFilter<Image, ImageId, FilterOf<Image>, null | undefined>;
   userOneToOne?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
   authors?: EntityFilter<Author, AuthorId, FilterOf<Author>, null | undefined>;
+  schedules?: EntityFilter<AuthorSchedule, AuthorScheduleId, FilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
   comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   tags?: EntityFilter<Tag, TagId, FilterOf<Tag>, null | undefined>;
@@ -209,6 +215,7 @@ export interface AuthorGraphQLFilter {
   image?: EntityGraphQLFilter<Image, ImageId, GraphQLFilterOf<Image>, null | undefined>;
   userOneToOne?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
   authors?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null | undefined>;
+  schedules?: EntityGraphQLFilter<AuthorSchedule, AuthorScheduleId, GraphQLFilterOf<AuthorSchedule>, null | undefined>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
   comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   tags?: EntityGraphQLFilter<Tag, TagId, GraphQLFilterOf<Tag>, null | undefined>;
@@ -269,6 +276,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   };
 
   readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id", undefined);
+
+  readonly schedules: Collection<Author, AuthorSchedule> = hasMany(
+    authorScheduleMeta,
+    "schedules",
+    "author",
+    "author_id",
+    undefined,
+  );
 
   readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", {
     "field": "order",

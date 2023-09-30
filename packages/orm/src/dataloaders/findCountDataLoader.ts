@@ -4,6 +4,7 @@ import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { combineConditions, getTables, joinKeywords, parseFindQuery } from "../QueryParser";
+import { kq } from "../keywords";
 import { cleanSql, fail } from "../utils";
 import {
   buildConditions,
@@ -61,7 +62,7 @@ export function findCountDataLoader<T extends Entity>(
 
       const [primary, joins] = getTables(query);
       // Use count(distinct id) in case two o2m joins end up duplicating rows
-      const selects = ["_find.tag as tag", `count(distinct ${primary.alias}.id) as count`];
+      const selects = ["_find.tag as tag", `count(distinct ${kq(primary.alias)}.id) as count`];
 
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings = createBindings(meta, queries);
@@ -71,8 +72,8 @@ export function findCountDataLoader<T extends Entity>(
       const sql = `
         ${buildValuesCte("_find", args, queries)}
         SELECT ${selects.join(", ")}
-        FROM ${primary.table} as ${primary.alias}
-        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${j.alias} ON ${j.col1} = ${j.col2}`).join(" ")}
+        FROM ${primary.table} as ${kq(primary.alias)}
+        ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY _find.tag
       `;

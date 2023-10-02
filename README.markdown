@@ -1,4 +1,4 @@
-![npm](https://img.shields.io/npm/v/joist-orm)
+[![npm](https://img.shields.io/npm/v/joist-orm)](https://www.npmjs.com/package/joist-orm)
 [![CircleCI](https://circleci.com/gh/stephenh/joist-ts.svg?style=svg)](https://circleci.com/gh/stephenh/joist-ts)
 
 ## Joist

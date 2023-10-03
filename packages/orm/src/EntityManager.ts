@@ -55,7 +55,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
+import {MaybePromise, assertNever, fail, getOrSet, toArray, groupBy, indexBy} from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -1065,8 +1065,11 @@ export class EntityManager<C = unknown> {
 
   async assignNewIds() {
     let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
-    let todos = createTodos(pendingEntities);
-    return this.driver.assignNewIds(this, todos);
+    await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
+      let todos = createTodos([...entities]);
+      await this.driver.assignNewIds(this, todos);
+      return entities;
+    }).loadMany(pendingEntities);
   }
 
   /**

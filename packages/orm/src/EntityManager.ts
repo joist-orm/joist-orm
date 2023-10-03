@@ -1063,10 +1063,13 @@ export class EntityManager<C = unknown> {
     this.#pendingCascadeDeletes.push(entity);
   }
 
-  async assignNewIds() {
+  assignNewIds() {
     let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
-    let todos = createTodos(pendingEntities);
-    return this.driver.assignNewIds(this, todos);
+    return this.getLoader<Entity, void>("assign-new-ids", "global", async (entities) => {
+      let todos = createTodos(Array.from(entities));
+      await this.driver.assignNewIds(this, todos);
+      return [];
+    }).loadMany(pendingEntities);
   }
 
   /**

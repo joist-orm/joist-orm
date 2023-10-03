@@ -1065,11 +1065,11 @@ export class EntityManager<C = unknown> {
 
   assignNewIds() {
     let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
-    return this.getLoader<Entity, void>("assign-new-ids", "global", async (entities) => {
-      let todos = createTodos(Array.from(entities));
+    return this.getLoader<string, string>("assign-new-ids", "global", async (entityTestIds) => {
+      let todos = createTodos(entityTestIds.map(id => pendingEntities.find(e => e.toString() === id)!));
       await this.driver.assignNewIds(this, todos);
-      return [];
-    }).loadMany(pendingEntities);
+      return entityTestIds;
+    }).loadMany(pendingEntities.map(e => e.toString()));
   }
 
   /**

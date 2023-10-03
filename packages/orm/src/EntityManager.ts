@@ -55,7 +55,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
+import {MaybePromise, assertNever, fail, getOrSet, toArray, groupBy, indexBy} from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -1066,7 +1066,14 @@ export class EntityManager<C = unknown> {
   async assignNewIds() {
     let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
     await this.getLoader<string, string>("assign-new-ids", "global", async (entityTestIds) => {
-      let todos = createTodos(entityTestIds.map(id => pendingEntities.find(e => e.toString() === id)!));
+      // need to do this with a reference to this.entities rather than the above pendingEntities because lexical scope
+      // shouldn't be relied on with the batching
+      const pendingEntityMap = indexBy(this.entities
+        .filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe), e => e.toString())
+      const entities = entityTestIds.map(id =>
+        pendingEntityMap.get(id) || fail('entity scheduled for id not found in pending entity map')
+      );
+      let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
       return entityTestIds;
     }).loadMany(pendingEntities.map(e => e.toString()));

@@ -1,3 +1,10 @@
+# [1.109.0](https://github.com/stephenh/joist-ts/compare/v1.108.11...v1.109.0) (2023-10-03)
+
+
+### Features
+
+* batch assignNewIds ([#814](https://github.com/stephenh/joist-ts/issues/814)) ([46feeff](https://github.com/stephenh/joist-ts/commit/46feeff3801ea21a55dce7afea0a8144749b4e4e))
+
 ## [1.108.11](https://github.com/stephenh/joist-ts/compare/v1.108.10...v1.108.11) (2023-10-03)
 
 

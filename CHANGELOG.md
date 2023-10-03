@@ -1,3 +1,10 @@
+## [1.108.11](https://github.com/stephenh/joist-ts/compare/v1.108.10...v1.108.11) (2023-10-03)
+
+
+### Bug Fixes
+
+* Add more keywords. ([#812](https://github.com/stephenh/joist-ts/issues/812)) ([7c72fa3](https://github.com/stephenh/joist-ts/commit/7c72fa3f6073b5bda34e8358513c33d5196eb7c6))
+
 ## [1.108.10](https://github.com/stephenh/joist-ts/compare/v1.108.9...v1.108.10) (2023-09-30)
 
 

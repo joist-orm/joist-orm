@@ -35,10 +35,10 @@ export function buildKnexQuery(
   parsed.tables.forEach((t) => {
     switch (t.join) {
       case "inner":
-        query.join(`${t.table} AS ${t.alias}`, t.col1, t.col2);
+        query.join(`${t.table} AS ${t.alias}`, knex.raw(t.col1) as any, knex.raw(t.col2));
         break;
       case "outer":
-        query.leftOuterJoin(`${t.table} AS ${t.alias}`, t.col1, t.col2);
+        query.leftOuterJoin(`${t.table} AS ${t.alias}`, knex.raw(t.col1) as any, knex.raw(t.col2));
         break;
       case "primary":
         // ignore

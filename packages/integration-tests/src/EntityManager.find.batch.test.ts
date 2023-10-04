@@ -107,9 +107,7 @@ describe("EntityManager.find.batch", () => {
     // When they are executed in the same event loop
     await Promise.all([q1p, q2p]);
     // Then we issue a single SQL query without any of the CTE overhead
-    expect(queries).toEqual([
-      `select a.* from "authors" as "a" where "a"."deleted_at" is null order by "a"."id" ASC limit $1`,
-    ]);
+    expect(queries).toEqual([`select a.* from authors as a where a.deleted_at is null order by a.id ASC limit $1`]);
   });
 
   it("batches queries with same order bys", async () => {

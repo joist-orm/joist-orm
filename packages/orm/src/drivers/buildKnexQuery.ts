@@ -1,6 +1,7 @@
 import { Knex } from "knex";
 import { opToFn } from "../EntityGraphQLFilter";
-import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery } from "../QueryParser";
+import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { kq, kqDot } from "../keywords";
 import { assertNever, fail } from "../utils";
 import QueryBuilder = Knex.QueryBuilder;
 
@@ -24,8 +25,10 @@ export function buildKnexQuery(
   // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
   const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
 
+  const asRaw = (t: ParsedTable) => knex.raw(`${kq(t.table)} as ${kq(t.alias)}`);
+
   const primary = parsed.tables.find((t) => t.join === "primary")!;
-  let query: Knex.QueryBuilder<any, any> = knex.from(`${primary.table} AS ${primary.alias}`);
+  let query: Knex.QueryBuilder<any, any> = knex.from(asRaw(primary));
 
   parsed.selects.forEach((s, i) => {
     const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
@@ -35,10 +38,10 @@ export function buildKnexQuery(
   parsed.tables.forEach((t) => {
     switch (t.join) {
       case "inner":
-        query.join(`${t.table} AS ${t.alias}`, knex.raw(t.col1) as any, knex.raw(t.col2));
+        query.join(asRaw(t), knex.raw(t.col1) as any, knex.raw(t.col2));
         break;
       case "outer":
-        query.leftOuterJoin(`${t.table} AS ${t.alias}`, knex.raw(t.col1) as any, knex.raw(t.col2));
+        query.leftOuterJoin(asRaw(t), knex.raw(t.col1) as any, knex.raw(t.col2));
         break;
       case "primary":
         // ignore
@@ -49,12 +52,12 @@ export function buildKnexQuery(
   });
 
   parsed.conditions.forEach((c) => {
-    addColumnCondition(query, c);
+    addColumnCondition(knex, query, c);
   });
 
   parsed.complexConditions &&
     parsed.complexConditions.forEach((c) => {
-      addComplexCondition(query, c);
+      addComplexCondition(knex, query, c);
     });
 
   parsed.orderBys &&
@@ -63,7 +66,7 @@ export function buildKnexQuery(
       if (needsDistinct) {
         query.select(`${alias}.${column}`);
       }
-      query.orderBy(`${alias}.${column}`, order);
+      query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
     });
 
   if (limit) {
@@ -77,22 +80,22 @@ export function buildKnexQuery(
   return query;
 }
 
-function addComplexCondition(query: QueryBuilder, complex: ParsedExpressionFilter): void {
+function addComplexCondition(knex: Knex, query: QueryBuilder, complex: ParsedExpressionFilter): void {
   query.where((q) => {
     const op = complex.op === "and" ? "andWhere" : "orWhere";
     complex.conditions.forEach((c) => {
       if ("op" in c) {
-        q[op]((q) => addComplexCondition(q, c));
+        q[op]((q) => addComplexCondition(knex, q, c));
       } else {
-        q[op]((q) => addColumnCondition(q, c));
+        q[op]((q) => addColumnCondition(knex, q, c));
       }
     });
   });
 }
 
-function addColumnCondition(query: QueryBuilder, cc: ColumnCondition) {
+function addColumnCondition(knex: Knex, query: QueryBuilder, cc: ColumnCondition) {
   const { alias, column, cond } = cc;
-  const columnName = `${alias}.${column}`;
+  const columnName = knex.raw(kqDot(alias, column)) as any;
   switch (cond.kind) {
     case "eq":
     case "ne":

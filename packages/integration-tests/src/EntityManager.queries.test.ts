@@ -1076,6 +1076,25 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by nlike", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nlike: "a%" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [
+        { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nlike", value: "A%" } },
+      ],
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find by ilike", async () => {
     await insertAuthor({ first_name: "a1", age: 1 });
     await insertAuthor({ first_name: "a2", age: 2 });
@@ -1090,6 +1109,25 @@ describe("EntityManager.queries", () => {
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [
         { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "A%" } },
+      ],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by nilike", async () => {
+    await insertAuthor({ first_name: "a1", age: 1 });
+    await insertAuthor({ first_name: "a2", age: 2 });
+
+    const em = newEntityManager();
+    const where = { firstName: { nilike: "A%" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(0);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      conditions: [
+        { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nilike", value: "A%" } },
       ],
       orderBys: [expect.anything()],
     });

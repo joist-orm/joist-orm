@@ -1,3 +1,10 @@
+## [1.109.1](https://github.com/stephenh/joist-ts/compare/v1.109.0...v1.109.1) (2023-10-04)
+
+
+### Bug Fixes
+
+* Fix double quoting in buildKnexQuery ([#817](https://github.com/stephenh/joist-ts/issues/817)) ([1ebbbf1](https://github.com/stephenh/joist-ts/commit/1ebbbf1a48f8b833b97219dc4de96e833f6e884d))
+
 # [1.109.0](https://github.com/stephenh/joist-ts/compare/v1.108.11...v1.109.0) (2023-10-03)
 
 

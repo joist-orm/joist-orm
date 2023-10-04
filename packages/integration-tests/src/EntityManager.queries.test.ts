@@ -1089,7 +1089,7 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       conditions: [
-        { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nlike", value: "A%" } },
+        { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "nlike", value: "a%" } },
       ],
       orderBys: [expect.anything()],
     });

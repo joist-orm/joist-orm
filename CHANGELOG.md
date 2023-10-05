@@ -1,3 +1,10 @@
+# [1.110.0](https://github.com/stephenh/joist-ts/compare/v1.109.1...v1.110.0) (2023-10-05)
+
+
+### Features
+
+* Add nlike/nilike operators. ([#819](https://github.com/stephenh/joist-ts/issues/819)) ([baa41f4](https://github.com/stephenh/joist-ts/commit/baa41f4aeb7bf3e9837f8d7859d99a2ec44e0785))
+
 ## [1.109.1](https://github.com/stephenh/joist-ts/compare/v1.109.0...v1.109.1) (2023-10-04)
 
 

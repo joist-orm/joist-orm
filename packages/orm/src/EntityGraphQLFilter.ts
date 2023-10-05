@@ -29,7 +29,9 @@ export type ValueGraphQLFilter<V> =
       lt?: V | null;
       lte?: V | null;
       like?: V | null;
+      nlike?: V | null;
       ilike?: V | null;
+      nilike?: V | null;
       between?: readonly V[] | null;
       contains?: V | null;
       overlaps?: V | null;

@@ -7,7 +7,7 @@ import {
   OptsOf,
 } from "./EntityManager";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
-import { getFakeInstance } from "./getProperties";
+import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
 import { abbreviation } from "./QueryBuilder";
@@ -141,7 +141,11 @@ export function setOpts<T extends Entity>(
   Object.entries(values as {}).forEach(([key, _value]) => {
     const field = meta.allFields[key];
     if (!field) {
-      throw new Error(`Unknown field ${key}`);
+      // Allow setting non-field properties like fullName setters
+      const prop = getProperties(meta)[key];
+      if (!prop) {
+        throw new Error(`Unknown field ${key}`);
+      }
     }
 
     // If ignoreUndefined is set, we treat undefined as a noop

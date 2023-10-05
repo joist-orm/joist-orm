@@ -117,6 +117,13 @@ export class Author extends AuthorCodegen {
     return this.firstName + (this.lastName ? ` ${this.lastName}` : "");
   }
 
+  /** For testing `createOrUpdatePartial` with non-field properties. */
+  set fullName(fullName: string) {
+    const [firstName, lastName] = fullName.split(" ");
+    this.firstName = firstName;
+    this.lastName = lastName;
+  }
+
   get isPopular(): boolean | undefined {
     return super.isPopular;
   }

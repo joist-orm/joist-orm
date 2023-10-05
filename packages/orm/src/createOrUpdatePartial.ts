@@ -1,7 +1,7 @@
 import { Entity, isEntity } from "./Entity";
 import { EntityManager, IdOf, MaybeAbstractEntityConstructor, OptIdsOf, OptsOf, isKey } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId } from "./index";
+import { PartialOrNull, asConcreteCstr, getConstructorFromTaggedId, getProperties } from "./index";
 import { NullOrDefinedOr } from "./utils";
 
 /**
@@ -59,10 +59,10 @@ export async function createOrUpdatePartial<T extends Entity>(
       // Allow delete/remove flags that we assume the API layer (i.e. GraphQL) will have specifically
       // allowed, i.e. this isn't the Rails form bug where users can POST in any random field they want.
       const flagField = key === "delete" || key === "remove" || key === "op";
-      if (flagField) {
-        // Pass these along for setOpts to look for
-        return [key, value];
-      }
+      if (flagField) return [key, value];
+      // Look for non-field properties like a fullName setter
+      const prop = getProperties(meta)[key];
+      if (prop) return [key, value];
       throw new Error(`Unknown field ${key}`);
     }
 

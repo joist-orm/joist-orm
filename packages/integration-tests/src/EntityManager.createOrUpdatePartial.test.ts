@@ -337,4 +337,11 @@ describe("EntityManager.createOrUpdatePartial", () => {
       await em.createPartial(Author, { firstName: "a2", publisherId: "1" });
     }).rejects.toThrow("Unknown field publisherId");
   });
+
+  it("can create new entity with non-field properties", async () => {
+    const em = newEntityManager();
+    const a1 = await em.createOrUpdatePartial(Author, { fullName: "a1 l1" } as any);
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.lastName).toEqual("l1");
+  });
 });

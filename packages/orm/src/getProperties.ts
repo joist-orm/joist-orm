@@ -11,6 +11,16 @@ const em = EM;
  *
  * This is a little tricky because field assignments don't show up on the prototype, so we actually
  * instantiate a throw-away instance to observe the side-effect of what fields it has.
+ *
+ * The map values will be:
+ *
+ * - The `AbstractRelationImpl` or `AbstractPropertyImpl` for relations
+ * - The primitive value like true/false/"foo" for getters that return primitive values
+ * - A `UnknownProperty` for keys/getters that return `undefined` or throw errors
+ * - Any other custom value that the user has defined
+ *
+ * Basically the values won't be `undefined`, to avoid throwing off `if getPropertyes(meta)[key]`
+ * checks.
  */
 export function getProperties<T extends Entity>(meta: EntityMetadata<T>): Record<string, any> {
   if (propertiesCache[meta.tagName]) {
@@ -24,9 +34,9 @@ export function getProperties<T extends Entity>(meta: EntityMetadata<T>): Record
         // Return the value of `instance[key]` but wrap it in a try/catch in case it's
         // a getter that runs code that fails b/c of the dummy state we're in.
         try {
-          return [key, (instance as any)[key]];
+          return [key, (instance as any)[key] ?? unknown];
         } catch {
-          return [key, undefined];
+          return [key, unknown];
         }
       })
       // Purposefully return methods, primitives, etc. so that `entityResolver` can add them to the resolver
@@ -34,6 +44,9 @@ export function getProperties<T extends Entity>(meta: EntityMetadata<T>): Record
   );
   return propertiesCache[meta.tagName];
 }
+
+export class UnknownProperty {}
+const unknown = new UnknownProperty();
 
 const propertiesCache: Record<string, any> = {};
 const fakeInstances: Record<string, Entity> = {};

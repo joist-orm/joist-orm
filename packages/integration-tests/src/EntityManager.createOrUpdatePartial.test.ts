@@ -10,7 +10,8 @@ import {
   insertTag,
   select,
 } from "@src/entities/inserts";
-import { Author, Book } from "./entities";
+import { getProperties } from "joist-orm";
+import { Author, Book, newAuthor } from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.createOrUpdatePartial", () => {
@@ -336,5 +337,19 @@ describe("EntityManager.createOrUpdatePartial", () => {
       // @ts-expect-error
       await em.createPartial(Author, { firstName: "a2", publisherId: "1" });
     }).rejects.toThrow("Unknown field publisherId");
+  });
+
+  it("can create new entity with non-field properties", async () => {
+    const em = newEntityManager();
+    const a1 = await em.createOrUpdatePartial(Author, { fullName: "a1 l1" } as any);
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.lastName).toEqual("l1");
+  });
+
+  it("can create new entity with non-field setter-only properties", async () => {
+    const em = newEntityManager();
+    const a1 = await em.createOrUpdatePartial(Author, { fullName2: "a1 l1" } as any);
+    expect(a1.firstName).toEqual("a1");
+    expect(a1.lastName).toEqual("l1");
   });
 });

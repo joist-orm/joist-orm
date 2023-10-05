@@ -6,6 +6,7 @@ import {
   ManyToOneReferenceImpl,
   OneToManyCollection,
   OneToOneReferenceImpl,
+  UnknownProperty,
   getProperties,
 } from "joist-orm";
 
@@ -16,7 +17,7 @@ describe("getProperties", () => {
       reviews: expect.any(OneToManyCollection),
       comments: expect.any(OneToManyCollection),
       author: expect.any(ManyToOneReferenceImpl),
-      authorSetWhenDeleteRuns: undefined,
+      authorSetWhenDeleteRuns: expect.any(UnknownProperty),
       currentDraftAuthor: expect.any(OneToOneReferenceImpl),
       image: expect.any(OneToOneReferenceImpl),
       tags: expect.any(ManyToManyCollection),

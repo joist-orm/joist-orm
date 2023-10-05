@@ -1,3 +1,10 @@
+# [1.111.0](https://github.com/stephenh/joist-ts/compare/v1.110.0...v1.111.0) (2023-10-05)
+
+
+### Features
+
+* Allow non-field properties in createOrUpdatePartial. ([#820](https://github.com/stephenh/joist-ts/issues/820)) ([3eead2b](https://github.com/stephenh/joist-ts/commit/3eead2bd6a9c7366ce50f9f7a391309aeef536ce))
+
 # [1.110.0](https://github.com/stephenh/joist-ts/compare/v1.109.1...v1.110.0) (2023-10-05)
 
 

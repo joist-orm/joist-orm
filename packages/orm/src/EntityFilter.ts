@@ -69,7 +69,9 @@ export type ValueFilter<V, N> =
   | { lt: V | undefined }
   | { lte: V | undefined }
   | { like: V | undefined }
+  | { nlike: V | undefined }
   | { ilike: V | undefined }
+  | { nilike: V | undefined }
   // should put these in a dedicated ArrayFilter
   | { contains: V | undefined }
   | { overlaps: V | undefined }

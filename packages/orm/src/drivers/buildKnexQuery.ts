@@ -104,7 +104,9 @@ function addColumnCondition(knex: Knex, query: QueryBuilder, cc: ColumnCondition
     case "lte":
     case "lt":
     case "like":
+    case "nlike":
     case "ilike":
+    case "nilike":
     case "contains":
     case "containedBy":
     case "overlaps":

@@ -6,7 +6,7 @@ import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
-import {kq, kqDot} from "./keywords";
+import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
 export interface ParsedExpressionFilter {
@@ -554,7 +554,9 @@ export type ParsedValueFilter<V> =
   | { kind: "lt"; value: V }
   | { kind: "lte"; value: V }
   | { kind: "like"; value: V }
+  | { kind: "nlike"; value: V }
   | { kind: "ilike"; value: V }
+  | { kind: "nilike"; value: V }
   | { kind: "contains"; value: readonly V[] }
   | { kind: "overlaps"; value: readonly V[] }
   | { kind: "containedBy"; value: readonly V[] }
@@ -614,7 +616,9 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
             case "lt":
             case "lte":
             case "like":
+            case "nlike":
             case "ilike":
+            case "nilike":
             case "contains":
             case "overlaps":
             case "containedBy":
@@ -643,7 +647,9 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
     case "lt":
     case "lte":
     case "like":
+    case "nlike":
     case "ilike":
+    case "nilike":
       filter.value = column.mapToDb(filter.value);
       return filter;
     case "in":

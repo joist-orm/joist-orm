@@ -1,3 +1,10 @@
+## [1.111.1](https://github.com/stephenh/joist-ts/compare/v1.111.0...v1.111.1) (2023-10-05)
+
+
+### Bug Fixes
+
+* Add nlike/nilike to ValueGraphQLFilter. ([#821](https://github.com/stephenh/joist-ts/issues/821)) ([d6a80db](https://github.com/stephenh/joist-ts/commit/d6a80db2b7de84808fa8d2da96ee319e84c30088))
+
 # [1.111.0](https://github.com/stephenh/joist-ts/compare/v1.110.0...v1.111.0) (2023-10-05)
 
 

@@ -27,4 +27,24 @@ describe("Entity.arrayColumns", () => {
     const rows = await select("authors");
     expect(rows[0].nick_names).toEqual(["c", "a"]);
   });
+
+  it("can find contains on string[] columns", async () => {
+    await insertAuthor({ first_name: "a1", nick_names: ["a", "b"] });
+    await insertAuthor({ first_name: "a2", nick_names: ["b", "c"] });
+    await insertAuthor({ first_name: "a3", nick_names: ["c", "d"] });
+    await insertAuthor({ first_name: "a4", nick_names: [] });
+    const em = newEntityManager();
+    const as = await em.find(Author, { nickNames: { contains: ["b"] } });
+    expect(as).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+  });
+
+  it("can find overlaps on string[] columns", async () => {
+    await insertAuthor({ first_name: "a1", nick_names: ["a", "b"] });
+    await insertAuthor({ first_name: "a2", nick_names: ["b", "c"] });
+    await insertAuthor({ first_name: "a3", nick_names: ["f"] });
+    await insertAuthor({ first_name: "a4" });
+    const em = newEntityManager();
+    const as = await em.find(Author, { nickNames: { overlaps: ["a", "b", "c", "d"] } });
+    expect(as).toMatchEntity([{ firstName: "a1" }, { firstName: "a2" }]);
+  });
 });

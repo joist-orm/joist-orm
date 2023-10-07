@@ -1116,6 +1116,7 @@ describe("EntityManager", () => {
       isPopular: null,
       lastName: null,
       mentor: null,
+      nickNames: null,
       numberOfAtoms: null,
       numberOfBooks: null,
       numberOfPublicReviews: null,

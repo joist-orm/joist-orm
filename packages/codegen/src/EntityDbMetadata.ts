@@ -96,7 +96,7 @@ export type PrimitiveField = Field & {
   columnName: string;
   columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
-  // The fieldType might be code for jsonb columns
+  // The fieldType might be code for jsonb columns or primitive array columns, i.e. string[]
   fieldType: PrimitiveTypescriptType | Import | Code;
   rawFieldType: PrimitiveTypescriptType;
   notNull: boolean;
@@ -106,6 +106,7 @@ export type PrimitiveField = Field & {
   superstruct: Import | undefined;
   zodSchema: Import | undefined;
   customSerde: Import | undefined;
+  isArray: boolean;
 };
 
 export type EnumField = Field & {
@@ -388,6 +389,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
   const fieldName = primitiveFieldName(column.name);
   const columnName = column.name;
   const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
+  const array = isArray(column);
   const fieldType = mapType(table.name, columnName, columnType);
   const customSerde = serdeConfig(config, entity, fieldName);
   const superstruct = superstructConfig(config, entity, fieldName);
@@ -400,7 +402,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     fieldName,
     columnName,
     columnType,
-    fieldType: maybeUserType,
+    fieldType: array ? code`${fieldType}[]` : maybeUserType,
     rawFieldType: fieldType,
     notNull: column.notNull,
     columnDefault: column.default,
@@ -411,6 +413,7 @@ function newPrimitive(config: Config, entity: Entity, column: Column, table: Tab
     superstruct: fieldType === "Object" && superstruct ? Import.from(superstruct) : undefined,
     zodSchema: fieldType === "Object" && zodSchema ? Import.from(zodSchema) : undefined,
     customSerde: customSerde ? serdeType(customSerde) : undefined,
+    isArray: array,
   };
 }
 
@@ -779,6 +782,10 @@ function mapType(tableName: string, columnName: string, dbColumnType: DatabaseCo
 
 function isEnumArray(c: Column): boolean {
   return c.arrayDimension === 1 && !!c.comment && c.comment.startsWith("enum=");
+}
+
+function isArray(c: Column): boolean {
+  return c.arrayDimension === 1;
 }
 
 function isPgEnum(c: Column): boolean {

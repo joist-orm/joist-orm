@@ -30,6 +30,7 @@ export function newPrimitiveField(fieldName: string, opts: Partial<PrimitiveFiel
     superstruct: undefined,
     zodSchema: undefined,
     customSerde: undefined,
+    isArray: false,
     ...opts,
   };
 }

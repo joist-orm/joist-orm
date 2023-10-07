@@ -177,7 +177,7 @@ export function parseFindQuery(
           const joinKind = field.required && join !== "outer" ? "inner" : "outer";
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, joinKind, `${fa}.${column.columnName}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id (...and not soft deleted), if so we can avoid the join
@@ -185,7 +185,7 @@ export function parseFindQuery(
             // skip
           } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, joinKind, `${fa}.${column.columnName}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
             conditions.push({
               alias: fa,
@@ -248,7 +248,14 @@ export function parseFindQuery(
           // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
           const a = getAlias(field.otherMetadata().tableName);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
-          addTable(field.otherMetadata(), a, "outer", `${alias}.id`, `${a}.${otherColumn}`, (ef.subFilter as any)[key]);
+          addTable(
+            field.otherMetadata(),
+            a,
+            "outer",
+            kqDot(alias, "id"),
+            kqDot(a, otherColumn),
+            (ef.subFilter as any)[key],
+          );
         } else if (field.kind === "o2m") {
           const a = getAlias(field.otherMetadata().tableName);
           const otherField = field.otherMetadata().allFields[field.otherFieldName];
@@ -283,7 +290,7 @@ export function parseFindQuery(
           const sub = (ef.subFilter as any)[key];
           if (isAlias(sub)) {
             const a = getAlias(field.otherMetadata().tableName);
-            addTable(field.otherMetadata(), a, "outer", `${ja}.${field.columnNames[1]}`, `${a}.id`, sub);
+            addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
           // Probe the filter and see if it's just an id, if so we can avoid the join
@@ -295,8 +302,8 @@ export function parseFindQuery(
               field.otherMetadata(),
               a,
               "outer",
-              `${ja}.${field.columnNames[1]}`,
-              `${a}.id`,
+              kqDot(ja, field.columnNames[1]),
+              kqDot(a, "id"),
               (ef.subFilter as any)[key],
             );
           } else {

@@ -70,14 +70,15 @@ export class CustomSerdeAdapter implements FieldSerde {
   }
 }
 
+/** Supports `string`, `int`, etc., as well as `string[]`, `int[]`, etc. */
 export class PrimitiveSerde implements FieldSerde {
-  isArray = false;
   columns = [this];
 
   constructor(
     private fieldName: string,
     public columnName: string,
     public dbType: string,
+    public isArray = false,
   ) {}
 
   setOnEntity(data: any, row: any): void {
@@ -266,30 +267,6 @@ export class EnumArrayFieldSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
-  }
-}
-
-/** Supports string[], int[], etc. */
-export class PrimitiveArraySerde implements FieldSerde {
-  isArray = true;
-  columns = [this];
-
-  constructor(
-    private fieldName: string,
-    public columnName: string,
-    public dbType: string,
-  ) {}
-
-  setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
-  }
-
-  dbValue(data: any) {
-    return data[this.fieldName];
-  }
-
-  mapToDb(value: any) {
-    return value;
   }
 }
 

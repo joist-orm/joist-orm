@@ -23,7 +23,6 @@ export const ManyToManyCollection = imp("ManyToManyCollection@joist-orm");
 export const EnumFieldSerde = imp("EnumFieldSerde@joist-orm");
 export const EnumArrayFieldSerde = imp("EnumArrayFieldSerde@joist-orm");
 export const PolymorphicKeySerde = imp("PolymorphicKeySerde@joist-orm");
-export const PrimitiveArraySerde = imp("PrimitiveArraySerde@joist-orm");
 export const PrimitiveSerde = imp("PrimitiveSerde@joist-orm");
 export const BigIntSerde = imp("BigIntSerde@joist-orm");
 export const JsonSerde = imp("JsonSerde@joist-orm");

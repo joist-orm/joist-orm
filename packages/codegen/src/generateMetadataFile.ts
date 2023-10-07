@@ -12,7 +12,6 @@ import {
   JsonSerde,
   KeySerde,
   PolymorphicKeySerde,
-  PrimitiveArraySerde,
   PrimitiveSerde,
   SuperstructSerde,
   ZodSerde,
@@ -84,7 +83,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       : fieldType === "bigint"
       ? code`new ${BigIntSerde}("${fieldName}", "${columnName}")`
       : isArray
-      ? code`new ${PrimitiveArraySerde}("${fieldName}", "${columnName}", "${columnType}[]")`
+      ? code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}[]", true)`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     fields[fieldName] = code`
       {

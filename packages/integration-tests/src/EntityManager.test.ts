@@ -23,6 +23,7 @@ import {
   PublisherType,
   newAuthor,
   newBook,
+  newBookReview,
   newPublisher,
 } from "./entities";
 import { knex, maybeBeginAndCommit, newEntityManager, numberOfQueries, queries, resetQueryCount } from "./setupDbTests";
@@ -156,6 +157,23 @@ describe("EntityManager", () => {
 
     const row = (await select("authors"))[0];
     expect(row["first_name"]).toEqual("a2");
+  });
+
+  it("updates multiple hasPersistedAsyncProperties at once", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, { firstName: "a1", canHaveReviews: true });
+    const a2 = newAuthor(em, { firstName: "a2", canHaveReviews: true });
+    await em.flush();
+
+    newBookReview(em, { use: a1, rating: 4 });
+    newBookReview(em, { use: a2, rating: 5 });
+    await em.flush();
+
+    const rows = await select("authors");
+    expect(rows[0]["number_of_public_reviews"]).toEqual(1);
+    expect(rows[1]["number_of_public_reviews"]).toEqual(1);
+    expect(rows[0]["numberOfPublicReviews2"]).toEqual(1);
+    expect(rows[1]["numberOfPublicReviews2"]).toEqual(1);
   });
 
   it("does not update inserted-then-unchanged entities", async () => {

@@ -373,7 +373,7 @@ export function parseFindQuery(
 
   // always add the main table
   const alias = getAlias(meta.tableName);
-  selects.push(kqDot(alias, "*"));
+  selects.push(`${kq(alias)}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
   if (expression) {
     const parsed = parseExpression(expression);

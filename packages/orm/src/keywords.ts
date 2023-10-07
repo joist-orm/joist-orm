@@ -102,10 +102,13 @@ const keywords = [
 
 // Cache all keywords => their escaped equivalent
 const escapeMapped = new Map(keywords.map((k) => [k, `"${k}"`]));
+const allLower = /^[a-z0-9_]+$/;
 
-/** Conditionally quotes `alias` if it's a SQL keyword. */
-export function kq(alias: string): string {
-  return escapeMapped.get(alias) ?? alias;
+/** Conditionally quotes `identifier` if it's a SQL keyword or not snake cased. */
+export function kq(ident: string): string {
+  // All camel-cased identifiers/column names need to be quoted
+  if (!allLower.test(ident)) return `"${ident}"`;
+  return escapeMapped.get(ident) ?? ident;
 }
 
 export function kqDot(alias: string, column: string): string {

@@ -1,3 +1,10 @@
+# [1.112.0](https://github.com/stephenh/joist-ts/compare/v1.111.3...v1.112.0) (2023-10-07)
+
+
+### Features
+
+* Support string array columns. ([#826](https://github.com/stephenh/joist-ts/issues/826)) ([add9bc5](https://github.com/stephenh/joist-ts/commit/add9bc560b8ee4efcf44ab00b3dc2422bdae2d5f))
+
 ## [1.111.3](https://github.com/stephenh/joist-ts/compare/v1.111.2...v1.111.3) (2023-10-07)
 
 

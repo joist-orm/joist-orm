@@ -85,6 +85,8 @@ export function up(b: MigrationBuilder): void {
     graduated: { type: "date", notNull: false },
     // for testing enum[] fields
     favorite_colors: enumArrayColumn("color"),
+    // for testing string[] fields
+    nick_names: { type: "varchar[]", notNull: false },
     // for testing native enum fields
     favorite_shape: { type: "favorite_shape", notNull: false },
     // for testing protected fields

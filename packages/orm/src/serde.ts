@@ -74,7 +74,11 @@ export class PrimitiveSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, public dbType: string) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    public dbType: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
@@ -94,7 +98,10 @@ export class BigIntSerde implements FieldSerde {
   columns = [this];
   dbType = "bigint";
 
-  constructor(private fieldName: string, public columnName: string) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
@@ -124,7 +131,10 @@ export class DecimalToNumberSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
@@ -146,7 +156,12 @@ export class KeySerde implements FieldSerde {
   columns = [this];
   private meta: { tagName: string; idType: "int" | "uuid" };
 
-  constructor(tagName: string, private fieldName: string, public columnName: string, public dbType: "int" | "uuid") {
+  constructor(
+    tagName: string,
+    private fieldName: string,
+    public columnName: string,
+    public dbType: "int" | "uuid",
+  ) {
     this.meta = { tagName, idType: dbType };
   }
 
@@ -164,7 +179,10 @@ export class KeySerde implements FieldSerde {
 }
 
 export class PolymorphicKeySerde implements FieldSerde {
-  constructor(private meta: () => EntityMetadata<any>, private fieldName: string) {}
+  constructor(
+    private meta: () => EntityMetadata<any>,
+    private fieldName: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     this.columns
@@ -208,7 +226,11 @@ export class EnumFieldSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    private enumObject: any,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = this.enumObject.findById(row[this.columnName])?.code;
@@ -228,7 +250,11 @@ export class EnumArrayFieldSerde implements FieldSerde {
   isArray = true;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, private enumObject: any) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    private enumObject: any,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = row[this.columnName]?.map((id: any) => this.enumObject.findById(id).code) || [];
@@ -240,6 +266,30 @@ export class EnumArrayFieldSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
+  }
+}
+
+/** Supports string[], int[], etc. */
+export class PrimitiveArraySerde implements FieldSerde {
+  isArray = true;
+  columns = [this];
+
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    public dbType: string,
+  ) {}
+
+  setOnEntity(data: any, row: any): void {
+    data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
+  }
+
+  dbValue(data: any) {
+    return data[this.fieldName];
+  }
+
+  mapToDb(value: any) {
+    return value;
   }
 }
 
@@ -257,7 +307,11 @@ export class SuperstructSerde implements FieldSerde {
   // until they want to, i.e. we don't have superstruct in the joist-orm package.json.
   private assert = require("superstruct").assert;
 
-  constructor(private fieldName: string, public columnName: string, private superstruct: any) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    private superstruct: any,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);
@@ -281,7 +335,10 @@ export class JsonSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     data[this.fieldName] = maybeNullToUndefined(row[this.columnName]);
@@ -302,7 +359,11 @@ export class ZodSerde implements FieldSerde {
   isArray = false;
   columns = [this];
 
-  constructor(private fieldName: string, public columnName: string, private zodSchema: any) {}
+  constructor(
+    private fieldName: string,
+    public columnName: string,
+    private zodSchema: any,
+  ) {}
 
   setOnEntity(data: any, row: any): void {
     const value = maybeNullToUndefined(row[this.columnName]);

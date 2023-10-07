@@ -88,6 +88,7 @@ export interface AuthorFields {
   isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
   age: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
+  nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
   businessAddress: { kind: "primitive"; type: z.input<typeof AddressSchema>; unique: false; nullable: undefined };
@@ -114,6 +115,7 @@ export interface AuthorOpts {
   isPopular?: boolean | null;
   age?: number | null;
   graduated?: Date | null;
+  nickNames?: string[] | null;
   wasEverPopular?: boolean | null;
   address?: Address | null;
   businessAddress?: z.input<typeof AddressSchema> | null;
@@ -158,6 +160,7 @@ export interface AuthorFilter {
   isPopular?: BooleanFilter<null>;
   age?: ValueFilter<number, null>;
   graduated?: ValueFilter<Date, null>;
+  nickNames?: ValueFilter<string[], null>;
   wasEverPopular?: BooleanFilter<null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
@@ -195,6 +198,7 @@ export interface AuthorGraphQLFilter {
   isPopular?: BooleanGraphQLFilter;
   age?: ValueGraphQLFilter<number>;
   graduated?: ValueGraphQLFilter<Date>;
+  nickNames?: ValueGraphQLFilter<string[]>;
   wasEverPopular?: BooleanGraphQLFilter;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
@@ -232,6 +236,7 @@ export interface AuthorOrder {
   isPopular?: OrderBy;
   age?: OrderBy;
   graduated?: OrderBy;
+  nickNames?: OrderBy;
   wasEverPopular?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
@@ -401,6 +406,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   set graduated(graduated: Date | undefined) {
     setField(this, "graduated", graduated);
+  }
+
+  get nickNames(): string[] | undefined {
+    return this.__orm.data["nickNames"];
+  }
+
+  set nickNames(nickNames: string[] | undefined) {
+    setField(this, "nickNames", nickNames);
   }
 
   get wasEverPopular(): boolean | undefined {

@@ -105,8 +105,8 @@ export function up(b: MigrationBuilder): void {
     deleted_at: { type: "timestamptz", notNull: false },
     // for testing derived fields using other derived fields
     number_of_public_reviews: { type: "int", notNull: false },
-    // for testing derived fields using other derived fields
-    number_of_public_reviews2: { type: "int", notNull: false },
+    // for testing derived fields using other derived fields ... also purposefully camel-case to test batch updates
+    numberOfPublicReviews2: { type: "int", notNull: false },
     // for testing derived fields through m2ms
     tags_of_all_books: { type: "varchar", notNull: true },
   });
@@ -233,7 +233,7 @@ export function up(b: MigrationBuilder): void {
     smallserial: { type: "smallserial", notNull: true },
     serial: { type: "serial", notNull: true },
     bigserial: { type: "bigserial", notNull: true },
-    doublePrecision: { type: "double precision", notNull: true },
+    double_precision: { type: "double precision", notNull: true },
     nullable_text: { type: "text", notNull: false },
     json: { type: "jsonb", notNull: false },
   });

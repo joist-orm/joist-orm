@@ -387,4 +387,53 @@ describe("EntityManager.find.batch", () => {
     expect(q1).toEqual(0);
     expect(q2).toEqual(0);
   });
+
+  it("batches finds with multi-word hasPersistedAsyncProperty", async () => {
+    resetQueryCount();
+    const em = newEntityManager();
+    // Given two queries with exactly the same where clause
+    const q1p = em.find(Author, { numberOfPublicReviews: 1 });
+    const q2p = em.find(Author, { numberOfPublicReviews: 2 });
+    // When they are executed in the same event loop
+    const [q1, q2] = await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // And it's the regular/sane query, i.e. not auto-batched
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        ` SELECT array_agg(_find.tag) as _tags, a.*`,
+        ` FROM authors as a`,
+        ` JOIN _find ON a.deleted_at IS NULL AND a.number_of_public_reviews = _find.arg0`,
+        ` GROUP BY a.id ORDER BY a.id ASC LIMIT 50000;`,
+      ].join(""),
+    ]);
+    expect(q1).toEqual([]);
+    expect(q2).toEqual([]);
+  });
+
+
+  it("batches finds with camelCased hasPersistedAsyncProperty", async () => {
+    resetQueryCount();
+    const em = newEntityManager();
+    // Given two queries with exactly the same where clause
+    const q1p = em.find(Author, { numberOfPublicReviews2: 1 });
+    const q2p = em.find(Author, { numberOfPublicReviews2: 2 });
+    // When they are executed in the same event loop
+    const [q1, q2] = await Promise.all([q1p, q2p]);
+    // Then we issue a single SQL query
+    expect(numberOfQueries).toEqual(1);
+    // And it's the regular/sane query, i.e. not auto-batched
+    expect(queries).toEqual([
+      [
+        `WITH _find (tag, arg0) AS (VALUES ($1::int, $2::int), ($3, $4) )`,
+        ` SELECT array_agg(_find.tag) as _tags, a.*`,
+        ` FROM authors as a`,
+        ` JOIN _find ON a.deleted_at IS NULL AND a."numberOfPublicReviews2" = _find.arg0`,
+        ` GROUP BY a.id ORDER BY a.id ASC LIMIT 50000;`,
+      ].join(""),
+    ]);
+    expect(q1).toEqual([]);
+    expect(q2).toEqual([]);
+  });
 });

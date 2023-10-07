@@ -10,6 +10,7 @@ import {
   maybeResolveReferenceToId,
   ParsedFindQuery,
 } from "../index";
+import { kq, kqDot } from "../keywords";
 import { JoinRowTodo, Todo } from "../Todo";
 import { cleanSql, partition, zeroTo } from "../utils";
 import { buildKnexQuery } from "./buildKnexQuery";
@@ -187,19 +188,19 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
   const cte = buildValuesCte("data", columns, rows);
 
   const maybeUpdatedAt = updatedAt
-    ? ` AND date_trunc('milliseconds', "${tableName}".${updatedAt!}) = data.__original_updated_at`
+    ? ` AND date_trunc('milliseconds', ${kqDot(tableName, updatedAt!)}) = data.__original_updated_at`
     : "";
 
   const sql = `
     ${cte}
-    UPDATE "${tableName}"
+    UPDATE ${kq(tableName)}
     SET ${columns
       .filter((c) => c.columnName !== "id" && c.columnName !== "__original_updated_at")
-      .map((c) => `"${c.columnName}" = data."${c.columnName}"`)
+      .map((c) => `${kq(c.columnName)} = data.${kq(c.columnName)}`)
       .join(", ")}
     FROM data
-    WHERE "${tableName}".id = data.id ${maybeUpdatedAt}
-    RETURNING "${tableName}".id
+    WHERE ${kq(tableName)}.id = data.id ${maybeUpdatedAt}
+    RETURNING ${kq(tableName)}.id
   `;
 
   const bindings = rows.flat();

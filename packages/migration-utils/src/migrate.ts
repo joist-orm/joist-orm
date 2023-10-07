@@ -11,6 +11,10 @@ export async function runMigrationsIfNeeded(client: Client, dir: string = produc
     count: undefined as any as number,
     direction: "up",
     ignorePattern: "(\\..*)|(.*\\.d\\.ts)|(.*utils\\.[jt]s)|(migrate\\.[jt]s)|(migrate\\.test\\.[jt]s)",
-    decamelize: true,
+    // I generally dislike the magic of decamelize, but pragmatically it seems like a good foot-gun
+    // mitigation to keep schemas always underscores/snake-based.
+    // That said, provide an escape hatch, via the DECAMELIZE env var, which we also use for tests
+    // since we want to specifically regression test the behavior of camelCased columns.
+    decamelize: process.env.DECAMELIZE ? process.env.DECAMELIZE === "true" : true,
   });
 }

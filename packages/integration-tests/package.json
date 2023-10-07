@@ -9,7 +9,7 @@
     "directory": "packages/integration-tests"
   },
   "scripts": {
-    "migrate": "env-cmd tsx ../migration-utils",
+    "migrate": "DECAMELIZE=false env-cmd tsx ../migration-utils",
     "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "env-cmd tsx ../codegen",

@@ -1,3 +1,10 @@
+## [1.111.2](https://github.com/stephenh/joist-ts/compare/v1.111.1...v1.111.2) (2023-10-07)
+
+
+### Bug Fixes
+
+* Fix some missing keyword wrapping. ([#823](https://github.com/stephenh/joist-ts/issues/823)) ([5827aa3](https://github.com/stephenh/joist-ts/commit/5827aa3f2bad45e51ef90761b928bc51c4b53cef))
+
 ## [1.111.1](https://github.com/stephenh/joist-ts/compare/v1.111.0...v1.111.1) (2023-10-05)
 
 

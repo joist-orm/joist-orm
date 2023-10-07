@@ -1,3 +1,10 @@
+## [1.111.3](https://github.com/stephenh/joist-ts/compare/v1.111.2...v1.111.3) (2023-10-07)
+
+
+### Bug Fixes
+
+* Always quote columns that are camel cased. ([#824](https://github.com/stephenh/joist-ts/issues/824)) ([1c11513](https://github.com/stephenh/joist-ts/commit/1c1151337b0956bdae40d40be6304dd78abf2a98))
+
 ## [1.111.2](https://github.com/stephenh/joist-ts/compare/v1.111.1...v1.111.2) (2023-10-07)
 
 

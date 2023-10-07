@@ -1,3 +1,10 @@
+## [1.112.1](https://github.com/stephenh/joist-ts/compare/v1.112.0...v1.112.1) (2023-10-07)
+
+
+### Bug Fixes
+
+* Reuse PrimitiveSerde instead of introducing a new one. ([#827](https://github.com/stephenh/joist-ts/issues/827)) ([61bdcd1](https://github.com/stephenh/joist-ts/commit/61bdcd107779da9636389de6830c3e07cf71aaac))
+
 # [1.112.0](https://github.com/stephenh/joist-ts/compare/v1.111.3...v1.112.0) (2023-10-07)
 
 

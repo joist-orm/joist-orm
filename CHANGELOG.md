@@ -1,3 +1,10 @@
+## [1.112.2](https://github.com/stephenh/joist-ts/compare/v1.112.1...v1.112.2) (2023-10-09)
+
+
+### Bug Fixes
+
+* added support for o2o relations to sql load lens ([#828](https://github.com/stephenh/joist-ts/issues/828)) ([499a5ad](https://github.com/stephenh/joist-ts/commit/499a5ad1ecd9f746f6e681fa4ead6ded23376abd))
+
 ## [1.112.1](https://github.com/stephenh/joist-ts/compare/v1.112.0...v1.112.1) (2023-10-07)
 
 

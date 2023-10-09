@@ -3,11 +3,12 @@ import {
   insertBook,
   insertBookReview,
   insertBookToTag,
+  insertImage,
   insertPublisher,
   insertTag,
 } from "@src/entities/inserts";
 import { Lens, getLens, getMetadata, testing } from "joist-orm";
-import { Author, Book, Publisher, Tag } from "./entities";
+import { Author, Book, Image, Publisher, Tag } from "./entities";
 import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 const { isAllSqlPaths } = testing;
@@ -163,6 +164,44 @@ describe("EntityManager.lens", () => {
   });
 
   describe("sql", () => {
+    it("loads a subset via o2o", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertImage({ file_name: "i1", type_id: 1, author_id: 1 });
+      await insertImage({ file_name: "i2", type_id: 1, author_id: 2 });
+
+      const em = newEntityManager();
+      const b1 = await em.load(Book, "b:1");
+      const i1 = await b1.load((b) => b.author.image, { sql: true });
+      expect(i1!.fileName).toEqual("i1");
+      expect(em.entities.length).toBe(2);
+
+      expect(lastQuery()).toMatchInlineSnapshot(
+        `"select "i".*, i.id as id, "b".id as __source_id from images as i inner join authors as a on a.id = i.author_id inner join books as b on b.author_id = a.id where a.deleted_at is null and b.deleted_at is null and b.id in ($1) order by i.id ASC limit $2"`,
+      );
+    });
+
+    it("loads a subset via m2o that has a o2o as its otherField", async () => {
+      await insertPublisher({ name: "p1" });
+      await insertPublisher({ id: 2, name: "p2" });
+      await insertAuthor({ first_name: "a1", publisher_id: 1 });
+      await insertAuthor({ first_name: "a2", publisher_id: 2 });
+      await insertImage({ file_name: "i1", type_id: 1, author_id: 1 });
+      await insertImage({ file_name: "i2", type_id: 1, author_id: 2 });
+
+      const em = newEntityManager();
+      const i1 = await em.load(Image, "i:1");
+      const p1 = await i1.load((i) => i.author.publisher, { sql: true });
+      expect(p1!.name).toEqual("p1");
+      expect(em.entities.length).toBe(2);
+
+      expect(lastQuery()).toMatchInlineSnapshot(
+        `"select "p".*, p_s0.*, p_s1.*, p.id as id, CASE WHEN p_s0.id IS NOT NULL THEN 'LargePublisher' WHEN p_s1.id IS NOT NULL THEN 'SmallPublisher' ELSE 'Publisher' END as __class, "i".id as __source_id from publishers as p left outer join large_publishers as p_s0 on p.id = p_s0.id left outer join small_publishers as p_s1 on p.id = p_s1.id inner join authors as a on a.publisher_id = p.id inner join images as i on i.author_id = a.id where a.deleted_at is null and i.id in ($1) order by p.id ASC limit $2"`,
+      );
+    });
+
     it("loads a subset via m2o", async () => {
       await insertPublisher({ name: "p1" });
       await insertPublisher({ id: 2, name: "p2" });

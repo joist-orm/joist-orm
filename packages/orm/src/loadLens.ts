@@ -115,7 +115,7 @@ export async function loadLens<T extends Entity, U, V>(
 export function isAllSqlPaths(meta: EntityMetadata<any>, paths: string[]): boolean {
   for (let i = 0, current = meta; i < paths.length; i++) {
     const next = current.allFields[paths[i]];
-    if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m")) {
+    if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m" || next.kind === "o2o")) {
       current = next.otherMetadata();
     } else {
       return false;
@@ -133,7 +133,7 @@ export function mapPathsToTarget(
   let fields: [EntityMetadata<any>, Field][] = [];
   for (let i = 0; i < paths.length; i++) {
     const next = other.allFields[paths[i]];
-    if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m")) {
+    if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m" || next.kind === "o2o")) {
       other = next.otherMetadata();
       fields.push([other, other.allFields[next.otherFieldName]]);
     } else {

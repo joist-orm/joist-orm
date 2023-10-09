@@ -1,7 +1,7 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
+import { EntityMetadata, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "../EntityMetadata";
 import { abbreviation } from "../QueryBuilder";
 import {
   ColumnCondition,
@@ -82,6 +82,7 @@ export function lensDataLoader<T extends Entity>(
     fields.forEach(([, field], i) => {
       const isLast = i === fields.length - 1;
       switch (field.kind) {
+        case "o2o":
         case "o2m": {
           // This is `Publisher.authors` and we want to join in the authors table,
           // so get the `Author.publisher` field to know the column name
@@ -111,6 +112,7 @@ export function lensDataLoader<T extends Entity>(
         case "m2o": {
           // This is `Book.author` and we want to join in the authors table
           const other = field.otherMetadata();
+          const otherField = other.fields[field.otherFieldName] as OneToManyField | OneToOneField;
           const alias = getAlias(other.tableName);
           if (!isLast) {
             tables.push({
@@ -131,7 +133,7 @@ export function lensDataLoader<T extends Entity>(
             });
             // Need to add filter for soft-deleted...
           }
-          resultIsArray = true;
+          resultIsArray = otherField.kind === "o2o" ? resultIsArray : true;
           lastAlias = alias;
           break;
         }

@@ -12,7 +12,7 @@ export interface AsyncMethod<T extends Entity, A extends unknown[], V> {
 }
 
 export interface LoadedMethod<T extends Entity, A extends unknown[], V> {
-  get(...args: A): V;
+  call(...args: A): V;
 }
 
 export function hasAsyncMethod<T extends Entity, const H extends LoadHint<T>, A extends unknown[], V>(
@@ -51,12 +51,12 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
         return isPopulate ? undefined : fn(loaded, ...args);
       }));
     }
-    return Promise.resolve(isPopulate ? (undefined as any) : this.get(...args));
+    return Promise.resolve(isPopulate ? (undefined as any) : this.call(...args));
   }
 
-  get(...args: A): V {
+  call(...args: A): V {
     if (!this.isLoaded) {
-      throw new Error("hasAsyncMethod.get was called but not loaded");
+      throw new Error("hasAsyncMethod.call was called but not loaded");
     }
     return this.fn(this.#entity as Loaded<T, H>, ...args);
   }

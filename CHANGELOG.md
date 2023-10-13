@@ -1,3 +1,10 @@
+## [1.112.3](https://github.com/stephenh/joist-ts/compare/v1.112.2...v1.112.3) (2023-10-13)
+
+
+### Bug Fixes
+
+* Fix AsyncMethods w/no params looking like AsyncProperties. ([#829](https://github.com/stephenh/joist-ts/issues/829)) ([8353c63](https://github.com/stephenh/joist-ts/commit/8353c63d6de609cf4a1024ea2bdd851aa93fd1a1))
+
 ## [1.112.2](https://github.com/stephenh/joist-ts/compare/v1.112.1...v1.112.2) (2023-10-09)
 
 

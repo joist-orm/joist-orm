@@ -6,7 +6,7 @@ const darkCodeTheme = require("prism-react-renderer").themes.dracula;
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: "Joist",
-  tagline: "More than Just a Query Builder",
+  tagline: "Build Great Domain Models",
   url: "https://joist-orm.io",
   baseUrl: "/",
   onBrokenLinks: "throw",

@@ -49,4 +49,24 @@ describe("hasAsyncMethod", () => {
     // Then we get back the expected value
     expect(books).toMatchEntity([]);
   });
+
+  it("without params can be accessed via a promise", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "programming in action" });
+    // Given a stock author
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    // When we access an async method
+    expect(await a1.booksTitles.load()).toBe("programming in action");
+  });
+
+  it("without params can be accessed via get", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "programming in action" });
+    // Given a stock author
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1", "booksTitles");
+    // When we access an async method
+    expect(a1.booksTitles.get()).toBe("programming in action");
+  });
 });

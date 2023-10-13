@@ -3,8 +3,7 @@ import { currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
-
-const I = Symbol();
+import { AsyncPropertyT } from "./hasAsyncProperty";
 
 /**
  * A `PersistedAsyncProperty` is a value that is derived from other entities/values,
@@ -20,6 +19,7 @@ const I = Symbol();
  * re-calc the value while persisting to the database.
  */
 export interface PersistedAsyncProperty<T extends Entity, V> {
+  [AsyncPropertyT]: T;
   isLoaded: boolean;
   isSet: boolean;
 
@@ -52,8 +52,6 @@ export interface PersistedAsyncProperty<T extends Entity, V> {
    * to the new derived value.
    * */
   fieldValue: V;
-
-  [I]?: T;
 }
 
 /**
@@ -140,6 +138,8 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   get loadHint(): any {
     return getMetadata(this.#entity).config.__data.cachedReactiveLoadHints[this.fieldName];
   }
+
+  [AsyncPropertyT] = undefined as any as T;
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */

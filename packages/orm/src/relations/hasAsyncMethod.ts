@@ -2,12 +2,13 @@ import { Entity } from "../Entity";
 import { currentlyInstantiatingEntity } from "../EntityManager";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
 
-const M = Symbol();
+const AsyncMethodM = Symbol();
 
 export interface AsyncMethod<T extends Entity, A extends unknown[], V> {
+  // To differentiate from AsyncProperties
+  [AsyncMethodM]: undefined;
   isLoaded: boolean;
   load(...args: A): Promise<V>;
-  [M]?: T;
 }
 
 export interface LoadedMethod<T extends Entity, A extends unknown[], V> {
@@ -63,4 +64,6 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   get isLoaded() {
     return this.loaded || isLoaded(this.#entity, this.#hint);
   }
+
+  [AsyncMethodM]: undefined;
 }

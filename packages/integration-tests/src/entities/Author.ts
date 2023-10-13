@@ -217,6 +217,12 @@ export class Author extends AuthorCodegen {
     // Include silly `title.trim().length > 0` check to ensure we're not called during `populate`
     title.trim().length > 0 ? a.books.get.filter((b) => b.title.includes(title)) : [],
   );
+
+  // Example of an AsyncMethod without params, i.e. for a calc that we only want calculated when
+  // explicitly called, vs. AsyncProperties that implicitly call `.get` whenever loaded.
+  readonly booksTitles: AsyncMethod<Author, [], string> = hasAsyncMethod("books", (a) =>
+    a.books.get.map((b) => b.title).join(", "),
+  );
 }
 
 config.cascadeDelete("books");

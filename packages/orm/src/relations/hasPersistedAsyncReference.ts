@@ -1,27 +1,25 @@
 import {
+  EntityMetadata,
+  ManyToOneField,
   deTagId,
   ensureNotDeleted,
   ensureTagged,
-  EntityMetadata,
   fail,
   getEmInternalApi,
   getMetadata,
   isEntity,
   isLoaded,
-  ManyToOneField,
   maybeResolveReferenceToId,
   sameEntity,
   setField,
 } from "..";
 import { Entity } from "../Entity";
-import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
+import { IdOf, currentlyInstantiatingEntity } from "../EntityManager";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
-
-const I = Symbol();
 
 export interface PersistedAsyncReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
@@ -46,8 +44,6 @@ export interface PersistedAsyncReference<T extends Entity, U extends Entity, N e
   idUntagged: string;
 
   idUntaggedIfSet: string | undefined;
-
-  [I]?: T;
 }
 
 export function hasPersistedAsyncReference<

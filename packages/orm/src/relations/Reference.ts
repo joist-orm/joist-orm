@@ -19,13 +19,13 @@ export const ReferenceN = Symbol();
  * `U | never` which becomes just `U`.
  */
 export interface Reference<T extends Entity, U extends Entity, N extends never | undefined> extends Relation<T, U> {
+  [ReferenceN]: N;
+
   readonly isLoaded: boolean;
 
   load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   set(other: U | N): void;
-
-  [ReferenceN]: N;
 }
 
 /** Adds a known-safe `get` accessor. */

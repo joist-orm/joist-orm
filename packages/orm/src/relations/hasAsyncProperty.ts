@@ -4,12 +4,13 @@ import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded } from "../loadHints";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
 
-const I = Symbol();
+export const AsyncPropertyT = Symbol();
 
 export interface AsyncProperty<T extends Entity, V> {
+  // Differentiate from AsyncMethod
+  [AsyncPropertyT]: T;
   isLoaded: boolean;
   load(): Promise<V>;
-  [I]?: T;
 }
 
 export interface LoadedProperty<T extends Entity, V> {
@@ -96,6 +97,8 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   get isLoaded() {
     return this.loaded;
   }
+
+  [AsyncPropertyT] = undefined as any as T;
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */

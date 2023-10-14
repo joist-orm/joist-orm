@@ -110,7 +110,7 @@ export function up(b: MigrationBuilder): void {
     // for testing derived fields using other derived fields ... also purposefully camel-case to test batch updates
     numberOfPublicReviews2: { type: "int", notNull: false },
     // for testing derived fields through m2ms
-    tags_of_all_books: { type: "varchar", notNull: true },
+    tags_of_all_books: { type: "varchar", notNull: false },
   });
 
   // A publisher can only have one author named `Jim`, but still have other authors

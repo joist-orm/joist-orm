@@ -97,7 +97,7 @@ export interface AuthorFields {
   deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: never };
+  tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
@@ -169,7 +169,7 @@ export interface AuthorFilter {
   deletedAt?: ValueFilter<Date, null>;
   numberOfPublicReviews?: ValueFilter<number, null>;
   numberOfPublicReviews2?: ValueFilter<number, null>;
-  tagsOfAllBooks?: ValueFilter<string, never>;
+  tagsOfAllBooks?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   favoriteColors?: ValueFilter<Color[], null>;
@@ -261,7 +261,6 @@ export const authorConfig = new ConfigApi<Author, Context>();
 authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("initials"));
 authorConfig.addRule(newRequiredRule("numberOfBooks"));
-authorConfig.addRule(newRequiredRule("tagsOfAllBooks"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
@@ -478,7 +477,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
 
   abstract readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number | undefined>;
 
-  abstract readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string>;
+  abstract readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string | undefined>;
 
   get createdAt(): Date {
     return this.__orm.data["createdAt"];

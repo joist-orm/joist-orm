@@ -75,8 +75,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
-      const key = `${this.columnName}=${this.#entity.id}`;
-      this.loaded = await manyToManyDataLoader(this.#entity.em, this).load(key);
+      const joinLoaded = this.getPreloaded();
+      if (joinLoaded) {
+        this.loaded = joinLoaded;
+      } else {
+        const key = `${this.columnName}=${this.#entity.id}`;
+        this.loaded = await manyToManyDataLoader(this.#entity.em, this).load(key);
+      }
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
@@ -153,6 +158,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   get isLoaded(): boolean {
     return this.loaded !== undefined;
+  }
+
+  get isPreloaded(): boolean {
+    return !!this.getPreloaded();
   }
 
   private doGet(): U[] {
@@ -266,6 +275,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
       this.otherMeta.type
     }, otherFieldName: ${this.otherFieldName})`;
+  }
+
+  private getPreloaded(): U[] | undefined {
+    return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

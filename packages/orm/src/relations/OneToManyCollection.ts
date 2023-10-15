@@ -64,7 +64,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
-      this.loaded = await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!);
+      const joinLoaded = this.getPreloaded();
+      if (joinLoaded) {
+        this.loaded = joinLoaded;
+      } else {
+        this.loaded = await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!);
+      }
       this.maybeAppendAddedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded, opts);
@@ -91,6 +96,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   get isLoaded(): boolean {
     return this.loaded !== undefined;
+  }
+
+  get isPreloaded(): boolean {
+    return !!this.getPreloaded();
   }
 
   get get(): U[] {
@@ -287,6 +296,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   private get isCascadeDelete(): boolean {
     return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+  }
+
+  private getPreloaded(): U[] | undefined {
+    return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

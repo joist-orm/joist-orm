@@ -34,6 +34,7 @@ export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
 export * from "./getProperties";
 export * from "./keys";
+export { kq } from "./keywords";
 export {
   assertLoaded,
   DeepNew,

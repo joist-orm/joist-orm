@@ -49,13 +49,14 @@ import {
   setOpts,
   tagId,
 } from "./index";
+import { preloadJoins } from "./joinPreloading";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import {MaybePromise, assertNever, fail, getOrSet, toArray, groupBy, indexBy} from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -173,6 +174,7 @@ export class EntityManager<C = unknown> {
   #entityIndex: Map<string, Entity> = new Map();
   #isValidating: boolean = false;
   #pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
+  #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
    *
@@ -214,6 +216,17 @@ export class EntityManager<C = unknown> {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
       pendingChildren: this.#pendingChildren,
+      getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined {
+        return em.#preloadedRelations.get(taggedId)?.get(fieldName) as U[] | undefined;
+      },
+      setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void {
+        let map = em.#preloadedRelations.get(taggedId);
+        if (!map) {
+          map = new Map();
+          em.#preloadedRelations.set(taggedId, map);
+        }
+        map.set(fieldName, children as Entity[]);
+      },
       hooks: this.#hooks,
       rm: this.#rm,
       get isValidating() {
@@ -919,11 +932,21 @@ export class EntityManager<C = unknown> {
     const loader = this.getLoader(
       "populate",
       batchKey,
-      (batch) => {
+      async (batch) => {
         // Because we're using `{ cache: false }`, we could have dups in the list, so unique
         const list = [...new Set(batch)];
-
         const hints = Object.entries(normalizeHint(hintOpt as any));
+
+        // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
+        // needs loading, just load everything
+        const anyInThisLayerNeedsLoaded = list.some((entity: any) => {
+          return hints.some(([key]) => entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded);
+        });
+        if (anyInThisLayerNeedsLoaded) {
+          const ids = (list as any).map((e: any) => e.id);
+          console.log("PRELOADING", getMetadata((list as any)[0]).tableName, hintOpt as any, ids);
+          await preloadJoins(this, getMetadata((list as any)[0]), list as any, hintOpt as any);
+        }
 
         // One breadth-width pass to ensure each relation is loaded
         const loadPromises = list.flatMap((entity) => {
@@ -1393,7 +1416,11 @@ export class EntityManager<C = unknown> {
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
+  /** Map of taggedId -> fieldName -> pending children. */
   pendingChildren: Map<string, Map<string, Entity[]>>;
+  /** Map of taggedId -> fieldName -> join-loaded data. */
+  getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
+  setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
   isValidating: boolean;

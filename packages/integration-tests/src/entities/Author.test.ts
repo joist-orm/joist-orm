@@ -1,4 +1,11 @@
-import { insertAuthor, insertBook, insertPublisher, select } from "@src/entities/inserts";
+import {
+  insertAuthor,
+  insertBook,
+  insertBookReview,
+  insertComment,
+  insertPublisher,
+  select,
+} from "@src/entities/inserts";
 import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
@@ -9,6 +16,17 @@ import { zeroTo } from "../utils";
 const inspect = Symbol.for("nodejs.util.inspect.custom");
 
 describe("Author", () => {
+  it("data for query", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertBook({ title: "b3", author_id: 1 });
+    await insertBookReview({ book_id: 3, rating: 5 });
+    await insertComment({ parent_author_id: 1, text: "c1" });
+    await insertComment({ parent_author_id: 1, text: "c2" });
+    await insertComment({ parent_author_id: 1, text: "c3" });
+  });
+
   it("can have business logic methods", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();

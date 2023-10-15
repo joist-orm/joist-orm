@@ -56,6 +56,7 @@ export function insertComment(row: {
   id?: number;
   text: string;
   user_id?: number;
+  parent_author_id?: number;
   parent_book_id?: number;
   parent_book_review_id?: number;
   parent_publisher_id?: number;

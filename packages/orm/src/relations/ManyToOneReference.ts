@@ -37,7 +37,6 @@ export function isManyToOneReference(maybeReference: any): maybeReference is Man
 
 export interface ManyToOneReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends Reference<T, U, N> {
-
   /** Returns the id of the current assigned entity, or a runtime error if either 1) unset or 2) set to a new entity that doesn't have an `id` yet. */
   id: IdOf<U>;
 
@@ -114,6 +113,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   get isLoaded(): boolean {
     return this._isLoaded;
+  }
+
+  get isPreloaded(): boolean {
+    return !!this.maybeFindEntity();
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {

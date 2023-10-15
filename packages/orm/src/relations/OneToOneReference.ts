@@ -1,4 +1,12 @@
-import { currentlyInstantiatingEntity, deTagId, ensureNotDeleted, IdOf, LoadedReference, setField } from "../";
+import {
+  currentlyInstantiatingEntity,
+  deTagId,
+  ensureNotDeleted,
+  getEmInternalApi,
+  IdOf,
+  LoadedReference,
+  setField,
+} from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
@@ -146,7 +154,12 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
     if (!this._isLoaded || opts.forceReload) {
       if (!this.#entity.isNewEntity) {
-        this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
+        const joinLoaded = this.getPreloaded();
+        if (joinLoaded) {
+          this.loaded = joinLoaded[0];
+        } else {
+          this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
+        }
       }
       this._isLoaded = true;
     }
@@ -173,6 +186,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   get isLoaded(): boolean {
     return this._isLoaded;
+  }
+
+  get isPreloaded(): boolean {
+    return !!this.getPreloaded();
   }
 
   get getWithDeleted(): U | undefined {
@@ -241,6 +258,10 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */
   private getOtherRelation(other: U): ManyToOneReference<U, T, any> {
     return (other as U)[this.otherFieldName] as any;
+  }
+
+  private getPreloaded(): U[] | undefined {
+    return getEmInternalApi(this.#entity.em).getPreloadedRelation(this.#entity.idTagged, this.fieldName);
   }
 
   [RelationT] = null!;

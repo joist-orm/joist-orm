@@ -69,6 +69,14 @@ export function indexBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
   return result;
 }
 
+export function batched<T>(list: Array<T>, n: number): T[][] {
+  const result = [] as T[][];
+  for (let i = 0; i < list.length; i += n) {
+    result.push(list.slice(i, i + n));
+  }
+  return result;
+}
+
 export function partition<T>(array: ReadonlyArray<T>, f: (el: T) => boolean): [T[], T[]] {
   const trueElements: T[] = [];
   const falseElements: T[] = [];

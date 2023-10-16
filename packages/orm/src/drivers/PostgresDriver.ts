@@ -12,7 +12,7 @@ import {
 } from "../index";
 import { kq, kqDot } from "../keywords";
 import { JoinRowTodo, Todo } from "../Todo";
-import { cleanSql, partition, zeroTo } from "../utils";
+import { batched, cleanSql, partition, zeroTo } from "../utils";
 import { buildKnexQuery } from "./buildKnexQuery";
 import { Driver } from "./Driver";
 import { DeleteOp, generateOps, InsertOp, UpdateOp } from "./EntityWriter";
@@ -102,8 +102,18 @@ export class PostgresDriver implements Driver {
 
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/stephenh/joist-ts/issues/591
+    // We want 10k params maximum per batch insert
+    const parameterLimit = 10_000;
     for (const insert of ops.inserts) {
-      await batchInsert(knex, insert);
+      const parameterTotal = insert.columns.length * insert.rows.length;
+      if (parameterTotal > parameterLimit) {
+        const batchSize = Math.floor(parameterLimit / insert.columns.length);
+        await Promise.all(
+          batched(insert.rows, batchSize).map((batch) => batchInsert(knex, { ...insert, rows: batch })),
+        );
+      } else {
+        await batchInsert(knex, insert);
+      }
     }
     for (const update of ops.updates) {
       await batchUpdate(knex, update);
@@ -171,14 +181,14 @@ export class PostgresDriver implements Driver {
 }
 
 // Issue 1 INSERT statement with N `VALUES (..., ...), (..., ...), ...`
-function batchInsert(knex: Knex, op: InsertOp): Promise<void> {
+function batchInsert(knex: Knex, op: InsertOp): Promise<unknown> {
   const { tableName, columns, rows } = op;
-  const sql = `
+  const sql = cleanSql(`
     INSERT INTO "${tableName}" (${columns.map((c) => `"${c.columnName}"`).join(", ")})
     VALUES ${rows.map(() => `(${columns.map(() => `?`).join(", ")})`).join(",")}
-  `;
+  `);
   const bindings = rows.flat();
-  return knex.raw(cleanSql(sql), bindings);
+  return knex.raw(sql, bindings);
 }
 
 // Issue 1 UPDATE statement with N `VALUES (..., ...), (..., ...), ...`

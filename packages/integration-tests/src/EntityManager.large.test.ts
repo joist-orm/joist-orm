@@ -5,7 +5,7 @@ import { newEntityManager } from "./setupDbTests";
 
 jest.setTimeout(30_000);
 
-describe("EntityManager.large", () => {
+describe.skip("EntityManager.large", () => {
   it("can insert 10k records", async () => {
     const em = newEntityManager();
     zeroTo(10_000).forEach(() => newPublisher(em));

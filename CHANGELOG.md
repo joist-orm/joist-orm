@@ -1,3 +1,10 @@
+## [1.112.4](https://github.com/stephenh/joist-ts/compare/v1.112.3...v1.112.4) (2023-10-17)
+
+
+### Bug Fixes
+
+* Batch large inserts. ([#833](https://github.com/stephenh/joist-ts/issues/833)) ([b07047a](https://github.com/stephenh/joist-ts/commit/b07047a662f4d7ac9943c63e29ed91d76b1d4bf0))
+
 ## [1.112.3](https://github.com/stephenh/joist-ts/compare/v1.112.2...v1.112.3) (2023-10-13)
 
 

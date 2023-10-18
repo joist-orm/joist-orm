@@ -91,14 +91,12 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   load(opts?: { forceReload?: boolean }): Promise<V> {
     const { loadHint } = this;
     if (!this.loaded || opts?.forceReload) {
-      return (this.loadPromise ??= this.#entity.em
-        .populate(this.#entity, { hint: this.loadHint, isPersistedAsyncPropertyLoad: true } as any)
-        .then(() => {
-          this.loadPromise = undefined;
-          this.loaded = true;
-          // Go through `this.get` so that `setField` is called to set our latest value
-          return this.get;
-        }));
+      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, { hint: this.loadHint } as any).then(() => {
+        this.loadPromise = undefined;
+        this.loaded = true;
+        // Go through `this.get` so that `setField` is called to set our latest value
+        return this.get;
+      }));
     }
     return Promise.resolve(this.get);
   }

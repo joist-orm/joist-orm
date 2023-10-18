@@ -172,7 +172,7 @@ export class EntityManager<C = unknown> {
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   #entityIndex: Map<string, Entity> = new Map();
   #isValidating: boolean = false;
-  #pendingChildren: Map<string, Map<string, { adds: Entity[], removes: Entity[] }>> = new Map();
+  #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
@@ -954,20 +954,14 @@ export class EntityManager<C = unknown> {
               if (!relation || typeof relation.load !== "function") {
                 throw new Error(`Invalid load hint '${key}' on ${entity}`);
               }
-              // If we're populating a hasPersistedAsyncProperty, and find an upstream
-              // property that we ourselves depend on, don't bother loading it if it's
-              // already been calculated (i.e. we have no reason to believe its value
+              // If we're populating a hasPersistedAsyncProperty, don't bother loading it
+              // if it's already been calculated (i.e. we have no reason to believe its value
               // is stale, so we should avoid pulling all of its data into memory).
               //
               // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
               // then go ahead and call `.load()` so that the downstream reactive calc can
               // call `.get` to evaluate its derived value.
-              if (
-                (opts as any).isPersistedAsyncPropertyLoad &&
-                relation instanceof PersistedAsyncPropertyImpl &&
-                relation.isSet
-              )
-                return;
+              if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
               return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
             });
           });
@@ -1443,7 +1437,7 @@ export class EntityManager<C = unknown> {
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
   /** Map of taggedId -> fieldName -> pending children. */
-  pendingChildren: Map<string, Map<string, { adds: Entity[], removes: Entity[] }>>;
+  pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;

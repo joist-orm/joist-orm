@@ -164,7 +164,7 @@ describe("PersistedAsyncProperty", () => {
     expect(await a1.numberOfBooks.load()).toEqual(2);
   });
 
-  it("can force async derived values to recalc on populate", async () => {
+  it("doesn't force async derived values to recalc on populate", async () => {
     // Given an author with a book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -182,7 +182,7 @@ describe("PersistedAsyncProperty", () => {
     // But if we load it via a populate hint
     await em.populate(a1, "numberOfBooks");
     // Then we'll get the live value
-    expect(a1.numberOfBooks.get).toEqual(2);
+    expect(a1.numberOfBooks.get).toEqual(1);
   });
 
   it("has async derived values triggered on both old and new value", async () => {

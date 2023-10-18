@@ -33,9 +33,9 @@ export type HintTree = {
 export function buildHintTree(populates: readonly { entity: Entity; hint: LoadHint<any> }[]): HintTree {
   const rootHint: HintTree = {};
   for (const { entity, hint } of populates) {
-    if (!entity.isNewEntity) {
-      populateHintTree(entity, rootHint, hint);
-    }
+    // It's tempting to filter out new entities here, but we need to call `.load()` on their
+    // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
+    populateHintTree(entity, rootHint, hint);
   }
   return rootHint;
 }
@@ -181,7 +181,9 @@ export async function preloadJoins<T extends Entity>(
     order by ${kq(alias)}.id;
   `;
 
-  const entities = Object.values(tree).flatMap((hint) => [...hint.entities]);
+  const entities = Object.values(tree)
+    .flatMap((hint) => [...hint.entities])
+    .filter((e) => !e.isNewEntity);
   const ids = entities.map((e) => Number(deTagId(e)));
 
   console.log("PRELOADING", JSON.stringify(tree), sql);

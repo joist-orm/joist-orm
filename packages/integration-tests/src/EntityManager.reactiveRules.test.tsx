@@ -481,7 +481,6 @@ describe("EntityManager.reactiveRules", () => {
         const em2 = newEntityManager();
         const br = await em2.load(BookReview, "br:1");
         br.rating = 1;
-        console.log("FLUSH");
         await em2.flush();
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
       });

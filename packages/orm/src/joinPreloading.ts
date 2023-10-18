@@ -148,7 +148,7 @@ export async function preloadJoins<T extends Entity>(
           const children = arrays.map((array) => {
             // Turn the array into a hash for em.hydrate
             const data = Object.fromEntries(columns.map((c, i) => [c.columnName, array[i]]));
-            const entity = em.hydrate(otherMeta.cstr, data);
+            const entity = em.hydrate(otherMeta.cstr, data, { overwriteExisting: false });
             // Within each child, look for grandchildren
             subProcessors.forEach((sub, i) => {
               // array[i] could be null if there are no grandchildren, but still call `sub` to

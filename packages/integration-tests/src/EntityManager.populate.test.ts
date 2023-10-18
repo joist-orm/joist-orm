@@ -47,7 +47,7 @@ describe("EntityManager.populate", () => {
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
     const pub = await em.populate(asyncPub, { authors: "books" });
-    expect(numberOfQueries).toEqual(2);
+    expect(numberOfQueries).toEqual(1);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);
     expect(pub.authors.get[1].books.get.length).toEqual(2);
@@ -66,7 +66,7 @@ describe("EntityManager.populate", () => {
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
     const pub = await em.populate(asyncPub, { authors: ["books", "publisher"] });
-    expect(numberOfQueries).toEqual(2);
+    expect(numberOfQueries).toEqual(1);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);
     expect(pub.authors.get[0].publisher.get!.id).toEqual("p:1");

@@ -18,8 +18,38 @@ import { normalizeHint } from "./normalizeHints";
 //
 // https://sqlfum.pt/?n=60&indent=2&spaces=1&simplify=1&align=0&case=lower&sql=c2VsZWN0IGEuaWQsIGIuXyBhcyBiLCBjMS5fIGFzIGMxLCBhMS5fIGFzIGExIGZyb20gYXV0aG9ycyBhIGNyb3NzIGpvaW4gbGF0ZXJhbCAoIHNlbGVjdCBqc29uX2FnZyhqc29uX2J1aWxkX2FycmF5KGIuaWQsIGIudGl0bGUsIGIuIm9yZGVyIiwgYi5kZWxldGVkX2F0LCBiLmNyZWF0ZWRfYXQsIGIudXBkYXRlZF9hdCwgYi5hdXRob3JfaWQsIGJyLl8pKSBhcyBfIGZyb20gYm9va3MgYiBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShici5pZCwgYnIucmF0aW5nLCBici5pc19wdWJsaWMsIGJyLmlzX3Rlc3QsIGJyLmNyZWF0ZWRfYXQsIGJyLnVwZGF0ZWRfYXQsIGJyLmJvb2tfaWQsIGMuXykpIGFzIF8gZnJvbSBib29rX3Jldmlld3MgYnIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYy5pZCwgYy50ZXh0LCBjLmNyZWF0ZWRfYXQsIGMudXBkYXRlZF9hdCwgYy51c2VyX2lkLCBjLnBhcmVudF9hdXRob3JfaWQsIGMucGFyZW50X2Jvb2tfaWQsIGMucGFyZW50X2Jvb2tfcmV2aWV3X2lkLCBjLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYyB3aGVyZSBjLnBhcmVudF9ib29rX3Jldmlld19pZCA9IGJyLmlkICkgYyB3aGVyZSBici5ib29rX2lkID0gYi5pZCApIGJyIHdoZXJlIGIuYXV0aG9yX2lkID0gYS5pZCApIGIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYzEuaWQsIGMxLnRleHQsIGMxLmNyZWF0ZWRfYXQsIGMxLnVwZGF0ZWRfYXQsIGMxLnVzZXJfaWQsIGMxLnBhcmVudF9hdXRob3JfaWQsIGMxLnBhcmVudF9ib29rX2lkLCBjMS5wYXJlbnRfYm9va19yZXZpZXdfaWQsIGMxLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYzEgd2hlcmUgYzEucGFyZW50X2F1dGhvcl9pZCA9IGEuaWQgKSBjMSBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShhMS5pZCwgYTEuZmlyc3RfbmFtZSwgYTEubGFzdF9uYW1lLCBhMS5zc24sIGExLmluaXRpYWxzLCBhMS5udW1iZXJfb2ZfYm9va3MsIGExLmJvb2tfY29tbWVudHMsIGExLmlzX3BvcHVsYXIsIGExLmFnZSwgYTEuZ3JhZHVhdGVkLCBhMS5uaWNrX25hbWVzLCBhMS53YXNfZXZlcl9wb3B1bGFyLCBhMS5hZGRyZXNzLCBhMS5idXNpbmVzc19hZGRyZXNzLCBhMS5xdW90ZXMsIGExLm51bWJlcl9vZl9hdG9tcywgYTEuZGVsZXRlZF9hdCwgYTEubnVtYmVyX29mX3B1YmxpY19yZXZpZXdzLCBhMS4ibnVtYmVyT2ZQdWJsaWNSZXZpZXdzMiIsIGExLnRhZ3Nfb2ZfYWxsX2Jvb2tzLCBhMS5jcmVhdGVkX2F0LCBhMS51cGRhdGVkX2F0LCBhMS5mYXZvcml0ZV9zaGFwZSwgYTEuZmF2b3JpdGVfY29sb3JzLCBhMS5tZW50b3JfaWQsIGExLmN1cnJlbnRfZHJhZnRfYm9va19pZCwgYTEuZmF2b3JpdGVfYm9va19pZCwgYTEucHVibGlzaGVyX2lkKSkgYXMgXyBmcm9tIGF1dGhvcnMgYTEgd2hlcmUgYTEuaWQgPSBhLm1lbnRvcl9pZCApIGExIHdoZXJlIGEuaWQgPSAxOw%3D%3D
 
+export type HintNode = {
+  /** These entities are always the root entities of our preload, i.e. we use them to trim the tree to prevent over-fetching. */
+  entities: Set<Entity>;
+  subHints: HintTree;
+};
+
+export type HintTree = {
+  [key: string]: HintNode;
+};
+
+// Turn `{ author: reviews }` into:
+// { author: { entities: [a1, a2], subHints: { reviews: { entities: [a2], subHints: {} } } } }
+export function buildHintTree(populates: readonly { entity: Entity; hint: LoadHint<any> }[]): HintTree {
+  const rootHint: HintTree = {};
+  for (const { entity, hint } of populates) {
+    if (!entity.isNewEntity) {
+      populateHintTree(entity, rootHint, hint);
+    }
+  }
+  return rootHint;
+}
+
+function populateHintTree(entity: Entity, parent: HintTree, hint: LoadHint<any>) {
+  for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
+    const { entities, subHints } = (parent[key] ??= { entities: new Set(), subHints: {} });
+    entities.add(entity);
+    if (nestedHint) populateHintTree(entity, subHints, nestedHint);
+  }
+}
+
 /**
- * For a given load hint `hint`, finds all SQL-able relations and preloads them.
+ * For a given hint tree `hint`, finds all SQL-able relations and preloads them.
  *
  * Specifically we use `json_agg` & `json_build_array` to `CROSS LATERAL JOIN`
  * children/grand children back as arbitrarily-deeply nested arrays, and then
@@ -29,8 +59,7 @@ import { normalizeHint } from "./normalizeHints";
 export async function preloadJoins<T extends Entity>(
   em: EntityManager,
   meta: EntityMetadata<T>,
-  entities: T[],
-  hint: LoadHint<T>,
+  tree: HintTree,
 ): Promise<void> {
   const { getAlias } = new AliasAssigner();
 
@@ -38,13 +67,13 @@ export async function preloadJoins<T extends Entity>(
   type JoinsResult = { aliases: string[]; joins: string[]; processors: Processor[] };
 
   /** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
-  function addJoins(hint: LoadHint<any>, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
+  function addJoins(tree: HintTree, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
     const aliases: string[] = [];
     const joins: string[] = [];
     const processors: Processor[] = [];
 
     // Join in SQL-able hints from parent
-    Object.entries(normalizeHint(hint)).forEach(([key, subHint]) => {
+    Object.entries(tree).forEach(([key, subTree]) => {
       const field = parentMeta.allFields[key];
       // AsyncProperties don't have fields
       if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
@@ -60,7 +89,7 @@ export async function preloadJoins<T extends Entity>(
           aliases: subAliases,
           joins: subJoins,
           processors: subProcessors,
-        } = addJoins(subHint, otherAlias, otherMeta);
+        } = addJoins(subTree.subHints, otherAlias, otherMeta);
 
         // Get all fields with serdes and flatten out the columns
         const columns = Object.values(otherMeta.allFields)
@@ -139,7 +168,7 @@ export async function preloadJoins<T extends Entity>(
   }
 
   const alias = getAlias(meta.tableName);
-  const { aliases, joins, processors } = addJoins(hint, alias, meta);
+  const { aliases, joins, processors } = addJoins(tree, alias, meta);
 
   // We may have not found any SQL-preload-able relations in the load hint
   if (joins.length === 0) return;
@@ -152,9 +181,12 @@ export async function preloadJoins<T extends Entity>(
     order by ${kq(alias)}.id;
   `;
 
-  const existingEntities = entities.filter((e) => !e.isNewEntity);
-  const ids = existingEntities.map((e) => Number(deTagId(e)));
+  const entities = Object.values(tree).flatMap((hint) => [...hint.entities]);
+  const ids = entities.map((e) => Number(deTagId(e)));
+
+  console.log("PRELOADING", JSON.stringify(tree), sql);
   const rows = await em.driver.executeQuery(em, sql, [ids]);
+
   rows.forEach((row, i) => {
     const parent = entities[i];
     processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));

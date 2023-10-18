@@ -78,4 +78,38 @@ describe("EntityManager.joins", () => {
     expect(bl2.tags.get.length).toBe(1);
     expect(bl3.tags.get.length).toBe(0);
   });
+
+  it("preloads overlapping load hints", async () => {
+    // Given an author with books + reviews
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await insertComment({ text: "c1", parent_book_review_id: 1 });
+    // And a 2nd author with the same
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ author_id: 2, title: "b1" });
+    await insertBookReview({ book_id: 2, rating: 1 });
+    await insertComment({ text: "c2", parent_book_review_id: 2 });
+
+    const em = newEntityManager();
+    const [a1, a2] = await em.find(Author, {});
+    // When we populate both but with different load hints
+    resetQueryCount();
+    const [l1, l2] = await Promise.all([
+      em.populate(a1, { books: { reviews: "comment" } }),
+      em.populate(a2, { books: { reviews: {} } }),
+    ]);
+    // Then we issued one query
+    expect(queries.length).toEqual(1);
+    expect(a1).toMatchEntity({ books: [{ reviews: [{ comment: { text: "c1" } }] }] });
+    expect(a2).toMatchEntity({ books: [{ reviews: [{}] }] });
+    // And we did load a2 -> books -> reviews -> comment
+    expect(l1.books.get[0].reviews.get[0].comment.isLoaded).toBe(true);
+    // Because it was preloaded
+    expect((l1.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(true);
+    // But we didn't load a2 -> books -> reviews -> comment
+    expect(l2.books.get[0].reviews.get[0].comment.isLoaded).toBe(false);
+    // And also it was not preloaded (...currently it is b/c we're some join filtering)
+    expect((l2.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(true);
+  });
 });

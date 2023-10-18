@@ -49,9 +49,8 @@ import {
   setOpts,
   tagId,
 } from "./index";
-import { preloadJoins } from "./joinPreloading";
+import { HintTree, buildHintTree, preloadJoins } from "./joinPreloading";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
-import { normalizeHint } from "./normalizeHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -918,6 +917,8 @@ export class EntityManager<C = unknown> {
     // Tell `AsyncMethodImpl.load` to not invoke its function
     (opts as any)["populate"] = true;
 
+    const em = this;
+
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
     // But since it's a public API, we should just early exit.
@@ -928,63 +929,87 @@ export class EntityManager<C = unknown> {
 
     // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
     // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
-    const batchKey = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hintOpt)}-${opts.forceReload}`;
-    const loader = this.getLoader(
+    const batchKey = `${list[0]?.__orm.metadata.tagName}:${opts.forceReload}`;
+    const loader = this.getLoader<{ entity: Entity; hint: LoadHint<any> }, any>(
       "populate",
       batchKey,
-      async (batch) => {
-        // Because we're using `{ cache: false }`, we could have dups in the list, so unique
-        const list = [...new Set(batch)];
-        const hints = Object.entries(normalizeHint(hintOpt as any));
+      async (populates) => {
+        async function populateLayer(layerMeta: EntityMetadata<any> | undefined, layerHint: HintTree): Promise<any[]> {
+          // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
+          // needs loading, just load everything
+          const anyInThisLayerNeedsLoaded = Object.entries(layerHint).some(([key, hint]) => {
+            return [...hint.entities].some(
+              (entity: any) => !!entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded,
+            );
+          });
+          // We may not have a layerMeta if we're going through non-field properties
+          if (anyInThisLayerNeedsLoaded && layerMeta) {
+            await preloadJoins(em, layerMeta, layerHint);
+          }
 
-        // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
-        // needs loading, just load everything
-        const anyInThisLayerNeedsLoaded = list.some((entity: any) => {
-          return hints.some(([key]) => entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded);
-        });
-        if (anyInThisLayerNeedsLoaded) {
-          const ids = (list as any).map((e: any) => e.id);
-          console.log("PRELOADING", getMetadata((list as any)[0]).tableName, hintOpt as any, ids);
-          await preloadJoins(this, getMetadata((list as any)[0]), list as any, hintOpt as any);
+          // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded
+          const loadPromises = Object.entries(layerHint).flatMap(([key, tree]) => {
+            return [...tree.entities].map((entity) => {
+              const relation = (entity as any)[key];
+              if (!relation || typeof relation.load !== "function") {
+                throw new Error(`Invalid load hint '${key}' on ${entity}`);
+              }
+              // If we're populating a hasPersistedAsyncProperty, and find an upstream
+              // property that we ourselves depend on, don't bother loading it if it's
+              // already been calculated (i.e. we have no reason to believe its value
+              // is stale, so we should avoid pulling all of its data into memory).
+              //
+              // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
+              // then go ahead and call `.load()` so that the downstream reactive calc can
+              // call `.get` to evaluate its derived value.
+              if (
+                (opts as any).isPersistedAsyncPropertyLoad &&
+                relation instanceof PersistedAsyncPropertyImpl &&
+                relation.isSet
+              )
+                return;
+              return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
+            });
+          });
+
+          // 2nd breadth-width pass to do nested load hints, this will fan out at the sibling level.
+          // i.e. populateLayer(...reviews...) & populateLayer(...comments...)
+          return Promise.all(loadPromises).then(() => {
+            // Each of these keys will be fanning out to a new entity, like book -> reviews or book -> comments
+            const nestedLoadPromises = Object.entries(layerHint).map(([key, tree]) => {
+              if (Object.keys(tree.subHints).length === 0) return;
+
+              // Get the children we found, i.e. [a1, a2, a3] -> all of their books
+              const childrenByParent = new Map(
+                [...tree.entities].map((entity) => [entity, toArray(getEvenDeleted((entity as any)[key]))]),
+              );
+              if (childrenByParent.size === 0) return;
+
+              // Children will be all books, for all of `[a1, a2, a3]`, but only the books of `a2` need to recurse
+              // into `book: reviews` and only the books of `a3` need to recurse into `book: comments`
+              const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
+
+              // Rewrite our tree.entities to be the next layer of children
+              function rewrite(tree: HintTree) {
+                Object.values(tree).forEach((node) => {
+                  node.entities = new Set(
+                    Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),
+                  );
+                  rewrite(node.subHints);
+                });
+              }
+              rewrite(tree.subHints);
+
+              return populateLayer(nextMeta, tree.subHints);
+            });
+            return Promise.all(nestedLoadPromises);
+          });
         }
 
-        // One breadth-width pass to ensure each relation is loaded
-        const loadPromises = list.flatMap((entity) => {
-          return hints.map(([key]) => {
-            const relation = (entity as any)[key];
-            if (!relation || typeof relation.load !== "function") {
-              throw new Error(`Invalid load hint '${key}' on ${entity}`);
-            }
-            // If we're populating a hasPersistedAsyncProperty, and find an upstream
-            // property that we ourselves depend on, don't bother loading it if it's
-            // already been calculated (i.e. we have no reason to believe its value
-            // is stale, so we should avoid pulling all of its data into memory).
-            //
-            // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
-            // then go ahead and call `.load()` so that the downstream reactive calc can
-            // call `.get` to evaluate its derived value.
-            if (
-              (opts as any).isPersistedAsyncPropertyLoad &&
-              relation instanceof PersistedAsyncPropertyImpl &&
-              relation.isSet
-            )
-              return;
-            return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
-          });
-        });
-
-        // 2nd breadth-width pass to do nested load hints
-        return Promise.all(loadPromises).then(() => {
-          const nestedLoadPromises = hints.map(([key, nestedHint]) => {
-            if (Object.keys(nestedHint).length === 0) return;
-            // Unique for good measure?...
-            const children = [...new Set(list.map((entity) => toArray(getEvenDeleted((entity as any)[key]))).flat())];
-            if (children.length === 0) return;
-            return this.populate(children, { hint: nestedHint, ...opts });
-          });
-          // After the nested hints are done, echo back the original now-loaded list
-          return Promise.all(nestedLoadPromises).then(() => batch);
-        });
+        const rootMeta = getMetadata(getConstructorFromTaggedId(batchKey));
+        await populateLayer(rootMeta, buildHintTree(populates));
+        // After the nested hints are done, echo back the original now-loaded list
+        return populates.map(() => 0 as any);
       },
       // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
       // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely
@@ -999,7 +1024,7 @@ export class EntityManager<C = unknown> {
 
     // Purposefully use `then` instead of `async` as an optimization; avoid using loader.loadMany so
     // that we don't have to check its allSettled-style `Array<V | Error>` return value for errors.
-    return Promise.all(list.map((entity) => loader.load(entity))).then(() =>
+    return Promise.all(list.map((entity) => loader.load({ entity, hint: hintOpt }))).then(() =>
       fn ? fn(entityOrList as any) : (entityOrList as any),
     );
   }

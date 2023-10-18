@@ -34,8 +34,12 @@ export interface FieldSerde {
 export interface Column {
   columnName: string;
   dbType: string;
+  /** From the given `__orm.data` hash, return this columns value, i.e. for putting in `UPDATE` params. */
   dbValue(data: any): any;
+  /** For a given domain value, return the database value, i.e. for putting `em.find` params into a db WHERE clause. */
   mapToDb(value: any): any;
+  /** For converting `json_agg`-preloaded JSON values into their domain type. */
+  mapFromJsonAgg(value: any): any;
   isArray: boolean;
 }
 
@@ -68,6 +72,10 @@ export class CustomSerdeAdapter implements FieldSerde {
   mapToDb(value: any): any {
     return value === null ? value : this.mapper.fromDb(value);
   }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : this.mapper.fromDb(value);
+  }
 }
 
 /** Supports `string`, `int`, etc., as well as `string[]`, `int[]`, etc. */
@@ -90,6 +98,12 @@ export class PrimitiveSerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
+    return value;
+  }
+
+  mapFromJsonAgg(value: any): any {
+    if (value === null) return value;
+    if (this.dbType.includes("time")) return new Date(value);
     return value;
   }
 }
@@ -115,6 +129,10 @@ export class BigIntSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return value;
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : BigInt(value);
   }
 }
 
@@ -149,6 +167,10 @@ export class DecimalToNumberSerde implements FieldSerde {
   mapToDb(value: any) {
     return value;
   }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : Number(value);
+  }
 }
 
 /** Maps physical integer keys to logical string IDs "because GraphQL". */
@@ -176,6 +198,10 @@ export class KeySerde implements FieldSerde {
 
   mapToDb(value: any) {
     return value === null ? value : keyToNumber(this.meta, maybeResolveReferenceToId(value));
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : value;
   }
 }
 
@@ -208,6 +234,9 @@ export class PolymorphicKeySerde implements FieldSerde {
       },
       mapToDb(value: any): any {
         return keyToNumber(comp.otherMetadata(), maybeResolveReferenceToId(value));
+      },
+      mapFromJsonAgg(value: any): any {
+        return value === null ? value : value;
       },
     }));
   }
@@ -244,6 +273,10 @@ export class EnumFieldSerde implements FieldSerde {
   mapToDb(value: any) {
     return this.enumObject.findByCode(value)?.id;
   }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : value;
+  }
 }
 
 export class EnumArrayFieldSerde implements FieldSerde {
@@ -267,6 +300,10 @@ export class EnumArrayFieldSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return !value ? [] : value.map((code: any) => this.enumObject.getByCode(code).id);
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : value;
   }
 }
 
@@ -305,6 +342,10 @@ export class SuperstructSerde implements FieldSerde {
   mapToDb(value: any) {
     return JSON.stringify(value);
   }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : value;
+  }
 }
 
 export class JsonSerde implements FieldSerde {
@@ -327,6 +368,10 @@ export class JsonSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return JSON.stringify(value);
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : value;
   }
 }
 
@@ -358,5 +403,9 @@ export class ZodSerde implements FieldSerde {
 
   mapToDb(value: any) {
     return JSON.stringify(value);
+  }
+
+  mapFromJsonAgg(value: any): any {
+    return value === null ? value : value;
   }
 }

@@ -146,7 +146,7 @@ export async function preloadJoins<T extends Entity>(
           // We get back an array of [[1, title], [2, title], [3, title]]
           const children = arrays.map((array) => {
             // Turn the array into a hash for em.hydrate
-            const data = Object.fromEntries(columns.map((c, i) => [c.columnName, array[i]]));
+            const data = Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[i])]));
             const entity = em.hydrate(otherMeta.cstr, data, { overwriteExisting: false });
             // Within each child, look for grandchildren
             subProcessors.forEach((sub, i) => {
@@ -185,7 +185,7 @@ export async function preloadJoins<T extends Entity>(
     .filter((e) => !e.isNewEntity);
   const ids = entities.map((e) => Number(deTagId(e)));
 
-  console.log("PRELOADING", JSON.stringify(tree), sql);
+  // console.log("PRELOADING", JSON.stringify(tree), sql);
   const rows = await em.driver.executeQuery(em, sql, [ids]);
 
   rows.forEach((row, i) => {

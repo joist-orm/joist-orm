@@ -212,7 +212,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
     if (!this._isLoaded) {
       // This should only be callable in the type system if we've already resolved this to an instance
-      throw new Error("get was called when not preloaded");
+      throw new Error("get was called when not loaded");
     }
     return this.loaded;
   }

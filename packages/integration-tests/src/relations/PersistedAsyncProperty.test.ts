@@ -18,9 +18,9 @@ describe("PersistedAsyncProperty", () => {
     const b2 = await em.load(Book, "b:2");
     b2.author.set(a);
     // Then calc it again, it will blow up
-    expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not preloaded");
+    expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not loaded");
     // Even if we try to .load it
-    expect(() => a.numberOfPublicReviews.load()).toThrow("get was called when not preloaded");
+    expect(() => a.numberOfPublicReviews.load()).toThrow("get was called when not loaded");
     // But if we force the load
     expect(await a.numberOfPublicReviews.load({ forceReload: true })).toBe(1);
   });

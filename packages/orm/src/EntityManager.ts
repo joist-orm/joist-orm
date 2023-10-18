@@ -981,7 +981,11 @@ export class EntityManager<C = unknown> {
 
               // Get the children we found, i.e. [a1, a2, a3] -> all of their books
               const childrenByParent = new Map(
-                [...tree.entities].map((entity) => [entity, toArray(getEvenDeleted((entity as any)[key]))]),
+                [...tree.entities].map((entity) => [
+                  entity,
+                  // We might have an addedBeforeLoaded new entity, so re-filter to only existing entities
+                  toArray(getEvenDeleted((entity as any)[key])).filter((e) => !e.isNewEntity),
+                ]),
               );
               if (childrenByParent.size === 0) return;
 

@@ -103,12 +103,11 @@ export async function preloadJoins<T extends Entity>(
         ];
 
         const otherField = otherMeta.allFields[field.otherFieldName];
-        // If `otherField` is missing, this could be a large collection which can't be loaded...
-        if (!otherField) {
-          throw new Error(
-            `Could not find ${otherMeta.tableName}.${field.otherFieldName}, it's probably a large relation`,
-          );
-        }
+        // If `otherField` is missing, this could be a large collection which currently can't be loaded...
+        if (!otherField) return;
+        // throw new Error(
+        //   `Could not find ${otherMeta.tableName}.${field.otherFieldName}, it's probably a large relation`,
+        // );
 
         let m2mAlias: string | undefined;
         if (field.kind === "m2m") {

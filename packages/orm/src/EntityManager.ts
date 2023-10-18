@@ -172,7 +172,7 @@ export class EntityManager<C = unknown> {
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
   #entityIndex: Map<string, Entity> = new Map();
   #isValidating: boolean = false;
-  #pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
+  #pendingChildren: Map<string, Map<string, { adds: Entity[], removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
@@ -1443,7 +1443,7 @@ export class EntityManager<C = unknown> {
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
   /** Map of taggedId -> fieldName -> pending children. */
-  pendingChildren: Map<string, Map<string, Entity[]>>;
+  pendingChildren: Map<string, Map<string, { adds: Entity[], removes: Entity[] }>>;
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;

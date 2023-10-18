@@ -43,6 +43,20 @@ export function remove<T>(array: T[], t: T): void {
   }
 }
 
+export function maybeRemove<T>(array: T[] | undefined, t: T): void {
+  if (array) remove(array, t);
+}
+
+export function maybeAdd<T>(array: T[], t: T): void {
+  if (!array.includes(t)) {
+    array.push(t);
+  }
+}
+
+export function clear<T>(array: T[]): void {
+  array.splice(0, array.length);
+}
+
 /** Returns 0 inclusive to n exclusive. */
 export function zeroTo(n: number): number[] {
   return [...Array(n).keys()];

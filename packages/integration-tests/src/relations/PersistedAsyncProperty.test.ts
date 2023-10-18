@@ -205,7 +205,7 @@ describe("PersistedAsyncProperty", () => {
 
   it("has async derived values triggered on both lazy-loaded old and new value", async () => {
     const em = newEntityManager();
-    // Given a book & author already in the databaseo
+    // Given a book & author already in the database
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     // When we make a new author for b1 (and a1 is not even in the UnitOfWork)

@@ -15,6 +15,7 @@ import {
   setField,
   tagId,
 } from "../index";
+import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
@@ -155,6 +156,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       id = tagId(this.otherMeta, id) as IdOf<U>;
     }
 
+    const previousId = this.idTagged;
     const previous = this.maybeFindEntity();
     const changed = setField(this.#entity, this.fieldName, id);
     if (!changed) {
@@ -163,7 +165,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
     this.loaded = id ? this.#entity.em.getEntity(id) : undefined;
     this._isLoaded = !!this.loaded;
-    this.maybeRemove(previous);
+    this.maybeRemove(previousId, previous);
     this.maybeAdd();
   }
 
@@ -211,6 +213,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       return;
     }
 
+    const previousId = this.idTagged;
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
@@ -222,7 +225,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       this.loaded = other;
       this._isLoaded = true;
     }
-    this.maybeRemove(previous);
+    this.maybeRemove(previousId, previous);
     this.maybeAdd();
   }
 
@@ -270,7 +273,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this._isLoaded = true;
   }
 
-  maybeRemove(other: U | undefined) {
+  maybeRemove(otherId: string | undefined, other: U | undefined) {
     if (other) {
       const prevRelation = this.getOtherRelation(other);
       if (prevRelation instanceof OneToManyCollection) {
@@ -280,6 +283,21 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       } else {
         prevRelation.set(undefined as any, { percolating: true });
       }
+    } else if (otherId) {
+      // Other is not loaded in memory, but cache it in case our other side is later loaded
+      const { em } = this.#entity;
+      let map = getEmInternalApi(em).pendingChildren.get(otherId);
+      if (!map) {
+        map = new Map();
+        getEmInternalApi(em).pendingChildren.set(otherId, map);
+      }
+      let pending = map.get(this.otherFieldName);
+      if (!pending) {
+        pending = { adds: [], removes: [] };
+        map.set(this.otherFieldName, pending);
+      }
+      maybeAdd(pending.removes, this.#entity);
+      maybeRemove(pending.adds, this.#entity);
     }
   }
 
@@ -304,12 +322,13 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
         map = new Map();
         getEmInternalApi(em).pendingChildren.set(id, map);
       }
-      let list = map.get(this.otherFieldName);
-      if (!list) {
-        list = [];
-        map.set(this.otherFieldName, list);
+      let pending = map.get(this.otherFieldName);
+      if (!pending) {
+        pending = { adds: [], removes: [] };
+        map.set(this.otherFieldName, pending);
       }
-      list.push(this.#entity);
+      maybeAdd(pending.adds, this.#entity);
+      maybeRemove(pending.removes, this.#entity);
     }
   }
 

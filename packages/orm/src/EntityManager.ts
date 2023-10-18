@@ -1273,6 +1273,7 @@ export class EntityManager<C = unknown> {
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
     this.#dataloaders = {};
+    this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
       param === undefined ? this.#entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this.#entities;

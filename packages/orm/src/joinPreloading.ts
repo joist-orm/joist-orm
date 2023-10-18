@@ -127,7 +127,7 @@ export async function preloadJoins<T extends Entity>(
         } else if (otherField.kind === "m2m") {
           where = `
             ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias!, otherField.columnNames[1])} AND
-            ${kqDot(m2mAlias!, otherField.columnNames[1])} = ${kqDot(otherAlias, "id")}
+            ${kqDot(m2mAlias!, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
           `;
         } else {
           throw new Error(`Unsupported otherField.kind ${otherField.kind}`);

@@ -75,7 +75,7 @@ export async function preloadJoins<T extends Entity>(
     // Join in SQL-able hints from parent
     Object.entries(tree).forEach(([key, subTree]) => {
       const field = parentMeta.allFields[key];
-      // AsyncProperties don't have fields
+      // AsyncProperties don't have fields, which is fine, skip for now...
       if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
         const otherMeta = field.otherMetadata();
         // We don't support preloading tables with inheritance yet
@@ -105,14 +105,6 @@ export async function preloadJoins<T extends Entity>(
         const otherField = otherMeta.allFields[field.otherFieldName];
         // If `otherField` is missing, this could be a large collection which currently can't be loaded...
         if (!otherField) return;
-        // throw new Error(
-        //   `Could not find ${otherMeta.tableName}.${field.otherFieldName}, it's probably a large relation`,
-        // );
-
-        let m2mAlias: string | undefined;
-        if (field.kind === "m2m") {
-          m2mAlias = getAlias(field.joinTableName);
-        }
 
         let where: string;
         if (otherField.kind === "m2o") {
@@ -124,9 +116,14 @@ export async function preloadJoins<T extends Entity>(
         } else if (otherField.kind === "o2m") {
           where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
         } else if (otherField.kind === "m2m") {
+          const m2mAlias = getAlias(otherField.joinTableName);
+          // Get the m2m row's id to track in JoinRows
+          selects.unshift(kqDot(m2mAlias, "id"));
+          // Sneak in m2m join into subJoins
+          subJoins.unshift(`, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`);
           where = `
-            ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias!, otherField.columnNames[1])} AND
-            ${kqDot(m2mAlias!, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
+            ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias, otherField.columnNames[1])} AND
+            ${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
           `;
         } else {
           throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
@@ -136,7 +133,6 @@ export async function preloadJoins<T extends Entity>(
           cross join lateral (
             select json_agg(json_build_array(${selects.join(", ")})) as _
             from ${kq(otherMeta.tableName)} ${kq(otherAlias)}
-            ${field.kind === "m2m" ? `, ${kq(field.joinTableName)} ${kq(m2mAlias!)}` : ""}
             ${subJoins.join("\n")}
             where ${where}
           ) ${kq(otherAlias)}
@@ -145,15 +141,26 @@ export async function preloadJoins<T extends Entity>(
         processors.push((parent, arrays) => {
           // We get back an array of [[1, title], [2, title], [3, title]]
           const children = arrays.map((array) => {
+            // If we've snuck the m2m row id into the json arry, ignore it
+            const m2mOffset = field.kind === "m2m" ? 1 : 0;
             // Turn the array into a hash for em.hydrate
-            const data = Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[i])]));
+            const data = Object.fromEntries(
+              columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]),
+            );
             const entity = em.hydrate(otherMeta.cstr, data, { overwriteExisting: false });
+            // Tell the internal JoinRow booking-keeping about this m2m row
+            if (field.kind === "m2m") {
+              const m2m = (parent as any)[key];
+              getEmInternalApi(em)
+                .joinRows(m2m)
+                .addExisting(m2m, array[0] as any, parent, entity);
+            }
             // Within each child, look for grandchildren
             subProcessors.forEach((sub, i) => {
               // array[i] could be null if there are no grandchildren, but still call `sub` to
               // process it so that we store the empty array into the em.joinLoadedRelations, to
               // avoid the relation.load method later doing a SQL for rows we know are not there.
-              sub(entity, (array[columns.length + i] as any) ?? []);
+              sub(entity, (array[m2mOffset + columns.length + i] as any) ?? []);
             });
             return entity;
           });

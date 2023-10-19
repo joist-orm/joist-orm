@@ -2,7 +2,7 @@ import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
-import { deTagId } from "./keys";
+import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
 import { LoadHint } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
@@ -190,7 +190,7 @@ export async function preloadJoins<T extends Entity>(
   const entities = Object.values(tree)
     .flatMap((hint) => [...hint.entities])
     .filter((e) => !e.isNewEntity);
-  const ids = entities.map((e) => Number(deTagId(e)));
+  const ids = entities.map((e) => keyToNumber(meta, e.id));
 
   // console.log("PRELOADING", JSON.stringify(tree), sql);
   const rows = await em.driver.executeQuery(em, sql, [ids]);

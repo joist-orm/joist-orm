@@ -155,11 +155,9 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     if (!this._isLoaded || opts.forceReload) {
       if (!this.#entity.isNewEntity) {
         const joinLoaded = this.getPreloaded();
-        if (joinLoaded) {
-          this.loaded = joinLoaded[0];
-        } else {
-          this.loaded = await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
-        }
+        this.loaded = joinLoaded
+          ? joinLoaded[0]
+          : await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
       }
       this._isLoaded = true;
     }

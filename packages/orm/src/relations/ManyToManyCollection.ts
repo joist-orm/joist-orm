@@ -75,13 +75,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
-      const joinLoaded = this.getPreloaded();
-      if (joinLoaded) {
-        this.loaded = joinLoaded;
-      } else {
-        const key = `${this.columnName}=${this.#entity.id}`;
-        this.loaded = await manyToManyDataLoader(this.#entity.em, this).load(key);
-      }
+      const key = `${this.columnName}=${this.#entity.id}`;
+      this.loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.#entity.em, this).load(key));
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;

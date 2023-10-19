@@ -1,3 +1,10 @@
+# [1.113.0](https://github.com/stephenh/joist-ts/compare/v1.112.4...v1.113.0) (2023-10-19)
+
+
+### Features
+
+* Rename AsyncMethod.get to call. ([#830](https://github.com/stephenh/joist-ts/issues/830)) ([c12dda0](https://github.com/stephenh/joist-ts/commit/c12dda084e22c9e62836283ae66cc69e3e1adc5b))
+
 ## [1.112.4](https://github.com/stephenh/joist-ts/compare/v1.112.3...v1.112.4) (2023-10-17)
 
 

@@ -8,7 +8,7 @@ import styles from "./index.module.css";
 export default function Index(): JSX.Element {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <Layout title="Joist" description="An idiomatic TypeScript ORM that's more than just a query builder">
+    <Layout title="Joist" description="An idiomatic TypeScript ORM for creating great domain models">
       <Header />
       <main>
         <HomepageFeatures />

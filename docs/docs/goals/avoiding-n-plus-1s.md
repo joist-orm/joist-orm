@@ -5,7 +5,7 @@ sidebar_position: 2
 
 Joist is built on Facebook's [dataloader](https://github.com/graphql/dataloader) library, which means Joist avoids N+1s in a fundamental, systematic way that just works.
 
-This solid foundation comes Joist's roots as an ORM for GraphQL backends, which are particularly prone to N+1s (see section below), but is a boon to any system (REST, GRPC, etc.) working with relational data. 
+This foundation comes Joist's roots as an ORM for GraphQL backends, which are particularly prone to N+1s (see below), but is a boon to any system (REST, GRPC, etc.). 
 
 ## N+1s: Lazy Loading in a Loop
 

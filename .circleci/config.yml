@@ -10,7 +10,7 @@ workflows:
       - build:
           matrix:
             parameters:
-              node-version: ["18.0.0", "18.10.0", "20.5.0"]
+              node-version: ["18.0.0", "18.10.0", "20.6.1"]
 
 jobs:
   build:
@@ -48,7 +48,7 @@ jobs:
           condition:
             and:
               - equal: [main, << pipeline.git.branch >>]
-              - equal: ["20.5.0", << parameters.node-version >>]
+              - equal: ["20.6.1", << parameters.node-version >>]
           steps:
             - run:
                 name: Release

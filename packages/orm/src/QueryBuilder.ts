@@ -44,9 +44,5 @@ export function buildQuery<T extends Entity>(
   return buildKnexQuery(knex, parsed, { limit, offset });
 }
 
-export function abbreviation(tableName: string): string {
-  return tableName
-    .split("_")
-    .map((w) => w[0])
-    .join("");
-}
+// Legacy location
+export { abbreviation } from "./AliasAssigner";

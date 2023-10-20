@@ -22,17 +22,13 @@ export function buildKnexQuery(
 ): QueryBuilder<{}, unknown[]> {
   const { limit, offset } = settings;
 
-  // If we're doing o2m joins, add a `DISTINCT` clause to avoid duplicates
-  const needsDistinct = parsed.tables.some((t) => t.join === "outer" && t.distinct !== false);
-
   const asRaw = (t: ParsedTable) => knex.raw(`${kq(t.table)} as ${kq(t.alias)}`);
 
   const primary = parsed.tables.find((t) => t.join === "primary")!;
   let query: Knex.QueryBuilder<any, any> = knex.from(asRaw(primary));
 
-  parsed.selects.forEach((s, i) => {
-    const maybeDistinct = i === 0 && needsDistinct ? "distinct " : "";
-    query.select(knex.raw(`${maybeDistinct}${s}`));
+  parsed.selects.forEach((s) => {
+    query.select(knex.raw(s));
   });
 
   parsed.tables.forEach((t) => {
@@ -61,13 +57,23 @@ export function buildKnexQuery(
     });
 
   parsed.orderBys &&
-    parsed.orderBys.forEach(({ alias, column, order }) => {
-      // If we're doing "select distinct" for o2m joins, then all order bys must be selects
-      if (needsDistinct) {
-        query.select(`${alias}.${column}`);
+    parsed.orderBys.forEach((orderBy) => {
+      if (orderBy.kind === "column") {
+        const { alias, column, order } = orderBy;
+        // If we're doing "select distinct" for o2m joins, then all order bys must be selects
+        // if (needsDistinct) query.select(`${alias}.${column}`);
+        query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
+      } else if (orderBy.kind === "expression") {
+        // if (needsDistinct) query.select(knex.raw(orderBy.expression.expression));
+        query.orderBy(knex.raw(orderBy.expression.expression) as any, orderBy.order);
+      } else {
+        assertNever(orderBy);
       }
-      query.orderBy(knex.raw(kqDot(alias, column)) as any, order);
     });
+
+  if (parsed.groupBys) {
+    for (const groupBy of parsed.groupBys) query.groupByRaw(groupBy);
+  }
 
   if (limit) {
     query.limit(limit);

@@ -32,7 +32,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       conditions: [
         { alias, column: collection.otherColumnName, dbType: meta.idType, cond: { kind: "in", value: keys } },
       ],
-      orderBys: [{ alias, column: "id", order: "ASC" }],
+      orderBys: [{ kind: "column", alias, column: "id", order: "ASC" }],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

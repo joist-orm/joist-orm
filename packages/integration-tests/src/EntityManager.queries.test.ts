@@ -19,6 +19,7 @@ import {
   UniqueFilter,
   alias,
   aliases,
+  exp,
   getMetadata,
   jan1,
   jan2,
@@ -218,6 +219,7 @@ describe("EntityManager.queries", () => {
       ],
       conditions: [{ alias: "p", column: "name", dbType: "character varying", cond: { kind: "eq", value: "p2" } }],
       orderBys: expect.anything(),
+      groupBys: expect.anything(),
     });
   });
 
@@ -608,6 +610,7 @@ describe("EntityManager.queries", () => {
         { alias: "b", column: "title", order: "ASC" },
         { alias: "b", column: "id", order: "ASC" },
       ],
+      groupBys: ["b.id"],
     });
   });
 
@@ -1295,6 +1298,27 @@ describe("EntityManager.queries", () => {
         { alias: "a", column: "id", order: "ASC" },
       ],
     });
+  });
+
+  it("can order by aggregate expression", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertPublisher({ id: 2, name: "p2" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1, age: 30 });
+    await insertAuthor({ first_name: "a2", publisher_id: 2, age: 20 });
+    await insertAuthor({ first_name: "a3", publisher_id: 2, age: 20 });
+    await insertComment({ parent_publisher_id: 1, text: "c1" });
+    await insertComment({ parent_publisher_id: 1, text: "c2" });
+    await insertComment({ parent_publisher_id: 2, text: "c3" });
+
+    const em = newEntityManager();
+    const a = alias(Author);
+    const [p2, p1] = await em.find(
+      Publisher,
+      { authors: a, comments: { text: { like: "c%" } } },
+      { orderBy: [exp`SUM(DISTINCT ON (${a.id}) ${a.age})`, "DESC"] },
+    );
+    expect(p2.name).toBe("p2");
+    expect(p1.name).toBe("p1");
   });
 
   it("can find empty results in a loop", async () => {

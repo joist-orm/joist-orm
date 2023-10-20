@@ -1,4 +1,5 @@
 import { groupBy } from "joist-utils";
+import { AliasAssigner } from "./AliasAssigner";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
 import { PolymorphicField, PolymorphicFieldComponent, getMetadata } from "./EntityMetadata";
@@ -9,14 +10,16 @@ import { fail } from "./utils";
 
 /** Creates an alias for complex filtering against `T`. */
 export function alias<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
-  return newAliasProxy(cstr);
+  const assigner = new AliasAssigner();
+  return newAliasProxy(cstr, assigner);
 }
 
 /** Creates multiple aliases for complex filtering. */
 export function aliases<T extends readonly MaybeAbstractEntityConstructor<any>[]>(
   ...type: T
 ): { [P in keyof T]: T[P] extends MaybeAbstractEntityConstructor<infer E extends Entity> ? Alias<E> : never } {
-  return type.map((t) => newAliasProxy(t)) as any;
+  const assigner = new AliasAssigner();
+  return type.map((t) => newAliasProxy(t, assigner)) as any;
 }
 
 export type Alias<T extends Entity> = {
@@ -52,22 +55,21 @@ export const aliasMgmt = Symbol("aliasMgmt");
 
 /** Management interface for `QueryParser` to set Alias's canonical alias. */
 export interface AliasMgmt {
+  alias: string;
+  assigner: AliasAssigner;
   tableName: string;
-  setAlias(alias: string): void;
 }
 
-export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
+export function newAliasProxy<T extends Entity>(
+  cstr: MaybeAbstractEntityConstructor<T>,
+  assigner: AliasAssigner,
+): Alias<T> {
   const meta = getMetadata(cstr);
-  // Keeps a list of conditions we've created for this specific proxy, so that parseFindQuery
-  // can tell us, after we've been creating via the `const a = alias(Author)` command, which
-  // alias we're actually bound to in the join literal.
-  const conditions: ColumnCondition[] = [];
-  // Give QueryBuilder a hook to assign our actual alias
+  const alias = assigner.getAlias(meta.tableName);
   const mgmt: AliasMgmt = {
+    alias,
+    assigner,
     tableName: meta.tableName,
-    setAlias(newAlias: string) {
-      conditions.forEach((c) => (c.alias = newAlias));
-    },
   };
   return new Proxy(cstr, {
     /** Create a column alias for the given field. */
@@ -80,11 +82,11 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primaryKey":
         case "primitive":
         case "enum":
-          return new PrimitiveAliasImpl(conditions, field.serde!.columns[0]);
+          return new PrimitiveAliasImpl(alias, field.serde!.columns[0]);
         case "m2o":
-          return new EntityAliasImpl(conditions, field.serde!.columns[0]);
+          return new EntityAliasImpl(alias, field.serde!.columns[0]);
         case "poly":
-          return new PolyReferenceAlias(conditions, field);
+          return new PolyReferenceAlias(alias, field);
         default:
           throw new Error(`Unsupported alias field kind ${field.kind}`);
       }
@@ -97,8 +99,13 @@ export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt 
   return obj && typeof obj === "function" && obj[aliasMgmt] !== undefined;
 }
 
-class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V, N> {
-  public constructor(private conditions: ColumnCondition[], private column: Column) {}
+export class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V, N> {
+  private conditions: ColumnCondition[] = [];
+
+  public constructor(
+    public alias: string,
+    public column: Column,
+  ) {}
 
   eq(value: V | N | undefined): ColumnCondition {
     if (value === undefined) {
@@ -162,7 +169,7 @@ class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V,
 
   private addCondition(value: ParsedValueFilter<V>): ColumnCondition {
     const cond: ColumnCondition = {
-      alias: "unset",
+      alias: this.alias,
       column: this.column.columnName,
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
@@ -173,7 +180,12 @@ class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V,
 }
 
 class EntityAliasImpl<T> implements EntityAlias<T> {
-  public constructor(private conditions: ColumnCondition[], private column: Column) {}
+  private conditions: ColumnCondition[] = [];
+
+  public constructor(
+    public alias: string,
+    private column: Column,
+  ) {}
 
   eq(value: T | IdOf<T> | null | undefined): ColumnCondition {
     if (value === undefined) {
@@ -202,7 +214,7 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
 
   private addCondition(value: ParsedValueFilter<T | IdOf<T>>): ColumnCondition {
     const cond: ColumnCondition = {
-      alias: "unset",
+      alias: this.alias,
       column: this.column.columnName,
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
@@ -213,7 +225,12 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
 }
 
 class PolyReferenceAlias<T> {
-  public constructor(private conditions: ColumnCondition[], private field: PolymorphicField) {}
+  private conditions: ColumnCondition[] = [];
+
+  public constructor(
+    public alias: string,
+    private field: PolymorphicField,
+  ) {}
 
   eq(value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
     return this.addEqOrNe("eq", value);

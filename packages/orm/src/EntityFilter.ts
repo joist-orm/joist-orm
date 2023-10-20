@@ -1,13 +1,13 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
 import { FieldsOf, FilterOf, IdOf, OrderOf } from "./EntityManager";
-import { ColumnCondition } from "./QueryParser";
+import { ColumnCondition, ParsedExpression } from "./QueryParser";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
 export type FilterAndSettings<T extends Entity> = {
   where: FilterWithAlias<T>;
   conditions?: ExpressionFilter;
-  orderBy?: OrderOf<T>;
+  orderBy?: OrderOf<T> | [ParsedExpression, OrderBy];
   limit?: number;
   offset?: number;
   softDeletes?: "exclude" | "include";

@@ -13,7 +13,7 @@ describe("QueryParser", () => {
   it("quotes with abbreviation", () => {
     expect(generateSql(parseFindQuery(bm, { author: { firstName: "jeff", schedules: { id: 4 } } }))).toEqual(
       [
-        'select distinct b.*, "b"."title", "b"."id"',
+        'select b.*, "b"."title", "b"."id"',
         " from books as b",
         " inner join authors as a on b.author_id = a.id",
         ' left outer join author_schedules as "as" on a.id = "as".author_id',
@@ -21,6 +21,7 @@ describe("QueryParser", () => {
         " and a.deleted_at is null",
         " and a.first_name = ?",
         ' and "as".id = ?',
+        " group by b.id",
         " order by b.title ASC, b.id ASC",
       ].join(""),
     );

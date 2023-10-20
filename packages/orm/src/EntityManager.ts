@@ -28,6 +28,8 @@ import {
   Lens,
   ManyToManyCollection,
   OneToManyCollection,
+  OrderBy,
+  ParsedExpression,
   PartialOrNull,
   PolymorphicReferenceImpl,
   UniqueFilter,
@@ -55,7 +57,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import {MaybePromise, assertNever, fail, getOrSet, toArray, groupBy, indexBy} from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -77,7 +79,7 @@ export interface EntityConstructor<T> {
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
 export interface FindFilterOptions<T extends Entity> {
   conditions?: ExpressionFilter;
-  orderBy?: OrderOf<T>;
+  orderBy?: OrderOf<T> | [ParsedExpression, OrderBy];
   softDeletes?: "include" | "exclude";
 }
 

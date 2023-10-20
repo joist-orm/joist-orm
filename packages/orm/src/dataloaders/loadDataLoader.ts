@@ -22,7 +22,7 @@ export function loadDataLoader<T extends Entity>(
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: keys } }],
-      orderBys: [{ alias, column: "id", order: "ASC" }],
+      orderBys: [{ kind: "column", alias, column: "id", order: "ASC" }],
     };
 
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

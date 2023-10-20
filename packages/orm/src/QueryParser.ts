@@ -1,10 +1,10 @@
 import { isPlainObject } from "is-plain-object";
 import { groupBy } from "joist-utils";
-import { aliasMgmt, isAlias } from "./Aliases";
+import { AliasAssigner } from "./AliasAssigner";
+import { aliasMgmt, isAlias, PrimitiveAlias, PrimitiveAliasImpl } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
-import { abbreviation } from "./QueryBuilder";
 import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
@@ -47,11 +47,57 @@ export interface JoinTable {
 
 export type ParsedTable = PrimaryTable | JoinTable;
 
-export interface ParsedOrderBy {
+/** A tuple of simple alias+column ordering. */
+export interface ParsedColumnOrderBy {
+  kind: "column";
   alias: string;
   column: string;
   order: OrderBy;
 }
+
+/** A user-provided expression order `SUM(${alias}.amount) > 1000` desc. */
+export interface ParsedExpressionOrderBy {
+  kind: "expression";
+  expression: ParsedExpression;
+  order: OrderBy;
+}
+
+/** A user-provided expression like `SUM(${alias}.amount) > 1000`. */
+export interface ParsedExpression {
+  /** The aliases, i.e. `[a, b]`, used within the expression. */
+  aliases: string[];
+  /** The columns, i.e. `a.first_name`, used within the expression. */
+  columns: string[];
+  /** The expression itself, i.e. `SUM(a.age) DESC`. */
+  expression: string;
+}
+
+/** Creates a `ParsedExpression` of an expression + the aliases/columns used within it. */
+export function exp(
+  literals: TemplateStringsArray,
+  ...placeholders: ReadonlyArray<PrimitiveAlias<any, any>>
+): ParsedExpression {
+  const aliases = new Set<string>();
+  const columns = new Set<string>();
+  let expression = "";
+  // interleave the literals with the placeholders
+  for (let i = 0; i < placeholders.length; i++) {
+    const p = placeholders[i];
+    if (p instanceof PrimitiveAliasImpl) {
+      const column = kqDot(p.alias, p.column.columnName);
+      expression += literals[i];
+      expression += column;
+      aliases.add(p.alias);
+      columns.add(column);
+    }
+  }
+  // add the last literal
+  expression += literals[literals.length - 1];
+  return { aliases: [...aliases], columns: [...columns], expression };
+}
+
+/** The order bys for a query, either simple `alias.column` or user-provided expressions. */
+export type ParsedOrderBy = ParsedColumnOrderBy | ParsedExpressionOrderBy;
 
 /** The result of parsing an `em.find` filter. */
 export interface ParsedFindQuery {
@@ -64,6 +110,8 @@ export interface ParsedFindQuery {
   complexConditions?: ParsedExpressionFilter[];
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
+  /** Any option group bys, i.e. `[a.id, a_s0.id]`, only added if we're joining into children. */
+  groupBys?: string[];
 }
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
@@ -92,12 +140,15 @@ export function parseFindQuery(
     keepAliases = [],
   } = opts;
 
-  const aliases: Record<string, number> = {};
-  function getAlias(tableName: string): string {
-    const abbrev = abbreviation(tableName);
-    const i = aliases[abbrev] || 0;
-    aliases[abbrev] = i + 1;
-    return i === 0 ? abbrev : `${abbrev}${i}`;
+  const assigner = AliasAssigner.findOrCreate([filter]);
+  // If the user has a `{ as: a }` or just `{ books: b }` alias, use it
+  function findOrCreateAlias(meta: EntityMetadata<any>, filter: any): string {
+    if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
+      return filter.as[aliasMgmt].alias;
+    } else if (isAlias(filter)) {
+      return filter[aliasMgmt].alias;
+    }
+    return assigner.getAlias(meta.tableName);
   }
 
   function filterSoftDeletes(meta: EntityMetadata<any>): boolean {
@@ -144,16 +195,6 @@ export function parseFindQuery(
 
     maybeAddNotSoftDeleted(meta, alias);
 
-    // The user's locally declared aliases, i.e. `const [a, b] = aliases(Author, Book)`,
-    // aren't guaranteed to line up with the aliases we've assigned internally, like `a`
-    // might actually be `a1` if there are two `authors` tables in the query, so push the
-    // canonical alias value for the current clause into the Alias.
-    if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      filter.as[aliasMgmt].setAlias(alias);
-    } else if (isAlias(filter)) {
-      filter[aliasMgmt].setAlias(alias);
-    }
-
     if (ef && ef.kind === "join") {
       // subFilter really means we're matching against the entity columns/further joins
       Object.keys(ef.subFilter).forEach((key) => {
@@ -176,7 +217,7 @@ export function parseFindQuery(
           const sub = (ef.subFilter as any)[key];
           const joinKind = field.required && join !== "outer" ? "inner" : "outer";
           if (isAlias(sub)) {
-            const a = getAlias(field.otherMetadata().tableName);
+            const a = findOrCreateAlias(field.otherMetadata(), sub);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
@@ -184,7 +225,7 @@ export function parseFindQuery(
           if (!f) {
             // skip
           } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
-            const a = getAlias(field.otherMetadata().tableName);
+            const a = findOrCreateAlias(field.otherMetadata(), sub);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
             conditions.push({
@@ -246,7 +287,7 @@ export function parseFindQuery(
           }
         } else if (field.kind === "o2o") {
           // We have to always join into o2os, i.e. we can't probe the filter like we do for m2os
-          const a = getAlias(field.otherMetadata().tableName);
+          const a = findOrCreateAlias(field.otherMetadata(), (ef.subFilter as any)[key]);
           const otherColumn = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
           addTable(
             field.otherMetadata(),
@@ -257,7 +298,7 @@ export function parseFindQuery(
             (ef.subFilter as any)[key],
           );
         } else if (field.kind === "o2m") {
-          const a = getAlias(field.otherMetadata().tableName);
+          const a = findOrCreateAlias(field.otherMetadata(), (ef.subFilter as any)[key]);
           const otherField = field.otherMetadata().allFields[field.otherFieldName];
           let otherColumn = otherField.serde!.columns[0].columnName;
           // If the other field is a poly, we need to find the right column
@@ -278,7 +319,7 @@ export function parseFindQuery(
           );
         } else if (field.kind === "m2m") {
           // Always join into the m2m table
-          const ja = getAlias(field.joinTableName);
+          const ja = assigner.getAlias(field.joinTableName);
           tables.push({
             alias: ja,
             join: "outer",
@@ -289,7 +330,7 @@ export function parseFindQuery(
           // But conditionally join into the alias table
           const sub = (ef.subFilter as any)[key];
           if (isAlias(sub)) {
-            const a = getAlias(field.otherMetadata().tableName);
+            const a = findOrCreateAlias(field.otherMetadata(), sub);
             addTable(field.otherMetadata(), a, "outer", kqDot(ja, field.columnNames[1]), kqDot(a, "id"), sub);
           }
           const f = parseEntityFilter(field.otherMetadata(), sub);
@@ -297,7 +338,7 @@ export function parseFindQuery(
           if (!f) {
             // skip
           } else if (f.kind === "join" || filterSoftDeletes(field.otherMetadata())) {
-            const a = getAlias(field.otherMetadata().tableName);
+            const a = findOrCreateAlias(field.otherMetadata(), (ef.subFilter as any)[key]);
             addTable(
               field.otherMetadata(),
               a,
@@ -341,6 +382,7 @@ export function parseFindQuery(
       if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
         const column = field.serde.columns[0];
         orderBys.push({
+          kind: "column",
           alias: `${alias}${field.aliasSuffix ?? ""}`,
           column: column.columnName,
           order: value as OrderBy,
@@ -352,7 +394,8 @@ export function parseFindQuery(
           addOrderBy(field.otherMetadata(), table.alias, value);
         } else {
           const table = field.otherMetadata().tableName;
-          const a = getAlias(table);
+          // do we need to look for an existing?
+          const a = assigner.getAlias(table);
           const column = field.serde.columns[0].columnName;
           // If we don't have a join, don't force this to be an inner join
           tables.push({
@@ -372,19 +415,36 @@ export function parseFindQuery(
   }
 
   // always add the main table
-  const alias = getAlias(meta.tableName);
+  const alias = findOrCreateAlias(meta, filter);
   selects.push(`${kq(alias)}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
+
+  // Look for `condition: ...` complex where clauses
   if (expression) {
     const parsed = parseExpression(expression);
     if (parsed) {
       complexConditions.push(parsed);
     }
   }
+
+  // Look for `orderBy: { name: "desc" }` or `orderBy: exp...`
+  let expressionBasedOrderBy = false;
   if (orderBy) {
-    addOrderBy(meta, alias, orderBy);
+    if (Array.isArray(orderBy)) {
+      orderBys.push({ kind: "expression", expression: orderBy[0], order: orderBy[1] });
+      expressionBasedOrderBy = true;
+    } else {
+      addOrderBy(meta, alias, orderBy);
+    }
   }
   maybeAddOrderBy(query, meta, alias);
+
+  const needsGroupBy = query.tables.some((t) => t.join === "outer" && t.distinct !== false) || expressionBasedOrderBy;
+  if (needsGroupBy) {
+    Object.assign(query, {
+      groupBys: [kqDot(alias, "id"), ...getTablePerClassGroupBys(meta, alias)],
+    });
+  }
 
   if (complexConditions.length > 0) {
     Object.assign(query, { complexConditions });
@@ -401,7 +461,15 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
   parsed.conditions.filter((c) => !c.pruneable).forEach((c) => used.add(c.alias));
-  parsed.orderBys.forEach((o) => used.add(o.alias));
+  parsed.orderBys.forEach((o) => {
+    if (o.kind === "expression") {
+      for (const a of o.expression.aliases) used.add(a);
+    } else if (o.kind === "column") {
+      used.add(o.alias);
+    } else {
+      assertNever(o);
+    }
+  });
   keepAliases.forEach((a) => used.add(a));
   flattenComplexConditions(parsed.complexConditions).forEach((c) => used.add(c.alias));
   // Mark all usages via joins
@@ -695,22 +763,37 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
   }
 }
 
-/** Adds any user-configured default order, plus a "always order by id" for determinism. */
+/**
+ * Adds any user-configured default order, plus an "always order by id" for determinism.
+ *
+ * These will always come after any `find`-specific finds, so shouldn't change the user-requested order.
+ */
 export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any>, alias: string): void {
   const { orderBys } = query;
   if (meta.orderBy) {
     const field = meta.allFields[meta.orderBy] ?? fail(`${meta.orderBy} not found on ${meta.tableName}`);
     const column = field.serde!.columns[0].columnName;
-    const hasAlready = orderBys.find((o) => o.alias === alias && o.column === column);
+    const hasAlready = orderBys.find((o) => o.kind === "column" && o.alias === alias && o.column === column);
     if (!hasAlready) {
-      orderBys.push({ alias, column, order: "ASC" });
+      orderBys.push({ kind: "column", alias, column, order: "ASC" });
     }
   }
   // Even if they already added orders, add id as the last one to get deterministic output
-  const hasIdOrder = orderBys.find((o) => o.alias === alias && o.column === "id");
+  const hasIdOrder = orderBys.find((o) => o.kind === "column" && o.alias === alias && o.column === "id");
   if (!hasIdOrder) {
-    orderBys.push({ alias, column: "id", order: "ASC" });
+    orderBys.push({ kind: "column", alias, column: "id", order: "ASC" });
   }
+}
+
+function getTablePerClassGroupBys(meta: EntityMetadata<any>, alias: string): string[] {
+  const groupBys: string[] = [];
+  meta.baseTypes.forEach((_, i) => {
+    groupBys.push(`${alias}_b${i}.id`);
+  });
+  meta.subTypes.forEach((st, i) => {
+    groupBys.push(`${alias}_s${i}.id`);
+  });
+  return groupBys;
 }
 
 export function addTablePerClassJoinsAndClassTag(

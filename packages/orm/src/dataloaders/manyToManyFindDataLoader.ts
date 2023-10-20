@@ -63,7 +63,7 @@ async function load<T extends Entity, U extends Entity>(
         }),
       },
     ],
-    orderBys: [{ alias, column: "id", order: "ASC" }],
+    orderBys: [{ kind: "column", alias, column: "id", order: "ASC" }],
   };
 
   const rows = await em.driver.executeFind(em, query, {});

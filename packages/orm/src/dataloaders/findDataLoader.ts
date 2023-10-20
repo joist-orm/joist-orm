@@ -1,5 +1,6 @@
 import DataLoader from "dataloader";
 import hash from "object-hash";
+import { builders } from "prettier/doc";
 import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
@@ -18,6 +19,7 @@ import {
 } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever, cleanSql } from "../utils";
+import join = builders.join;
 
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
@@ -79,8 +81,14 @@ export function findDataLoader<T extends Entity>(
 
       // Also because of our `array_agg` group by, add any order bys to the group by
       for (const o of query.orderBys) {
-        if (o.alias !== primary.alias) {
-          groupBys.push(kqDot(o.alias, o.column));
+        if (o.kind === "column") {
+          if (o.alias !== primary.alias) {
+            groupBys.push(kqDot(o.alias, o.column));
+          }
+        } else if (o.kind === "expression") {
+          throw new Error("Not implemented");
+        } else {
+          assertNever(o);
         }
       }
 
@@ -91,7 +99,17 @@ export function findDataLoader<T extends Entity>(
         ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
         GROUP BY ${groupBys.join(", ")}
-        ORDER BY ${query.orderBys.map((o) => `${kq(o.alias)}.${o.column} ${o.order}`).join(", ")}
+        ORDER BY ${query.orderBys
+          .map((o) => {
+            if (o.kind === "column") {
+              return `${kq(o.alias)}.${o.column} ${o.order}`;
+            } else if (o.kind === "expression") {
+              throw new Error("Not implemented");
+            } else {
+              assertNever(o);
+            }
+          })
+          .join(", ")}
         LIMIT ${em.entityLimit};
       `;
 

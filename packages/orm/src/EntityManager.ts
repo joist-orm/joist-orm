@@ -979,11 +979,11 @@ export class EntityManager<C = unknown> {
               );
               if (childrenByParent.size === 0) return;
 
-              // Children will be all books, for all of `[a1, a2, a3]`, but only the books of `a2` need to recurse
-              // into `book: reviews` and only the books of `a3` need to recurse into `book: comments`
-              const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
-
-              // Rewrite our tree.entities to be the next layer of children
+              // Rewrite our tree.entities to be the next layer of children, i.e. children will be all books, for all of
+              // `[a1, a2, a3]`, but only the books of `a2` need to recurse into `book: reviews` and only the books of
+              // `a3` need to recurse into `book: comments`, so swap `node.entities` (which is currently authors)
+              // with the books. This is what prevents our dataloader-merged TreeHint from over-fetching and loading
+              // the superset load hint for all entities.
               function rewrite(tree: HintTree) {
                 Object.values(tree).forEach((node) => {
                   node.entities = new Set(
@@ -994,6 +994,7 @@ export class EntityManager<C = unknown> {
               }
               rewrite(tree.subHints);
 
+              const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
               return populateLayer(nextMeta, tree.subHints);
             });
             return Promise.all(nestedLoadPromises);

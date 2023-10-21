@@ -113,17 +113,32 @@ describe("EntityManager.joins", () => {
     expect((l2.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(true);
   });
 
-  it.skip("preloads em.load", async () => {
+  it("preloads em.load", async () => {
     // Given an author with books + reviews
     await insertAuthor({ first_name: "a1" });
     await insertBook({ author_id: 1, title: "b1" });
     await insertBookReview({ book_id: 1, rating: 1 });
     await insertAuthor({ first_name: "a2" });
-
     const em = newEntityManager();
     resetQueryCount();
     const a1 = await em.load(Author, "a:1", { books: "reviews" });
     // Then we issued one query
     expect(queries.length).toEqual(1);
+    expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
+  });
+
+  it("preloads em.loadAll", async () => {
+    // Given an author with books + reviews
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [a1, a2] = await em.loadAll(Author, ["a:1", "a:2"], { books: "reviews" });
+    // Then we issued one query
+    expect(queries.length).toEqual(1);
+    expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
+    expect(a2.books.get.length).toBe(0);
   });
 });

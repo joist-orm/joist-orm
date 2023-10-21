@@ -749,7 +749,8 @@ export class EntityManager<C = unknown> {
     }
     const meta = getMetadata(type);
     const tagged = tagId(meta, id);
-    const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
+    const entity =
+      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load({ entity: tagged, hint }));
     if (!entity) {
       throw new NotFoundError(`${tagged} was not found`);
     }
@@ -775,10 +776,10 @@ export class EntityManager<C = unknown> {
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
+        return this.findExistingInstance(id) || loadDataLoader(this, meta).load({ entity: id, hint });
       }),
     );
-    const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
+    const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
     if (idsNotFound.length > 0) {
       throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
@@ -808,7 +809,7 @@ export class EntityManager<C = unknown> {
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
+          return this.findExistingInstance(id) || loadDataLoader(this, meta).load({ entity: id, hint });
         }),
       )
     ).filter(Boolean);
@@ -934,7 +935,10 @@ export class EntityManager<C = unknown> {
       "populate",
       batchKey,
       async (populates) => {
-        async function populateLayer(layerMeta: EntityMetadata<any> | undefined, layerHint: HintTree): Promise<any[]> {
+        async function populateLayer(
+          layerMeta: EntityMetadata<any> | undefined,
+          layerHint: HintTree<Entity>,
+        ): Promise<any[]> {
           // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
           // needs loading, just load everything
           const anyInThisLayerNeedsLoaded = Object.entries(layerHint).some(([key, hint]) => {
@@ -944,7 +948,7 @@ export class EntityManager<C = unknown> {
           });
           // We may not have a layerMeta if we're going through non-field properties
           if (anyInThisLayerNeedsLoaded && layerMeta) {
-            await preloadJoins(em, layerMeta, layerHint);
+            await preloadJoins(em, layerMeta, layerHint, "populate");
           }
 
           // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded
@@ -984,7 +988,7 @@ export class EntityManager<C = unknown> {
               // `a3` need to recurse into `book: comments`, so swap `node.entities` (which is currently authors)
               // with the books. This is what prevents our dataloader-merged TreeHint from over-fetching and loading
               // the superset load hint for all entities.
-              function rewrite(tree: HintTree) {
+              function rewrite(tree: HintTree<Entity>) {
                 Object.values(tree).forEach((node) => {
                   node.entities = new Set(
                     Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),

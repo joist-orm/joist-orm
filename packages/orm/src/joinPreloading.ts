@@ -6,6 +6,7 @@ import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
 import { LoadHint } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
+import { assertNever, groupBy } from "./utils";
 
 // add the select books clause to authors
 // add the CJL for authors -> books
@@ -18,20 +19,24 @@ import { normalizeHint } from "./normalizeHints";
 //
 // https://sqlfum.pt/?n=60&indent=2&spaces=1&simplify=1&align=0&case=lower&sql=c2VsZWN0IGEuaWQsIGIuXyBhcyBiLCBjMS5fIGFzIGMxLCBhMS5fIGFzIGExIGZyb20gYXV0aG9ycyBhIGNyb3NzIGpvaW4gbGF0ZXJhbCAoIHNlbGVjdCBqc29uX2FnZyhqc29uX2J1aWxkX2FycmF5KGIuaWQsIGIudGl0bGUsIGIuIm9yZGVyIiwgYi5kZWxldGVkX2F0LCBiLmNyZWF0ZWRfYXQsIGIudXBkYXRlZF9hdCwgYi5hdXRob3JfaWQsIGJyLl8pKSBhcyBfIGZyb20gYm9va3MgYiBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShici5pZCwgYnIucmF0aW5nLCBici5pc19wdWJsaWMsIGJyLmlzX3Rlc3QsIGJyLmNyZWF0ZWRfYXQsIGJyLnVwZGF0ZWRfYXQsIGJyLmJvb2tfaWQsIGMuXykpIGFzIF8gZnJvbSBib29rX3Jldmlld3MgYnIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYy5pZCwgYy50ZXh0LCBjLmNyZWF0ZWRfYXQsIGMudXBkYXRlZF9hdCwgYy51c2VyX2lkLCBjLnBhcmVudF9hdXRob3JfaWQsIGMucGFyZW50X2Jvb2tfaWQsIGMucGFyZW50X2Jvb2tfcmV2aWV3X2lkLCBjLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYyB3aGVyZSBjLnBhcmVudF9ib29rX3Jldmlld19pZCA9IGJyLmlkICkgYyB3aGVyZSBici5ib29rX2lkID0gYi5pZCApIGJyIHdoZXJlIGIuYXV0aG9yX2lkID0gYS5pZCApIGIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYzEuaWQsIGMxLnRleHQsIGMxLmNyZWF0ZWRfYXQsIGMxLnVwZGF0ZWRfYXQsIGMxLnVzZXJfaWQsIGMxLnBhcmVudF9hdXRob3JfaWQsIGMxLnBhcmVudF9ib29rX2lkLCBjMS5wYXJlbnRfYm9va19yZXZpZXdfaWQsIGMxLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYzEgd2hlcmUgYzEucGFyZW50X2F1dGhvcl9pZCA9IGEuaWQgKSBjMSBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShhMS5pZCwgYTEuZmlyc3RfbmFtZSwgYTEubGFzdF9uYW1lLCBhMS5zc24sIGExLmluaXRpYWxzLCBhMS5udW1iZXJfb2ZfYm9va3MsIGExLmJvb2tfY29tbWVudHMsIGExLmlzX3BvcHVsYXIsIGExLmFnZSwgYTEuZ3JhZHVhdGVkLCBhMS5uaWNrX25hbWVzLCBhMS53YXNfZXZlcl9wb3B1bGFyLCBhMS5hZGRyZXNzLCBhMS5idXNpbmVzc19hZGRyZXNzLCBhMS5xdW90ZXMsIGExLm51bWJlcl9vZl9hdG9tcywgYTEuZGVsZXRlZF9hdCwgYTEubnVtYmVyX29mX3B1YmxpY19yZXZpZXdzLCBhMS4ibnVtYmVyT2ZQdWJsaWNSZXZpZXdzMiIsIGExLnRhZ3Nfb2ZfYWxsX2Jvb2tzLCBhMS5jcmVhdGVkX2F0LCBhMS51cGRhdGVkX2F0LCBhMS5mYXZvcml0ZV9zaGFwZSwgYTEuZmF2b3JpdGVfY29sb3JzLCBhMS5tZW50b3JfaWQsIGExLmN1cnJlbnRfZHJhZnRfYm9va19pZCwgYTEuZmF2b3JpdGVfYm9va19pZCwgYTEucHVibGlzaGVyX2lkKSkgYXMgXyBmcm9tIGF1dGhvcnMgYTEgd2hlcmUgYTEuaWQgPSBhLm1lbnRvcl9pZCApIGExIHdoZXJlIGEuaWQgPSAxOw%3D%3D
 
-export type HintNode = {
-  /** These entities are always the root entities of our preload, i.e. we use them to trim the tree to prevent over-fetching. */
-  entities: Set<Entity>;
-  subHints: HintTree;
+type EntityOrId = Entity | string;
+
+export type HintNode<T extends EntityOrId> = {
+  /** These entities are the root entities of our preload, i.e. we use them to trim the tree to prevent over-fetching. */
+  entities: Set<T>;
+  subHints: HintTree<T>;
 };
 
-export type HintTree = {
-  [key: string]: HintNode;
+export type HintTree<T extends EntityOrId> = {
+  [key: string]: HintNode<T>;
 };
 
 // Turn `{ author: reviews }` into:
 // { author: { entities: [a1, a2], subHints: { reviews: { entities: [a2], subHints: {} } } } }
-export function buildHintTree(populates: readonly { entity: Entity; hint: LoadHint<any> }[]): HintTree {
-  const rootHint: HintTree = {};
+export function buildHintTree<T extends EntityOrId>(
+  populates: readonly { entity: T; hint: LoadHint<any> }[],
+): HintTree<T> {
+  const rootHint: HintTree<T> = {};
   for (const { entity, hint } of populates) {
     // It's tempting to filter out new entities here, but we need to call `.load()` on their
     // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
@@ -40,7 +45,7 @@ export function buildHintTree(populates: readonly { entity: Entity; hint: LoadHi
   return rootHint;
 }
 
-function populateHintTree(entity: Entity, parent: HintTree, hint: LoadHint<any>) {
+function populateHintTree<T extends EntityOrId>(entity: T, parent: HintTree<T>, hint: LoadHint<any>) {
   for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
     const { entities, subHints } = (parent[key] ??= { entities: new Set(), subHints: {} });
     entities.add(entity);
@@ -56,18 +61,31 @@ function populateHintTree(entity: Entity, parent: HintTree, hint: LoadHint<any>)
  * stash the results in the `EntityManager` `joinLoadedRelations` cache, which
  * each join-instrumented relation will check before making its SQL calls.
  */
-export async function preloadJoins<T extends Entity>(
+export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   em: EntityManager,
   meta: EntityMetadata<T>,
-  tree: HintTree,
-): Promise<void> {
+  tree: HintTree<I>,
+  mode: "populate",
+): Promise<void>;
+export async function preloadJoins<T extends Entity, I extends EntityOrId>(
+  em: EntityManager,
+  meta: EntityMetadata<T>,
+  tree: HintTree<I>,
+  mode: "load",
+): Promise<T[]>;
+export async function preloadJoins<T extends Entity, I extends EntityOrId>(
+  em: EntityManager,
+  meta: EntityMetadata<T>,
+  tree: HintTree<I>,
+  mode: "load" | "populate",
+): Promise<void | T[]> {
   const { getAlias } = new AliasAssigner();
 
   type Processor = (parent: Entity, arrays: unknown[][]) => void;
   type JoinsResult = { aliases: string[]; joins: string[]; processors: Processor[] };
 
   /** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
-  function addJoins(tree: HintTree, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
+  function addJoins(tree: HintTree<I>, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
     const aliases: string[] = [];
     const joins: string[] = [];
     const processors: Processor[] = [];
@@ -179,26 +197,51 @@ export async function preloadJoins<T extends Entity>(
   // We may have not found any SQL-preload-able relations in the load hint
   if (joins.length === 0) return;
 
+  let select;
+  if (mode === "populate") {
+    select = kqDot(alias, "id");
+  } else {
+    select = `${kq(alias)}.*`;
+  }
+
   const sql = `
-    select ${kq(alias)}.id, ${aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`).join(", ")}
+    select ${select}, ${aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`).join(", ")}
     from ${kq(meta.tableName)} ${kq(alias)}
     ${joins.join(" ")}
     where ${kq(alias)}.id = ANY(?)
     order by ${kq(alias)}.id;
   `;
 
-  const entities = Object.values(tree)
+  const ids = Object.values(tree)
     .flatMap((hint) => [...hint.entities])
-    .filter((e) => !e.isNewEntity);
-  const ids = entities.map((e) => keyToNumber(meta, e.id));
+    .filter((e) => typeof e === "string" || !e.isNewEntity)
+    .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id));
 
-  // console.log("PRELOADING", JSON.stringify(tree), sql);
+  console.log("PRELOADING", JSON.stringify(tree), sql);
   const rows = await em.driver.executeQuery(em, sql, [ids]);
 
-  rows.forEach((row, i) => {
-    const parent = entities[i];
-    processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));
-  });
+  if (mode === "populate") {
+    // Don't return anything, just call the processors
+    const entitiesById = groupBy(
+      Object.values(tree)
+        .flatMap((hint) => [...hint.entities])
+        .filter((e) => typeof e !== "string" && !e.isNewEntity) as Entity[],
+      (e) => String(keyToNumber(meta, e.id)),
+    );
+    rows.forEach((row) => {
+      const parent = entitiesById.get(row["id"])![0];
+      processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));
+    });
+  } else if (mode === "load") {
+    const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
+    rows.forEach((row, i) => {
+      const parent = entities[i];
+      processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));
+    });
+    return entities;
+  } else {
+    assertNever(mode);
+  }
 }
 
 class AliasAssigner {

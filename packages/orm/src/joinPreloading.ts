@@ -95,6 +95,8 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
           ...subAliases.map((a) => kqDot(a, "_")),
         ];
 
+        const aliasMaybeSuffix = kq(`${parentAlias}${field.aliasSuffix}`);
+
         let where: string;
         if (otherField.kind === "m2o") {
           where = `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`;
@@ -106,9 +108,9 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
             fail(`No component found for ${field.fieldName} -> ${otherField.fieldName}`);
           where = `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`;
         } else if (otherField.kind === "o2m" || otherField.kind === "lo2m") {
-          where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
+          where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
         } else if (otherField.kind === "o2o") {
-          where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
+          where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
         } else if (otherField.kind === "m2m") {
           const m2mAlias = getAlias(otherField.joinTableName);
           // Get the m2m row's id to track in JoinRows

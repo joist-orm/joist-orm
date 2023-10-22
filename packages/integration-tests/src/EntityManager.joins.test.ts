@@ -161,4 +161,14 @@ describe("EntityManager.joins", () => {
     await em.load(Critic, "c:1", "group");
     expect(queries.length).toBe(1);
   });
+
+  it("preloads m2os where column exists on a base table", async () => {
+    await insertPublisherGroup({ name: "pg1" });
+    await insertLargePublisher({ name: "lp1", group_id: 1 });
+    const em = newEntityManager();
+    resetQueryCount();
+    const lp = await em.load(LargePublisher, "p:1", "group");
+    expect(queries.length).toBe(1);
+    expect(lp.group.get?.name).toBe("pg1");
+  });
 });

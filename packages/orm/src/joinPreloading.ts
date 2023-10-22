@@ -107,6 +107,9 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
         const otherMeta = field.otherMetadata();
         // We don't support preloading tables with inheritance yet
         if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return;
+        // If `otherField` is missing, this could be a large collection which currently can't be loaded...
+        const otherField = otherMeta.allFields[field.otherFieldName];
+        if (!otherField) return;
 
         const otherAlias = getAlias(otherMeta.tableName);
         aliases.push(otherAlias);
@@ -131,10 +134,6 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
           // Combine any grandchilden
           ...subAliases.map((a) => kqDot(a, "_")),
         ];
-
-        const otherField = otherMeta.allFields[field.otherFieldName];
-        // If `otherField` is missing, this could be a large collection which currently can't be loaded...
-        if (!otherField) return;
 
         let where: string;
         if (otherField.kind === "m2o") {
@@ -223,9 +222,11 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
     query.selects.push(kqDot(alias, "id"));
     // We may have not found any SQL-preload-able relations in the load hint
     if (joins.length === 0) return;
-  } else {
+  } else if (mode === "load") {
     query.selects.push(`${kq(alias)}.*`);
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+  } else {
+    assertNever(mode);
   }
 
   // Push `books._ as books`, `comments._ as comments`

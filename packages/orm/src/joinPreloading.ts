@@ -157,7 +157,8 @@ function addJoins<I extends EntityOrId>(
       // If otherField is a poly that points to a sub/base component, we don't support that yet
       if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === parentMeta)) return;
 
-      const otherAlias = getAlias(otherMeta.tableName);
+      // For now use a prefix like `_j_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
+      const otherAlias = `_j_${getAlias(otherMeta.tableName)}`;
       aliases.push(otherAlias);
 
       // Do the recursion up-front, so we can work it into our own join/processor

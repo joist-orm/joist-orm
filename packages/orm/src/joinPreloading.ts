@@ -39,19 +39,20 @@ export function buildHintTree<T extends EntityOrId>(
 ): HintNode<T> {
   const root: HintNode<T> = { entities: new Set(), subHints: {} };
   for (const { entity, hint } of populates) {
-    // It's tempting to filter out new entities here, but we need to call `.load()` on their
-    // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
-    if (hint) populateHintTree(entity, root, hint);
-    root.entities.add(entity);
+    populateHintNode(root, entity, hint);
   }
   return root;
 }
 
-function populateHintTree<T extends EntityOrId>(entity: T, parent: HintNode<T>, hint: LoadHint<any>) {
-  for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
-    const child = (parent.subHints[key] ??= { entities: new Set(), subHints: {} });
-    child.entities.add(entity);
-    if (nestedHint) populateHintTree(entity, child, nestedHint);
+function populateHintNode<T extends EntityOrId>(node: HintNode<T>, entity: T, hint: LoadHint<any> | undefined) {
+  // It's tempting to filter out new entities here, but we need to call `.load()` on their
+  // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
+  node.entities.add(entity);
+  if (hint) {
+    for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
+      const child = (node.subHints[key] ??= { entities: new Set(), subHints: {} });
+      populateHintNode(child, entity, nestedHint);
+    }
   }
 }
 

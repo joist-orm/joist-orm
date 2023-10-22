@@ -238,7 +238,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
     .filter((e) => typeof e === "string" || !e.isNewEntity)
     .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id));
 
-  console.log("PRELOADING", JSON.stringify(root), sql);
+  // console.log("PRELOADING", JSON.stringify(root), sql);
   const rows = await em.driver.executeQuery(em, sql, [...bindings, ids]);
 
   if (mode === "populate") {

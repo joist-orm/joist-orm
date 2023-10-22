@@ -49,7 +49,7 @@ import {
   setOpts,
   tagId,
 } from "./index";
-import { HintNode, HintTree, buildHintTree, preloadJoins } from "./joinPreloading";
+import { HintNode, buildHintTree, preloadJoins } from "./joinPreloading";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
@@ -983,20 +983,18 @@ export class EntityManager<C = unknown> {
               );
               if (childrenByParent.size === 0) return;
 
-              // Rewrite our tree.entities to be the next layer of children, i.e. children will be all books, for all of
+              // Rewrite our node.entities to be the next layer of children, i.e. children will be all books, for all of
               // `[a1, a2, a3]`, but only the books of `a2` need to recurse into `book: reviews` and only the books of
               // `a3` need to recurse into `book: comments`, so swap `node.entities` (which is currently authors)
               // with the books. This is what prevents our dataloader-merged TreeHint from over-fetching and loading
               // the superset load hint for all entities.
-              function rewrite(tree: HintTree<Entity>) {
-                Object.values(tree).forEach((node) => {
-                  node.entities = new Set(
-                    Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),
-                  );
-                  rewrite(node.subHints);
-                });
+              function rewrite(node: HintNode<Entity>) {
+                node.entities = new Set(
+                  Array.from(node.entities).flatMap((entity) => childrenByParent.get(entity) ?? []),
+                );
+                Object.values(node.subHints).forEach((node) => rewrite(node));
               }
-              rewrite(tree.subHints);
+              rewrite(tree);
 
               const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
               return populateLayer(nextMeta, tree);

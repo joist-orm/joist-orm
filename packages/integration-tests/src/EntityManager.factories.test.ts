@@ -23,7 +23,7 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { maybeNew, maybeNewPoly, newTestInstance, testIndex } from "joist-orm";
-import { newEntityManager } from "./setupDbTests";
+import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
@@ -558,10 +558,13 @@ describe("EntityManager.factories", () => {
     newBook(em2, { author: await em2.load(Author, "a:1"), reviews: [{ rating: 2 }] });
     await em2.flush();
     // When our original em refreshes
+    resetQueryCount();
     await em.refresh({ deepLoad: true });
     // Then both books are deeply loaded
     expect(a.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a.books.get[1].reviews.get[0].rating).toBe(2);
+    // And it took only 9 queries (vs. 27 without join preloading)
+    expect(queries.length).toBe(9);
   });
 
   it("uniquely assigns name fields", async () => {

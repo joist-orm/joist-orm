@@ -102,6 +102,8 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
           where = `${kqDot(otherAlias, comp!.columnName)} = ${kqDot(parentAlias, "id")}`;
         } else if (otherField.kind === "o2m") {
           where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
+        } else if (otherField.kind === "o2o") {
+          where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
         } else if (otherField.kind === "m2m") {
           const m2mAlias = getAlias(otherField.joinTableName);
           // Get the m2m row's id to track in JoinRows

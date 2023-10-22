@@ -505,10 +505,12 @@ describe("EntityManager", () => {
     // And a new join row is added by someone else
     await insertTag({ name: "t2" });
     await insertBookToTag({ tag_id: 2, book_id: 1 });
+    resetQueryCount();
     // When we refresh the entity
     await em.refresh(b1);
     // Then we have the new data
     expect(b1.tags.get!.length).toEqual(2);
+    expect(queries.length).toBe(1);
   });
 
   it("refresh an entity with a loaded PersistedAsyncReference", async () => {

@@ -347,6 +347,10 @@ export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
   return Object.values(entity).filter((v: any) => v instanceof AbstractRelationImpl);
 }
 
+export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
+  return Object.entries(entity).filter(([_, v]: any) => v instanceof AbstractRelationImpl);
+}
+
 export function getConstructorFromTaggedId(id: string): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);

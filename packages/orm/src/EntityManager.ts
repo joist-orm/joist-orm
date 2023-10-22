@@ -42,6 +42,7 @@ import {
   getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
+  getRelationEntries,
   getRelations,
   keyToString,
   loadLens,
@@ -1277,13 +1278,16 @@ export class EntityManager<C = unknown> {
       copy.forEach((e) => done.add(e));
       todo = [];
 
-      // Clear the original cached loader result and fetch the new primitives
       const entities = await Promise.all(
         copy
           .filter((e) => e.idTaggedMaybe)
-          .map((entity) =>
-            loadDataLoader(this, getMetadata(entity)).load({ entity: entity.idTagged, hint: undefined }),
-          ),
+          .map((entity) => {
+            // Pass these as a hint to potentially preload them
+            const hint = getRelationEntries(entity)
+              .filter(([_, r]) => deepLoad || r.isLoaded)
+              .map(([k]) => k);
+            return loadDataLoader(this, getMetadata(entity)).load({ entity: entity.idTagged, hint });
+          }),
       );
 
       // Then refresh any non-deleted loaded collections

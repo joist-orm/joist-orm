@@ -171,4 +171,15 @@ describe("EntityManager.joins", () => {
     expect(queries.length).toBe(1);
     expect(lp.group.get?.name).toBe("pg1");
   });
+
+  it("doesn't deadlock", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    await Promise.all([
+      //
+      a1.favoriteBook.load(),
+      em.populate(a1, ["favoriteBook", "books"]),
+    ]);
+  });
 });

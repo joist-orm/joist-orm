@@ -6,7 +6,7 @@ import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
 import { LoadHint } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
-import { assertNever, groupBy } from "./utils";
+import { assertNever, indexBy } from "./utils";
 
 // add the select books clause to authors
 // add the CJL for authors -> books
@@ -34,15 +34,18 @@ export type HintTree<T extends EntityOrId> = {
 // Turn `{ author: reviews }` into:
 // { author: { entities: [a1, a2], subHints: { reviews: { entities: [a2], subHints: {} } } } }
 export function buildHintTree<T extends EntityOrId>(
-  populates: readonly { entity: T; hint: LoadHint<any> }[],
-): HintTree<T> {
-  const rootHint: HintTree<T> = {};
+  populates: readonly { entity: T; hint: LoadHint<any> | undefined }[],
+): HintNode<T> {
+  const root: HintNode<T> = { entities: new Set(), subHints: {} };
   for (const { entity, hint } of populates) {
     // It's tempting to filter out new entities here, but we need to call `.load()` on their
     // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
-    populateHintTree(entity, rootHint, hint);
+    if (hint) {
+      populateHintTree(entity, root.subHints, hint);
+    }
+    root.entities.add(entity);
   }
-  return rootHint;
+  return root;
 }
 
 function populateHintTree<T extends EntityOrId>(entity: T, parent: HintTree<T>, hint: LoadHint<any>) {
@@ -64,19 +67,19 @@ function populateHintTree<T extends EntityOrId>(entity: T, parent: HintTree<T>, 
 export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   em: EntityManager,
   meta: EntityMetadata<T>,
-  tree: HintTree<I>,
+  tree: HintNode<I>,
   mode: "populate",
 ): Promise<void>;
 export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   em: EntityManager,
   meta: EntityMetadata<T>,
-  tree: HintTree<I>,
+  tree: HintNode<I>,
   mode: "load",
 ): Promise<T[]>;
 export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   em: EntityManager,
   meta: EntityMetadata<T>,
-  tree: HintTree<I>,
+  root: HintNode<I>,
   mode: "load" | "populate",
 ): Promise<void | T[]> {
   const { getAlias } = new AliasAssigner();
@@ -102,7 +105,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
         const otherAlias = getAlias(otherMeta.tableName);
         aliases.push(otherAlias);
 
-        // Do this up-front, so we can work it into our own join/processor
+        // Do the recursion up-front, so we can work it into our own join/processor
         const {
           aliases: subAliases,
           joins: subJoins,
@@ -146,6 +149,8 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
         } else {
           throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
         }
+
+        const needsSubSelect = subTree.entities.size !== root.entities.size;
 
         joins.push(`
           cross join lateral (
@@ -192,44 +197,41 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   }
 
   const alias = getAlias(meta.tableName);
-  const { aliases, joins, processors } = addJoins(tree, alias, meta);
-
-  // We may have not found any SQL-preload-able relations in the load hint
-  if (joins.length === 0) return;
+  const { aliases, joins, processors } = addJoins(root.subHints, alias, meta);
 
   let select;
   if (mode === "populate") {
     select = kqDot(alias, "id");
+    // We may have not found any SQL-preload-able relations in the load hint
+    if (joins.length === 0) return;
   } else {
     select = `${kq(alias)}.*`;
+    // add the class table joins
   }
 
   const sql = `
-    select ${select}, ${aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`).join(", ")}
+    select ${[select, ...aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`)].join(", ")}
     from ${kq(meta.tableName)} ${kq(alias)}
     ${joins.join(" ")}
     where ${kq(alias)}.id = ANY(?)
     order by ${kq(alias)}.id;
   `;
 
-  const ids = Object.values(tree)
-    .flatMap((hint) => [...hint.entities])
+  const ids = [...root.entities]
     .filter((e) => typeof e === "string" || !e.isNewEntity)
     .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id));
 
-  console.log("PRELOADING", JSON.stringify(tree), sql);
+  console.log("PRELOADING", JSON.stringify(root), sql);
   const rows = await em.driver.executeQuery(em, sql, [ids]);
 
   if (mode === "populate") {
-    // Don't return anything, just call the processors
-    const entitiesById = groupBy(
-      Object.values(tree)
-        .flatMap((hint) => [...hint.entities])
-        .filter((e) => typeof e !== "string" && !e.isNewEntity) as Entity[],
-      (e) => String(keyToNumber(meta, e.id)),
+    // B/c this is populate, don't return anything (new entities), just call the processors
+    const entitiesById = indexBy(
+      [...root.entities].filter((e) => typeof e !== "string" && !e.isNewEntity) as Entity[],
+      (e) => keyToNumber(meta, e.id),
     );
     rows.forEach((row) => {
-      const parent = entitiesById.get(row["id"])![0];
+      const parent = entitiesById.get(row["id"])!;
       processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));
     });
   } else if (mode === "load") {

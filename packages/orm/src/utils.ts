@@ -62,8 +62,8 @@ export function zeroTo(n: number): number[] {
   return [...Array(n).keys()];
 }
 
-export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x: T) => Y): Map<string, Y[]> {
-  const result = new Map<string, Y[]>();
+export function groupBy<T, Y = T, K = string>(list: T[], fn: (x: T) => K, valueFn?: (x: T) => Y): Map<K, Y[]> {
+  const result = new Map<K, Y[]>();
   list.forEach((o) => {
     const group = fn(o);
     if (!result.has(group)) {
@@ -74,8 +74,8 @@ export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
   return result;
 }
 
-export function indexBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x: T) => Y): Map<string, Y> {
-  const result = new Map<string, Y>();
+export function indexBy<T, Y = T, K = string>(list: T[], fn: (x: T) => K, valueFn?: (x: T) => Y): Map<K, Y> {
+  const result = new Map<K, Y>();
   list.forEach((o) => {
     const group = fn(o);
     result.set(group, valueFn === undefined ? (o as any as Y) : valueFn(o));

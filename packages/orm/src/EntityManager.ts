@@ -49,7 +49,7 @@ import {
   setOpts,
   tagId,
 } from "./index";
-import { HintTree, buildHintTree, preloadJoins } from "./joinPreloading";
+import { HintNode, HintTree, buildHintTree, preloadJoins } from "./joinPreloading";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
@@ -937,22 +937,22 @@ export class EntityManager<C = unknown> {
       async (populates) => {
         async function populateLayer(
           layerMeta: EntityMetadata<any> | undefined,
-          layerHint: HintTree<Entity>,
+          layerNode: HintNode<Entity>,
         ): Promise<any[]> {
           // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
           // needs loading, just load everything
-          const anyInThisLayerNeedsLoaded = Object.entries(layerHint).some(([key, hint]) => {
+          const anyInThisLayerNeedsLoaded = Object.entries(layerNode.subHints).some(([key, hint]) => {
             return [...hint.entities].some(
               (entity: any) => !!entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded,
             );
           });
           // We may not have a layerMeta if we're going through non-field properties
           if (anyInThisLayerNeedsLoaded && layerMeta) {
-            await preloadJoins(em, layerMeta, layerHint, "populate");
+            await preloadJoins(em, layerMeta, layerNode, "populate");
           }
 
           // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded
-          const loadPromises = Object.entries(layerHint).flatMap(([key, tree]) => {
+          const loadPromises = Object.entries(layerNode.subHints).flatMap(([key, tree]) => {
             return [...tree.entities].map((entity) => {
               const relation = (entity as any)[key];
               if (!relation || typeof relation.load !== "function") {
@@ -974,7 +974,7 @@ export class EntityManager<C = unknown> {
           // i.e. populateLayer(...reviews...) & populateLayer(...comments...)
           return Promise.all(loadPromises).then(() => {
             // Each of these keys will be fanning out to a new entity, like book -> reviews or book -> comments
-            const nestedLoadPromises = Object.entries(layerHint).map(([key, tree]) => {
+            const nestedLoadPromises = Object.entries(layerNode.subHints).map(([key, tree]) => {
               if (Object.keys(tree.subHints).length === 0) return;
 
               // Get the children we found, i.e. [a1, a2, a3] -> all of their books
@@ -999,7 +999,7 @@ export class EntityManager<C = unknown> {
               rewrite(tree.subHints);
 
               const nextMeta = (layerMeta?.allFields[key] as any)?.otherMetadata?.();
-              return populateLayer(nextMeta, tree.subHints);
+              return populateLayer(nextMeta, tree);
             });
             return Promise.all(nestedLoadPromises);
           });

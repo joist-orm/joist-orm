@@ -100,6 +100,9 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
       processors.forEach((p, i) => p(parent as I, parent, row[aliases[i]] ?? []));
     });
   } else if (mode === "load") {
+    // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us,
+    // and we should only be getting here if the row wasn't already loaded in the EM. Note that in the preload
+    // processors, we do use `overwriteExisting: false` to avoid writing over WIP changes while hooking up relations.
     const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
     rows.forEach((row, i) => {
       const parent = entities[i];
@@ -111,12 +114,18 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   }
 }
 
+/** Decodes an array-of-arrays of children entries, and stores them the `parent`'s relation. */
 type Processor<I extends EntityOrId> = (root: I, parent: Entity, arrays: unknown[][]) => void;
 
+/** Any preload-loadable joins, potentially nested. */
 type JoinsResult<I extends EntityOrId> = {
+  /** The aliases for this level's json-array-d column, i.e. `b._` or `c._`. */
   aliases: string[];
+  /** The SQL for this level's lateral joins, which themselves might have recursive lateral joins. */
   joins: string[];
+  /** The processors for this level's lateral joins, which themselves might recursively processor subjoins. */
   processors: Processor<I>[];
+  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
   bindings: any[];
 };
 

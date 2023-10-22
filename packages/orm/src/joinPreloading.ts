@@ -19,6 +19,10 @@ import { assertNever, indexBy } from "./utils";
 //
 // https://sqlfum.pt/?n=60&indent=2&spaces=1&simplify=1&align=0&case=lower&sql=c2VsZWN0IGEuaWQsIGIuXyBhcyBiLCBjMS5fIGFzIGMxLCBhMS5fIGFzIGExIGZyb20gYXV0aG9ycyBhIGNyb3NzIGpvaW4gbGF0ZXJhbCAoIHNlbGVjdCBqc29uX2FnZyhqc29uX2J1aWxkX2FycmF5KGIuaWQsIGIudGl0bGUsIGIuIm9yZGVyIiwgYi5kZWxldGVkX2F0LCBiLmNyZWF0ZWRfYXQsIGIudXBkYXRlZF9hdCwgYi5hdXRob3JfaWQsIGJyLl8pKSBhcyBfIGZyb20gYm9va3MgYiBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShici5pZCwgYnIucmF0aW5nLCBici5pc19wdWJsaWMsIGJyLmlzX3Rlc3QsIGJyLmNyZWF0ZWRfYXQsIGJyLnVwZGF0ZWRfYXQsIGJyLmJvb2tfaWQsIGMuXykpIGFzIF8gZnJvbSBib29rX3Jldmlld3MgYnIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYy5pZCwgYy50ZXh0LCBjLmNyZWF0ZWRfYXQsIGMudXBkYXRlZF9hdCwgYy51c2VyX2lkLCBjLnBhcmVudF9hdXRob3JfaWQsIGMucGFyZW50X2Jvb2tfaWQsIGMucGFyZW50X2Jvb2tfcmV2aWV3X2lkLCBjLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYyB3aGVyZSBjLnBhcmVudF9ib29rX3Jldmlld19pZCA9IGJyLmlkICkgYyB3aGVyZSBici5ib29rX2lkID0gYi5pZCApIGJyIHdoZXJlIGIuYXV0aG9yX2lkID0gYS5pZCApIGIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYzEuaWQsIGMxLnRleHQsIGMxLmNyZWF0ZWRfYXQsIGMxLnVwZGF0ZWRfYXQsIGMxLnVzZXJfaWQsIGMxLnBhcmVudF9hdXRob3JfaWQsIGMxLnBhcmVudF9ib29rX2lkLCBjMS5wYXJlbnRfYm9va19yZXZpZXdfaWQsIGMxLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYzEgd2hlcmUgYzEucGFyZW50X2F1dGhvcl9pZCA9IGEuaWQgKSBjMSBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShhMS5pZCwgYTEuZmlyc3RfbmFtZSwgYTEubGFzdF9uYW1lLCBhMS5zc24sIGExLmluaXRpYWxzLCBhMS5udW1iZXJfb2ZfYm9va3MsIGExLmJvb2tfY29tbWVudHMsIGExLmlzX3BvcHVsYXIsIGExLmFnZSwgYTEuZ3JhZHVhdGVkLCBhMS5uaWNrX25hbWVzLCBhMS53YXNfZXZlcl9wb3B1bGFyLCBhMS5hZGRyZXNzLCBhMS5idXNpbmVzc19hZGRyZXNzLCBhMS5xdW90ZXMsIGExLm51bWJlcl9vZl9hdG9tcywgYTEuZGVsZXRlZF9hdCwgYTEubnVtYmVyX29mX3B1YmxpY19yZXZpZXdzLCBhMS4ibnVtYmVyT2ZQdWJsaWNSZXZpZXdzMiIsIGExLnRhZ3Nfb2ZfYWxsX2Jvb2tzLCBhMS5jcmVhdGVkX2F0LCBhMS51cGRhdGVkX2F0LCBhMS5mYXZvcml0ZV9zaGFwZSwgYTEuZmF2b3JpdGVfY29sb3JzLCBhMS5tZW50b3JfaWQsIGExLmN1cnJlbnRfZHJhZnRfYm9va19pZCwgYTEuZmF2b3JpdGVfYm9va19pZCwgYTEucHVibGlzaGVyX2lkKSkgYXMgXyBmcm9tIGF1dGhvcnMgYTEgd2hlcmUgYTEuaWQgPSBhLm1lbnRvcl9pZCApIGExIHdoZXJlIGEuaWQgPSAxOw%3D%3D
 
+// We support preloading in `populate` with existing entities, or `load` with just ids.
+// (We could ask `populate` to convert its entities to ids, but it's convenient for it
+// to keep the HintTree populated with Entities so that newly-created entities can have
+// their collections marked as loaded.
 type EntityOrId = Entity | string;
 
 export type HintNode<T extends EntityOrId> = {
@@ -84,14 +88,15 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
 ): Promise<void | T[]> {
   const { getAlias } = new AliasAssigner();
 
-  type Processor = (parent: Entity, arrays: unknown[][]) => void;
-  type JoinsResult = { aliases: string[]; joins: string[]; processors: Processor[] };
+  type Processor = (root: I, parent: Entity, arrays: unknown[][]) => void;
+  type JoinsResult = { aliases: string[]; joins: string[]; processors: Processor[]; bindings: any[] };
 
   /** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
   function addJoins(tree: HintTree<I>, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
     const aliases: string[] = [];
     const joins: string[] = [];
     const processors: Processor[] = [];
+    const bindings: any[] = [];
 
     // Join in SQL-able hints from parent
     Object.entries(tree).forEach(([key, subTree]) => {
@@ -110,7 +115,10 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
           aliases: subAliases,
           joins: subJoins,
           processors: subProcessors,
+          bindings: subBindings,
         } = addJoins(subTree.subHints, otherAlias, otherMeta);
+
+        bindings.push(...subBindings);
 
         // Get all fields with serdes and flatten out the columns
         const columns = Object.values(otherMeta.allFields)
@@ -151,6 +159,9 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
         }
 
         const needsSubSelect = subTree.entities.size !== root.entities.size;
+        if (needsSubSelect) {
+          bindings.push([...subTree.entities].map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id)));
+        }
 
         joins.push(`
           cross join lateral (
@@ -158,10 +169,16 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
             from ${kq(otherMeta.tableName)} ${kq(otherAlias)}
             ${subJoins.join("\n")}
             where ${where}
+            ${needsSubSelect ? ` AND ${kqDot(alias, "id")} = ANY(?)` : ""}
           ) ${kq(otherAlias)}
         `);
 
-        processors.push((parent, arrays) => {
+        processors.push((root, parent, arrays) => {
+          // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
+          // we're processing the arrays of comments, but for a root author like `a2` that didn't ask for our load
+          // hint, then skip it to keep the relation unloaded.
+          if (!subTree.entities.has(root)) return;
+
           // We get back an array of [[1, title], [2, title], [3, title]]
           const children = arrays.map((array) => {
             // If we've snuck the m2m row id into the json arry, ignore it
@@ -183,7 +200,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
               // array[i] could be null if there are no grandchildren, but still call `sub` to
               // process it so that we store the empty array into the em.joinLoadedRelations, to
               // avoid the relation.load method later doing a SQL for rows we know are not there.
-              sub(entity, (array[m2mOffset + columns.length + i] as any) ?? []);
+              sub(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
             });
             return entity;
           });
@@ -193,11 +210,11 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
       }
     });
 
-    return { aliases, joins, processors };
+    return { aliases, joins, processors, bindings };
   }
 
   const alias = getAlias(meta.tableName);
-  const { aliases, joins, processors } = addJoins(root.subHints, alias, meta);
+  const { aliases, joins, processors, bindings } = addJoins(root.subHints, alias, meta);
 
   let select;
   if (mode === "populate") {
@@ -222,7 +239,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
     .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id));
 
   console.log("PRELOADING", JSON.stringify(root), sql);
-  const rows = await em.driver.executeQuery(em, sql, [ids]);
+  const rows = await em.driver.executeQuery(em, sql, [...bindings, ids]);
 
   if (mode === "populate") {
     // B/c this is populate, don't return anything (new entities), just call the processors
@@ -232,13 +249,13 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
     );
     rows.forEach((row) => {
       const parent = entitiesById.get(row["id"])!;
-      processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));
+      processors.forEach((p, i) => p(parent as I, parent, row[aliases[i]] ?? []));
     });
   } else if (mode === "load") {
     const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
     rows.forEach((row, i) => {
       const parent = entities[i];
-      processors.forEach((p, i) => p(parent, row[aliases[i]] ?? []));
+      processors.forEach((p, i) => p(parent.id as I, parent, row[aliases[i]] ?? []));
     });
     return entities;
   } else {

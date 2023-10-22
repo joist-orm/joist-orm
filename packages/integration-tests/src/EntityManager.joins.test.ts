@@ -110,7 +110,7 @@ describe("EntityManager.joins", () => {
     // But we didn't load a2 -> books -> reviews -> comment
     expect(l2.books.get[0].reviews.get[0].comment.isLoaded).toBe(false);
     // And also it was not preloaded (...currently it is b/c we're some join filtering)
-    expect((l2.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(true);
+    expect((l2.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(false);
   });
 
   it("preloads em.load", async () => {

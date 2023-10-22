@@ -14,8 +14,29 @@ export type HintNode<T extends EntityOrId> = {
   subHints: { [key: string]: HintNode<T> };
 };
 
-// Turn `{ author: reviews }` into:
-// { author: { entities: [a1, a2], subHints: { reviews: { entities: [a2], subHints: {} } } } }
+/**
+ * Given a number of potentially overlapping load hints, i.e. `{ authors: "books" }` and
+ * `{ authors: "reviews" }`, combines them into a single `HintNode` tree, with bookkeeping
+ * of which entities requested each specific node of the tree.
+ *
+ * I.e. if we're populating three publishers, two with `{ authors: "books" }` and one with
+ * `{ authors: "reviews" }`, we'll end up with a tree like:
+ *
+ * ```
+ *  {
+ *    authors: {
+ *      entities: [p1, p2, p3],
+ *      subHints: {
+ *        books: { entities: [p1, p2], subHints: {} },
+ *        reviews: { entities: [p3], subHints: {} },
+ *      }
+ *    }
+ *  }
+ * ```
+ *
+ * Which will let us preload `authors` for all three publishers, but `books` only for the
+ * first two, and `reviews` only for the third, i.e. we can prevent over-fetching.
+ */
 export function buildHintTree<T extends EntityOrId>(
   populates: readonly { entity: T; hint: LoadHint<any> | undefined }[],
 ): HintNode<T> {

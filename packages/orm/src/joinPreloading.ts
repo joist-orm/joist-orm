@@ -4,7 +4,7 @@ import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { EntityOrId, HintNode } from "./HintTree";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, joinClauses } from "./QueryParser";
-import { keyToNumber } from "./keys";
+import { keyToNumber, keyToString } from "./keys";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, indexBy } from "./utils";
 
@@ -240,11 +240,16 @@ function addJoins<I extends EntityOrId>(
         const children = arrays.map((array) => {
           // If we've snuck the m2m row id into the json arry, ignore it
           const m2mOffset = field.kind === "m2m" ? 1 : 0;
-          // Turn the array into a hash for em.hydrate
-          const data = Object.fromEntries(
-            columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]),
-          );
-          const entity = em.hydrate(otherMeta.cstr, data, { overwriteExisting: false });
+          const taggedId = keyToString(otherMeta, array[m2mOffset])!;
+          const entity =
+            em.findExistingInstance<Entity>(taggedId) ??
+            (em.hydrate(
+              otherMeta.cstr,
+              // Turn the array into a hash for em.hydrate
+              Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])])),
+              // When em.refreshing this should be true?
+              { overwriteExisting: false },
+            ) as Entity);
           // Tell the internal JoinRow booking-keeping about this m2m row
           if (field.kind === "m2m") {
             const m2m = (parent as any)[key];

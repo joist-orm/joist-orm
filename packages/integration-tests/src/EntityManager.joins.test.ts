@@ -179,7 +179,7 @@ describe("EntityManager.joins", () => {
     await Promise.all([
       //
       a1.favoriteBook.load(),
-      em.populate(a1, ["favoriteBook", "books"]),
+      em.populate(a1, "favoriteBook"),
     ]);
   });
 });

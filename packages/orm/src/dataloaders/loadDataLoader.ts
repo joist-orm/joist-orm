@@ -2,7 +2,8 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
-import { buildHintTree, preloadJoins } from "../joinPreloading";
+import { buildHintTree } from "../HintTree";
+import { preloadJoins } from "../joinPreloading";
 import { LoadHint } from "../loadHints";
 import { indexBy } from "../utils";
 

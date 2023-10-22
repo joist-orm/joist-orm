@@ -29,11 +29,7 @@ type EntityOrId = Entity | string;
 export type HintNode<T extends EntityOrId> = {
   /** These entities are the root entities of our preload, i.e. we use them to trim the tree to prevent over-fetching. */
   entities: Set<T>;
-  subHints: HintTree<T>;
-};
-
-export type HintTree<T extends EntityOrId> = {
-  [key: string]: HintNode<T>;
+  subHints: { [key: string]: HintNode<T> };
 };
 
 // Turn `{ author: reviews }` into:
@@ -45,19 +41,17 @@ export function buildHintTree<T extends EntityOrId>(
   for (const { entity, hint } of populates) {
     // It's tempting to filter out new entities here, but we need to call `.load()` on their
     // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
-    if (hint) {
-      populateHintTree(entity, root.subHints, hint);
-    }
+    if (hint) populateHintTree(entity, root, hint);
     root.entities.add(entity);
   }
   return root;
 }
 
-function populateHintTree<T extends EntityOrId>(entity: T, parent: HintTree<T>, hint: LoadHint<any>) {
+function populateHintTree<T extends EntityOrId>(entity: T, parent: HintNode<T>, hint: LoadHint<any>) {
   for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
-    const { entities, subHints } = (parent[key] ??= { entities: new Set(), subHints: {} });
-    entities.add(entity);
-    if (nestedHint) populateHintTree(entity, subHints, nestedHint);
+    const child = (parent.subHints[key] ??= { entities: new Set(), subHints: {} });
+    child.entities.add(entity);
+    if (nestedHint) populateHintTree(entity, child, nestedHint);
   }
 }
 
@@ -93,14 +87,14 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   type JoinsResult = { aliases: string[]; joins: string[]; processors: Processor[]; bindings: any[] };
 
   /** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
-  function addJoins(tree: HintTree<I>, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
+  function addJoins(tree: HintNode<I>, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
     const aliases: string[] = [];
     const joins: string[] = [];
     const processors: Processor[] = [];
     const bindings: any[] = [];
 
     // Join in SQL-able hints from parent
-    Object.entries(tree).forEach(([key, subTree]) => {
+    Object.entries(tree.subHints).forEach(([key, subTree]) => {
       const field = parentMeta.allFields[key];
       // AsyncProperties don't have fields, which is fine, skip for now...
       if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
@@ -120,7 +114,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
           joins: subJoins,
           processors: subProcessors,
           bindings: subBindings,
-        } = addJoins(subTree.subHints, otherAlias, otherMeta);
+        } = addJoins(subTree, otherAlias, otherMeta);
 
         bindings.push(...subBindings);
 
@@ -218,7 +212,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   }
 
   const alias = getAlias(meta.tableName);
-  const { aliases, joins, processors, bindings } = addJoins(root.subHints, alias, meta);
+  const { aliases, joins, processors, bindings } = addJoins(root, alias, meta);
 
   // Create a ParsedFindQuery to reuse addTablePerClassJoinsAndClassTag
   const query: ParsedFindQuery = { selects: [], tables: [], conditions: [], orderBys: [] };

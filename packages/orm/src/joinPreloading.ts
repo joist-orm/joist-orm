@@ -1,12 +1,11 @@
 import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
+import { EntityOrId, HintNode } from "./HintTree";
 import { abbreviation } from "./QueryBuilder";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, joinClauses } from "./QueryParser";
 import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
-import { LoadHint } from "./loadHints";
-import { normalizeHint } from "./normalizeHints";
 import { assertNever, indexBy } from "./utils";
 
 // add the select books clause to authors
@@ -19,42 +18,6 @@ import { assertNever, indexBy } from "./utils";
 //   build the json_build_array for comments
 //
 // https://sqlfum.pt/?n=60&indent=2&spaces=1&simplify=1&align=0&case=lower&sql=c2VsZWN0IGEuaWQsIGIuXyBhcyBiLCBjMS5fIGFzIGMxLCBhMS5fIGFzIGExIGZyb20gYXV0aG9ycyBhIGNyb3NzIGpvaW4gbGF0ZXJhbCAoIHNlbGVjdCBqc29uX2FnZyhqc29uX2J1aWxkX2FycmF5KGIuaWQsIGIudGl0bGUsIGIuIm9yZGVyIiwgYi5kZWxldGVkX2F0LCBiLmNyZWF0ZWRfYXQsIGIudXBkYXRlZF9hdCwgYi5hdXRob3JfaWQsIGJyLl8pKSBhcyBfIGZyb20gYm9va3MgYiBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShici5pZCwgYnIucmF0aW5nLCBici5pc19wdWJsaWMsIGJyLmlzX3Rlc3QsIGJyLmNyZWF0ZWRfYXQsIGJyLnVwZGF0ZWRfYXQsIGJyLmJvb2tfaWQsIGMuXykpIGFzIF8gZnJvbSBib29rX3Jldmlld3MgYnIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYy5pZCwgYy50ZXh0LCBjLmNyZWF0ZWRfYXQsIGMudXBkYXRlZF9hdCwgYy51c2VyX2lkLCBjLnBhcmVudF9hdXRob3JfaWQsIGMucGFyZW50X2Jvb2tfaWQsIGMucGFyZW50X2Jvb2tfcmV2aWV3X2lkLCBjLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYyB3aGVyZSBjLnBhcmVudF9ib29rX3Jldmlld19pZCA9IGJyLmlkICkgYyB3aGVyZSBici5ib29rX2lkID0gYi5pZCApIGJyIHdoZXJlIGIuYXV0aG9yX2lkID0gYS5pZCApIGIgY3Jvc3Mgam9pbiBsYXRlcmFsICggc2VsZWN0IGpzb25fYWdnKGpzb25fYnVpbGRfYXJyYXkoYzEuaWQsIGMxLnRleHQsIGMxLmNyZWF0ZWRfYXQsIGMxLnVwZGF0ZWRfYXQsIGMxLnVzZXJfaWQsIGMxLnBhcmVudF9hdXRob3JfaWQsIGMxLnBhcmVudF9ib29rX2lkLCBjMS5wYXJlbnRfYm9va19yZXZpZXdfaWQsIGMxLnBhcmVudF9wdWJsaXNoZXJfaWQpKSBhcyBfIGZyb20gY29tbWVudHMgYzEgd2hlcmUgYzEucGFyZW50X2F1dGhvcl9pZCA9IGEuaWQgKSBjMSBjcm9zcyBqb2luIGxhdGVyYWwgKCBzZWxlY3QganNvbl9hZ2coanNvbl9idWlsZF9hcnJheShhMS5pZCwgYTEuZmlyc3RfbmFtZSwgYTEubGFzdF9uYW1lLCBhMS5zc24sIGExLmluaXRpYWxzLCBhMS5udW1iZXJfb2ZfYm9va3MsIGExLmJvb2tfY29tbWVudHMsIGExLmlzX3BvcHVsYXIsIGExLmFnZSwgYTEuZ3JhZHVhdGVkLCBhMS5uaWNrX25hbWVzLCBhMS53YXNfZXZlcl9wb3B1bGFyLCBhMS5hZGRyZXNzLCBhMS5idXNpbmVzc19hZGRyZXNzLCBhMS5xdW90ZXMsIGExLm51bWJlcl9vZl9hdG9tcywgYTEuZGVsZXRlZF9hdCwgYTEubnVtYmVyX29mX3B1YmxpY19yZXZpZXdzLCBhMS4ibnVtYmVyT2ZQdWJsaWNSZXZpZXdzMiIsIGExLnRhZ3Nfb2ZfYWxsX2Jvb2tzLCBhMS5jcmVhdGVkX2F0LCBhMS51cGRhdGVkX2F0LCBhMS5mYXZvcml0ZV9zaGFwZSwgYTEuZmF2b3JpdGVfY29sb3JzLCBhMS5tZW50b3JfaWQsIGExLmN1cnJlbnRfZHJhZnRfYm9va19pZCwgYTEuZmF2b3JpdGVfYm9va19pZCwgYTEucHVibGlzaGVyX2lkKSkgYXMgXyBmcm9tIGF1dGhvcnMgYTEgd2hlcmUgYTEuaWQgPSBhLm1lbnRvcl9pZCApIGExIHdoZXJlIGEuaWQgPSAxOw%3D%3D
-
-// We support preloading in `populate` with existing entities, or `load` with just ids.
-// (We could ask `populate` to convert its entities to ids, but it's convenient for it
-// to keep the HintTree populated with Entities so that newly-created entities can have
-// their collections marked as loaded.
-type EntityOrId = Entity | string;
-
-export type HintNode<T extends EntityOrId> = {
-  /** These entities are the root entities of our preload, i.e. we use them to trim the tree to prevent over-fetching. */
-  entities: Set<T>;
-  subHints: { [key: string]: HintNode<T> };
-};
-
-// Turn `{ author: reviews }` into:
-// { author: { entities: [a1, a2], subHints: { reviews: { entities: [a2], subHints: {} } } } }
-export function buildHintTree<T extends EntityOrId>(
-  populates: readonly { entity: T; hint: LoadHint<any> | undefined }[],
-): HintNode<T> {
-  const root: HintNode<T> = { entities: new Set(), subHints: {} };
-  for (const { entity, hint } of populates) {
-    populateHintNode(root, entity, hint);
-  }
-  return root;
-}
-
-function populateHintNode<T extends EntityOrId>(node: HintNode<T>, entity: T, hint: LoadHint<any> | undefined) {
-  // It's tempting to filter out new entities here, but we need to call `.load()` on their
-  // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
-  node.entities.add(entity);
-  if (hint) {
-    for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
-      const child = (node.subHints[key] ??= { entities: new Set(), subHints: {} });
-      populateHintNode(child, entity, nestedHint);
-    }
-  }
-}
 
 /**
  * For a given hint tree `hint`, finds all SQL-able relations and preloads them.

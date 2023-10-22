@@ -2,6 +2,7 @@ import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
 import { Entity, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
+import { HintNode, buildHintTree } from "./HintTree";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo, Todo, combineJoinRows, createTodos } from "./Todo";
@@ -49,7 +50,7 @@ import {
   setOpts,
   tagId,
 } from "./index";
-import { HintNode, buildHintTree, preloadJoins } from "./joinPreloading";
+import { preloadJoins } from "./joinPreloading";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";

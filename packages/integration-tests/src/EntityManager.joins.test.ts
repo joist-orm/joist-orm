@@ -4,10 +4,11 @@ import {
   insertBookReview,
   insertBookToTag,
   insertComment,
+  insertLargePublisher,
   insertTag,
   update,
 } from "@src/entities/inserts";
-import { Author, Book } from "./entities";
+import { Author, Book, LargePublisher } from "./entities";
 import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.joins", () => {
@@ -140,5 +141,13 @@ describe("EntityManager.joins", () => {
     expect(queries.length).toEqual(1);
     expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a2.books.get.length).toBe(0);
+  });
+
+  it("does not yet preload polys with subclasses", async () => {
+    await insertLargePublisher({ name: "p1" });
+    const em = newEntityManager();
+    resetQueryCount();
+    await em.load(LargePublisher, "p:1", "comments");
+    expect(queries.length).toBe(2);
   });
 });

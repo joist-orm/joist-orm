@@ -6,7 +6,7 @@ import { abbreviation } from "./QueryBuilder";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, joinClauses } from "./QueryParser";
 import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
-import { assertNever, indexBy } from "./utils";
+import { assertNever, fail, indexBy } from "./utils";
 
 // add the select books clause to authors
 // add the CJL for authors -> books
@@ -68,6 +68,8 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
         // If `otherField` is missing, this could be a large collection which currently can't be loaded...
         const otherField = otherMeta.allFields[field.otherFieldName];
         if (!otherField) return;
+        // If otherField is a poly that points to a sub/base component, we don't support that yet
+        if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === parentMeta)) return;
 
         const otherAlias = getAlias(otherMeta.tableName);
         aliases.push(otherAlias);
@@ -98,8 +100,11 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
           where = `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`;
         } else if (otherField.kind === "poly") {
           // Get the component that points to us
-          const comp = otherField.components.find((c) => c.otherMetadata().cstr === parentMeta.cstr);
-          where = `${kqDot(otherAlias, comp!.columnName)} = ${kqDot(parentAlias, "id")}`;
+          // const comp = otherField.components.find((c) => getAllMetas(parentMeta).some((m) => m.cstr === c.otherMetadata().cstr)) ??
+          const comp =
+            otherField.components.find((c) => parentMeta.cstr === c.otherMetadata().cstr) ??
+            fail(`No component found for ${field.fieldName} -> ${otherField.fieldName}`);
+          where = `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`;
         } else if (otherField.kind === "o2m") {
           where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
         } else if (otherField.kind === "o2o") {

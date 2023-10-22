@@ -160,7 +160,11 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
 
         const needsSubSelect = subTree.entities.size !== root.entities.size;
         if (needsSubSelect) {
-          bindings.push([...subTree.entities].map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id)));
+          bindings.push(
+            [...subTree.entities]
+              .filter((e) => typeof e === "string" || !e.isNewEntity)
+              .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id)),
+          );
         }
 
         joins.push(`

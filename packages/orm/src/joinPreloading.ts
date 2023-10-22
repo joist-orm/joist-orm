@@ -2,6 +2,7 @@ import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
+import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, joinClauses } from "./QueryParser";
 import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
 import { LoadHint } from "./loadHints";
@@ -216,19 +217,24 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   const alias = getAlias(meta.tableName);
   const { aliases, joins, processors, bindings } = addJoins(root.subHints, alias, meta);
 
-  let select;
+  // Create a ParsedFindQuery to reuse addTablePerClassJoinsAndClassTag
+  const query: ParsedFindQuery = { selects: [], tables: [], conditions: [], orderBys: [] };
   if (mode === "populate") {
-    select = kqDot(alias, "id");
+    query.selects.push(kqDot(alias, "id"));
     // We may have not found any SQL-preload-able relations in the load hint
     if (joins.length === 0) return;
   } else {
-    select = `${kq(alias)}.*`;
-    // add the class table joins
+    query.selects.push(`${kq(alias)}.*`);
+    addTablePerClassJoinsAndClassTag(query, meta, alias, true);
   }
 
+  // Push `books._ as books`, `comments._ as comments`
+  query.selects.push(...aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`));
+
   const sql = `
-    select ${[select, ...aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`)].join(", ")}
+    select ${query.selects.join(", ")}
     from ${kq(meta.tableName)} ${kq(alias)}
+    ${joinClauses(query.tables).join("\n")}
     ${joins.join(" ")}
     where ${kq(alias)}.id = ANY(?)
     order by ${kq(alias)}.id;

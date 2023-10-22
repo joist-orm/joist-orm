@@ -1,8 +1,8 @@
+import { AliasAssigner } from "./AliasAssigner";
 import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { EntityOrId, HintNode } from "./HintTree";
-import { abbreviation } from "./QueryBuilder";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, joinClauses } from "./QueryParser";
 import { keyToNumber } from "./keys";
 import { kq, kqDot } from "./keywords";
@@ -268,19 +268,4 @@ function addJoins<I extends EntityOrId>(
   });
 
   return { aliases, joins, processors, bindings };
-}
-
-class AliasAssigner {
-  #aliases: Record<string, number> = {};
-
-  constructor() {
-    this.getAlias = this.getAlias.bind(this);
-  }
-
-  getAlias(tableName: string): string {
-    const abbrev = abbreviation(tableName);
-    const i = this.#aliases[abbrev] || 0;
-    this.#aliases[abbrev] = i + 1;
-    return i === 0 ? abbrev : `${abbrev}${i}`;
-  }
 }

@@ -105,7 +105,7 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
             otherField.components.find((c) => parentMeta.cstr === c.otherMetadata().cstr) ??
             fail(`No component found for ${field.fieldName} -> ${otherField.fieldName}`);
           where = `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`;
-        } else if (otherField.kind === "o2m") {
+        } else if (otherField.kind === "o2m" || otherField.kind === "lo2m") {
           where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;
         } else if (otherField.kind === "o2o") {
           where = `${kqDot(otherAlias, "id")} = ${kqDot(parentAlias, field.serde!.columns[0].columnName)}`;

@@ -4,11 +4,13 @@ import {
   insertBookReview,
   insertBookToTag,
   insertComment,
+  insertCritic,
   insertLargePublisher,
+  insertPublisherGroup,
   insertTag,
   update,
 } from "@src/entities/inserts";
-import { Author, Book, LargePublisher } from "./entities";
+import { Author, Book, Critic, LargePublisher } from "./entities";
 import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.joins", () => {
@@ -149,5 +151,14 @@ describe("EntityManager.joins", () => {
     resetQueryCount();
     await em.load(LargePublisher, "p:1", "comments");
     expect(queries.length).toBe(2);
+  });
+
+  it("preloads m2o that are opposite of a lo2m relation", async () => {
+    await insertPublisherGroup({ name: "pg1" });
+    await insertCritic({ name: "c1", group_id: 1 });
+    const em = newEntityManager();
+    resetQueryCount();
+    await em.load(Critic, "c:1", "group");
+    expect(queries.length).toBe(1);
   });
 });

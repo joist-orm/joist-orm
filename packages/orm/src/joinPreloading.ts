@@ -47,145 +47,15 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
 ): Promise<void | T[]> {
   const { getAlias } = new AliasAssigner();
 
-  type Processor = (root: I, parent: Entity, arrays: unknown[][]) => void;
-  type JoinsResult = { aliases: string[]; joins: string[]; processors: Processor[]; bindings: any[] };
-
-  /** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
-  function addJoins(tree: HintNode<I>, parentAlias: string, parentMeta: EntityMetadata<any>): JoinsResult {
-    const aliases: string[] = [];
-    const joins: string[] = [];
-    const processors: Processor[] = [];
-    const bindings: any[] = [];
-
-    // Join in SQL-able hints from parent
-    Object.entries(tree.subHints).forEach(([key, subTree]) => {
-      const field = parentMeta.allFields[key];
-      // AsyncProperties don't have fields, which is fine, skip for now...
-      if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
-        const otherMeta = field.otherMetadata();
-        // We don't support preloading tables with inheritance yet
-        if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return;
-        // If `otherField` is missing, this could be a large collection which currently can't be loaded...
-        const otherField = otherMeta.allFields[field.otherFieldName];
-        if (!otherField) return;
-        // If otherField is a poly that points to a sub/base component, we don't support that yet
-        if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === parentMeta)) return;
-
-        const otherAlias = getAlias(otherMeta.tableName);
-        aliases.push(otherAlias);
-
-        // Do the recursion up-front, so we can work it into our own join/processor
-        const {
-          aliases: subAliases,
-          joins: subJoins,
-          processors: subProcessors,
-          bindings: subBindings,
-        } = addJoins(subTree, otherAlias, otherMeta);
-
-        bindings.push(...subBindings);
-
-        // Get all fields with serdes and flatten out the columns
-        const columns = Object.values(otherMeta.allFields)
-          .filter((f) => f.serde)
-          .flatMap((f) => f.serde!.columns);
-        const selects = [
-          ...columns.map((c) => kqDot(otherAlias, c.columnName)),
-          // We eventually need to handle parent types/subtypes here...
-          // Combine any grandchilden
-          ...subAliases.map((a) => kqDot(a, "_")),
-        ];
-
-        const aliasMaybeSuffix = kq(`${parentAlias}${field.aliasSuffix}`);
-
-        let where: string;
-        if (otherField.kind === "m2o") {
-          where = `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`;
-        } else if (otherField.kind === "poly") {
-          // Get the component that points to us
-          // const comp = otherField.components.find((c) => getAllMetas(parentMeta).some((m) => m.cstr === c.otherMetadata().cstr)) ??
-          const comp =
-            otherField.components.find((c) => parentMeta.cstr === c.otherMetadata().cstr) ??
-            fail(`No component found for ${field.fieldName} -> ${otherField.fieldName}`);
-          where = `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`;
-        } else if (otherField.kind === "o2m" || otherField.kind === "lo2m") {
-          where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
-        } else if (otherField.kind === "o2o") {
-          where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
-        } else if (otherField.kind === "m2m") {
-          const m2mAlias = getAlias(otherField.joinTableName);
-          // Get the m2m row's id to track in JoinRows
-          selects.unshift(kqDot(m2mAlias, "id"));
-          // Sneak in m2m join into subJoins
-          subJoins.unshift(`, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`);
-          where = `
-            ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias, otherField.columnNames[1])} AND
-            ${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
-          `;
-        } else {
-          throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
-        }
-
-        const needsSubSelect = subTree.entities.size !== root.entities.size;
-        if (needsSubSelect) {
-          bindings.push(
-            [...subTree.entities]
-              .filter((e) => typeof e === "string" || !e.isNewEntity)
-              .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id)),
-          );
-        }
-
-        joins.push(`
-          cross join lateral (
-            select json_agg(json_build_array(${selects.join(", ")})) as _
-            from ${kq(otherMeta.tableName)} ${kq(otherAlias)}
-            ${subJoins.join("\n")}
-            where ${where}
-            ${needsSubSelect ? ` AND ${kqDot(alias, "id")} = ANY(?)` : ""}
-          ) ${kq(otherAlias)}
-        `);
-
-        processors.push((root, parent, arrays) => {
-          // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
-          // we're processing the arrays of comments, but for a root author like `a2` that didn't ask for our load
-          // hint, then skip it to keep the relation unloaded.
-          if (!subTree.entities.has(root)) return;
-
-          // We get back an array of [[1, title], [2, title], [3, title]]
-          const children = arrays.map((array) => {
-            // If we've snuck the m2m row id into the json arry, ignore it
-            const m2mOffset = field.kind === "m2m" ? 1 : 0;
-            // Turn the array into a hash for em.hydrate
-            const data = Object.fromEntries(
-              columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]),
-            );
-            const entity = em.hydrate(otherMeta.cstr, data, { overwriteExisting: false });
-            // Tell the internal JoinRow booking-keeping about this m2m row
-            if (field.kind === "m2m") {
-              const m2m = (parent as any)[key];
-              getEmInternalApi(em)
-                .joinRows(m2m)
-                .addExisting(m2m, array[0] as any, parent, entity);
-            }
-            // Within each child, look for grandchildren
-            subProcessors.forEach((sub, i) => {
-              // array[i] could be null if there are no grandchildren, but still call `sub` to
-              // process it so that we store the empty array into the em.joinLoadedRelations, to
-              // avoid the relation.load method later doing a SQL for rows we know are not there.
-              sub(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
-            });
-            return entity;
-          });
-          // Cache the entities so `.load`s will see them
-          getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
-        });
-      }
-    });
-
-    return { aliases, joins, processors, bindings };
-  }
-
   const alias = getAlias(meta.tableName);
-  const { aliases, joins, processors, bindings } = addJoins(root, alias, meta);
+  const { aliases, joins, processors, bindings } = addJoins(
+    em,
+    getAlias,
+    { tree: root, alias, meta },
+    root,
+    alias,
+    meta,
+  );
 
   // Create a ParsedFindQuery to reuse addTablePerClassJoinsAndClassTag
   const query: ParsedFindQuery = { selects: [], tables: [], conditions: [], orderBys: [] };
@@ -239,6 +109,156 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
   } else {
     assertNever(mode);
   }
+}
+
+type Processor<I extends EntityOrId> = (root: I, parent: Entity, arrays: unknown[][]) => void;
+
+type JoinsResult<I extends EntityOrId> = {
+  aliases: string[];
+  joins: string[];
+  processors: Processor<I>[];
+  bindings: any[];
+};
+
+/** Given a `parent` like Author, and a hint of `{ books: ..., comments: ... }`, create joins. */
+function addJoins<I extends EntityOrId>(
+  em: EntityManager,
+  getAlias: (tableName: string) => string,
+  root: { tree: HintNode<I>; alias: string; meta: EntityMetadata<any> },
+  tree: HintNode<I>,
+  parentAlias: string,
+  parentMeta: EntityMetadata<any>,
+): JoinsResult<I> {
+  const aliases: string[] = [];
+  const joins: string[] = [];
+  const processors: Processor<I>[] = [];
+  const bindings: any[] = [];
+
+  // Join in SQL-able hints from parent
+  Object.entries(tree.subHints).forEach(([key, subTree]) => {
+    const field = parentMeta.allFields[key];
+    // AsyncProperties don't have fields, which is fine, skip for now...
+    if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
+      const otherMeta = field.otherMetadata();
+      // We don't support preloading tables with inheritance yet
+      if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return;
+      // If `otherField` is missing, this could be a large collection which currently can't be loaded...
+      const otherField = otherMeta.allFields[field.otherFieldName];
+      if (!otherField) return;
+      // If otherField is a poly that points to a sub/base component, we don't support that yet
+      if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === parentMeta)) return;
+
+      const otherAlias = getAlias(otherMeta.tableName);
+      aliases.push(otherAlias);
+
+      // Do the recursion up-front, so we can work it into our own join/processor
+      const {
+        aliases: subAliases,
+        joins: subJoins,
+        processors: subProcessors,
+        bindings: subBindings,
+      } = addJoins(em, getAlias, root, subTree, otherAlias, otherMeta);
+
+      bindings.push(...subBindings);
+
+      // Get all fields with serdes and flatten out the columns
+      const columns = Object.values(otherMeta.allFields)
+        .filter((f) => f.serde)
+        .flatMap((f) => f.serde!.columns);
+      const selects = [
+        ...columns.map((c) => kqDot(otherAlias, c.columnName)),
+        // We eventually need to handle parent types/subtypes here...
+        // Combine any grandchilden
+        ...subAliases.map((a) => kqDot(a, "_")),
+      ];
+
+      const aliasMaybeSuffix = kq(`${parentAlias}${field.aliasSuffix}`);
+
+      let where: string;
+      if (otherField.kind === "m2o") {
+        where = `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`;
+      } else if (otherField.kind === "poly") {
+        // Get the component that points to us
+        // const comp = otherField.components.find((c) => getAllMetas(parentMeta).some((m) => m.cstr === c.otherMetadata().cstr)) ??
+        const comp =
+          otherField.components.find((c) => parentMeta.cstr === c.otherMetadata().cstr) ??
+          fail(`No component found for ${field.fieldName} -> ${otherField.fieldName}`);
+        where = `${kqDot(otherAlias, comp.columnName)} = ${kqDot(parentAlias, "id")}`;
+      } else if (otherField.kind === "o2m" || otherField.kind === "lo2m") {
+        where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
+      } else if (otherField.kind === "o2o") {
+        where = `${kqDot(otherAlias, "id")} = ${aliasMaybeSuffix}.${kq(field.serde!.columns[0].columnName)}`;
+      } else if (otherField.kind === "m2m") {
+        const m2mAlias = getAlias(otherField.joinTableName);
+        // Get the m2m row's id to track in JoinRows
+        selects.unshift(kqDot(m2mAlias, "id"));
+        // Sneak in m2m join into subJoins
+        subJoins.unshift(`, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`);
+        where = `
+            ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias, otherField.columnNames[1])} AND
+            ${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
+          `;
+      } else {
+        throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
+      }
+
+      const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
+      if (needsSubSelect) {
+        bindings.push(
+          [...subTree.entities]
+            .filter((e) => typeof e === "string" || !e.isNewEntity)
+            .map((e) => keyToNumber(root.meta, typeof e === "string" ? e : e.id)),
+        );
+      }
+
+      joins.push(`
+          cross join lateral (
+            select json_agg(json_build_array(${selects.join(", ")})) as _
+            from ${kq(otherMeta.tableName)} ${kq(otherAlias)}
+            ${subJoins.join("\n")}
+            where ${where}
+            ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
+          ) ${kq(otherAlias)}
+        `);
+
+      processors.push((root, parent, arrays) => {
+        // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
+        // we're processing the arrays of comments, but for a root author like `a2` that didn't ask for our load
+        // hint, then skip it to keep the relation unloaded.
+        if (!subTree.entities.has(root)) return;
+
+        // We get back an array of [[1, title], [2, title], [3, title]]
+        const children = arrays.map((array) => {
+          // If we've snuck the m2m row id into the json arry, ignore it
+          const m2mOffset = field.kind === "m2m" ? 1 : 0;
+          // Turn the array into a hash for em.hydrate
+          const data = Object.fromEntries(
+            columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]),
+          );
+          const entity = em.hydrate(otherMeta.cstr, data, { overwriteExisting: false });
+          // Tell the internal JoinRow booking-keeping about this m2m row
+          if (field.kind === "m2m") {
+            const m2m = (parent as any)[key];
+            getEmInternalApi(em)
+              .joinRows(m2m)
+              .addExisting(m2m, array[0] as any, parent, entity);
+          }
+          // Within each child, look for grandchildren
+          subProcessors.forEach((sub, i) => {
+            // array[i] could be null if there are no grandchildren, but still call `sub` to
+            // process it so that we store the empty array into the em.joinLoadedRelations, to
+            // avoid the relation.load method later doing a SQL for rows we know are not there.
+            sub(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
+          });
+          return entity;
+        });
+        // Cache the entities so `.load`s will see them
+        getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
+      });
+    }
+  });
+
+  return { aliases, joins, processors, bindings };
 }
 
 class AliasAssigner {

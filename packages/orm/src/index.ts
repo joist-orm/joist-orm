@@ -10,7 +10,6 @@ import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
-import { abbreviation } from "./QueryBuilder";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -34,7 +33,7 @@ export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
 export * from "./getProperties";
 export * from "./keys";
-export { kq } from "./keywords";
+export { kq, kqDot } from "./keywords";
 export {
   assertLoaded,
   DeepNew,
@@ -272,7 +271,6 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
   // Setup subTypes/baseTypes
   metas.forEach((m) => {
-    const abbr = `${abbreviation(m.tableName)}0`;
     // This is basically m.fields.mapValues to assign the primary alias
     m.allFields = Object.fromEntries(
       Object.entries(m.fields).map(([name, field]) => [name, { ...field, aliasSuffix: "" }]),

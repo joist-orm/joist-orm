@@ -1,3 +1,4 @@
+// select word from pg_get_keywords() where catdesc = 'reserved' order by word;
 const keywords = [
   "all",
   "alter",

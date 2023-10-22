@@ -1280,7 +1280,9 @@ export class EntityManager<C = unknown> {
       const entities = await Promise.all(
         copy
           .filter((e) => e.idTaggedMaybe)
-          .map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.idTagged)),
+          .map((entity) =>
+            loadDataLoader(this, getMetadata(entity)).load({ entity: entity.idTagged, hint: undefined }),
+          ),
       );
 
       // Then refresh any non-deleted loaded collections

@@ -926,6 +926,8 @@ export class EntityManager<C = unknown> {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
+
+
     // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
     // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
     const batchKey = `${list[0]?.__orm.metadata.tagName}:${opts.forceReload}`;

@@ -3,10 +3,29 @@ import { Entity } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
 import { EntityManager, getConstructorFromTaggedId } from "../index";
-import { preloadJoins } from "../joinPreloading";
-import { LoadHint } from "../loadHints";
+import { canPreload, preloadJoins } from "../joinPreloading";
+import { LoadHint, NestedLoadHint } from "../loadHints";
+import { normalizeHint } from "../normalizeHints";
 import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
 import { toArray } from "../utils";
+
+/** Partitions a hint into SQL-able and non-SQL-able hints. */
+function partitionHint(
+  meta: EntityMetadata<any> | undefined,
+  hint: LoadHint<any>,
+): [LoadHint<any> | undefined, LoadHint<any> | undefined] {
+  let sql: NestedLoadHint<any> | undefined = undefined;
+  let non: NestedLoadHint<any> | undefined = undefined;
+  for (const [key, subHint] of Object.entries(normalizeHint(hint))) {
+    const field = meta?.allFields[key];
+    if (field && canPreload(meta, field)) {
+      (sql ??= {})[key] = subHint;
+    } else {
+      (non ??= {})[key] = subHint;
+    }
+  }
+  return [sql, non];
+}
 
 export function populateDataLoader(
   em: EntityManager,

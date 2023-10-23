@@ -1,7 +1,14 @@
 import { AliasAssigner } from "./AliasAssigner";
 import { Entity } from "./Entity";
 import { EntityManager, getEmInternalApi } from "./EntityManager";
-import { EntityMetadata } from "./EntityMetadata";
+import {
+  EntityMetadata,
+  Field,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+} from "./EntityMetadata";
 import { EntityOrId, HintNode } from "./HintTree";
 import { ParsedFindQuery, addTablePerClassJoinsAndClassTag, joinClauses } from "./QueryParser";
 import { keyToNumber, keyToString } from "./keys";
@@ -86,8 +93,9 @@ export async function preloadJoins<T extends Entity, I extends EntityOrId>(
     .filter((e) => typeof e === "string" || !e.isNewEntity)
     .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id));
 
-  // console.log("PRELOADING", JSON.stringify(root), sql);
+  // console.log("PRELOADING", JSON.stringify(root));
   const rows = await em.driver.executeQuery(em, sql, [...bindings, ids]);
+  // console.log("...done with", JSON.stringify(root));
 
   if (mode === "populate") {
     // B/c this is populate, don't return anything (new entities), just call the processors
@@ -147,15 +155,9 @@ function addJoins<I extends EntityOrId>(
   Object.entries(tree.subHints).forEach(([key, subTree]) => {
     const field = parentMeta.allFields[key];
     // AsyncProperties don't have fields, which is fine, skip for now...
-    if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
+    if (field && canPreload(parentMeta, field)) {
       const otherMeta = field.otherMetadata();
-      // We don't support preloading tables with inheritance yet
-      if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return;
-      // If `otherField` is missing, this could be a large collection which currently can't be loaded...
       const otherField = otherMeta.allFields[field.otherFieldName];
-      if (!otherField) return;
-      // If otherField is a poly that points to a sub/base component, we don't support that yet
-      if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === parentMeta)) return;
 
       // For now use a prefix like `_j_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
       const otherAlias = `_j_${getAlias(otherMeta.tableName)}`;
@@ -274,4 +276,22 @@ function addJoins<I extends EntityOrId>(
   });
 
   return { aliases, joins, processors, bindings };
+}
+
+export function canPreload(
+  meta: EntityMetadata<any>,
+  field: Field,
+): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
+  if (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") {
+    const otherMeta = field.otherMetadata();
+    // We don't support preloading tables with inheritance yet
+    if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return false;
+    // If `otherField` is missing, this could be a large collection which currently can't be loaded...
+    const otherField = otherMeta.allFields[field.otherFieldName];
+    if (!otherField) return false;
+    // If otherField is a poly that points to a sub/base component, we don't support that yet
+    if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === meta)) return false;
+    return true;
+  }
+  return false;
 }

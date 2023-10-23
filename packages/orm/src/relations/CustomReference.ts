@@ -56,6 +56,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
     return this._isLoaded;
   }
 
+  get isLoadInProgress(): boolean {
+    return this.loadPromise !== undefined;
+  }
+
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
     ensureNotDeleted(this.#entity, "pending");
     if (!this.isLoaded || opts.forceReload) {

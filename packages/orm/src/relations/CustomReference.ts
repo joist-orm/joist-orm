@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
-import { ensureNotDeleted, fail, Reference, unsafeDeTagIds } from "../index";
+import { ensureNotDeleted, fail, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";

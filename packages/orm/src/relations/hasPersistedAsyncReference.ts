@@ -90,10 +90,6 @@ export class PersistedAsyncReferenceImpl<
     this.#reactiveHint = reactiveHint;
   }
 
-  get isLoadInProgress(): boolean {
-    return this.loadPromise !== undefined;
-  }
-
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;

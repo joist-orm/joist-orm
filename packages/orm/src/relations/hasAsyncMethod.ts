@@ -40,10 +40,6 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
     this.#hint = hint;
   }
 
-  get isLoadInProgress(): boolean {
-    return this.loadPromise !== undefined;
-  }
-
   /** Args might be either the user-provided args, or the populate `opts` if we're being preloaded. */
   load(...args: A): Promise<V> {
     // Are we being called by `em.populate`? If so, we don't have the real args, so avoid invoking fn

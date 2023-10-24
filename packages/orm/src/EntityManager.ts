@@ -12,7 +12,7 @@ import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
-import { populateDataLoader } from "./dataloaders/populateDataLoader";
+import { partitionHint, populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers/Driver";
 import {
   BaseEntity,
@@ -906,13 +906,12 @@ export class EntityManager<C = unknown> {
     entities: ReadonlyArray<T>,
     opts: { hint: H; forceReload?: boolean },
   ): Promise<Loaded<T, H>[]>;
-  populate<T extends Entity, H extends LoadHint<T>, V>(
+  async populate<T extends Entity, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
     hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
     const { hint: hintOpt, ...opts } =
-      // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
     // Tell `AsyncMethodImpl.load` to not invoke its function
@@ -926,19 +925,19 @@ export class EntityManager<C = unknown> {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
+    const meta = list[0]?.__orm.metadata;
+    const [sql, non] = partitionHint(meta, hintOpt);
 
+    if (sql) {
+      const loader = populateDataLoader(this, meta, sql, "sqlOnly", opts);
+      await Promise.all(list.map((entity) => loader.load({ entity, hint: sql })));
+    }
+    if (non) {
+      const loader = populateDataLoader(this, meta, non, "intermixed", opts);
+      await Promise.all(list.map((entity) => loader.load({ entity, hint: non })));
+    }
 
-    // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
-    // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
-    const batchKey = `${list[0]?.__orm.metadata.tagName}:${opts.forceReload}`;
-    const loader = populateDataLoader(this, batchKey, opts);
-
-    // Purposefully use `then` instead of `async` as an optimization; avoid using loader.loadMany so
-    // that we don't have to check its allSettled-style `Array<V | Error>` return value for errors.
-    return Promise.all(list.map((entity) => loader.load({ entity, hint: hintOpt }))).then(() => {
-      // console.log("...done POPULATING", list, hintOpt);
-      return fn ? fn(entityOrList as any) : (entityOrList as any);
-    });
+    return fn ? fn(entityOrList as any) : (entityOrList as any);
   }
 
   // For debugging EntityManager.populate.test.ts's "can be huge"

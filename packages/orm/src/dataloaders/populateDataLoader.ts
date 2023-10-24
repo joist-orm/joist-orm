@@ -1,8 +1,8 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityMetadata, getMetadata } from "../EntityMetadata";
+import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { EntityManager, getConstructorFromTaggedId } from "../index";
+import { EntityManager } from "../index";
 import { canPreload, preloadJoins } from "../joinPreloading";
 import { LoadHint, NestedLoadHint } from "../loadHints";
 import { normalizeHint } from "../normalizeHints";
@@ -10,7 +10,7 @@ import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProper
 import { toArray } from "../utils";
 
 /** Partitions a hint into SQL-able and non-SQL-able hints. */
-function partitionHint(
+export function partitionHint(
   meta: EntityMetadata<any> | undefined,
   hint: LoadHint<any>,
 ): [LoadHint<any> | undefined, LoadHint<any> | undefined] {
@@ -19,8 +19,12 @@ function partitionHint(
   for (const [key, subHint] of Object.entries(normalizeHint(hint))) {
     const field = meta?.allFields[key];
     if (field && canPreload(meta, field)) {
-      (sql ??= {})[key] = subHint;
+      const [_sql, _non] = partitionHint(field.otherMetadata(), subHint);
+      (sql ??= {})[key] = _sql ?? {};
+      if (_non) (non ??= {})[key] = _non;
     } else {
+      // const p = meta && getProperties(meta)[key];
+      // if (p && p.loadHint) console.log("FOUND", key, p.loadHint);
       (non ??= {})[key] = subHint;
     }
   }
@@ -29,20 +33,30 @@ function partitionHint(
 
 export function populateDataLoader(
   em: EntityManager,
-  batchKey: string,
+  meta: EntityMetadata<any>,
+  hint: LoadHint<any>,
+  mode: "sqlOnly" | "intermixed",
   opts: { forceReload?: boolean } = {},
 ): DataLoader<{ entity: Entity; hint: LoadHint<any> }, any> {
+  // If we know this is a sql-only hint, we can batch all loads for a given entity
+  // together do leverage join-based preloading.
+  //
+  // However, intermixed batches can be prone to promise deadlocking (one relation .load getting
+  // stuck in a batch that is asking for its own dependencies to load), so if this is an intermixed
+  // hint, then use a batch key that includes the hint itself, which will make it unlikely
+  // for non-sql relations to deadlock on each other/themselves.
+  const batchKey =
+    mode === "sqlOnly"
+      ? `${meta.tagName}:${opts.forceReload}`
+      : `${meta.tagName}:${JSON.stringify(hint)}:${opts.forceReload}`;
   return em.getLoader(
     "populate",
     batchKey,
     async (populates) => {
-      console.log("POPULATING", populates);
-
       async function populateLayer(
         layerMeta: EntityMetadata<any> | undefined,
         layerNode: HintNode<Entity>,
       ): Promise<any[]> {
-        console.log("POPULATING LAYER", layerMeta?.tagName, layerNode);
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
         const anyInThisLayerNeedsLoaded = Object.entries(layerNode.subHints).some(([key, hint]) => {
@@ -71,13 +85,7 @@ export function populateDataLoader(
             // call `.get` to evaluate its derived value.
             if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
             if (relation.isLoaded && !opts.forceReload) return undefined;
-            // Avoid promise deadlocks
-            // if (relation.isLoadInProgress) return undefined;
-            // return relation.load(opts) as Promise<any>;
-            console.log("LOADING", relation);
-            return relation.load(opts).then(() => {
-              console.log("...done", relation);
-            });
+            return relation.load(opts) as Promise<any>;
           });
         });
 
@@ -115,10 +123,7 @@ export function populateDataLoader(
         });
       }
 
-      const rootMeta = getMetadata(getConstructorFromTaggedId(batchKey));
-      await populateLayer(rootMeta, buildHintTree(populates));
-      // After the nested hints are done, echo back the original now-loaded list
-      return populates.map(() => 0 as any);
+      return populateLayer(meta, buildHintTree(populates)).then(() => populates);
     },
     // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
     // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely

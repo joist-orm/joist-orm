@@ -58,10 +58,6 @@ export class CustomCollection<T extends Entity, U extends Entity>
     return this._isLoaded;
   }
 
-  get isLoadInProgress(): boolean {
-    return this.loadPromise !== undefined;
-  }
-
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.#entity, "pending");
     if (!this.isLoaded || opts.forceReload) {

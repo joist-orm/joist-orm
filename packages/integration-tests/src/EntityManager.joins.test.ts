@@ -10,8 +10,11 @@ import {
   insertTag,
   update,
 } from "@src/entities/inserts";
-import { Author, Book, Critic, LargePublisher } from "./entities";
+import { testing } from "joist-orm";
+import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
 import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
+
+const { partitionHint } = testing;
 
 describe("EntityManager.joins", () => {
   it("preloads o2m, m2o, and o2o relations", async () => {
@@ -181,5 +184,31 @@ describe("EntityManager.joins", () => {
       a1.favoriteBook.load(),
       em.populate(a1, "favoriteBook"),
     ]);
+  });
+
+  describe("partitionHint", () => {
+    it("partitions a sql-only hint", () => {
+      const [a, b] = partitionHint(Author.metadata, { books: { reviews: "comment" } });
+      expect(a).toEqual({ books: { reviews: { comment: {} } } });
+      expect(b).toEqual(undefined);
+    });
+
+    it("partitions a non-sql hint", () => {
+      const [a, b] = partitionHint(Author.metadata, { favoriteBook: {} });
+      expect(a).toEqual(undefined);
+      expect(b).toEqual({ favoriteBook: {} });
+    });
+
+    it("partitions a nested non-sql hint", () => {
+      const [a, b] = partitionHint(Publisher.metadata, { authors: { favoriteBook: {}, books: {} } });
+      expect(a).toEqual({ authors: { books: {} } });
+      expect(b).toEqual({ authors: { favoriteBook: {} } });
+    });
+
+    it("partitions inter-mixed a sql-only hint", () => {
+      const [a, b] = partitionHint(Author.metadata, { books: { reviews: "isPublic2" } });
+      expect(a).toEqual({ books: { reviews: {} } });
+      expect(b).toEqual({ books: { reviews: { isPublic2: {} } } });
+    });
   });
 });

@@ -12,7 +12,7 @@ import { followReverseHint } from "./reactiveHints";
  */
 export class ReactionsManager {
   /** Stores all source `ReactiveField`s that have been marked for later traversal. */
-  private pendingFieldReactions: Map<ReactiveField, Set<Entity>> = new Map();
+  private pendingFieldReactions: Map<ReactiveField, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -34,7 +34,7 @@ export class ReactionsManager {
         // - if we skip re-queuing firstName's RFs, we will miss that initials needs
         //   its `.load()` called again so that it's `setField` marks `initials` as
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
-        this.getPending(rf).add(entity);
+        this.getPending(rf).todo.add(entity);
       }
     }
   }
@@ -46,12 +46,21 @@ export class ReactionsManager {
     for (const rf of rfs) {
       if (rf.fields.includes(fieldName)) {
         const pending = this.getPending(rf);
-        // We can only delete/dequeue a reaction if `fieldName` is the only or last field
-        // that had triggered `rf` to run. Since we don't track that currently, i.e. we'd
-        // need to have a `Pending.dirtyFields`, for now just only dequeue if `rf` only
-        // has one field (which is us) anyway.
-        if (rf.fields.length === 1) {
-          pending.delete(entity);
+        if (pending.done.has(entity)) {
+          // Ironically, if we've already run this RF, asking to dequeue probably means
+          // we need run it again (to recalc its value), b/c this could be a mid-flush change, i.e.:
+          // - firstName = a1 from db
+          // - firstName is changed to a2, triggers initials RF
+          // - firstName is changed back to a1, which is the original value, so setField
+          //   thinks we can dequeue the RF
+          // - but actually our RF needs to be re-run with the restored value
+          pending.todo.add(entity);
+        } else if (rf.fields.length === 1) {
+          // We can only delete/dequeue a reaction if `fieldName` is the only or last field
+          // that had triggered `rf` to run. Since we don't track that currently, i.e. we'd
+          // need to have a `Pending.dirtyFields`, for now just only dequeue if `rf` only
+          // has one field (which is us) anyway.
+          pending.todo.delete(entity);
         }
       }
     }
@@ -61,7 +70,7 @@ export class ReactionsManager {
   queueAllDownstreamFields(entity: Entity): void {
     const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
-      this.getPending(rf).add(entity);
+      this.getPending(rf).todo.add(entity);
     }
   }
 
@@ -80,13 +89,14 @@ export class ReactionsManager {
       const relations = await Promise.all(
         [...this.pendingFieldReactions.entries()].map(async ([rf, pending]) => {
           // Copy pending and clear it
-          const todo = [...pending];
-          pending.clear();
+          const todo = [...pending.todo];
+          pending.todo.clear();
           // If we found any pending, loop again b/c we might be a dependency of another field,
           // which our `.load()` will have marked as pending by calling `queueDownstreamReactiveFields`.
           if (todo.length > 0) {
             scanPending = true;
           }
+          for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream fields
           return (await followReverseHint(todo, rf.path))
             .filter((entity) => !entity.isDeletedEntity)
@@ -112,10 +122,10 @@ export class ReactionsManager {
     this.pendingFieldReactions = new Map();
   }
 
-  private getPending(rf: ReactiveField): Set<Entity> {
+  private getPending(rf: ReactiveField): { todo: Set<Entity>; done: Set<Entity> } {
     let pending = this.pendingFieldReactions.get(rf);
     if (!pending) {
-      pending = new Set();
+      pending = { todo: new Set(), done: new Set() };
       this.pendingFieldReactions.set(rf, pending);
     }
     return pending;

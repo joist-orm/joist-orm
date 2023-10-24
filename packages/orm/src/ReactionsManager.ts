@@ -1,6 +1,6 @@
 import { ReactiveField } from "./config";
 import { Entity } from "./Entity";
-import { getAllMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { followReverseHint } from "./reactiveHints";
 
 /**
@@ -13,6 +13,16 @@ import { followReverseHint } from "./reactiveHints";
 export class ReactionsManager {
   /** Stores all source `ReactiveField`s that have been marked for later traversal. */
   private pendingFieldReactions: Map<ReactiveField, { todo: Set<Entity>; done: Set<Entity> }> = new Map();
+  /**
+   * A map of entity tagName -> fields that have been marked as dirty.
+   *
+   * The key of the map is "just" the tag name, instead of a specific entity, b/c at the time of
+   * being marked dirty, we only have the upstream/source entity + fieldName that has changed, and
+   * not the 1-or-more downstream/target entities that will actually recalc.
+   *
+   * Instead, we just track the dirty fields by type-of-entity, which is enough for `isPendingRecalc`.
+   */
+  private dirtyFields: Map<string, Set<string>> = new Map();
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -35,6 +45,7 @@ export class ReactionsManager {
         //   its `.load()` called again so that it's `setField` marks `initials` as
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
         this.getPending(rf).todo.add(entity);
+        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       }
     }
   }
@@ -71,7 +82,24 @@ export class ReactionsManager {
     const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
+      this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
     }
+  }
+
+  /**
+   * Returns whether this field might be pending recalc.
+   *
+   * This is technically a guess, b/c our reaction infra may not yet have crawled up an upstream
+   * source field down to the `N` specific target entities that need recalced, and instead just
+   * knows "it will need to do that soon" i.e. at the next `em.flush`.
+   *
+   * So, instead this is a heuristic that says this `fieldName` has been marked dirty for _some_
+   * entities, but we don't technically know if it's _this_ entity.
+   *
+   * I.e. this might return false positives, but should never return false negatives.
+   */
+  isMaybePendingRecalc(entity: Entity, fieldName: string): boolean {
+    return this.getDirtyFields(getMetadata(entity)).has(fieldName);
   }
 
   /**
@@ -129,5 +157,14 @@ export class ReactionsManager {
       this.pendingFieldReactions.set(rf, pending);
     }
     return pending;
+  }
+
+  private getDirtyFields(meta: EntityMetadata<any>): Set<string> {
+    let dirty = this.dirtyFields.get(meta.tagName);
+    if (!dirty) {
+      dirty = new Set();
+      this.dirtyFields.set(meta.tagName, dirty);
+    }
+    return dirty;
   }
 }

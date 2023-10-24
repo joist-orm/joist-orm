@@ -2,7 +2,7 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { EntityManager, getProperties } from "../index";
+import { EntityManager, getEmInternalApi, getProperties } from "../index";
 import { canPreload, preloadJoins } from "../joinPreloading";
 import { LoadHint, NestedLoadHint } from "../loadHints";
 import { deepNormalizeHint, normalizeHint } from "../normalizeHints";
@@ -95,7 +95,12 @@ export function populateDataLoader(
             // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
             // then go ahead and call `.load()` so that the downstream reactive calc can
             // call `.get` to evaluate its derived value.
-            if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
+            if (
+              relation instanceof PersistedAsyncPropertyImpl &&
+              relation.isSet &&
+              !getEmInternalApi(em).rm.isMaybePendingRecalc(entity, key)
+            )
+              return;
             if (relation.isLoaded && !opts.forceReload) return undefined;
             // Avoid creating a promise
             if (relation.isPreloaded) {

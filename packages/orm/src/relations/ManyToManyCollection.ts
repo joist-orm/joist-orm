@@ -11,7 +11,7 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { remove } from "../utils";
+import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -142,12 +142,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
     } else {
-      if (this.addedBeforeLoaded) {
-        remove(this.addedBeforeLoaded, other);
-      }
-      if (!(this.removedBeforeLoaded ??= []).includes(other)) {
-        this.removedBeforeLoaded.push(other);
-      }
+      maybeRemove(this.addedBeforeLoaded, other);
+      maybeAdd((this.removedBeforeLoaded ??= []), other);
     }
   }
 
@@ -157,6 +153,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   get isPreloaded(): boolean {
     return !!this.getPreloaded();
+  }
+
+  preload(): void {
+    this.loaded = this.getPreloaded();
+    this.maybeApplyAddedAndRemovedBeforeLoaded();
   }
 
   private doGet(): U[] {

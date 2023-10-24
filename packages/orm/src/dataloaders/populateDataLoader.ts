@@ -85,6 +85,11 @@ export function populateDataLoader(
             // call `.get` to evaluate its derived value.
             if (relation instanceof PersistedAsyncPropertyImpl && relation.isSet) return;
             if (relation.isLoaded && !opts.forceReload) return undefined;
+            // Avoid creating a promise
+            if (relation.isPreloaded) {
+              relation.preload();
+              return undefined;
+            }
             return relation.load(opts) as Promise<any>;
           });
         });

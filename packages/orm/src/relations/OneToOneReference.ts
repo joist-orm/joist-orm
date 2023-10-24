@@ -190,6 +190,11 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     return !!this.getPreloaded();
   }
 
+  preload(): void {
+    this.loaded = this.getPreloaded()?.[0];
+    this._isLoaded = true;
+  }
+
   get getWithDeleted(): U | undefined {
     return this.filterDeleted(this.doGet(), { withDeleted: true });
   }

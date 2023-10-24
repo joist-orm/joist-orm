@@ -120,6 +120,10 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return !!this.maybeFindEntity();
   }
 
+  preload(): void {
+    this.loaded = this.maybeFindEntity();
+  }
+
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.#entity, "pending");
     // This should only be callable in the type system if we've already resolved this to an instance,

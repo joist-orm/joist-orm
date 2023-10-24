@@ -100,6 +100,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return !!this.getPreloaded();
   }
 
+  preload(): void {
+    this.loaded = this.getPreloaded();
+    this.maybeAppendAddedBeforeLoaded();
+  }
+
   get get(): U[] {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }

@@ -26,3 +26,14 @@ export function normalizeHint<T extends Entity>(hint: LoadHint<T> | ReactiveHint
     return hint;
   }
 }
+
+/** Normalizes a `key | key[] | { key: nested }` hint into `{ key: nested }`. */
+export function deepNormalizeHint<T extends Entity>(hint: LoadHint<T> | ReactiveHint<T>): object {
+  if (typeof hint === "string") {
+    return { [hint]: {} };
+  } else if (Array.isArray(hint)) {
+    return Object.fromEntries(hint.map((field) => [field, {}]));
+  } else {
+    return Object.fromEntries(Object.entries(hint).map(([key, value]) => [key, deepNormalizeHint(value)]));
+  }
+}

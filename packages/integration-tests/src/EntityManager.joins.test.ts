@@ -195,14 +195,14 @@ describe("EntityManager.joins", () => {
 
     it("partitions a non-sql hint", () => {
       const [a, b] = partitionHint(Author.metadata, { favoriteBook: {} });
-      expect(a).toEqual(undefined);
+      expect(a).toEqual({ books: { reviews: {} } });
       expect(b).toEqual({ favoriteBook: {} });
     });
 
     it("partitions a nested non-sql hint", () => {
-      const [a, b] = partitionHint(Publisher.metadata, { authors: { favoriteBook: {}, books: {} } });
-      expect(a).toEqual({ authors: { books: {} } });
-      expect(b).toEqual({ authors: { favoriteBook: {} } });
+      const [a, b] = partitionHint(Publisher.metadata, { authors: { favoriteBook: ["tags"], books: {} } });
+      expect(a).toEqual({ authors: { books: { reviews: {} } } });
+      expect(b).toEqual({ authors: { favoriteBook: { tags: {} } } });
     });
 
     it("partitions inter-mixed a sql-only hint", () => {

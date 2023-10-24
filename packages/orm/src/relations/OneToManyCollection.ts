@@ -312,6 +312,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private getPreloaded(): U[] | undefined {
+    if (this.#entity.isNewEntity) return undefined;
     return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
   }
 

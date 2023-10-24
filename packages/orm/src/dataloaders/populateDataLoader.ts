@@ -2,7 +2,7 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { EntityManager, getEmInternalApi, getProperties } from "../index";
+import { EntityManager, PersistedAsyncReferenceImpl, getEmInternalApi, getProperties } from "../index";
 import { canPreload, preloadJoins } from "../joinPreloading";
 import { LoadHint, NestedLoadHint } from "../loadHints";
 import { deepNormalizeHint, normalizeHint } from "../normalizeHints";
@@ -91,18 +91,15 @@ export function populateDataLoader(
             // If we're populating a hasPersistedAsyncProperty, don't bother loading it
             // if it's already been calculated (i.e. we have no reason to believe its value
             // is stale, so we should avoid pulling all of its data into memory).
-            //
-            // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
-            // then go ahead and call `.load()` so that the downstream reactive calc can
-            // call `.get` to evaluate its derived value.
+            // _Unless_ the ReactionsManager has noticed a change that might have invalidated it.
             if (
-              relation instanceof PersistedAsyncPropertyImpl &&
+              (relation instanceof PersistedAsyncPropertyImpl || relation instanceof PersistedAsyncReferenceImpl) &&
               relation.isSet &&
               !getEmInternalApi(em).rm.isMaybePendingRecalc(entity, key)
             )
               return;
             if (relation.isLoaded && !opts.forceReload) return undefined;
-            // Avoid creating a promise
+            // Avoid creating a promise for preloaded relations
             if (relation.isPreloaded) {
               relation.preload();
               return undefined;

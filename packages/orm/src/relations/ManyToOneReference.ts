@@ -122,6 +122,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   preload(): void {
     this.loaded = this.maybeFindEntity();
+    this._isLoaded = true;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {

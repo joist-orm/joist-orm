@@ -264,6 +264,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private getPreloaded(): U[] | undefined {
+    if (this.#entity.isNewEntity) return undefined;
     return getEmInternalApi(this.#entity.em).getPreloadedRelation(this.#entity.idTagged, this.fieldName);
   }
 

@@ -225,7 +225,7 @@ function addJoins<I extends EntityOrId>(
 
       joins.push(`
           cross join lateral (
-            select json_agg(json_build_array(${selects.join(", ")})) as _
+            select json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _
             from ${kq(otherMeta.tableName)} ${kq(otherAlias)}
             ${subJoins.join("\n")}
             where ${where}

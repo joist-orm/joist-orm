@@ -103,7 +103,8 @@ export class PrimitiveSerde implements FieldSerde {
 
   mapFromJsonAgg(value: any): any {
     if (value === null) return value;
-    if (this.dbType.includes("time")) return new Date(value);
+    // Super-hacky handling of de-JSON-ifying dates
+    if (this.dbType.includes("time") || this.dbType.includes("date")) return new Date(value);
     return value;
   }
 }

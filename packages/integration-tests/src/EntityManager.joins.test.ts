@@ -6,11 +6,12 @@ import {
   insertComment,
   insertCritic,
   insertLargePublisher,
+  insertPublisher,
   insertPublisherGroup,
   insertTag,
   update,
 } from "@src/entities/inserts";
-import { testing } from "joist-orm";
+import { jan1, jan2, testing } from "joist-orm";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
 import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
 
@@ -173,6 +174,15 @@ describe("EntityManager.joins", () => {
     const lp = await em.load(LargePublisher, "p:1", "group");
     expect(queries.length).toBe(1);
     expect(lp.group.get?.name).toBe("pg1");
+  });
+
+  it("can preload dates", async () => {
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1, graduated: jan1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1, graduated: jan2 });
+    const em = newEntityManager();
+    const p = await em.load(Publisher, "p:1", "authors");
+    expect(p.authors.get[0].graduated).toEqual(jan1);
   });
 
   it("doesn't deadlock", async () => {

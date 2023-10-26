@@ -159,8 +159,8 @@ function addJoins<I extends EntityOrId>(
       const otherMeta = field.otherMetadata();
       const otherField = otherMeta.allFields[field.otherFieldName];
 
-      // For now use a prefix like `_j_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
-      const otherAlias = `_j_${getAlias(otherMeta.tableName)}`;
+      // Use a prefix like `_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
+      const otherAlias = `_${getAlias(otherMeta.tableName)}`;
       aliases.push(otherAlias);
 
       // Do the recursion up-front, so we can work it into our own join/processor

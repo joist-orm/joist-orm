@@ -1,3 +1,10 @@
+# [1.114.0](https://github.com/stephenh/joist-ts/compare/v1.113.0...v1.114.0) (2023-10-27)
+
+
+### Features
+
+* Bump node, other deps ([#838](https://github.com/stephenh/joist-ts/issues/838)) ([354a195](https://github.com/stephenh/joist-ts/commit/354a1958f718cfd88c5a27124cdff8b32bd9f5df))
+
 # [1.113.0](https://github.com/stephenh/joist-ts/compare/v1.112.4...v1.113.0) (2023-10-19)
 
 

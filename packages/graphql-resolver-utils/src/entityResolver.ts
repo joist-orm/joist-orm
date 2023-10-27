@@ -5,10 +5,14 @@ import {
   Entity,
   EntityMetadata,
   Field,
+  getMetadata,
   getProperties,
   IdOf,
   isAsyncProperty,
   isCollection,
+  isLoadedAsyncProperty,
+  isLoadedCollection,
+  isLoadedReference,
   isReference,
   ManyToManyField,
   ManyToOneField,
@@ -19,6 +23,7 @@ import {
   Reference,
 } from "joist-orm";
 import { Resolver } from "./context";
+import { convertInfoToLoadHint } from "./hint";
 
 type GraphQLPrimitive = string | Date | boolean | number | null | undefined;
 
@@ -75,7 +80,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     .filter((ormField) => isReferenceField(ormField))
     .map((ormField) => [
       ormField.fieldName,
-      (entity: T, args, ctx, info: GraphQLResolveInfo | undefined) => {
+      (entity: T, args, ctx, info: GraphQLResolveInfo) => {
         // Use the `info` to see if the query is only returning `{ id }` and if so avoid fetching the entity
         if ((ormField.kind === "m2o" || ormField.kind === "poly") && info?.fieldNodes.length === 1) {
           const selectionSet = info.fieldNodes[0].selectionSet;
@@ -85,17 +90,42 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
               selectionSet.selections[0].kind === "Field" &&
               selectionSet.selections[0].name.value === "id"
             ) {
+              // This is cheating and returning the "wrong root", but our `id` field resolvers
+              // knows to look for it, to optimize this case and avoiding the unnecessary load
               return (entity as any)[ormField.fieldName].idMaybe;
             }
           }
         }
-        return (entity as any)[ormField.fieldName].load();
+        const reference = (entity as any)[ormField.fieldName];
+        if (isLoadedReference(reference)) {
+          return reference.get;
+        }
+        // See if we can populate the collection from the GraphQL selection set
+        const loadHint = convertInfoToLoadHint(getMetadata(entity), info);
+        if (loadHint) {
+          return entity.em.populate(entity, loadHint).then(() => reference.get);
+        }
+        return reference.load();
       },
     ]);
 
-  const collectionResolvers = Object.values(entityMetadata.fields)
+  const collectionResolvers: [string, Resolver<T, any, any>][] = Object.values(entityMetadata.fields)
     .filter((ormField) => isCollectionField(ormField))
-    .map((ormField) => [ormField.fieldName, (entity: T) => (entity as any)[ormField.fieldName].load()]);
+    .map((ormField) => [
+      ormField.fieldName,
+      (entity, args, ctx, info) => {
+        const collection = (entity as any)[ormField.fieldName];
+        if (isLoadedCollection(collection)) {
+          return collection.get;
+        }
+        // See if we can populate the collection from the GraphQL selection set
+        const loadHint = convertInfoToLoadHint(getMetadata(entity), info);
+        if (loadHint) {
+          return entity.em.populate(entity, loadHint).then(() => collection.get);
+        }
+        return collection.load();
+      },
+    ]);
 
   const ormResolvers = Object.fromEntries([...primitiveResolvers, ...referenceResolvers, ...collectionResolvers]);
 
@@ -104,14 +134,22 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
   // non-prototype properties like CustomReferences
   const ignoredKeys = Object.keys(ormResolvers);
   const customProperties = Object.keys(getProperties(entityMetadata)).filter((n) => !ignoredKeys.includes(n));
-  const customResolvers = customProperties.map((key) => [
+  const customResolvers: [string, Resolver<T, any, any>][] = customProperties.map((key) => [
     key,
-    (entity: T) => {
+    (entity, args, ctx, info) => {
       const property = (entity as any)[key];
-
       if (typeof property === "function") {
+        // Support methods like `async name(): Promise<string>`
         return (property as Function).apply(entity);
       } else if (isReference(property) || isCollection(property) || isAsyncProperty(property)) {
+        if (isLoadedReference(property) || isLoadedCollection(property) || isLoadedAsyncProperty(property)) {
+          return property.get;
+        }
+        // See if we can populate the collection from the GraphQL selection set
+        const loadHint = convertInfoToLoadHint(getMetadata(entity), info);
+        if (loadHint) {
+          return entity.em.populate(entity, loadHint).then(() => (property as any).get);
+        }
         return property.load();
       } else {
         return property;

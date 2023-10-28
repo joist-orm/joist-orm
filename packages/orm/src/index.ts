@@ -35,7 +35,6 @@ export { ConfigApi, EntityHook } from "./config";
 export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export * from "./getProperties";
-export { canPreload } from "./joinPreloading";
 export * from "./keys";
 export { kq, kqDot } from "./keywords";
 export {

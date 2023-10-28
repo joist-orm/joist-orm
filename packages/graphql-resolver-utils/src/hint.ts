@@ -7,13 +7,16 @@ import {
   GraphQLResolveInfo,
   isObjectType,
 } from "graphql/type";
-import { Entity, EntityMetadata, LoadHint, canPreload } from "joist-orm";
+import { Entity, EntityMetadata, LoadHint } from "joist-orm";
 
 /** Returns a load hint for the given `meta` entity at the `info` node.populate`. */
 export function convertInfoToLoadHint<T extends Entity>(
   meta: EntityMetadata<T>,
   info: GraphQLResolveInfo,
 ): LoadHint<T> | undefined {
+  // The return type of the current field resolver is the root type, i.e.
+  // Author.books fieldResolver ==> objectType = Book, or
+  // query.authors fieldResolver ==> objectType = Author
   const objectType = convertToObjectType(info.returnType);
   const selectionSet = info.fieldNodes[0].selectionSet;
   if (objectType && selectionSet) {
@@ -35,7 +38,7 @@ export function selectionSetToObject(
       const fieldName = selection.name.value;
       const fieldType = convertToObjectType(gqlType.getFields()[fieldName].type);
       const ormField = meta.allFields[fieldName];
-      if (fieldType && selection.selectionSet && canPreload(meta, ormField)) {
+      if (fieldType && selection.selectionSet && "otherMetadata" in ormField) {
         result[fieldName] = selectionSetToObject(info, ormField.otherMetadata(), fieldType, selection.selectionSet);
       }
     } else if (selection.kind === "FragmentSpread") {

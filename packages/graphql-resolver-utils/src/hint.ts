@@ -38,7 +38,7 @@ export function selectionSetToObject(
       const fieldName = selection.name.value;
       const fieldType = convertToObjectType(gqlType.getFields()[fieldName].type);
       const ormField = meta.allFields[fieldName];
-      if (fieldType && selection.selectionSet && "otherMetadata" in ormField) {
+      if (fieldType && selection.selectionSet && ormField && "otherMetadata" in ormField) {
         result[fieldName] = selectionSetToObject(info, ormField.otherMetadata(), fieldType, selection.selectionSet);
       }
     } else if (selection.kind === "FragmentSpread") {

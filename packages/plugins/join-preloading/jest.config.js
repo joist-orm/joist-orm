@@ -11,8 +11,8 @@ module.exports = {
     [
       "jest-junit",
       {
-        outputDirectory: "../../artifacts",
-        outputName: "junit-graphql-resolver-utils.xml",
+        outputDirectory: "../../../artifacts",
+        outputName: "junit-plugins-join-preloading.xml",
         usePathForSuiteName: "true",
       },
     ],

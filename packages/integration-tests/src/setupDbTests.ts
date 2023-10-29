@@ -16,11 +16,14 @@ export const makeApiCall = jest.fn();
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
+const plugins = (process.env.PLUGINS ?? "").split(",");
+export const isPreloadingEnabled = plugins.includes("join-preloading");
+
 export function newEntityManager() {
   const ctx = { knex };
   const opts: EntityManagerOpts = {
     driver,
-    preloadPlugin: new JsonAggregatePreloader(),
+    preloadPlugin: isPreloadingEnabled ? new JsonAggregatePreloader() : undefined,
   };
   const em = new EntityManager(ctx as any, opts);
   Object.assign(ctx, { em, makeApiCall });

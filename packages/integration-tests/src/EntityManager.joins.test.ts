@@ -14,7 +14,7 @@ import {
 import { jan1, jan2 } from "joist-orm";
 import { testing } from "joist-plugin-join-preloading";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
-import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "./setupDbTests";
 
 const { partitionHint } = testing;
 
@@ -43,11 +43,11 @@ describe("EntityManager.joins", () => {
     // When we call populate
     await em.populate([a1, a2], hint);
     // Then we issued one query
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 5);
     // And we when populate the collections
     const loaded = await a1.populate(hint);
     // Then no new queries are issues
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 5);
     // And the tree of data is available
     expect(loaded.books.get.length).toBe(2);
     expect(loaded.books.get[0].reviews.get.length).toBe(1);
@@ -76,11 +76,11 @@ describe("EntityManager.joins", () => {
     // When we call populate
     await em.populate([b1, b2, b3], hint);
     // Then we issued one query
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 2);
     // And we when populate the collections
     const [bl1, bl2, bl3] = await em.populate([b1, b2, b3], hint);
     // Then no new queries are issues
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 2);
     // And the tree of data is available
     expect(bl1.tags.get.length).toBe(2);
     expect(bl2.tags.get.length).toBe(1);
@@ -108,13 +108,13 @@ describe("EntityManager.joins", () => {
       em.populate(a2, { books: { reviews: {} } }),
     ]);
     // Then we issued one query
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
     expect(a1).toMatchEntity({ books: [{ reviews: [{ comment: { text: "c1" } }] }] });
     expect(a2).toMatchEntity({ books: [{ reviews: [{}] }] });
     // And we did load a2 -> books -> reviews -> comment
     expect(l1.books.get[0].reviews.get[0].comment.isLoaded).toBe(true);
     // Because it was preloaded
-    expect((l1.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(true);
+    expect((l1.books.get[0].reviews.get[0].comment as any).isPreloaded).toBe(isPreloadingEnabled);
     // But we didn't load a2 -> books -> reviews -> comment
     expect(l2.books.get[0].reviews.get[0].comment.isLoaded).toBe(false);
     // And also it was not preloaded (...currently it is b/c we're some join filtering)
@@ -131,7 +131,7 @@ describe("EntityManager.joins", () => {
     resetQueryCount();
     const a1 = await em.load(Author, "a:1", { books: "reviews" });
     // Then we issued one query
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
     expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
   });
 
@@ -145,7 +145,7 @@ describe("EntityManager.joins", () => {
     resetQueryCount();
     const [a1, a2] = await em.loadAll(Author, ["a:1", "a:2"], { books: "reviews" });
     // Then we issued one query
-    expect(queries.length).toEqual(1);
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
     expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
     expect(a2.books.get.length).toBe(0);
   });
@@ -164,7 +164,7 @@ describe("EntityManager.joins", () => {
     const em = newEntityManager();
     resetQueryCount();
     await em.load(Critic, "c:1", "group");
-    expect(queries.length).toBe(1);
+    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 2);
   });
 
   it("preloads m2os where column exists on a base table", async () => {
@@ -173,7 +173,7 @@ describe("EntityManager.joins", () => {
     const em = newEntityManager();
     resetQueryCount();
     const lp = await em.load(LargePublisher, "p:1", "group");
-    expect(queries.length).toBe(1);
+    expect(queries.length).toBe(isPreloadingEnabled ? 1 : 2);
     expect(lp.group.get?.name).toBe("pg1");
   });
 

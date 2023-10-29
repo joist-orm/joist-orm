@@ -12,7 +12,7 @@ import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
-import { partitionHint, populateDataLoader } from "./dataloaders/populateDataLoader";
+import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers/Driver";
 import {
   BaseEntity,
@@ -52,6 +52,7 @@ import {
   tagId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
+import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -151,11 +152,16 @@ type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
-export type TimestampFields = {
+export interface TimestampFields {
   updatedAt: string | undefined;
   createdAt: string | undefined;
   deletedAt: string | undefined;
-};
+}
+
+export interface EntityManagerOpts {
+  driver: Driver;
+  preloadPlugin?: PreloadPlugin;
+}
 
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
@@ -167,12 +173,12 @@ export class EntityManager<C = unknown> {
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;
   public entityLimit: number = defaultEntityLimit;
-  #entities: Entity[] = [];
+  readonly #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
-  #entityIndex: Map<string, Entity> = new Map();
+  readonly #entityIndex: Map<string, Entity> = new Map();
   #isValidating: boolean = false;
-  #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
+  readonly #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
   #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
@@ -184,33 +190,42 @@ export class EntityManager<C = unknown> {
    */
   #pendingCascadeDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
-  #joinRows: Record<string, JoinRows> = {};
+  readonly #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
-  #rm = new ReactionsManager();
+  readonly #rm = new ReactionsManager();
   /** Ensures our `em.flush` method is not interrupted. */
-  #fl = new FlushLock();
-  #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
+  readonly #fl = new FlushLock();
+  readonly #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
+  readonly #preloader: PreloadPlugin | undefined;
   private __api: EntityManagerInternalApi;
 
   constructor(em: EntityManager<C>);
+  constructor(ctx: C, opts: EntityManagerOpts);
   constructor(ctx: C, driver: Driver);
-  constructor(emOrCtx: EntityManager<C> | C, driver?: Driver) {
+  constructor(emOrCtx: EntityManager<C> | C, driverOrOpts?: EntityManagerOpts | Driver) {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
       this.driver = em.driver;
+      this.#preloader = em.#preloader;
       this.#hooks = {
         beforeTransaction: [...em.#hooks.beforeTransaction],
         afterTransaction: [...em.#hooks.afterTransaction],
       };
-      this.ctx = em.ctx!;
+      this.ctx = em.ctx;
+    } else if (driverOrOpts && "executeFind" in driverOrOpts) {
+      this.ctx = emOrCtx;
+      this.driver = driverOrOpts;
+      this.#preloader = undefined;
     } else {
-      this.ctx = emOrCtx!;
-      this.driver = driver!;
+      this.ctx = emOrCtx;
+      this.driver = driverOrOpts!.driver;
+      this.#preloader = driverOrOpts!.preloadPlugin;
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
     this.__api = {
+      preloader: this.#preloader,
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
@@ -926,15 +941,22 @@ export class EntityManager<C = unknown> {
     }
 
     const meta = list[0]?.__orm.metadata;
-    const [sql, non] = partitionHint(meta, hintOpt);
 
-    if (sql) {
-      const loader = populateDataLoader(this, meta, sql, "sqlOnly", opts);
-      await Promise.all(list.map((entity) => loader.load({ entity, hint: sql })));
-    }
-    if (non) {
-      const loader = populateDataLoader(this, meta, non, "intermixed", opts);
-      await Promise.all(list.map((entity) => loader.load({ entity, hint: non })));
+    if (this.#preloader) {
+      // If we can preload, prevent promise deadlocking by one large-batch preload populate (which can't have
+      // intra dependencies), then a 2nd small-batch non-preload populate.
+      const [preload, non] = this.#preloader.partitionHint(meta, hintOpt);
+      if (preload) {
+        const loader = populateDataLoader(this, meta, preload, "preload", opts);
+        await Promise.all(list.map((entity) => loader.load({ entity, hint: preload })));
+      }
+      if (non) {
+        const loader = populateDataLoader(this, meta, non, "intermixed", opts);
+        await Promise.all(list.map((entity) => loader.load({ entity, hint: non })));
+      }
+    } else {
+      const loader = populateDataLoader(this, meta, hintOpt, "intermixed", opts);
+      await Promise.all(list.map((entity) => loader.load({ entity, hint: hintOpt })));
     }
 
     return fn ? fn(entityOrList as any) : (entityOrList as any);
@@ -1365,6 +1387,7 @@ export interface EntityManagerInternalApi {
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
+  preloader: PreloadPlugin | undefined;
   isValidating: boolean;
   checkWritesAllowed: () => void;
 }

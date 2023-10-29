@@ -7,7 +7,6 @@ import {
   getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
-import { partitionHint } from "./dataloaders/populateDataLoader";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
@@ -18,8 +17,9 @@ import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncPropert
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
-export const testing = { isAllSqlPaths, partitionHint };
+export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
+export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
 export { Entity, EntityOrmField, isEntity } from "./Entity";
@@ -28,6 +28,7 @@ export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
+export { EntityOrId, HintNode } from "./HintTree";
 export * from "./QueryBuilder";
 export * from "./QueryParser";
 export * from "./changes";
@@ -43,6 +44,7 @@ export {
   Loadable,
   Loaded,
   MarkLoaded,
+  NestedLoadHint,
   New,
   RelationsIn,
   assertLoaded,
@@ -53,6 +55,8 @@ export {
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
+export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
+export { PreloadPlugin } from "./plugins/PreloadPlugin";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
@@ -68,7 +72,7 @@ export {
   rangeValueRule,
 } from "./rules";
 export * from "./serde";
-export { asNew, cleanStringValue, fail } from "./utils";
+export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
 export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/

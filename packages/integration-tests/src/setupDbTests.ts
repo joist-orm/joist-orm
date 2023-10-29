@@ -1,6 +1,7 @@
 import { EntityManager } from "@src/entities";
 import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
-import { Driver } from "joist-orm";
+import { Driver, EntityManagerOpts } from "joist-orm";
+import { JsonAggregatePreloader } from "joist-plugin-join-preloading";
 import { toMatchEntity } from "joist-test-utils";
 import { Knex } from "knex";
 
@@ -17,7 +18,11 @@ export let queries: string[] = [];
 
 export function newEntityManager() {
   const ctx = { knex };
-  const em = new EntityManager(ctx as any, driver);
+  const opts: EntityManagerOpts = {
+    driver,
+    preloadPlugin: new JsonAggregatePreloader(),
+  };
+  const em = new EntityManager(ctx as any, opts);
   Object.assign(ctx, { em, makeApiCall });
   return em;
 }

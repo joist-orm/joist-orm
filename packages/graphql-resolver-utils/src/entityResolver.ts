@@ -35,6 +35,10 @@ type GraphQLPrimitive = string | Date | boolean | number | null | undefined;
  * Note that we don't necessarily know/care if `firstName` is in the `Entity` GraphQL type, we just map
  * every field to a potential resolver, and then will let the `EntityResolvers` type-check effectively
  * do the union of "what's defined on the ORM type vs. what's defined on the GraphQL type".
+ *
+ * Note this might require setting GraphQL options like `requireResolversToMatchSchema: ignore` to avoid
+ * the GraphQL infra complaining about the extra field resolvers that Joist creates for fields that
+ * are not technically mapped in your GraphQL schema.
  */
 export type EntityResolver<T extends Entity> = {
   [P in keyof T]: P extends "id"

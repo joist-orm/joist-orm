@@ -1,56 +1,26 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
+import { EntityMetadata, Field } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
 import { EntityManager, PersistedAsyncReferenceImpl, getEmInternalApi, getProperties } from "../index";
-import { canPreload, preloadJoins } from "../joinPreloading";
 import { LoadHint, NestedLoadHint } from "../loadHints";
 import { deepNormalizeHint, normalizeHint } from "../normalizeHints";
 import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
 import { toArray } from "../utils";
 
-/** Partitions a hint into SQL-able and non-SQL-able hints. */
-export function partitionHint(
-  meta: EntityMetadata<any> | undefined,
-  hint: LoadHint<any>,
-): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined] {
-  let sql: NestedLoadHint<any> | undefined = undefined;
-  let non: NestedLoadHint<any> | undefined = undefined;
-  for (const [key, subHint] of Object.entries(normalizeHint(hint))) {
-    const field = meta?.allFields[key];
-    if (field && canPreload(meta, field)) {
-      const [_sql, _non] = partitionHint(field.otherMetadata(), subHint);
-      deepMerge(((sql ??= {})[key] ??= {}), _sql ?? {});
-      if (_non) deepMerge(((non ??= {})[key] ??= {}), _non);
-    } else {
-      // If this isn't a raw SQL relation, but it exposes a load-hint, inline that into our SQL.
-      // This will get the non-SQL relation's underlying SQL data preloaded.
-      const p = meta && getProperties(meta)[key];
-      if (p && p.loadHint) {
-        const [_sql, _non] = partitionHint(meta, p.loadHint);
-        if (_sql) deepMerge((sql ??= {}), _sql);
-        if (_non) deepMerge((non ??= {}), _non);
-      }
-      deepMerge(((non ??= {})[key] ??= {}), deepNormalizeHint(subHint));
-    }
-  }
-  return [sql, non];
-}
-
-function deepMerge<T extends object>(a: T, b: T): void {
-  for (const [key, value] of Object.entries(b)) {
-    deepMerge(((a as any)[key] ??= {}), value);
-  }
-}
-
 export function populateDataLoader(
   em: EntityManager,
   meta: EntityMetadata<any>,
   hint: LoadHint<any>,
-  mode: "sqlOnly" | "intermixed",
+  mode: "preload" | "intermixed",
   opts: { forceReload?: boolean } = {},
 ): DataLoader<{ entity: Entity; hint: LoadHint<any> }, any> {
-  // If we know this is a sql-only hint, we can batch all loads for a given entity
+  // For batching populates, we want different levels of course-ness:
+  // - preloading populates that are only SQL should be batched together as much as possible, but
+  // - intermixed populates (some with custom relations) should be batched as separately as possible
+  //   (while still batching identical populates together) to reduce the chance of promise deadlocks.
+  //
+  // I.e. if we know this is a sql-only hint, we can batch all loads for a given entity
   // together do leverage join-based preloading.
   //
   // However, intermixed batches can be prone to promise deadlocking (one relation .load getting
@@ -58,7 +28,7 @@ export function populateDataLoader(
   // hint, then use a batch key that includes the hint itself, which will make it unlikely
   // for non-sql relations to deadlock on each other/themselves.
   const batchKey =
-    mode === "sqlOnly"
+    mode === "preload"
       ? `${meta.tagName}:${opts.forceReload}`
       : `${meta.tagName}:${JSON.stringify(hint)}:${opts.forceReload}`;
   return em.getLoader(
@@ -71,14 +41,17 @@ export function populateDataLoader(
       ): Promise<any[]> {
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
-        const anyInThisLayerNeedsLoaded = Object.entries(layerNode.subHints).some(([key, hint]) => {
-          return [...hint.entities].some(
-            (entity: any) => !!entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded,
-          );
-        });
+        const { preloader } = getEmInternalApi(em);
         // We may not have a layerMeta if we're going through non-field properties
-        if (anyInThisLayerNeedsLoaded && layerMeta) {
-          await preloadJoins(em, layerMeta, layerNode, "populate");
+        if (preloader && layerMeta) {
+          const preloadThisLayer = Object.entries(layerNode.subHints).some(([key, hint]) => {
+            return [...hint.entities].some(
+              (entity: any) => !!entity[key] && !entity[key].isLoaded && !entity[key].isPreloaded,
+            );
+          });
+          if (preloadThisLayer) {
+            await preloader.preloadPopulate(em, layerMeta, layerNode);
+          }
         }
 
         // One breadth-width pass (only 1 level deep, our 2nd pass recurses) to ensure each relation is loaded

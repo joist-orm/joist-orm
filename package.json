@@ -21,6 +21,7 @@
     "packages/integration-tests",
     "packages/migration-utils",
     "packages/orm",
+    "packages/plugins/join-preloading",
     "packages/utils",
     "packages/test-utils",
     "packages/tests/uuid-ids",

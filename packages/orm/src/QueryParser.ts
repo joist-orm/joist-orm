@@ -19,6 +19,10 @@ export interface ColumnCondition {
   column: string;
   dbType: string;
   cond: ParsedValueFilter<any>;
+  /**
+   * A pruneable condition is one that was auto-added by something like soft-delete, and shouldn't
+   * be something that marks a join as actually used by the user's query.
+   */
   pruneable?: boolean;
 }
 

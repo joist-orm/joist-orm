@@ -17,7 +17,8 @@
     "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
-    "joist-orm": "workspace:*"
+    "joist-orm": "workspace:*",
+    "joist-plugin-join-preloading": "workspace:*"
   },
   "devDependencies": {
     "@swc/core": "^1.3.95",

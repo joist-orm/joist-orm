@@ -11,7 +11,8 @@ import {
   insertTag,
   update,
 } from "@src/entities/inserts";
-import { jan1, jan2, testing } from "joist-orm";
+import { jan1, jan2 } from "joist-orm";
+import { testing } from "joist-plugin-join-preloading";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
 import { newEntityManager, queries, resetQueryCount } from "./setupDbTests";
 

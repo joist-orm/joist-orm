@@ -22,6 +22,7 @@ import {
   getMetadata,
   jan1,
   jan2,
+  jan3,
   parseFindQuery,
 } from "joist-orm";
 import {
@@ -2365,6 +2366,16 @@ describe("EntityManager.queries", () => {
       expect(c2).toBe(1);
       // And we didn't make an extra query for it
       expect(numberOfQueries).toBe(1);
+    });
+
+    it("can count with dates between", async () => {
+      await insertAuthor({ first_name: "a1", graduated: jan1 });
+      await insertAuthor({ first_name: "a2", graduated: jan2 });
+      await insertAuthor({ first_name: "a3", graduated: jan3 });
+      await insertAuthor({ first_name: "a4", graduated: undefined });
+      const em = newEntityManager();
+      const q1 = await em.findCount(Author, { graduated: { between: [jan2, jan3] } });
+      expect(q1).toBe(2);
     });
 
     it("can batch count", async () => {

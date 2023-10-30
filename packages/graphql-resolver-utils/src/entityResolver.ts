@@ -86,7 +86,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     .filter((ormField) => isReferenceField(ormField))
     .map((ormField) => [
       ormField.fieldName,
-      (entity: T, args, ctx, info: GraphQLResolveInfo) => {
+      (entity: T, args, ctx, info: GraphQLResolveInfo | undefined) => {
         // Use the `info` to see if the query is only returning `{ id }` and if so avoid fetching the entity
         if ((ormField.kind === "m2o" || ormField.kind === "poly") && info?.fieldNodes.length === 1) {
           const selectionSet = info.fieldNodes[0].selectionSet;
@@ -107,7 +107,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
           return reference.get;
         }
         // We skip polys b/c they can't have load hints anyway
-        if (isManyToOneField(ormField) || isOneToManyField(ormField)) {
+        if (info && (isManyToOneField(ormField) || isOneToManyField(ormField))) {
           // See if we can populate the collection from the GraphQL selection set
           const loadHint = convertInfoToLoadHint(ormField.otherMetadata(), info);
           if (loadHint) {
@@ -123,17 +123,19 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
     .filter((ormField) => isCollectionField(ormField))
     .map((ormField) => [
       ormField.fieldName,
-      (entity, args, ctx, info) => {
+      (entity, args, ctx, info: GraphQLResolveInfo | undefined) => {
         const field = ormField as OneToManyField | ManyToManyField;
         const collection = (entity as any)[field.fieldName];
         if (isLoadedCollection(collection)) {
           return collection.get;
         }
-        // See if we can populate the collection from the GraphQL selection set
-        const loadHint = convertInfoToLoadHint(field.otherMetadata(), info);
-        if (loadHint) {
-          const parentHint = { [field.fieldName]: loadHint } as LoadHint<T>;
-          return entity.em.populate(entity, parentHint).then(() => collection.get);
+        if (info) {
+          // See if we can populate the collection from the GraphQL selection set
+          const loadHint = convertInfoToLoadHint(field.otherMetadata(), info);
+          if (loadHint) {
+            const parentHint = { [field.fieldName]: loadHint } as LoadHint<T>;
+            return entity.em.populate(entity, parentHint).then(() => collection.get);
+          }
         }
         return collection.load();
       },

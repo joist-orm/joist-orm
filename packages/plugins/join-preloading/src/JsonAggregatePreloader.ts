@@ -7,11 +7,11 @@ import {
   EntityOrId,
   getEmInternalApi,
   HintNode,
-  joinClauses,
   keyToNumber,
   keyToString,
   kq,
   kqDot,
+  kqStar,
   LoadHint,
   NestedLoadHint,
   ParsedFindQuery,
@@ -89,41 +89,35 @@ async function preloadJoins<T extends Entity, I extends EntityOrId>(
     meta,
   );
 
-  // Create a ParsedFindQuery to reuse addTablePerClassJoinsAndClassTag
-  const query: ParsedFindQuery = { selects: [], tables: [], conditions: [], orderBys: [] };
-  if (mode === "populate") {
-    query.selects.push(kqDot(alias, "id"));
-    // We may have not found any SQL-preload-able relations in the load hint
-    if (joins.length === 0) return;
-  } else if (mode === "load") {
-    query.selects.push(`${kq(alias)}.*`);
-    addTablePerClassJoinsAndClassTag(query, meta, alias, true);
-  } else {
-    assertNever(mode);
-  }
-
-  // Push `books._ as books`, `comments._ as comments`
-  query.selects.push(...aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`));
-
-  const sql = `
-    select ${query.selects.join(", ")}
-    from ${kq(meta.tableName)} ${kq(alias)}
-    ${joinClauses(query.tables).join("\n")}
-    ${joins.join(" ")}
-    where ${kq(alias)}.id = ANY(?)
-    order by ${kq(alias)}.id;
-  `;
+  // We may have not found any SQL-preload-able relations in the load hint; if so, since
+  // this is just `em.populate` and not an `em.load/find`, we can early return.
+  if (mode === "populate" && joins.length === 0) return;
 
   const ids = [...root.entities]
     .filter((e) => typeof e === "string" || !e.isNewEntity)
     .map((e) => keyToNumber(meta, typeof e === "string" ? e : e.id));
 
+  // Create a ParsedFindQuery to reuse addTablePerClassJoinsAndClassTag
+  const query: ParsedFindQuery = {
+    selects: [
+      // Either `select id` if populating, or `select *` if loading
+      mode === "populate" ? kqDot(alias, "id") : kqStar(alias),
+      // Include the aggregate `books._ as books`, `comments._ as comments`
+      ...aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`),
+    ],
+    tables: [{ alias, join: "primary", table: meta.tableName }],
+    lateralJoins: { joins, bindings },
+    conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: ids } }],
+    orderBys: [],
+  };
+
+  if (mode === "load") addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+
   // console.log("PRELOADING", JSON.stringify(root));
-  const rows = await em.driver.executeQuery(em, sql, [...bindings, ids]);
-  // console.log("...done with", JSON.stringify(root));
+  const rows = await em.driver.executeFind(em, query, {});
 
   if (mode === "populate") {
-    // B/c this is populate, don't return anything (new entities), just call the processors
+    // B/c this is `populate`, don't return anything (new entities), just call the processors
     const entitiesById = indexBy(
       [...root.entities].filter((e) => typeof e !== "string" && !e.isNewEntity) as Entity[],
       (e) => keyToNumber(meta, e.id),

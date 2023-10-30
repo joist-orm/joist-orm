@@ -51,6 +51,10 @@ export function buildKnexQuery(
     }
   });
 
+  if (parsed.lateralJoins) {
+    query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
+  }
+
   parsed.conditions.forEach((c) => {
     addColumnCondition(knex, query, c);
   });

@@ -37,7 +37,7 @@ export { DeepPartialOrNull } from "./createOrUpdatePartial";
 export * from "./drivers";
 export * from "./getProperties";
 export * from "./keys";
-export { kq, kqDot } from "./keywords";
+export { kq, kqDot, kqStar } from "./keywords";
 export {
   DeepNew,
   LoadHint,

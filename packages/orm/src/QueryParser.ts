@@ -62,6 +62,8 @@ export interface ParsedFindQuery {
   selects: string[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
+  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
+  lateralJoins?: { joins: string[]; bindings: any[] };
   /** Simple conditions that are ANDd together. */
   conditions: ColumnCondition[];
   /** Any optional complex conditions that will be ANDd with the simple conditions. */

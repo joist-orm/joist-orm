@@ -32,6 +32,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
   ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined] {
     return partitionHint(meta, hint);
   }
+
   preloadPopulate<T extends Entity>(
     em: EntityManager<unknown>,
     meta: EntityMetadata<T>,
@@ -80,14 +81,7 @@ async function preloadJoins<T extends Entity, I extends EntityOrId>(
   const { getAlias } = new AliasAssigner();
 
   const alias = getAlias(meta.tableName);
-  const { aliases, joins, processors, bindings } = addJoins(
-    em,
-    getAlias,
-    { tree: root, alias, meta },
-    root,
-    alias,
-    meta,
-  );
+  const joins = addJoins(em, getAlias, { tree: root, alias, meta }, root, alias, meta);
 
   // We may have not found any SQL-preload-able relations in the load hint; if so, since
   // this is just `em.populate` and not an `em.load/find`, we can early return.
@@ -103,10 +97,10 @@ async function preloadJoins<T extends Entity, I extends EntityOrId>(
       // Either `select id` if populating, or `select *` if loading
       mode === "populate" ? kqDot(alias, "id") : kqStar(alias),
       // Include the aggregate `books._ as books`, `comments._ as comments`
-      ...aliases.map((a) => `${kqDot(a, "_")} as ${kq(a)}`),
+      ...joins.map(({ alias: a }) => `${kqDot(a, "_")} as ${kq(a)}`),
     ],
     tables: [{ alias, join: "primary", table: meta.tableName }],
-    lateralJoins: { joins, bindings },
+    lateralJoins: { joins: joins.map((j) => j.join), bindings: joins.flatMap((j) => j.bindings) },
     conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: ids } }],
     orderBys: [],
   };
@@ -124,7 +118,7 @@ async function preloadJoins<T extends Entity, I extends EntityOrId>(
     );
     rows.forEach((row) => {
       const parent = entitiesById.get(row["id"])!;
-      processors.forEach((p, i) => p(parent as I, parent, row[aliases[i]] ?? []));
+      joins.forEach(({ processor: p, alias: a }) => p(parent as I, parent, row[a] ?? []));
     });
   } else if (mode === "load") {
     // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us,
@@ -133,7 +127,7 @@ async function preloadJoins<T extends Entity, I extends EntityOrId>(
     const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
     rows.forEach((row, i) => {
       const parent = entities[i];
-      processors.forEach((p, i) => p(parent.id as I, parent, row[aliases[i]] ?? []));
+      joins.forEach(({ processor: p, alias: a }) => p(parent.id as I, parent, row[a] ?? []));
     });
     return entities;
   } else {
@@ -144,14 +138,14 @@ async function preloadJoins<T extends Entity, I extends EntityOrId>(
 /** Decodes an array-of-arrays of children entries, and stores them the `parent`'s relation. */
 type Processor<I extends EntityOrId> = (root: I, parent: Entity, arrays: unknown[][]) => void;
 
-/** Any preload-loadable joins, potentially nested. */
-type JoinsResult<I extends EntityOrId> = {
-  /** The aliases for this level's json-array-d column, i.e. `b._` or `c._`. */
-  aliases: string[];
-  /** The SQL for this level's lateral joins, which themselves might have recursive lateral joins. */
-  joins: string[];
-  /** The processors for this level's lateral joins, which themselves might recursively processor subjoins. */
-  processors: Processor<I>[];
+/** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
+type JoinResult<I extends EntityOrId> = {
+  /** The alias for this child's json-array-d column, i.e. `b._` or `c._`. */
+  alias: string;
+  /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
+  join: string;
+  /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
+  processor: Processor<I>;
   /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
   bindings: any[];
 };
@@ -164,11 +158,8 @@ function addJoins<I extends EntityOrId>(
   tree: HintNode<I>,
   parentAlias: string,
   parentMeta: EntityMetadata<any>,
-): JoinsResult<I> {
-  const aliases: string[] = [];
-  const joins: string[] = [];
-  const processors: Processor<I>[] = [];
-  const bindings: any[] = [];
+): JoinResult<I>[] {
+  const results: JoinResult<I>[] = [];
 
   // Join in SQL-able hints from parent
   Object.entries(tree.subHints).forEach(([key, subTree]) => {
@@ -180,17 +171,9 @@ function addJoins<I extends EntityOrId>(
 
       // Use a prefix like `_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
       const otherAlias = `_${getAlias(otherMeta.tableName)}`;
-      aliases.push(otherAlias);
 
       // Do the recursion up-front, so we can work it into our own join/processor
-      const {
-        aliases: subAliases,
-        joins: subJoins,
-        processors: subProcessors,
-        bindings: subBindings,
-      } = addJoins(em, getAlias, root, subTree, otherAlias, otherMeta);
-
-      bindings.push(...subBindings);
+      const subJoins = addJoins(em, getAlias, root, subTree, otherAlias, otherMeta);
 
       // Get all fields with serdes and flatten out the columns
       const columns = Object.values(otherMeta.allFields)
@@ -200,12 +183,13 @@ function addJoins<I extends EntityOrId>(
         ...columns.map((c) => kqDot(otherAlias, c.columnName)),
         // We eventually need to handle parent types/subtypes here...
         // Combine any grandchilden
-        ...subAliases.map((a) => kqDot(a, "_")),
+        ...subJoins.map((sb) => kqDot(sb.alias, "_")),
       ];
 
       const aliasMaybeSuffix = kq(`${parentAlias}${field.aliasSuffix}`);
 
       let where: string;
+      let m2mFrom = "";
       if (otherField.kind === "m2o") {
         where = `${kqDot(otherAlias, otherField.serde.columns[0].columnName)} = ${kqDot(parentAlias, "id")}`;
       } else if (otherField.kind === "poly") {
@@ -223,8 +207,7 @@ function addJoins<I extends EntityOrId>(
         const m2mAlias = getAlias(otherField.joinTableName);
         // Get the m2m row's id to track in JoinRows
         selects.unshift(kqDot(m2mAlias, "id"));
-        // Sneak in m2m join into subJoins
-        subJoins.unshift(`, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`);
+        m2mFrom = `, ${kq(otherField.joinTableName)} ${kq(m2mAlias)}`;
         where = `
             ${kqDot(parentAlias, "id")} = ${kqDot(m2mAlias, otherField.columnNames[1])} AND
             ${kqDot(m2mAlias, otherField.columnNames[0])} = ${kqDot(otherAlias, "id")}
@@ -233,6 +216,7 @@ function addJoins<I extends EntityOrId>(
         throw new Error(`Unsupported otherField.kind ${otherField.kind}`);
       }
 
+      const bindings = subJoins.flatMap((sj) => sj.bindings);
       const needsSubSelect = subTree.entities.size !== root.tree.entities.size;
       if (needsSubSelect) {
         bindings.push(
@@ -242,17 +226,17 @@ function addJoins<I extends EntityOrId>(
         );
       }
 
-      joins.push(`
-          cross join lateral (
-            select json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _
-            from ${kq(otherMeta.tableName)} ${kq(otherAlias)}
-            ${subJoins.join("\n")}
-            where ${where}
-            ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
-          ) ${kq(otherAlias)}
-        `);
+      const join = `
+        cross join lateral (
+          select json_agg(json_build_array(${selects.join(", ")}) order by ${kq(otherAlias)}.id) as _
+          from ${kq(otherMeta.tableName)} ${kq(otherAlias)} ${m2mFrom}
+          ${subJoins.map((sb) => sb.join).join("\n")}
+          where ${where}
+          ${needsSubSelect ? ` AND ${kqDot(root.alias, "id")} = ANY(?)` : ""}
+        ) ${kq(otherAlias)}
+      `;
 
-      processors.push((root, parent, arrays) => {
+      const processor: Processor<I> = (root, parent, arrays) => {
         // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
         // we're processing the arrays of comments, but for a root author like `a2` that didn't ask for our load
         // hint, then skip it to keep the relation unloaded.
@@ -280,19 +264,21 @@ function addJoins<I extends EntityOrId>(
               .addExisting(m2m, array[0] as any, parent, entity);
           }
           // Within each child, look for grandchildren
-          subProcessors.forEach((sub, i) => {
+          subJoins.forEach((sub, i) => {
             // array[i] could be null if there are no grandchildren, but still call `sub` to
             // process it so that we store the empty array into the em.joinLoadedRelations, to
             // avoid the relation.load method later doing a SQL for rows we know are not there.
-            sub(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
+            sub.processor(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
           });
           return entity;
         });
         // Cache the entities so `.load`s will see them
         getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
-      });
+      };
+
+      results.push({ alias: otherAlias, join, bindings, processor });
     }
   });
 
-  return { aliases, joins, processors, bindings };
+  return results;
 }

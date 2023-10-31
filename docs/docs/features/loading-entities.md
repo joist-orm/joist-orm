@@ -49,32 +49,32 @@ const r3 = await em.find(Author, { firstName: { like: "%a%" } });
 const r4 = await em.find(Author, { publisher: p1 });
 ```
 
-If object graph navigation is ~80-90% of your application's queries (because they are all implicit), `find` queries will likely be **~10% of your queries**.
+If object graph navigation is ~80% of your application's queries (because they are all implicit), `em.find` queries will likely be **~15% of your queries**.
 
 See [Find Queries](./queries-find) for more documentation and examples.
 
 * Pro: Still succinct because joins are implicit in the object literal
 * Pro: Supports `WHERE`-based filtering/returning a subset of entities
-* Con: Not as N+1 safe as approach 1; Joist currently _attempts_ to de-N+1 these queries, but it's not perfect. See [this issue](https://github.com/stephenh/joist-ts/issues/441) for details.
+* Pro: N+1 safe even when called in a loop
 * Con: Cannot use domain model-level relations like Joist's `hasOneDerived`, `hasOneThrough`, `AsyncProperties`, etc.
 * Con: Loads only full entities, not cross-table aggregates/group bys/etc.
 
 ### 3. Other Query Builders
 
-For queries that grow outside what `em.find` can provide, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely).
+For queries that grow outside what `em.find` can provide, i.e. **the last ~5% of your application's queries** that are truly custom, then it's perfectly fine to use a 3rd-party query builder like [Knex](https://knexjs.org/) or [Kysely](https://github.com/koskimas/kysely).
 
 Knex would be a natural choice, because Joist uses Knex as an internal dependency, but Kysely would be fine too.
 
 In particular, any queries that need to:
 
-* Do group bys/aggregates
+* Group bys/aggregates
 * Select custom fragments of data (not just an entity)
 
 Are best done via Knex or Kysely.
 
 #### `buildQuery`
 
-Joist does provide a `buildQuery` method that allows blending approaches 2 and 3: you can pass an `em.find` join literal to `buildQuery` (with either inline or complex conditions), and get back a Knex `QueryBuilder` with all the joins and conditions added, to which you can do your own further joins or filters.
+Joist provides a `buildQuery` method that allows blending approaches 2 and 3: you can pass an `em.find`-style join literal to `buildQuery` (with either inline or complex conditions), and get back a Knex `QueryBuilder` with all the joins and conditions added, to which you can do your own further joins or filters.
 
 ```ts
 const query = buildQuery(knex, Book, {
@@ -90,7 +90,7 @@ const books = await em.loadFromQuery(Book, query);
 
 These three options all focus on loading *entities*, which your code will then iterate over to perform business/view logic.
 
-If you need to load bespoke, non-entity fragments of data across several tables (i.e. with aggregates/group bys/etc.), that is currently not a feature that Joist provides, but you're free to use a raw query builder, which is fourth option in the above list.
+If you need to load bespoke, non-entity fragments of data across several tables (i.e. with aggregates/group bys/etc.), that is currently not a feature that Joist provides, so you must use a separate raw query builder, as per the "option 3" in the above list.
 
 :::
 

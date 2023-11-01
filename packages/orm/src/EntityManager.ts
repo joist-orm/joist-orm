@@ -55,7 +55,7 @@ import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
 import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import {MaybePromise, assertNever, fail, getOrSet, toArray, groupBy, indexBy} from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -1161,6 +1161,7 @@ export class EntityManager<C = unknown> {
         await this.driver.transaction(this, async () => {
           await this.driver.flushEntities(this, entityTodos);
           await this.driver.flushJoinTables(this, joinRowTodos);
+          await beforeCommit(this.ctx, entityTodos);
         });
 
         // TODO: This is really "after flush" if we're being called from a transaction that
@@ -1632,6 +1633,10 @@ function beforeUpdate(ctx: unknown, todos: Record<string, Todo>): Promise<unknow
 
 function afterValidation(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
   return runHook(ctx, "afterValidation", todos, ["inserts", "updates"]);
+}
+
+function beforeCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return runHook(ctx, "beforeCommit", todos, ["inserts", "updates", "deletes"]);
 }
 
 function afterCommit(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {

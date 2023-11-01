@@ -18,6 +18,7 @@ export type EntityHook =
   | "beforeUpdate"
   | "beforeDelete"
   | "afterValidation"
+  | "beforeCommit"
   | "afterCommit";
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
@@ -124,6 +125,10 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterValidation", ruleOrHint, maybeFn);
   }
 
+  beforeCommit(fn: HookFn<T, C>): void {
+    this.addHook("beforeCommit", fn);
+  }
+
   afterCommit(fn: HookFn<T, C>): void {
     this.addHook("afterCommit", fn);
   }
@@ -180,8 +185,9 @@ export class ConfigData<T extends Entity, C> {
     beforeFlush: [],
     beforeCreate: [],
     beforeUpdate: [],
-    afterCommit: [],
     afterValidation: [],
+    beforeCommit: [],
+    afterCommit: [],
   };
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];

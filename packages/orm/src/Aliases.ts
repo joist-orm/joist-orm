@@ -1,7 +1,7 @@
 import { groupBy } from "joist-utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { PolymorphicField, PolymorphicFieldComponent, getMetadata } from "./EntityMetadata";
+import { Field, PolymorphicField, PolymorphicFieldComponent, getMetadata } from "./EntityMetadata";
 import { ColumnCondition, ParsedValueFilter, mapToDb, skipCondition } from "./QueryParser";
 import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
@@ -56,17 +56,21 @@ export interface AliasMgmt {
   setAlias(alias: string): void;
 }
 
+type ConditionAndAlias = { cond: ColumnCondition; field: { aliasSuffix: string } };
+
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
   // Keeps a list of conditions we've created for this specific proxy, so that parseFindQuery
   // can tell us, after we've been creating via the `const a = alias(Author)` command, which
   // alias we're actually bound to in the join literal.
-  const conditions: ColumnCondition[] = [];
+  const conditions: ConditionAndAlias[] = [];
   // Give QueryBuilder a hook to assign our actual alias
   const mgmt: AliasMgmt = {
     tableName: meta.tableName,
     setAlias(newAlias: string) {
-      conditions.forEach((c) => (c.alias = newAlias));
+      conditions.forEach(({ cond, field }) => {
+        cond.alias = `${newAlias}${field.aliasSuffix}`;
+      });
     },
   };
   return new Proxy(cstr, {
@@ -80,9 +84,9 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primaryKey":
         case "primitive":
         case "enum":
-          return new PrimitiveAliasImpl(conditions, field.serde!.columns[0]);
+          return new PrimitiveAliasImpl(field, conditions, field.serde!.columns[0]);
         case "m2o":
-          return new EntityAliasImpl(conditions, field.serde!.columns[0]);
+          return new EntityAliasImpl(field, conditions, field.serde!.columns[0]);
         case "poly":
           return new PolyReferenceAlias(conditions, field);
         default:
@@ -98,7 +102,11 @@ export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt 
 }
 
 class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V, N> {
-  public constructor(private conditions: ColumnCondition[], private column: Column) {}
+  public constructor(
+    private field: Field & { aliasSuffix: string },
+    private conditions: ConditionAndAlias[],
+    private column: Column,
+  ) {}
 
   eq(value: V | N | undefined): ColumnCondition {
     if (value === undefined) {
@@ -167,13 +175,17 @@ class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V,
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
     };
-    this.conditions.push(cond);
+    this.conditions.push({ cond, field: this.field });
     return cond;
   }
 }
 
 class EntityAliasImpl<T> implements EntityAlias<T> {
-  public constructor(private conditions: ColumnCondition[], private column: Column) {}
+  public constructor(
+    private field: Field & { aliasSuffix: string },
+    private conditions: ConditionAndAlias[],
+    private column: Column,
+  ) {}
 
   eq(value: T | IdOf<T> | null | undefined): ColumnCondition {
     if (value === undefined) {
@@ -207,13 +219,16 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
       dbType: this.column.dbType,
       cond: mapToDb(this.column, value),
     };
-    this.conditions.push(cond);
+    this.conditions.push({ cond, field: this.field });
     return cond;
   }
 }
 
 class PolyReferenceAlias<T> {
-  public constructor(private conditions: ColumnCondition[], private field: PolymorphicField) {}
+  public constructor(
+    private conditions: ConditionAndAlias[],
+    private field: PolymorphicField & { aliasSuffix: string },
+  ) {}
 
   eq(value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
     return this.addEqOrNe("eq", value);
@@ -265,7 +280,7 @@ class PolyReferenceAlias<T> {
       dbType: this.field.serde.columns[0].dbType,
       cond: mapToDb(column, value),
     };
-    this.conditions.push(cond);
+    this.conditions.push({ cond, field: this.field });
     return cond;
   }
 }

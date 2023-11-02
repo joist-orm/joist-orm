@@ -149,9 +149,9 @@ export function parseFindQuery(
     // might actually be `a1` if there are two `authors` tables in the query, so push the
     // canonical alias value for the current clause into the Alias.
     if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      filter.as[aliasMgmt].setAlias(alias);
+      filter.as[aliasMgmt].setAlias(meta, alias);
     } else if (isAlias(filter)) {
-      filter[aliasMgmt].setAlias(alias);
+      filter[aliasMgmt].setAlias(meta, alias);
     }
 
     if (ef && ef.kind === "join") {

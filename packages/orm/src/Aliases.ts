@@ -1,7 +1,14 @@
 import { groupBy } from "joist-utils";
 import { Entity } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
-import { Field, PolymorphicField, PolymorphicFieldComponent, getMetadata } from "./EntityMetadata";
+import {
+  EntityMetadata,
+  Field,
+  PolymorphicField,
+  PolymorphicFieldComponent,
+  getBaseAndSelfMetas,
+  getMetadata,
+} from "./EntityMetadata";
 import { ColumnCondition, ParsedValueFilter, mapToDb, skipCondition } from "./QueryParser";
 import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
@@ -53,10 +60,10 @@ export const aliasMgmt = Symbol("aliasMgmt");
 /** Management interface for `QueryParser` to set Alias's canonical alias. */
 export interface AliasMgmt {
   tableName: string;
-  setAlias(alias: string): void;
+  setAlias(meta: EntityMetadata<any>, alias: string): void;
 }
 
-type ConditionAndAlias = { cond: ColumnCondition; field: { aliasSuffix: string } };
+type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: string } };
 
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
@@ -67,8 +74,18 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   // Give QueryBuilder a hook to assign our actual alias
   const mgmt: AliasMgmt = {
     tableName: meta.tableName,
-    setAlias(newAlias: string) {
+    setAlias(newMeta: EntityMetadata<any>, newAlias: string) {
       conditions.forEach(({ cond, field }) => {
+        // Do we have mismatched `em.find(ChildMeta)` with a `alias(BaseMeta)`? If so, the
+        // usual `${field.aliasSuffix}` won't know it should have a suffix, so we need to calc it.
+        if (newMeta !== meta) {
+          const bases = getBaseAndSelfMetas(newMeta);
+          const fieldIsFromBase = bases.includes(newMeta);
+          if (fieldIsFromBase) {
+            cond.alias = `${newAlias}_b0`;
+            return;
+          }
+        }
         cond.alias = `${newAlias}${field.aliasSuffix}`;
       });
     },

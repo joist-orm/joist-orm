@@ -44,7 +44,7 @@ describe("EntityManager.ctiQueries", () => {
     expect(res).toMatchEntity([sp1]);
   });
 
-  it("finds against child with simple child & parent filter", async () => {
+  it("finds against child with simple child & parent filter, parent alias", async () => {
     const em = newEntityManager();
     const sp1 = newSmallPublisher(em, { name: "p1", city: "location" });
     await em.flush();

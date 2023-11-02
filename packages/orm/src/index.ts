@@ -271,7 +271,6 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
   // Setup subTypes/baseTypes
   metas.forEach((m) => {
-    const abbr = `${abbreviation(m.tableName)}0`;
     // This is basically m.fields.mapValues to assign the primary alias
     m.allFields = Object.fromEntries(
       Object.entries(m.fields).map(([name, field]) => [name, { ...field, aliasSuffix: "" }]),

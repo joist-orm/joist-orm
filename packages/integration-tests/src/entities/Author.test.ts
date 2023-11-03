@@ -189,12 +189,14 @@ describe("Author", () => {
     expect(a1.transientFields.afterCommitIsNewEntity).toBe(false);
     expect(a1.transientFields.afterValidationRan).toBe(false);
     expect(a1.transientFields.beforeDeleteRan).toBe(false);
+    expect(a1.transientFields.beforeCommitRan).toBe(false);
     await em.flush();
     expect(a1.transientFields.beforeFlushRan).toBe(true);
     expect(a1.transientFields.beforeCreateRan).toBe(true);
     expect(a1.transientFields.beforeUpdateRan).toBe(false);
     expect(a1.transientFields.beforeDeleteRan).toBe(false);
     expect(a1.transientFields.afterValidationRan).toBe(true);
+    expect(a1.transientFields.beforeCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitRan).toBe(true);
     expect(a1.transientFields.afterCommitIdIsSet).toBe(true);
     expect(a1.transientFields.afterCommitIsNewEntity).toBe(true);

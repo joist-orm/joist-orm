@@ -10,8 +10,7 @@ import {
   insertTag,
   select,
 } from "@src/entities/inserts";
-import { getProperties } from "joist-orm";
-import { Author, Book, newAuthor } from "./entities";
+import { Author, Book } from "./entities";
 import { newEntityManager } from "./setupDbTests";
 
 describe("EntityManager.createOrUpdatePartial", () => {

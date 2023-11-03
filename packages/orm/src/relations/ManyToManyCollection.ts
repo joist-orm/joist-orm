@@ -11,7 +11,7 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
-import { remove } from "../utils";
+import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -76,7 +76,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
       const key = `${this.columnName}=${this.#entity.id}`;
-      this.loaded = await manyToManyDataLoader(this.#entity.em, this).load(key);
+      this.loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.#entity.em, this).load(key));
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
@@ -142,17 +142,22 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
     } else {
-      if (this.addedBeforeLoaded) {
-        remove(this.addedBeforeLoaded, other);
-      }
-      if (!(this.removedBeforeLoaded ??= []).includes(other)) {
-        this.removedBeforeLoaded.push(other);
-      }
+      maybeRemove(this.addedBeforeLoaded, other);
+      maybeAdd((this.removedBeforeLoaded ??= []), other);
     }
   }
 
   get isLoaded(): boolean {
     return this.loaded !== undefined;
+  }
+
+  get isPreloaded(): boolean {
+    return !!this.getPreloaded();
+  }
+
+  preload(): void {
+    this.loaded = this.getPreloaded();
+    this.maybeApplyAddedAndRemovedBeforeLoaded();
   }
 
   private doGet(): U[] {
@@ -266,6 +271,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
       this.otherMeta.type
     }, otherFieldName: ${this.otherFieldName})`;
+  }
+
+  private getPreloaded(): U[] | undefined {
+    if (this.#entity.isNewEntity) return undefined;
+    return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

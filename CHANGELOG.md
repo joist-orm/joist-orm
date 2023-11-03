@@ -1,3 +1,17 @@
+# [1.115.0](https://github.com/stephenh/joist-ts/compare/v1.114.1...v1.115.0) (2023-11-03)
+
+
+### Features
+
+* Add an experimental joins plugin ([#843](https://github.com/stephenh/joist-ts/issues/843)) ([63a81af](https://github.com/stephenh/joist-ts/commit/63a81af9150b9cf366fa9d5ba3c4fcdebdfd25bc))
+
+## [1.114.1](https://github.com/stephenh/joist-ts/compare/v1.114.0...v1.114.1) (2023-11-03)
+
+
+### Bug Fixes
+
+* complex filters on cti of parent fields do not filter to correct table ([#837](https://github.com/stephenh/joist-ts/issues/837)) ([6716c8b](https://github.com/stephenh/joist-ts/commit/6716c8be8099e50909d360e1d1bc644d68b41ed4))
+
 # [1.114.0](https://github.com/stephenh/joist-ts/compare/v1.113.0...v1.114.0) (2023-10-27)
 
 

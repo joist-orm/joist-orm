@@ -19,6 +19,10 @@ export interface ColumnCondition {
   column: string;
   dbType: string;
   cond: ParsedValueFilter<any>;
+  /**
+   * A pruneable condition is one that was auto-added by something like soft-delete, and shouldn't
+   * be something that marks a join as actually used by the user's query.
+   */
   pruneable?: boolean;
 }
 
@@ -58,6 +62,8 @@ export interface ParsedFindQuery {
   selects: string[];
   /** The primary table plus any joins. */
   tables: ParsedTable[];
+  /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
+  lateralJoins?: { joins: string[]; bindings: any[] };
   /** Simple conditions that are ANDd together. */
   conditions: ColumnCondition[];
   /** Any optional complex conditions that will be ANDd with the simple conditions. */
@@ -149,9 +155,9 @@ export function parseFindQuery(
     // might actually be `a1` if there are two `authors` tables in the query, so push the
     // canonical alias value for the current clause into the Alias.
     if (filter && typeof filter === "object" && "as" in filter && isAlias(filter.as)) {
-      filter.as[aliasMgmt].setAlias(alias);
+      filter.as[aliasMgmt].setAlias(meta, alias);
     } else if (isAlias(filter)) {
-      filter[aliasMgmt].setAlias(alias);
+      filter[aliasMgmt].setAlias(meta, alias);
     }
 
     if (ef && ef.kind === "join") {
@@ -825,6 +831,14 @@ export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {
 
 export function joinKeywords(join: JoinTable): string {
   return join.join === "inner" ? "JOIN" : "LEFT OUTER JOIN";
+}
+
+export function joinClause(join: JoinTable): string {
+  return `${joinKeywords(join)} ${kq(join.table)} ${kq(join.alias)} ON ${join.col1} = ${join.col2}`;
+}
+
+export function joinClauses(joins: ParsedTable[]): string[] {
+  return joins.map((t) => (t.join !== "primary" ? joinClause(t) : ""));
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {

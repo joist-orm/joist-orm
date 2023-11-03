@@ -2,15 +2,14 @@ import { Entity, EntityOrmField, isEntity } from "./Entity";
 import {
   EntityConstructor,
   EntityManager,
-  getEmInternalApi,
   MaybeAbstractEntityConstructor,
   OptsOf,
+  getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
-import { abbreviation } from "./QueryBuilder";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
@@ -20,55 +19,61 @@ import { fail } from "./utils";
 
 export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
+export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
 export { Entity, EntityOrmField, isEntity } from "./Entity";
 export * from "./EntityFilter";
 export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
+export { EntityOrId, HintNode } from "./HintTree";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
 export * from "./getProperties";
 export * from "./keys";
+export { kq, kqDot, kqStar } from "./keywords";
 export {
-  assertLoaded,
   DeepNew,
+  LoadHint,
+  Loadable,
+  Loaded,
+  MarkLoaded,
+  NestedLoadHint,
+  New,
+  RelationsIn,
+  assertLoaded,
   ensureLoaded,
   isLoaded,
   isNew,
-  Loadable,
-  Loaded,
-  LoadHint,
-  MarkLoaded,
   maybePopulateThen,
-  New,
-  RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
+export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
+export { PreloadPlugin } from "./plugins/PreloadPlugin";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  cannotBeUpdated,
   GenericError,
-  maxValueRule,
-  minValueRule,
-  newRequiredRule,
-  rangeValueRule,
   ValidationError,
   ValidationErrors,
   ValidationRule,
   ValidationRuleResult,
+  cannotBeUpdated,
+  maxValueRule,
+  minValueRule,
+  newRequiredRule,
+  rangeValueRule,
 } from "./rules";
 export * from "./serde";
-export { asNew, cleanStringValue, fail } from "./utils";
-export { ensureWithLoaded, withLoaded, WithLoaded } from "./withLoaded";
+export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
+export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -271,7 +276,6 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
 
   // Setup subTypes/baseTypes
   metas.forEach((m) => {
-    const abbr = `${abbreviation(m.tableName)}0`;
     // This is basically m.fields.mapValues to assign the primary alias
     m.allFields = Object.fromEntries(
       Object.entries(m.fields).map(([name, field]) => [name, { ...field, aliasSuffix: "" }]),
@@ -344,6 +348,10 @@ export function getEm(entity: Entity): EntityManager<any> {
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
   return Object.values(entity).filter((v: any) => v instanceof AbstractRelationImpl);
+}
+
+export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
+  return Object.entries(entity).filter(([_, v]: any) => v instanceof AbstractRelationImpl);
 }
 
 export function getConstructorFromTaggedId(id: string): MaybeAbstractEntityConstructor<any> {

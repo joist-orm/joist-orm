@@ -20,6 +20,7 @@
       "joist-migration-utils": ["../migration-utils"],
       "joist-test-utils": ["../test-utils"],
       "joist-orm": ["../orm"],
+      "joist-plugin-join-preloading": ["../plugin/join-preloading"],
       "joist-utils": ["../utils"],
       "@src/*": ["src/*"]
     }
@@ -29,6 +30,7 @@
     { "path": "../graphql-codegen" },
     { "path": "../migration-utils" },
     { "path": "../orm" },
+    { "path": "../plugins/join-preloading" },
     { "path": "../utils" },
     { "path": "../test-utils" }
   ]

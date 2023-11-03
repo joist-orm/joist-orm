@@ -1,6 +1,7 @@
 import { EntityManager } from "@src/entities";
 import { InMemoryTestDriver, PostgresTestDriver, TestDriver } from "@src/testDrivers";
-import { Driver } from "joist-orm";
+import { Driver, EntityManagerOpts } from "joist-orm";
+import { JsonAggregatePreloader } from "joist-plugin-join-preloading";
 import { toMatchEntity } from "joist-test-utils";
 import { Knex } from "knex";
 
@@ -15,9 +16,16 @@ export const makeApiCall = jest.fn();
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
+const plugins = (process.env.PLUGINS ?? "").split(",");
+export const isPreloadingEnabled = plugins.includes("join-preloading");
+
 export function newEntityManager() {
   const ctx = { knex };
-  const em = new EntityManager(ctx as any, driver);
+  const opts: EntityManagerOpts = {
+    driver,
+    preloadPlugin: isPreloadingEnabled ? new JsonAggregatePreloader() : undefined,
+  };
+  const em = new EntityManager(ctx as any, opts);
   Object.assign(ctx, { em, makeApiCall });
   return em;
 }

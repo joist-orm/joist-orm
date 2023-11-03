@@ -1,11 +1,11 @@
 {
-  "name": "joist-graphql-resolver-utils",
-  "version": "1.115.0",
+  "name": "joist-plugin-join-preloading",
+  "version": "1.113.0",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/stephenh/joist-ts.git",
-    "directory": "packages/graphql-resolver-utils"
+    "directory": "packages/plugins/join-preloading"
   },
   "main": "build/index.js",
   "exports": {
@@ -14,7 +14,7 @@
   },
   "types": "build/index.d.ts",
   "scripts": {
-    "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'"
+    "format": "prettier --write '{src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [
     "build"

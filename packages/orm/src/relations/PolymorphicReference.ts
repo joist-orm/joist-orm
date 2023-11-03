@@ -112,6 +112,14 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     return this._isLoaded;
   }
 
+  get isPreloaded(): boolean {
+    return false;
+  }
+
+  preload(): void {
+    throw new Error("Not implemented");
+  }
+
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     ensureNotDeleted(this.entity, "pending");
     // This should only be callable in the type system if we've already resolved this to an instance,

@@ -73,6 +73,14 @@ export class CustomCollection<T extends Entity, U extends Entity>
     return this.doGet(opts);
   }
 
+  get isPreloaded(): boolean {
+    return false;
+  }
+
+  preload(): void {
+    throw new Error("Not implemented");
+  }
+
   initializeForNewEntity(): void {
     // Normally we flag relations as loaded if created on a new entity, however CustomCollections
     // might require crawling N-layers down from our initial opts, i.e. if creating a BookReview

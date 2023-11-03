@@ -318,7 +318,7 @@ config.beforeDelete((author) => {
 });
 
 config.beforeCommit((author) => {
-  author.transientFields.afterCommitRan = true;
+  author.transientFields.beforeCommitRan = true;
 });
 
 config.afterCommit((author) => {

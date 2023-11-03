@@ -1,3 +1,10 @@
+# [1.115.0](https://github.com/stephenh/joist-ts/compare/v1.114.1...v1.115.0) (2023-11-03)
+
+
+### Features
+
+* Add an experimental joins plugin ([#843](https://github.com/stephenh/joist-ts/issues/843)) ([63a81af](https://github.com/stephenh/joist-ts/commit/63a81af9150b9cf366fa9d5ba3c4fcdebdfd25bc))
+
 ## [1.114.1](https://github.com/stephenh/joist-ts/compare/v1.114.0...v1.114.1) (2023-11-03)
 
 

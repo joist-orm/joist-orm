@@ -53,6 +53,7 @@ Joist supports the following hooks, listed in the order that they are fired:
 * `beforeFlush` fired when an entity is either created or updated (but not deleted)
 * `beforeDelete` fired when an entity is deleted / `DELETE`-d
 * `afterValidation` fired after an entity is created or updated, and all validation rules have passed
+* `beforeCommit` fired when an entity is created, or updated, or deleted and the transaction is about to commit, can abort the transaction by throwing an error
 * `afterCommit` fired when an entity is created, or updated, or deleted and the transaction has committed
 
 ### Allowed Behavior

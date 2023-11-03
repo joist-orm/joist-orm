@@ -89,6 +89,7 @@ export class Author extends AuthorCodegen {
     beforeUpdateRan: false,
     beforeDeleteRan: false,
     afterValidationRan: false,
+    beforeCommitRan: false,
     afterCommitRan: false,
     afterCommitIdIsSet: false,
     afterCommitIsNewEntity: false,
@@ -314,6 +315,10 @@ config.afterValidation((author) => {
 
 config.beforeDelete((author) => {
   author.transientFields.beforeDeleteRan = true;
+});
+
+config.beforeCommit((author) => {
+  author.transientFields.beforeCommitRan = true;
 });
 
 config.afterCommit((author) => {

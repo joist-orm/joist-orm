@@ -1,3 +1,10 @@
+# [1.116.0](https://github.com/stephenh/joist-ts/compare/v1.115.0...v1.116.0) (2023-11-03)
+
+
+### Features
+
+* add beforeCommit ([#842](https://github.com/stephenh/joist-ts/issues/842)) ([10d71fa](https://github.com/stephenh/joist-ts/commit/10d71faf557eae48145b25daaa22718a79ffa4d7))
+
 # [1.115.0](https://github.com/stephenh/joist-ts/compare/v1.114.1...v1.115.0) (2023-11-03)
 
 

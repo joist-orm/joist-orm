@@ -14,8 +14,14 @@ export abstract class AbstractRelationImpl<U> {
   /** Whether this relation is loaded. */
   abstract get isLoaded(): boolean;
 
+  /** Whether this relation is preloaded. */
+  abstract get isPreloaded(): boolean;
+
   /** Loads the other side of this relation. */
   abstract load(opts?: { forceReload?: boolean }): Promise<any>;
+
+  /** Whether the relation from the preload cache, if preloaded. */
+  abstract preload(): void;
 
   /**
    * Called when our entity has been `EntityManager.delete`'d _and_ `EntityManager.flush` is being called,

@@ -1,10 +1,9 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityMetadata, Field } from "../EntityMetadata";
+import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { EntityManager, PersistedAsyncReferenceImpl, getEmInternalApi, getProperties } from "../index";
-import { LoadHint, NestedLoadHint } from "../loadHints";
-import { deepNormalizeHint, normalizeHint } from "../normalizeHints";
+import { EntityManager, PersistedAsyncReferenceImpl, getEmInternalApi } from "../index";
+import { LoadHint } from "../loadHints";
 import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
 import { toArray } from "../utils";
 
@@ -58,6 +57,8 @@ export function populateDataLoader(
         const loadPromises = Object.entries(layerNode.subHints).flatMap(([key, tree]) => {
           return [...tree.entities].map((entity) => {
             const relation = (entity as any)[key];
+            // This happens to let through non-relation hints like 'name' on user, which wasn't intentional,
+            // but currently doesn't blow up (somehow), and is not depended on by internal tests.
             if (!relation || typeof relation.load !== "function") {
               throw new Error(`Invalid load hint '${key}' on ${entity}`);
             }

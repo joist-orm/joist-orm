@@ -56,7 +56,7 @@ import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -1213,6 +1213,7 @@ export class EntityManager<C = unknown> {
       copy.forEach((e) => done.add(e));
       todo = [];
 
+      // For any entity with an id, get its latest data + relations from the database
       const entities = await Promise.all(
         copy
           .filter((e) => e.idTaggedMaybe)
@@ -1225,33 +1226,43 @@ export class EntityManager<C = unknown> {
           }),
       );
 
-      // Then refresh any non-deleted loaded collections
-      const relations = entities
-        .filter((e) => e && e.__orm.deleted === undefined)
-        .flatMap((entity) => getRelations(entity))
-        .filter((r) => deepLoad || r.isLoaded);
-      await Promise.all(relations.map((r) => r.load({ forceReload: true })));
+      // Then refresh any non-deleted loaded relations (the `loadDataLoader.load` only populates the
+      // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
+      const [custom, builtin] = partition(
+        entities
+          .filter((e) => e && e.__orm.deleted === undefined)
+          .flatMap((entity) => getRelations(entity).filter((r) => deepLoad || r.isLoaded)),
+        isCustomRelation,
+      );
+      // Call `.load` on builtin relations first, because if we hit an already-loaded custom relation
+      // first, it will call `.get` internally, and might access built-in relations that we've not had a
+      // chance to `.load()` yet.
+      await Promise.all(
+        builtin.map((r) => {
+          // If the relation is already loaded, we need to go through .load({ forceReload }), otherwise
+          // use preload to avoid the promise.
+          if (r.isPreloaded && !r.isLoaded) {
+            r.preload();
+            return undefined;
+          } else {
+            return r.load({ forceReload: true });
+          }
+        }),
+      );
+      await Promise.all(custom.map((r) => r.load({ forceReload: true })));
 
       // If deep loading, get all entity/entities in the relation and push them on the list
       if (deepLoad) {
         todo.push(
-          ...relations
+          // We skip recursing into CustomCollections and CustomReferences and PersistedAsyncReferencesImpl for two reasons:
+          // 1. It can be tricky to ensure `{ forceReload: true }` is passed all the way through their custom load
+          // implementations, and so it's easy to have `.get` accidentally come across a not-yet-loaded collection, and
+          // 2. Any custom load functions should use the underlying o2m/m2o/etc relations anyway, so if we crawl/refresh
+          // those, then when the user calls `.get` on custom collections/references, they should be talking to always-loaded
+          // relations, w/o us having to tackle the tricky bookkeeping problem passing `forceReload` all through their
+          // custom load function + any other collections they call.
+          ...builtin
             .filter((r) => "get" in r)
-            // We skip recursing into CustomCollections and CustomReferences and PersistedAsyncReferencesImpl for two reasons:
-            // 1. It can be tricky to ensure `{ forceReload: true }` is passed all the way through their custom load
-            // implementations, and so it's easy to have `.get` accidentally come across a not-yet-loaded collection, and
-            // 2. Any custom load functions should use the underlying o2m/m2o/etc relations anyway, so if we crawl/refresh
-            // those, then when the user calls `.get` on custom collections/references, they should be talking to always-loaded
-            // relations, w/o us having to tackle the tricky bookkeeping problem passing `forceReload` all through their
-            // custom load function + any other collections they call.
-            .filter(
-              (r) =>
-                !(
-                  r instanceof CustomCollection ||
-                  r instanceof CustomReference ||
-                  r instanceof PersistedAsyncReferenceImpl
-                ),
-            )
             .map((r) => (r as any).get)
             .flatMap((value) => (Array.isArray(value) ? value : [value]))
             .filter((value) => isEntity(value) && !done.has(value)),
@@ -1733,4 +1744,8 @@ function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any>[] 
   return getAllMetas(getMetadata(entity)).flatMap((meta) => {
     return meta.config.__data.cascadeDeleteFields.map((fieldName) => (entity as any)[fieldName]);
   });
+}
+
+function isCustomRelation(r: AbstractRelationImpl<any>): boolean {
+  return r instanceof CustomCollection || r instanceof CustomReference || r instanceof PersistedAsyncReferenceImpl;
 }

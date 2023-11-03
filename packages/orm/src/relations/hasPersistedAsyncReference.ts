@@ -172,6 +172,14 @@ export class PersistedAsyncReferenceImpl<
     }
   }
 
+  get isPreloaded(): boolean {
+    return false;
+  }
+
+  preload(): void {
+    throw new Error("Not implemented");
+  }
+
   /** Returns the tagged id of the current value. */
   private get idTagged(): IdOf<U> | N {
     ensureNotDeleted(this.#entity, "pending");

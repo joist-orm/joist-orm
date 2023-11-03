@@ -80,7 +80,7 @@ describe("OneToOneReference", () => {
     expect(() => {
       // @ts-expect-error
       a1.image.get;
-    }).toThrow("get was called when not preloaded");
+    }).toThrow("get was called when not loaded");
   });
 
   it("can be set without being loaded", async () => {

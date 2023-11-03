@@ -1,3 +1,4 @@
+// select word from pg_get_keywords() where catdesc = 'reserved' order by word;
 const keywords = [
   "all",
   "alter",
@@ -113,4 +114,8 @@ export function kq(ident: string): string {
 
 export function kqDot(alias: string, column: string): string {
   return `${kq(alias)}.${kq(column)}`;
+}
+
+export function kqStar(alias: string): string {
+  return `${kq(alias)}.*`;
 }

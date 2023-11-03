@@ -4,9 +4,9 @@ import { knex, newEntityManager } from "../setupDbTests";
 
 describe("PersistedAsyncProperty", () => {
   it("can repopulate a changed tree", async () => {
-    // Given a tree of Author/Book/Review
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
+    // Given a tree of Author (that can have public reviews)/Book/Review
+    await insertAuthor({ first_name: "a1", age: 21, graduated: new Date() });
+    await insertAuthor({ first_name: "a2", age: 21, graduated: new Date() });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
     await insertBookReview({ rating: 1, book_id: 1 });
@@ -17,10 +17,10 @@ describe("PersistedAsyncProperty", () => {
     // When we move Book b2 into a1 (instead of creating a new one, to ensure its review collection is not loaded)
     const b2 = await em.load(Book, "b:2");
     b2.author.set(a);
-    // Then calc it again, it will blow up
-    expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not preloaded");
-    // Even if we try to .load it
-    expect(() => a.numberOfPublicReviews.load()).toThrow("get was called when not preloaded");
+    // Then calc it again, it will blow up (b/c the new b2 hasn't had its reviews loaded)
+    expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not loaded");
+    // Even if we try to .load it again (it's already loaded, and doesn't know to reload its dependencies)
+    expect(() => a.numberOfPublicReviews.load()).toThrow("get was called when not loaded");
     // But if we force the load
     expect(await a.numberOfPublicReviews.load({ forceReload: true })).toBe(1);
   });
@@ -164,7 +164,7 @@ describe("PersistedAsyncProperty", () => {
     expect(await a1.numberOfBooks.load()).toEqual(2);
   });
 
-  it("can force async derived values to recalc on populate", async () => {
+  it("knows to recalc dirty async derived values on populate", async () => {
     // Given an author with a book
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -183,6 +183,23 @@ describe("PersistedAsyncProperty", () => {
     await em.populate(a1, "numberOfBooks");
     // Then we'll get the live value
     expect(a1.numberOfBooks.get).toEqual(2);
+  });
+
+  it("does not recalc unchanged async derived values on populate", async () => {
+    // Given an author with a book
+    await insertAuthor({ first_name: "a1", number_of_books: 1 });
+    await insertBook({ title: "b1", author_id: 1 });
+    // When we load the author
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "a:1");
+    // We can access the numberOfBooks without it being calculated
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+    // And if we load it via a populate hint
+    await em.populate(a1, "numberOfBooks");
+    // Then we still get the existing/correct value and did not recalc it
+    expect(a1.numberOfBooks.get).toEqual(1);
+    expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
   });
 
   it("has async derived values triggered on both old and new value", async () => {
@@ -205,7 +222,7 @@ describe("PersistedAsyncProperty", () => {
 
   it("has async derived values triggered on both lazy-loaded old and new value", async () => {
     const em = newEntityManager();
-    // Given a book & author already in the databaseo
+    // Given a book & author already in the database
     await insertAuthor({ first_name: "a1", number_of_books: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     // When we make a new author for b1 (and a1 is not even in the UnitOfWork)

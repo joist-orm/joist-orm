@@ -14,7 +14,7 @@ import {
   OrderBy,
   sameEntity,
 } from "../index";
-import { compareValues, remove } from "../utils";
+import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { RelationT, RelationU } from "./Relation";
@@ -39,11 +39,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   readonly #fieldName: keyof T & string;
   readonly #orderBy: { field: keyof U; direction: OrderBy } | undefined;
   private loaded: U[] | undefined;
-  // We don't need to track removedBeforeLoaded, because if a child is removed in our unloaded state,
+  // We _used_ to not track removedBeforeLoaded, because if a child is removed in our unloaded state,
   // when we load and get back the `child X has parent_id = our id` rows from the db, `loaderForCollection`
   // groups the hydrated rows by their _current parent m2o field value_, which for a removed child will no
   // longer be us, so it will effectively not show up in our post-load `loaded` array.
+  // However, now with join preloading, the getPreloadedRelation might still have pre-load removed children.
   #addedBeforeLoaded: U[] | undefined;
+  #removedBeforeLoaded: U[] | undefined;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
@@ -64,7 +66,8 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
     ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
-      this.loaded = await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!);
+      this.loaded =
+        this.getPreloaded() ?? (await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!));
       this.maybeAppendAddedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded, opts);
@@ -93,6 +96,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return this.loaded !== undefined;
   }
 
+  get isPreloaded(): boolean {
+    return !!this.getPreloaded();
+  }
+
+  preload(): void {
+    this.loaded = this.getPreloaded();
+    this.maybeAppendAddedBeforeLoaded();
+  }
+
   get get(): U[] {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
@@ -105,7 +117,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
     if (this.loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
-      throw new Error("get was called when not preloaded");
+      throw new Error("get was called when not loaded");
     }
     return this.loaded;
   }
@@ -143,13 +155,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   add(other: U): void {
     ensureNotDeleted(this.#entity);
     if (this.loaded === undefined) {
-      if (!this.#addedBeforeLoaded?.includes(other)) {
-        (this.#addedBeforeLoaded ??= []).push(other);
-      }
+      this.#addedBeforeLoaded ??= [];
+      maybeAdd(this.#addedBeforeLoaded, other);
+      maybeRemove(this.#removedBeforeLoaded, other);
     } else {
-      if (!this.loaded.includes(other)) {
-        this.loaded.push(other);
-      }
+      maybeAdd(this.loaded, other);
     }
     // This will no-op and mark other dirty if necessary
     this.getOtherRelation(other).set(this.#entity);
@@ -162,7 +172,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
-    remove(this.loaded ?? this.#addedBeforeLoaded ?? [], other);
+    if (this.loaded === undefined) {
+      this.#removedBeforeLoaded ??= [];
+      maybeAdd(this.#removedBeforeLoaded, other);
+      maybeRemove(this.#addedBeforeLoaded, other);
+    } else {
+      remove(this.loaded, other);
+    }
     // This will no-op and mark other dirty if necessary
     this.getOtherRelation(other).set(undefined);
   }
@@ -231,18 +247,24 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     // be handled here?)
     if (!this.#entity.isNewEntity) {
       const { em } = this.#entity;
-      const newChildren = getEmInternalApi(em).pendingChildren.get(this.#entity.idTagged!)?.get(this.fieldName);
-      if (newChildren) {
-        (this.#addedBeforeLoaded ??= []).push(...(newChildren as U[]));
-        newChildren.splice(0, newChildren.length);
+      const pending = getEmInternalApi(em).pendingChildren.get(this.#entity.idTagged!)?.get(this.fieldName);
+      if (pending) {
+        (this.#addedBeforeLoaded ??= []).push(...(pending.adds as U[]));
+        (this.#removedBeforeLoaded ??= []).push(...(pending.removes as U[]));
+        clear(pending.adds);
+        clear(pending.removes);
       }
     }
     if (this.#addedBeforeLoaded) {
       const newEntities = this.#addedBeforeLoaded.filter((e) => !this.loaded?.includes(e));
       // Push on the end to better match the db order of "newer things come last"
       this.loaded!.push(...newEntities);
+      this.#addedBeforeLoaded = undefined;
     }
-    this.#addedBeforeLoaded = [];
+    if (this.#removedBeforeLoaded) {
+      this.#removedBeforeLoaded.forEach((e) => remove(this.loaded!, e));
+      this.#removedBeforeLoaded = undefined;
+    }
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
@@ -287,6 +309,11 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   private get isCascadeDelete(): boolean {
     return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+  }
+
+  private getPreloaded(): U[] | undefined {
+    if (this.#entity.isNewEntity) return undefined;
+    return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

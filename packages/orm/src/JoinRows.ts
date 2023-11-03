@@ -56,6 +56,18 @@ export class JoinRows {
     return rows.map((r) => r[otherColumnName] as Entity);
   }
 
+  /** Adds an existing join row to this table. */
+  addExisting(m2m: ManyToManyCollection<any, any>, id: number, e1: Entity, e2: Entity): void {
+    const { columnName, otherColumnName } = m2m;
+    const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
+    if (existing) {
+      // Treat any existing WIP change as source-of-truth, so leave it alone
+    } else {
+      const joinRow: JoinRow = { id, [m2m.columnName]: e1, [m2m.otherColumnName]: e2 };
+      this.rows.push(joinRow);
+    }
+  }
+
   /**
    * Look up/create our JoinRow psuedo-entity for the given db row.
    *

@@ -43,13 +43,27 @@ export function remove<T>(array: T[], t: T): void {
   }
 }
 
+export function maybeRemove<T>(array: T[] | undefined, t: T): void {
+  if (array) remove(array, t);
+}
+
+export function maybeAdd<T>(array: T[], t: T): void {
+  if (!array.includes(t)) {
+    array.push(t);
+  }
+}
+
+export function clear<T>(array: T[]): void {
+  array.splice(0, array.length);
+}
+
 /** Returns 0 inclusive to n exclusive. */
 export function zeroTo(n: number): number[] {
   return [...Array(n).keys()];
 }
 
-export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x: T) => Y): Map<string, Y[]> {
-  const result = new Map<string, Y[]>();
+export function groupBy<T, Y = T, K = string>(list: T[], fn: (x: T) => K, valueFn?: (x: T) => Y): Map<K, Y[]> {
+  const result = new Map<K, Y[]>();
   list.forEach((o) => {
     const group = fn(o);
     if (!result.has(group)) {
@@ -60,8 +74,8 @@ export function groupBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x:
   return result;
 }
 
-export function indexBy<T, Y = T>(list: T[], fn: (x: T) => string, valueFn?: (x: T) => Y): Map<string, Y> {
-  const result = new Map<string, Y>();
+export function indexBy<T, Y = T, K = string>(list: T[], fn: (x: T) => K, valueFn?: (x: T) => Y): Map<K, Y> {
+  const result = new Map<K, Y>();
   list.forEach((o) => {
     const group = fn(o);
     result.set(group, valueFn === undefined ? (o as any as Y) : valueFn(o));

@@ -38,7 +38,10 @@ export class CustomCollection<T extends Entity, U extends Entity>
   private loadPromise: Promise<any> | undefined;
   private _isLoaded = false;
 
-  constructor(entity: T, private opts: CustomCollectionOpts<T, U>) {
+  constructor(
+    entity: T,
+    private opts: CustomCollectionOpts<T, U>,
+  ) {
     super();
     this.#entity = entity;
   }

@@ -12,6 +12,7 @@ import { findCountDataLoader } from "./dataloaders/findCountDataLoader";
 import { findDataLoader } from "./dataloaders/findDataLoader";
 import { findOrCreateDataLoader } from "./dataloaders/findOrCreateDataLoader";
 import { loadDataLoader } from "./dataloaders/loadDataLoader";
+import { populateDataLoader } from "./dataloaders/populateDataLoader";
 import { Driver } from "./drivers/Driver";
 import {
   BaseEntity,
@@ -41,6 +42,7 @@ import {
   getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
+  getRelationEntries,
   getRelations,
   keyToString,
   loadLens,
@@ -50,12 +52,11 @@ import {
   tagId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
-import { normalizeHint } from "./normalizeHints";
+import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
-import {MaybePromise, assertNever, fail, getOrSet, toArray, groupBy, indexBy} from "./utils";
+import { MaybePromise, assertNever, fail, getOrSet, toArray } from "./utils";
 
 /**
  * The constructor for concrete entity types.
@@ -151,11 +152,16 @@ type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
 
 export type LoaderCache = Record<string, DataLoader<any, any>>;
 
-export type TimestampFields = {
+export interface TimestampFields {
   updatedAt: string | undefined;
   createdAt: string | undefined;
   deletedAt: string | undefined;
-};
+}
+
+export interface EntityManagerOpts {
+  driver: Driver;
+  preloadPlugin?: PreloadPlugin;
+}
 
 export interface FlushOptions {
   /** Skip all validations, including reactive validations, when flushing */
@@ -167,12 +173,13 @@ export class EntityManager<C = unknown> {
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;
   public entityLimit: number = defaultEntityLimit;
-  #entities: Entity[] = [];
+  readonly #entities: Entity[] = [];
   // Indexes the currently loaded entities by their tagged ids. This fixes a real-world
   // performance issue where `findExistingInstance` scanning `#entities` was an `O(n^2)`.
-  #entityIndex: Map<string, Entity> = new Map();
+  readonly #entityIndex: Map<string, Entity> = new Map();
   #isValidating: boolean = false;
-  #pendingChildren: Map<string, Map<string, Entity[]>> = new Map();
+  readonly #pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>> = new Map();
+  #preloadedRelations: Map<string, Map<string, Entity[]>> = new Map();
   /**
    * Tracks cascade deletes.
    *
@@ -183,37 +190,57 @@ export class EntityManager<C = unknown> {
    */
   #pendingCascadeDeletes: Entity[] = [];
   #dataloaders: Record<string, LoaderCache> = {};
-  #joinRows: Record<string, JoinRows> = {};
+  readonly #joinRows: Record<string, JoinRows> = {};
   /** Stores any `source -> downstream` reactions to recalc during `em.flush`. */
-  #rm = new ReactionsManager();
+  readonly #rm = new ReactionsManager();
   /** Ensures our `em.flush` method is not interrupted. */
-  #fl = new FlushLock();
-  #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
+  readonly #fl = new FlushLock();
+  readonly #hooks: Record<EntityManagerHook, HookFn[]> = { beforeTransaction: [], afterTransaction: [] };
+  readonly #preloader: PreloadPlugin | undefined;
   private __api: EntityManagerInternalApi;
 
   constructor(em: EntityManager<C>);
+  constructor(ctx: C, opts: EntityManagerOpts);
   constructor(ctx: C, driver: Driver);
-  constructor(emOrCtx: EntityManager<C> | C, driver?: Driver) {
+  constructor(emOrCtx: EntityManager<C> | C, driverOrOpts?: EntityManagerOpts | Driver) {
     if (emOrCtx instanceof EntityManager) {
       const em = emOrCtx;
       this.driver = em.driver;
+      this.#preloader = em.#preloader;
       this.#hooks = {
         beforeTransaction: [...em.#hooks.beforeTransaction],
         afterTransaction: [...em.#hooks.afterTransaction],
       };
-      this.ctx = em.ctx!;
+      this.ctx = em.ctx;
+    } else if (driverOrOpts && "executeFind" in driverOrOpts) {
+      this.ctx = emOrCtx;
+      this.driver = driverOrOpts;
+      this.#preloader = undefined;
     } else {
-      this.ctx = emOrCtx!;
-      this.driver = driver!;
+      this.ctx = emOrCtx;
+      this.driver = driverOrOpts!.driver;
+      this.#preloader = driverOrOpts!.preloadPlugin;
     }
 
     // Expose some of our private fields as the EntityManagerInternalApi
     const em = this;
     this.__api = {
+      preloader: this.#preloader,
       joinRows(m2m: ManyToManyCollection<any, any>): JoinRows {
         return getOrSet(em.#joinRows, m2m.joinTableName, () => new JoinRows(m2m, em.#rm));
       },
       pendingChildren: this.#pendingChildren,
+      getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined {
+        return em.#preloadedRelations.get(taggedId)?.get(fieldName) as U[] | undefined;
+      },
+      setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void {
+        let map = em.#preloadedRelations.get(taggedId);
+        if (!map) {
+          map = new Map();
+          em.#preloadedRelations.set(taggedId, map);
+        }
+        map.set(fieldName, children as Entity[]);
+      },
       hooks: this.#hooks,
       rm: this.#rm,
       get isValidating() {
@@ -737,7 +764,8 @@ export class EntityManager<C = unknown> {
     }
     const meta = getMetadata(type);
     const tagged = tagId(meta, id);
-    const entity = this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load(tagged));
+    const entity =
+      this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load({ entity: tagged, hint }));
     if (!entity) {
       throw new NotFoundError(`${tagged} was not found`);
     }
@@ -763,10 +791,10 @@ export class EntityManager<C = unknown> {
     const ids = _ids.map((id) => tagId(meta, id));
     const entities = await Promise.all(
       ids.map((id) => {
-        return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
+        return this.findExistingInstance(id) || loadDataLoader(this, meta).load({ entity: id, hint });
       }),
     );
-    const idsNotFound = ids.filter((id, i) => entities[i] === undefined);
+    const idsNotFound = ids.filter((_, i) => entities[i] === undefined);
     if (idsNotFound.length > 0) {
       throw new NotFoundError(`${idsNotFound.join(",")} were not found`);
     }
@@ -796,7 +824,7 @@ export class EntityManager<C = unknown> {
     const entities = (
       await Promise.all(
         ids.map((id) => {
-          return this.findExistingInstance(id) || loadDataLoader(this, meta).load(id);
+          return this.findExistingInstance(id) || loadDataLoader(this, meta).load({ entity: id, hint });
         }),
       )
     ).filter(Boolean);
@@ -893,13 +921,12 @@ export class EntityManager<C = unknown> {
     entities: ReadonlyArray<T>,
     opts: { hint: H; forceReload?: boolean },
   ): Promise<Loaded<T, H>[]>;
-  populate<T extends Entity, H extends LoadHint<T>, V>(
+  async populate<T extends Entity, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
     hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<Loaded<T, H> | Array<Loaded<T, H>> | V> {
     const { hint: hintOpt, ...opts } =
-      // @ts-ignore for some reason TS thinks `"hint" in hintOrOpts` is operating on a primitive
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
     // Tell `AsyncMethodImpl.load` to not invoke its function
@@ -913,72 +940,26 @@ export class EntityManager<C = unknown> {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
-    // If a bunch of `.load`s get called in parallel for the same entity type + load hint, dedup them down
-    // to a single promise to avoid making more and more promises with each level/fan-out of a nested load hint.
-    const batchKey = `${list[0]?.__orm.metadata.tagName}-${JSON.stringify(hintOpt)}-${opts.forceReload}`;
-    const loader = this.getLoader(
-      "populate",
-      batchKey,
-      (batch) => {
-        // Because we're using `{ cache: false }`, we could have dups in the list, so unique
-        const list = [...new Set(batch)];
+    const meta = list[0]?.__orm.metadata;
 
-        const hints = Object.entries(normalizeHint(hintOpt as any));
+    if (this.#preloader) {
+      // If we can preload, prevent promise deadlocking by one large-batch preload populate (which can't have
+      // intra dependencies), then a 2nd small-batch non-preload populate.
+      const [preload, non] = this.#preloader.partitionHint(meta, hintOpt);
+      if (preload) {
+        const loader = populateDataLoader(this, meta, preload, "preload", opts);
+        await Promise.all(list.map((entity) => loader.load({ entity, hint: preload })));
+      }
+      if (non) {
+        const loader = populateDataLoader(this, meta, non, "intermixed", opts);
+        await Promise.all(list.map((entity) => loader.load({ entity, hint: non })));
+      }
+    } else {
+      const loader = populateDataLoader(this, meta, hintOpt, "intermixed", opts);
+      await Promise.all(list.map((entity) => loader.load({ entity, hint: hintOpt })));
+    }
 
-        // One breadth-width pass to ensure each relation is loaded
-        const loadPromises = list.flatMap((entity) => {
-          return hints.map(([key]) => {
-            const relation = (entity as any)[key];
-            if (!relation || typeof relation.load !== "function") {
-              throw new Error(`Invalid load hint '${key}' on ${entity}`);
-            }
-            // If we're populating a hasPersistedAsyncProperty, and find an upstream
-            // property that we ourselves depend on, don't bother loading it if it's
-            // already been calculated (i.e. we have no reason to believe its value
-            // is stale, so we should avoid pulling all of its data into memory).
-            //
-            // But if it's _not_ previously set, i.e. b/c the entity itself is a new entity,
-            // then go ahead and call `.load()` so that the downstream reactive calc can
-            // call `.get` to evaluate its derived value.
-            if (
-              (opts as any).isPersistedAsyncPropertyLoad &&
-              relation instanceof PersistedAsyncPropertyImpl &&
-              relation.isSet
-            )
-              return;
-            return relation.isLoaded && !opts.forceReload ? undefined : (relation.load(opts) as Promise<any>);
-          });
-        });
-
-        // 2nd breadth-width pass to do nested load hints
-        return Promise.all(loadPromises).then(() => {
-          const nestedLoadPromises = hints.map(([key, nestedHint]) => {
-            if (Object.keys(nestedHint).length === 0) return;
-            // Unique for good measure?...
-            const children = [...new Set(list.map((entity) => toArray(getEvenDeleted((entity as any)[key]))).flat())];
-            if (children.length === 0) return;
-            return this.populate(children, { hint: nestedHint, ...opts });
-          });
-          // After the nested hints are done, echo back the original now-loaded list
-          return Promise.all(nestedLoadPromises).then(() => batch);
-        });
-      },
-      // We always disable caching, because during a UoW, having called `populate(author, nestedHint1)`
-      // once doesn't mean that, on the 2nd call to `populate(author, nestedHint1)`, we can completely
-      // skip it b/c author's relations may have been changed/mutated to different not-yet-loaded
-      // entities.
-      //
-      // Even though having `{ cache: false }` looks weird here, i.e. why use dataloader at all?, it
-      // still helps us fan-in resolvers callers that are happening ~simultaneously into the same
-      // effort.
-      { cache: false },
-    );
-
-    // Purposefully use `then` instead of `async` as an optimization; avoid using loader.loadMany so
-    // that we don't have to check its allSettled-style `Array<V | Error>` return value for errors.
-    return Promise.all(list.map((entity) => loader.load(entity))).then(() =>
-      fn ? fn(entityOrList as any) : (entityOrList as any),
-    );
+    return fn ? fn(entityOrList as any) : (entityOrList as any);
   }
 
   // For debugging EntityManager.populate.test.ts's "can be huge"
@@ -1221,6 +1202,7 @@ export class EntityManager<C = unknown> {
   async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
   async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
     this.#dataloaders = {};
+    this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
     let todo =
       param === undefined ? this.#entities : Array.isArray(param) ? param : isEntity(param) ? [param] : this.#entities;
@@ -1230,11 +1212,16 @@ export class EntityManager<C = unknown> {
       copy.forEach((e) => done.add(e));
       todo = [];
 
-      // Clear the original cached loader result and fetch the new primitives
       const entities = await Promise.all(
         copy
           .filter((e) => e.idTaggedMaybe)
-          .map((entity) => loadDataLoader(this, getMetadata(entity)).load(entity.idTagged)),
+          .map((entity) => {
+            // Pass these as a hint to potentially preload them
+            const hint = getRelationEntries(entity)
+              .filter(([_, r]) => deepLoad || r.isLoaded)
+              .map(([k]) => k);
+            return loadDataLoader(this, getMetadata(entity)).load({ entity: entity.idTagged, hint });
+          }),
       );
 
       // Then refresh any non-deleted loaded collections
@@ -1393,9 +1380,14 @@ export class EntityManager<C = unknown> {
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
-  pendingChildren: Map<string, Map<string, Entity[]>>;
+  /** Map of taggedId -> fieldName -> pending children. */
+  pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
+  /** Map of taggedId -> fieldName -> join-loaded data. */
+  getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
+  setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
+  preloader: PreloadPlugin | undefined;
   isValidating: boolean;
   checkWritesAllowed: () => void;
 }
@@ -1730,11 +1722,6 @@ function adaptHint<T extends Entity>(hint: LoadHint<T> | undefined): NestedLoadH
 
 export function isDefined<T extends any>(param: T | undefined | null): param is T {
   return param !== null && param !== undefined;
-}
-
-/** Probes `relation` to see if it's a m2o/o2m/m2m relation that supports `getWithDeleted`, otherwise calls `get`. */
-function getEvenDeleted(relation: any): any {
-  return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
 }
 
 function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any>[] {

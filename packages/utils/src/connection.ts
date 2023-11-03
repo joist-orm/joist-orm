@@ -12,8 +12,12 @@ export type ConnectionEnv = DatabaseUrlEnv | DbSettingsEnv;
  * The `PgConnectionConfig` has a fancy password that can be a function/async, i.e. to like dynamically
  * load it somehow; that's fine, but is more complex than knex expects, so we simplify it to "just a string",
  * which is what we provide anyway.
+ *
+ * We also omit `types` and `stream` b/c Knex's `PgConnectionConfig` doesn't exactly match pg's.
  */
-export type ConnectionConfig = Omit<PgConnectionConfig, "password" | "types"> & { password: string | undefined };
+export type ConnectionConfig = Omit<PgConnectionConfig, "password" | "types" | "stream"> & {
+  password: string | undefined;
+};
 
 /**
  * Returns the `ConnectionConfig` that joist will use to connect to pg.

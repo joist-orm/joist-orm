@@ -1,3 +1,10 @@
+## [1.116.1](https://github.com/stephenh/joist-ts/compare/v1.116.0...v1.116.1) (2023-11-03)
+
+
+### Bug Fixes
+
+* Ensure built-in relations are refreshed before custom. ([#844](https://github.com/stephenh/joist-ts/issues/844)) ([33e21a6](https://github.com/stephenh/joist-ts/commit/33e21a621dbc38be106e71c47d5b1ce0d1a398e5))
+
 # [1.116.0](https://github.com/stephenh/joist-ts/compare/v1.115.0...v1.116.0) (2023-11-03)
 
 

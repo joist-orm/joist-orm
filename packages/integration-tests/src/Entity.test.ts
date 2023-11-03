@@ -276,6 +276,7 @@ describe("Entity", () => {
           "afterValidationRan": false,
           "ageRuleInvoked": 0,
           "beforeCreateRan": false,
+          "beforeCreateRan": false,
           "beforeDeleteRan": false,
           "beforeFlushRan": false,
           "beforeUpdateRan": false,

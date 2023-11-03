@@ -33,7 +33,7 @@ export class PostgresTestDriver implements TestDriver {
   constructor() {
     this.knex = createKnex({
       client: "pg",
-      connection: newPgConnectionConfig(),
+      connection: newPgConnectionConfig() as any,
       debug: false,
       asyncStackTraces: true,
     }).on("query", (e: any) => {

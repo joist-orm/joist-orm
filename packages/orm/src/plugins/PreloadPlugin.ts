@@ -29,13 +29,33 @@ export interface PreloadPlugin {
     hint: LoadHint<any>,
   ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined];
 
+  /**
+   * Given an existing `ParsedFindQuery`, adds extra selects & joins directly
+   * to the `query` that will preload any child data requested in `tree`.
+   *
+   * The caller is still responsible for executing `query`, and then also
+   * calling the `PreloadHydrator` with the database results for the preload
+   * plugin to instantiate & populate the EM's preload cache.
+   *
+   * Note that the actual relations themselves won't be loaded, just the preload
+   * cache populated to make the relation `.preload()` / `.load()` fast.
+   */
   addPreloading<T extends Entity>(
     em: EntityManager,
     meta: EntityMetadata<T>,
     tree: HintNode<EntityOrId>,
     query: ParsedFindQuery,
-  ): PreloadProcessor | undefined;
+  ): PreloadHydrator | undefined;
 
+  /**
+   * Given an anticipated `ParsedFindQuery`, returns lower-level `JoinResult` that
+   * are the fragments of SELECTs and JOINs that the caller can work into their custom
+   * query.
+   *
+   * This is primarily for callers who aren't going to call `driver.executeFind`, but instead
+   * are crafting their own SQL query for `driver.executeQuery` (basically this is `em.findAll`
+   * because it uses a complicated CTE + join strategy to do batching).
+   */
   getPreloadJoins<T extends Entity>(
     em: EntityManager,
     meta: EntityMetadata<T>,
@@ -44,7 +64,7 @@ export interface PreloadPlugin {
   ): JoinResult[];
 }
 
-export type PreloadProcessor = (rows: any[], entities: any[]) => void;
+export type PreloadHydrator = (rows: any[], entities: any[]) => void;
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
 export type JoinResult = {
@@ -55,7 +75,7 @@ export type JoinResult = {
   /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
   join: string;
   /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
-  processor: PreloadProcessor;
+  hydrator: PreloadHydrator;
   /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
   bindings: any[];
 };

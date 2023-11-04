@@ -56,7 +56,7 @@ export {
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
-export { JoinResult, PreloadPlugin, PreloadProcessor } from "./plugins/PreloadPlugin";
+export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {

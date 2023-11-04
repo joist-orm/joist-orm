@@ -126,7 +126,7 @@ export function findDataLoader<T extends Entity>(
 
       const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
       if (preloadJoins) {
-        preloadJoins.forEach((j) => j.processor(rows, entities));
+        preloadJoins.forEach((j) => j.hydrator(rows, entities));
       }
 
       // Make an empty array for each batched query, per the dataloader contract

@@ -9,8 +9,8 @@ import {
   LoadHint,
   NestedLoadHint,
   ParsedFindQuery,
+  PreloadHydrator,
   PreloadPlugin,
-  PreloadProcessor,
   getEmInternalApi,
   getTables,
   keyToNumber,
@@ -38,7 +38,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     meta: EntityMetadata<T>,
     root: HintNode<T>,
     query: ParsedFindQuery,
-  ): PreloadProcessor | undefined {
+  ): PreloadHydrator | undefined {
     const { getAlias } = new AliasAssigner(query);
 
     // Get the existing primary alias
@@ -59,7 +59,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     return (rows, entities) => {
       rows.forEach((row, i) => {
         const parent = entities[i];
-        joins.forEach((join) => join.processor(parent, parent, row[join.alias] ?? []));
+        joins.forEach((join) => join.hydrator(parent, parent, row[join.alias] ?? []));
       });
     };
   }
@@ -83,10 +83,10 @@ export class JsonAggregatePreloader implements PreloadPlugin {
         alias: join.alias,
         selects: [{ value: kqDot(join.alias, "_"), as: join.alias }],
         join: join.join,
-        processor: (rows, entities) => {
+        hydrator: (rows, entities) => {
           rows.forEach((row, i) => {
             const parent = entities[i];
-            join.processor(parent, parent, row[join.alias] ?? []);
+            join.hydrator(parent, parent, row[join.alias] ?? []);
           });
         },
         bindings: join.bindings,
@@ -96,7 +96,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
 }
 
 /** Decodes an array-of-arrays of children entries, and stores them the `parent`'s relation. */
-type Processor = (root: Entity, parent: Entity, arrays: unknown[][]) => void;
+type AggregateJsonHydrator = (root: Entity, parent: Entity, arrays: unknown[][]) => void;
 
 /**
  * For a given hint tree `hint`, finds all SQL-able relations and preloads them.
@@ -131,7 +131,7 @@ function addJoins<I extends EntityOrId>(
       // Use a prefix like `_` to avoid collisions like `InvoiceDocument` -> alias `id` -> collides with the `id` column
       const otherAlias = `_${getAlias(otherMeta.tableName)}`;
 
-      // Do the recursion up-front, so we can work it into our own join/processor
+      // Do the recursion up-front, so we can work it into our own join/hydrator
       const subJoins = addJoins(em, getAlias, root, subTree, otherAlias, otherMeta);
 
       // Get all fields with serdes and flatten out the columns
@@ -195,7 +195,7 @@ function addJoins<I extends EntityOrId>(
         ) ${kq(otherAlias)}
       `;
 
-      const processor: Processor = (root, parent, arrays) => {
+      const hydrator: AggregateJsonHydrator = (root, parent, arrays) => {
         // If we had overlapping load hints, i.e. `author.books` for [a1, a2] and `author.comments` for [a1], and
         // we're processing the arrays of comments, but for a root author like `a2` that didn't ask for our load
         // hint, then skip it to keep the relation unloaded.
@@ -228,7 +228,7 @@ function addJoins<I extends EntityOrId>(
             // array[i] could be null if there are no grandchildren, but still call `sub` to
             // process it so that we store the empty array into the em.joinLoadedRelations, to
             // avoid the relation.load method later doing a SQL for rows we know are not there.
-            sub.processor(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
+            sub.hydrator(root, entity, (array[m2mOffset + columns.length + i] as any) ?? []);
           });
           return entity;
         });
@@ -236,7 +236,7 @@ function addJoins<I extends EntityOrId>(
         getEmInternalApi(em).setPreloadedRelation(parent.idTagged, key, children);
       };
 
-      results.push({ alias: otherAlias, join, bindings, processor });
+      results.push({ alias: otherAlias, join, bindings, hydrator });
     }
   });
 
@@ -249,8 +249,8 @@ type AggregateJoinResult = {
   alias: string;
   /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
   join: string;
-  /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
-  processor: Processor;
+  /** The hydrator for this child's lateral join, which itself might recursively hydrator subjoins. */
+  hydrator: AggregateJsonHydrator;
   /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
   bindings: any[];
 };

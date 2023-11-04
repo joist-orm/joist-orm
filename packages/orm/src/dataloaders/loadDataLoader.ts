@@ -28,13 +28,13 @@ export function loadDataLoader<T extends Entity>(
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);
     // Inject preloading joins into the query if enabled
     const { preloader } = getEmInternalApi(em);
-    const processor = preloader && preloader.addPreloading(em, meta, buildHintTree(loads), query);
+    const preloadHydrator = preloader && preloader.addPreloading(em, meta, buildHintTree(loads), query);
     // Skip maybeAddOrderBy?
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
     const rows = await em.driver.executeFind(em, query, {});
     // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
     entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
-    processor && processor(rows, entities);
+    preloadHydrator && preloadHydrator(rows, entities);
 
     // Return the results back in the same order as the keys
     const entitiesById = indexBy(entities, (e) => e.idTagged!);

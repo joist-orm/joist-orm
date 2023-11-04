@@ -72,12 +72,12 @@ export function populateDataLoader(
               conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: ids } }],
               orderBys: [],
             };
-            const hydrate = preloader.addPreloading(em, meta, layerNode, query);
-            if (hydrate) {
+            const hydrator = preloader.addPreloading(em, meta, layerNode, query);
+            if (hydrator) {
               const rows = await em.driver.executeFind(em, query, {});
               const entitiesById = indexBy(entities, (e) => keyToNumber(meta, e.id));
               const entitiesInOrder = rows.map((row) => entitiesById.get(row["id"]));
-              hydrate(rows, entitiesInOrder);
+              hydrator(rows, entitiesInOrder);
             }
           }
         }

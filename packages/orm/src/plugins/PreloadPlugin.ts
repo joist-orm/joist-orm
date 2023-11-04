@@ -64,6 +64,12 @@ export interface PreloadPlugin {
   ): JoinResult[];
 }
 
+/**
+ * Given a list of `rows`, and the `entities` for each row, pulls the preload
+ * columns out of the `rows` result set, and pushes them into the EM preload cache.
+ *
+ * The order of `rows` and `entities` must match.
+ */
 export type PreloadHydrator = (rows: any[], entities: any[]) => void;
 
 /** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */

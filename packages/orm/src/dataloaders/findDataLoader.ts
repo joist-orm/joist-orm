@@ -55,11 +55,11 @@ export function findDataLoader<T extends Entity>(
         const query = parseFindQuery(meta, where, opts);
         // Maybe add preload joins
         const { preloader } = getEmInternalApi(em);
-        const processor = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
+        const preloadHydrator = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
         const rows = await em.driver.executeFind(em, query, opts);
         ensureUnderLimit(em, rows);
         const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
-        if (processor) processor(rows, entities);
+        preloadHydrator?.(rows, entities);
         return [entities];
       }
 
@@ -125,9 +125,7 @@ export function findDataLoader<T extends Entity>(
       ensureUnderLimit(em, rows);
 
       const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
-      if (preloadJoins) {
-        preloadJoins.forEach((j) => j.hydrator(rows, entities));
-      }
+      preloadJoins?.forEach((j) => j.hydrator(rows, entities));
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as T[]);

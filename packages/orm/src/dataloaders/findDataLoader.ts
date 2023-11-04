@@ -115,7 +115,7 @@ export function findDataLoader<T extends Entity>(
         FROM ${primary.table} as ${kq(primary.alias)}
         ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
-        ${preloadJoins?.map((j) => `${j.join}`).join(" ")}
+        ${preloadJoins?.map((j) => j.join).join(" ") ?? ""}
         GROUP BY ${groupBys.join(", ")}
         ORDER BY ${query.orderBys.map((o) => `${kq(o.alias)}.${o.column} ${o.order}`).join(", ")}
         LIMIT ${em.entityLimit};

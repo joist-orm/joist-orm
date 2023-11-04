@@ -1,3 +1,10 @@
+## [1.116.2](https://github.com/stephenh/joist-ts/compare/v1.116.1...v1.116.2) (2023-11-04)
+
+
+### Bug Fixes
+
+* Fix plugins publishing. ([f43f390](https://github.com/stephenh/joist-ts/commit/f43f3907c2c71f5936e3cb5e6544aa1ac5f592dc))
+
 ## [1.116.1](https://github.com/stephenh/joist-ts/compare/v1.116.0...v1.116.1) (2023-11-03)
 
 

@@ -1,3 +1,10 @@
+# [1.117.0](https://github.com/stephenh/joist-ts/compare/v1.116.2...v1.117.0) (2023-11-04)
+
+
+### Features
+
+* Add em.find preloading ([#845](https://github.com/stephenh/joist-ts/issues/845)) ([d2c4f97](https://github.com/stephenh/joist-ts/commit/d2c4f975fde34f2c3be8128335f3a7462a4c95fc))
+
 ## [1.116.2](https://github.com/stephenh/joist-ts/compare/v1.116.1...v1.116.2) (2023-11-04)
 
 

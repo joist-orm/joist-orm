@@ -65,8 +65,9 @@ export interface PreloadPlugin {
 }
 
 /**
- * Given a list of `rows`, and the `entities` for each row, pulls the preload
- * columns out of the `rows` result set, and pushes them into the EM preload cache.
+ * Given a list of `rows`, and the already-hydrated `entities` for each row, reads the preload-specific
+ * columns out of the `rows` result set, and pushes them into the EM preload cache, hydrating
+ * the child entities in the process, but not marking any relations as loaded.
  *
  * The order of `rows` and `entities` must match.
  */

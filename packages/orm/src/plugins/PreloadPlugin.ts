@@ -25,7 +25,7 @@ export interface PreloadPlugin {
    * SQL call.
    */
   partitionHint(
-    meta: EntityMetadata<any> | undefined,
+    meta: EntityMetadata | undefined,
     hint: LoadHint<any>,
   ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined];
 
@@ -42,7 +42,7 @@ export interface PreloadPlugin {
    */
   addPreloading<T extends Entity>(
     em: EntityManager,
-    meta: EntityMetadata<T>,
+    meta: EntityMetadata,
     tree: HintNode<EntityOrId>,
     query: ParsedFindQuery,
   ): PreloadHydrator | undefined;
@@ -58,8 +58,8 @@ export interface PreloadPlugin {
    */
   getPreloadJoins<T extends Entity>(
     em: EntityManager,
-    meta: EntityMetadata<T>,
-    tree: HintNode<T>,
+    meta: EntityMetadata,
+    tree: HintNode<EntityOrId>,
     query: ParsedFindQuery,
   ): JoinResult[];
 }

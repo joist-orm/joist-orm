@@ -26,6 +26,7 @@
     "packages/test-utils",
     "packages/tests/uuid-ids",
     "packages/tests/schema-misc",
+    "packages/tests/number-ids",
     "packages/tests/untagged-ids"
   ],
   "devDependencies": {

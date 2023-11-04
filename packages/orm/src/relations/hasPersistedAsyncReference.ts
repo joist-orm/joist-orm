@@ -1,6 +1,7 @@
 import {
-  EntityMetadata,
+  EntityMetadataTyped,
   ManyToOneField,
+  TaggedId,
   deTagId,
   ensureNotDeleted,
   ensureTagged,
@@ -12,6 +13,7 @@ import {
   maybeResolveReferenceToId,
   sameEntity,
   setField,
+  toIdOf,
 } from "..";
 import { Entity } from "../Entity";
 import { IdOf, currentlyInstantiatingEntity } from "../EntityManager";
@@ -52,7 +54,7 @@ export function hasPersistedAsyncReference<
   const H extends ReactiveHint<T>,
   N extends never | undefined,
 >(
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadataTyped<U>,
   fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => U | N,
@@ -153,21 +155,21 @@ export class PersistedAsyncReferenceImpl<
     ensureNotDeleted(this.#entity, "pending");
 
     // If the project is not using tagged ids, we still want it tagged internally
-    other = ensureTagged(this.otherMeta, other) as U | IdOf<U> | N;
+    const _other = ensureTagged(this.otherMeta, other) as U | TaggedId | N;
 
-    if (sameEntity(other, this.current({ withDeleted: true }))) {
+    if (sameEntity(_other, this.current({ withDeleted: true }))) {
       return;
     }
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
+    setField(this.#entity, this.fieldName, isEntity(_other) ? _other.idTaggedMaybe ?? _other : _other);
 
-    if (typeof other === "string") {
+    if (typeof _other === "string") {
       this.loaded = undefined;
       this._isLoaded = false;
     } else {
-      this.loaded = other;
+      this.loaded = _other;
       this._isLoaded = true;
     }
   }
@@ -181,9 +183,9 @@ export class PersistedAsyncReferenceImpl<
   }
 
   /** Returns the tagged id of the current value. */
-  private get idTagged(): IdOf<U> | N {
+  get idTaggedMaybe(): TaggedId | N {
     ensureNotDeleted(this.#entity, "pending");
-    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
+    return maybeResolveReferenceToId(this.current()) as TaggedId | N;
   }
 
   get id(): IdOf<U> {
@@ -211,14 +213,9 @@ export class PersistedAsyncReferenceImpl<
   // private impl
 
   /** Returns the id of the current value. */
-  private get idMaybe(): IdOf<U> | N {
+  private get idMaybe(): IdOf<U> | undefined {
     ensureNotDeleted(this.#entity, "pending");
-    // If current is a string, we might need to detag it...
-    const id = maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
-    if (!this.otherMeta.idTagged && id) {
-      return deTagId(this.otherMeta, id) as IdOf<U>;
-    }
-    return id;
+    return toIdOf(this.otherMeta, this.idTaggedMaybe);
   }
 
   private get idUntaggedMaybe(): string | undefined {
@@ -264,7 +261,7 @@ export class PersistedAsyncReferenceImpl<
     return current;
   }
 
-  public get otherMeta(): EntityMetadata<U> {
+  public get otherMeta(): EntityMetadataTyped<U> {
     return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
   }
 
@@ -302,8 +299,11 @@ export class PersistedAsyncReferenceImpl<
    */
   maybeFindEntity(): U | N {
     // Check this.loaded first b/c a new entity won't have an id yet
-    const { idTagged } = this;
-    return this.loaded ?? (idTagged !== undefined ? (this.#entity.em.getEntity(idTagged) as U | N) : (undefined as N));
+    const { idTaggedMaybe } = this;
+    return (
+      this.loaded ??
+      (idTaggedMaybe !== undefined ? (this.#entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
+    );
   }
 
   [RelationT]: T = null!;

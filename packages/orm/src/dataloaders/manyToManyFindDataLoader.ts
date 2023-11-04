@@ -49,13 +49,13 @@ async function load<T extends Entity, U extends Entity>(
               {
                 alias,
                 column: columnOne,
-                dbType: meta1.idType,
+                dbType: meta1.idDbType,
                 cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
               },
               {
                 alias,
                 column: columnTwo,
-                dbType: meta2.idType,
+                dbType: meta2.idDbType,
                 cond: { kind: "eq", value: keyToNumber(meta2, idTwo) },
               },
             ],

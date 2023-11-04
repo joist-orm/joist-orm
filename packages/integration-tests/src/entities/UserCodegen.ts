@@ -28,6 +28,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -126,10 +127,10 @@ userConfig.addRule(newRequiredRule("bio"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class UserCodegen extends BaseEntity<EntityManager> {
+export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = { bio: "" };
   static readonly tagName = "u";
-  static readonly metadata: EntityMetadata<User>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: UserFilter;
@@ -174,14 +175,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): UserId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(userMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): UserId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("User has no id tagged yet");
   }
 
-  get idTaggedMaybe(): UserId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

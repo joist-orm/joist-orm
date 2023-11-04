@@ -32,6 +32,7 @@ import {
   PolymorphicReference,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -118,10 +119,10 @@ commentConfig.addRule(newRequiredRule("createdAt"));
 commentConfig.addRule(newRequiredRule("updatedAt"));
 commentConfig.addRule(newRequiredRule("parent"));
 
-export abstract class CommentCodegen extends BaseEntity<EntityManager> {
+export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "comment";
-  static readonly metadata: EntityMetadata<Comment>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CommentFilter;
@@ -156,14 +157,14 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): CommentId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(commentMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): CommentId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("Comment has no id tagged yet");
   }
 
-  get idTaggedMaybe(): CommentId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

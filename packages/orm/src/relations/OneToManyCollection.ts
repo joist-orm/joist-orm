@@ -21,7 +21,7 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
@@ -50,7 +50,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
     entity: T,
-    otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata,
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
@@ -271,7 +271,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return this.filterDeleted(this.loaded ?? this.#addedBeforeLoaded ?? [], opts);
   }
 
-  public get meta(): EntityMetadata<T> {
+  public get meta(): EntityMetadata {
     return getMetadata(this.#entity);
   }
 
@@ -279,7 +279,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     return this.#entity;
   }
 
-  public get otherMeta(): EntityMetadata<U> {
+  public get otherMeta(): EntityMetadata {
     return (getMetadata(this.#entity).allFields[this.#fieldName] as OneToManyField).otherMetadata();
   }
 

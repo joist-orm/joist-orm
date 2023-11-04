@@ -19,6 +19,7 @@ import {
   PersistedAsyncProperty,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -74,7 +75,7 @@ smallPublisherConfig.addRule(newRequiredRule("city"));
 export abstract class SmallPublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<SmallPublisher>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: SmallPublisherFilter;
@@ -97,14 +98,14 @@ export abstract class SmallPublisherCodegen extends Publisher {
   }
 
   get idMaybe(): SmallPublisherId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(smallPublisherMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): SmallPublisherId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("SmallPublisher has no id tagged yet");
   }
 
-  get idTaggedMaybe(): SmallPublisherId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

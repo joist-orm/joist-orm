@@ -25,6 +25,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -85,10 +86,10 @@ artistConfig.addRule(newRequiredRule("lastName"));
 artistConfig.addRule(newRequiredRule("createdAt"));
 artistConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
+export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "artist";
-  static readonly metadata: EntityMetadata<Artist>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ArtistFilter;
@@ -118,14 +119,14 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): ArtistId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(artistMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): ArtistId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("Artist has no id tagged yet");
   }
 
-  get idTaggedMaybe(): ArtistId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

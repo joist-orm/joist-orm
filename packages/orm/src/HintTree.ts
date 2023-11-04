@@ -1,4 +1,5 @@
 import { Entity } from "./Entity";
+import { TaggedId } from "./EntityManager";
 import { LoadHint } from "./loadHints";
 import { normalizeHint } from "./normalizeHints";
 
@@ -6,7 +7,7 @@ import { normalizeHint } from "./normalizeHints";
 // (We could ask `populate` to convert its entities to ids, but it's convenient for it
 // to keep the HintTree populated with Entities so that newly-created entities can have
 // their collections marked as loaded.
-export type EntityOrId = Entity | string;
+export type EntityOrId = Entity | TaggedId;
 
 export type HintNode<E extends EntityOrId> = {
   /** These entities are the root entities of our preload, i.e. we use them to trim the tree to prevent over-fetching. */

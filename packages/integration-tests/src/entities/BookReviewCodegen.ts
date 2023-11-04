@@ -29,6 +29,7 @@ import {
   PersistedAsyncProperty,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -111,10 +112,10 @@ bookReviewConfig.addRule(newRequiredRule("createdAt"));
 bookReviewConfig.addRule(newRequiredRule("updatedAt"));
 bookReviewConfig.addRule(newRequiredRule("book"));
 
-export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
+export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "br";
-  static readonly metadata: EntityMetadata<BookReview>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookReviewFilter;
@@ -145,14 +146,14 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): BookReviewId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(bookReviewMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): BookReviewId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("BookReview has no id tagged yet");
   }
 
-  get idTaggedMaybe(): BookReviewId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

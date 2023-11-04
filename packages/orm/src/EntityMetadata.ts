@@ -4,23 +4,30 @@ import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
-export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
-export function getMetadata<T extends Entity>(meta: EntityMetadata<T>): EntityMetadata<T>;
+export function getMetadata<T extends Entity>(entity: T): EntityMetadata;
+export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata;
+export function getMetadata<T extends Entity>(meta: EntityMetadata): EntityMetadata;
 export function getMetadata<T extends Entity>(
-  param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata<T>,
-): EntityMetadata<T> {
+  param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata,
+): EntityMetadata {
   return (
     typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : param.__orm.metadata
-  ) as EntityMetadata<T>;
+  ) as EntityMetadata;
+}
+
+/** A typed version of `EntityMetadata` that typically we don't use, but is useful for driving type inference. */
+export interface EntityMetadataTyped<T extends Entity> extends EntityMetadata {
+  cstr: MaybeAbstractEntityConstructor<T>;
 }
 
 /** Runtime metadata about an entity. */
-export interface EntityMetadata<T extends Entity> {
-  cstr: MaybeAbstractEntityConstructor<T>;
+export interface EntityMetadata {
+  cstr: MaybeAbstractEntityConstructor<any>;
   type: string;
-  idType: "int" | "uuid";
-  idTagged: boolean;
+  /** Whether id field is a tagged string. */
+  idType: "tagged-string" | "untagged-string" | "number";
+  /** The database column type, i.e. used to do `::type` casts in Postgres. */
+  idDbType: "bigint" | "int" | "uuid";
   tableName: string;
   /** If we're a subtype, our immediate base type's name, e.g. for `SmallPublisher` this would be `Publisher`. */
   baseType: string | undefined;
@@ -30,11 +37,11 @@ export interface EntityMetadata<T extends Entity> {
   config: ConfigApi<any, any>;
   orderBy: string | undefined;
   timestampFields: TimestampFields;
-  factory: (em: EntityManager<any>, opts?: any) => DeepNew<T>;
+  factory: (em: EntityManager<any>, opts?: any) => DeepNew<any>;
   /** The list of base types for this subtype, e.g. for Dog it'd be [Animal, Mammal]. */
-  baseTypes: EntityMetadata<any>[];
+  baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */
-  subTypes: EntityMetadata<any>[];
+  subTypes: EntityMetadata[];
 }
 
 export type Field =
@@ -87,7 +94,7 @@ export type OneToManyField = {
   fieldName: string;
   fieldIdName: string;
   required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
+  otherMetadata: () => EntityMetadata;
   otherFieldName: string;
   serde: undefined;
   immutable: false;
@@ -98,7 +105,7 @@ export type LargeOneToManyField = {
   fieldName: string;
   fieldIdName: string;
   required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
+  otherMetadata: () => EntityMetadata;
   otherFieldName: string;
   serde: undefined;
   immutable: false;
@@ -109,7 +116,7 @@ export type ManyToOneField = {
   fieldName: string;
   fieldIdName: string;
   required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
+  otherMetadata: () => EntityMetadata;
   otherFieldName: string;
   serde: FieldSerde;
   immutable: boolean;
@@ -121,7 +128,7 @@ export type ManyToManyField = {
   fieldName: string;
   fieldIdName: string;
   required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
+  otherMetadata: () => EntityMetadata;
   otherFieldName: string;
   serde: undefined;
   immutable: false;
@@ -134,7 +141,7 @@ export type OneToOneField = {
   fieldName: string;
   fieldIdName: string;
   required: boolean;
-  otherMetadata: () => EntityMetadata<any>;
+  otherMetadata: () => EntityMetadata;
   otherFieldName: string;
   serde: undefined;
   immutable: false;
@@ -151,7 +158,7 @@ export type PolymorphicField = {
 };
 
 export type PolymorphicFieldComponent = {
-  otherMetadata: () => EntityMetadata<any>;
+  otherMetadata: () => EntityMetadata;
   otherFieldName: string; // eg `comment` or `comments`
   columnName: string; // eg `parent_book_id` or `parent_book_review_id`
 };
@@ -184,15 +191,15 @@ export function isCollectionField(ormField: Field): ormField is OneToManyField |
   return ormField.kind === "o2m" || ormField.kind === "m2m";
 }
 
-export function getAllMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
+export function getAllMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
-export function getBaseAndSelfMetas(meta: EntityMetadata<any>): EntityMetadata<any>[] {
+export function getBaseAndSelfMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta];
 }
 
-export function getBaseMeta(meta: EntityMetadata<any>): EntityMetadata<any> {
+export function getBaseMeta(meta: EntityMetadata): EntityMetadata {
   if (!meta.baseType) {
     return meta;
   } else {

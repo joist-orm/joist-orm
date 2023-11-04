@@ -27,6 +27,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -97,10 +98,10 @@ tagConfig.addRule(newRequiredRule("name"));
 tagConfig.addRule(newRequiredRule("createdAt"));
 tagConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class TagCodegen extends BaseEntity<EntityManager> {
+export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "t";
-  static readonly metadata: EntityMetadata<Tag>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: TagFilter;
@@ -149,14 +150,14 @@ export abstract class TagCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): TagId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(tagMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): TagId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("Tag has no id tagged yet");
   }
 
-  get idTaggedMaybe(): TagId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

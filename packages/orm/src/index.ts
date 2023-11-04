@@ -4,7 +4,7 @@ import {
   EntityManager,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  getEmInternalApi,
+  getEmInternalApi, TaggedId,
 } from "./EntityManager";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
@@ -247,7 +247,7 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
 
 /** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
-export function configureMetadata(metas: EntityMetadata<any>[]): void {
+export function configureMetadata(metas: EntityMetadata[]): void {
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
     if (!meta.baseType) {
@@ -271,7 +271,7 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
       acc[m.type] = m;
       return acc;
     },
-    {} as Record<string, EntityMetadata<any>>,
+    {} as Record<string, EntityMetadata>,
   );
 
   // Setup subTypes/baseTypes
@@ -319,7 +319,9 @@ export function configureMetadata(metas: EntityMetadata<any>[]): void {
     Object.values(meta.fields)
       .filter((f) => f.kind === "primitive" || (f.kind === "m2o" && f.derived === "async"))
       .forEach((field) => {
-        const ap = getFakeInstance(meta)[field.fieldName] as PersistedAsyncPropertyImpl<any, any, any> | undefined;
+        const ap = (getFakeInstance(meta) as any)[field.fieldName] as
+          | PersistedAsyncPropertyImpl<any, any, any>
+          | undefined;
         // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
@@ -354,7 +356,7 @@ export function getRelationEntries(entity: Entity): [string, AbstractRelationImp
   return Object.entries(entity).filter(([_, v]: any) => v instanceof AbstractRelationImpl);
 }
 
-export function getConstructorFromTaggedId(id: string): MaybeAbstractEntityConstructor<any> {
+export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
 }

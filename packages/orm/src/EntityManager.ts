@@ -1,6 +1,6 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
-import { Entity, isEntity } from "./Entity";
+import { Entity, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
@@ -44,12 +44,13 @@ import {
   getMetadata,
   getRelationEntries,
   getRelations,
-  keyToString,
+  keyToTaggedId,
   loadLens,
   parseFindQuery,
   setField,
   setOpts,
   tagId,
+  toTaggedId,
 } from "./index";
 import { LoadHint, Loaded, NestedLoadHint, New, RelationsIn } from "./loadHints";
 import { PreloadPlugin } from "./plugins/PreloadPlugin";
@@ -72,7 +73,7 @@ export interface EntityConstructor<T> {
   // probably do some sort of `tagOf(T)` look up, similar to filter types, which would return
   // either the string literal for a real `T`, or `any` if using `EntityConstructor<any>`.
   tagName: any;
-  metadata: EntityMetadata<any>;
+  metadata: EntityMetadata;
 }
 
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
@@ -139,6 +140,8 @@ export type ActualFactoryOpts<T> = T extends { __orm: { factoryOptsType: infer Q
 
 /** Pulls the entity's id type out of a given entity type T. */
 export type IdOf<T> = T extends { id: infer I | undefined } ? I : never;
+
+export type TaggedId = string;
 
 export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
@@ -258,9 +261,9 @@ export class EntityManager<C = unknown> {
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
-  getEntity<T extends Entity>(id: IdOf<T>): T | undefined {
+  getEntity(id: string): Entity | undefined {
     assertIdIsTagged(id);
-    return this.#entityIndex.get(id) as T | undefined;
+    return this.#entityIndex.get(id);
   }
 
   /**
@@ -731,38 +734,31 @@ export class EntityManager<C = unknown> {
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
-  public async load<T>(id: IdOf<T>): Promise<T>;
-  public async load(id: string): Promise<Entity>;
-  public async load<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, id: string): Promise<T>;
+  public async load<T>(id: IdOf<T> & string): Promise<T>;
+  public async load(id: TaggedId): Promise<Entity>;
+  public async load<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, id: IdOf<T> | TaggedId): Promise<T>;
   public async load<T extends Entity, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
-    id: string,
-    populate: H,
-  ): Promise<Loaded<T, H>>;
-  public async load<T extends Entity, const H extends LoadHint<T>>(
-    type: MaybeAbstractEntityConstructor<T>,
-    id: string,
+    id: IdOf<T> | TaggedId,
     populate: H,
   ): Promise<Loaded<T, H>>;
   async load<T extends Entity>(
     typeOrId: MaybeAbstractEntityConstructor<T> | string,
-    id?: string,
+    id?: IdType,
     hint?: any,
   ): Promise<T> {
     // Handle the `typeOrId` overload
     let type: MaybeAbstractEntityConstructor<T>;
     if (typeof typeOrId === "string") {
+      // This must be a tagged id for the 1st overload to work
       type = getConstructorFromTaggedId(typeOrId);
       id = typeOrId;
     } else {
       type = typeOrId;
       id = id || fail();
     }
-    if (typeof (id as any) !== "string") {
-      throw new Error(`Expected ${id} to be a string`);
-    }
     const meta = getMetadata(type);
-    const tagged = tagId(meta, id);
+    const tagged = toTaggedId(meta, id);
     const entity =
       this.findExistingInstance<T>(tagged) || (await loadDataLoader(this, meta).load({ entity: tagged, hint }));
     if (!entity) {
@@ -771,7 +767,7 @@ export class EntityManager<C = unknown> {
     if (hint) {
       await this.populate(entity, hint);
     }
-    return entity;
+    return entity as T;
   }
 
   /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
@@ -990,7 +986,7 @@ export class EntityManager<C = unknown> {
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
-  register(meta: EntityMetadata<any>, entity: Entity): void {
+  register(meta: EntityMetadata, entity: Entity): void {
     if (entity.idTaggedMaybe) {
       if (this.findExistingInstance(entity.idTagged) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
@@ -1230,7 +1226,7 @@ export class EntityManager<C = unknown> {
       const [custom, builtin] = partition(
         entities
           .filter((e) => e && e.__orm.deleted === undefined)
-          .flatMap((entity) => getRelations(entity).filter((r) => deepLoad || r.isLoaded)),
+          .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
       // Call `.load` on builtin relations first, because if we hit an already-loaded custom relation
@@ -1296,9 +1292,9 @@ export class EntityManager<C = unknown> {
     options?: { overwriteExisting?: boolean },
   ): T {
     const maybeBaseMeta = getMetadata(type);
-    const id = keyToString(maybeBaseMeta, row["id"]) || fail("No id column was available");
+    const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
     // See if this is already in our UoW
-    let entity = this.findExistingInstance(id) as T;
+    let entity = this.findExistingInstance(taggedId) as T;
     if (!entity) {
       // Look for __class from the driver telling us which subtype to instantiate
       const meta = row.__class
@@ -1306,7 +1302,7 @@ export class EntityManager<C = unknown> {
         : maybeBaseMeta;
       // Pass id as a hint that we're in hydrate mode
       // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
-      entity = new (asConcreteCstr(meta.cstr))(this, id);
+      entity = new (asConcreteCstr(meta.cstr))(this, taggedId);
       Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       const meta = getMetadata(entity);
@@ -1426,7 +1422,7 @@ export function isKey(k: any): k is string {
 }
 
 /** Compares `a` to `b`, where `b` might be an id. */
-export function sameEntity(a: Entity | string | undefined, b: Entity | string | undefined): boolean {
+export function sameEntity(a: Entity | string | number | undefined, b: Entity | string | number | undefined): boolean {
   if (a === b) {
     return true;
   }

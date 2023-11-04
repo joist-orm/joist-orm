@@ -2,7 +2,7 @@ import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoade
 import { Entity } from "../Entity";
 import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
-import { ensureNotDeleted, getMetadata, ManyToManyCollection } from "../index";
+import { ensureNotDeleted, getMetadata, ManyToManyCollection, toTaggedId } from "../index";
 import { remove } from "../utils";
 import { LargeCollection } from "./LargeCollection";
 import { RelationT, RelationU } from "./Relation";
@@ -12,7 +12,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadata,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
@@ -44,7 +44,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     public entity: T,
     public fieldName: keyof T & string,
     public columnName: string,
-    public otherMeta: EntityMetadata<U>,
+    public otherMeta: EntityMetadata,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {}
@@ -71,7 +71,8 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     // Make a cacheable tuple to look up this specific m2m row
     const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
     const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
-    return includes ? this.entity.em.load(id) : undefined;
+    const taggedId = toTaggedId(this.otherMeta, id);
+    return includes ? (this.entity.em.load(taggedId) as Promise<U>) : undefined;
   }
 
   async includes(other: U): Promise<boolean> {
@@ -110,7 +111,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
     (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
   }
 
-  public get meta(): EntityMetadata<T> {
+  public get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 

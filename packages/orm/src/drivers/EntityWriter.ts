@@ -47,7 +47,7 @@ function addInserts(ops: Ops, todo: Todo): void {
   }
 }
 
-function newInsertOp(meta: EntityMetadata<any>, entities: Entity[]): InsertOp {
+function newInsertOp(meta: EntityMetadata, entities: Entity[]): InsertOp {
   const columns = Object.values(meta.fields)
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
@@ -72,7 +72,7 @@ function addUpdates(ops: Ops, todo: Todo, now: Date): void {
   }
 }
 
-function maybeBumpUpdatedAt(meta: EntityMetadata<any>, todo: Todo, now: Date): void {
+function maybeBumpUpdatedAt(meta: EntityMetadata, todo: Todo, now: Date): void {
   const { updatedAt } = todo.metadata.timestampFields;
   if (updatedAt) {
     todo.updates.forEach((e) => {
@@ -83,7 +83,7 @@ function maybeBumpUpdatedAt(meta: EntityMetadata<any>, todo: Todo, now: Date): v
   }
 }
 
-function newUpdateOp(meta: EntityMetadata<any>, entities: Entity[]): UpdateOp | undefined {
+function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undefined {
   // We only include changed fields in our `UPDATE`--maybe we could change this
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
@@ -137,8 +137,8 @@ function addDeletes(ops: Ops, todo: Todo): void {
   }
 }
 
-function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata<any>, Entity[]]> {
-  const entitiesByType: Map<EntityMetadata<any>, Entity[]> = new Map();
+function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity[]]> {
+  const entitiesByType: Map<EntityMetadata, Entity[]> = new Map();
   for (const e of entities) {
     for (const m of getBaseAndSelfMetas(getMetadata(e))) {
       let list = entitiesByType.get(m);

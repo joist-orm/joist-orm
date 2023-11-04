@@ -1,6 +1,6 @@
 import { groupBy } from "joist-utils";
 import { Entity } from "./Entity";
-import { FieldsOf, IdOf, MaybeAbstractEntityConstructor } from "./EntityManager";
+import { FieldsOf, IdOf, MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import {
   EntityMetadata,
   Field,
@@ -31,7 +31,7 @@ export type Alias<T extends Entity> = {
     ? PrimitiveAlias<V, N extends undefined ? null : never>
     : FieldsOf<T>[P] extends { kind: "m2o"; type: infer U }
     ? EntityAlias<U>
-    : FieldsOf<T>[P] extends { kind: "poly"; type: infer U }
+    : FieldsOf<T>[P] extends { kind: "poly"; type: infer U extends Entity }
     ? PolyReferenceAlias<U>
     : never;
 };
@@ -60,7 +60,7 @@ export const aliasMgmt = Symbol("aliasMgmt");
 /** Management interface for `QueryParser` to set Alias's canonical alias. */
 export interface AliasMgmt {
   tableName: string;
-  setAlias(meta: EntityMetadata<any>, alias: string): void;
+  setAlias(meta: EntityMetadata, alias: string): void;
 }
 
 type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: string } };
@@ -74,7 +74,7 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
   // Give QueryBuilder a hook to assign our actual alias
   const mgmt: AliasMgmt = {
     tableName: meta.tableName,
-    setAlias(newMeta: EntityMetadata<any>, newAlias: string) {
+    setAlias(newMeta: EntityMetadata, newAlias: string) {
       conditions.forEach(({ cond, field }) => {
         // Do we have mismatched `em.find(ChildMeta)` with a `alias(BaseMeta)`? If so, the
         // usual `${field.aliasSuffix}` won't know it should have a suffix, so we need to calc it.
@@ -241,21 +241,22 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
   }
 }
 
-class PolyReferenceAlias<T> {
+class PolyReferenceAlias<T extends Entity> {
   public constructor(
     private conditions: ConditionAndAlias[],
     private field: PolymorphicField & { aliasSuffix: string },
   ) {}
 
-  eq(value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
+  eq(value: T | TaggedId | null | undefined): ExpressionFilter | ColumnCondition {
     return this.addEqOrNe("eq", value);
   }
 
-  ne(value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
+  ne(value: T | TaggedId | null | undefined): ExpressionFilter | ColumnCondition {
     return this.addEqOrNe("ne", value);
   }
 
-  in(values: Array<T | IdOf<T>> | undefined): ExpressionFilter | ColumnCondition {
+  // We required tagged ids for polys
+  in(values: Array<T | TaggedId> | undefined): ExpressionFilter | ColumnCondition {
     if (values === undefined) return skipCondition;
     // Split up the ids by constructor
     const idsByConstructor = groupBy(values, (id) => getConstructorFromTaggedId(maybeResolveReferenceToId(id)!).name);
@@ -270,7 +271,7 @@ class PolyReferenceAlias<T> {
     };
   }
 
-  private addEqOrNe(kind: "eq" | "ne", value: T | IdOf<T> | null | undefined): ExpressionFilter | ColumnCondition {
+  private addEqOrNe(kind: "eq" | "ne", value: T | TaggedId | null | undefined): ExpressionFilter | ColumnCondition {
     if (value === undefined) {
       return skipCondition;
     } else if (value === null) {
@@ -289,7 +290,7 @@ class PolyReferenceAlias<T> {
     }
   }
 
-  private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | IdOf<T>>): ColumnCondition {
+  private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
     const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
     const cond: ColumnCondition = {
       alias: "unset",

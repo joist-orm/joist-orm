@@ -231,7 +231,7 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
 }
 
 /** Converts a normalized reactive `hint` into a load hint. */
-export function convertToLoadHint<T extends Entity>(meta: EntityMetadata<T>, hint: ReactiveHint<T>): LoadHint<T> {
+export function convertToLoadHint<T extends Entity>(meta: EntityMetadata, hint: ReactiveHint<T>): LoadHint<T> {
   const loadHint = {};
   // Process the hints individually instead of just calling Object.fromEntries so that
   // we can handle inlined reactive hints that overlap.

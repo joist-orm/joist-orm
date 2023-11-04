@@ -19,6 +19,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -132,10 +133,10 @@ authorStatConfig.addRule(newRequiredRule("doublePrecision"));
 authorStatConfig.addRule(newRequiredRule("createdAt"));
 authorStatConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
+export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "as";
-  static readonly metadata: EntityMetadata<AuthorStat>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorStatFilter;
@@ -157,14 +158,14 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): AuthorStatId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(authorStatMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): AuthorStatId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("AuthorStat has no id tagged yet");
   }
 
-  get idTaggedMaybe(): AuthorStatId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

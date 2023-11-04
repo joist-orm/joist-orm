@@ -1,7 +1,7 @@
 import { EntityMetadata, Field, ManyToManyField, ManyToOneField, OneToManyField, OneToOneField } from "joist-orm";
 
 export function canPreload(
-  meta: EntityMetadata<any>,
+  meta: EntityMetadata,
   field: Field,
 ): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
   if (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") {

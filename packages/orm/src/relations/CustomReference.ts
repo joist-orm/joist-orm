@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
+import {IdOf, TaggedId} from "../EntityManager";
 import { ensureNotDeleted, fail, Reference } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { ReferenceN } from "./Reference";
@@ -93,6 +93,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   get idMaybe(): IdOf<U> | undefined {
     return fail(`CustomReference cannot resolve 'idMaybe'`);
+  }
+
+  get idTaggedMaybe(): TaggedId | undefined {
+    return fail(`CustomReference cannot resolve 'idTaggedMaybe'`);
   }
 
   get idUntagged(): string {

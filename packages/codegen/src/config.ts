@@ -75,7 +75,8 @@ export interface Config {
   codegenPlugins: string[];
   entities: Record<string, EntityConfig>;
   ignoredTables?: string[];
-  idType?: "untagged-string";
+  /** The type of entity `id` fields; defaults to `tagged-string`. */
+  idType?: "tagged-string" | "untagged-string" | "number";
   // We don't persist this, and instead just use it as a cache
   __tableToEntityName?: Record<string, string>;
 }

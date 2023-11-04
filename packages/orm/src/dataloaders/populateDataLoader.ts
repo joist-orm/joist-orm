@@ -18,7 +18,7 @@ import { toArray } from "../utils";
 
 export function populateDataLoader(
   em: EntityManager,
-  meta: EntityMetadata<any>,
+  meta: EntityMetadata,
   hint: LoadHint<any>,
   mode: "preload" | "intermixed",
   opts: { forceReload?: boolean } = {},
@@ -44,7 +44,7 @@ export function populateDataLoader(
     batchKey,
     async (populates) => {
       async function populateLayer(
-        layerMeta: EntityMetadata<any> | undefined,
+        layerMeta: EntityMetadata | undefined,
         layerNode: HintNode<Entity>,
       ): Promise<any[]> {
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
@@ -69,7 +69,7 @@ export function populateDataLoader(
               // We already have the entities loaded, so can do just `SELECT a.id` + the preload columns
               selects: [kqDot(alias, "id")],
               tables: [{ alias, join: "primary", table: meta.tableName }],
-              conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: ids } }],
+              conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: ids } }],
               orderBys: [],
             };
             const hydrator = preloader.addPreloading(em, meta, layerNode, query);

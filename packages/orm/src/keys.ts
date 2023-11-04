@@ -1,19 +1,43 @@
 import { BaseEntity } from "./BaseEntity";
-import { Entity } from "./Entity";
-import { EntityConstructor } from "./EntityManager";
-import { EntityMetadata, getMetadata } from "./EntityMetadata";
+import { Entity, IdType } from "./Entity";
+import { EntityConstructor, IdOf, TaggedId } from "./EntityManager";
+import { EntityMetadata, EntityMetadataTyped, getMetadata } from "./EntityMetadata";
+import { Reference } from "./relations";
 import { assertNever, fail } from "./utils";
 
 const tagDelimiter = ":";
 
 // I'm not entirely sure this is still necessary, but use a small subset of EntityMetadata so
 // that this file doesn't have to import the type and potentially create import cycles.
-type HasTagName = { tagName: string; idType: "int" | "uuid" };
+type HasTagName = {
+  tagName: string;
+  /** The type of the `id` field on the domain entity. */
+  // idType: "tagged-string" | "untagged-string" | "number";
+  /** The database column type, i.e. used to do `::type` casts in Postgres. */
+  idDbType: "bigint" | "int" | "uuid";
+};
+
+/** Converts our internal/always-tagged `id` to the domain entity's `id` type. */
+export function toIdOf<T extends Entity>(meta: EntityMetadataTyped<T>, id: TaggedId | undefined): IdOf<T> | undefined {
+  if (!id) return undefined;
+  switch (meta.idType) {
+    case "number":
+      return Number(deTagId(meta, id)) as IdOf<T>;
+    case "tagged-string":
+      return id as IdOf<T>;
+    case "untagged-string":
+      return deTagId(meta, id) as IdOf<T>;
+    default:
+      return assertNever(meta.idType);
+  }
+}
 
 // Before a referred-to object is saved, we keep its instance in our data
 // map, and then assume it will be persisted before we're asked to persist
-export function maybeResolveReferenceToId(value: any): string | undefined {
-  return typeof value === "number" || typeof value === "string" ? value : value?.idTaggedMaybe;
+export function maybeResolveReferenceToId(
+  value: Entity | Reference<any, any, any> | string | undefined,
+): TaggedId | undefined {
+  return typeof value === "string" ? value : value?.idTaggedMaybe;
 }
 
 /** Converts `value` to a number, i.e. for string ids, unless its undefined. */
@@ -40,15 +64,15 @@ export function keyToNumber(meta: HasTagName, value: any): number | undefined {
 
 // If we're using UUIDs, just lie to the type system and pretend they're numbers.
 function maybeNumberUnlessUuid(meta: HasTagName, key: string): number {
-  if (meta.idType === "uuid") {
+  if (meta.idDbType === "uuid") {
     return key as any;
   }
   return Number(key);
 }
 
-/** Converts `value` to a tagged string, i.e. for string ids, unless its undefined. */
-export function keyToString(meta: HasTagName, value: any): string | undefined {
-  return value === undefined || value === null ? undefined : `${meta.tagName}:${value}`;
+/** Converts `dbValue` (big int, int, uuid) to a tagged string, unless its undefined. */
+export function keyToTaggedId(meta: HasTagName, dbValue: string | number): TaggedId | undefined {
+  return dbValue === undefined || dbValue === null ? undefined : `${meta.tagName}:${dbValue}`;
 }
 
 /** Fails if any keys are tagged; used by internal functions b/c we still allow most direct API input to be untagged. */
@@ -65,22 +89,24 @@ const validId = /[a-z]+:([0-9a-z\-]+)/;
 const uuidIshId = /[0-9a-z\-]+/i;
 
 /** Returns whether `id` is tagged and a probably-correct value. */
-export function isTaggedId(id: string): boolean;
+export function isTaggedId(id: string | number): boolean;
 /** Returns whether `id` is tagged and the tag matches `meta`'s tag. */
-export function isTaggedId(meta: EntityMetadata<any>, id: string): boolean;
-export function isTaggedId(metaOrId: string | EntityMetadata<any>, id?: string): boolean {
-  if (typeof metaOrId === "string") {
+export function isTaggedId(meta: EntityMetadata, id: string): boolean;
+export function isTaggedId(metaOrId: string | number | EntityMetadata, id?: string): boolean {
+  if (typeof metaOrId === "number") {
+    return false;
+  } else if (typeof metaOrId === "string") {
     return validId.test(metaOrId);
   } else {
     const [tag, _id] = id!.split(tagDelimiter);
     if (metaOrId.tagName !== tag) return false;
     // With meta available, we can do more strict number or uuid checking
-    if (metaOrId.idType === "int") {
+    if (metaOrId.idDbType === "int" || metaOrId.idDbType === "bigint") {
       return !Number.isNaN(Number(_id));
-    } else if (metaOrId.idType === "uuid") {
+    } else if (metaOrId.idDbType === "uuid") {
       return uuidIshId.test(_id);
     } else {
-      return assertNever(metaOrId.idType);
+      return assertNever(metaOrId.idDbType);
     }
   }
 }
@@ -91,23 +117,35 @@ export function assertIdIsTagged(id: string): void {
   }
 }
 
-export function ensureTagged<V extends Entity | string | number | undefined>(
-  meta: HasTagName,
-  maybeId: V,
-): V | undefined {
-  if (typeof maybeId === "string") {
-    // Treat "" as undefined, arguably this should be an error
-    if (maybeId === "") {
-      return undefined;
-    }
+/** We accept an entity in case this is m2o storing a not-yet-saved entity. */
+export function toTaggedId(meta: HasTagName, maybeId: IdType): TaggedId;
+export function toTaggedId(meta: HasTagName, maybeId: IdType | undefined): TaggedId | undefined;
+export function toTaggedId(meta: HasTagName, maybeId: IdType | undefined): TaggedId | undefined {
+  if (typeof maybeId === "number") {
+    return `${meta.tagName}${tagDelimiter}${maybeId}`;
+  } else if (typeof maybeId === "string") {
     const i = maybeId.indexOf(tagDelimiter);
-    if (i === -1) {
-      return `${meta.tagName}${tagDelimiter}${maybeId}` as V;
-    }
+    if (i === -1) return `${meta.tagName}${tagDelimiter}${maybeId}`;
     const tag = maybeId.slice(0, i);
-    if (tag !== meta.tagName) {
-      throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${maybeId}`);
-    }
+    if (tag !== meta.tagName) throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${maybeId}`);
+  }
+  return maybeId;
+}
+
+/** Similar to `toTaggedId`, but we accept an entity for handling relations to not-yet-saved entities. */
+export function ensureTagged<U extends Entity>(
+  meta: HasTagName,
+  maybeId: U | string | number | undefined,
+): U | TaggedId | undefined {
+  if (typeof maybeId === "number") {
+    return `${meta.tagName}${tagDelimiter}${maybeId}`;
+  } else if (typeof maybeId === "string") {
+    // Treat "" as undefined, arguably this should be an error
+    if (maybeId === "") return undefined;
+    const i = maybeId.indexOf(tagDelimiter);
+    if (i === -1) return `${meta.tagName}${tagDelimiter}${maybeId}`;
+    const tag = maybeId.slice(0, i);
+    if (tag !== meta.tagName) throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${maybeId}`);
   }
   return maybeId;
 }

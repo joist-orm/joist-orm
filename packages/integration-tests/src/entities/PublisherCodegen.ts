@@ -29,6 +29,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -162,10 +163,10 @@ publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
 
-export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
+export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<Publisher>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherFilter;
@@ -237,14 +238,14 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): PublisherId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(publisherMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): PublisherId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("Publisher has no id tagged yet");
   }
 
-  get idTaggedMaybe(): PublisherId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

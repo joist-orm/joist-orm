@@ -68,7 +68,7 @@ export function findDataLoader<T extends Entity>(
       //   (1, 'b', 'b'),
       //   (2, 'c', 'c')
       // )
-      // SELECT array_agg(d.tag), a.*
+      // SELECT array_agg(d.tag), a.newtestin*
       // FROM authors a
       // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
       // group by a.id;
@@ -181,7 +181,7 @@ export function collectArgs(query: ParsedFindQuery): { columnName: string; dbTyp
   return args;
 }
 
-export function createBindings(meta: EntityMetadata<any>, queries: readonly FilterAndSettings<any>[]): any[] {
+export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
   const bindings: any[] = [];
   queries.forEach((query, i) => {
     const { where, ...opts } = query;

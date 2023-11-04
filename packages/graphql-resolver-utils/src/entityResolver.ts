@@ -3,8 +3,8 @@ import {
   AsyncProperty,
   Collection,
   Entity,
-  EntityMetadata,
   Field,
+  getMetadata,
   getProperties,
   IdOf,
   isAsyncProperty,
@@ -18,6 +18,7 @@ import {
   LoadHint,
   ManyToManyField,
   ManyToOneField,
+  MaybeAbstractEntityConstructor,
   OneToManyField,
   OneToOneField,
   PolymorphicField,
@@ -64,9 +65,11 @@ export type EntityResolver<T extends Entity> = {
  * Creates field resolvers for each of the fields on our entity.
  */
 export function entityResolver<T extends Entity, A extends Record<string, keyof T> = Record<string, any>>(
-  entityMetadata: EntityMetadata<T>,
+  entity: MaybeAbstractEntityConstructor<T>,
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {
+  const entityMetadata = getMetadata(entity);
+
   const idResolver = (entityOrId: T | string) => {
     return typeof entityOrId === "string" ? entityOrId : entityOrId.id;
   };

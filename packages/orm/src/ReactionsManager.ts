@@ -159,7 +159,7 @@ export class ReactionsManager {
     return pending;
   }
 
-  private getDirtyFields(meta: EntityMetadata<any>): Set<string> {
+  private getDirtyFields(meta: EntityMetadata): Set<string> {
     let dirty = this.dirtyFields.get(meta.tagName);
     if (!dirty) {
       dirty = new Set();

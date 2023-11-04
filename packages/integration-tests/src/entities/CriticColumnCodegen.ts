@@ -25,6 +25,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -82,10 +83,10 @@ criticColumnConfig.addRule(newRequiredRule("createdAt"));
 criticColumnConfig.addRule(newRequiredRule("updatedAt"));
 criticColumnConfig.addRule(newRequiredRule("critic"));
 
-export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
+export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "cc";
-  static readonly metadata: EntityMetadata<CriticColumn>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CriticColumnFilter;
@@ -109,14 +110,14 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): CriticColumnId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(criticColumnMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): CriticColumnId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("CriticColumn has no id tagged yet");
   }
 
-  get idTaggedMaybe(): CriticColumnId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

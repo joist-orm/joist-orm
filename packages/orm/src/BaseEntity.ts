@@ -1,3 +1,4 @@
+import { IdType } from "./Entity";
 import {
   deTagId,
   Entity,
@@ -7,7 +8,7 @@ import {
   isEntity,
   keyToNumber,
   OptsOf,
-  PartialOrNull,
+  PartialOrNull, TaggedId,
 } from "./index";
 
 /**
@@ -15,7 +16,9 @@ import {
  *
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
-export abstract class BaseEntity<EM extends EntityManager = EntityManager> implements Entity {
+export abstract class BaseEntity<EM extends EntityManager = EntityManager, I extends IdType = string>
+  implements Entity<I>
+{
   readonly __orm!: EntityOrmField;
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
@@ -41,16 +44,16 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager> imple
   }
 
   /** @returns the entity's id, tagged/untagged based on your config, or a runtime error if it's new/unassigned. */
-  abstract id: string;
+  abstract id: I;
 
   /** @returns the entity's, tagged/untagged based on your config, or undefined if it's new/unassigned. */
-  abstract get idMaybe(): string | undefined;
+  abstract get idMaybe(): I | undefined;
 
   /** @returns the entity's id, always tagged, or a runtime error if it's new/unassigned. */
-  abstract idTagged: string;
+  abstract idTagged: TaggedId;
 
   /** @returns the entity's id, always tagged, or undefined if it's new/unassigned. */
-  abstract get idTaggedMaybe(): string | undefined;
+  abstract get idTaggedMaybe(): TaggedId | undefined;
 
   /** @returns the entity's id, always untagged, or a runtime error if it's unassigned. */
   get idUntagged(): string {

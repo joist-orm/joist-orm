@@ -19,6 +19,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -59,10 +60,10 @@ export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 
-export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager> {
+export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "do";
-  static readonly metadata: EntityMetadata<DatabaseOwner>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: DatabaseOwnerFilter;
@@ -84,14 +85,14 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): DatabaseOwnerId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(databaseOwnerMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): DatabaseOwnerId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("DatabaseOwner has no id tagged yet");
   }
 
-  get idTaggedMaybe(): DatabaseOwnerId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

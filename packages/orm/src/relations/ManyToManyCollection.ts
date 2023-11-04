@@ -8,6 +8,7 @@ import {
   getMetadata,
   IdOf,
   ManyToManyField,
+  toTaggedId,
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
@@ -20,7 +21,7 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadata,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
@@ -56,7 +57,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     entity: T,
     public fieldName: keyof T & string,
     public columnName: string,
-    otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
@@ -94,7 +95,8 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       // Make a cacheable tuple to look up this specific m2m row
       const key = `${this.columnName}=${this.#entity.id},${this.otherColumnName}=${id}`;
       const includes = await manyToManyFindDataLoader(this.#entity.em, this).load(key);
-      return includes ? this.#entity.em.load(id) : undefined;
+      const taggedId = toTaggedId(this.otherMeta, id);
+      return includes ? (this.#entity.em.load(taggedId) as Promise<U>) : undefined;
     }
   }
 
@@ -255,11 +257,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return this.#entity;
   }
 
-  public get meta(): EntityMetadata<T> {
+  public get meta(): EntityMetadata {
     return getMetadata(this.#entity);
   }
 
-  public get otherMeta(): EntityMetadata<U> {
+  public get otherMeta(): EntityMetadata {
     return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToManyField).otherMetadata();
   }
 

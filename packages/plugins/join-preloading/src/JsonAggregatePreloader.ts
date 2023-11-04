@@ -14,7 +14,7 @@ import {
   getEmInternalApi,
   getTables,
   keyToNumber,
-  keyToString,
+  keyToTaggedId,
   kq,
   kqDot,
 } from "joist-orm";
@@ -27,7 +27,7 @@ import { partitionHint } from "./partitionHint";
  */
 export class JsonAggregatePreloader implements PreloadPlugin {
   partitionHint(
-    meta: EntityMetadata<any> | undefined,
+    meta: EntityMetadata | undefined,
     hint: LoadHint<any>,
   ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined] {
     return partitionHint(meta, hint);
@@ -35,7 +35,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
 
   addPreloading<T extends Entity>(
     em: EntityManager,
-    meta: EntityMetadata<T>,
+    meta: EntityMetadata,
     root: HintNode<T>,
     query: ParsedFindQuery,
   ): PreloadHydrator | undefined {
@@ -66,7 +66,7 @@ export class JsonAggregatePreloader implements PreloadPlugin {
 
   getPreloadJoins<T extends Entity>(
     em: EntityManager,
-    meta: EntityMetadata<T>,
+    meta: EntityMetadata,
     root: HintNode<T>,
     query: ParsedFindQuery,
   ): JoinResult[] {
@@ -112,10 +112,10 @@ type AggregateJsonHydrator = (root: Entity, parent: Entity, arrays: unknown[][])
 function addJoins<I extends EntityOrId>(
   em: EntityManager,
   getAlias: (tableName: string) => string,
-  root: { tree: HintNode<I>; alias: string; meta: EntityMetadata<any> },
+  root: { tree: HintNode<I>; alias: string; meta: EntityMetadata },
   tree: HintNode<I>,
   parentAlias: string,
-  parentMeta: EntityMetadata<any>,
+  parentMeta: EntityMetadata,
 ): AggregateJoinResult[] {
   const results: AggregateJoinResult[] = [];
 
@@ -205,7 +205,7 @@ function addJoins<I extends EntityOrId>(
         const children = arrays.map((array) => {
           // If we've snuck the m2m row id into the json arry, ignore it
           const m2mOffset = field.kind === "m2m" ? 1 : 0;
-          const taggedId = keyToString(otherMeta, array[m2mOffset])!;
+          const taggedId = keyToTaggedId(otherMeta, array[m2mOffset] as any)!;
           const entity =
             em.findExistingInstance<Entity>(taggedId) ??
             (em.hydrate(

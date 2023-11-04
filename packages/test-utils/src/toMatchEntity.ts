@@ -57,7 +57,7 @@ function maybeTestId(maybeEntity: any): any {
 /** Returns either the persisted id or `tag#<offset-in-EntityManager>`. */
 function getTestId(em: EntityManager, entity: Entity): string {
   if (entity.idMaybe) {
-    return entity.id;
+    return entity.idTagged;
   }
   const meta = getMetadata(entity);
   const sameType = em.entities.filter((e) => e instanceof meta.cstr);

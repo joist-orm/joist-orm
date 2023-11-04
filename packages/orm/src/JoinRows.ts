@@ -1,7 +1,7 @@
 import { Entity } from "./Entity";
 import { ReactionsManager } from "./ReactionsManager";
 import { JoinRowTodo } from "./Todo";
-import { keyToString } from "./keys";
+import { keyToTaggedId } from "./keys";
 import { ManyToManyCollection } from "./relations/ManyToManyCollection";
 import { remove } from "./utils";
 
@@ -81,16 +81,16 @@ export class JoinRows {
     let row = this.rows.find((jr) => {
       return (
         // Use idMaybe because row join might be for a not-yet-flushed new entity
-        (jr[column1] as Entity).idMaybe === keyToString(meta1, dbRow[column1]) &&
-        (jr[column2] as Entity).idMaybe === keyToString(meta2, dbRow[column2])
+        (jr[column1] as Entity).idMaybe === keyToTaggedId(meta1, dbRow[column1]) &&
+        (jr[column2] as Entity).idMaybe === keyToTaggedId(meta2, dbRow[column2])
       );
     });
     if (!row) {
       // For this join table row, load the entities of both foreign keys. Because we are `EntityManager.load`,
       // this is N+1 safe (and will check the Unit of Work for already-loaded entities), but per ^ comment
       // we chould pull these from the row itself if we did a fancier join.
-      const p1 = em.load(meta1.cstr, keyToString(meta1, dbRow[column1])!);
-      const p2 = em.load(meta2.cstr, keyToString(meta2, dbRow[column2])!);
+      const p1 = em.load(meta1.cstr, keyToTaggedId(meta1, dbRow[column1])!);
+      const p2 = em.load(meta2.cstr, keyToTaggedId(meta2, dbRow[column2])!);
       const [e1, e2] = await Promise.all([p1, p2]);
       row = { id: dbRow.id, m2m: this.m2m, [column1]: e1, [column2]: e2, created_at: dbRow.created_at };
       this.rows.push(row);

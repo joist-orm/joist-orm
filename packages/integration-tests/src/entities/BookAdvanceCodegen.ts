@@ -24,6 +24,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -103,10 +104,10 @@ bookAdvanceConfig.addRule(newRequiredRule("status"));
 bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
-export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
+export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "ba";
-  static readonly metadata: EntityMetadata<BookAdvance>;
+  static readonly metadata: EntityMetadata;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookAdvanceFilter;
@@ -136,14 +137,14 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): BookAdvanceId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(bookAdvanceMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): BookAdvanceId {
+  get idTagged(): string {
     return this.idTaggedMaybe || fail("BookAdvance has no id tagged yet");
   }
 
-  get idTaggedMaybe(): BookAdvanceId | undefined {
+  get idTaggedMaybe(): string | undefined {
     return this.__orm.data["id"];
   }
 

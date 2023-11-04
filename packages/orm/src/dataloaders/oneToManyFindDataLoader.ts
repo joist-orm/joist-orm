@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityManager, IdOf } from "../EntityManager";
+import { EntityManager } from "../EntityManager";
 import {
   OneToManyCollection,
   OneToManyLargeCollection,
@@ -43,13 +43,13 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
                 {
                   alias,
                   column: columnOne,
-                  dbType: meta1.idType,
+                  dbType: meta1.idDbType,
                   cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
                 },
                 {
                   alias,
                   column: columnTwo,
-                  dbType: meta2.idType,
+                  dbType: meta2.idDbType,
                   cond: { kind: "eq", value: keyToNumber(meta2, idTwo) },
                 },
               ],
@@ -72,7 +72,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
       const [otherKey, parentKey] = k.split(",");
       const [, otherId] = otherKey.split("=");
       const [, parentId] = parentKey.split("=");
-      const other = em.getEntity(otherId as IdOf<U>);
+      const other = em.getEntity(otherId) as U;
       // We have may fetched `other` for a different parent in our batch
       const isMine = (other as any)?.[collection.otherFieldName].id === parentId;
       return isMine ? other : undefined;

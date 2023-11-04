@@ -38,7 +38,6 @@ import {
   ValueGraphQLFilter,
   Zod,
   cleanStringValue,
-  deTagId,
   fail as failSymbol,
   hasLargeMany,
   hasLargeManyToMany,
@@ -53,8 +52,9 @@ import {
   newRequiredRule,
   setField,
   setOpts,
+  toIdOf,
 } from "./symbols";
-import { fail, uncapitalize } from "./utils";
+import { assertNever, fail, uncapitalize } from "./utils";
 
 export interface ColumnMetaData {
   fieldType: PrimitiveTypescriptType;
@@ -361,10 +361,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const factoryMethod = imp(`new${entity.name}@./entities`);
   const EntityManager = imp("t:EntityManager@./entities");
 
+  // If we're not tagged-strings, detag on the way out of id
   const idMaybeCode =
-    config.idType === "untagged-string"
-      ? code`return ${deTagId}(${metadata}, this.idTaggedMaybe);`
-      : code`return this.idTaggedMaybe;`;
+    config.idType === "tagged-string"
+      ? code`return this.idTaggedMaybe;`
+      : code`return ${toIdOf}(${metadata}, this.idTaggedMaybe);`;
+  const idType = getIdType(config);
 
   const maybeIsSoftDeleted = meta.deletedAt
     ? code`
@@ -377,14 +379,14 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   // Set up the codegen artifacts to extend from the base type if necessary
   const baseEntity = meta.baseClassName ? dbMeta.entities.find((e) => e.name === meta.baseClassName)! : undefined;
   const subEntities = dbMeta.entities.filter((e) => e.baseClassName === meta.name);
-  const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}>`;
+  const base = baseEntity?.entity.type ?? code`${BaseEntity}<${EntityManager}, ${idType}>`;
   const maybeBaseFields = baseEntity ? code`extends ${imp(baseEntity.name + "Fields@./entities")}` : "";
   const maybeBaseOpts = baseEntity ? code`extends ${baseEntity.entity.optsType}` : "";
   const maybeBaseIdOpts = baseEntity ? code`extends ${imp(baseEntity.name + "IdsOpts@./entities")}` : "";
   const maybeBaseFilter = baseEntity ? code`extends ${imp(baseEntity.name + "Filter@./entities")}` : "";
   const maybeBaseGqlFilter = baseEntity ? code`extends ${imp(baseEntity.name + "GraphQLFilter@./entities")}` : "";
   const maybeBaseOrder = baseEntity ? code`extends ${baseEntity.entity.orderType}` : "";
-  const maybeBaseId = baseEntity ? code` & Flavor<string, "${baseEntity.name}">` : "";
+  const maybeBaseId = baseEntity ? code` & Flavor<${idType}, "${baseEntity.name}">` : "";
   const maybePreventBaseTypeInstantiation = meta.abstract
     ? code`
     if (this.constructor === ${entity.type} && !(em as any).fakeInstance) {
@@ -454,7 +456,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   }
 
   return code`
-    export type ${entityName}Id = ${Flavor}<string, ${entityName}> ${maybeBaseId};
+    export type ${entityName}Id = ${Flavor}<${idType}, ${entityName}> ${maybeBaseId};
 
     ${generatePolymorphicTypes(meta)}
     
@@ -491,7 +493,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${defaultValues}
       };
       static readonly tagName = "${tagName}";
-      static readonly metadata: ${EntityMetadata}<${entityName}>;
+      static readonly metadata: ${EntityMetadata};
 
       declare readonly __orm: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
@@ -514,11 +516,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${idMaybeCode}
       }
 
-      get idTagged(): ${entityName}Id {
+      get idTagged(): string {
         return this.idTaggedMaybe || ${failSymbol}("${entityName} has no id tagged yet");
       }
 
-      get idTaggedMaybe(): ${entityName}Id | undefined {
+      get idTaggedMaybe(): string | undefined {
         return this.__orm.data["id"];
       }
 
@@ -836,4 +838,17 @@ function undefinedOrNever(notNull: boolean): string {
 
 function nullOrNever(notNull: boolean): string {
   return notNull ? "never" : "null";
+}
+
+function getIdType(config: Config) {
+  switch (config.idType) {
+    case "untagged-string":
+    case "tagged-string":
+    case undefined:
+      return "string";
+    case "number":
+      return "number";
+    default:
+      return assertNever(config.idType);
+  }
 }

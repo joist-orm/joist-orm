@@ -49,14 +49,14 @@ export function findDataLoader<T extends Entity>(
 
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
       if (queries.length === 1) {
-        const { where, limit, offset, ...opts } = queries[0];
+        const { where, ...opts } = queries[0];
         // We have to parseFindQuery queries[0], b/c our query variable may be captured from
         // a prior invocation that instantiated our dataloader instance.
         const query = parseFindQuery(meta, where, opts);
         // Maybe add preload joins
         const { preloader } = getEmInternalApi(em);
         const processor = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
-        const rows = await em.driver.executeFind(em, query, { limit, offset });
+        const rows = await em.driver.executeFind(em, query, opts);
         ensureUnderLimit(em, rows);
         const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
         if (processor) processor(rows, entities);

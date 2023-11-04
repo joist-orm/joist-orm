@@ -80,7 +80,6 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     // Adapt our json aggregate joins to the higher-level JoinResult
     return joins.map((join) => {
       return {
-        alias: join.alias,
         selects: [{ value: kqDot(join.alias, "_"), as: join.alias }],
         join: join.join,
         hydrator: (rows, entities) => {

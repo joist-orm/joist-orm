@@ -76,8 +76,6 @@ export type PreloadHydrator = (rows: any[], entities: any[]) => void;
 export type JoinResult = {
   /** The select clause(s) for this join, i.e. `b._ as _b` or `c._ as _c`. */
   selects: { value: string; as: string }[];
-  /** The alias for this child's single json-array-d column, i.e. `b._` or `c._`. */
-  alias: string;
   /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
   join: string;
   /** The processor for this child's lateral join, which itself might recursively processor subjoins. */

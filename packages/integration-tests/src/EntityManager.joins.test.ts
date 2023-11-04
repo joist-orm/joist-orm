@@ -197,6 +197,38 @@ describe("EntityManager.joins", () => {
     ]);
   });
 
+  it("preloads em.find", async () => {
+    // Given an author with books + reviews
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [a1] = await em.find(Author, { firstName: "a1" }, { populate: { books: "reviews" } });
+    // Then we issued one query
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
+    expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
+  });
+
+  it("preloads em.find in a loop", async () => {
+    // Given an author with books + reviews
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ author_id: 1, title: "b1" });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await insertAuthor({ first_name: "a2" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [[a1], [a2]] = await Promise.all([
+      em.find(Author, { firstName: "a1" }, { populate: { books: "reviews" } }),
+      em.find(Author, { firstName: "a2" }, { populate: { books: "reviews" } }),
+    ]);
+    // Then we issued one query
+    expect(queries.length).toEqual(isPreloadingEnabled ? 1 : 3);
+    expect(a1.books.get[0].reviews.get[0].rating).toBe(1);
+    expect(a2.books.get.length).toBe(0);
+  });
+
   describe("partitionHint", () => {
     it("partitions a sql-only hint", () => {
       const [a, b] = partitionHint(Author.metadata, { books: { reviews: "comment" } });

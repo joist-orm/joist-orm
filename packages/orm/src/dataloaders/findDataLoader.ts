@@ -4,8 +4,9 @@ import { isAlias } from "../Aliases";
 import { Entity, isEntity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { opToFn } from "../EntityGraphQLFilter";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { EntityManager, MaybeAbstractEntityConstructor, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
+import { buildHintTree } from "../HintTree";
 import {
   ColumnCondition,
   ParsedExpressionFilter,
@@ -17,13 +18,15 @@ import {
   parseFindQuery,
 } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
+import { LoadHint } from "../loadHints";
 import { assertNever, cleanSql } from "../utils";
 
 export function findDataLoader<T extends Entity>(
   em: EntityManager,
   type: MaybeAbstractEntityConstructor<T>,
   filter: FilterAndSettings<T>,
-): DataLoader<FilterAndSettings<T>, unknown[]> {
+  hint: LoadHint<T> | undefined,
+): DataLoader<FilterAndSettings<T>, T[]> {
   const { where, ...opts } = filter;
   if (opts.limit || opts.offset) {
     throw new Error("Cannot use limit/offset with findDataLoader");
@@ -35,19 +38,29 @@ export function findDataLoader<T extends Entity>(
 
   return em.getLoader(
     "find",
-    batchKey,
+    // It's unlikely we'll have simultaneous em.finds with the same WHERE clause structure
+    // but lots of different load hints, and it'd be complicated to implement the preloading
+    // in a way that doesn't naively over-fetch data (which our loadDataLoader does prevent,
+    // but it's simpler b/c it's given exact ids to load), so for now just include the load
+    // hint in the batch key.
+    `${batchKey}-${JSON.stringify(hint)}`,
     async (queries) => {
       // We're guaranteed that these queries all have the same structure
 
       // Don't bother with the CTE if there's only 1 query (or each query has exactly the same filter values)
       if (queries.length === 1) {
-        const { where, ...opts } = queries[0];
+        const { where, limit, offset, ...opts } = queries[0];
         // We have to parseFindQuery queries[0], b/c our query variable may be captured from
         // a prior invocation that instantiated our dataloader instance.
         const query = parseFindQuery(meta, where, opts);
-        const rows = await em.driver.executeFind(em, query, {});
+        // Maybe add preload joins
+        const { preloader } = getEmInternalApi(em);
+        const processor = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
+        const rows = await em.driver.executeFind(em, query, { limit, offset });
         ensureUnderLimit(em, rows);
-        return [rows];
+        const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
+        if (processor) processor(rows, entities);
+        return [entities];
       }
 
       // WITH data(tag, arg1, arg2) AS (VALUES
@@ -84,12 +97,25 @@ export function findDataLoader<T extends Entity>(
         }
       }
 
+      const { preloader } = getEmInternalApi(em);
+      const preloadJoins = preloader && hint && preloader.getPreloadJoins(em, meta, buildHintTree(hint), query);
+      if (preloadJoins) {
+        selects.push(
+          ...preloadJoins.flatMap((j) =>
+            // Because we 'group by primary.id' to collapse the "a1 matched multiple finds" into
+            // a single row, we also need to pick just the first value of each preload column
+            j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
+          ),
+        );
+      }
+
       const sql = `
         ${buildValuesCte("_find", args, queries)}
         SELECT ${selects.join(", ")}
         FROM ${primary.table} as ${kq(primary.alias)}
         ${joins.map((j) => `${joinKeywords(j)} ${j.table} ${kq(j.alias)} ON ${j.col1} = ${j.col2}`).join(" ")}
         JOIN _find ON ${conditions}
+        ${preloadJoins?.map((j) => `${j.join}`).join(" ")}
         GROUP BY ${groupBys.join(", ")}
         ORDER BY ${query.orderBys.map((o) => `${kq(o.alias)}.${o.column} ${o.order}`).join(", ")}
         LIMIT ${em.entityLimit};
@@ -98,16 +124,19 @@ export function findDataLoader<T extends Entity>(
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
       ensureUnderLimit(em, rows);
 
-      // Make an empty array for each batched query, per the dataloader contract
-      const results = queries.map(() => [] as any[]);
-      // Then put each row into the tagged query it matched
-      for (const row of rows) {
-        for (const tag of row._tags) {
-          results[tag].push(row);
-        }
-        delete row._tags;
+      const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
+      if (preloadJoins) {
+        preloadJoins.forEach((j) => j.processor(rows, entities));
       }
 
+      // Make an empty array for each batched query, per the dataloader contract
+      const results = queries.map(() => [] as T[]);
+      // Then put each row into the tagged query it matched
+      rows.forEach((row, i) => {
+        const entity = entities[i];
+        for (const tag of row._tags) results[tag].push(entity);
+        delete row._tags;
+      });
       return results;
     },
     // Our filter/order tuple is a complex object, so object-hash it to ensure caching works

@@ -1,8 +1,9 @@
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
-import { HintNode } from "../HintTree";
+import { EntityOrId, HintNode } from "../HintTree";
 import { LoadHint, NestedLoadHint } from "../loadHints";
+import { ParsedFindQuery } from "../QueryParser";
 
 /**
  * This is a plugin API dedicated to preloading data for subtrees of entities.
@@ -28,24 +29,33 @@ export interface PreloadPlugin {
     hint: LoadHint<any>,
   ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined];
 
-  /**
-   * Given a hint tree for an existing entities going through `em.populate`, loads their relations
-   * into the EM's preload cache.
-   *
-   * The `EntityManager.populate` method will still call each relation's `.preload()` method, to
-   * pull the data from the preload cache into the relation.
-   */
-  preloadPopulate<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, tree: HintNode<T>): Promise<void>;
+  addPreloading<T extends Entity>(
+    em: EntityManager,
+    meta: EntityMetadata<T>,
+    tree: HintNode<EntityOrId>,
+    query: ParsedFindQuery,
+  ): PreloadProcessor | undefined;
 
-  /**
-   * Given a hint tree for entities about be loaded from the database, load the entities, as well as preload-able
-   * relations.
-   *
-   * The `EntityManager.load` methods will still call `em.populate`, which will call each relation's
-   * `.preload()` method, to pull the data from the preload cache into the relation.
-   *
-   * Note that, unlike `preloadPopulate`, `tree` will have both sql-able and non-sql-able hints, so the
-   * implementation should just ignore any hints that it's not able to preload.
-   */
-  preloadLoad<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, tree: HintNode<string>): Promise<T[]>;
+  getPreloadJoins<T extends Entity>(
+    em: EntityManager,
+    meta: EntityMetadata<T>,
+    tree: HintNode<T>,
+    query: ParsedFindQuery,
+  ): JoinResult[];
 }
+
+export type PreloadProcessor = (rows: any[], entities: any[]) => void;
+
+/** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
+export type JoinResult = {
+  /** The select clause(s) for this join, i.e. `b._ as _b` or `c._ as _c`. */
+  selects: { value: string; as: string }[];
+  /** The alias for this child's single json-array-d column, i.e. `b._` or `c._`. */
+  alias: string;
+  /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
+  join: string;
+  /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
+  processor: PreloadProcessor;
+  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
+  bindings: any[];
+};

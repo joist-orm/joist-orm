@@ -17,26 +17,24 @@ export function loadDataLoader<T extends Entity>(
   return em.getLoader("load", meta.type, async (loads) => {
     let entities: T[];
 
+    const keys = loads.map((l) => keyToNumber(meta, l.entity));
+    const alias = abbreviation(meta.tableName);
+    const query: ParsedFindQuery = {
+      selects: [`"${alias}".*`],
+      tables: [{ alias, join: "primary", table: meta.tableName }],
+      conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: keys } }],
+      orderBys: [{ alias, column: "id", order: "ASC" }],
+    };
+    addTablePerClassJoinsAndClassTag(query, meta, alias, true);
+    // Inject preloading joins into the query if enabled
     const { preloader } = getEmInternalApi(em);
-    if (preloader) {
-      const rootTree = buildHintTree<string>(loads);
-      entities = await preloader.preloadLoad(em, meta, rootTree);
-    } else {
-      const keys = loads.map((l) => keyToNumber(meta, l.entity));
-      const alias = abbreviation(meta.tableName);
-      const query: ParsedFindQuery = {
-        selects: [`"${alias}".*`],
-        tables: [{ alias, join: "primary", table: meta.tableName }],
-        conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: keys } }],
-        orderBys: [{ alias, column: "id", order: "ASC" }],
-      };
-      addTablePerClassJoinsAndClassTag(query, meta, alias, true);
-      // Skip maybeAddOrderBy?
-      // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
-      const rows = await em.driver.executeFind(em, query, {});
-      // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
-      entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
-    }
+    const processor = preloader && preloader.addPreloading(em, meta, buildHintTree(loads), query);
+    // Skip maybeAddOrderBy?
+    // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
+    const rows = await em.driver.executeFind(em, query, {});
+    // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
+    entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
+    processor && processor(rows, entities);
 
     // Return the results back in the same order as the keys
     const entitiesById = indexBy(entities, (e) => e.idTagged!);

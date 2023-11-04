@@ -288,8 +288,7 @@ export class EntityManager<C = unknown> {
   ): Promise<T[]> {
     const { populate, ...rest } = options || {};
     const settings = { where, ...rest };
-    const rows = await findDataLoader(this, type, settings).load(settings);
-    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
+    const result = await findDataLoader(this, type, settings, populate).load(settings);
     if (populate) {
       await this.populate(result, populate);
     }

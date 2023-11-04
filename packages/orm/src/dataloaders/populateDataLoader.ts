@@ -2,7 +2,16 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { EntityManager, PersistedAsyncReferenceImpl, getEmInternalApi } from "../index";
+import {
+  AliasAssigner,
+  EntityManager,
+  ParsedFindQuery,
+  PersistedAsyncReferenceImpl,
+  getEmInternalApi,
+  indexBy,
+  keyToNumber,
+  kqDot,
+} from "../index";
 import { LoadHint } from "../loadHints";
 import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
 import { toArray } from "../utils";
@@ -49,7 +58,27 @@ export function populateDataLoader(
             );
           });
           if (preloadThisLayer) {
-            await preloader.preloadPopulate(em, layerMeta, layerNode);
+            // Do an up-front SQL call of `select id, ...preloads... from table`,
+            const assigner = new AliasAssigner();
+            const meta = layerMeta;
+            const alias = assigner.getAlias(meta.tableName);
+            const entities = [...layerNode.entities].filter((e) => !e.isNewEntity);
+            const ids = entities.map((e) => keyToNumber(meta, e.id));
+            // Create a ParsedFindQuery for `addPreloading` to inject joins into
+            const query: ParsedFindQuery = {
+              // We already have the entities loaded, so can do just `SELECT a.id` + the preload columns
+              selects: [kqDot(alias, "id")],
+              tables: [{ alias, join: "primary", table: meta.tableName }],
+              conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: ids } }],
+              orderBys: [],
+            };
+            const hydrator = preloader.addPreloading(em, meta, layerNode, query);
+            if (hydrator) {
+              const rows = await em.driver.executeFind(em, query, {});
+              const entitiesById = indexBy(entities, (e) => keyToNumber(meta, e.id));
+              const entitiesInOrder = rows.map((row) => entitiesById.get(row["id"]));
+              hydrator(rows, entitiesInOrder);
+            }
           }
         }
 

@@ -16,7 +16,7 @@ export const makeApiCall = jest.fn();
 export let numberOfQueries = 0;
 export let queries: string[] = [];
 
-const plugins = (process.env.PLUGINS ?? "").split(",");
+const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");
 export const isPreloadingEnabled = plugins.includes("join-preloading");
 
 export function newEntityManager() {

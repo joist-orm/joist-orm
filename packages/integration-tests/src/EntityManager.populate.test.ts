@@ -1,7 +1,7 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { setDefaultEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
-import {isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount} from "./setupDbTests";
+import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
@@ -123,7 +123,7 @@ describe("EntityManager.populate", () => {
     const books = await em.find(Book, {}, { populate: "author" });
     expect(books[0].author.get.firstName).toEqual("a1");
     expect(books[1].author.get.firstName).toEqual("a2");
-    expect(numberOfQueries).toEqual(2);
+    expect(numberOfQueries).toEqual(isPreloadingEnabled ? 1 : 2);
   });
 
   it("does not break when populating through null relations  ", async () => {

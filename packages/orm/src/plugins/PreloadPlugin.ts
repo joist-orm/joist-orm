@@ -1,8 +1,9 @@
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
-import { HintNode } from "../HintTree";
+import { EntityOrId, HintNode } from "../HintTree";
 import { LoadHint, NestedLoadHint } from "../loadHints";
+import { ParsedFindQuery } from "../QueryParser";
 
 /**
  * This is a plugin API dedicated to preloading data for subtrees of entities.
@@ -29,23 +30,57 @@ export interface PreloadPlugin {
   ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined];
 
   /**
-   * Given a hint tree for an existing entities going through `em.populate`, loads their relations
-   * into the EM's preload cache.
+   * Given an existing `ParsedFindQuery`, adds extra selects & joins directly
+   * to the `query` that will preload any child data requested in `tree`.
    *
-   * The `EntityManager.populate` method will still call each relation's `.preload()` method, to
-   * pull the data from the preload cache into the relation.
+   * The caller is still responsible for executing `query`, and then also
+   * calling the `PreloadHydrator` with the database results for the preload
+   * plugin to instantiate & populate the EM's preload cache.
+   *
+   * Note that the actual relations themselves won't be loaded, just the preload
+   * cache populated to make the relation `.preload()` / `.load()` fast.
    */
-  preloadPopulate<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, tree: HintNode<T>): Promise<void>;
+  addPreloading<T extends Entity>(
+    em: EntityManager,
+    meta: EntityMetadata<T>,
+    tree: HintNode<EntityOrId>,
+    query: ParsedFindQuery,
+  ): PreloadHydrator | undefined;
 
   /**
-   * Given a hint tree for entities about be loaded from the database, load the entities, as well as preload-able
-   * relations.
+   * Given an anticipated `ParsedFindQuery`, returns lower-level `JoinResult` that
+   * are the fragments of SELECTs and JOINs that the caller can work into their custom
+   * query.
    *
-   * The `EntityManager.load` methods will still call `em.populate`, which will call each relation's
-   * `.preload()` method, to pull the data from the preload cache into the relation.
-   *
-   * Note that, unlike `preloadPopulate`, `tree` will have both sql-able and non-sql-able hints, so the
-   * implementation should just ignore any hints that it's not able to preload.
+   * This is primarily for callers who aren't going to call `driver.executeFind`, but instead
+   * are crafting their own SQL query for `driver.executeQuery` (basically this is `em.findAll`
+   * because it uses a complicated CTE + join strategy to do batching).
    */
-  preloadLoad<T extends Entity>(em: EntityManager, meta: EntityMetadata<T>, tree: HintNode<string>): Promise<T[]>;
+  getPreloadJoins<T extends Entity>(
+    em: EntityManager,
+    meta: EntityMetadata<T>,
+    tree: HintNode<T>,
+    query: ParsedFindQuery,
+  ): JoinResult[];
 }
+
+/**
+ * Given a list of `rows`, and the already-hydrated `entities` for each row, reads the preload-specific
+ * columns out of the `rows` result set, and pushes them into the EM preload cache, hydrating
+ * the child entities in the process, but not marking any relations as loaded.
+ *
+ * The order of `rows` and `entities` must match.
+ */
+export type PreloadHydrator = (rows: any[], entities: any[]) => void;
+
+/** A preload-loadable join for a given child, with potentially grand-child joins contained within it. */
+export type JoinResult = {
+  /** The select clause(s) for this join, i.e. `b._ as _b` or `c._ as _c`. */
+  selects: { value: string; as: string }[];
+  /** The SQL for this child's lateral join, which itself might have recursive lateral joins. */
+  join: string;
+  /** The processor for this child's lateral join, which itself might recursively processor subjoins. */
+  hydrator: PreloadHydrator;
+  /** Any bindings for filtering subjoins by a subset of the root entities, to avoid over-fetching. */
+  bindings: any[];
+};

@@ -19,6 +19,7 @@ for dir in . ./packages/codegen \
   ./packages/graphql-codegen \
   ./packages/graphql-resolver-utils \
   ./packages/migration-utils \
+  ./packages/plugins/join-preloading \
   ./packages/orm \
   ./packages/utils \
   ./packages/test-utils

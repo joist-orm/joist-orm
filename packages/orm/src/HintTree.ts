@@ -39,35 +39,31 @@ export type HintNode<E extends EntityOrId> = {
  * Which will let us preload `authors` for all three publishers, but `books` only for the
  * first two, and `reviews` only for the third, i.e. we can prevent over-fetching.
  */
-export function buildHintTree<T extends EntityOrId>(
-  populates: readonly { entity: T; hint: LoadHint<any> | undefined }[] | LoadHint<any>,
-): HintNode<T> {
-  if (Array.isArray(populates)) {
-    const entitiesKind = typeof populates[0].entity === "string" ? ("ids" as const) : ("instances" as const);
-    const root: HintNode<T> = { entitiesKind, entities: new Set(), subHints: {} };
-    for (const { entity, hint } of populates) {
-      populateHintNode(root, entity, hint);
+export function buildHintTree<E extends EntityOrId>(
+  hints: readonly { entity: E; hint: LoadHint<any> | undefined }[] | LoadHint<any>,
+): HintNode<E> {
+  if (Array.isArray(hints)) {
+    const entitiesKind = typeof hints[0].entity === "string" ? ("ids" as const) : ("instances" as const);
+    const root: HintNode<E> = { entitiesKind, entities: new Set(), subHints: {} };
+    for (const { entity, hint } of hints) {
+      addHintNode(root, entity, hint);
     }
     return root;
   } else {
-    const root: HintNode<T> = { entitiesKind: "none", entities: new Set(), subHints: {} };
-    populateHintNode(root, undefined, populates as LoadHint<any>);
+    const root: HintNode<E> = { entitiesKind: "none", entities: new Set(), subHints: {} };
+    addHintNode(root, undefined, hints as LoadHint<any>);
     return root;
   }
 }
 
-function populateHintNode<T extends EntityOrId>(
-  node: HintNode<T>,
-  entity: T | undefined,
-  hint: LoadHint<any> | undefined,
-) {
+function addHintNode<E extends EntityOrId>(node: HintNode<E>, entity: E | undefined, hint: LoadHint<any> | undefined) {
   // It's tempting to filter out new entities here, but we need to call `.load()` on their
   // relations to ensure the `.get`s will later work, even if we don't look in the db for them.
   if (entity) node.entities.add(entity);
   if (hint) {
     for (const [key, nestedHint] of Object.entries(normalizeHint(hint))) {
       const child = (node.subHints[key] ??= { entitiesKind: node.entitiesKind, entities: new Set(), subHints: {} });
-      populateHintNode(child, entity, nestedHint);
+      addHintNode(child, entity, nestedHint);
     }
   }
 }

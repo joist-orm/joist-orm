@@ -6,6 +6,7 @@ export function isEntity(maybeEntity: any): maybeEntity is Entity {
   return maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
 }
 
+/** All the types we support for entity `id` fields. */
 export type IdType = number | string;
 
 /** A marker/base interface for all of our entity types. */

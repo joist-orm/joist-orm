@@ -139,7 +139,7 @@ export type OrderOf<T> = T extends { __orm: { orderType: infer Q } } ? Q : never
 export type ActualFactoryOpts<T> = T extends { __orm: { factoryOptsType: infer Q } } ? Q : never;
 
 /** Pulls the entity's id type out of a given entity type T. */
-export type IdOf<T> = T extends { id: infer I | undefined } ? I : never;
+export type IdOf<T> = T extends { id: infer I } ? I : never;
 
 export type TaggedId = string;
 
@@ -261,7 +261,9 @@ export class EntityManager<C = unknown> {
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
-  getEntity(id: string): Entity | undefined {
+  getEntity<T extends Entity>(id: IdOf<T> & string): T | undefined;
+  getEntity(id: TaggedId): Entity | undefined;
+  getEntity(id: TaggedId): Entity | undefined {
     assertIdIsTagged(id);
     return this.#entityIndex.get(id);
   }

@@ -4,8 +4,8 @@ import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
-export function getMetadata<T extends Entity>(entity: T): EntityMetadata;
-export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata;
+export function getMetadata<T extends Entity>(entity: T): EntityMetadataTyped<T>;
+export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadataTyped<T>;
 export function getMetadata<T extends Entity>(meta: EntityMetadata): EntityMetadata;
 export function getMetadata<T extends Entity>(
   param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata,

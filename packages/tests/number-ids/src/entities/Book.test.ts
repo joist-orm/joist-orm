@@ -1,5 +1,5 @@
 import { Book, newAuthor, newBook } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager, select } from "@src/setupDbTests";
 
 describe("Book", () => {
   it("can save a book", async () => {
@@ -9,8 +9,10 @@ describe("Book", () => {
 
     const em2 = newEntityManager();
     const b2 = await em2.load(Book, b1.id, "author");
+    expect(b2.id).toBe(1);
     expect(b2.title).toEqual("b1");
     expect(b2.author.get.firstName).toEqual("a1");
+    expect(b2.author.get.id).toBe(1);
   });
 
   it("can update a book", async () => {
@@ -22,5 +24,7 @@ describe("Book", () => {
     const a2 = newAuthor(em);
     b1.author.set(a2);
     await em.flush();
+
+    expect(await select("books")).toMatchObject([{ id: "1", author_id: 2 }]);
   });
 });

@@ -1,4 +1,4 @@
-import {EntityManager, OptsOf, TaggedId} from "./EntityManager";
+import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { PartialOrNull } from "./index";
 

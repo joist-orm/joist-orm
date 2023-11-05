@@ -8,7 +8,8 @@ import {
   isEntity,
   keyToNumber,
   OptsOf,
-  PartialOrNull, TaggedId,
+  PartialOrNull,
+  TaggedId,
 } from "./index";
 
 /**

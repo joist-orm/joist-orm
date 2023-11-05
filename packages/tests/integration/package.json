@@ -9,7 +9,7 @@
     "directory": "packages/tests/integration"
   },
   "scripts": {
-    "migrate": "DECAMELIZE=false env-cmd tsx ../migration-utils",
+    "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "yarn test-stock && yarn test-preloading",
     "test-stock": "PLUGINS= jest --runInBand --detectOpenHandles --logHeapUsage",
     "test-preloading": "PLUGINS=join-preloading jest --runInBand --detectOpenHandles --logHeapUsage",

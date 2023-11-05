@@ -18,16 +18,16 @@
     "packages/codegen",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",
-    "packages/integration-tests",
     "packages/migration-utils",
     "packages/orm",
     "packages/plugins/join-preloading",
     "packages/utils",
     "packages/test-utils",
-    "packages/tests/uuid-ids",
+    "packages/tests/integration",
     "packages/tests/schema-misc",
     "packages/tests/number-ids",
-    "packages/tests/untagged-ids"
+    "packages/tests/untagged-ids",
+    "packages/tests/uuid-ids"
   ],
   "devDependencies": {
     "@semantic-release/changelog": "^6.0.3",

@@ -118,18 +118,20 @@ export function assertIdIsTagged(id: string): void {
 }
 
 /** We accept an entity in case this is m2o storing a not-yet-saved entity. */
-export function toTaggedId(meta: HasTagName, maybeId: IdType): TaggedId;
-export function toTaggedId(meta: HasTagName, maybeId: IdType | undefined): TaggedId | undefined;
-export function toTaggedId(meta: HasTagName, maybeId: IdType | undefined): TaggedId | undefined {
-  if (typeof maybeId === "number") {
-    return `${meta.tagName}${tagDelimiter}${maybeId}`;
-  } else if (typeof maybeId === "string") {
-    const i = maybeId.indexOf(tagDelimiter);
-    if (i === -1) return `${meta.tagName}${tagDelimiter}${maybeId}`;
-    const tag = maybeId.slice(0, i);
-    if (tag !== meta.tagName) throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${maybeId}`);
+export function toTaggedId(meta: HasTagName, id: IdType): TaggedId;
+export function toTaggedId(meta: HasTagName, id: IdType | undefined): TaggedId | undefined;
+export function toTaggedId(meta: HasTagName, id: IdType | undefined): TaggedId | undefined {
+  if (typeof id === "number") {
+    return `${meta.tagName}${tagDelimiter}${id}`;
+  } else if (typeof id === "string") {
+    // This seems odd, but is covered by a unit test, so I guess we need it?
+    if (id === "") return undefined;
+    const i = id.indexOf(tagDelimiter);
+    if (i === -1) return `${meta.tagName}${tagDelimiter}${id}`;
+    const tag = id.slice(0, i);
+    if (tag !== meta.tagName) throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${id}`);
   }
-  return maybeId;
+  return id;
 }
 
 /** Similar to `toTaggedId`, but we accept an entity for handling relations to not-yet-saved entities. */

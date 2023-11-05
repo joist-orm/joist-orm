@@ -1,3 +1,10 @@
+# [1.118.0](https://github.com/stephenh/joist-ts/compare/v1.117.0...v1.118.0) (2023-11-05)
+
+
+### Features
+
+* Initial support for number-typed id fields ([#846](https://github.com/stephenh/joist-ts/issues/846)) ([97b01ef](https://github.com/stephenh/joist-ts/commit/97b01efdc942cba8543e7c7307bd31eddbe6cf46))
+
 # [1.117.0](https://github.com/stephenh/joist-ts/compare/v1.116.2...v1.117.0) (2023-11-04)
 
 

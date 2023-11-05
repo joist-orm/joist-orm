@@ -1,5 +1,5 @@
 import { BaseEntity } from "./BaseEntity";
-import { Entity, IdType } from "./Entity";
+import { Entity, IdType, isEntity } from "./Entity";
 import { EntityConstructor, IdOf, TaggedId } from "./EntityManager";
 import { EntityMetadata, EntityMetadataTyped, getMetadata } from "./EntityMetadata";
 import { Reference } from "./relations";
@@ -133,21 +133,11 @@ export function toTaggedId(meta: HasTagName, maybeId: IdType | undefined): Tagge
 }
 
 /** Similar to `toTaggedId`, but we accept an entity for handling relations to not-yet-saved entities. */
-export function ensureTagged<U extends Entity>(
+export function ensureTagged<T extends Entity>(
   meta: HasTagName,
-  maybeId: U | string | number | undefined,
-): U | TaggedId | undefined {
-  if (typeof maybeId === "number") {
-    return `${meta.tagName}${tagDelimiter}${maybeId}`;
-  } else if (typeof maybeId === "string") {
-    // Treat "" as undefined, arguably this should be an error
-    if (maybeId === "") return undefined;
-    const i = maybeId.indexOf(tagDelimiter);
-    if (i === -1) return `${meta.tagName}${tagDelimiter}${maybeId}`;
-    const tag = maybeId.slice(0, i);
-    if (tag !== meta.tagName) throw new Error(`Invalid tagged id, expected tag ${meta.tagName}, got ${maybeId}`);
-  }
-  return maybeId;
+  value: T | string | number | undefined,
+): T | TaggedId | undefined {
+  return isEntity(value) ? value : toTaggedId(meta, value);
 }
 
 /** Tags a potentially untagged id, while our API inputs still accept either tagged or untagged ids. */

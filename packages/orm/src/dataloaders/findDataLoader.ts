@@ -68,7 +68,7 @@ export function findDataLoader<T extends Entity>(
       //   (1, 'b', 'b'),
       //   (2, 'c', 'c')
       // )
-      // SELECT array_agg(d.tag), a.newtestin*
+      // SELECT array_agg(d.tag), a.*
       // FROM authors a
       // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
       // group by a.id;

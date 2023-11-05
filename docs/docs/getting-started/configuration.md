@@ -37,9 +37,11 @@ If this is not set, `npm run joist-codegen` will also look for a `DATABASE_URL` 
 
 Controls the type of the domain model's `id` properties, i.e. `Author.id` or `author1.id`.
 
-Joist's default behavior is `tagged-string` which means the type of `Author.id` will be a `string`, and the value will be `a:1` where `a` is the "tag" established for all `Author` entities, and `1` is the numeric primary key value of that row.
+Available values: `tagged-string`, `untagged-string`, `number`.
 
-If you do not want the `a:` tagged prefix, you can use `untagged-string`:
+Joist's default behavior is `tagged-string` which means the type of `Author.id` will be a `string`, and the value will be `"a:1"` where `a` is the "tag" established for all `Author` entities, and `1` is the numeric primary key value of that row.
+
+If you do not want the `a:` tagged prefix, you can use `untagged-string` or `number`:
 
 ```json
 {
@@ -47,19 +49,13 @@ If you do not want the `a:` tagged prefix, you can use `untagged-string`:
 }
 ```
 
-This is a project-wide setting and cannot be changed on an entity-by-entity basis.
+This is currently a project-wide setting and cannot be changed on an entity-by-entity basis.
 
-Also note that this `idType` setting controls the _codegen output_, but Joist will still look at the database type of the each individual entity's `id` column to determine if the SQL values are actually numbers (i.e. auto increment integers) or other types like UUIDs.
+Also note that this `idType` setting controls the _codegen output_, but Joist will still look at the database type of each individual entity's `id` column to determine if the SQL values are actually numbers (i.e. auto increment integers) or other types like UUIDs.
 
 :::info
 
 Even if you use `untagged-string`s, currently Joist still manages ids internally as tagged, and so you'll still see a per-entity `tag` established in the `joist-config.json` file, but the tag will be stripped by the `id` getters.
-
-:::
-
-:::caution
-
-Joist currently does not support typing `id` properties as `number`. This is doable, it's just not been something we've needed. See [this issue](https://github.com/stephenh/joist-ts/issues/368).
 
 :::
 

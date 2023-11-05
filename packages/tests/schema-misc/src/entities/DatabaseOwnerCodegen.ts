@@ -3,7 +3,7 @@ import {
   Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   Flavor,
@@ -19,6 +19,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -63,7 +64,7 @@ databaseOwnerConfig.addRule(newRequiredRule("name"));
 export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "do";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<DatabaseOwner>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: DatabaseOwnerFilter;
@@ -88,11 +89,11 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
     return toIdOf(databaseOwnerMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("DatabaseOwner has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("DatabaseOwner has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

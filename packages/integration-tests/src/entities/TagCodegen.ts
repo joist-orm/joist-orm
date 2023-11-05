@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -27,6 +27,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -101,7 +102,7 @@ tagConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "t";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<Tag>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: TagFilter;
@@ -153,11 +154,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
     return toIdOf(tagMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("Tag has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("Tag has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

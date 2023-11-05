@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -27,6 +27,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -93,7 +94,7 @@ publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "pg";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<PublisherGroup>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherGroupFilter;
@@ -128,11 +129,11 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     return toIdOf(publisherGroupMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("PublisherGroup has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("PublisherGroup has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

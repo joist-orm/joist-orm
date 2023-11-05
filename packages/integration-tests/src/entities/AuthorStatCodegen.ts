@@ -3,7 +3,7 @@ import {
   Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   Flavor,
@@ -19,6 +19,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -136,7 +137,7 @@ authorStatConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "as";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<AuthorStat>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorStatFilter;
@@ -161,11 +162,11 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
     return toIdOf(authorStatMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("AuthorStat has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("AuthorStat has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

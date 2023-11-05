@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -29,6 +29,7 @@ import {
   PersistedAsyncProperty,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -115,7 +116,7 @@ bookReviewConfig.addRule(newRequiredRule("book"));
 export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "br";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<BookReview>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookReviewFilter;
@@ -149,11 +150,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     return toIdOf(bookReviewMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("BookReview has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("BookReview has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

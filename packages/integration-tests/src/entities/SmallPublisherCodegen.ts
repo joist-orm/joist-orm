@@ -2,7 +2,7 @@ import {
   Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   Flavor,
@@ -19,6 +19,7 @@ import {
   PersistedAsyncProperty,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -75,7 +76,7 @@ smallPublisherConfig.addRule(newRequiredRule("city"));
 export abstract class SmallPublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<SmallPublisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: SmallPublisherFilter;
@@ -101,11 +102,11 @@ export abstract class SmallPublisherCodegen extends Publisher {
     return toIdOf(smallPublisherMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("SmallPublisher has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("SmallPublisher has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

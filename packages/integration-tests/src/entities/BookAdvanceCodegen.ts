@@ -4,7 +4,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -24,6 +24,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -107,7 +108,7 @@ bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "ba";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<BookAdvance>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookAdvanceFilter;
@@ -140,11 +141,11 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     return toIdOf(bookAdvanceMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("BookAdvance has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("BookAdvance has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

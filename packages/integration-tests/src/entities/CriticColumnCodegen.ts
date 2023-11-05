@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -86,7 +87,7 @@ criticColumnConfig.addRule(newRequiredRule("critic"));
 export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "cc";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<CriticColumn>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CriticColumnFilter;
@@ -113,11 +114,11 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
     return toIdOf(criticColumnMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("CriticColumn has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("CriticColumn has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

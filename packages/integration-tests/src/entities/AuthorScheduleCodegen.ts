@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -93,7 +94,7 @@ authorScheduleConfig.addRule(newRequiredRule("author"));
 export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "authorSchedule";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<AuthorSchedule>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorScheduleFilter;
@@ -120,11 +121,11 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     return toIdOf(authorScheduleMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("AuthorSchedule has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("AuthorSchedule has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

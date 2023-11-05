@@ -13,7 +13,7 @@ import {
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   FieldsOf,
   FilterOf,
@@ -34,6 +34,7 @@ import {
   PersistedAsyncReference,
   PolymorphicReference,
   SSAssert,
+  TaggedId,
   ValueFilter,
   ValueGraphQLFilter,
   Zod,
@@ -493,7 +494,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${defaultValues}
       };
       static readonly tagName = "${tagName}";
-      static readonly metadata: ${EntityMetadata};
+      static readonly metadata: ${EntityMetadataTyped}<${entity.type}>;
 
       declare readonly __orm: ${EntityOrmField} & {
         filterType: ${entityName}Filter;
@@ -516,11 +517,11 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${idMaybeCode}
       }
 
-      get idTagged(): string {
-        return this.idTaggedMaybe || ${failSymbol}("${entityName} has no id tagged yet");
+      get idTagged(): ${TaggedId} {
+        return this.idTaggedMaybe || ${failSymbol}("${entityName} has no id yet");
       }
 
-      get idTaggedMaybe(): string | undefined {
+      get idTaggedMaybe(): ${TaggedId} | undefined {
         return this.__orm.data["id"];
       }
 

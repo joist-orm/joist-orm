@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -122,7 +123,7 @@ imageConfig.addRule(newRequiredRule("type"));
 export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "i";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<Image>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ImageFilter;
@@ -153,11 +154,11 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
     return toIdOf(imageMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("Image has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("Image has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

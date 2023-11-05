@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FieldsOf,
@@ -29,6 +29,7 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
   toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
@@ -166,7 +167,7 @@ publisherConfig.addRule(newRequiredRule("type"));
 export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata;
+  static readonly metadata: EntityMetadataTyped<Publisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherFilter;
@@ -241,11 +242,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     return toIdOf(publisherMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): string {
-    return this.idTaggedMaybe || fail("Publisher has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("Publisher has no id yet");
   }
 
-  get idTaggedMaybe(): string | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

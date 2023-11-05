@@ -20,7 +20,13 @@ export interface EntityMetadataTyped<T extends Entity> extends EntityMetadata {
   cstr: MaybeAbstractEntityConstructor<T>;
 }
 
-/** Runtime metadata about an entity. */
+/**
+ * Runtime metadata about an entity.
+ *
+ * Note: This has no generic, like `T extends Entity`, because `Entity<IdType>` i.e. with
+ * an unknown string/id type, causes issues when we want to generically mix `EntityMetadata`
+ * of different types, that even liberally using `EntityMetadata<any>` did not avoid.
+ */
 export interface EntityMetadata {
   cstr: MaybeAbstractEntityConstructor<any>;
   type: string;

@@ -6,7 +6,7 @@ import {
   BigIntSerde,
   CustomSerdeAdapter,
   DecimalToNumberSerde,
-  EntityMetadata, EntityMetadataTyped,
+  EntityMetadataTyped,
   EnumArrayFieldSerde,
   EnumFieldSerde,
   JsonSerde,

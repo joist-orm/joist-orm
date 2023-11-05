@@ -1,4 +1,4 @@
-import { BaseEntity, configureMetadata, EntityManager as EntityManager1, EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
+import { BaseEntity, configureMetadata, EntityManager as EntityManager1, EntityMetadataTyped, KeySerde, PrimitiveSerde } from "joist-orm";
 import { Context } from "src/context";
 import { Artist, artistConfig, Author, authorConfig, Book, bookConfig, DatabaseOwner, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, Painting, paintingConfig } from "./entities";
 
@@ -8,12 +8,12 @@ export function getEm(e: BaseEntity): EntityManager {
   return e.em as EntityManager;
 }
 
-export const artistMeta: EntityMetadata<Artist> = {
+export const artistMeta: EntityMetadataTyped<Artist> = {
   cstr: Artist,
   type: "Artist",
   baseType: undefined,
-  idType: "uuid",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "uuid",
   tagName: "artist",
   tableName: "artists",
   fields: {
@@ -35,12 +35,12 @@ export const artistMeta: EntityMetadata<Artist> = {
 
 (Artist as any).metadata = artistMeta;
 
-export const authorMeta: EntityMetadata<Author> = {
+export const authorMeta: EntityMetadataTyped<Author> = {
   cstr: Author,
   type: "Author",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "a",
   tableName: "authors",
   fields: {
@@ -62,12 +62,12 @@ export const authorMeta: EntityMetadata<Author> = {
 
 (Author as any).metadata = authorMeta;
 
-export const bookMeta: EntityMetadata<Book> = {
+export const bookMeta: EntityMetadataTyped<Book> = {
   cstr: Book,
   type: "Book",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "b",
   tableName: "book",
   fields: {
@@ -86,12 +86,12 @@ export const bookMeta: EntityMetadata<Book> = {
 
 (Book as any).metadata = bookMeta;
 
-export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
+export const databaseOwnerMeta: EntityMetadataTyped<DatabaseOwner> = {
   cstr: DatabaseOwner,
   type: "DatabaseOwner",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "do",
   tableName: "database_owners",
   fields: { "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("do", "id", "id", "int"), immutable: true }, "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying"), immutable: false } },
@@ -106,12 +106,12 @@ export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
 
 (DatabaseOwner as any).metadata = databaseOwnerMeta;
 
-export const paintingMeta: EntityMetadata<Painting> = {
+export const paintingMeta: EntityMetadataTyped<Painting> = {
   cstr: Painting,
   type: "Painting",
   baseType: undefined,
-  idType: "uuid",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "uuid",
   tagName: "p",
   tableName: "paintings",
   fields: {

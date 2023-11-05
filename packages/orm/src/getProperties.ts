@@ -22,7 +22,7 @@ const em = EM;
  * Basically the values won't be `undefined`, to avoid throwing off `if getPropertyes(meta)[key]`
  * checks.
  */
-export function getProperties<T extends Entity>(meta: EntityMetadata<T>): Record<string, any> {
+export function getProperties<T extends Entity>(meta: EntityMetadata): Record<string, any> {
   if (propertiesCache[meta.tagName]) {
     return propertiesCache[meta.tagName];
   }
@@ -55,7 +55,7 @@ const fakeInstances: Record<string, Entity> = {};
  * Returns a fake instance of `meta` so that user-defined `CustomReference` and `AsyncProperty`s can
  * be inspected on boot.
  */
-export function getFakeInstance<T extends Entity>(meta: EntityMetadata<T>): T {
+export function getFakeInstance(meta: EntityMetadata): Entity {
   // asConcreteCstr is safe b/c we're just doing property scanning and not real instantiation
   return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
@@ -68,5 +68,5 @@ export function getFakeInstance<T extends Entity>(meta: EntityMetadata<T>): T {
       fakeInstance: true,
     } as any,
     {},
-  )) as T;
+  ));
 }

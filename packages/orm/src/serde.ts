@@ -3,7 +3,7 @@ import {
   EntityMetadata,
   getConstructorFromTaggedId,
   keyToNumber,
-  keyToString,
+  keyToTaggedId,
   maybeResolveReferenceToId,
 } from "./index";
 
@@ -178,19 +178,19 @@ export class DecimalToNumberSerde implements FieldSerde {
 export class KeySerde implements FieldSerde {
   isArray = false;
   columns = [this];
-  private meta: { tagName: string; idType: "int" | "uuid" };
+  private meta: { tagName: string; idDbType: "bigint" | "int" | "uuid" };
 
   constructor(
     tagName: string,
     private fieldName: string,
     public columnName: string,
-    public dbType: "int" | "uuid",
+    public dbType: "bigint" | "int" | "uuid",
   ) {
-    this.meta = { tagName, idType: dbType };
+    this.meta = { tagName, idDbType: dbType };
   }
 
   setOnEntity(data: any, row: any): void {
-    data[this.fieldName] = keyToString(this.meta, row[this.columnName]);
+    data[this.fieldName] = keyToTaggedId(this.meta, row[this.columnName]);
   }
 
   dbValue(data: any) {
@@ -198,7 +198,12 @@ export class KeySerde implements FieldSerde {
   }
 
   mapToDb(value: any) {
-    return value === null ? value : keyToNumber(this.meta, maybeResolveReferenceToId(value));
+    // Sometimes the nilIdValue will pass -1 as already a number, but usually this should be a tagged id
+    return value === null || typeof value === "number"
+      ? value
+        // We go through `maybeResolveReferenceToId` because filters like `in: [a1, a2]` will pass the
+        // entity directly into mapToDb and not convert it to a tagged id first.
+      : keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 
   mapFromJsonAgg(value: any): any {
@@ -208,7 +213,7 @@ export class KeySerde implements FieldSerde {
 
 export class PolymorphicKeySerde implements FieldSerde {
   constructor(
-    private meta: () => EntityMetadata<any>,
+    private meta: () => EntityMetadata,
     private fieldName: string,
   ) {}
 
@@ -216,12 +221,12 @@ export class PolymorphicKeySerde implements FieldSerde {
     this.columns
       .filter((column) => !!row[column.columnName])
       .forEach((column) => {
-        data[this.fieldName] ??= keyToString(column.otherMetadata(), row[column.columnName]);
+        data[this.fieldName] ??= keyToTaggedId(column.otherMetadata(), row[column.columnName]);
       });
   }
 
   // Lazy b/c we use PolymorphicField which we can't access in our cstr
-  get columns(): Array<Column & { otherMetadata: () => EntityMetadata<any> }> {
+  get columns(): Array<Column & { otherMetadata: () => EntityMetadata }> {
     const { fieldName } = this;
     return this.field.components.map((comp) => ({
       columnName: comp.columnName,

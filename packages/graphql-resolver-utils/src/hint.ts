@@ -11,7 +11,7 @@ import { Entity, EntityMetadata, LoadHint } from "joist-orm";
 
 /** Returns a load hint for the given `meta` entity at the `info` node.populate`. */
 export function convertInfoToLoadHint<T extends Entity>(
-  meta: EntityMetadata<T>,
+  meta: EntityMetadata,
   info: GraphQLResolveInfo,
 ): LoadHint<T> | undefined {
   // The return type of the current field resolver is the root type, i.e.
@@ -28,7 +28,7 @@ export function convertInfoToLoadHint<T extends Entity>(
 /** Converts a GraphQL selection set into a hint for `EntityManager.populate`. */
 export function selectionSetToObject(
   info: GraphQLResolveInfo,
-  meta: EntityMetadata<any>,
+  meta: EntityMetadata,
   gqlType: GraphQLObjectType,
   selectionSet: SelectionSetNode,
 ): Record<string, any> {

@@ -4,7 +4,7 @@ import { EntityManager } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { ParsedFindQuery, parseEntityFilter, parseValueFilter } from "../QueryParser";
 import { JoinRowTodo, Todo } from "../Todo";
-import { deTagId, keyToNumber, keyToString, maybeResolveReferenceToId } from "../keys";
+import { deTagId, keyToNumber, keyToTaggedId, maybeResolveReferenceToId } from "../keys";
 import { hasSerde } from "../serde";
 import { fail, partition } from "../utils";
 import { Driver } from "./Driver";
@@ -83,7 +83,7 @@ export class InMemoryDriver implements Driver {
         .filter((e) => e.id === undefined)
         .forEach((i) => {
           const id = this.nextId(todo.metadata.tableName);
-          i.__orm.data["id"] = keyToString(todo.metadata, id);
+          i.__orm.data["id"] = keyToTaggedId(todo.metadata, id);
           this.rowsOfTable(todo.metadata.tableName)[id] = {};
         });
     });
@@ -131,7 +131,7 @@ export class InMemoryDriver implements Driver {
         // The rows in EntityManager.joinRows point to entities, change those to integers
         Object.keys(fkColumns).forEach((key) => {
           const meta = key == m2m.columnName ? getMetadata(m2m.entity) : m2m.otherMeta;
-          fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId(fkColumns[key]));
+          fkColumns[key] = keyToNumber(meta, maybeResolveReferenceToId((fkColumns as any)[key]));
         });
         // Mimic an ON CONFLICT upsert
         const existing = Object.values(this.rowsOfTable(joinTableName)).find((row) => {
@@ -161,10 +161,11 @@ export class InMemoryDriver implements Driver {
           rows
             .filter((row) => {
               const a =
-                String(row[m2m.columnName]) === deTagId(m2m.meta, maybeResolveReferenceToId(noIdRow[m2m.columnName])!);
+                String(row[m2m.columnName]) ===
+                deTagId(m2m.meta, maybeResolveReferenceToId((noIdRow as any)[m2m.columnName])!);
               const b =
                 String(row[m2m.otherColumnName]) ===
-                deTagId(m2m.otherMeta, maybeResolveReferenceToId(noIdRow[m2m.otherColumnName])!);
+                deTagId(m2m.otherMeta, maybeResolveReferenceToId((noIdRow as any)[m2m.otherColumnName])!);
               return a && b;
             })
             .forEach((found) => this.delete(joinTableName, found.id));
@@ -209,7 +210,7 @@ const ops = {
   between: (a: number, b: number[]) => a >= b[0] && a <= b[1],
 };
 
-function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any, where: unknown): boolean {
+function rowMatches(driver: InMemoryDriver, meta: EntityMetadata, row: any, where: unknown): boolean {
   return Object.entries(where as any)
     .filter(([_, value]) => value !== undefined)
     .every(([fieldName, value]) => {
@@ -278,7 +279,7 @@ function rowMatches(driver: InMemoryDriver, meta: EntityMetadata<any>, row: any,
     });
 }
 
-function sort(driver: InMemoryDriver, meta: EntityMetadata<any>, orderBy: object, a: any, b: any): number {
+function sort(driver: InMemoryDriver, meta: EntityMetadata, orderBy: object, a: any, b: any): number {
   const fieldName = Object.keys(orderBy)[0];
   const value = (orderBy as any)[fieldName];
   if (value !== "ASC" && value !== "DESC") {

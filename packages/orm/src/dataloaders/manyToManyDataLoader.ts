@@ -56,7 +56,7 @@ async function load<T extends Entity, U extends Entity>(
           return {
             alias,
             column: columnId,
-            dbType: meta.idType,
+            dbType: meta.idDbType,
             cond: { kind: "in", value: values.map((id) => keyToNumber(meta, id)!) },
           };
         }),

@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { IdOf } from "../EntityManager";
+import { IdOf, TaggedId } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
@@ -26,6 +26,8 @@ export interface Reference<T extends Entity, U extends Entity, N extends never |
   load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   set(other: U | N): void;
+
+  idTaggedMaybe: TaggedId | undefined;
 }
 
 /** Adds a known-safe `get` accessor. */

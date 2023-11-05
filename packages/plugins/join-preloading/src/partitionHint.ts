@@ -5,7 +5,7 @@ import { canPreload } from "./canPreload";
 
 /** Partitions a hint into SQL-able and non-SQL-able hints. */
 export function partitionHint(
-  meta: EntityMetadata<any> | undefined,
+  meta: EntityMetadata | undefined,
   hint: LoadHint<any>,
 ): [NestedLoadHint<any> | undefined, NestedLoadHint<any> | undefined] {
   let sql: NestedLoadHint<any> | undefined = undefined;

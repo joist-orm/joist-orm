@@ -7,6 +7,9 @@
     { "path": "./packages/orm" },
     { "path": "./packages/plugins/join-preloading" },
     { "path": "./packages/integration-tests" },
+    { "path": "./packages/tests/number-ids" },
+    { "path": "./packages/tests/schema-misc" },
+    { "path": "./packages/tests/uuid-ids" },
     { "path": "./packages/utils" }
   ],
   "files": [],

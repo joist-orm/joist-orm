@@ -12,7 +12,7 @@ export class Todo {
 
   constructor(
     /** The metadata for entities in this todo; it will be the base metadata for any subtypes. */
-    public metadata: EntityMetadata<any>,
+    public metadata: EntityMetadata,
   ) {}
 }
 

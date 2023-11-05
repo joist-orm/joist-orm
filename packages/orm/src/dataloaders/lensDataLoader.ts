@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
+import { EntityManager, MaybeAbstractEntityConstructor, TaggedId } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "../EntityMetadata";
 import { abbreviation } from "../QueryBuilder";
 import {
@@ -26,7 +26,7 @@ export function lensDataLoader<T extends Entity>(
   type: MaybeAbstractEntityConstructor<T>,
   startIsArray: boolean,
   paths: string[],
-): DataLoader<string, T | T[]> {
+): DataLoader<TaggedId, T | T[]> {
   // Batch lens loads by type + path to avoid N+1s
   const batchKey = `${type.name}-${paths.join("/")}`;
   return em.getLoader("lens", batchKey, async (sourceIds) => {
@@ -66,7 +66,7 @@ export function lensDataLoader<T extends Entity>(
     addTablePerClassJoinsAndClassTag(query, target, alias, true);
     maybeAddOrderBy(query, target, alias);
 
-    function maybeAddNotSoftDeleted(other: EntityMetadata<any>, alias: string): void {
+    function maybeAddNotSoftDeleted(other: EntityMetadata, alias: string): void {
       if (other.timestampFields.deletedAt) {
         const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0]!;
         conditions.push({
@@ -102,7 +102,7 @@ export function lensDataLoader<T extends Entity>(
             conditions.push({
               alias,
               column: "id",
-              dbType: other.idType,
+              dbType: other.idDbType,
               cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
           }
@@ -162,7 +162,7 @@ export function lensDataLoader<T extends Entity>(
             conditions.push({
               alias,
               column: "id",
-              dbType: other.idType,
+              dbType: other.idDbType,
               cond: { kind: "in", value: deTagIds(source, sourceIds) },
             });
           }

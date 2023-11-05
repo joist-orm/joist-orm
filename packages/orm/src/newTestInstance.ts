@@ -129,8 +129,8 @@ export function newTestInstance<T extends Entity>(
         const isUniqueAndAlreadyUsed =
           existing &&
           isOneToOneField(field.otherMetadata().fields[field.otherFieldName]) &&
-          existing[field.otherFieldName].isLoaded &&
-          existing[field.otherFieldName].isSet;
+          (existing as any)[field.otherFieldName].isLoaded &&
+          (existing as any)[field.otherFieldName].isSet;
         if (existing && !isUniqueAndAlreadyUsed && !ignoreAllDefaults) {
           return [fieldName, existing];
         }
@@ -235,7 +235,7 @@ function resolveFactoryOpt<T extends Entity>(
       if (field.kind !== "poly") {
         const existing = getObviousDefault(em, meta, opts);
         if (existing) {
-          return existing;
+          return existing as T;
         }
         // Otherwise fall though to making a new entity via the factory
       } else {
@@ -246,7 +246,7 @@ function resolveFactoryOpt<T extends Entity>(
           .map((cstr) => getObviousDefault(em, getMetadata(cstr), opts))
           .find((existing) => !!existing);
         if (existing) {
-          return existing;
+          return existing as T;
         }
       }
     }
@@ -265,7 +265,7 @@ function resolveFactoryOpt<T extends Entity>(
 function metaFromFieldAndOpt<T extends Entity>(
   field: OneToManyField | ManyToOneField | OneToOneField | ManyToManyField | PolymorphicField,
   opt: FactoryEntityOpt<T> | undefined,
-): { meta: EntityMetadata<T>; otherFieldName: string } {
+): { meta: EntityMetadata; otherFieldName: string } {
   if (field.kind !== "poly") {
     // If it isn't a poly field, then the field itself can tell us everything we need to know
     return { meta: field.otherMetadata(), otherFieldName: field.otherFieldName };
@@ -285,7 +285,7 @@ function metaFromFieldAndOpt<T extends Entity>(
 /** We look for `use`-cached and "if-only-one" defaults. */
 function getObviousDefault<T extends Entity>(
   em: EntityManager,
-  metadata: EntityMetadata<T>,
+  metadata: EntityMetadata,
   opts: FactoryOpts<any>,
 ): T | undefined {
   // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field then look in use
@@ -323,7 +323,7 @@ function getObviousDefault<T extends Entity>(
 // opts of only-one-existing or factory-created instances.
 
 /** Given we're going to call a factory, make sure any `use`s are put into `opts`. */
-function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata<any>): object {
+function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata): object {
   const opts = optsMaybeNew instanceof MaybeNew ? optsMaybeNew.opts : optsMaybeNew;
   // Find any unset fields
   Object.values(metadata.fields)

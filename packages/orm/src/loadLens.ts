@@ -80,10 +80,10 @@ export async function loadLens<T extends Entity, U, V>(
       // TODO We can only do this is _none_ of the paths are loaded, otherwise we'll miss WIP mutations
       if (Array.isArray(start)) {
         const em = start[0].em;
-        return (await lensDataLoader(em, meta.cstr, true, paths).loadMany(start.map((e) => e.id))) as V;
+        return (await lensDataLoader(em, meta.cstr, true, paths).loadMany(start.map((e) => e.idTagged))) as V;
       } else {
         const em = start.em;
-        return (await lensDataLoader(em, meta.cstr, false, paths).load(start.id)) as V;
+        return (await lensDataLoader(em, meta.cstr, false, paths).load(start.idTagged)) as V;
       }
     }
   }
@@ -112,7 +112,7 @@ export async function loadLens<T extends Entity, U, V>(
   return current!;
 }
 
-export function isAllSqlPaths(meta: EntityMetadata<any>, paths: string[]): boolean {
+export function isAllSqlPaths(meta: EntityMetadata, paths: string[]): boolean {
   for (let i = 0, current = meta; i < paths.length; i++) {
     const next = current.allFields[paths[i]];
     if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m" || next.kind === "o2o")) {
@@ -126,11 +126,11 @@ export function isAllSqlPaths(meta: EntityMetadata<any>, paths: string[]): boole
 
 // Given BookReview+[book, author] return [Author, books+bookReviews]
 export function mapPathsToTarget(
-  source: EntityMetadata<any>,
+  source: EntityMetadata,
   paths: string[],
-): [EntityMetadata<any>, [EntityMetadata<any>, Field][]] {
+): [EntityMetadata, [EntityMetadata, Field][]] {
   let other = source;
-  let fields: [EntityMetadata<any>, Field][] = [];
+  let fields: [EntityMetadata, Field][] = [];
   for (let i = 0; i < paths.length; i++) {
     const next = other.allFields[paths[i]];
     if (next && (next.kind === "m2o" || next.kind === "m2m" || next.kind === "o2m" || next.kind === "o2o")) {

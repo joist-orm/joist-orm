@@ -33,7 +33,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: otherMeta.tableName }],
       conditions: [
-        { alias, column: reference.otherColumnName, dbType: meta.idType, cond: { kind: "in", value: keys } },
+        { alias, column: reference.otherColumnName, dbType: meta.idDbType, cond: { kind: "in", value: keys } },
       ],
       orderBys: [],
     };

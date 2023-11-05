@@ -11,7 +11,7 @@ import { indexBy } from "../utils";
 
 export function loadDataLoader<T extends Entity>(
   em: EntityManager,
-  meta: EntityMetadata<T>,
+  meta: EntityMetadata,
 ): DataLoader<{ entity: string; hint: LoadHint<T> | undefined }, T | undefined> {
   // Batch different populate hints together and defer to the hint tree to do the right thing
   return em.getLoader("load", meta.type, async (loads) => {
@@ -20,7 +20,7 @@ export function loadDataLoader<T extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions: [{ alias, column: "id", dbType: meta.idType, cond: { kind: "in", value: keys } }],
+      conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: keys } }],
       orderBys: [{ alias, column: "id", order: "ASC" }],
     };
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

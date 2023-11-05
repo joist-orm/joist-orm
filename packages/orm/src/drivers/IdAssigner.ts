@@ -1,7 +1,7 @@
 import * as crypto from "crypto";
 import { Knex } from "knex";
 import { Todo } from "../Todo";
-import { keyToString } from "../keys";
+import { keyToTaggedId } from "../keys";
 
 export interface IdAssigner {
   assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void>;
@@ -33,7 +33,7 @@ export class SequenceIdAssigner implements IdAssigner {
       Object.values(todos).forEach((todo) => {
         for (const insert of todo.inserts.filter((e) => e.idMaybe === undefined)) {
           // Use todo.metadata so that all subtypes get their base type's tag
-          insert.__orm.data["id"] = keyToString(todo.metadata, result.rows![i++]["nextval"]);
+          insert.__orm.data["id"] = keyToTaggedId(todo.metadata, result.rows![i++]["nextval"]);
         }
       });
     }
@@ -49,7 +49,7 @@ export class RandomUuidAssigner implements IdAssigner {
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
-        insert.__orm.data["id"] = keyToString(todo.metadata, crypto.randomUUID());
+        insert.__orm.data["id"] = keyToTaggedId(todo.metadata, crypto.randomUUID());
       }
     });
   }
@@ -74,7 +74,7 @@ export class RandomUuidAssigner implements IdAssigner {
 export class TestUuidAssigner implements IdAssigner {
   private nextId: Record<string, number> = {};
 
-  async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
+  async assignNewIds(_: Knex, todos: Record<string, Todo>): Promise<void> {
     Object.entries(todos).forEach(([, todo]) => {
       if (todo.inserts.length > 0) {
         const tag = todo.metadata.tagName.substring(0, 4).padStart(4, "0");
@@ -82,7 +82,7 @@ export class TestUuidAssigner implements IdAssigner {
         for (const insert of todo.inserts) {
           const id = String(this.nextId[tag]++);
           const uuid = `00000000-0000-0000-${tag}-${id.padStart(12, "0")}`;
-          insert.__orm.data["id"] = keyToString(todo.metadata, uuid);
+          insert.__orm.data["id"] = keyToTaggedId(todo.metadata, uuid);
         }
       }
     });

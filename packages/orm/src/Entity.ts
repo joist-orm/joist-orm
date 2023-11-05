@@ -1,4 +1,4 @@
-import { EntityManager, OptsOf } from "./EntityManager";
+import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { PartialOrNull } from "./index";
 
@@ -6,18 +6,21 @@ export function isEntity(maybeEntity: any): maybeEntity is Entity {
   return maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
 }
 
+/** All the types we support for entity `id` fields. */
+export type IdType = number | string;
+
 /** A marker/base interface for all of our entity types. */
-export interface Entity {
+export interface Entity<I extends IdType = IdType> {
   /**
    * The entity's primary key, or undefined if it's new.
    *
    * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-config.json`.
    */
-  id: string;
-  idMaybe: string | undefined;
+  id: I;
+  idMaybe: I | undefined;
   /** The entity id that is always tagged, regardless of the idType config. */
-  idTagged: string;
-  idTaggedMaybe: string | undefined;
+  idTagged: TaggedId;
+  idTaggedMaybe: TaggedId | undefined;
   /** Joist internal metadata, should be considered a private implementation detail. */
   readonly __orm: EntityOrmField;
   readonly em: EntityManager<any>;
@@ -42,7 +45,7 @@ export class EntityOrmField {
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   readonly em: EntityManager;
   /** A point to our entity type's metadata. */
-  readonly metadata: EntityMetadata<Entity>;
+  readonly metadata: EntityMetadata;
   /** A bag for our primitives/fk column values. */
   data: Record<any, any>;
   /** A bag to keep the original values, lazily populated. */
@@ -54,7 +57,7 @@ export class EntityOrmField {
   /** Whether our entity should flush regardless of any other changes. */
   isTouched: boolean = false;
 
-  constructor(em: EntityManager, metadata: EntityMetadata<Entity>, defaultValues: Record<any, any>) {
+  constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any>) {
     this.em = em;
     this.metadata = metadata;
     this.data = { ...defaultValues };

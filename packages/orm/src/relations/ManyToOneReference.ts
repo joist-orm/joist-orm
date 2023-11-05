@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "../Entity";
-import { IdOf, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
+import { IdOf, TaggedId, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
+import { EntityMetadata, EntityMetadataTyped, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
   BaseEntity,
   OneToManyLargeCollection,
@@ -10,10 +10,10 @@ import {
   ensureNotDeleted,
   ensureTagged,
   fail,
-  isTaggedId,
   maybeResolveReferenceToId,
   setField,
-  tagId,
+  toIdOf,
+  toTaggedId,
 } from "../index";
 import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
@@ -23,7 +23,7 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
 ): ManyToOneReference<T, U, N> {
@@ -79,7 +79,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   constructor(
     entity: T,
-    otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata,
     private fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
   ) {
@@ -157,18 +157,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   /** Sets the m2o to `id`, and allows accepting `undefined` (`N`) if this is a nullable relation. */
   set id(id: IdOf<U> | N) {
     ensureNotDeleted(this.#entity, "pending");
-    if (id && !isTaggedId(id)) {
-      id = tagId(this.otherMeta, id) as IdOf<U>;
-    }
+    const newId = toTaggedId(this.otherMeta, id);
 
-    const previousId = this.idTagged;
+    const previousId = this.idTaggedMaybe;
     const previous = this.maybeFindEntity();
     const changed = setField(this.#entity, this.fieldName, id);
     if (!changed) {
       return;
     }
 
-    this.loaded = id ? this.#entity.em.getEntity(id) : undefined;
+    this.loaded = newId ? (this.#entity.em.getEntity(newId) as U) : undefined;
     this._isLoaded = !!this.loaded;
     this.maybeRemove(previousId, previous);
     this.maybeAdd();
@@ -190,35 +188,30 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   get idMaybe(): IdOf<U> | N | undefined {
     ensureNotDeleted(this.#entity, "pending");
-    // If current is a string, we might need to detag it...
-    let id = maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
-    if (!this.otherMeta.idTagged && id) {
-      id = deTagId(this.otherMeta, id) as IdOf<U>;
-    }
-    return id;
+    return toIdOf(this.otherMeta, this.idTaggedMaybe);
+  }
+
+  /** Returns the tagged id of the current value. */
+  get idTaggedMaybe(): TaggedId | undefined {
+    ensureNotDeleted(this.#entity, "pending");
+    return maybeResolveReferenceToId(this.current());
   }
 
   private get idUntaggedMaybe(): string | undefined {
     return deTagId(this.otherMeta, this.idMaybe);
   }
 
-  /** Returns the tagged id of the current value. */
-  private get idTagged(): IdOf<U> | N {
-    ensureNotDeleted(this.#entity, "pending");
-    return maybeResolveReferenceToId(this.current()) as IdOf<U> | N;
-  }
-
   // Internal method used by OneToManyCollection
-  setImpl(other: U | IdOf<U> | N): void {
+  setImpl(_other: U | IdOf<U> | N): void {
     ensureNotDeleted(this.#entity, "pending");
     // If the project is not using tagged ids, we still want it tagged internally
-    other = ensureTagged(this.otherMeta, other) as U | IdOf<U> | N;
+    const other = ensureTagged(this.otherMeta, _other);
 
     if (sameEntity(other, this.current({ withDeleted: true }))) {
       return;
     }
 
-    const previousId = this.idTagged;
+    const previousId = this.idTaggedMaybe;
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
     setField(this.#entity, this.fieldName, isEntity(other) ? other?.idTaggedMaybe ?? other : other);
@@ -227,7 +220,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
       this.loaded = undefined;
       this._isLoaded = false;
     } else {
-      this.loaded = other;
+      this.loaded = other as U | N;
       this._isLoaded = true;
     }
     this.maybeRemove(previousId, previous);
@@ -338,7 +331,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
-  current(opts?: { withDeleted?: boolean }): U | string | N {
+  current(opts?: { withDeleted?: boolean }): U | TaggedId | N {
     const current = this.#entity.__orm.data[this.fieldName];
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
@@ -346,7 +339,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return current;
   }
 
-  public get otherMeta(): EntityMetadata<U> {
+  public get otherMeta(): EntityMetadataTyped<U> {
     return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
   }
 
@@ -389,8 +382,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
    */
   maybeFindEntity(): U | undefined {
     // Check this.loaded first b/c a new entity won't have an id yet
-    const { idTagged } = this;
-    return this.loaded ?? (idTagged !== undefined ? this.#entity.em.getEntity(idTagged) : undefined);
+    const { idTaggedMaybe } = this;
+    return this.loaded ?? (idTaggedMaybe !== undefined ? (this.#entity.em.getEntity(idTaggedMaybe) as U) : undefined);
   }
 
   [RelationT]: T = null!;

@@ -9,7 +9,7 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
@@ -27,7 +27,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
     public entity: T,
-    public otherMeta: EntityMetadata<U>,
+    public otherMeta: EntityMetadata,
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
@@ -79,7 +79,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
     this.getOtherRelation(other).set(undefined);
   }
 
-  public get meta(): EntityMetadata<T> {
+  public get meta(): EntityMetadata {
     return getMetadata(this.entity);
   }
 

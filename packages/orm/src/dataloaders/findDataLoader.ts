@@ -181,7 +181,7 @@ export function collectArgs(query: ParsedFindQuery): { columnName: string; dbTyp
   return args;
 }
 
-export function createBindings(meta: EntityMetadata<any>, queries: readonly FilterAndSettings<any>[]): any[] {
+export function createBindings(meta: EntityMetadata, queries: readonly FilterAndSettings<any>[]): any[] {
   const bindings: any[] = [];
   queries.forEach((query, i) => {
     const { where, ...opts } = query;

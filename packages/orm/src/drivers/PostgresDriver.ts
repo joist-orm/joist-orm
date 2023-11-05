@@ -139,8 +139,8 @@ export class PostgresDriver implements Driver {
         const meta2 = m2m.otherMeta;
         const bindings = newRows.flatMap((row) => {
           return [
-            keyToNumber(meta1, maybeResolveReferenceToId(row[m2m.columnName]))!,
-            keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName]))!,
+            keyToNumber(meta1, maybeResolveReferenceToId(row[m2m.columnName] as any))!,
+            keyToNumber(meta2, maybeResolveReferenceToId(row[m2m.otherColumnName] as any))!,
           ];
         });
         const { rows } = await knex.raw(sql, bindings);
@@ -165,8 +165,8 @@ export class PostgresDriver implements Driver {
           const data = noIds.map(
             (e) =>
               [
-                deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName])!),
-                deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName])!),
+                deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName] as any)!),
+                deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName] as any)!),
               ] as any,
           );
           await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);

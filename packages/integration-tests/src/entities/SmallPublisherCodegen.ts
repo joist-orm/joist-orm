@@ -2,7 +2,7 @@ import {
   Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   Flavor,
@@ -19,6 +19,8 @@ import {
   PersistedAsyncProperty,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -74,7 +76,7 @@ smallPublisherConfig.addRule(newRequiredRule("city"));
 export abstract class SmallPublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<SmallPublisher>;
+  static readonly metadata: EntityMetadataTyped<SmallPublisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: SmallPublisherFilter;
@@ -97,14 +99,14 @@ export abstract class SmallPublisherCodegen extends Publisher {
   }
 
   get idMaybe(): SmallPublisherId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(smallPublisherMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): SmallPublisherId {
-    return this.idTaggedMaybe || fail("SmallPublisher has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("SmallPublisher has no id yet");
   }
 
-  get idTaggedMaybe(): SmallPublisherId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

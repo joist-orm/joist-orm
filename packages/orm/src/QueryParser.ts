@@ -74,7 +74,7 @@ export interface ParsedFindQuery {
 
 /** Parses an `em.find` filter into a `ParsedFindQuery` for simpler execution. */
 export function parseFindQuery(
-  meta: EntityMetadata<any>,
+  meta: EntityMetadata,
   filter: any,
   opts: {
     conditions?: ExpressionFilter;
@@ -106,11 +106,11 @@ export function parseFindQuery(
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
-  function filterSoftDeletes(meta: EntityMetadata<any>): boolean {
+  function filterSoftDeletes(meta: EntityMetadata): boolean {
     return softDeletes === "exclude" && !!meta.timestampFields.deletedAt;
   }
 
-  function maybeAddNotSoftDeleted(meta: EntityMetadata<any>, alias: string): void {
+  function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta)) {
       const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0]!;
       conditions.push({
@@ -124,7 +124,7 @@ export function parseFindQuery(
   }
 
   function addTable(
-    meta: EntityMetadata<any>,
+    meta: EntityMetadata,
     alias: string,
     join: ParsedTable["join"],
     col1: string,
@@ -322,7 +322,7 @@ export function parseFindQuery(
             conditions.push({
               alias: ja,
               column: field.columnNames[1],
-              dbType: meta.idType,
+              dbType: meta.idDbType,
               cond: mapToDb(column, f),
             });
           }
@@ -332,11 +332,11 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      conditions.push({ alias, column: "id", dbType: meta.idType, cond: mapToDb(column, ef) });
+      conditions.push({ alias, column: "id", dbType: meta.idDbType, cond: mapToDb(column, ef) });
     }
   }
 
-  function addOrderBy(meta: EntityMetadata<any>, alias: string, orderBy: any): void {
+  function addOrderBy(meta: EntityMetadata, alias: string, orderBy: any): void {
     // Assume only one key
     const entries = Object.entries(orderBy);
     if (entries.length === 0) {
@@ -462,7 +462,7 @@ export type ParsedEntityFilter =
   | { kind: "join"; subFilter: object };
 
 /** Parses an entity filter, which could be "just an id", an array of ids, or a nested filter. */
-export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): ParsedEntityFilter | undefined {
+export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEntityFilter | undefined {
   if (filter === undefined) {
     // This matches legacy `em.find(Book, { author: undefined })` behavior
     return undefined;
@@ -477,11 +477,11 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? v.id ?? nilIdValue(meta) : v;
+        return isEntity(v) ? v.idMaybe ?? nilIdValue(meta) : v;
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: filter.id || nilIdValue(meta) };
+    return { kind: "eq", value: filter.idMaybe || nilIdValue(meta) };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -495,7 +495,7 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: value.id || nilIdValue(meta) };
+        return { kind: "ne", value: value.idMaybe || nilIdValue(meta) };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -510,7 +510,7 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: value.id || nilIdValue(meta) };
+        return { kind: "eq", value: value.idMaybe || nilIdValue(meta) };
       } else {
         return parseValueFilter(value)[0] as any;
       }
@@ -541,12 +541,15 @@ export function parseEntityFilter(meta: EntityMetadata<any>, filter: any): Parse
  *
  * https://en.wikipedia.org/wiki/Universally_unique_identifier#Nil_UUID
  */
-function nilIdValue(meta: EntityMetadata<any>): any {
-  switch (meta.idType) {
+function nilIdValue(meta: EntityMetadata): any {
+  switch (meta.idDbType) {
     case "int":
+    case "bigint":
       return -1;
     case "uuid":
       return "00000000-0000-0000-0000-000000000000";
+    default:
+      return assertNever(meta.idDbType);
   }
 }
 
@@ -702,7 +705,7 @@ export function mapToDb(column: Column, filter: ParsedValueFilter<any>): ParsedV
 }
 
 /** Adds any user-configured default order, plus a "always order by id" for determinism. */
-export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any>, alias: string): void {
+export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata, alias: string): void {
   const { orderBys } = query;
   if (meta.orderBy) {
     const field = meta.allFields[meta.orderBy] ?? fail(`${meta.orderBy} not found on ${meta.tableName}`);
@@ -721,7 +724,7 @@ export function maybeAddOrderBy(query: ParsedFindQuery, meta: EntityMetadata<any
 
 export function addTablePerClassJoinsAndClassTag(
   query: ParsedFindQuery,
-  meta: EntityMetadata<any>,
+  meta: EntityMetadata,
   alias: string,
   isPrimary: boolean,
 ): void {
@@ -771,7 +774,7 @@ export function addTablePerClassJoinsAndClassTag(
 
 export function maybeAddNotSoftDeleted(
   conditions: ColumnCondition[],
-  meta: EntityMetadata<any>,
+  meta: EntityMetadata,
   alias: string,
   softDeletes: "include" | "exclude",
 ): void {
@@ -841,6 +844,6 @@ export function joinClauses(joins: ParsedTable[]): string[] {
   return joins.map((t) => (t.join !== "primary" ? joinClause(t) : ""));
 }
 
-function needsClassPerTableJoins(meta: EntityMetadata<any>): boolean {
+function needsClassPerTableJoins(meta: EntityMetadata): boolean {
   return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }

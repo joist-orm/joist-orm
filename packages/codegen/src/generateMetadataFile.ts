@@ -6,7 +6,7 @@ import {
   BigIntSerde,
   CustomSerdeAdapter,
   DecimalToNumberSerde,
-  EntityMetadata,
+  EntityMetadataTyped,
   EnumArrayFieldSerde,
   EnumFieldSerde,
   JsonSerde,
@@ -28,12 +28,12 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   const maybeBaseType = meta.baseClassName ? `"${meta.baseClassName}"` : undefined;
 
   return code`
-    export const ${entity.metaName}: ${EntityMetadata}<${entity.type}> = {
+    export const ${entity.metaName}: ${EntityMetadataTyped}<${entity.name}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
       baseType: ${maybeBaseType},
-      idType: "${meta.primaryKey.columnType}",
-      idTagged: ${config.idType !== "untagged-string"},
+      idType: "${config.idType ?? "tagged-string"}",
+      idDbType: "${meta.primaryKey.columnType}",
       tagName: "${meta.tagName}",
       tableName: "${meta.tableName}",
       fields: ${fields},

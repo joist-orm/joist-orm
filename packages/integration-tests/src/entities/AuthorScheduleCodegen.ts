@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -89,10 +91,10 @@ authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));
 authorScheduleConfig.addRule(newRequiredRule("author"));
 
-export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager> {
+export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "authorSchedule";
-  static readonly metadata: EntityMetadata<AuthorSchedule>;
+  static readonly metadata: EntityMetadataTyped<AuthorSchedule>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorScheduleFilter;
@@ -116,14 +118,14 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): AuthorScheduleId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(authorScheduleMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): AuthorScheduleId {
-    return this.idTaggedMaybe || fail("AuthorSchedule has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("AuthorSchedule has no id yet");
   }
 
-  get idTaggedMaybe(): AuthorScheduleId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

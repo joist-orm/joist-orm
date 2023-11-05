@@ -6,6 +6,7 @@ import {
   IdOf,
   LoadedReference,
   setField,
+  TaggedId,
 } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
@@ -59,7 +60,7 @@ export function isLoadedOneToOneReference(
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata<U>,
+  otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
@@ -93,12 +94,12 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
   readonly #entity: T;
-  readonly #otherMeta: EntityMetadata<U>;
+  readonly #otherMeta: EntityMetadata;
 
   constructor(
     // These are public to our internal implementation but not exposed in the Collection API
     entity: T,
-    otherMeta: EntityMetadata<U>,
+    otherMeta: EntityMetadata,
     public fieldName: keyof T & string,
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
@@ -134,6 +135,14 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     ensureNotDeleted(this.#entity, "pending");
     if (this._isLoaded) {
       return this.loaded?.idMaybe as IdOf<U> | undefined;
+    }
+    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
+  }
+
+  get idTaggedMaybe(): TaggedId | undefined {
+    ensureNotDeleted(this.#entity, "pending");
+    if (this._isLoaded) {
+      return this.loaded?.idTaggedMaybe;
     }
     throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
   }
@@ -207,7 +216,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
 
-  get otherMeta(): EntityMetadata<U> {
+  get otherMeta(): EntityMetadata {
     return this.#otherMeta;
   }
 

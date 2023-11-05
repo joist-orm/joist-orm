@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -118,10 +120,10 @@ imageConfig.addRule(newRequiredRule("createdAt"));
 imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
-export abstract class ImageCodegen extends BaseEntity<EntityManager> {
+export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "i";
-  static readonly metadata: EntityMetadata<Image>;
+  static readonly metadata: EntityMetadataTyped<Image>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ImageFilter;
@@ -149,14 +151,14 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): ImageId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(imageMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): ImageId {
-    return this.idTaggedMaybe || fail("Image has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("Image has no id yet");
   }
 
-  get idTaggedMaybe(): ImageId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

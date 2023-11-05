@@ -10,7 +10,7 @@ describe("entityResolver", () => {
     const em = newEntityManager();
     // When we access it via the entity resolver
     const a = await em.load(Author, "a:1");
-    const result = entityResolver(Author.metadata).numberOfPublicReviews(a, {}, {}, undefined!);
+    const result = entityResolver(Author).numberOfPublicReviews(a, {}, {}, undefined!);
     // Then we got the stale value
     expect(result).toBe(2);
   });

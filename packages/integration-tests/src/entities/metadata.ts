@@ -1,4 +1,4 @@
-import { BaseEntity, BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
+import { BaseEntity, BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadataTyped, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import {
@@ -63,12 +63,12 @@ export function getEm(e: BaseEntity): EntityManager {
   return e.em as EntityManager;
 }
 
-export const authorMeta: EntityMetadata<Author> = {
+export const authorMeta: EntityMetadataTyped<Author> = {
   cstr: Author,
   type: "Author",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "a",
   tableName: "authors",
   fields: {
@@ -119,12 +119,12 @@ export const authorMeta: EntityMetadata<Author> = {
 
 (Author as any).metadata = authorMeta;
 
-export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
+export const authorScheduleMeta: EntityMetadataTyped<AuthorSchedule> = {
   cstr: AuthorSchedule,
   type: "AuthorSchedule",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "authorSchedule",
   tableName: "author_schedules",
   fields: {
@@ -145,12 +145,12 @@ export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
 
 (AuthorSchedule as any).metadata = authorScheduleMeta;
 
-export const authorStatMeta: EntityMetadata<AuthorStat> = {
+export const authorStatMeta: EntityMetadataTyped<AuthorStat> = {
   cstr: AuthorStat,
   type: "AuthorStat",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "as",
   tableName: "author_stats",
   fields: {
@@ -181,12 +181,12 @@ export const authorStatMeta: EntityMetadata<AuthorStat> = {
 
 (AuthorStat as any).metadata = authorStatMeta;
 
-export const bookMeta: EntityMetadata<Book> = {
+export const bookMeta: EntityMetadataTyped<Book> = {
   cstr: Book,
   type: "Book",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "b",
   tableName: "books",
   fields: {
@@ -215,12 +215,12 @@ export const bookMeta: EntityMetadata<Book> = {
 
 (Book as any).metadata = bookMeta;
 
-export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
+export const bookAdvanceMeta: EntityMetadataTyped<BookAdvance> = {
   cstr: BookAdvance,
   type: "BookAdvance",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "ba",
   tableName: "book_advances",
   fields: {
@@ -242,12 +242,12 @@ export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
 
 (BookAdvance as any).metadata = bookAdvanceMeta;
 
-export const bookReviewMeta: EntityMetadata<BookReview> = {
+export const bookReviewMeta: EntityMetadataTyped<BookReview> = {
   cstr: BookReview,
   type: "BookReview",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "br",
   tableName: "book_reviews",
   fields: {
@@ -271,12 +271,12 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
-export const commentMeta: EntityMetadata<Comment> = {
+export const commentMeta: EntityMetadataTyped<Comment> = {
   cstr: Comment,
   type: "Comment",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "comment",
   tableName: "comments",
   fields: {
@@ -311,12 +311,12 @@ export const commentMeta: EntityMetadata<Comment> = {
 
 (Comment as any).metadata = commentMeta;
 
-export const criticMeta: EntityMetadata<Critic> = {
+export const criticMeta: EntityMetadataTyped<Critic> = {
   cstr: Critic,
   type: "Critic",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "c",
   tableName: "critics",
   fields: {
@@ -339,12 +339,12 @@ export const criticMeta: EntityMetadata<Critic> = {
 
 (Critic as any).metadata = criticMeta;
 
-export const criticColumnMeta: EntityMetadata<CriticColumn> = {
+export const criticColumnMeta: EntityMetadataTyped<CriticColumn> = {
   cstr: CriticColumn,
   type: "CriticColumn",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "cc",
   tableName: "critic_columns",
   fields: {
@@ -365,12 +365,12 @@ export const criticColumnMeta: EntityMetadata<CriticColumn> = {
 
 (CriticColumn as any).metadata = criticColumnMeta;
 
-export const imageMeta: EntityMetadata<Image> = {
+export const imageMeta: EntityMetadataTyped<Image> = {
   cstr: Image,
   type: "Image",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "i",
   tableName: "images",
   fields: {
@@ -394,12 +394,12 @@ export const imageMeta: EntityMetadata<Image> = {
 
 (Image as any).metadata = imageMeta;
 
-export const largePublisherMeta: EntityMetadata<LargePublisher> = {
+export const largePublisherMeta: EntityMetadataTyped<LargePublisher> = {
   cstr: LargePublisher,
   type: "LargePublisher",
   baseType: "Publisher",
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "p",
   tableName: "large_publishers",
   fields: {
@@ -418,12 +418,12 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
 
 (LargePublisher as any).metadata = largePublisherMeta;
 
-export const publisherMeta: EntityMetadata<Publisher> = {
+export const publisherMeta: EntityMetadataTyped<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "p",
   tableName: "publishers",
   fields: {
@@ -454,12 +454,12 @@ export const publisherMeta: EntityMetadata<Publisher> = {
 
 (Publisher as any).metadata = publisherMeta;
 
-export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
+export const publisherGroupMeta: EntityMetadataTyped<PublisherGroup> = {
   cstr: PublisherGroup,
   type: "PublisherGroup",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "pg",
   tableName: "publisher_groups",
   fields: {
@@ -481,12 +481,12 @@ export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
 
 (PublisherGroup as any).metadata = publisherGroupMeta;
 
-export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
+export const smallPublisherMeta: EntityMetadataTyped<SmallPublisher> = {
   cstr: SmallPublisher,
   type: "SmallPublisher",
   baseType: "Publisher",
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "p",
   tableName: "small_publishers",
   fields: {
@@ -505,12 +505,12 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
 
 (SmallPublisher as any).metadata = smallPublisherMeta;
 
-export const tagMeta: EntityMetadata<Tag> = {
+export const tagMeta: EntityMetadataTyped<Tag> = {
   cstr: Tag,
   type: "Tag",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "t",
   tableName: "tags",
   fields: {
@@ -532,12 +532,12 @@ export const tagMeta: EntityMetadata<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-export const userMeta: EntityMetadata<User> = {
+export const userMeta: EntityMetadataTyped<User> = {
   cstr: User,
   type: "User",
   baseType: undefined,
-  idType: "int",
-  idTagged: true,
+  idType: "tagged-string",
+  idDbType: "int",
   tagName: "u",
   tableName: "users",
   fields: {

@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -28,6 +28,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -126,10 +128,10 @@ userConfig.addRule(newRequiredRule("bio"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class UserCodegen extends BaseEntity<EntityManager> {
+export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = { bio: "" };
   static readonly tagName = "u";
-  static readonly metadata: EntityMetadata<User>;
+  static readonly metadata: EntityMetadataTyped<User>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: UserFilter;
@@ -174,14 +176,14 @@ export abstract class UserCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): UserId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(userMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): UserId {
-    return this.idTaggedMaybe || fail("User has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("User has no id yet");
   }
 
-  get idTaggedMaybe(): UserId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

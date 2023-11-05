@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -84,10 +86,10 @@ authorConfig.addRule(newRequiredRule("firstName"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
+export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "a";
-  static readonly metadata: EntityMetadata<Author>;
+  static readonly metadata: EntityMetadataTyped<Author>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorFilter;
@@ -111,14 +113,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): AuthorId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(authorMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): AuthorId {
-    return this.idTaggedMaybe || fail("Author has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("Author has no id yet");
   }
 
-  get idTaggedMaybe(): AuthorId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

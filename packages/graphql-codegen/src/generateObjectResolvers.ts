@@ -2,7 +2,6 @@ import { camelCase, sentenceCase } from "change-case";
 import { Config, EntityDbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
-const getMetadata = imp("getMetadata@joist-orm");
 const entityResolver = imp("entityResolver@src/resolvers/utils");
 const makeRunResolverKeys = imp("makeRunResolverKeys@src/resolvers/testUtils");
 const makeRunResolver = imp("makeRunResolver@src/resolvers/testUtils");
@@ -24,7 +23,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
     const resolverType = imp(`${e.name}Resolvers@src/generated/graphql-types`);
     const contents = code`
       export const ${camelName}Resolvers: ${resolverType} = {
-        ...${entityResolver}(${getMetadata}(${type})),
+        ...${entityResolver}(${type}),
       };
     `;
     return { name: `resolvers/objects/${camelName}/${camelName}Resolvers.ts`, overwrite: false, contents };
@@ -34,8 +33,6 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
     const { name } = e;
     const camelName = camelCase(name);
     const factory = imp(`new${name}@src/entities`);
-    const idType = imp(`${name}Id@src/entities`);
-    const resolverType = imp(`${name}Resolvers@src/generated/graphql-types`);
     const resolverConst = imp(`${camelName}Resolvers@src/resolvers/objects/${camelName}/${camelName}Resolvers`);
 
     const tagName = config.entities[name].tag || "entity";

@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -25,6 +25,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -82,10 +84,10 @@ paintingConfig.addRule(newRequiredRule("createdAt"));
 paintingConfig.addRule(newRequiredRule("updatedAt"));
 paintingConfig.addRule(newRequiredRule("artist"));
 
-export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
+export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<Painting>;
+  static readonly metadata: EntityMetadataTyped<Painting>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PaintingFilter;
@@ -109,14 +111,14 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): PaintingId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(paintingMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): PaintingId {
-    return this.idTaggedMaybe || fail("Painting has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("Painting has no id yet");
   }
 
-  get idTaggedMaybe(): PaintingId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

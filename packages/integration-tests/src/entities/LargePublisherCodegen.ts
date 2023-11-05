@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   FilterOf,
@@ -23,6 +23,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -79,7 +81,7 @@ export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 export abstract class LargePublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadata<LargePublisher>;
+  static readonly metadata: EntityMetadataTyped<LargePublisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: LargePublisherFilter;
@@ -110,14 +112,14 @@ export abstract class LargePublisherCodegen extends Publisher {
   }
 
   get idMaybe(): LargePublisherId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(largePublisherMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): LargePublisherId {
-    return this.idTaggedMaybe || fail("LargePublisher has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("LargePublisher has no id yet");
   }
 
-  get idTaggedMaybe(): LargePublisherId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

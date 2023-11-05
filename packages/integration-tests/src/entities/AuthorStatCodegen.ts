@@ -3,7 +3,7 @@ import {
   Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadata,
+  EntityMetadataTyped,
   EntityOrmField,
   fail,
   Flavor,
@@ -19,6 +19,8 @@ import {
   PartialOrNull,
   setField,
   setOpts,
+  TaggedId,
+  toIdOf,
   ValueFilter,
   ValueGraphQLFilter,
 } from "joist-orm";
@@ -132,10 +134,10 @@ authorStatConfig.addRule(newRequiredRule("doublePrecision"));
 authorStatConfig.addRule(newRequiredRule("createdAt"));
 authorStatConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
+export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "as";
-  static readonly metadata: EntityMetadata<AuthorStat>;
+  static readonly metadata: EntityMetadataTyped<AuthorStat>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorStatFilter;
@@ -157,14 +159,14 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager> {
   }
 
   get idMaybe(): AuthorStatId | undefined {
-    return this.idTaggedMaybe;
+    return toIdOf(authorStatMeta, this.idTaggedMaybe);
   }
 
-  get idTagged(): AuthorStatId {
-    return this.idTaggedMaybe || fail("AuthorStat has no id tagged yet");
+  get idTagged(): TaggedId {
+    return this.idTaggedMaybe || fail("AuthorStat has no id yet");
   }
 
-  get idTaggedMaybe(): AuthorStatId | undefined {
+  get idTaggedMaybe(): TaggedId | undefined {
     return this.__orm.data["id"];
   }
 

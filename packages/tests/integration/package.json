@@ -1,20 +1,20 @@
 {
-  "name": "joist-integration-tests",
+  "name": "joist-tests-integration",
   "version": "1.24.0",
   "license": "MIT",
   "private": true,
   "repository": {
     "type": "git",
     "url": "https://github.com/stephenh/joist-ts.git",
-    "directory": "packages/integration-tests"
+    "directory": "packages/tests/integration"
   },
   "scripts": {
-    "migrate": "DECAMELIZE=false env-cmd tsx ../migration-utils",
+    "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "yarn test-stock && yarn test-preloading",
     "test-stock": "PLUGINS= jest --runInBand --detectOpenHandles --logHeapUsage",
     "test-preloading": "PLUGINS=join-preloading jest --runInBand --detectOpenHandles --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
-    "codegen": "env-cmd tsx ../codegen",
+    "codegen": "env-cmd tsx ../../codegen",
     "docker:up": "docker compose up -d db",
     "docker:reset": "docker compose exec db ./reset.sh"
   },

@@ -1,3 +1,10 @@
+## [1.118.1](https://github.com/stephenh/joist-ts/compare/v1.118.0...v1.118.1) (2023-11-06)
+
+
+### Bug Fixes
+
+* Fix NPE in entityResolver. ([#848](https://github.com/stephenh/joist-ts/issues/848)) ([316b347](https://github.com/stephenh/joist-ts/commit/316b3475c9efaeafb8bedaedc752c4074168be3f))
+
 # [1.118.0](https://github.com/stephenh/joist-ts/compare/v1.117.0...v1.118.0) (2023-11-05)
 
 

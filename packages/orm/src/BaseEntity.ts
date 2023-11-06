@@ -17,16 +17,14 @@ import {
  *
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
-export abstract class BaseEntity<EM extends EntityManager = EntityManager, I extends IdType = string>
-  implements Entity<I>
-{
+export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
   readonly __orm!: EntityOrmField;
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
   // that sufficiently overlaps.
   readonly fullNonReactiveAccess!: this;
 
-  protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
+  protected constructor(em: EM, metadata: any, defaultValues: object, opts: any) {
     Object.defineProperty(this, "__orm", {
       value: new EntityOrmField(em, metadata, defaultValues),
       enumerable: false,
@@ -41,7 +39,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager, I ext
       this.__orm.data["id"] = opts;
       this.__orm.isNew = false;
     }
-    em.register(metadata, this);
+    em.register(metadata, this as any);
   }
 
   /** @returns the entity's id, tagged/untagged based on your config, or a runtime error if it's new/unassigned. */
@@ -141,7 +139,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager, I ext
             case "m2o":
               // Don't recurse into new entities b/c the point is to stay shallow
               const value = (this as any)[f.fieldName].current();
-              return [[f.fieldName, isEntity(value) ? value.idMaybe || null : value || null]];
+              return [[f.fieldName, isEntity(value) ? (value as any).idMaybe || null : value || null]];
             default:
               return [];
           }

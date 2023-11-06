@@ -18,6 +18,7 @@ import {
   Book,
   Color,
   Comment,
+  EntityManager,
   Publisher,
   PublisherSize,
   PublisherType,
@@ -33,7 +34,7 @@ import {
   newEntityManager,
   numberOfQueries,
   queries,
-  resetQueryCount
+  resetQueryCount,
 } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1633,6 +1634,17 @@ describe("EntityManager", () => {
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     await expect(em.flush()).rejects.toThrow("There is already a publisher with a Jim");
+  });
+
+  it("is typed correctly", async () => {
+    // Given our app-specific em
+    const em = newEntityManager();
+    // And a function that takes the app-specific em
+    function doSomething(_: EntityManager) {}
+    // When we have an entity and use its em field
+    const a = newAuthor(em);
+    // Then it works
+    doSomething(a.em);
   });
 });
 

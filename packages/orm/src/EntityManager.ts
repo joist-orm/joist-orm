@@ -171,6 +171,23 @@ export interface FlushOptions {
   skipValidation?: boolean;
 }
 
+/**
+ * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
+ * will interact with the database.
+ *
+ * It acts both an Identity Cache (preventing loading the same row twice into memory as separate entities, and then
+ * having drift between the two instances) and as a Unit of Work (tracking all changes to entities and then batch
+ * flushing only the entities that have changed).
+ *
+ * Note that the type parameters (C, I, and Entity) will be filled in by codegen with the values specific to your
+ * application, so you can import your app-specific EntityManager like:
+ *
+ * ```ts
+ * import { EntityManager } from "src/entities";
+ * ```
+ *
+ * @param C The type of your application-specific app-wide/request-wide Context object that will be passed to hooks
+ */
 export class EntityManager<C = unknown> {
   public readonly ctx: C;
   public driver: Driver;
@@ -242,7 +259,7 @@ export class EntityManager<C = unknown> {
           map = new Map();
           em.#preloadedRelations.set(taggedId, map);
         }
-        map.set(fieldName, children as Entity[]);
+        map.set(fieldName, children as any);
       },
       hooks: this.#hooks,
       rm: this.#rm,
@@ -658,7 +675,7 @@ export class EntityManager<C = unknown> {
     const todo: Entity[] = [];
 
     // 1. Find all entities w/o mutating them yets
-    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf });
+    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf: skipIf as any });
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
@@ -695,7 +712,7 @@ export class EntityManager<C = unknown> {
 
       // Call `new` just like the user would do
       // The `asConcreteCstr` is safe b/c we got meta from a concrete/already-instantiated entity
-      const clone = new (asConcreteCstr(meta.cstr))(this, copy);
+      const clone = new (asConcreteCstr(meta.cstr))(this, copy) as Entity;
 
       return [entity, clone] as const;
     });
@@ -767,7 +784,7 @@ export class EntityManager<C = unknown> {
       throw new NotFoundError(`${tagged} was not found`);
     }
     if (hint) {
-      await this.populate(entity, hint);
+      await this.populate(entity as Entity, hint);
     }
     return entity as T;
   }
@@ -1042,7 +1059,7 @@ export class EntityManager<C = unknown> {
   }
 
   async assignNewIds() {
-    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
+    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idTaggedMaybe);
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
       let todos = createTodos([...entities]);
       await this.driver.assignNewIds(this, todos);
@@ -1262,7 +1279,7 @@ export class EntityManager<C = unknown> {
             .filter((r) => "get" in r)
             .map((r) => (r as any).get)
             .flatMap((value) => (Array.isArray(value) ? value : [value]))
-            .filter((value) => isEntity(value) && !done.has(value)),
+            .filter((value) => isEntity(value) && !done.has(value as Entity)),
         );
       }
     }
@@ -1274,7 +1291,7 @@ export class EntityManager<C = unknown> {
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // Currently only public for the driver impls
-  public findExistingInstance<T>(id: string): T | undefined {
+  public findExistingInstance<T extends Entity>(id: string): T | undefined {
     assertIdIsTagged(id);
     return this.#entityIndex.get(id) as T | undefined;
   }
@@ -1304,7 +1321,7 @@ export class EntityManager<C = unknown> {
         : maybeBaseMeta;
       // Pass id as a hint that we're in hydrate mode
       // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
-      entity = new (asConcreteCstr(meta.cstr))(this, taggedId);
+      entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
       Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       const meta = getMetadata(entity);
@@ -1509,7 +1526,7 @@ async function validateReactiveRules(
 
   const p2 = Object.values(joinRowTodos).flatMap((todo) => {
     // Cheat and use `Object.values` + `filter instanceof BaseEntity` to handle the variable keys
-    const entities: BaseEntity[] = [...todo.newRows, ...todo.deletedRows]
+    const entities: Entity[] = [...todo.newRows, ...todo.deletedRows]
       .flatMap((jr) => Object.values(jr))
       .filter((e) => e instanceof BaseEntity) as any;
     // Do the first side

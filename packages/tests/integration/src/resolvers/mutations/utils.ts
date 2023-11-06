@@ -1,7 +1,7 @@
 import { Context } from "@src/context";
-import { BaseEntity, DeepPartialOrNull, EntityConstructor, IdOf } from "joist-orm";
+import { DeepPartialOrNull, Entity, EntityConstructor, IdOf } from "joist-orm";
 
-export async function saveEntities<T extends BaseEntity>(
+export async function saveEntities<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
   input: DeepPartialOrNull<T>[],

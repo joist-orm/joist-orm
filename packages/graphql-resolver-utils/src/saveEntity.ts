@@ -1,8 +1,8 @@
-import { BaseEntity, DeepPartialOrNull, EntityConstructor, OptsOf } from "joist-orm";
+import { DeepPartialOrNull, Entity, EntityConstructor, OptsOf } from "joist-orm";
 import { Context } from "./context";
 
 /** Given an GraphQL input, creates-or-updates an entity of `type`. */
-export async function saveEntity<T extends BaseEntity>(
+export async function saveEntity<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
   input: DeepPartialOrNull<T>,
@@ -12,7 +12,7 @@ export async function saveEntity<T extends BaseEntity>(
 }
 
 /** Given GraphQL inputs, creates-or-updates multiple entities of `type`. */
-export async function saveEntities<T extends BaseEntity>(
+export async function saveEntities<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
   input: readonly DeepPartialOrNull<T>[],

@@ -10,20 +10,15 @@ export function isEntity(maybeEntity: any): maybeEntity is Entity {
 export type IdType = number | string;
 
 /** A marker/base interface for all of our entity types. */
-export interface Entity<I extends IdType = IdType> {
-  /**
-   * The entity's primary key, or undefined if it's new.
-   *
-   * This will be a tagged id, i.e. `a:1`, unless idType is untagged in `joist-config.json`.
-   */
-  id: I;
-  idMaybe: I | undefined;
+export interface Entity {
+  id: IdType;
+  idMaybe: IdType | undefined;
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: TaggedId;
   idTaggedMaybe: TaggedId | undefined;
   /** Joist internal metadata, should be considered a private implementation detail. */
   readonly __orm: EntityOrmField;
-  readonly em: EntityManager<any>;
+  readonly em: EntityManager;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
   readonly isDirtyEntity: boolean;

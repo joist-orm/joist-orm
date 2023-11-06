@@ -1,3 +1,10 @@
+# [1.119.0](https://github.com/stephenh/joist-ts/compare/v1.118.1...v1.119.0) (2023-11-06)
+
+
+### Features
+
+* Generate an app-specific Entity type. ([#849](https://github.com/stephenh/joist-ts/issues/849)) ([2850d27](https://github.com/stephenh/joist-ts/commit/2850d27922aee2eca332f7cf72c52935d77f1636))
+
 ## [1.118.1](https://github.com/stephenh/joist-ts/compare/v1.118.0...v1.118.1) (2023-11-06)
 
 

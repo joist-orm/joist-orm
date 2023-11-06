@@ -171,32 +171,7 @@ export interface FlushOptions {
   skipValidation?: boolean;
 }
 
-type ET<I extends IdType = IdType> = Entity<I>;
-
-/**
- * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
- * will interact with the database.
- *
- * It acts both an Identity Cache (preventing loading the same row twice into memory as separate entities, and then
- * having drift between the two instances) and as a Unit of Work (tracking all changes to entities and then batch
- * flushing only the entities that have changed).
- *
- * Note that the type parameters (C, I, and Entity) will be filled in by codegen with the values specific to your
- * application, so you can import your app-specific EntityManager like:
- *
- * ```ts
- * import { EntityManager } from "src/entities";
- * ```
- *
- * @param C The type of your application-specific app-wide/request-wide Context object that will be passed to hooks
- * @param I The type of your application-specific IdType, i.e. `string | number`
- * @param Entity the Entity type but adapted to your app's IdType, i.e. `string | number`
- */
-// We purposefully use the name `Entity` for the type parameter, but have it mapped to the `Entity<string>`
-// or `Entity<number>` that will be specific for the application, as this keeps all our type signatures
-// clean (not having to repeat `Entity<I>` everywhere), while automatically ensuring any "Entity" usages
-// in our API methods is the application-specific adaptation.
-export class EntityManager<C = unknown, I extends IdType = IdType, Entity extends ET<I> = ET<I>> {
+export class EntityManager<C = unknown> {
   public readonly ctx: C;
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;
@@ -267,7 +242,7 @@ export class EntityManager<C = unknown, I extends IdType = IdType, Entity extend
           map = new Map();
           em.#preloadedRelations.set(taggedId, map);
         }
-        map.set(fieldName, children as any);
+        map.set(fieldName, children as Entity[]);
       },
       hooks: this.#hooks,
       rm: this.#rm,
@@ -683,7 +658,7 @@ export class EntityManager<C = unknown, I extends IdType = IdType, Entity extend
     const todo: Entity[] = [];
 
     // 1. Find all entities w/o mutating them yets
-    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf: skipIf as any });
+    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf });
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
@@ -792,7 +767,7 @@ export class EntityManager<C = unknown, I extends IdType = IdType, Entity extend
       throw new NotFoundError(`${tagged} was not found`);
     }
     if (hint) {
-      await this.populate(entity as Entity, hint);
+      await this.populate(entity, hint);
     }
     return entity as T;
   }
@@ -1287,7 +1262,7 @@ export class EntityManager<C = unknown, I extends IdType = IdType, Entity extend
             .filter((r) => "get" in r)
             .map((r) => (r as any).get)
             .flatMap((value) => (Array.isArray(value) ? value : [value]))
-            .filter((value) => isEntity(value) && !done.has(value as Entity)),
+            .filter((value) => isEntity(value) && !done.has(value)),
         );
       }
     }
@@ -1299,7 +1274,7 @@ export class EntityManager<C = unknown, I extends IdType = IdType, Entity extend
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // Currently only public for the driver impls
-  public findExistingInstance<T extends Entity>(id: string): T | undefined {
+  public findExistingInstance<T>(id: string): T | undefined {
     assertIdIsTagged(id);
     return this.#entityIndex.get(id) as T | undefined;
   }

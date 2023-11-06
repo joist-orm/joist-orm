@@ -192,6 +192,10 @@ type ET<I extends IdType = IdType> = Entity<I>;
  * @param I The type of your application-specific IdType, i.e. `string | number`
  * @param Entity the Entity type but adapted to your app's IdType, i.e. `string | number`
  */
+// We purposefully use the name `Entity` for the type parameter, but have it mapped to the `Entity<string>`
+// or `Entity<number>` that will be specific for the application, as this keeps all our type signatures
+// clean (not having to repeat `Entity<I>` everywhere), while automatically ensuring any "Entity" usages
+// in our API methods is the application-specific adaptation.
 export class EntityManager<C = unknown, I extends IdType = IdType, Entity extends ET<I> = ET<I>> {
   public readonly ctx: C;
   public driver: Driver;

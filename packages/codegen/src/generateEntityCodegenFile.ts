@@ -841,7 +841,7 @@ function nullOrNever(notNull: boolean): string {
   return notNull ? "never" : "null";
 }
 
-function getIdType(config: Config) {
+export function getIdType(config: Config) {
   switch (config.idType) {
     case "untagged-string":
     case "tagged-string":

@@ -1,4 +1,4 @@
-import { BaseEntity, BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, EntityManager as EntityManager1, EntityMetadataTyped, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
+import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, Entity as Entity2, EntityManager as EntityManager1, EntityMetadataTyped, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import {
@@ -59,9 +59,7 @@ import {
 
 export class EntityManager extends EntityManager1<Context> {}
 
-export function getEm(e: BaseEntity): EntityManager {
-  return e.em as EntityManager;
-}
+export type Entity = Entity2<string>;
 
 export const authorMeta: EntityMetadataTyped<Author> = {
   cstr: Author,

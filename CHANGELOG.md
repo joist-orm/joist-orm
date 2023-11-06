@@ -1,3 +1,10 @@
+## [1.119.1](https://github.com/stephenh/joist-ts/compare/v1.119.0...v1.119.1) (2023-11-06)
+
+
+### Reverts
+
+* Revert "feat: Generate an app-specific Entity type. (#849)" (#850) ([8964378](https://github.com/stephenh/joist-ts/commit/89643784a086729a2aefd8570c3039b126e0f3ee)), closes [#849](https://github.com/stephenh/joist-ts/issues/849) [#850](https://github.com/stephenh/joist-ts/issues/850)
+
 # [1.119.0](https://github.com/stephenh/joist-ts/compare/v1.118.1...v1.119.0) (2023-11-06)
 
 

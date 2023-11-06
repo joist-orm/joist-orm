@@ -36,7 +36,10 @@ export function selectionSetToObject(
   for (const selection of selectionSet.selections) {
     if (selection.kind === "Field") {
       const fieldName = selection.name.value;
-      const fieldType = convertToObjectType(gqlType.getFields()[fieldName].type);
+      const field = gqlType.getFields()[fieldName];
+      // This might be __typename, which is a meta field
+      if (field === undefined) continue;
+      const fieldType = convertToObjectType(field.type);
       const ormField = meta.allFields[fieldName];
       if (fieldType && selection.selectionSet && ormField && "otherMetadata" in ormField) {
         result[fieldName] = selectionSetToObject(info, ormField.otherMetadata(), fieldType, selection.selectionSet);

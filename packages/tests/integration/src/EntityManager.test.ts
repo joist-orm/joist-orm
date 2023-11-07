@@ -1662,8 +1662,10 @@ describe("EntityManager", () => {
   it("can accept non-narrowed constructors", async () => {
     // Given our local EM that is typed to Entity narrowed to a string
     const em = newEntityManager();
-    const id: string = em.entities[0].id;
     async function foo() {
+      // And we verify the return values are typed as strings
+      const id1: string = em.entities[0].id;
+      const id2: string | undefined = em.getEntity("a:1")?.id;
       // And a type that uses the joist non-narrowed Entity that is string | number
       const type = Author as MaybeAbstractEntityConstructor<JoistEntity>;
       const type2 = Author as EntityConstructor<JoistEntity>;

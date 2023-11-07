@@ -4,7 +4,8 @@ import {
   EntityManager,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  getEmInternalApi, TaggedId,
+  TaggedId,
+  getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";

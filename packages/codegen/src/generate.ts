@@ -66,7 +66,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
             .join(",")}');`
         : ``
     }
-      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
+      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity> {}
 
       export interface ${def("Entity")} extends ${Entity} {
         id: ${getIdType(config)};

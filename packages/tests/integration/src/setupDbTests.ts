@@ -19,7 +19,7 @@ export let queries: string[] = [];
 const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");
 export const isPreloadingEnabled = plugins.includes("join-preloading");
 
-export function newEntityManager() {
+export function newEntityManager(): EntityManager {
   const ctx = { knex };
   const opts: EntityManagerOpts = {
     driver,

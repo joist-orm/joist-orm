@@ -57,7 +57,7 @@ import {
   userConfig,
 } from "./entities";
 
-export class EntityManager extends EntityManager1<Context> {}
+export class EntityManager extends EntityManager1<Context, Entity> {}
 
 export interface Entity extends Entity2 {
   id: string;

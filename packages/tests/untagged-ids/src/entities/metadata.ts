@@ -2,7 +2,7 @@ import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, 
 import { Context } from "src/context";
 import { Author, authorConfig, Book, bookConfig, newAuthor, newBook } from "./entities";
 
-export class EntityManager extends EntityManager1<Context> {}
+export class EntityManager extends EntityManager1<Context, Entity> {}
 
 export interface Entity extends Entity2 {
   id: string;

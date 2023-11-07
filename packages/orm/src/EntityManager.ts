@@ -675,7 +675,7 @@ export class EntityManager<C = unknown> {
     const todo: Entity[] = [];
 
     // 1. Find all entities w/o mutating them yets
-    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf: skipIf as any });
+    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf });
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
@@ -712,7 +712,7 @@ export class EntityManager<C = unknown> {
 
       // Call `new` just like the user would do
       // The `asConcreteCstr` is safe b/c we got meta from a concrete/already-instantiated entity
-      const clone = new (asConcreteCstr(meta.cstr))(this, copy) as Entity;
+      const clone = new (asConcreteCstr(meta.cstr))(this, copy);
 
       return [entity, clone] as const;
     });
@@ -784,7 +784,7 @@ export class EntityManager<C = unknown> {
       throw new NotFoundError(`${tagged} was not found`);
     }
     if (hint) {
-      await this.populate(entity as Entity, hint);
+      await this.populate(entity, hint);
     }
     return entity as T;
   }

@@ -39,7 +39,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
       this.__orm.data["id"] = opts;
       this.__orm.isNew = false;
     }
-    em.register(metadata, this as any);
+    em.register(metadata, this);
   }
 
   /** @returns the entity's id, tagged/untagged based on your config, or a runtime error if it's new/unassigned. */
@@ -126,7 +126,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
         .map((f) => {
           switch (f.kind) {
             case "primaryKey":
-              return [[f.fieldName, (this as any).idMaybe || null]];
+              return [[f.fieldName, this.idMaybe || null]];
             case "enum":
               return [[f.fieldName, (this as any)[f.fieldName] || null]];
             case "primitive":
@@ -139,7 +139,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
             case "m2o":
               // Don't recurse into new entities b/c the point is to stay shallow
               const value = (this as any)[f.fieldName].current();
-              return [[f.fieldName, isEntity(value) ? (value as any).idMaybe || null : value || null]];
+              return [[f.fieldName, isEntity(value) ? value.idMaybe || null : value || null]];
             default:
               return [];
           }

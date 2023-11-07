@@ -14,8 +14,6 @@ import {
 import {
   EntityFilter,
   ExpressionFilter,
-  FilterWithAlias,
-  MaybeAbstractEntityConstructor,
   NotFoundError,
   TooManyError,
   UniqueFilter,
@@ -25,7 +23,7 @@ import {
   jan1,
   jan2,
   jan3,
-  parseFindQuery, Entity,
+  parseFindQuery,
 } from "joist-orm";
 import {
   Author,

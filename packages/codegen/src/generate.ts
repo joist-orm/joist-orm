@@ -1,13 +1,13 @@
 import { code, CodegenFile, def, imp } from "ts-poet";
 import { generateEntitiesFile } from "./generateEntitiesFile";
-import { generateEntityCodegenFile } from "./generateEntityCodegenFile";
+import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
 import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
 import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
-import { configureMetadata, JoistEntityManager } from "./symbols";
+import {configureMetadata, EntityManager, Entity, JoistEntityManager} from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;
@@ -54,7 +54,6 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     .reduce(merge, []);
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
-  const BaseEntity = imp("BaseEntity@joist-orm");
 
   const invalidEntities = entities.filter((e) => e.invalidDeferredFK);
   const metadataFile: CodegenFile = {
@@ -67,10 +66,11 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
             .join(",")}');`
         : ``
     }
-      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
+      export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}, Entity> {}
 
-      export function getEm(e: ${BaseEntity}): EntityManager {
-        return e.em as EntityManager;
+      export interface ${def("Entity")} extends ${Entity} {
+        id: ${getIdType(config)};
+        em: EntityManager;
       }
 
       ${entities.map((meta) => generateMetadataFile(config, dbMeta, meta))}

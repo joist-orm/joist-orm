@@ -12,12 +12,22 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
-import { Loaded, sameEntity } from "joist-orm";
+import {
+  EntityConstructor,
+  FilterWithAlias,
+  Entity as JoistEntity,
+  Loaded,
+  MaybeAbstractEntityConstructor,
+  OptsOf,
+  sameEntity,
+} from "joist-orm";
 import {
   Author,
   Book,
   Color,
   Comment,
+  Entity,
+  EntityManager,
   Publisher,
   PublisherSize,
   PublisherType,
@@ -33,7 +43,7 @@ import {
   newEntityManager,
   numberOfQueries,
   queries,
-  resetQueryCount
+  resetQueryCount,
 } from "./setupDbTests";
 
 describe("EntityManager", () => {
@@ -1633,6 +1643,46 @@ describe("EntityManager", () => {
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     em.create(Author, { publisher: "p:1", firstName: "Jim" });
     await expect(em.flush()).rejects.toThrow("There is already a publisher with a Jim");
+  });
+
+  it("is typed correctly", async () => {
+    // Given our app-specific em
+    const em = newEntityManager();
+    // And a function that takes the app-specific em
+    function doSomething(_: EntityManager) {}
+    // When we have an entity and use its em field
+    const a = newAuthor(em);
+    // Then it works
+    doSomething(a.em);
+    // And also with our app-specific Entity
+    const a2: Entity = a;
+    doSomething(a2.em);
+  });
+
+  it("can accept non-narrowed constructors", async () => {
+    // Given our local EM that is typed to Entity narrowed to a string
+    const em = newEntityManager();
+    async function foo() {
+      // And we verify the return values are typed as strings
+      const id1: string = em.entities[0].id;
+      const id2: string | undefined = em.getEntity("a:1")?.id;
+      // And a type that uses the joist non-narrowed Entity that is string | number
+      const type = Author as MaybeAbstractEntityConstructor<JoistEntity>;
+      const type2 = Author as EntityConstructor<JoistEntity>;
+      const entity: JoistEntity = null!;
+      // Then we can use the non-narrowed Entity in various EM methods
+      await em.find(type, {} as FilterWithAlias<JoistEntity>);
+      await em.findCount(type, {} as FilterWithAlias<JoistEntity>);
+      await em.findOne(type, {} as FilterWithAlias<JoistEntity>);
+      await em.findOneOrFail(type, {} as FilterWithAlias<JoistEntity>);
+      await em.findByUnique(type, {} as FilterWithAlias<JoistEntity>);
+      await em.load(type, {} as OptsOf<JoistEntity>);
+      await em.loadAll(type, {} as FilterWithAlias<JoistEntity>);
+      await em.populate(entity, []);
+      await em.refresh(entity);
+      em.create(type2, {} as OptsOf<JoistEntity>);
+      em.touch(entity);
+    }
   });
 });
 

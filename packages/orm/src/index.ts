@@ -4,7 +4,8 @@ import {
   EntityManager,
   MaybeAbstractEntityConstructor,
   OptsOf,
-  getEmInternalApi, TaggedId,
+  TaggedId,
+  getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
@@ -22,7 +23,7 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
-export { Entity, EntityOrmField, isEntity } from "./Entity";
+export { Entity, EntityOrmField, isEntity, IdType } from "./Entity";
 export * from "./EntityFilter";
 export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";

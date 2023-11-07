@@ -17,16 +17,14 @@ import {
  *
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
-export abstract class BaseEntity<EM extends EntityManager = EntityManager, I extends IdType = string>
-  implements Entity<I>
-{
+export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
   readonly __orm!: EntityOrmField;
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
   // that sufficiently overlaps.
   readonly fullNonReactiveAccess!: this;
 
-  protected constructor(em: EntityManager, metadata: any, defaultValues: object, opts: any) {
+  protected constructor(em: EM, metadata: any, defaultValues: object, opts: any) {
     Object.defineProperty(this, "__orm", {
       value: new EntityOrmField(em, metadata, defaultValues),
       enumerable: false,
@@ -128,7 +126,7 @@ export abstract class BaseEntity<EM extends EntityManager = EntityManager, I ext
         .map((f) => {
           switch (f.kind) {
             case "primaryKey":
-              return [[f.fieldName, (this as any).idMaybe || null]];
+              return [[f.fieldName, this.idMaybe || null]];
             case "enum":
               return [[f.fieldName, (this as any)[f.fieldName] || null]];
             case "primitive":

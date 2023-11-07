@@ -1,6 +1,7 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
-import { Entity, IdType, isEntity } from "./Entity";
+// We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
+import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
@@ -66,7 +67,7 @@ import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from ".
  * implement this and instead only have the `AbsEntityConstructor` type.
  */
 export interface EntityConstructor<T> {
-  new (em: EntityManager<any>, opts: any): T;
+  new (em: EntityManager<any, any>, opts: any): T;
 
   defaultValues: object;
   // Use any for now to pass the `.includes` test in `EntityConstructor.test.ts`. We could
@@ -110,7 +111,7 @@ export interface FindCountFilterOptions<T extends Entity> {
  *
  * I.e. this is more like "MaybeAbstractEntityConstructor".
  */
-export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any>, opts: any) => T;
+export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<any, any>, opts: any) => T;
 
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
 export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
@@ -171,7 +172,24 @@ export interface FlushOptions {
   skipValidation?: boolean;
 }
 
-export class EntityManager<C = unknown> {
+/**
+ * The EntityManager is the primary way nearly all code, i.e. anything that finds/creates/updates/deletes entities,
+ * will interact with the database.
+ *
+ * It acts both an Identity Cache (preventing loading the same row twice into memory as separate entities, and then
+ * having drift between the two instances) and as a Unit of Work (tracking all changes to entities and then batch
+ * flushing only the entities that have changed).
+ *
+ * Note that the type parameters (C, I, and Entity) will be filled in by codegen with the values specific to your
+ * application, so you can import your app-specific EntityManager like:
+ *
+ * ```ts
+ * import { EntityManager } from "src/entities";
+ * ```
+ *
+ * @param C The type of your application-specific app-wide/request-wide Context object that will be passed to hooks
+ */
+export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   public readonly ctx: C;
   public driver: Driver;
   public currentTxnKnex: Knex | undefined;
@@ -242,7 +260,7 @@ export class EntityManager<C = unknown> {
           map = new Map();
           em.#preloadedRelations.set(taggedId, map);
         }
-        map.set(fieldName, children as Entity[]);
+        map.set(fieldName, children as any);
       },
       hooks: this.#hooks,
       rm: this.#rm,
@@ -261,7 +279,7 @@ export class EntityManager<C = unknown> {
   }
 
   /** Looks up `id` in the list of already-loaded entities. */
-  getEntity<T extends Entity>(id: IdOf<T> & string): T | undefined;
+  getEntity<T extends Entity & { id: string }>(id: IdOf<T>): T | undefined;
   getEntity(id: TaggedId): Entity | undefined;
   getEntity(id: TaggedId): Entity | undefined {
     assertIdIsTagged(id);
@@ -280,13 +298,16 @@ export class EntityManager<C = unknown> {
    * to avoid N+1s. Because of this, it cannot be used with queries that want to use `LIMIT`
    * or `OFFSET`; for those, see `findPaginated`.
    */
-  public async find<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, where: FilterWithAlias<T>): Promise<T[]>;
-  public async find<T extends Entity, const H extends LoadHint<T>>(
+  public async find<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    where: FilterWithAlias<T>,
+  ): Promise<T[]>;
+  public async find<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
-  async find<T extends Entity>(
+  async find<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options?: FindFilterOptions<T> & { populate?: any },
@@ -311,17 +332,17 @@ export class EntityManager<C = unknown> {
    * This method is *NOT* batch-friendly, i.e. if called in a loop, it will cause N+1s. Because
    * of this, you should prefer using `find`, unless you explicitly pagination support.
    */
-  public async findPaginated<T extends Entity>(
+  public async findPaginated<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options: FindPaginatedFilterOptions<T>,
   ): Promise<T[]>;
-  public async findPaginated<T extends Entity, const H extends LoadHint<T>>(
+  public async findPaginated<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options: FindPaginatedFilterOptions<T> & { populate: H },
   ): Promise<Loaded<T, H>[]>;
-  async findPaginated<T extends Entity>(
+  async findPaginated<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options: FindPaginatedFilterOptions<T> & { populate?: any },
@@ -342,16 +363,16 @@ export class EntityManager<C = unknown> {
    *
    * I.e. filtering by `null` on fields that are non-`nullable`.
    */
-  public async findGql<T extends Entity>(
+  public async findGql<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
   ): Promise<T[]>;
-  public async findGql<T extends Entity, const H extends LoadHint<T>>(
+  public async findGql<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
     options?: FindFilterOptions<T> & { populate?: H },
   ): Promise<Loaded<T, H>[]>;
-  async findGql<T extends Entity>(
+  async findGql<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterOf<T>,
     options?: FindFilterOptions<T> & { populate?: any },
@@ -364,17 +385,17 @@ export class EntityManager<C = unknown> {
    *
    * I.e. filtering by `null` on fields that are non-`nullable`.
    */
-  public async findGqlPaginated<T extends Entity>(
+  public async findGqlPaginated<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
     options: FindGqlPaginatedFilterOptions<T>,
   ): Promise<T[]>;
-  public async findGqlPaginated<T extends Entity, const H extends LoadHint<T>>(
+  public async findGqlPaginated<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
     options: FindGqlPaginatedFilterOptions<T> & { populate: H },
   ): Promise<Loaded<T, H>[]>;
-  async findGqlPaginated<T extends Entity>(
+  async findGqlPaginated<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: GraphQLFilterWithAlias<T>,
     options: FindGqlPaginatedFilterOptions<T> & { populate?: any },
@@ -382,16 +403,16 @@ export class EntityManager<C = unknown> {
     return this.findPaginated(type, where as any, options as any);
   }
 
-  public async findOne<T extends Entity>(
+  public async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
   ): Promise<T | undefined>;
-  public async findOne<T extends Entity, const H extends LoadHint<T>>(
+  public async findOne<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H> | undefined>;
-  async findOne<T extends Entity>(
+  async findOne<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options?: { populate?: any; softDeletes?: "include" | "exclude" },
@@ -407,16 +428,16 @@ export class EntityManager<C = unknown> {
   }
 
   /** Executes a given query filter and returns exactly one result, otherwise throws `NotFoundError` or `TooManyError`. */
-  public async findOneOrFail<T extends Entity>(
+  public async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
   ): Promise<T>;
-  public async findOneOrFail<T extends Entity, const H extends LoadHint<T>>(
+  public async findOneOrFail<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H>>;
-  async findOneOrFail<T extends Entity>(
+  async findOneOrFail<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options?: { populate?: any; softDeletes?: "include" | "exclude" },
@@ -430,16 +451,16 @@ export class EntityManager<C = unknown> {
     return list[0];
   }
 
-  public async findByUnique<T extends Entity>(
+  public async findByUnique<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: UniqueFilter<T>,
   ): Promise<T | undefined>;
-  public async findByUnique<T extends Entity, const H extends LoadHint<T>>(
+  public async findByUnique<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     where: UniqueFilter<T>,
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H> | undefined>;
-  async findByUnique<T extends Entity>(
+  async findByUnique<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: UniqueFilter<T>,
     options: { populate?: any; softDeletes?: "include" | "exclude" } = {},
@@ -471,7 +492,7 @@ export class EntityManager<C = unknown> {
    *
    * Note: this method is not currently auto-batched, so it will cause N+1s if called in a loop.
    */
-  async findCount<T extends Entity>(
+  async findCount<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     where: FilterWithAlias<T>,
     options: FindCountFilterOptions<T> = {},
@@ -519,13 +540,13 @@ export class EntityManager<C = unknown> {
    * @param upsert the fields to update if the entity is either existing or new
    */
   async findOrCreate<
-    T extends Entity,
+    T extends EntityW,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     N extends Omit<OptsOf<T>, keyof F | keyof U>,
   >(type: EntityConstructor<T>, where: F, ifNew: N, upsert?: U): Promise<T>;
   async findOrCreate<
-    T extends Entity,
+    T extends EntityW,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     N extends Omit<OptsOf<T>, keyof F | keyof U>,
@@ -538,7 +559,7 @@ export class EntityManager<C = unknown> {
     options?: { populate?: H; softDeletes?: "include" | "exclude" },
   ): Promise<Loaded<T, H>>;
   async findOrCreate<
-    T extends Entity,
+    T extends EntityW,
     F extends Partial<OptsOf<T>>,
     U extends Partial<OptsOf<T>> | {},
     N extends Omit<OptsOf<T>, keyof F | keyof U>,
@@ -563,13 +584,13 @@ export class EntityManager<C = unknown> {
   }
 
   /** Creates a new `type` and marks it as loaded, i.e. we know its collections are all safe to access in memory. */
-  public create<T extends Entity, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
+  public create<T extends EntityW, O extends OptsOf<T>>(type: EntityConstructor<T>, opts: O): New<T, O> {
     // The constructor will run setOpts which handles defaulting collections to the right state.
     return new type(this, opts) as New<T, O>;
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createPartial<T extends Entity>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
+  public createPartial<T extends EntityW>(type: EntityConstructor<T>, opts: PartialOrNull<OptsOf<T>>): T {
     // We force some manual calls to setOpts to mimic `setUnsafe`'s behavior that `undefined` should
     // mean "ignore" (and we assume validation rules will catch it later) but still set
     // `calledFromConstructor` because this is _basically_ like calling `new`.
@@ -580,7 +601,7 @@ export class EntityManager<C = unknown> {
   }
 
   /** Creates a new `type` but with `opts` that are nullable, to accept partial-update-style input. */
-  public createOrUpdatePartial<T extends Entity>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
+  public createOrUpdatePartial<T extends EntityW>(type: EntityConstructor<T>, opts: DeepPartialOrNull<T>): Promise<T> {
     return createOrUpdatePartial(this, type, opts);
   }
 
@@ -614,7 +635,7 @@ export class EntityManager<C = unknown> {
    * // This will duplicate the author, but skip any book where the title includes `sea`
    * const duplicatedAuthor = await em.clone(author, { skipIf: (original) => original.title?.includes("sea") })
    */
-  public async clone<T extends Entity, H extends LoadHint<T>>(
+  public async clone<T extends EntityW, H extends LoadHint<T>>(
     entity: T,
     opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
   ): Promise<Loaded<T, H>>;
@@ -645,11 +666,11 @@ export class EntityManager<C = unknown> {
    * // This will duplicate the author's books, but skip any book where the title includes `sea`
    * const duplicatedBooks = await em.clone(author.books.get, { skipIf: (original) => original.title.includes("sea") })
    */
-  public async clone<T extends Entity, H extends LoadHint<T>>(
+  public async clone<T extends EntityW, H extends LoadHint<T>>(
     entities: readonly T[],
     opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
   ): Promise<Loaded<T, H>[]>;
-  public async clone<T extends Entity, H extends LoadHint<T>>(
+  public async clone<T extends EntityW, H extends LoadHint<T>>(
     entityOrArray: T | readonly T[],
     opts?: { deep?: H; skipIf?: (entity: Entity) => boolean; postClone?: (original: Entity, clone: Entity) => void },
   ): Promise<Loaded<T, H> | Loaded<T, H>[]> {
@@ -658,7 +679,7 @@ export class EntityManager<C = unknown> {
     const todo: Entity[] = [];
 
     // 1. Find all entities w/o mutating them yets
-    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf });
+    await crawl(todo, Array.isArray(entityOrArray) ? entityOrArray : [entityOrArray], deep, { skipIf: skipIf as any });
 
     // 2. Clone each found entity
     const clones = todo.map((entity) => {
@@ -736,15 +757,15 @@ export class EntityManager<C = unknown> {
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */
-  public async load<T>(id: IdOf<T> & string): Promise<T>;
+  public async load<T extends EntityW & { id: string }>(id: IdOf<T>): Promise<T>;
   public async load(id: TaggedId): Promise<Entity>;
-  public async load<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, id: IdOf<T> | TaggedId): Promise<T>;
-  public async load<T extends Entity, const H extends LoadHint<T>>(
+  public async load<T extends EntityW>(type: MaybeAbstractEntityConstructor<T>, id: IdOf<T> | TaggedId): Promise<T>;
+  public async load<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     id: IdOf<T> | TaggedId,
     populate: H,
   ): Promise<Loaded<T, H>>;
-  async load<T extends Entity>(
+  async load<T extends EntityW>(
     typeOrId: MaybeAbstractEntityConstructor<T> | string,
     id?: IdType,
     hint?: any,
@@ -773,13 +794,16 @@ export class EntityManager<C = unknown> {
   }
 
   /** Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. */
-  public async loadAll<T extends Entity>(type: MaybeAbstractEntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
-  public async loadAll<T extends Entity, const H extends LoadHint<T>>(
+  public async loadAll<T extends EntityW>(
+    type: MaybeAbstractEntityConstructor<T>,
+    ids: readonly string[],
+  ): Promise<T[]>;
+  public async loadAll<T extends EntityW, const H extends LoadHint<T>>(
     type: MaybeAbstractEntityConstructor<T>,
     ids: readonly string[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
-  async loadAll<T extends Entity>(
+  async loadAll<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     _ids: readonly string[],
     hint?: any,
@@ -805,13 +829,13 @@ export class EntityManager<C = unknown> {
    * Returns instances of `type` for the given `ids`, resolving to an existing instance if in our Unit of Work. Ignores
    * IDs that are not found.
    */
-  public async loadAllIfExists<T extends Entity>(type: EntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
-  public async loadAllIfExists<T extends Entity, const H extends LoadHint<T>>(
+  public async loadAllIfExists<T extends EntityW>(type: EntityConstructor<T>, ids: readonly string[]): Promise<T[]>;
+  public async loadAllIfExists<T extends EntityW, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     ids: readonly string[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
-  async loadAllIfExists<T extends Entity>(
+  async loadAllIfExists<T extends EntityW>(
     type: EntityConstructor<T>,
     _ids: readonly string[],
     hint?: any,
@@ -837,13 +861,13 @@ export class EntityManager<C = unknown> {
    * Results are unique, i.e. if doing `em.loadLens([b1, b2], b => b.author.publisher)` point to the
    * same `Publisher`, it will only be returned as a single value.
    */
-  public async loadLens<T extends Entity, U, V>(entities: T[], fn: (lens: Lens<T>) => Lens<U, V>): Promise<U[]>;
-  public async loadLens<T extends Entity, U extends Entity, V, const H extends LoadHint<U>>(
+  public async loadLens<T extends EntityW, U, V>(entities: T[], fn: (lens: Lens<T>) => Lens<U, V>): Promise<U[]>;
+  public async loadLens<T extends EntityW, U extends EntityW, V, const H extends LoadHint<U>>(
     entities: T[],
     fn: (lens: Lens<T>) => Lens<U, V>,
     populate: H,
   ): Promise<Loaded<U, H>[]>;
-  public async loadLens<T extends Entity, U, V>(
+  public async loadLens<T extends EntityW, U, V>(
     entities: T[],
     fn: (lens: Lens<T>) => Lens<U, V>,
     populate?: any,
@@ -856,13 +880,13 @@ export class EntityManager<C = unknown> {
   }
 
   /** Loads entities from a knex QueryBuilder. */
-  public async loadFromQuery<T extends Entity>(type: EntityConstructor<T>, query: Knex.QueryBuilder): Promise<T[]>;
-  public async loadFromQuery<T extends Entity, const H extends LoadHint<T>>(
+  public async loadFromQuery<T extends EntityW>(type: EntityConstructor<T>, query: Knex.QueryBuilder): Promise<T[]>;
+  public async loadFromQuery<T extends EntityW, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     query: Knex.QueryBuilder,
     populate: H,
   ): Promise<Loaded<T, H>[]>;
-  public async loadFromQuery<T extends Entity>(
+  public async loadFromQuery<T extends EntityW>(
     type: EntityConstructor<T>,
     query: Knex.QueryBuilder,
     populate?: any,
@@ -881,13 +905,13 @@ export class EntityManager<C = unknown> {
   }
 
   /** Loads entities from rows. */
-  public async loadFromRows<T extends Entity>(type: EntityConstructor<T>, rows: unknown[]): Promise<T[]>;
-  public async loadFromRows<T extends Entity, const H extends LoadHint<T>>(
+  public async loadFromRows<T extends EntityW>(type: EntityConstructor<T>, rows: unknown[]): Promise<T[]>;
+  public async loadFromRows<T extends EntityW, const H extends LoadHint<T>>(
     type: EntityConstructor<T>,
     rows: unknown[],
     populate: H,
   ): Promise<Loaded<T, H>[]>;
-  public async loadFromRows<T extends Entity>(
+  public async loadFromRows<T extends EntityW>(
     type: EntityConstructor<T>,
     rows: unknown[],
     populate?: any,
@@ -900,25 +924,25 @@ export class EntityManager<C = unknown> {
   }
 
   /** Given a hint `H` (a field, array of fields, or nested hash), pre-load that data into `entity` for sync access. */
-  public async populate<T extends Entity, const H extends LoadHint<T>, V = Loaded<T, H>>(
+  public async populate<T extends EntityW, const H extends LoadHint<T>, V = Loaded<T, H>>(
     entity: T,
     hint: H,
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<V>;
-  public async populate<T extends Entity, const H extends LoadHint<T>, V = Loaded<T, H>>(
+  public async populate<T extends EntityW, const H extends LoadHint<T>, V = Loaded<T, H>>(
     entity: T,
     opts: { hint: H; forceReload?: boolean },
     fn?: (entity: Loaded<T, H>) => V,
   ): Promise<V>;
-  public async populate<T extends Entity, const H extends LoadHint<T>>(
+  public async populate<T extends EntityW, const H extends LoadHint<T>>(
     entities: ReadonlyArray<T>,
     hint: H,
   ): Promise<Loaded<T, H>[]>;
-  public async populate<T extends Entity, const H extends LoadHint<T>>(
+  public async populate<T extends EntityW, const H extends LoadHint<T>>(
     entities: ReadonlyArray<T>,
     opts: { hint: H; forceReload?: boolean },
   ): Promise<Loaded<T, H>[]>;
-  async populate<T extends Entity, H extends LoadHint<T>, V>(
+  async populate<T extends EntityW, H extends LoadHint<T>, V>(
     entityOrList: T | T[],
     hintOrOpts: { hint: H; forceReload?: boolean } | H,
     fn?: (entity: Loaded<T, H>) => V,
@@ -1042,7 +1066,7 @@ export class EntityManager<C = unknown> {
   }
 
   async assignNewIds() {
-    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idMaybe);
+    let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idTaggedMaybe);
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
       let todos = createTodos([...entities]);
       await this.driver.assignNewIds(this, todos);
@@ -1196,9 +1220,9 @@ export class EntityManager<C = unknown> {
    * `deepLoad` which should only be used by tests to avoid loading your entire database in memory.
    */
   async refresh(opts?: { deepLoad?: boolean }): Promise<void>;
-  async refresh(entity: Entity): Promise<void>;
-  async refresh(entities: ReadonlyArray<Entity>): Promise<void>;
-  async refresh(param?: Entity | ReadonlyArray<Entity> | { deepLoad?: boolean }): Promise<void> {
+  async refresh(entity: EntityW): Promise<void>;
+  async refresh(entities: ReadonlyArray<EntityW>): Promise<void>;
+  async refresh(param?: EntityW | ReadonlyArray<EntityW> | { deepLoad?: boolean }): Promise<void> {
     this.#dataloaders = {};
     this.#preloadedRelations = new Map();
     const deepLoad = param && "deepLoad" in param && param.deepLoad;
@@ -1262,7 +1286,7 @@ export class EntityManager<C = unknown> {
             .filter((r) => "get" in r)
             .map((r) => (r as any).get)
             .flatMap((value) => (Array.isArray(value) ? value : [value]))
-            .filter((value) => isEntity(value) && !done.has(value)),
+            .filter((value) => isEntity(value) && !done.has(value as Entity)),
         );
       }
     }
@@ -1274,7 +1298,7 @@ export class EntityManager<C = unknown> {
 
   // Handles our Unit of Work-style look up / deduplication of entity instances.
   // Currently only public for the driver impls
-  public findExistingInstance<T>(id: string): T | undefined {
+  public findExistingInstance<T extends EntityW>(id: string): T | undefined {
     assertIdIsTagged(id);
     return this.#entityIndex.get(id) as T | undefined;
   }
@@ -1288,7 +1312,7 @@ export class EntityManager<C = unknown> {
    * i.e. when we're loading collections and have db results that are potentially stale compared to
    * the WIP entity state.
    */
-  public hydrate<T extends Entity>(
+  public hydrate<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
     row: any,
     options?: { overwriteExisting?: boolean },
@@ -1304,7 +1328,7 @@ export class EntityManager<C = unknown> {
         : maybeBaseMeta;
       // Pass id as a hint that we're in hydrate mode
       // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
-      entity = new (asConcreteCstr(meta.cstr))(this, taggedId);
+      entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
       Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
     } else if (options?.overwriteExisting !== false) {
       const meta = getMetadata(entity);
@@ -1326,7 +1350,7 @@ export class EntityManager<C = unknown> {
    * - Recalc all async derived fields stored on the entity, and
    * - Rerun all simple & reactive rules on the entity.
    */
-  public touch(entity: Entity) {
+  public touch(entity: EntityW) {
     entity.__orm.isTouched = true;
   }
 
@@ -1509,7 +1533,7 @@ async function validateReactiveRules(
 
   const p2 = Object.values(joinRowTodos).flatMap((todo) => {
     // Cheat and use `Object.values` + `filter instanceof BaseEntity` to handle the variable keys
-    const entities: BaseEntity[] = [...todo.newRows, ...todo.deletedRows]
+    const entities: Entity[] = [...todo.newRows, ...todo.deletedRows]
       .flatMap((jr) => Object.values(jr))
       .filter((e) => e instanceof BaseEntity) as any;
     // Do the first side

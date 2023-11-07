@@ -1,3 +1,10 @@
+# [1.120.0](https://github.com/stephenh/joist-ts/compare/v1.119.1...v1.120.0) (2023-11-07)
+
+
+### Features
+
+* Reroll per-application Entity ([#851](https://github.com/stephenh/joist-ts/issues/851)) ([4a0a360](https://github.com/stephenh/joist-ts/commit/4a0a360ee016b33823355ddc7629928f460ea36f))
+
 ## [1.119.1](https://github.com/stephenh/joist-ts/compare/v1.119.0...v1.119.1) (2023-11-06)
 
 

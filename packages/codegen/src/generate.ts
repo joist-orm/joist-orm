@@ -7,7 +7,7 @@ import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
-import { configureMetadata, JoistEntityManager } from "./symbols";
+import {configureMetadata, EntityManager, Entity, JoistEntityManager} from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;
@@ -67,6 +67,11 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
         : ``
     }
       export class ${def("EntityManager")} extends ${JoistEntityManager}<${contextType}> {}
+
+      export interface ${def("Entity")} extends ${Entity} {
+        id: ${getIdType(config)};
+        em: EntityManager;
+      }
 
       ${entities.map((meta) => generateMetadataFile(config, dbMeta, meta))}
 

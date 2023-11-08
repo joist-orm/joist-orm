@@ -29,22 +29,6 @@ export interface PersistedAsyncReference<T extends Entity, U extends Entity, N e
   isLoaded: boolean;
   isSet: boolean;
 
-  /**
-   * Calculates the latest derived value.
-   *
-   * Users are not required to call this method explicitly, as Joist will keep the
-   * persisted value automatically in-sync, but if for some reason (code changes,
-   * bug fixes, etc.) you need to trigger an explicit recalc, you can call `.load()`,
-   * any dependent data will be loaded from the database, and the latest value
-   * returned, and then later stored to the database on `em.flush`.
-   *
-   * Note that persisted properties used in load hints, i.e. `em.populate`s that
-   * accidentally list reactive fields (instead of just relations) will not have
-   * `.load()` invoked, and will instead use the previously-calculated value.
-   * The rationale is that one persisted property should be able to declare its
-   * dependency on another persisted property (for its reactive field-level hint)
-   * without causing that dependent property's populate hint to itself be loaded.
-   */
   load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   /**
@@ -131,10 +115,10 @@ export class PersistedAsyncReferenceImpl<
       } else {
         // If we don't need a full recalc, just make sure we have the entity in memory
         const current = this.current();
-        if (isEntity(current)) {
+        if (isEntity(current) || current === undefined) {
+          this._isLoaded = "ref";
+          this.loaded = current;
           return current;
-        } else if (current === undefined) {
-          return undefined as N;
         } else {
           return (this.loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
             this.loadPromise = undefined;

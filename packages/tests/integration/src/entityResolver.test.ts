@@ -87,7 +87,7 @@ describe("entityResolver", () => {
     } as any;
     const spy = jest.spyOn(em, "populate");
     const b = await entityResolver(Author).favoriteBook(a, {}, {}, info);
-    // Then we didn't need to call populate
+    // Then we called populate
     expect(spy).toHaveBeenCalledWith(a, { favoriteBook: { reviews: {} } });
     expect(b.reviews.isLoaded).toBe(true);
   });

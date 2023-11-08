@@ -21,11 +21,12 @@ export function partitionHint(
       // This will get the non-SQL relation's underlying SQL data preloaded.
       const p = meta && getProperties(meta)[key];
       if (p && p.loadHint) {
-        // Maybe we could have `PersistedAsyncReferenceImpl` internally/dynamically return us th right
+        // Maybe we could have `PersistedAsyncReferenceImpl` internally/dynamically return us the right
         // load hint, instead of special casing it like this? Like it could internally check "needs calc?"
         if (p instanceof PersistedAsyncReferenceImpl) {
+          // Instead of using p.loadHint, we'll just follow the FK in the database and go to the subHint
           const [_sql, _non] = partitionHint(p.otherMeta, subHint);
-          if (_sql) deepMerge(((sql ??= {})[key] ??= {}), _sql);
+          deepMerge(((sql ??= {})[key] ??= {}), _sql ?? {});
           if (_non) deepMerge(((non ??= {})[key] ??= {}), _non);
           continue;
         } else {

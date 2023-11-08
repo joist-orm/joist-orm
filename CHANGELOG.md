@@ -1,3 +1,10 @@
+# [1.121.0](https://github.com/stephenh/joist-ts/compare/v1.120.1...v1.121.0) (2023-11-08)
+
+
+### Features
+
+* Remove EntityMetadataTyped. ([#857](https://github.com/stephenh/joist-ts/issues/857)) ([30a838b](https://github.com/stephenh/joist-ts/commit/30a838b8df3075a4224a9c6ebe47ed9f7ef5dae2))
+
 ## [1.120.1](https://github.com/stephenh/joist-ts/compare/v1.120.0...v1.120.1) (2023-11-08)
 
 

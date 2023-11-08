@@ -1,5 +1,6 @@
 import { Stepper } from "@src/Stepper.test";
 import { Publisher, SmallPublisher } from "@src/entities";
+import { select } from "@src/entities/inserts";
 import { newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
 import { knex, newEntityManager } from "./setupDbTests";
@@ -19,7 +20,7 @@ describe("EntityManager", () => {
     })();
 
     await Promise.all([t1, t2]);
-    const rows = await knex.select("*").from("publishers");
+    const rows = await select("publishers");
     expect(rows).toMatchObject([
       { id: 1, name: "foo" },
       { id: 2, name: "foo" },
@@ -46,7 +47,7 @@ describe("EntityManager", () => {
 
     // We still get two rows
     await Promise.all([t1, t2]);
-    const rows = await knex.select("*").from("publishers");
+    const rows = await select("publishers");
     expect(rows.length).toEqual(2);
   });
 
@@ -116,7 +117,7 @@ describe("EntityManager", () => {
     await expect(t2).rejects.toThrow("could not serialize access");
     await pool.end();
 
-    const rows = await knex.select("*").from("publishers");
+    const rows = await select("publishers");
     expect(rows.length).toEqual(1);
     expect(rows).toMatchObject([{ id: 1, name: "foo" }]);
   });
@@ -146,7 +147,7 @@ describe("EntityManager", () => {
     await t1;
     await expect(t2).rejects.toThrow("could not serialize access");
 
-    const rows = await knex.select("*").from("publishers");
+    const rows = await select("publishers");
     expect(rows.length).toEqual(1);
     expect(rows).toMatchObject([{ id: 1, name: "foo" }]);
   });

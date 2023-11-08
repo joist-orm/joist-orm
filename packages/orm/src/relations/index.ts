@@ -14,6 +14,12 @@ export {
   isLoadedOneToOneReference,
   isOneToOneReference,
 } from "./OneToOneReference";
+export { PersistedAsyncProperty, hasPersistedAsyncProperty, isPersistedAsyncProperty } from "./PersistedAsyncProperty";
+export {
+  PersistedAsyncReference,
+  PersistedAsyncReferenceImpl,
+  hasPersistedAsyncReference,
+} from "./PersistedAsyncReference";
 export {
   PolymorphicReference,
   PolymorphicReferenceImpl,
@@ -35,13 +41,3 @@ export { hasManyDerived } from "./hasManyDerived";
 export { hasManyThrough } from "./hasManyThrough";
 export { hasOneDerived } from "./hasOneDerived";
 export { hasOneThrough } from "./hasOneThrough";
-export {
-  PersistedAsyncProperty,
-  hasPersistedAsyncProperty,
-  isPersistedAsyncProperty,
-} from "./hasPersistedAsyncProperty";
-export {
-  PersistedAsyncReference,
-  PersistedAsyncReferenceImpl,
-  hasPersistedAsyncReference,
-} from "./hasPersistedAsyncReference";

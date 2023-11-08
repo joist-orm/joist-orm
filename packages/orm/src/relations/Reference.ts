@@ -3,9 +3,9 @@ import { IdOf, TaggedId } from "../EntityManager";
 import { CustomReference } from "./CustomReference";
 import { ManyToOneReferenceImpl } from "./ManyToOneReference";
 import { OneToOneReferenceImpl } from "./OneToOneReference";
+import { PersistedAsyncReferenceImpl } from "./PersistedAsyncReference";
 import { PolymorphicReferenceImpl } from "./PolymorphicReference";
 import { Relation } from "./Relation";
-import { PersistedAsyncReferenceImpl } from "./hasPersistedAsyncReference";
 
 // Exported and used in sub-interfaces/types per https://stackoverflow.com/a/70437874/355031
 export const ReferenceN = Symbol();

@@ -117,25 +117,26 @@ export class PersistedAsyncReferenceImpl<
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;
-    if (!this.loaded) {
+    if (!this.loaded || opts?.forceReload) {
       const { em } = this.#entity;
       // Only use the full load hint if we need recalculated, otherwise just load our cached value
       const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.#entity, this.fieldName);
       if (recalc) {
-        return (this.loadPromise ??= em.populate(this.#entity, loadHint).then(() => {
+        return (this.loadPromise ??= em.populate(this.#entity, { hint: loadHint, ...opts }).then(() => {
           this.loadPromise = undefined;
           this._isLoaded = "full";
           // Go through `this.get` so that `setField` is called to set our latest value
           return this.doGet(opts);
         }));
       } else {
+        // If we don't need a full recalc, just make sure we have the entity in memory
         const current = this.current();
         if (isEntity(current)) {
           return current;
         } else if (current === undefined) {
           return undefined as N;
         } else {
-          return (this.loadPromise ??= em.load(this.#otherMeta.cstr, this.current()).then((loaded) => {
+          return (this.loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
             this.loadPromise = undefined;
             this._isLoaded = "ref";
             this.loaded = loaded;
@@ -214,11 +215,12 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get isPreloaded(): boolean {
-    return false;
+    return !!this.maybeFindEntity();
   }
 
   preload(): void {
-    throw new Error("Not implemented");
+    this.loaded = this.maybeFindEntity();
+    this._isLoaded = "ref";
   }
 
   /** Returns the tagged id of the current value. */
@@ -268,9 +270,7 @@ export class PersistedAsyncReferenceImpl<
   initializeForNewEntity(): void {
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    if (this.current() === undefined) {
-      this._isLoaded = "ref";
-    }
+    this._isLoaded = isEntity(this.current()) ? "ref" : false;
   }
 
   maybeCascadeDelete(): void {

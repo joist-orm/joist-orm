@@ -69,9 +69,9 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
   }
 
   load(): Promise<V> {
-    const { hint, fn } = this;
+    const { loadHint, fn } = this;
     if (!this.loaded) {
-      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, hint).then((loaded) => {
+      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then((loaded) => {
         this.loaded = true;
         return fn(loaded);
       }));
@@ -79,7 +79,7 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
     return Promise.resolve(this.get);
   }
 
-  get hint(): H {
+  get loadHint(): H {
     if (!this.#hint) {
       this.#hint = convertToLoadHint(getMetadata(this.#entity), this.#reactiveHint as any) as H;
     }

@@ -237,21 +237,23 @@ describe("EntityManager.joins", () => {
     });
 
     it("partitions a non-sql hint", () => {
-      const [a, b] = partitionHint(Author.metadata, { favoriteBook: {} });
-      expect(a).toEqual({ books: { reviews: {} } });
-      expect(b).toEqual({ favoriteBook: {} });
+      const [a, b] = partitionHint(Author.metadata, { latestComments: {} });
+      // We can't preload publisher b/c it's a CTI
+      expect(a).toEqual({ comments: {} });
+      expect(b).toEqual({ publisher: { comments: {} } });
     });
 
     it("partitions a nested non-sql hint", () => {
       const [a, b] = partitionHint(Publisher.metadata, { authors: { favoriteBook: ["tags"], books: {} } });
-      expect(a).toEqual({ authors: { books: { reviews: {} } } });
-      expect(b).toEqual({ authors: { favoriteBook: { tags: {} } } });
+      // favoriteBook is a persisted FK so we can join through it (assuming its not changed)
+      expect(a).toEqual({ authors: { books: {}, favoriteBook: { tags: {} } } });
+      expect(b).toEqual(undefined);
     });
 
     it("partitions inter-mixed a sql-only hint", () => {
       const [a, b] = partitionHint(Author.metadata, { books: { reviews: "isPublic2" } });
-      expect(a).toEqual({ books: { reviews: {} } });
-      expect(b).toEqual({ books: { reviews: { isPublic2: {} } } });
+      expect(a).toEqual({ books: { reviews: { comment: {} } } });
+      expect(b).toEqual(undefined);
     });
   });
 });

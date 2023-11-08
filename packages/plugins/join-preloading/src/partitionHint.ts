@@ -1,7 +1,6 @@
 import { EntityMetadata, getProperties, LoadHint, PersistedAsyncReferenceImpl } from "joist-orm";
 import { NestedLoadHint } from "joist-orm/build/src/loadHints";
 import { deepNormalizeHint, normalizeHint } from "joist-orm/build/src/normalizeHints";
-import { PersistedAsyncPropertyImpl } from "joist-orm/build/src/relations/hasPersistedAsyncProperty";
 import { canPreload } from "./canPreload";
 
 /** Partitions a hint into SQL-able and non-SQL-able hints. */
@@ -21,12 +20,23 @@ export function partitionHint(
       // If this isn't a raw SQL relation, but it exposes a load-hint, inline that into our SQL.
       // This will get the non-SQL relation's underlying SQL data preloaded.
       const p = meta && getProperties(meta)[key];
-      if (p && p.loadHint && !(p instanceof PersistedAsyncReferenceImpl)) {
-        const [_sql, _non] = partitionHint(meta, p.loadHint);
-        if (_sql) deepMerge((sql ??= {}), _sql);
-        if (_non) deepMerge((non ??= {}), _non);
+      if (p && p.loadHint) {
+        // Maybe we could have `PersistedAsyncReferenceImpl` internally/dynamically return us th right
+        // load hint, instead of special casing it like this? Like it could internally check "needs calc?"
+        if (p instanceof PersistedAsyncReferenceImpl) {
+          const [_sql, _non] = partitionHint(p.otherMeta, subHint);
+          if (_sql) deepMerge(((sql ??= {})[key] ??= {}), _sql);
+          if (_non) deepMerge(((non ??= {})[key] ??= {}), _non);
+        } else {
+          // It's not clear what to do with the subHint here, if anything--ideally it could stitch
+          // on top of load hint but only in the places that made sense. But we'd risk over-fetching.
+          const [_sql, _non] = partitionHint(meta, p.loadHint);
+          if (_sql) deepMerge((sql ??= {}), _sql);
+          if (_non) deepMerge((non ??= {}), _non);
+        }
+      } else {
+        deepMerge(((non ??= {})[key] ??= {}), deepNormalizeHint(subHint));
       }
-      deepMerge(((non ??= {})[key] ??= {}), deepNormalizeHint(subHint));
     }
   }
   return [sql, non];

@@ -243,6 +243,12 @@ describe("EntityManager.joins", () => {
       expect(b).toEqual({ latestComments: {}, publisher: { comments: {} } });
     });
 
+    it("partitions a derived fk with no subhint", () => {
+      const [a, b] = partitionHint(Author.metadata, "favoriteBook");
+      expect(a).toEqual({ favoriteBook: {} });
+      expect(b).toEqual(undefined);
+    });
+
     it("partitions a nested non-sql hint", () => {
       const [a, b] = partitionHint(Publisher.metadata, { authors: { favoriteBook: ["tags"], books: {} } });
       // favoriteBook is a persisted FK so we can join through it (assuming its not changed)

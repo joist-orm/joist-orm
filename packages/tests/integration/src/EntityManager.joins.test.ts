@@ -240,7 +240,7 @@ describe("EntityManager.joins", () => {
       const [a, b] = partitionHint(Author.metadata, { latestComments: {} });
       // We can't preload publisher b/c it's a CTI
       expect(a).toEqual({ comments: {} });
-      expect(b).toEqual({ publisher: { comments: {} } });
+      expect(b).toEqual({ latestComments: {}, publisher: { comments: {} } });
     });
 
     it("partitions a nested non-sql hint", () => {
@@ -253,7 +253,7 @@ describe("EntityManager.joins", () => {
     it("partitions inter-mixed a sql-only hint", () => {
       const [a, b] = partitionHint(Author.metadata, { books: { reviews: "isPublic2" } });
       expect(a).toEqual({ books: { reviews: { comment: {} } } });
-      expect(b).toEqual(undefined);
+      expect(b).toEqual({ books: { reviews: { isPublic2: {} } } });
     });
   });
 });

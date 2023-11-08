@@ -27,6 +27,7 @@ export function partitionHint(
           const [_sql, _non] = partitionHint(p.otherMeta, subHint);
           if (_sql) deepMerge(((sql ??= {})[key] ??= {}), _sql);
           if (_non) deepMerge(((non ??= {})[key] ??= {}), _non);
+          continue;
         } else {
           // It's not clear what to do with the subHint here, if anything--ideally it could stitch
           // on top of load hint but only in the places that made sense. But we'd risk over-fetching.
@@ -34,9 +35,9 @@ export function partitionHint(
           if (_sql) deepMerge((sql ??= {}), _sql);
           if (_non) deepMerge((non ??= {}), _non);
         }
-      } else {
-        deepMerge(((non ??= {})[key] ??= {}), deepNormalizeHint(subHint));
       }
+      // Even if we did some SQL preloads, the subHint needs to go through the non-sql path.
+      deepMerge(((non ??= {})[key] ??= {}), deepNormalizeHint(subHint));
     }
   }
   return [sql, non];

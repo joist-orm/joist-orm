@@ -1,4 +1,4 @@
-import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadataTyped, KeySerde, PrimitiveSerde } from "joist-orm";
+import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
 import { Context } from "src/context";
 import { Artist, artistConfig, Author, authorConfig, Book, bookConfig, DatabaseOwner, databaseOwnerConfig, newArtist, newAuthor, newBook, newDatabaseOwner, newPainting, Painting, paintingConfig } from "./entities";
 
@@ -9,7 +9,7 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
-export const artistMeta: EntityMetadataTyped<Artist> = {
+export const artistMeta: EntityMetadata<Artist> = {
   cstr: Artist,
   type: "Artist",
   baseType: undefined,
@@ -36,7 +36,7 @@ export const artistMeta: EntityMetadataTyped<Artist> = {
 
 (Artist as any).metadata = artistMeta;
 
-export const authorMeta: EntityMetadataTyped<Author> = {
+export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
   baseType: undefined,
@@ -63,7 +63,7 @@ export const authorMeta: EntityMetadataTyped<Author> = {
 
 (Author as any).metadata = authorMeta;
 
-export const bookMeta: EntityMetadataTyped<Book> = {
+export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
   baseType: undefined,
@@ -87,7 +87,7 @@ export const bookMeta: EntityMetadataTyped<Book> = {
 
 (Book as any).metadata = bookMeta;
 
-export const databaseOwnerMeta: EntityMetadataTyped<DatabaseOwner> = {
+export const databaseOwnerMeta: EntityMetadata<DatabaseOwner> = {
   cstr: DatabaseOwner,
   type: "DatabaseOwner",
   baseType: undefined,
@@ -107,7 +107,7 @@ export const databaseOwnerMeta: EntityMetadataTyped<DatabaseOwner> = {
 
 (DatabaseOwner as any).metadata = databaseOwnerMeta;
 
-export const paintingMeta: EntityMetadataTyped<Painting> = {
+export const paintingMeta: EntityMetadata<Painting> = {
   cstr: Painting,
   type: "Painting",
   baseType: undefined,

@@ -3,7 +3,7 @@ import {
   AsyncProperty,
   Collection,
   Entity,
-  EntityMetadataTyped,
+  EntityMetadata,
   Field,
   getMetadata,
   getProperties,
@@ -66,8 +66,7 @@ export type EntityResolver<T extends Entity> = {
  * Creates field resolvers for each of the fields on our entity.
  */
 export function entityResolver<T extends Entity, A extends Record<string, keyof T> = Record<string, any>>(
-  // Use EntityMetadataTyped so type inference infers T as our concrete type and our mapped return type works
-  entity: MaybeAbstractEntityConstructor<T> | EntityMetadataTyped<T>,
+  entity: MaybeAbstractEntityConstructor<T> | EntityMetadata<T>,
   aliases?: A,
 ): EntityResolver<T> & { [K in keyof A]: EntityResolver<T>[A[K]] } {
   const entityMetadata = getMetadata(entity as any);

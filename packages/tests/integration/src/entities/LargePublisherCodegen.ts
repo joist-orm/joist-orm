@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -81,7 +81,7 @@ export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 export abstract class LargePublisherCodegen extends Publisher {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadataTyped<LargePublisher>;
+  static readonly metadata: EntityMetadata<LargePublisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: LargePublisherFilter;

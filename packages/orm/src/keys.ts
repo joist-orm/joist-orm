@@ -1,7 +1,7 @@
 import { BaseEntity } from "./BaseEntity";
 import { Entity, IdType, isEntity } from "./Entity";
 import { EntityConstructor, IdOf, TaggedId } from "./EntityManager";
-import { EntityMetadata, EntityMetadataTyped, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Reference } from "./relations";
 import { assertNever, fail } from "./utils";
 
@@ -18,7 +18,7 @@ type HasTagName = {
 };
 
 /** Converts our internal/always-tagged `id` to the domain entity's `id` type. */
-export function toIdOf<T extends Entity>(meta: EntityMetadataTyped<T>, id: TaggedId | undefined): IdOf<T> | undefined {
+export function toIdOf<T extends Entity>(meta: EntityMetadata<T>, id: TaggedId | undefined): IdOf<T> | undefined {
   if (!id) return undefined;
   switch (meta.idType) {
     case "number":

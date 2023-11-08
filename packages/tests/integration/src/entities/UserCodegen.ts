@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -131,7 +131,7 @@ userConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = { bio: "" };
   static readonly tagName = "u";
-  static readonly metadata: EntityMetadataTyped<User>;
+  static readonly metadata: EntityMetadata<User>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: UserFilter;

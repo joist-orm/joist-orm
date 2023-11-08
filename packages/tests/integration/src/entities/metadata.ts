@@ -1,4 +1,4 @@
-import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, Entity as Entity2, EntityManager as EntityManager1, EntityMetadataTyped, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
+import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerde, Entity as Entity2, EntityManager as EntityManager1, EntityMetadata, EnumArrayFieldSerde, EnumFieldSerde, JsonSerde, KeySerde, PolymorphicKeySerde, PrimitiveSerde, SuperstructSerde, ZodSerde } from "joist-orm";
 import { Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import {
@@ -64,7 +64,7 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
-export const authorMeta: EntityMetadataTyped<Author> = {
+export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
   baseType: undefined,
@@ -120,7 +120,7 @@ export const authorMeta: EntityMetadataTyped<Author> = {
 
 (Author as any).metadata = authorMeta;
 
-export const authorScheduleMeta: EntityMetadataTyped<AuthorSchedule> = {
+export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
   cstr: AuthorSchedule,
   type: "AuthorSchedule",
   baseType: undefined,
@@ -146,7 +146,7 @@ export const authorScheduleMeta: EntityMetadataTyped<AuthorSchedule> = {
 
 (AuthorSchedule as any).metadata = authorScheduleMeta;
 
-export const authorStatMeta: EntityMetadataTyped<AuthorStat> = {
+export const authorStatMeta: EntityMetadata<AuthorStat> = {
   cstr: AuthorStat,
   type: "AuthorStat",
   baseType: undefined,
@@ -182,7 +182,7 @@ export const authorStatMeta: EntityMetadataTyped<AuthorStat> = {
 
 (AuthorStat as any).metadata = authorStatMeta;
 
-export const bookMeta: EntityMetadataTyped<Book> = {
+export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
   baseType: undefined,
@@ -216,7 +216,7 @@ export const bookMeta: EntityMetadataTyped<Book> = {
 
 (Book as any).metadata = bookMeta;
 
-export const bookAdvanceMeta: EntityMetadataTyped<BookAdvance> = {
+export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   cstr: BookAdvance,
   type: "BookAdvance",
   baseType: undefined,
@@ -243,7 +243,7 @@ export const bookAdvanceMeta: EntityMetadataTyped<BookAdvance> = {
 
 (BookAdvance as any).metadata = bookAdvanceMeta;
 
-export const bookReviewMeta: EntityMetadataTyped<BookReview> = {
+export const bookReviewMeta: EntityMetadata<BookReview> = {
   cstr: BookReview,
   type: "BookReview",
   baseType: undefined,
@@ -272,7 +272,7 @@ export const bookReviewMeta: EntityMetadataTyped<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
-export const commentMeta: EntityMetadataTyped<Comment> = {
+export const commentMeta: EntityMetadata<Comment> = {
   cstr: Comment,
   type: "Comment",
   baseType: undefined,
@@ -312,7 +312,7 @@ export const commentMeta: EntityMetadataTyped<Comment> = {
 
 (Comment as any).metadata = commentMeta;
 
-export const criticMeta: EntityMetadataTyped<Critic> = {
+export const criticMeta: EntityMetadata<Critic> = {
   cstr: Critic,
   type: "Critic",
   baseType: undefined,
@@ -340,7 +340,7 @@ export const criticMeta: EntityMetadataTyped<Critic> = {
 
 (Critic as any).metadata = criticMeta;
 
-export const criticColumnMeta: EntityMetadataTyped<CriticColumn> = {
+export const criticColumnMeta: EntityMetadata<CriticColumn> = {
   cstr: CriticColumn,
   type: "CriticColumn",
   baseType: undefined,
@@ -366,7 +366,7 @@ export const criticColumnMeta: EntityMetadataTyped<CriticColumn> = {
 
 (CriticColumn as any).metadata = criticColumnMeta;
 
-export const imageMeta: EntityMetadataTyped<Image> = {
+export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
   type: "Image",
   baseType: undefined,
@@ -395,7 +395,7 @@ export const imageMeta: EntityMetadataTyped<Image> = {
 
 (Image as any).metadata = imageMeta;
 
-export const largePublisherMeta: EntityMetadataTyped<LargePublisher> = {
+export const largePublisherMeta: EntityMetadata<LargePublisher> = {
   cstr: LargePublisher,
   type: "LargePublisher",
   baseType: "Publisher",
@@ -419,7 +419,7 @@ export const largePublisherMeta: EntityMetadataTyped<LargePublisher> = {
 
 (LargePublisher as any).metadata = largePublisherMeta;
 
-export const publisherMeta: EntityMetadataTyped<Publisher> = {
+export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
   baseType: undefined,
@@ -455,7 +455,7 @@ export const publisherMeta: EntityMetadataTyped<Publisher> = {
 
 (Publisher as any).metadata = publisherMeta;
 
-export const publisherGroupMeta: EntityMetadataTyped<PublisherGroup> = {
+export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
   cstr: PublisherGroup,
   type: "PublisherGroup",
   baseType: undefined,
@@ -482,7 +482,7 @@ export const publisherGroupMeta: EntityMetadataTyped<PublisherGroup> = {
 
 (PublisherGroup as any).metadata = publisherGroupMeta;
 
-export const smallPublisherMeta: EntityMetadataTyped<SmallPublisher> = {
+export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   cstr: SmallPublisher,
   type: "SmallPublisher",
   baseType: "Publisher",
@@ -506,7 +506,7 @@ export const smallPublisherMeta: EntityMetadataTyped<SmallPublisher> = {
 
 (SmallPublisher as any).metadata = smallPublisherMeta;
 
-export const tagMeta: EntityMetadataTyped<Tag> = {
+export const tagMeta: EntityMetadata<Tag> = {
   cstr: Tag,
   type: "Tag",
   baseType: undefined,
@@ -533,7 +533,7 @@ export const tagMeta: EntityMetadataTyped<Tag> = {
 
 (Tag as any).metadata = tagMeta;
 
-export const userMeta: EntityMetadataTyped<User> = {
+export const userMeta: EntityMetadata<User> = {
   cstr: User,
   type: "User",
   baseType: undefined,

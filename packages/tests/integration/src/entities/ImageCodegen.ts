@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -123,7 +123,7 @@ imageConfig.addRule(newRequiredRule("type"));
 export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "i";
-  static readonly metadata: EntityMetadataTyped<Image>;
+  static readonly metadata: EntityMetadata<Image>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: ImageFilter;

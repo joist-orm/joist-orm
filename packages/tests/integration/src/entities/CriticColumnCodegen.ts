@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -87,7 +87,7 @@ criticColumnConfig.addRule(newRequiredRule("critic"));
 export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "cc";
-  static readonly metadata: EntityMetadataTyped<CriticColumn>;
+  static readonly metadata: EntityMetadata<CriticColumn>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CriticColumnFilter;

@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -87,7 +87,7 @@ bookConfig.addRule(newRequiredRule("author"));
 export abstract class BookCodegen extends BaseEntity<EntityManager, number> {
   static defaultValues: object = {};
   static readonly tagName = "b";
-  static readonly metadata: EntityMetadataTyped<Book>;
+  static readonly metadata: EntityMetadata<Book>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookFilter;

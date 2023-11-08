@@ -1,6 +1,5 @@
 import {
   EntityMetadata,
-  EntityMetadataTyped,
   ManyToOneField,
   TaggedId,
   deTagId,
@@ -57,7 +56,7 @@ export function hasPersistedAsyncReference<
   const H extends ReactiveHint<T>,
   N extends never | undefined,
 >(
-  otherMeta: EntityMetadataTyped<U>,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => U | N,
@@ -284,7 +283,7 @@ export class PersistedAsyncReferenceImpl<
     return current;
   }
 
-  public get otherMeta(): EntityMetadataTyped<U> {
+  public get otherMeta(): EntityMetadata<U> {
     return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
   }
 

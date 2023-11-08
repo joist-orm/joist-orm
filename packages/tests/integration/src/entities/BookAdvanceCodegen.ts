@@ -4,7 +4,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -108,7 +108,7 @@ bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "ba";
-  static readonly metadata: EntityMetadataTyped<BookAdvance>;
+  static readonly metadata: EntityMetadata<BookAdvance>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: BookAdvanceFilter;

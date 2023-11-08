@@ -83,6 +83,11 @@ export function populateDataLoader(
             // if it's already been calculated (i.e. we have no reason to believe its value
             // is stale, so we should avoid pulling all of its data into memory).
             // _Unless_ the ReactionsManager has noticed a change that might have invalidated it.
+            //
+            // (Note that we can't do this same optimization for PersistedAsyncReferenceImpl, because
+            // as a FK, it will always need at least some `.load()` to fetch its entity from the database.
+            // So we go ahead and call `.load()`, assuming it will just load its cached value, but it
+            // will also check internally if it's marked for recalc, and load its load hint if necessary.
             if (
               relation instanceof PersistedAsyncPropertyImpl &&
               relation.isSet &&

@@ -4,7 +4,7 @@ import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
 import { AliasAssigner, EntityManager, ParsedFindQuery, getEmInternalApi, indexBy, keyToNumber, kqDot } from "../index";
 import { LoadHint } from "../loadHints";
-import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
+import { PersistedAsyncPropertyImpl } from "../relations/PersistedAsyncProperty";
 import { toArray } from "../utils";
 
 export function populateDataLoader(

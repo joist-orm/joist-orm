@@ -14,7 +14,7 @@ import { isAllSqlPaths } from "./loadLens";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { PersistedAsyncPropertyImpl } from "./relations/hasPersistedAsyncProperty";
+import { PersistedAsyncPropertyImpl } from "./relations/PersistedAsyncProperty";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -23,7 +23,7 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
-export { Entity, EntityOrmField, isEntity, IdType } from "./Entity";
+export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
 export * from "./EntityFilter";
 export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";

@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "../Entity";
 import { IdOf, TaggedId, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
-import { EntityMetadata, EntityMetadataTyped, ManyToOneField, getMetadata } from "../EntityMetadata";
+import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
   BaseEntity,
   OneToManyLargeCollection,
@@ -339,7 +339,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     return current;
   }
 
-  public get otherMeta(): EntityMetadataTyped<U> {
+  public get otherMeta(): EntityMetadata<U> {
     return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
   }
 

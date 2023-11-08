@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -102,7 +102,7 @@ tagConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "t";
-  static readonly metadata: EntityMetadataTyped<Tag>;
+  static readonly metadata: EntityMetadata<Tag>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: TagFilter;

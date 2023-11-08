@@ -3,7 +3,7 @@ import {
   Changes,
   cleanStringValue,
   ConfigApi,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   Flavor,
@@ -64,7 +64,7 @@ databaseOwnerConfig.addRule(newRequiredRule("name"));
 export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "do";
-  static readonly metadata: EntityMetadataTyped<DatabaseOwner>;
+  static readonly metadata: EntityMetadata<DatabaseOwner>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: DatabaseOwnerFilter;

@@ -4,8 +4,8 @@ import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
-export function getMetadata<T extends Entity>(entity: T): EntityMetadataTyped<T>;
-export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadataTyped<T>;
+export function getMetadata<T extends Entity>(entity: T): EntityMetadata<T>;
+export function getMetadata<T extends Entity>(type: MaybeAbstractEntityConstructor<T>): EntityMetadata<T>;
 export function getMetadata<T extends Entity>(meta: EntityMetadata): EntityMetadata;
 export function getMetadata<T extends Entity>(
   param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata,
@@ -15,11 +15,6 @@ export function getMetadata<T extends Entity>(
   ) as EntityMetadata;
 }
 
-/** A typed version of `EntityMetadata` that typically we don't use, but is useful for driving type inference. */
-export interface EntityMetadataTyped<T extends Entity> extends EntityMetadata {
-  cstr: MaybeAbstractEntityConstructor<T>;
-}
-
 /**
  * Runtime metadata about an entity.
  *
@@ -27,8 +22,8 @@ export interface EntityMetadataTyped<T extends Entity> extends EntityMetadata {
  * an unknown string/id type, causes issues when we want to generically mix `EntityMetadata`
  * of different types, that even liberally using `EntityMetadata<any>` did not avoid.
  */
-export interface EntityMetadata {
-  cstr: MaybeAbstractEntityConstructor<any>;
+export interface EntityMetadata<T extends Entity = any> {
+  cstr: MaybeAbstractEntityConstructor<T>;
   type: string;
   /** Whether id field is a tagged string. */
   idType: "tagged-string" | "untagged-string" | "number";
@@ -43,7 +38,7 @@ export interface EntityMetadata {
   config: ConfigApi<any, any>;
   orderBy: string | undefined;
   timestampFields: TimestampFields;
-  factory: (em: EntityManager<any, any>, opts?: any) => DeepNew<any>;
+  factory: (em: EntityManager<any, any>, opts?: any) => DeepNew<T>;
   /** The list of base types for this subtype, e.g. for Dog it'd be [Animal, Mammal]. */
   baseTypes: EntityMetadata[];
   /** The list of subtypes for this base type, e.g. for Animal it'd be `[Mammal, Dog]`. */

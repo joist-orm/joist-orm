@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FieldsOf,
@@ -167,7 +167,7 @@ publisherConfig.addRule(newRequiredRule("type"));
 export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadataTyped<Publisher>;
+  static readonly metadata: EntityMetadata<Publisher>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherFilter;

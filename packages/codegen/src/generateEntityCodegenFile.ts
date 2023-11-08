@@ -13,7 +13,7 @@ import {
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   FieldsOf,
   FilterOf,
@@ -494,7 +494,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         ${defaultValues}
       };
       static readonly tagName = "${tagName}";
-      static readonly metadata: ${EntityMetadataTyped}<${entity.type}>;
+      static readonly metadata: ${EntityMetadata}<${entity.type}>;
 
       declare readonly __orm: ${EntityOrmField} & {
         filterType: ${entityName}Filter;

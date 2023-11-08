@@ -7,7 +7,7 @@ import {
   Entity,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -123,7 +123,7 @@ commentConfig.addRule(newRequiredRule("parent"));
 export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "comment";
-  static readonly metadata: EntityMetadataTyped<Comment>;
+  static readonly metadata: EntityMetadata<Comment>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: CommentFilter;

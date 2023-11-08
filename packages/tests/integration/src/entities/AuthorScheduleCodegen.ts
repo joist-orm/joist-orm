@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -94,7 +94,7 @@ authorScheduleConfig.addRule(newRequiredRule("author"));
 export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "authorSchedule";
-  static readonly metadata: EntityMetadataTyped<AuthorSchedule>;
+  static readonly metadata: EntityMetadata<AuthorSchedule>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: AuthorScheduleFilter;

@@ -6,7 +6,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -94,7 +94,7 @@ publisherGroupConfig.addRule(newRequiredRule("updatedAt"));
 export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "pg";
-  static readonly metadata: EntityMetadataTyped<PublisherGroup>;
+  static readonly metadata: EntityMetadata<PublisherGroup>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PublisherGroupFilter;

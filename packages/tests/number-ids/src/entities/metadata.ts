@@ -1,4 +1,4 @@
-import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadataTyped, KeySerde, PrimitiveSerde } from "joist-orm";
+import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
 import { Context } from "src/context";
 import { Author, authorConfig, Book, bookConfig, newAuthor, newBook } from "./entities";
 
@@ -9,7 +9,7 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
-export const authorMeta: EntityMetadataTyped<Author> = {
+export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
   baseType: undefined,
@@ -36,7 +36,7 @@ export const authorMeta: EntityMetadataTyped<Author> = {
 
 (Author as any).metadata = authorMeta;
 
-export const bookMeta: EntityMetadataTyped<Book> = {
+export const bookMeta: EntityMetadata<Book> = {
   cstr: Book,
   type: "Book",
   baseType: undefined,

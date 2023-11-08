@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
-  EntityMetadataTyped,
+  EntityMetadata,
   EntityOrmField,
   fail,
   FilterOf,
@@ -87,7 +87,7 @@ paintingConfig.addRule(newRequiredRule("artist"));
 export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> {
   static defaultValues: object = {};
   static readonly tagName = "p";
-  static readonly metadata: EntityMetadataTyped<Painting>;
+  static readonly metadata: EntityMetadata<Painting>;
 
   declare readonly __orm: EntityOrmField & {
     filterType: PaintingFilter;

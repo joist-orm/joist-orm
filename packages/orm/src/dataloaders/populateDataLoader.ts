@@ -2,16 +2,7 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import {
-  AliasAssigner,
-  EntityManager,
-  ParsedFindQuery,
-  PersistedAsyncReferenceImpl,
-  getEmInternalApi,
-  indexBy,
-  keyToNumber,
-  kqDot,
-} from "../index";
+import { AliasAssigner, EntityManager, ParsedFindQuery, getEmInternalApi, indexBy, keyToNumber, kqDot } from "../index";
 import { LoadHint } from "../loadHints";
 import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
 import { toArray } from "../utils";
@@ -43,10 +34,7 @@ export function populateDataLoader(
     "populate",
     batchKey,
     async (populates) => {
-      async function populateLayer(
-        layerMeta: EntityMetadata | undefined,
-        layerNode: HintNode<Entity>,
-      ): Promise<any[]> {
+      async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
         const { preloader } = getEmInternalApi(em);
@@ -96,7 +84,7 @@ export function populateDataLoader(
             // is stale, so we should avoid pulling all of its data into memory).
             // _Unless_ the ReactionsManager has noticed a change that might have invalidated it.
             if (
-              (relation instanceof PersistedAsyncPropertyImpl || relation instanceof PersistedAsyncReferenceImpl) &&
+              relation instanceof PersistedAsyncPropertyImpl &&
               relation.isSet &&
               !getEmInternalApi(em).rm.isMaybePendingRecalc(entity, key)
             )

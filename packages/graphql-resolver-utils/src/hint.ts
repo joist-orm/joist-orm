@@ -20,7 +20,9 @@ export function convertInfoToLoadHint<T extends Entity>(
   const objectType = convertToObjectType(info.returnType);
   const selectionSet = info.fieldNodes[0].selectionSet;
   if (objectType && selectionSet) {
-    return selectionSetToObject(info, meta, objectType, selectionSet);
+    const hint = selectionSetToObject(info, meta, objectType, selectionSet);
+    // Don't return an empty hint
+    return Object.keys(hint).length === 0 ? undefined : hint;
   }
   return undefined;
 }

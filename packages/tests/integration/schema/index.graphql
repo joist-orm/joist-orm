@@ -1,2 +1,11 @@
 type Query
 type Mutation
+
+scalar DateTime
+
+# This is a pg-native enum that we don't codegen yet
+enum FavoriteShape {
+  CIRCLE
+  SQUARE
+  TRIANGLE
+}

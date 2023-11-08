@@ -2,16 +2,7 @@ import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import {
-  AliasAssigner,
-  EntityManager,
-  ParsedFindQuery,
-  PersistedAsyncReferenceImpl,
-  getEmInternalApi,
-  indexBy,
-  keyToNumber,
-  kqDot,
-} from "../index";
+import { AliasAssigner, EntityManager, ParsedFindQuery, getEmInternalApi, indexBy, keyToNumber, kqDot } from "../index";
 import { LoadHint } from "../loadHints";
 import { PersistedAsyncPropertyImpl } from "../relations/hasPersistedAsyncProperty";
 import { toArray } from "../utils";
@@ -43,10 +34,7 @@ export function populateDataLoader(
     "populate",
     batchKey,
     async (populates) => {
-      async function populateLayer(
-        layerMeta: EntityMetadata | undefined,
-        layerNode: HintNode<Entity>,
-      ): Promise<any[]> {
+      async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
         const { preloader } = getEmInternalApi(em);
@@ -95,8 +83,13 @@ export function populateDataLoader(
             // if it's already been calculated (i.e. we have no reason to believe its value
             // is stale, so we should avoid pulling all of its data into memory).
             // _Unless_ the ReactionsManager has noticed a change that might have invalidated it.
+            //
+            // (Note that we can't do this same optimization for PersistedAsyncReferenceImpl, because
+            // as a FK, it will always need at least some `.load()` to fetch its entity from the database.
+            // So we go ahead and call `.load()`, assuming it will just load its cached value, but it
+            // will also check internally if it's marked for recalc, and load its load hint if necessary.
             if (
-              (relation instanceof PersistedAsyncPropertyImpl || relation instanceof PersistedAsyncReferenceImpl) &&
+              relation instanceof PersistedAsyncPropertyImpl &&
               relation.isSet &&
               !getEmInternalApi(em).rm.isMaybePendingRecalc(entity, key)
             )

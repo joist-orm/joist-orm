@@ -1,4 +1,5 @@
 import {
+  EntityMetadata,
   EntityMetadataTyped,
   ManyToOneField,
   TaggedId,
@@ -27,6 +28,8 @@ export interface PersistedAsyncReference<T extends Entity, U extends Entity, N e
   extends Reference<T, U, N> {
   isLoaded: boolean;
   isSet: boolean;
+
+  load(opts?: { withDeleted?: boolean; forceReload?: true }): Promise<U | N>;
 
   /**
    * Returns the as-of-last-flush previously-calculated entity.
@@ -60,7 +63,7 @@ export function hasPersistedAsyncReference<
   fn: (entity: Reacted<T, H>) => U | N,
 ): PersistedAsyncReference<T, U, N> {
   const entity = currentlyInstantiatingEntity as T;
-  return new PersistedAsyncReferenceImpl<T, U, H, N>(entity, fieldName, hint, fn);
+  return new PersistedAsyncReferenceImpl<T, U, H, N>(entity, fieldName, otherMeta, hint, fn);
 }
 
 export class PersistedAsyncReferenceImpl<
@@ -74,21 +77,24 @@ export class PersistedAsyncReferenceImpl<
 {
   readonly #entity: T;
   readonly #fieldName: keyof T & string;
+  readonly #otherMeta: EntityMetadata;
   readonly #reactiveHint: H;
   // Either the loaded entity, or N/undefined if we're allowed to be null
   private loaded!: U | N | undefined;
   // We need a separate boolean to b/c loaded == undefined can still mean "_isLoaded" for nullable fks.
-  private _isLoaded = false;
+  private _isLoaded: "ref" | "full" | false = false;
   private loadPromise: any;
   constructor(
     entity: T,
     private fieldName: keyof T & string,
+    otherMeta: EntityMetadata,
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => U | N,
   ) {
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    this.#otherMeta = otherMeta;
     this.#reactiveHint = reactiveHint;
   }
 
@@ -96,12 +102,32 @@ export class PersistedAsyncReferenceImpl<
     ensureNotDeleted(this.#entity, "pending");
     const { loadHint } = this;
     if (!this.loaded || opts?.forceReload) {
-      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, loadHint).then(() => {
-        this.loadPromise = undefined;
-        this._isLoaded = true;
-        // Go through `this.get` so that `setField` is called to set our latest value
-        return this.doGet(opts);
-      }));
+      const { em } = this.#entity;
+      // Only use the full load hint if we need recalculated, otherwise just load our cached value
+      const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.#entity, this.fieldName);
+      if (recalc) {
+        return (this.loadPromise ??= em.populate(this.#entity, { hint: loadHint, ...opts }).then(() => {
+          this.loadPromise = undefined;
+          this._isLoaded = "full";
+          // Go through `this.get` so that `setField` is called to set our latest value
+          return this.doGet(opts);
+        }));
+      } else {
+        // If we don't need a full recalc, just make sure we have the entity in memory
+        const current = this.current();
+        if (isEntity(current) || current === undefined) {
+          this._isLoaded = "ref";
+          this.loaded = current;
+          return current;
+        } else {
+          return (this.loadPromise ??= em.load(this.#otherMeta.cstr, current).then((loaded) => {
+            this.loadPromise = undefined;
+            this._isLoaded = "ref";
+            this.loaded = loaded;
+            return loaded;
+          }));
+        }
+      }
     }
     return Promise.resolve(this.doGet(opts));
   }
@@ -109,7 +135,7 @@ export class PersistedAsyncReferenceImpl<
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     const { fn } = this;
     ensureNotDeleted(this.#entity, "pending");
-    if (this._isLoaded || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {
+    if (this._isLoaded === "full" || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {
       const newValue = this.filterDeleted(fn(this.#entity as Reacted<T, H>), opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -119,8 +145,8 @@ export class PersistedAsyncReferenceImpl<
         this.setImpl(newValue);
       }
       return this.maybeFindEntity();
-    } else if (this.isSet) {
-      return this.#entity.__orm.data[this.fieldName];
+    } else if (this._isLoaded) {
+      return this.loaded as U | N;
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
     }
@@ -139,7 +165,7 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get isLoaded(): boolean {
-    return this._isLoaded;
+    return !!this._isLoaded;
   }
 
   set(other: U | N): void {
@@ -167,19 +193,18 @@ export class PersistedAsyncReferenceImpl<
 
     if (typeof _other === "string") {
       this.loaded = undefined;
-      this._isLoaded = false;
     } else {
       this.loaded = _other;
-      this._isLoaded = true;
     }
   }
 
   get isPreloaded(): boolean {
-    return false;
+    return !!this.maybeFindEntity();
   }
 
   preload(): void {
-    throw new Error("Not implemented");
+    this.loaded = this.maybeFindEntity();
+    this._isLoaded = "ref";
   }
 
   /** Returns the tagged id of the current value. */
@@ -229,9 +254,7 @@ export class PersistedAsyncReferenceImpl<
   initializeForNewEntity(): void {
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    if (this.current() === undefined) {
-      this._isLoaded = true;
-    }
+    this._isLoaded = isEntity(this.current()) ? "ref" : false;
   }
 
   maybeCascadeDelete(): void {
@@ -249,7 +272,7 @@ export class PersistedAsyncReferenceImpl<
     const current = await this.load({ withDeleted: true });
     setField(this.#entity, this.fieldName, undefined);
     this.loaded = undefined as any;
-    this._isLoaded = true;
+    this._isLoaded = false;
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.

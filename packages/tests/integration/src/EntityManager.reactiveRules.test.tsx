@@ -282,6 +282,20 @@ describe("EntityManager.reactiveRules", () => {
     expect(a.favoriteBook.get).toBe(b);
   });
 
+  it.withCtx("loads derived fields when populated", async ({ em }) => {
+    // Given an entity with an async derived field
+    const a = newAuthor(em);
+    newBook(em, { author: a, reviews: [{ rating: 10 }] });
+    await em.flush();
+    // When we load it via populate
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, "a:1", "favoriteBook");
+    // Then we can access it
+    expect(a2.favoriteBook.get?.title).toBe("title");
+    // And we didn't load its full load hint
+    expect(em2.entities.length).toBe(2);
+  });
+
   it.withCtx("creates the right reactive derived values", async () => {
     const cstr = expect.any(Function);
     expect(getMetadata(Book).config.__data.reactiveDerivedValues).toEqual([

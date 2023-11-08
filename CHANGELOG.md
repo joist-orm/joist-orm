@@ -1,3 +1,10 @@
+## [1.120.1](https://github.com/stephenh/joist-ts/compare/v1.120.0...v1.120.1) (2023-11-08)
+
+
+### Bug Fixes
+
+* Fix PersistedAsyncReference always loading its full load hint. ([#854](https://github.com/stephenh/joist-ts/issues/854)) ([9df758a](https://github.com/stephenh/joist-ts/commit/9df758a3bfa0ec6bd6232d0784cd39ceadd62ca8))
+
 # [1.120.0](https://github.com/stephenh/joist-ts/compare/v1.119.1...v1.120.0) (2023-11-07)
 
 

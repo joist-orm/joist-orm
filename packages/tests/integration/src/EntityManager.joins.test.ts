@@ -177,6 +177,20 @@ describe("EntityManager.joins", () => {
     expect(lp.group.get?.name).toBe("pg1");
   });
 
+  it("does not preloads derived m2os", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await update("authors", { id: 1, favorite_book_id: 1 });
+    const em = newEntityManager();
+    resetQueryCount();
+    const a = await em.load(Author, "a:1", { favoriteBook: "reviews" });
+    // We don't model the "other side" of derived m2os b/c it was too complicated
+    // for the initial implementation. So, for now it doesn't get preloaded.
+    expect(queries.length).toBe(3);
+    expect(a.favoriteBook.get?.reviews.get[0].rating).toBe(1);
+  });
+
   it("can preload dates", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1, graduated: jan1 });

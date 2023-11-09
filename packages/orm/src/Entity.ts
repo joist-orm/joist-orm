@@ -2,7 +2,7 @@ import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { PartialOrNull } from "./index";
 
-export function isEntity(maybeEntity: any): maybeEntity is Entity {
+export function isEntity(maybeEntity: unknown): maybeEntity is Entity {
   return !!maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
 }
 

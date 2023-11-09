@@ -4,7 +4,6 @@ import {
   cleanStringValue,
   Collection,
   ConfigApi,
-  Entity,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
@@ -17,6 +16,7 @@ import {
   hasOne,
   hasOnePolymorphic,
   IdOf,
+  isEntity,
   isLoaded,
   Lens,
   Loaded,
@@ -59,9 +59,8 @@ export type CommentParent = Author | Book | BookReview | Publisher;
 export function getCommentParentConstructors(): MaybeAbstractEntityConstructor<CommentParent>[] {
   return [Author, Book, BookReview, Publisher];
 }
-export function isCommentParent(maybeEntity: Entity | undefined | null): maybeEntity is CommentParent {
-  return maybeEntity !== undefined && maybeEntity !== null &&
-    getCommentParentConstructors().some((type) => maybeEntity instanceof type);
+export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentParent {
+  return isEntity(maybeEntity) && getCommentParentConstructors().some((type) => maybeEntity instanceof type);
 }
 
 export interface CommentFields {

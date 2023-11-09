@@ -1,5 +1,5 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
-import { Book, BookReview, Comment, newBook } from "../entities";
+import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 
 describe("PolymorphicReference", () => {
@@ -120,4 +120,18 @@ describe("PolymorphicReference", () => {
 
     expect(book.comments.get).toEqual([]);
   });
+
+  it("can discern Comment Parents from other types", async () => {
+    await insertAuthor({ first_name: "a" });
+    await insertBook({ title: "t", author_id: 1 });
+    await insertComment({ text: "t", parent_book_id: 1 });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "1", "comments");
+
+    expect(isCommentParent(book)).toBe(true);
+    expect(isCommentParent({})).toBe(false)
+    expect(isCommentParent(null)).toBe(false)
+    expect(isCommentParent(undefined)).toBe(false)
+  })
 });

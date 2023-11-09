@@ -3,7 +3,7 @@ import { EntityMetadata } from "./EntityMetadata";
 import { PartialOrNull } from "./index";
 
 export function isEntity(maybeEntity: any): maybeEntity is Entity {
-  return maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
+  return !!maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
 }
 
 /** All the types we support for entity `id` fields. */

@@ -10,7 +10,6 @@ import {
   Changes,
   Collection,
   ConfigApi,
-  Entity,
   EntityFilter,
   EntityGraphQLFilter,
   EntityMetadata,
@@ -54,6 +53,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  isEntity,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 
@@ -594,8 +594,8 @@ function generatePolymorphicTypes(meta: EntityDbMetadata) {
     code`export function get${pf.fieldType}Constructors(): ${MaybeAbstractEntityConstructor}<${pf.fieldType}>[] {
       return [${pf.components.map((c) => code`${c.otherEntity.type},`)}];
     }`,
-    code`export function is${pf.fieldType}(maybeEntity: ${Entity} | undefined | null): maybeEntity is ${pf.fieldType} {
-      return maybeEntity !== undefined && maybeEntity !== null && get${pf.fieldType}Constructors().some((type) => maybeEntity instanceof type);
+    code`export function is${pf.fieldType}(maybeEntity: unknown): maybeEntity is ${pf.fieldType} {
+      return ${isEntity}(maybeEntity) && get${pf.fieldType}Constructors().some((type) => maybeEntity instanceof type);
     }`,
   ]);
 }

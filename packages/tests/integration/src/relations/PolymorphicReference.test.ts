@@ -122,14 +122,12 @@ describe("PolymorphicReference", () => {
   });
 
   it("can discern Comment Parents from other types", async () => {
-    await insertAuthor({ first_name: "a" });
-    await insertBook({ title: "t", author_id: 1 });
-    await insertComment({ text: "t", parent_book_id: 1 });
-
     const em = newEntityManager();
-    const book = await em.load(Book, "1", "comments");
+    const book = em.createPartial(Book, {});
+    const comment = em.createPartial(Comment, {});
 
     expect(isCommentParent(book)).toBe(true);
+    expect(isCommentParent(comment)).toBe(false);
     expect(isCommentParent({})).toBe(false);
     expect(isCommentParent(null)).toBe(false);
     expect(isCommentParent(undefined)).toBe(false);

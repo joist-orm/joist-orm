@@ -46,7 +46,6 @@ import {
   hasOne,
   hasOnePolymorphic,
   hasOneToOne,
-  isEntity,
   isLoaded,
   loadLens,
   newChangesProxy,
@@ -54,6 +53,7 @@ import {
   setField,
   setOpts,
   toIdOf,
+  isEntity,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 

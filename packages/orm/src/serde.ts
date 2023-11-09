@@ -201,9 +201,9 @@ export class KeySerde implements FieldSerde {
     // Sometimes the nilIdValue will pass -1 as already a number, but usually this should be a tagged id
     return value === null || typeof value === "number"
       ? value
-      : // We go through `maybeResolveReferenceToId` because filters like `in: [a1, a2]` will pass the
+        // We go through `maybeResolveReferenceToId` because filters like `in: [a1, a2]` will pass the
         // entity directly into mapToDb and not convert it to a tagged id first.
-        keyToNumber(this.meta, maybeResolveReferenceToId(value));
+      : keyToNumber(this.meta, maybeResolveReferenceToId(value));
   }
 
   mapFromJsonAgg(value: any): any {

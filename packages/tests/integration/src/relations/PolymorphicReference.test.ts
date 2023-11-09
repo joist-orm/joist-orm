@@ -130,8 +130,8 @@ describe("PolymorphicReference", () => {
     const book = await em.load(Book, "1", "comments");
 
     expect(isCommentParent(book)).toBe(true);
-    expect(isCommentParent({})).toBe(false)
-    expect(isCommentParent(null)).toBe(false)
-    expect(isCommentParent(undefined)).toBe(false)
-  })
+    expect(isCommentParent({})).toBe(false);
+    expect(isCommentParent(null)).toBe(false);
+    expect(isCommentParent(undefined)).toBe(false);
+  });
 });

@@ -1,6 +1,6 @@
 import { insertAuthor, insertPublisher } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
-import { aliases, jan1, jan2, jan3 } from "joist-orm";
+import { aliases, jan1 } from "joist-orm";
 import {
   AdvanceStatus,
   Author,

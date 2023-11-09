@@ -1,3 +1,10 @@
+## [1.121.1](https://github.com/stephenh/joist-ts/compare/v1.121.0...v1.121.1) (2023-11-09)
+
+
+### Bug Fixes
+
+* **isPolyHelper:** allow pasing in `unknown` types to discern whether or not it's a valid type ([#859](https://github.com/stephenh/joist-ts/issues/859)) ([f72c53c](https://github.com/stephenh/joist-ts/commit/f72c53c10f154f7e25b6ede50b37aeb9950a502c))
+
 # [1.121.0](https://github.com/stephenh/joist-ts/compare/v1.120.1...v1.121.0) (2023-11-08)
 
 

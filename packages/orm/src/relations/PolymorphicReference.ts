@@ -73,6 +73,11 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   ) {
     super();
     this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
+    // Usually our codegened opts ensures that polys are only initialized with entities,
+    // but em.clone currently passes in strings
+    if (entity.isNewEntity && this.current() === undefined) {
+      this._isLoaded = true;
+    }
   }
 
   private get currentComponent(): PolymorphicFieldComponent | N {
@@ -168,14 +173,6 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   setFromOpts(other: U): void {
     this.setImpl(other);
-  }
-
-  initializeForNewEntity(): void {
-    // Usually our codegened opts ensures that polys are only initialized with entities,
-    // but em.clone currently passes in strings
-    if (this.current() === undefined) {
-      this._isLoaded = true;
-    }
   }
 
   maybeCascadeDelete(): void {

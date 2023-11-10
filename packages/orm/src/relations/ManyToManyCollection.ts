@@ -63,6 +63,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    if (entity.isNewEntity) {
+      this.loaded = [];
+    }
   }
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
@@ -210,13 +213,6 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   setFromOpts(others: U[]): void {
     this.loaded = [];
     others.forEach((o) => this.add(o));
-  }
-
-  initializeForNewEntity(): void {
-    // Don't overwrite any opts values
-    if (this.loaded === undefined) {
-      this.loaded = [];
-    }
   }
 
   maybeCascadeDelete() {

@@ -81,14 +81,6 @@ export class CustomCollection<T extends Entity, U extends Entity>
     throw new Error("Not implemented");
   }
 
-  initializeForNewEntity(): void {
-    // Normally we flag relations as loaded if created on a new entity, however CustomCollections
-    // might require crawling N-layers down from our initial opts, i.e. if creating a BookReview
-    // with a book, accessing review.author maybe not necessarily be safe to do immediately b/c
-    // we need to load book.author to successfully evaluated review -> book -> author synchronously.
-    // this._isLoaded = true;
-  }
-
   set(values: U[]): void {
     this.ensureNewOrLoaded();
     const { set, add, remove } = this.opts;

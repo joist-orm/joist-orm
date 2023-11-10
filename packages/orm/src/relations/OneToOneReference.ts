@@ -99,6 +99,9 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     this.#entity = entity;
     this.#otherMeta = otherMeta;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    if (entity.isNewEntity) {
+      this._isLoaded = true;
+    }
   }
 
   get id(): IdOf<U> {
@@ -224,10 +227,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   setFromOpts(other: U): void {
     this.set(other);
-  }
-
-  initializeForNewEntity(): void {
-    this._isLoaded = true;
   }
 
   maybeCascadeDelete(): void {

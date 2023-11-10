@@ -59,6 +59,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     this.#entity = entity;
     this.#fieldName = fieldName;
     this.#orderBy = orderBy;
+    // Don't overwrite any opts values
+    if (entity.isNewEntity && this.loaded === undefined) {
+      this.loaded = [];
+    }
   }
 
   // opts is an internal parameter
@@ -197,13 +201,6 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   setFromOpts(others: U[]): void {
     this.loaded = [];
     others.forEach((o) => this.add(o));
-  }
-
-  initializeForNewEntity(): void {
-    // Don't overwrite any opts values
-    if (this.loaded === undefined) {
-      this.loaded = [];
-    }
   }
 
   removeIfLoaded(other: U) {

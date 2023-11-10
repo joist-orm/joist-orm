@@ -221,12 +221,6 @@ export function setOpts<T extends Entity>(
       (entity as any)[key] = value;
     }
   });
-  if (calledFromConstructor && !(entity.em as any).fakeInstance) {
-    // Because we're called from the AuthorCodegen constructor, the custom
-    // relation fields won't have been enabled yet ... thankfully none of them
-    // need the `initializeForNewEntity` call at the moment.
-    getRelations(entity).forEach((v) => v?.initializeForNewEntity());
-  }
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {

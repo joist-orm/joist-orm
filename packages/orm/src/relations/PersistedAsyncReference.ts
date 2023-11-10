@@ -95,6 +95,11 @@ export class PersistedAsyncReferenceImpl<
     this.#fieldName = fieldName;
     this.#otherMeta = otherMeta;
     this.#reactiveHint = reactiveHint;
+    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
+    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
+    if (entity.isNewEntity) {
+      this._isLoaded = isEntity(this.current()) ? "ref" : false;
+    }
   }
 
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
@@ -248,12 +253,6 @@ export class PersistedAsyncReferenceImpl<
 
   setFromOpts(other: U | IdOf<U> | N): void {
     this.setImpl(other);
-  }
-
-  initializeForNewEntity(): void {
-    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
-    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    this._isLoaded = isEntity(this.current()) ? "ref" : false;
   }
 
   maybeCascadeDelete(): void {

@@ -1,25 +1,25 @@
-import { Entity,isEntity } from "../Entity";
-import { IdOf,TaggedId,getEmInternalApi,sameEntity } from "../EntityManager";
-import { EntityMetadata,ManyToOneField,getMetadata } from "../EntityMetadata";
+import { Entity, isEntity } from "../Entity";
+import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
+import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
-BaseEntity,
-OneToManyLargeCollection,
-OneToOneReferenceImpl,
-Reference,
-deTagId,
-ensureNotDeleted,
-ensureTagged,
-fail,
-maybeResolveReferenceToId,
-setField,
-toIdOf,
-toTaggedId,
+  BaseEntity,
+  OneToManyLargeCollection,
+  OneToOneReferenceImpl,
+  Reference,
+  deTagId,
+  ensureNotDeleted,
+  ensureTagged,
+  fail,
+  maybeResolveReferenceToId,
+  setField,
+  toIdOf,
+  toTaggedId,
 } from "../index";
-import { maybeAdd,maybeRemove } from "../utils";
+import { maybeAdd, maybeRemove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
-import { RelationT,RelationU } from "./Relation";
+import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
@@ -86,6 +86,11 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
+    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
+    if (entity.isNewEntity && this.current() === undefined) {
+      this._isLoaded = true;
+    }
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
@@ -231,14 +236,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   setFromOpts(other: U | IdOf<U> | N): void {
     this.setImpl(other);
-  }
-
-  initializeForNewEntity(): void {
-    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
-    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    if (this.current() === undefined) {
-      this._isLoaded = true;
-    }
   }
 
   maybeCascadeDelete(): void {

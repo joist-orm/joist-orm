@@ -182,6 +182,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get books(): Collection<Author, Book> {
-    return this.#books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
+    if (this.#books === undefined) {
+      this.#books = hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
+    }
+    return this.#books;
   }
 }

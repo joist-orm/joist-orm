@@ -247,29 +247,38 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get createdComments(): Collection<User, Comment> {
-    return this.#createdComments ??= hasMany(
-      this as any as User,
-      commentMeta,
-      "createdComments",
-      "user",
-      "user_id",
-      undefined,
-    );
+    if (this.#createdComments === undefined) {
+      this.#createdComments = hasMany(
+        this as any as User,
+        commentMeta,
+        "createdComments",
+        "user",
+        "user_id",
+        undefined,
+      );
+    }
+    return this.#createdComments;
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    return this.#authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
+    if (this.#authorManyToOne === undefined) {
+      this.#authorManyToOne = hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
+    }
+    return this.#authorManyToOne;
   }
 
   get likedComments(): Collection<User, Comment> {
-    return this.#likedComments ??= hasManyToMany(
-      this as any as User,
-      "users_to_comments",
-      "likedComments",
-      "liked_by_user_id",
-      commentMeta,
-      "likedByUsers",
-      "comment_id",
-    );
+    if (this.#likedComments === undefined) {
+      this.#likedComments = hasManyToMany(
+        this as any as User,
+        "users_to_comments",
+        "likedComments",
+        "liked_by_user_id",
+        commentMeta,
+        "likedByUsers",
+        "comment_id",
+      );
+    }
+    return this.#likedComments;
   }
 }

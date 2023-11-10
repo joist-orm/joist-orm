@@ -530,73 +530,90 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get authors(): Collection<Author, Author> {
-    return this.#authors ??= hasMany(this as any as Author, authorMeta, "authors", "mentor", "mentor_id", undefined);
+    if (this.#authors === undefined) {
+      this.#authors = hasMany(this as any as Author, authorMeta, "authors", "mentor", "mentor_id", undefined);
+    }
+    return this.#authors;
   }
 
   get schedules(): Collection<Author, AuthorSchedule> {
-    return this.#schedules ??= hasMany(
-      this as any as Author,
-      authorScheduleMeta,
-      "schedules",
-      "author",
-      "author_id",
-      undefined,
-    );
+    if (this.#schedules === undefined) {
+      this.#schedules = hasMany(
+        this as any as Author,
+        authorScheduleMeta,
+        "schedules",
+        "author",
+        "author_id",
+        undefined,
+      );
+    }
+    return this.#schedules;
   }
 
   get books(): Collection<Author, Book> {
-    return this.#books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
-      "field": "order",
-      "direction": "ASC",
-    });
+    if (this.#books === undefined) {
+      this.#books = hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+        "field": "order",
+        "direction": "ASC",
+      });
+    }
+    return this.#books;
   }
 
   get comments(): Collection<Author, Comment> {
-    return this.#comments ??= hasMany(
-      this as any as Author,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_author_id",
-      undefined,
-    );
+    if (this.#comments === undefined) {
+      this.#comments = hasMany(this as any as Author, commentMeta, "comments", "parent", "parent_author_id", undefined);
+    }
+    return this.#comments;
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
-    return this.#mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
+    if (this.#mentor === undefined) {
+      this.#mentor = hasOne(this as any as Author, authorMeta, "mentor", "authors");
+    }
+    return this.#mentor;
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
-    return this.#currentDraftBook ??= hasOne(this as any as Author, bookMeta, "currentDraftBook", "currentDraftAuthor");
+    if (this.#currentDraftBook === undefined) {
+      this.#currentDraftBook = hasOne(this as any as Author, bookMeta, "currentDraftBook", "currentDraftAuthor");
+    }
+    return this.#currentDraftBook;
   }
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
-    return this.#publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
+    if (this.#publisher === undefined) {
+      this.#publisher = hasOne(this as any as Author, publisherMeta, "publisher", "authors");
+    }
+    return this.#publisher;
   }
 
   get image(): OneToOneReference<Author, Image> {
-    return this.#image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
+    if (this.#image === undefined) {
+      this.#image = hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
+    }
+    return this.#image;
   }
 
   get userOneToOne(): OneToOneReference<Author, User> {
-    return this.#userOneToOne ??= hasOneToOne(
-      this as any as Author,
-      userMeta,
-      "userOneToOne",
-      "authorManyToOne",
-      "author_id",
-    );
+    if (this.#userOneToOne === undefined) {
+      this.#userOneToOne = hasOneToOne(this as any as Author, userMeta, "userOneToOne", "authorManyToOne", "author_id");
+    }
+    return this.#userOneToOne;
   }
 
   get tags(): Collection<Author, Tag> {
-    return this.#tags ??= hasManyToMany(
-      this as any as Author,
-      "authors_to_tags",
-      "tags",
-      "author_id",
-      tagMeta,
-      "authors",
-      "tag_id",
-    );
+    if (this.#tags === undefined) {
+      this.#tags = hasManyToMany(
+        this as any as Author,
+        "authors_to_tags",
+        "tags",
+        "author_id",
+        tagMeta,
+        "authors",
+        "tag_id",
+      );
+    }
+    return this.#tags;
   }
 }

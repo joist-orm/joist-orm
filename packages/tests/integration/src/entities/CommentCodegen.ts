@@ -209,22 +209,31 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    return this.#user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
+    if (this.#user === undefined) {
+      this.#user = hasOne(this as any as Comment, userMeta, "user", "createdComments");
+    }
+    return this.#user;
   }
 
   get likedByUsers(): Collection<Comment, User> {
-    return this.#likedByUsers ??= hasManyToMany(
-      this as any as Comment,
-      "users_to_comments",
-      "likedByUsers",
-      "comment_id",
-      userMeta,
-      "likedComments",
-      "liked_by_user_id",
-    );
+    if (this.#likedByUsers === undefined) {
+      this.#likedByUsers = hasManyToMany(
+        this as any as Comment,
+        "users_to_comments",
+        "likedByUsers",
+        "comment_id",
+        userMeta,
+        "likedComments",
+        "liked_by_user_id",
+      );
+    }
+    return this.#likedByUsers;
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    return this.#parent ??= hasOnePolymorphic(this as any as Comment, "parent");
+    if (this.#parent === undefined) {
+      this.#parent = hasOnePolymorphic(this as any as Comment, "parent");
+    }
+    return this.#parent;
   }
 }

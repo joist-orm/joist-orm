@@ -258,51 +258,57 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    return this.#advances ??= hasMany(this as any as Book, bookAdvanceMeta, "advances", "book", "book_id", undefined);
+    if (this.#advances === undefined) {
+      this.#advances = hasMany(this as any as Book, bookAdvanceMeta, "advances", "book", "book_id", undefined);
+    }
+    return this.#advances;
   }
 
   get reviews(): Collection<Book, BookReview> {
-    return this.#reviews ??= hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+    if (this.#reviews === undefined) {
+      this.#reviews = hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+    }
+    return this.#reviews;
   }
 
   get comments(): Collection<Book, Comment> {
-    return this.#comments ??= hasMany(
-      this as any as Book,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_book_id",
-      undefined,
-    );
+    if (this.#comments === undefined) {
+      this.#comments = hasMany(this as any as Book, commentMeta, "comments", "parent", "parent_book_id", undefined);
+    }
+    return this.#comments;
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    return this.#author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+    if (this.#author === undefined) {
+      this.#author = hasOne(this as any as Book, authorMeta, "author", "books");
+    }
+    return this.#author;
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    return this.#currentDraftAuthor ??= hasOneToOne(
-      this as any as Book,
-      authorMeta,
-      "currentDraftAuthor",
-      "currentDraftBook",
-      "current_draft_book_id",
-    );
+    if (this.#currentDraftAuthor === undefined) {
+      this.#currentDraftAuthor = hasOneToOne(
+        this as any as Book,
+        authorMeta,
+        "currentDraftAuthor",
+        "currentDraftBook",
+        "current_draft_book_id",
+      );
+    }
+    return this.#currentDraftAuthor;
   }
 
   get image(): OneToOneReference<Book, Image> {
-    return this.#image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+    if (this.#image === undefined) {
+      this.#image = hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+    }
+    return this.#image;
   }
 
   get tags(): Collection<Book, Tag> {
-    return this.#tags ??= hasManyToMany(
-      this as any as Book,
-      "books_to_tags",
-      "tags",
-      "book_id",
-      tagMeta,
-      "books",
-      "tag_id",
-    );
+    if (this.#tags === undefined) {
+      this.#tags = hasManyToMany(this as any as Book, "books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
+    }
+    return this.#tags;
   }
 }

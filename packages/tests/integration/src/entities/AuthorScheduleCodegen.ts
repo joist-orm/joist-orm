@@ -184,6 +184,9 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get author(): ManyToOneReference<AuthorSchedule, Author, never> {
-    return this.#author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
+    if (this.#author === undefined) {
+      this.#author = hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
+    }
+    return this.#author;
   }
 }

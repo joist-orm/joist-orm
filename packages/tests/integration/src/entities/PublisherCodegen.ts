@@ -333,62 +333,66 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    return this.#authors ??= hasMany(
-      this as any as Publisher,
-      authorMeta,
-      "authors",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    if (this.#authors === undefined) {
+      this.#authors = hasMany(this as any as Publisher, authorMeta, "authors", "publisher", "publisher_id", undefined);
+    }
+    return this.#authors;
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    return this.#bookAdvances ??= hasMany(
-      this as any as Publisher,
-      bookAdvanceMeta,
-      "bookAdvances",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    if (this.#bookAdvances === undefined) {
+      this.#bookAdvances = hasMany(
+        this as any as Publisher,
+        bookAdvanceMeta,
+        "bookAdvances",
+        "publisher",
+        "publisher_id",
+        undefined,
+      );
+    }
+    return this.#bookAdvances;
   }
 
   get comments(): Collection<Publisher, Comment> {
-    return this.#comments ??= hasMany(
-      this as any as Publisher,
-      commentMeta,
-      "comments",
-      "parent",
-      "parent_publisher_id",
-      undefined,
-    );
+    if (this.#comments === undefined) {
+      this.#comments = hasMany(
+        this as any as Publisher,
+        commentMeta,
+        "comments",
+        "parent",
+        "parent_publisher_id",
+        undefined,
+      );
+    }
+    return this.#comments;
   }
 
   get images(): Collection<Publisher, Image> {
-    return this.#images ??= hasMany(
-      this as any as Publisher,
-      imageMeta,
-      "images",
-      "publisher",
-      "publisher_id",
-      undefined,
-    );
+    if (this.#images === undefined) {
+      this.#images = hasMany(this as any as Publisher, imageMeta, "images", "publisher", "publisher_id", undefined);
+    }
+    return this.#images;
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    return this.#group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+    if (this.#group === undefined) {
+      this.#group = hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+    }
+    return this.#group;
   }
 
   get tags(): Collection<Publisher, Tag> {
-    return this.#tags ??= hasManyToMany(
-      this as any as Publisher,
-      "publishers_to_tags",
-      "tags",
-      "publisher_id",
-      tagMeta,
-      "publishers",
-      "tag_id",
-    );
+    if (this.#tags === undefined) {
+      this.#tags = hasManyToMany(
+        this as any as Publisher,
+        "publishers_to_tags",
+        "tags",
+        "publisher_id",
+        tagMeta,
+        "publishers",
+        "tag_id",
+      );
+    }
+    return this.#tags;
   }
 }

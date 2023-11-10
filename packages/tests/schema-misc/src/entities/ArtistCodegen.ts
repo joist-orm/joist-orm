@@ -183,13 +183,9 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get paintings(): Collection<Artist, Painting> {
-    return this.#paintings ??= hasMany(
-      this as any as Artist,
-      paintingMeta,
-      "paintings",
-      "artist",
-      "artistId",
-      undefined,
-    );
+    if (this.#paintings === undefined) {
+      this.#paintings = hasMany(this as any as Artist, paintingMeta, "paintings", "artist", "artistId", undefined);
+    }
+    return this.#paintings;
   }
 }

@@ -186,38 +186,40 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get books(): Collection<Tag, Book> {
-    return this.#books ??= hasManyToMany(
-      this as any as Tag,
-      "books_to_tags",
-      "books",
-      "tag_id",
-      bookMeta,
-      "tags",
-      "book_id",
-    );
+    if (this.#books === undefined) {
+      this.#books = hasManyToMany(this as any as Tag, "books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id");
+    }
+    return this.#books;
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    return this.#publishers ??= hasManyToMany(
-      this as any as Tag,
-      "publishers_to_tags",
-      "publishers",
-      "tag_id",
-      publisherMeta,
-      "tags",
-      "publisher_id",
-    );
+    if (this.#publishers === undefined) {
+      this.#publishers = hasManyToMany(
+        this as any as Tag,
+        "publishers_to_tags",
+        "publishers",
+        "tag_id",
+        publisherMeta,
+        "tags",
+        "publisher_id",
+      );
+    }
+    return this.#publishers;
   }
 
   get authors(): LargeCollection<Tag, Author> {
-    return this.#authors ??= hasLargeManyToMany(
-      this as any as Tag,
-      "authors_to_tags",
-      "authors",
-      "tag_id",
-      authorMeta,
-      "tags",
-      "author_id",
-    );
+    if (this.#authors === undefined) {
+      this.#authors = hasLargeManyToMany(
+        this as any as Tag,
+        "authors_to_tags",
+        "authors",
+        "tag_id",
+        authorMeta,
+        "tags",
+        "author_id",
+      );
+    }
+
+    return this.#authors;
   }
 }

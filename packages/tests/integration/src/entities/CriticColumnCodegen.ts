@@ -174,6 +174,9 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get critic(): ManyToOneReference<CriticColumn, Critic, never> {
-    return this.#critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
+    if (this.#critic === undefined) {
+      this.#critic = hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
+    }
+    return this.#critic;
   }
 }

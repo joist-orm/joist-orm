@@ -206,16 +206,16 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    return this.#book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+    if (this.#book === undefined) {
+      this.#book = hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+    }
+    return this.#book;
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
-    return this.#comment ??= hasOneToOne(
-      this as any as BookReview,
-      commentMeta,
-      "comment",
-      "parent",
-      "parent_book_review_id",
-    );
+    if (this.#comment === undefined) {
+      this.#comment = hasOneToOne(this as any as BookReview, commentMeta, "comment", "parent", "parent_book_review_id");
+    }
+    return this.#comment;
   }
 }

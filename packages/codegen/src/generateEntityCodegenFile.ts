@@ -553,7 +553,8 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         } else {
           return code`
             get ${r.fieldName}(): ${r.decl} {
-              return this.#${r.fieldName} ??= ${r.init};
+              if (this.#${r.fieldName} === undefined) this.#${r.fieldName} = ${r.init};
+              return this.#${r.fieldName};
             }
           `;
         }

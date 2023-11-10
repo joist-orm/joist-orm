@@ -186,9 +186,6 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     const { relations } = this.__orm;
     if (relations.author === undefined) {
       relations.author = hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
-      if (this.isNewEntity) {
-        relations.author.initializeForNewEntity?.();
-      }
     }
     return relations.author as any;
   }

@@ -176,9 +176,6 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
     const { relations } = this.__orm;
     if (relations.critic === undefined) {
       relations.critic = hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
-      if (this.isNewEntity) {
-        relations.critic.initializeForNewEntity?.();
-      }
     }
     return relations.critic as any;
   }

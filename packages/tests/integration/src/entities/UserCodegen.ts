@@ -254,9 +254,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
         "user_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.createdComments.initializeForNewEntity?.();
-      }
     }
     return relations.createdComments as any;
   }
@@ -265,9 +262,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.authorManyToOne === undefined) {
       relations.authorManyToOne = hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
-      if (this.isNewEntity) {
-        relations.authorManyToOne.initializeForNewEntity?.();
-      }
     }
     return relations.authorManyToOne as any;
   }
@@ -284,9 +278,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
         "likedByUsers",
         "comment_id",
       );
-      if (this.isNewEntity) {
-        relations.likedComments.initializeForNewEntity?.();
-      }
     }
     return relations.likedComments as any;
   }

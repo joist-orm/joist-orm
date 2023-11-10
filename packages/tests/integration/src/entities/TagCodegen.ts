@@ -194,9 +194,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
         "tags",
         "book_id",
       );
-      if (this.isNewEntity) {
-        relations.books.initializeForNewEntity?.();
-      }
     }
     return relations.books as any;
   }
@@ -213,9 +210,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
         "tags",
         "publisher_id",
       );
-      if (this.isNewEntity) {
-        relations.publishers.initializeForNewEntity?.();
-      }
     }
     return relations.publishers as any;
   }
@@ -232,10 +226,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
         "tags",
         "author_id",
       );
-
-      if (this.isNewEntity) {
-        relations.authors.initializeForNewEntity?.();
-      }
     }
     return relations.authors as any;
   }

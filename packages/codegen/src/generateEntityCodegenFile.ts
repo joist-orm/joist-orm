@@ -557,7 +557,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
               const { relations } = this.__orm;
               if (relations.${r.fieldName} === undefined) {
                 relations.${r.fieldName} = ${r.init};
-                if (this.isNewEntity) relations.${r.fieldName}.initializeForNewEntity?.();
               }
               return relations.${r.fieldName} as any;
             }

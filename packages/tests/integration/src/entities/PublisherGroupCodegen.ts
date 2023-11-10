@@ -190,9 +190,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
         "group_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.publishers.initializeForNewEntity?.();
-      }
     }
     return relations.publishers as any;
   }
@@ -201,9 +198,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     const { relations } = this.__orm;
     if (relations.critics === undefined) {
       relations.critics = hasLargeMany(this as any as PublisherGroup, criticMeta, "critics", "group", "group_id");
-      if (this.isNewEntity) {
-        relations.critics.initializeForNewEntity?.();
-      }
     }
     return relations.critics as any;
   }

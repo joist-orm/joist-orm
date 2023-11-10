@@ -209,9 +209,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.user === undefined) {
       relations.user = hasOne(this as any as Comment, userMeta, "user", "createdComments");
-      if (this.isNewEntity) {
-        relations.user.initializeForNewEntity?.();
-      }
     }
     return relations.user as any;
   }
@@ -228,9 +225,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
         "likedComments",
         "liked_by_user_id",
       );
-      if (this.isNewEntity) {
-        relations.likedByUsers.initializeForNewEntity?.();
-      }
     }
     return relations.likedByUsers as any;
   }
@@ -239,9 +233,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.parent === undefined) {
       relations.parent = hasOnePolymorphic(this as any as Comment, "parent");
-      if (this.isNewEntity) {
-        relations.parent.initializeForNewEntity?.();
-      }
     }
     return relations.parent as any;
   }

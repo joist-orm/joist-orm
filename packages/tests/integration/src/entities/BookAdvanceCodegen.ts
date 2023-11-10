@@ -211,9 +211,6 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     const { relations } = this.__orm;
     if (relations.book === undefined) {
       relations.book = hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
-      if (this.isNewEntity) {
-        relations.book.initializeForNewEntity?.();
-      }
     }
     return relations.book as any;
   }
@@ -222,9 +219,6 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     const { relations } = this.__orm;
     if (relations.publisher === undefined) {
       relations.publisher = hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
-      if (this.isNewEntity) {
-        relations.publisher.initializeForNewEntity?.();
-      }
     }
     return relations.publisher as any;
   }

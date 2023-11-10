@@ -170,9 +170,6 @@ export abstract class LargePublisherCodegen extends Publisher {
         "favorite_large_publisher_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.critics.initializeForNewEntity?.();
-      }
     }
     return relations.critics as any;
   }

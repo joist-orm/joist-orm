@@ -205,9 +205,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
         "favoriteLargePublisher",
         "critics",
       );
-      if (this.isNewEntity) {
-        relations.favoriteLargePublisher.initializeForNewEntity?.();
-      }
     }
     return relations.favoriteLargePublisher as any;
   }
@@ -216,9 +213,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.group === undefined) {
       relations.group = hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
-      if (this.isNewEntity) {
-        relations.group.initializeForNewEntity?.();
-      }
     }
     return relations.group as any;
   }
@@ -233,9 +227,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
         "critic",
         "critic_id",
       );
-      if (this.isNewEntity) {
-        relations.criticColumn.initializeForNewEntity?.();
-      }
     }
     return relations.criticColumn as any;
   }

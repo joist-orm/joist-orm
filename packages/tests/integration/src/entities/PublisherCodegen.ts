@@ -337,9 +337,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "publisher_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.authors.initializeForNewEntity?.();
-      }
     }
     return relations.authors as any;
   }
@@ -355,9 +352,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "publisher_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.bookAdvances.initializeForNewEntity?.();
-      }
     }
     return relations.bookAdvances as any;
   }
@@ -373,9 +367,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "parent_publisher_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.comments.initializeForNewEntity?.();
-      }
     }
     return relations.comments as any;
   }
@@ -384,9 +375,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     const { relations } = this.__orm;
     if (relations.images === undefined) {
       relations.images = hasMany(this as any as Publisher, imageMeta, "images", "publisher", "publisher_id", undefined);
-      if (this.isNewEntity) {
-        relations.images.initializeForNewEntity?.();
-      }
     }
     return relations.images as any;
   }
@@ -395,9 +383,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     const { relations } = this.__orm;
     if (relations.group === undefined) {
       relations.group = hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
-      if (this.isNewEntity) {
-        relations.group.initializeForNewEntity?.();
-      }
     }
     return relations.group as any;
   }
@@ -414,9 +399,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "publishers",
         "tag_id",
       );
-      if (this.isNewEntity) {
-        relations.tags.initializeForNewEntity?.();
-      }
     }
     return relations.tags as any;
   }

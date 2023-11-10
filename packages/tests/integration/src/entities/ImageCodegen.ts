@@ -234,9 +234,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.author === undefined) {
       relations.author = hasOne(this as any as Image, authorMeta, "author", "image");
-      if (this.isNewEntity) {
-        relations.author.initializeForNewEntity?.();
-      }
     }
     return relations.author as any;
   }
@@ -245,9 +242,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.book === undefined) {
       relations.book = hasOne(this as any as Image, bookMeta, "book", "image");
-      if (this.isNewEntity) {
-        relations.book.initializeForNewEntity?.();
-      }
     }
     return relations.book as any;
   }
@@ -256,9 +250,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.publisher === undefined) {
       relations.publisher = hasOne(this as any as Image, publisherMeta, "publisher", "images");
-      if (this.isNewEntity) {
-        relations.publisher.initializeForNewEntity?.();
-      }
     }
     return relations.publisher as any;
   }

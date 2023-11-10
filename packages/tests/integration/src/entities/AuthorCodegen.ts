@@ -524,9 +524,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.authors === undefined) {
       relations.authors = hasMany(this as any as Author, authorMeta, "authors", "mentor", "mentor_id", undefined);
-      if (this.isNewEntity) {
-        relations.authors.initializeForNewEntity?.();
-      }
     }
     return relations.authors as any;
   }
@@ -542,9 +539,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
         "author_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.schedules.initializeForNewEntity?.();
-      }
     }
     return relations.schedules as any;
   }
@@ -556,9 +550,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
         "field": "order",
         "direction": "ASC",
       });
-      if (this.isNewEntity) {
-        relations.books.initializeForNewEntity?.();
-      }
     }
     return relations.books as any;
   }
@@ -574,9 +565,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
         "parent_author_id",
         undefined,
       );
-      if (this.isNewEntity) {
-        relations.comments.initializeForNewEntity?.();
-      }
     }
     return relations.comments as any;
   }
@@ -585,9 +573,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.mentor === undefined) {
       relations.mentor = hasOne(this as any as Author, authorMeta, "mentor", "authors");
-      if (this.isNewEntity) {
-        relations.mentor.initializeForNewEntity?.();
-      }
     }
     return relations.mentor as any;
   }
@@ -596,9 +581,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.currentDraftBook === undefined) {
       relations.currentDraftBook = hasOne(this as any as Author, bookMeta, "currentDraftBook", "currentDraftAuthor");
-      if (this.isNewEntity) {
-        relations.currentDraftBook.initializeForNewEntity?.();
-      }
     }
     return relations.currentDraftBook as any;
   }
@@ -607,9 +589,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.publisher === undefined) {
       relations.publisher = hasOne(this as any as Author, publisherMeta, "publisher", "authors");
-      if (this.isNewEntity) {
-        relations.publisher.initializeForNewEntity?.();
-      }
     }
     return relations.publisher as any;
   }
@@ -618,9 +597,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     const { relations } = this.__orm;
     if (relations.image === undefined) {
       relations.image = hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
-      if (this.isNewEntity) {
-        relations.image.initializeForNewEntity?.();
-      }
     }
     return relations.image as any;
   }
@@ -635,9 +611,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
         "authorManyToOne",
         "author_id",
       );
-      if (this.isNewEntity) {
-        relations.userOneToOne.initializeForNewEntity?.();
-      }
     }
     return relations.userOneToOne as any;
   }
@@ -654,9 +627,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
         "authors",
         "tag_id",
       );
-      if (this.isNewEntity) {
-        relations.tags.initializeForNewEntity?.();
-      }
     }
     return relations.tags as any;
   }

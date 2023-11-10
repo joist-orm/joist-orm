@@ -207,9 +207,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     const { relations } = this.__orm;
     if (relations.book === undefined) {
       relations.book = hasOne(this as any as BookReview, bookMeta, "book", "reviews");
-      if (this.isNewEntity) {
-        relations.book.initializeForNewEntity?.();
-      }
     }
     return relations.book as any;
   }
@@ -224,9 +221,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
         "parent",
         "parent_book_review_id",
       );
-      if (this.isNewEntity) {
-        relations.comment.initializeForNewEntity?.();
-      }
     }
     return relations.comment as any;
   }

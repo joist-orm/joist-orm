@@ -221,8 +221,11 @@ export function setOpts<T extends Entity>(
       (entity as any)[key] = value;
     }
   });
-  if (calledFromConstructor) {
-    getRelations(entity).forEach((v) => v.initializeForNewEntity());
+  if (calledFromConstructor && !(entity.em as any).fakeInstance) {
+    // Because we're called from the AuthorCodegen constructor, the custom
+    // relation fields won't have been enabled yet ... thankfully none of them
+    // need the `initializeForNewEntity` call at the moment.
+    getRelations(entity).forEach((v) => v?.initializeForNewEntity());
   }
 }
 
@@ -350,23 +353,15 @@ export function getEm(entity: Entity): EntityManager<any> {
 }
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
-  const fields = [
-    ...Object.values(entity),
-    ...Object.values(getMetadata(entity).allFields)
-      .filter((f) => f.fieldName !== "id")
-      .map((f) => (entity as any)[f.fieldName]),
-  ];
-  return fields.filter((v: any) => v instanceof AbstractRelationImpl);
+  return Object.entries(getProperties(getMetadata(entity)))
+    .filter(([, v]) => v instanceof AbstractRelationImpl)
+    .map(([name]) => (entity as any)[name]);
 }
 
 export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
-  const fields = [
-    ...Object.entries(entity),
-    ...Object.values(getMetadata(entity).allFields)
-      .filter((f) => f.fieldName !== "id")
-      .map((f) => [f.fieldName, (entity as any)[f.fieldName]] as const),
-  ];
-  return fields.filter(([_, v]) => v instanceof AbstractRelationImpl) as any;
+  return Object.entries(getProperties(getMetadata(entity)))
+    .filter(([, v]) => v instanceof AbstractRelationImpl)
+    .map(([name]) => [name, (entity as any)[name]]);
 }
 
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {

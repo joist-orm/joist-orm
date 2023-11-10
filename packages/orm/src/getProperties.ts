@@ -22,12 +22,13 @@ const em = EM;
  * Basically the values won't be `undefined`, to avoid throwing off `if getPropertyes(meta)[key]`
  * checks.
  */
-export function getProperties<T extends Entity>(meta: EntityMetadata): Record<string, any> {
-  if (propertiesCache[meta.tagName]) {
-    return propertiesCache[meta.tagName];
+export function getProperties(meta: EntityMetadata): Record<string, any> {
+  const key = meta.tableName;
+  if (propertiesCache[key]) {
+    return propertiesCache[key];
   }
   const instance = getFakeInstance(meta);
-  propertiesCache[meta.tagName] = Object.fromEntries(
+  propertiesCache[key] = Object.fromEntries(
     [
       ...Object.values(meta.allFields)
         .filter((f) => f.kind !== "primaryKey" && f.kind !== "primitive" && f.kind !== "enum")
@@ -48,7 +49,7 @@ export function getProperties<T extends Entity>(meta: EntityMetadata): Record<st
       // Purposefully return methods, primitives, etc. so that `entityResolver` can add them to the resolver
       .filter(([key]) => key !== "fullNonReactiveAccess" && key !== "transientFields"),
   );
-  return propertiesCache[meta.tagName];
+  return propertiesCache[key];
 }
 
 export class UnknownProperty {}

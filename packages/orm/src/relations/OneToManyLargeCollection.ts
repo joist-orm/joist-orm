@@ -10,7 +10,7 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(
   entity: T,
-  otherMeta: EntityMetadata,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,

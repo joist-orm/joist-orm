@@ -13,7 +13,7 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata,
+  otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {

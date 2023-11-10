@@ -21,7 +21,7 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata,
+  otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {

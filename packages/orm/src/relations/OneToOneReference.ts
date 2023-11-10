@@ -52,7 +52,7 @@ export function isLoadedOneToOneReference(
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
   entity: T,
-  otherMeta: EntityMetadata,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,

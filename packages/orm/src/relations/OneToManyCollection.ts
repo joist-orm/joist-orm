@@ -21,7 +21,7 @@ import { RelationT, RelationU } from "./Relation";
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
   entity: T,
-  otherMeta: EntityMetadata,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,

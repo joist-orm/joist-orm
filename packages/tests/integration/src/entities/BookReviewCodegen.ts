@@ -127,8 +127,6 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   };
-  #book: ManyToOneReference<BookReview, Book, never> | undefined = undefined;
-  #comment: OneToOneReference<BookReview, Comment> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, BookReviewCodegen.defaultValues, opts);
@@ -206,16 +204,30 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    if (this.#book === undefined) {
-      this.#book = hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+    const { relations } = this.__orm;
+    if (relations.book === undefined) {
+      relations.book = hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+      if (this.isNewEntity) {
+        relations.book.initializeForNewEntity?.();
+      }
     }
-    return this.#book;
+    return relations.book as any;
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
-    if (this.#comment === undefined) {
-      this.#comment = hasOneToOne(this as any as BookReview, commentMeta, "comment", "parent", "parent_book_review_id");
+    const { relations } = this.__orm;
+    if (relations.comment === undefined) {
+      relations.comment = hasOneToOne(
+        this as any as BookReview,
+        commentMeta,
+        "comment",
+        "parent",
+        "parent_book_review_id",
+      );
+      if (this.isNewEntity) {
+        relations.comment.initializeForNewEntity?.();
+      }
     }
-    return this.#comment;
+    return relations.comment as any;
   }
 }

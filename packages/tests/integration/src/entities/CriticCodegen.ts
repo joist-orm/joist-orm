@@ -124,9 +124,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: CriticIdsOpts;
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
-  #favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> | undefined = undefined;
-  #group: ManyToOneReference<Critic, PublisherGroup, undefined> | undefined = undefined;
-  #criticColumn: OneToOneReference<Critic, CriticColumn> | undefined = undefined;
 
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, CriticCodegen.defaultValues, opts);
@@ -200,28 +197,46 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
-    if (this.#favoriteLargePublisher === undefined) {
-      this.#favoriteLargePublisher = hasOne(
+    const { relations } = this.__orm;
+    if (relations.favoriteLargePublisher === undefined) {
+      relations.favoriteLargePublisher = hasOne(
         this as any as Critic,
         largePublisherMeta,
         "favoriteLargePublisher",
         "critics",
       );
+      if (this.isNewEntity) {
+        relations.favoriteLargePublisher.initializeForNewEntity?.();
+      }
     }
-    return this.#favoriteLargePublisher;
+    return relations.favoriteLargePublisher as any;
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
-    if (this.#group === undefined) {
-      this.#group = hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
+    const { relations } = this.__orm;
+    if (relations.group === undefined) {
+      relations.group = hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
+      if (this.isNewEntity) {
+        relations.group.initializeForNewEntity?.();
+      }
     }
-    return this.#group;
+    return relations.group as any;
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
-    if (this.#criticColumn === undefined) {
-      this.#criticColumn = hasOneToOne(this as any as Critic, criticColumnMeta, "criticColumn", "critic", "critic_id");
+    const { relations } = this.__orm;
+    if (relations.criticColumn === undefined) {
+      relations.criticColumn = hasOneToOne(
+        this as any as Critic,
+        criticColumnMeta,
+        "criticColumn",
+        "critic",
+        "critic_id",
+      );
+      if (this.isNewEntity) {
+        relations.criticColumn.initializeForNewEntity?.();
+      }
     }
-    return this.#criticColumn;
+    return relations.criticColumn as any;
   }
 }

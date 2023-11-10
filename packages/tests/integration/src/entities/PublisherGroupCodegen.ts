@@ -105,8 +105,6 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     optIdsType: PublisherGroupIdsOpts;
     factoryOptsType: Parameters<typeof newPublisherGroup>[1];
   };
-  #publishers: Collection<PublisherGroup, Publisher> | undefined = undefined;
-  #critics: LargeCollection<PublisherGroup, Critic> | undefined = undefined;
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
     super(em, publisherGroupMeta, PublisherGroupCodegen.defaultValues, opts);
@@ -182,8 +180,9 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    if (this.#publishers === undefined) {
-      this.#publishers = hasMany(
+    const { relations } = this.__orm;
+    if (relations.publishers === undefined) {
+      relations.publishers = hasMany(
         this as any as PublisherGroup,
         publisherMeta,
         "publishers",
@@ -191,14 +190,21 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
         "group_id",
         undefined,
       );
+      if (this.isNewEntity) {
+        relations.publishers.initializeForNewEntity?.();
+      }
     }
-    return this.#publishers;
+    return relations.publishers as any;
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    if (this.#critics === undefined) {
-      this.#critics = hasLargeMany(this as any as PublisherGroup, criticMeta, "critics", "group", "group_id");
+    const { relations } = this.__orm;
+    if (relations.critics === undefined) {
+      relations.critics = hasLargeMany(this as any as PublisherGroup, criticMeta, "critics", "group", "group_id");
+      if (this.isNewEntity) {
+        relations.critics.initializeForNewEntity?.();
+      }
     }
-    return this.#critics;
+    return relations.critics as any;
   }
 }

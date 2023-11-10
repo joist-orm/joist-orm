@@ -41,6 +41,8 @@ export class EntityOrmField {
   readonly em: EntityManager;
   /** A point to our entity type's metadata. */
   readonly metadata: EntityMetadata;
+  /** A bag for our lazy-initialized relations. */
+  relations: Record<any, any> = {};
   /** A bag for our primitives/fk column values. */
   data: Record<any, any>;
   /** A bag to keep the original values, lazily populated. */

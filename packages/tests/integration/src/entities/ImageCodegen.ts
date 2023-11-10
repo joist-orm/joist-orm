@@ -134,9 +134,6 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: ImageIdsOpts;
     factoryOptsType: Parameters<typeof newImage>[1];
   };
-  #author: ManyToOneReference<Image, Author, undefined> | undefined = undefined;
-  #book: ManyToOneReference<Image, Book, undefined> | undefined = undefined;
-  #publisher: ManyToOneReference<Image, Publisher, undefined> | undefined = undefined;
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, ImageCodegen.defaultValues, opts);
@@ -234,23 +231,35 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {
-    if (this.#author === undefined) {
-      this.#author = hasOne(this as any as Image, authorMeta, "author", "image");
+    const { relations } = this.__orm;
+    if (relations.author === undefined) {
+      relations.author = hasOne(this as any as Image, authorMeta, "author", "image");
+      if (this.isNewEntity) {
+        relations.author.initializeForNewEntity?.();
+      }
     }
-    return this.#author;
+    return relations.author as any;
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
-    if (this.#book === undefined) {
-      this.#book = hasOne(this as any as Image, bookMeta, "book", "image");
+    const { relations } = this.__orm;
+    if (relations.book === undefined) {
+      relations.book = hasOne(this as any as Image, bookMeta, "book", "image");
+      if (this.isNewEntity) {
+        relations.book.initializeForNewEntity?.();
+      }
     }
-    return this.#book;
+    return relations.book as any;
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    if (this.#publisher === undefined) {
-      this.#publisher = hasOne(this as any as Image, publisherMeta, "publisher", "images");
+    const { relations } = this.__orm;
+    if (relations.publisher === undefined) {
+      relations.publisher = hasOne(this as any as Image, publisherMeta, "publisher", "images");
+      if (this.isNewEntity) {
+        relations.publisher.initializeForNewEntity?.();
+      }
     }
-    return this.#publisher;
+    return relations.publisher as any;
   }
 }

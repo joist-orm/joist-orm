@@ -142,9 +142,6 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: UserIdsOpts;
     factoryOptsType: Parameters<typeof newUser>[1];
   };
-  #createdComments: Collection<User, Comment> | undefined = undefined;
-  #authorManyToOne: ManyToOneReference<User, Author, undefined> | undefined = undefined;
-  #likedComments: Collection<User, Comment> | undefined = undefined;
 
   constructor(em: EntityManager, opts: UserOpts) {
     super(em, userMeta, UserCodegen.defaultValues, opts);
@@ -247,8 +244,9 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get createdComments(): Collection<User, Comment> {
-    if (this.#createdComments === undefined) {
-      this.#createdComments = hasMany(
+    const { relations } = this.__orm;
+    if (relations.createdComments === undefined) {
+      relations.createdComments = hasMany(
         this as any as User,
         commentMeta,
         "createdComments",
@@ -256,20 +254,28 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
         "user_id",
         undefined,
       );
+      if (this.isNewEntity) {
+        relations.createdComments.initializeForNewEntity?.();
+      }
     }
-    return this.#createdComments;
+    return relations.createdComments as any;
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    if (this.#authorManyToOne === undefined) {
-      this.#authorManyToOne = hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
+    const { relations } = this.__orm;
+    if (relations.authorManyToOne === undefined) {
+      relations.authorManyToOne = hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
+      if (this.isNewEntity) {
+        relations.authorManyToOne.initializeForNewEntity?.();
+      }
     }
-    return this.#authorManyToOne;
+    return relations.authorManyToOne as any;
   }
 
   get likedComments(): Collection<User, Comment> {
-    if (this.#likedComments === undefined) {
-      this.#likedComments = hasManyToMany(
+    const { relations } = this.__orm;
+    if (relations.likedComments === undefined) {
+      relations.likedComments = hasManyToMany(
         this as any as User,
         "users_to_comments",
         "likedComments",
@@ -278,7 +284,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
         "likedByUsers",
         "comment_id",
       );
+      if (this.isNewEntity) {
+        relations.likedComments.initializeForNewEntity?.();
+      }
     }
-    return this.#likedComments;
+    return relations.likedComments as any;
   }
 }

@@ -113,9 +113,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: TagIdsOpts;
     factoryOptsType: Parameters<typeof newTag>[1];
   };
-  #books: Collection<Tag, Book> | undefined = undefined;
-  #publishers: Collection<Tag, Publisher> | undefined = undefined;
-  #authors: LargeCollection<Tag, Author> | undefined = undefined;
 
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta, TagCodegen.defaultValues, opts);
@@ -186,15 +183,28 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get books(): Collection<Tag, Book> {
-    if (this.#books === undefined) {
-      this.#books = hasManyToMany(this as any as Tag, "books_to_tags", "books", "tag_id", bookMeta, "tags", "book_id");
+    const { relations } = this.__orm;
+    if (relations.books === undefined) {
+      relations.books = hasManyToMany(
+        this as any as Tag,
+        "books_to_tags",
+        "books",
+        "tag_id",
+        bookMeta,
+        "tags",
+        "book_id",
+      );
+      if (this.isNewEntity) {
+        relations.books.initializeForNewEntity?.();
+      }
     }
-    return this.#books;
+    return relations.books as any;
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    if (this.#publishers === undefined) {
-      this.#publishers = hasManyToMany(
+    const { relations } = this.__orm;
+    if (relations.publishers === undefined) {
+      relations.publishers = hasManyToMany(
         this as any as Tag,
         "publishers_to_tags",
         "publishers",
@@ -203,13 +213,17 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
         "tags",
         "publisher_id",
       );
+      if (this.isNewEntity) {
+        relations.publishers.initializeForNewEntity?.();
+      }
     }
-    return this.#publishers;
+    return relations.publishers as any;
   }
 
   get authors(): LargeCollection<Tag, Author> {
-    if (this.#authors === undefined) {
-      this.#authors = hasLargeManyToMany(
+    const { relations } = this.__orm;
+    if (relations.authors === undefined) {
+      relations.authors = hasLargeManyToMany(
         this as any as Tag,
         "authors_to_tags",
         "authors",
@@ -218,8 +232,11 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
         "tags",
         "author_id",
       );
-    }
 
-    return this.#authors;
+      if (this.isNewEntity) {
+        relations.authors.initializeForNewEntity?.();
+      }
+    }
+    return relations.authors as any;
   }
 }

@@ -119,8 +119,6 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   };
-  #book: ManyToOneReference<BookAdvance, Book, never> | undefined = undefined;
-  #publisher: ManyToOneReference<BookAdvance, Publisher, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);
@@ -210,16 +208,24 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    if (this.#book === undefined) {
-      this.#book = hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
+    const { relations } = this.__orm;
+    if (relations.book === undefined) {
+      relations.book = hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
+      if (this.isNewEntity) {
+        relations.book.initializeForNewEntity?.();
+      }
     }
-    return this.#book;
+    return relations.book as any;
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    if (this.#publisher === undefined) {
-      this.#publisher = hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
+    const { relations } = this.__orm;
+    if (relations.publisher === undefined) {
+      relations.publisher = hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
+      if (this.isNewEntity) {
+        relations.publisher.initializeForNewEntity?.();
+      }
     }
-    return this.#publisher;
+    return relations.publisher as any;
   }
 }

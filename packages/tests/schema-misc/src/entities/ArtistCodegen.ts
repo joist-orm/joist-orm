@@ -101,7 +101,6 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: ArtistIdsOpts;
     factoryOptsType: Parameters<typeof newArtist>[1];
   };
-  #paintings: Collection<Artist, Painting> | undefined = undefined;
 
   constructor(em: EntityManager, opts: ArtistOpts) {
     super(em, artistMeta, ArtistCodegen.defaultValues, opts);
@@ -183,9 +182,13 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get paintings(): Collection<Artist, Painting> {
-    if (this.#paintings === undefined) {
-      this.#paintings = hasMany(this as any as Artist, paintingMeta, "paintings", "artist", "artistId", undefined);
+    const { relations } = this.__orm;
+    if (relations.paintings === undefined) {
+      relations.paintings = hasMany(this as any as Artist, paintingMeta, "paintings", "artist", "artistId", undefined);
+      if (this.isNewEntity) {
+        relations.paintings.initializeForNewEntity?.();
+      }
     }
-    return this.#paintings;
+    return relations.paintings as any;
   }
 }

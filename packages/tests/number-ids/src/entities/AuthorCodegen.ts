@@ -100,7 +100,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> {
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
-  #books: Collection<Author, Book> | undefined = undefined;
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
@@ -182,9 +181,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> {
   }
 
   get books(): Collection<Author, Book> {
-    if (this.#books === undefined) {
-      this.#books = hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
+    const { relations } = this.__orm;
+    if (relations.books === undefined) {
+      relations.books = hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
+      if (this.isNewEntity) {
+        relations.books.initializeForNewEntity?.();
+      }
     }
-    return this.#books;
+    return relations.books as any;
   }
 }

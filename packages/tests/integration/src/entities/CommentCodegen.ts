@@ -133,9 +133,6 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   };
-  #user: ManyToOneReference<Comment, User, undefined> | undefined = undefined;
-  #likedByUsers: Collection<Comment, User> | undefined = undefined;
-  #parent: PolymorphicReference<Comment, CommentParent, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, commentMeta, CommentCodegen.defaultValues, opts);
@@ -209,15 +206,20 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    if (this.#user === undefined) {
-      this.#user = hasOne(this as any as Comment, userMeta, "user", "createdComments");
+    const { relations } = this.__orm;
+    if (relations.user === undefined) {
+      relations.user = hasOne(this as any as Comment, userMeta, "user", "createdComments");
+      if (this.isNewEntity) {
+        relations.user.initializeForNewEntity?.();
+      }
     }
-    return this.#user;
+    return relations.user as any;
   }
 
   get likedByUsers(): Collection<Comment, User> {
-    if (this.#likedByUsers === undefined) {
-      this.#likedByUsers = hasManyToMany(
+    const { relations } = this.__orm;
+    if (relations.likedByUsers === undefined) {
+      relations.likedByUsers = hasManyToMany(
         this as any as Comment,
         "users_to_comments",
         "likedByUsers",
@@ -226,14 +228,21 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
         "likedComments",
         "liked_by_user_id",
       );
+      if (this.isNewEntity) {
+        relations.likedByUsers.initializeForNewEntity?.();
+      }
     }
-    return this.#likedByUsers;
+    return relations.likedByUsers as any;
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    if (this.#parent === undefined) {
-      this.#parent = hasOnePolymorphic(this as any as Comment, "parent");
+    const { relations } = this.__orm;
+    if (relations.parent === undefined) {
+      relations.parent = hasOnePolymorphic(this as any as Comment, "parent");
+      if (this.isNewEntity) {
+        relations.parent.initializeForNewEntity?.();
+      }
     }
-    return this.#parent;
+    return relations.parent as any;
   }
 }

@@ -98,7 +98,6 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     optIdsType: PaintingIdsOpts;
     factoryOptsType: Parameters<typeof newPainting>[1];
   };
-  #artist: ManyToOneReference<Painting, Artist, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, paintingMeta, PaintingCodegen.defaultValues, opts);
@@ -172,9 +171,13 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    if (this.#artist === undefined) {
-      this.#artist = hasOne(this as any as Painting, artistMeta, "artist", "paintings");
+    const { relations } = this.__orm;
+    if (relations.artist === undefined) {
+      relations.artist = hasOne(this as any as Painting, artistMeta, "artist", "paintings");
+      if (this.isNewEntity) {
+        relations.artist.initializeForNewEntity?.();
+      }
     }
-    return this.#artist;
+    return relations.artist as any;
   }
 }

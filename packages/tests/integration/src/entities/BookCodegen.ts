@@ -161,13 +161,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   };
-  #advances: Collection<Book, BookAdvance> | undefined = undefined;
-  #reviews: Collection<Book, BookReview> | undefined = undefined;
-  #comments: Collection<Book, Comment> | undefined = undefined;
-  #author: ManyToOneReference<Book, Author, never> | undefined = undefined;
-  #currentDraftAuthor: OneToOneReference<Book, Author> | undefined = undefined;
-  #image: OneToOneReference<Book, Image> | undefined = undefined;
-  #tags: Collection<Book, Tag> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
@@ -258,57 +251,93 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    if (this.#advances === undefined) {
-      this.#advances = hasMany(this as any as Book, bookAdvanceMeta, "advances", "book", "book_id", undefined);
+    const { relations } = this.__orm;
+    if (relations.advances === undefined) {
+      relations.advances = hasMany(this as any as Book, bookAdvanceMeta, "advances", "book", "book_id", undefined);
+      if (this.isNewEntity) {
+        relations.advances.initializeForNewEntity?.();
+      }
     }
-    return this.#advances;
+    return relations.advances as any;
   }
 
   get reviews(): Collection<Book, BookReview> {
-    if (this.#reviews === undefined) {
-      this.#reviews = hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+    const { relations } = this.__orm;
+    if (relations.reviews === undefined) {
+      relations.reviews = hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+      if (this.isNewEntity) {
+        relations.reviews.initializeForNewEntity?.();
+      }
     }
-    return this.#reviews;
+    return relations.reviews as any;
   }
 
   get comments(): Collection<Book, Comment> {
-    if (this.#comments === undefined) {
-      this.#comments = hasMany(this as any as Book, commentMeta, "comments", "parent", "parent_book_id", undefined);
+    const { relations } = this.__orm;
+    if (relations.comments === undefined) {
+      relations.comments = hasMany(this as any as Book, commentMeta, "comments", "parent", "parent_book_id", undefined);
+      if (this.isNewEntity) {
+        relations.comments.initializeForNewEntity?.();
+      }
     }
-    return this.#comments;
+    return relations.comments as any;
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    if (this.#author === undefined) {
-      this.#author = hasOne(this as any as Book, authorMeta, "author", "books");
+    const { relations } = this.__orm;
+    if (relations.author === undefined) {
+      relations.author = hasOne(this as any as Book, authorMeta, "author", "books");
+      if (this.isNewEntity) {
+        relations.author.initializeForNewEntity?.();
+      }
     }
-    return this.#author;
+    return relations.author as any;
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    if (this.#currentDraftAuthor === undefined) {
-      this.#currentDraftAuthor = hasOneToOne(
+    const { relations } = this.__orm;
+    if (relations.currentDraftAuthor === undefined) {
+      relations.currentDraftAuthor = hasOneToOne(
         this as any as Book,
         authorMeta,
         "currentDraftAuthor",
         "currentDraftBook",
         "current_draft_book_id",
       );
+      if (this.isNewEntity) {
+        relations.currentDraftAuthor.initializeForNewEntity?.();
+      }
     }
-    return this.#currentDraftAuthor;
+    return relations.currentDraftAuthor as any;
   }
 
   get image(): OneToOneReference<Book, Image> {
-    if (this.#image === undefined) {
-      this.#image = hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+    const { relations } = this.__orm;
+    if (relations.image === undefined) {
+      relations.image = hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+      if (this.isNewEntity) {
+        relations.image.initializeForNewEntity?.();
+      }
     }
-    return this.#image;
+    return relations.image as any;
   }
 
   get tags(): Collection<Book, Tag> {
-    if (this.#tags === undefined) {
-      this.#tags = hasManyToMany(this as any as Book, "books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
+    const { relations } = this.__orm;
+    if (relations.tags === undefined) {
+      relations.tags = hasManyToMany(
+        this as any as Book,
+        "books_to_tags",
+        "tags",
+        "book_id",
+        tagMeta,
+        "books",
+        "tag_id",
+      );
+      if (this.isNewEntity) {
+        relations.tags.initializeForNewEntity?.();
+      }
     }
-    return this.#tags;
+    return relations.tags as any;
   }
 }

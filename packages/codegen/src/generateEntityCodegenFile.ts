@@ -493,7 +493,8 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         if (r.kind === "abstract") {
           return r.line;
         } else {
-          return code`#${r.fieldName}: ${r.decl} | undefined = undefined;`;
+          return "";
+          // return code`#${r.fieldName}: ${r.decl} | undefined = undefined;`;
         }
       })}
 
@@ -553,8 +554,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         } else {
           return code`
             get ${r.fieldName}(): ${r.decl} {
-              if (this.#${r.fieldName} === undefined) this.#${r.fieldName} = ${r.init};
-              return this.#${r.fieldName};
+              const { relations } = this.__orm;
+              if (relations.${r.fieldName} === undefined) {
+                relations.${r.fieldName} = ${r.init};
+                if (this.isNewEntity) relations.${r.fieldName}.initializeForNewEntity?.();
+              }
+              return relations.${r.fieldName} as any;
             }
           `;
         }

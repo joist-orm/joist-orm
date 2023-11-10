@@ -92,7 +92,6 @@ export abstract class LargePublisherCodegen extends Publisher {
     optIdsType: LargePublisherIdsOpts;
     factoryOptsType: Parameters<typeof newLargePublisher>[1];
   };
-  #critics: Collection<LargePublisher, Critic> | undefined = undefined;
 
   constructor(em: EntityManager, opts: LargePublisherOpts) {
     // @ts-ignore
@@ -161,8 +160,9 @@ export abstract class LargePublisherCodegen extends Publisher {
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    if (this.#critics === undefined) {
-      this.#critics = hasMany(
+    const { relations } = this.__orm;
+    if (relations.critics === undefined) {
+      relations.critics = hasMany(
         this as any as LargePublisher,
         criticMeta,
         "critics",
@@ -170,7 +170,10 @@ export abstract class LargePublisherCodegen extends Publisher {
         "favorite_large_publisher_id",
         undefined,
       );
+      if (this.isNewEntity) {
+        relations.critics.initializeForNewEntity?.();
+      }
     }
-    return this.#critics;
+    return relations.critics as any;
   }
 }

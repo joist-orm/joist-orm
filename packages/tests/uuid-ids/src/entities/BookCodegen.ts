@@ -98,7 +98,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   };
-  #author: ManyToOneReference<Book, Author, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
@@ -169,9 +168,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    if (this.#author === undefined) {
-      this.#author = hasOne(this as any as Book, authorMeta, "author", "books");
+    const { relations } = this.__orm;
+    if (relations.author === undefined) {
+      relations.author = hasOne(this as any as Book, authorMeta, "author", "books");
+      if (this.isNewEntity) {
+        relations.author.initializeForNewEntity?.();
+      }
     }
-    return this.#author;
+    return relations.author as any;
   }
 }

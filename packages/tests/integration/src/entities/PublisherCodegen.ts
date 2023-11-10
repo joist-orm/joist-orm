@@ -178,12 +178,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     optIdsType: PublisherIdsOpts;
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
-  #authors: Collection<Publisher, Author> | undefined = undefined;
-  #bookAdvances: Collection<Publisher, BookAdvance> | undefined = undefined;
-  #comments: Collection<Publisher, Comment> | undefined = undefined;
-  #images: Collection<Publisher, Image> | undefined = undefined;
-  #group: ManyToOneReference<Publisher, PublisherGroup, undefined> | undefined = undefined;
-  #tags: Collection<Publisher, Tag> | undefined = undefined;
 
   constructor(em: EntityManager, opts: PublisherOpts) {
     if (arguments.length === 4) {
@@ -333,15 +327,27 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    if (this.#authors === undefined) {
-      this.#authors = hasMany(this as any as Publisher, authorMeta, "authors", "publisher", "publisher_id", undefined);
+    const { relations } = this.__orm;
+    if (relations.authors === undefined) {
+      relations.authors = hasMany(
+        this as any as Publisher,
+        authorMeta,
+        "authors",
+        "publisher",
+        "publisher_id",
+        undefined,
+      );
+      if (this.isNewEntity) {
+        relations.authors.initializeForNewEntity?.();
+      }
     }
-    return this.#authors;
+    return relations.authors as any;
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    if (this.#bookAdvances === undefined) {
-      this.#bookAdvances = hasMany(
+    const { relations } = this.__orm;
+    if (relations.bookAdvances === undefined) {
+      relations.bookAdvances = hasMany(
         this as any as Publisher,
         bookAdvanceMeta,
         "bookAdvances",
@@ -349,13 +355,17 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "publisher_id",
         undefined,
       );
+      if (this.isNewEntity) {
+        relations.bookAdvances.initializeForNewEntity?.();
+      }
     }
-    return this.#bookAdvances;
+    return relations.bookAdvances as any;
   }
 
   get comments(): Collection<Publisher, Comment> {
-    if (this.#comments === undefined) {
-      this.#comments = hasMany(
+    const { relations } = this.__orm;
+    if (relations.comments === undefined) {
+      relations.comments = hasMany(
         this as any as Publisher,
         commentMeta,
         "comments",
@@ -363,27 +373,39 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "parent_publisher_id",
         undefined,
       );
+      if (this.isNewEntity) {
+        relations.comments.initializeForNewEntity?.();
+      }
     }
-    return this.#comments;
+    return relations.comments as any;
   }
 
   get images(): Collection<Publisher, Image> {
-    if (this.#images === undefined) {
-      this.#images = hasMany(this as any as Publisher, imageMeta, "images", "publisher", "publisher_id", undefined);
+    const { relations } = this.__orm;
+    if (relations.images === undefined) {
+      relations.images = hasMany(this as any as Publisher, imageMeta, "images", "publisher", "publisher_id", undefined);
+      if (this.isNewEntity) {
+        relations.images.initializeForNewEntity?.();
+      }
     }
-    return this.#images;
+    return relations.images as any;
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    if (this.#group === undefined) {
-      this.#group = hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+    const { relations } = this.__orm;
+    if (relations.group === undefined) {
+      relations.group = hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+      if (this.isNewEntity) {
+        relations.group.initializeForNewEntity?.();
+      }
     }
-    return this.#group;
+    return relations.group as any;
   }
 
   get tags(): Collection<Publisher, Tag> {
-    if (this.#tags === undefined) {
-      this.#tags = hasManyToMany(
+    const { relations } = this.__orm;
+    if (relations.tags === undefined) {
+      relations.tags = hasManyToMany(
         this as any as Publisher,
         "publishers_to_tags",
         "tags",
@@ -392,7 +414,10 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
         "publishers",
         "tag_id",
       );
+      if (this.isNewEntity) {
+        relations.tags.initializeForNewEntity?.();
+      }
     }
-    return this.#tags;
+    return relations.tags as any;
   }
 }

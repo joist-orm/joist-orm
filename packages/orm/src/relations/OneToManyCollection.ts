@@ -1,16 +1,17 @@
+import { isOrWasNew } from "../Entity";
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
   Collection,
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
-  getEmInternalApi,
-  getMetadata,
   IdOf,
-  maybeResolveReferenceToId,
   OneToManyField,
   OrderBy,
+  ensureNotDeleted,
+  getEmInternalApi,
+  getMetadata,
+  maybeResolveReferenceToId,
   sameEntity,
 } from "../index";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
@@ -59,8 +60,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     this.#entity = entity;
     this.#fieldName = fieldName;
     this.#orderBy = orderBy;
-    // Don't overwrite any opts values
-    if (entity.isNewEntity && this.loaded === undefined) {
+    if (isOrWasNew(entity)) {
       this.loaded = [];
     }
   }

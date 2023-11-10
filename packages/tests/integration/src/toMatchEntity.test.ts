@@ -327,6 +327,16 @@ describe("toMatchEntity", () => {
     });
   });
 
+  it("can match references loaded after flush", async () => {
+    const em = newEntityManager();
+    const a1 = newAuthor(em, {});
+    await em.flush();
+    // This test assumes that no Author rules loaded `comments` during
+    // flush, and so this is the 1st time comments is being accessed
+    expect(Object.keys(a1.__orm.relations)).toEqual(["books", "publisher", "mentor"]);
+    expect(a1).toMatchEntity({ comments: [] });
+  });
+
   it("can match arrays", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, { firstName: "a1" });

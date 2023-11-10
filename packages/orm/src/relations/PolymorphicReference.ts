@@ -1,4 +1,4 @@
-import { Entity, isEntity } from "../Entity";
+import { Entity, isEntity, isOrWasNew } from "../Entity";
 import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
 import {
@@ -73,9 +73,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   ) {
     super();
     this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
-    // Usually our codegened opts ensures that polys are only initialized with entities,
-    // but em.clone currently passes in strings
-    if (entity.isNewEntity && this.current() === undefined) {
+    if (isOrWasNew(entity)) {
       this._isLoaded = true;
     }
   }

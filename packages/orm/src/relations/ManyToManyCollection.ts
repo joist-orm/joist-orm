@@ -11,6 +11,7 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
+import { isOrWasNew } from "../Entity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
@@ -63,7 +64,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
-    if (entity.isNewEntity) {
+    if (isOrWasNew(entity)) {
       this.loaded = [];
     }
   }

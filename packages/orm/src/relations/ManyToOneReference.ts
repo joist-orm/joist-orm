@@ -1,4 +1,4 @@
-import { Entity, isEntity } from "../Entity";
+import { Entity, isEntity, isOrWasNew } from "../Entity";
 import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
@@ -88,7 +88,8 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     this.#fieldName = fieldName;
     // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
     // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    if (entity.isNewEntity && this.current() === undefined) {
+    // if ((entity.isNewEntity || entity.__orm.wasNewInThisEm) && this.current() === undefined) {
+    if (isOrWasNew(entity) && this.current() === undefined) {
       this._isLoaded = true;
     }
   }

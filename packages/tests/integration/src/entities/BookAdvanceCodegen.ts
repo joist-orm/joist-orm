@@ -209,17 +209,11 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
     const { relations } = this.__orm;
-    if (relations.book === undefined) {
-      relations.book = hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
-    }
-    return relations.book as any;
+    return relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
     const { relations } = this.__orm;
-    if (relations.publisher === undefined) {
-      relations.publisher = hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
-    }
-    return relations.publisher as any;
+    return relations.publisher ??= hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
   }
 }

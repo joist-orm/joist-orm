@@ -205,23 +205,17 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   get book(): ManyToOneReference<BookReview, Book, never> {
     const { relations } = this.__orm;
-    if (relations.book === undefined) {
-      relations.book = hasOne(this as any as BookReview, bookMeta, "book", "reviews");
-    }
-    return relations.book as any;
+    return relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
     const { relations } = this.__orm;
-    if (relations.comment === undefined) {
-      relations.comment = hasOneToOne(
-        this as any as BookReview,
-        commentMeta,
-        "comment",
-        "parent",
-        "parent_book_review_id",
-      );
-    }
-    return relations.comment as any;
+    return relations.comment ??= hasOneToOne(
+      this as any as BookReview,
+      commentMeta,
+      "comment",
+      "parent",
+      "parent_book_review_id",
+    );
   }
 }

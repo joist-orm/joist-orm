@@ -328,78 +328,67 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   get authors(): Collection<Publisher, Author> {
     const { relations } = this.__orm;
-    if (relations.authors === undefined) {
-      relations.authors = hasMany(
-        this as any as Publisher,
-        authorMeta,
-        "authors",
-        "publisher",
-        "publisher_id",
-        undefined,
-      );
-    }
-    return relations.authors as any;
+    return relations.authors ??= hasMany(
+      this as any as Publisher,
+      authorMeta,
+      "authors",
+      "publisher",
+      "publisher_id",
+      undefined,
+    );
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
     const { relations } = this.__orm;
-    if (relations.bookAdvances === undefined) {
-      relations.bookAdvances = hasMany(
-        this as any as Publisher,
-        bookAdvanceMeta,
-        "bookAdvances",
-        "publisher",
-        "publisher_id",
-        undefined,
-      );
-    }
-    return relations.bookAdvances as any;
+    return relations.bookAdvances ??= hasMany(
+      this as any as Publisher,
+      bookAdvanceMeta,
+      "bookAdvances",
+      "publisher",
+      "publisher_id",
+      undefined,
+    );
   }
 
   get comments(): Collection<Publisher, Comment> {
     const { relations } = this.__orm;
-    if (relations.comments === undefined) {
-      relations.comments = hasMany(
-        this as any as Publisher,
-        commentMeta,
-        "comments",
-        "parent",
-        "parent_publisher_id",
-        undefined,
-      );
-    }
-    return relations.comments as any;
+    return relations.comments ??= hasMany(
+      this as any as Publisher,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_publisher_id",
+      undefined,
+    );
   }
 
   get images(): Collection<Publisher, Image> {
     const { relations } = this.__orm;
-    if (relations.images === undefined) {
-      relations.images = hasMany(this as any as Publisher, imageMeta, "images", "publisher", "publisher_id", undefined);
-    }
-    return relations.images as any;
+    return relations.images ??= hasMany(
+      this as any as Publisher,
+      imageMeta,
+      "images",
+      "publisher",
+      "publisher_id",
+      undefined,
+    );
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
     const { relations } = this.__orm;
-    if (relations.group === undefined) {
-      relations.group = hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
-    }
-    return relations.group as any;
+    return relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
     const { relations } = this.__orm;
-    if (relations.tags === undefined) {
-      relations.tags = hasManyToMany(
-        this as any as Publisher,
-        "publishers_to_tags",
-        "tags",
-        "publisher_id",
-        tagMeta,
-        "publishers",
-        "tag_id",
-      );
-    }
-    return relations.tags as any;
+    return relations.tags ??= hasManyToMany(
+      this as any as Publisher,
+      "publishers_to_tags",
+      "tags",
+      "publisher_id",
+      tagMeta,
+      "publishers",
+      "tag_id",
+    );
   }
 }

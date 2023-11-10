@@ -183,9 +183,13 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
 
   get paintings(): Collection<Artist, Painting> {
     const { relations } = this.__orm;
-    if (relations.paintings === undefined) {
-      relations.paintings = hasMany(this as any as Artist, paintingMeta, "paintings", "artist", "artistId", undefined);
-    }
-    return relations.paintings as any;
+    return relations.paintings ??= hasMany(
+      this as any as Artist,
+      paintingMeta,
+      "paintings",
+      "artist",
+      "artistId",
+      undefined,
+    );
   }
 }

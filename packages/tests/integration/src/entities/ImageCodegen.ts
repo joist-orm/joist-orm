@@ -232,25 +232,16 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
 
   get author(): ManyToOneReference<Image, Author, undefined> {
     const { relations } = this.__orm;
-    if (relations.author === undefined) {
-      relations.author = hasOne(this as any as Image, authorMeta, "author", "image");
-    }
-    return relations.author as any;
+    return relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
     const { relations } = this.__orm;
-    if (relations.book === undefined) {
-      relations.book = hasOne(this as any as Image, bookMeta, "book", "image");
-    }
-    return relations.book as any;
+    return relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
     const { relations } = this.__orm;
-    if (relations.publisher === undefined) {
-      relations.publisher = hasOne(this as any as Image, publisherMeta, "publisher", "images");
-    }
-    return relations.publisher as any;
+    return relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
   }
 }

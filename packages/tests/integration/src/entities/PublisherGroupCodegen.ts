@@ -181,24 +181,24 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   get publishers(): Collection<PublisherGroup, Publisher> {
     const { relations } = this.__orm;
-    if (relations.publishers === undefined) {
-      relations.publishers = hasMany(
-        this as any as PublisherGroup,
-        publisherMeta,
-        "publishers",
-        "group",
-        "group_id",
-        undefined,
-      );
-    }
-    return relations.publishers as any;
+    return relations.publishers ??= hasMany(
+      this as any as PublisherGroup,
+      publisherMeta,
+      "publishers",
+      "group",
+      "group_id",
+      undefined,
+    );
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
     const { relations } = this.__orm;
-    if (relations.critics === undefined) {
-      relations.critics = hasLargeMany(this as any as PublisherGroup, criticMeta, "critics", "group", "group_id");
-    }
-    return relations.critics as any;
+    return relations.critics ??= hasLargeMany(
+      this as any as PublisherGroup,
+      criticMeta,
+      "critics",
+      "group",
+      "group_id",
+    );
   }
 }

@@ -169,9 +169,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> {
 
   get author(): ManyToOneReference<Book, Author, never> {
     const { relations } = this.__orm;
-    if (relations.author === undefined) {
-      relations.author = hasOne(this as any as Book, authorMeta, "author", "books");
-    }
-    return relations.author as any;
+    return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

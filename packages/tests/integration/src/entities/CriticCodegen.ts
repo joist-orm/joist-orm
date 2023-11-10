@@ -198,36 +198,27 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
     const { relations } = this.__orm;
-    if (relations.favoriteLargePublisher === undefined) {
-      relations.favoriteLargePublisher = hasOne(
-        this as any as Critic,
-        largePublisherMeta,
-        "favoriteLargePublisher",
-        "critics",
-      );
-    }
-    return relations.favoriteLargePublisher as any;
+    return relations.favoriteLargePublisher ??= hasOne(
+      this as any as Critic,
+      largePublisherMeta,
+      "favoriteLargePublisher",
+      "critics",
+    );
   }
 
   get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
     const { relations } = this.__orm;
-    if (relations.group === undefined) {
-      relations.group = hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
-    }
-    return relations.group as any;
+    return relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
   }
 
   get criticColumn(): OneToOneReference<Critic, CriticColumn> {
     const { relations } = this.__orm;
-    if (relations.criticColumn === undefined) {
-      relations.criticColumn = hasOneToOne(
-        this as any as Critic,
-        criticColumnMeta,
-        "criticColumn",
-        "critic",
-        "critic_id",
-      );
-    }
-    return relations.criticColumn as any;
+    return relations.criticColumn ??= hasOneToOne(
+      this as any as Critic,
+      criticColumnMeta,
+      "criticColumn",
+      "critic",
+      "critic_id",
+    );
   }
 }

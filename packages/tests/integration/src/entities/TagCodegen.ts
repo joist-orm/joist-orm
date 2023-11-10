@@ -184,49 +184,40 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
 
   get books(): Collection<Tag, Book> {
     const { relations } = this.__orm;
-    if (relations.books === undefined) {
-      relations.books = hasManyToMany(
-        this as any as Tag,
-        "books_to_tags",
-        "books",
-        "tag_id",
-        bookMeta,
-        "tags",
-        "book_id",
-      );
-    }
-    return relations.books as any;
+    return relations.books ??= hasManyToMany(
+      this as any as Tag,
+      "books_to_tags",
+      "books",
+      "tag_id",
+      bookMeta,
+      "tags",
+      "book_id",
+    );
   }
 
   get publishers(): Collection<Tag, Publisher> {
     const { relations } = this.__orm;
-    if (relations.publishers === undefined) {
-      relations.publishers = hasManyToMany(
-        this as any as Tag,
-        "publishers_to_tags",
-        "publishers",
-        "tag_id",
-        publisherMeta,
-        "tags",
-        "publisher_id",
-      );
-    }
-    return relations.publishers as any;
+    return relations.publishers ??= hasManyToMany(
+      this as any as Tag,
+      "publishers_to_tags",
+      "publishers",
+      "tag_id",
+      publisherMeta,
+      "tags",
+      "publisher_id",
+    );
   }
 
   get authors(): LargeCollection<Tag, Author> {
     const { relations } = this.__orm;
-    if (relations.authors === undefined) {
-      relations.authors = hasLargeManyToMany(
-        this as any as Tag,
-        "authors_to_tags",
-        "authors",
-        "tag_id",
-        authorMeta,
-        "tags",
-        "author_id",
-      );
-    }
-    return relations.authors as any;
+    return relations.authors ??= hasLargeManyToMany(
+      this as any as Tag,
+      "authors_to_tags",
+      "authors",
+      "tag_id",
+      authorMeta,
+      "tags",
+      "author_id",
+    );
   }
 }

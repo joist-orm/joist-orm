@@ -207,33 +207,24 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
 
   get user(): ManyToOneReference<Comment, User, undefined> {
     const { relations } = this.__orm;
-    if (relations.user === undefined) {
-      relations.user = hasOne(this as any as Comment, userMeta, "user", "createdComments");
-    }
-    return relations.user as any;
+    return relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
   }
 
   get likedByUsers(): Collection<Comment, User> {
     const { relations } = this.__orm;
-    if (relations.likedByUsers === undefined) {
-      relations.likedByUsers = hasManyToMany(
-        this as any as Comment,
-        "users_to_comments",
-        "likedByUsers",
-        "comment_id",
-        userMeta,
-        "likedComments",
-        "liked_by_user_id",
-      );
-    }
-    return relations.likedByUsers as any;
+    return relations.likedByUsers ??= hasManyToMany(
+      this as any as Comment,
+      "users_to_comments",
+      "likedByUsers",
+      "comment_id",
+      userMeta,
+      "likedComments",
+      "liked_by_user_id",
+    );
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
     const { relations } = this.__orm;
-    if (relations.parent === undefined) {
-      relations.parent = hasOnePolymorphic(this as any as Comment, "parent");
-    }
-    return relations.parent as any;
+    return relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
   }
 }

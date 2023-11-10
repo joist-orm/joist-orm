@@ -161,16 +161,13 @@ export abstract class LargePublisherCodegen extends Publisher {
 
   get critics(): Collection<LargePublisher, Critic> {
     const { relations } = this.__orm;
-    if (relations.critics === undefined) {
-      relations.critics = hasMany(
-        this as any as LargePublisher,
-        criticMeta,
-        "critics",
-        "favoriteLargePublisher",
-        "favorite_large_publisher_id",
-        undefined,
-      );
-    }
-    return relations.critics as any;
+    return relations.critics ??= hasMany(
+      this as any as LargePublisher,
+      criticMeta,
+      "critics",
+      "favoriteLargePublisher",
+      "favorite_large_publisher_id",
+      undefined,
+    );
   }
 }

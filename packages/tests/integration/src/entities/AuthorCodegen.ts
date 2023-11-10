@@ -522,112 +522,94 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
 
   get authors(): Collection<Author, Author> {
     const { relations } = this.__orm;
-    if (relations.authors === undefined) {
-      relations.authors = hasMany(this as any as Author, authorMeta, "authors", "mentor", "mentor_id", undefined);
-    }
-    return relations.authors as any;
+    return relations.authors ??= hasMany(
+      this as any as Author,
+      authorMeta,
+      "authors",
+      "mentor",
+      "mentor_id",
+      undefined,
+    );
   }
 
   get schedules(): Collection<Author, AuthorSchedule> {
     const { relations } = this.__orm;
-    if (relations.schedules === undefined) {
-      relations.schedules = hasMany(
-        this as any as Author,
-        authorScheduleMeta,
-        "schedules",
-        "author",
-        "author_id",
-        undefined,
-      );
-    }
-    return relations.schedules as any;
+    return relations.schedules ??= hasMany(
+      this as any as Author,
+      authorScheduleMeta,
+      "schedules",
+      "author",
+      "author_id",
+      undefined,
+    );
   }
 
   get books(): Collection<Author, Book> {
     const { relations } = this.__orm;
-    if (relations.books === undefined) {
-      relations.books = hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
-        "field": "order",
-        "direction": "ASC",
-      });
-    }
-    return relations.books as any;
+    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+      "field": "order",
+      "direction": "ASC",
+    });
   }
 
   get comments(): Collection<Author, Comment> {
     const { relations } = this.__orm;
-    if (relations.comments === undefined) {
-      relations.comments = hasMany(
-        this as any as Author,
-        commentMeta,
-        "comments",
-        "parent",
-        "parent_author_id",
-        undefined,
-      );
-    }
-    return relations.comments as any;
+    return relations.comments ??= hasMany(
+      this as any as Author,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_author_id",
+      undefined,
+    );
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
     const { relations } = this.__orm;
-    if (relations.mentor === undefined) {
-      relations.mentor = hasOne(this as any as Author, authorMeta, "mentor", "authors");
-    }
-    return relations.mentor as any;
+    return relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
     const { relations } = this.__orm;
-    if (relations.currentDraftBook === undefined) {
-      relations.currentDraftBook = hasOne(this as any as Author, bookMeta, "currentDraftBook", "currentDraftAuthor");
-    }
-    return relations.currentDraftBook as any;
+    return relations.currentDraftBook ??= hasOne(
+      this as any as Author,
+      bookMeta,
+      "currentDraftBook",
+      "currentDraftAuthor",
+    );
   }
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
     const { relations } = this.__orm;
-    if (relations.publisher === undefined) {
-      relations.publisher = hasOne(this as any as Author, publisherMeta, "publisher", "authors");
-    }
-    return relations.publisher as any;
+    return relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
   }
 
   get image(): OneToOneReference<Author, Image> {
     const { relations } = this.__orm;
-    if (relations.image === undefined) {
-      relations.image = hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
-    }
-    return relations.image as any;
+    return relations.image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
   }
 
   get userOneToOne(): OneToOneReference<Author, User> {
     const { relations } = this.__orm;
-    if (relations.userOneToOne === undefined) {
-      relations.userOneToOne = hasOneToOne(
-        this as any as Author,
-        userMeta,
-        "userOneToOne",
-        "authorManyToOne",
-        "author_id",
-      );
-    }
-    return relations.userOneToOne as any;
+    return relations.userOneToOne ??= hasOneToOne(
+      this as any as Author,
+      userMeta,
+      "userOneToOne",
+      "authorManyToOne",
+      "author_id",
+    );
   }
 
   get tags(): Collection<Author, Tag> {
     const { relations } = this.__orm;
-    if (relations.tags === undefined) {
-      relations.tags = hasManyToMany(
-        this as any as Author,
-        "authors_to_tags",
-        "tags",
-        "author_id",
-        tagMeta,
-        "authors",
-        "tag_id",
-      );
-    }
-    return relations.tags as any;
+    return relations.tags ??= hasManyToMany(
+      this as any as Author,
+      "authors_to_tags",
+      "tags",
+      "author_id",
+      tagMeta,
+      "authors",
+      "tag_id",
+    );
   }
 }

@@ -555,10 +555,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
           return code`
             get ${r.fieldName}(): ${r.decl} {
               const { relations } = this.__orm;
-              if (relations.${r.fieldName} === undefined) {
-                relations.${r.fieldName} = ${r.init};
-              }
-              return relations.${r.fieldName} as any;
+              return relations.${r.fieldName} ??= ${r.init};
             }
           `;
         }

@@ -245,40 +245,31 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
 
   get createdComments(): Collection<User, Comment> {
     const { relations } = this.__orm;
-    if (relations.createdComments === undefined) {
-      relations.createdComments = hasMany(
-        this as any as User,
-        commentMeta,
-        "createdComments",
-        "user",
-        "user_id",
-        undefined,
-      );
-    }
-    return relations.createdComments as any;
+    return relations.createdComments ??= hasMany(
+      this as any as User,
+      commentMeta,
+      "createdComments",
+      "user",
+      "user_id",
+      undefined,
+    );
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
     const { relations } = this.__orm;
-    if (relations.authorManyToOne === undefined) {
-      relations.authorManyToOne = hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
-    }
-    return relations.authorManyToOne as any;
+    return relations.authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
   }
 
   get likedComments(): Collection<User, Comment> {
     const { relations } = this.__orm;
-    if (relations.likedComments === undefined) {
-      relations.likedComments = hasManyToMany(
-        this as any as User,
-        "users_to_comments",
-        "likedComments",
-        "liked_by_user_id",
-        commentMeta,
-        "likedByUsers",
-        "comment_id",
-      );
-    }
-    return relations.likedComments as any;
+    return relations.likedComments ??= hasManyToMany(
+      this as any as User,
+      "users_to_comments",
+      "likedComments",
+      "liked_by_user_id",
+      commentMeta,
+      "likedByUsers",
+      "comment_id",
+    );
   }
 }

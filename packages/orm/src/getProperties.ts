@@ -28,7 +28,13 @@ export function getProperties<T extends Entity>(meta: EntityMetadata): Record<st
   }
   const instance = getFakeInstance(meta);
   propertiesCache[meta.tagName] = Object.fromEntries(
-    [...Object.getOwnPropertyNames(meta.cstr.prototype), ...Object.keys(instance)]
+    [
+      ...Object.values(meta.allFields)
+        .filter((f) => f.kind !== "primaryKey" && f.kind !== "primitive" && f.kind !== "enum")
+        .map((f) => f.fieldName),
+      ...Object.getOwnPropertyNames(meta.cstr.prototype),
+      ...Object.keys(instance),
+    ]
       .filter((key) => key !== "constructor" && !key.startsWith("__"))
       .map((key) => {
         // Return the value of `instance[key]` but wrap it in a try/catch in case it's

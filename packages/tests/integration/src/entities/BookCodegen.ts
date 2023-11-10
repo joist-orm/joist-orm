@@ -161,31 +161,13 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: BookIdsOpts;
     factoryOptsType: Parameters<typeof newBook>[1];
   };
-
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id", undefined);
-
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id", undefined);
-
-  readonly comments: Collection<Book, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_book_id",
-    undefined,
-  );
-
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
-
-  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
-    authorMeta,
-    "currentDraftAuthor",
-    "currentDraftBook",
-    "current_draft_book_id",
-  );
-
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
-
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
+  #advances: Collection<Book, BookAdvance> | undefined = undefined;
+  #reviews: Collection<Book, BookReview> | undefined = undefined;
+  #comments: Collection<Book, Comment> | undefined = undefined;
+  #author: ManyToOneReference<Book, Author, never> | undefined = undefined;
+  #currentDraftAuthor: OneToOneReference<Book, Author> | undefined = undefined;
+  #image: OneToOneReference<Book, Image> | undefined = undefined;
+  #tags: Collection<Book, Tag> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
@@ -273,5 +255,54 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
     return isLoaded(this as any as Book, hint);
+  }
+
+  get advances(): Collection<Book, BookAdvance> {
+    return this.#advances ??= hasMany(this as any as Book, bookAdvanceMeta, "advances", "book", "book_id", undefined);
+  }
+
+  get reviews(): Collection<Book, BookReview> {
+    return this.#reviews ??= hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+  }
+
+  get comments(): Collection<Book, Comment> {
+    return this.#comments ??= hasMany(
+      this as any as Book,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_book_id",
+      undefined,
+    );
+  }
+
+  get author(): ManyToOneReference<Book, Author, never> {
+    return this.#author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+  }
+
+  get currentDraftAuthor(): OneToOneReference<Book, Author> {
+    return this.#currentDraftAuthor ??= hasOneToOne(
+      this as any as Book,
+      authorMeta,
+      "currentDraftAuthor",
+      "currentDraftBook",
+      "current_draft_book_id",
+    );
+  }
+
+  get image(): OneToOneReference<Book, Image> {
+    return this.#image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+  }
+
+  get tags(): Collection<Book, Tag> {
+    return this.#tags ??= hasManyToMany(
+      this as any as Book,
+      "books_to_tags",
+      "tags",
+      "book_id",
+      tagMeta,
+      "books",
+      "tag_id",
+    );
   }
 }

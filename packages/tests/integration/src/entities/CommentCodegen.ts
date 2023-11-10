@@ -133,19 +133,9 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: CommentIdsOpts;
     factoryOptsType: Parameters<typeof newComment>[1];
   };
-
-  readonly user: ManyToOneReference<Comment, User, undefined> = hasOne(userMeta, "user", "createdComments");
-
-  readonly likedByUsers: Collection<Comment, User> = hasManyToMany(
-    "users_to_comments",
-    "likedByUsers",
-    "comment_id",
-    userMeta,
-    "likedComments",
-    "liked_by_user_id",
-  );
-
-  readonly parent: PolymorphicReference<Comment, CommentParent, never> = hasOnePolymorphic("parent");
+  #user: ManyToOneReference<Comment, User, undefined> | undefined = undefined;
+  #likedByUsers: Collection<Comment, User> | undefined = undefined;
+  #parent: PolymorphicReference<Comment, CommentParent, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: CommentOpts) {
     super(em, commentMeta, CommentCodegen.defaultValues, opts);
@@ -216,5 +206,25 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Comment>>(hint: H): this is Loaded<Comment, H> {
     return isLoaded(this as any as Comment, hint);
+  }
+
+  get user(): ManyToOneReference<Comment, User, undefined> {
+    return this.#user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
+  }
+
+  get likedByUsers(): Collection<Comment, User> {
+    return this.#likedByUsers ??= hasManyToMany(
+      this as any as Comment,
+      "users_to_comments",
+      "likedByUsers",
+      "comment_id",
+      userMeta,
+      "likedComments",
+      "liked_by_user_id",
+    );
+  }
+
+  get parent(): PolymorphicReference<Comment, CommentParent, never> {
+    return this.#parent ??= hasOnePolymorphic(this as any as Comment, "parent");
   }
 }

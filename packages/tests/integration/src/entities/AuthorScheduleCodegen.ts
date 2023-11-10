@@ -105,8 +105,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
     optIdsType: AuthorScheduleIdsOpts;
     factoryOptsType: Parameters<typeof newAuthorSchedule>[1];
   };
-
-  readonly author: ManyToOneReference<AuthorSchedule, Author, never> = hasOne(authorMeta, "author", "schedules");
+  #author: ManyToOneReference<AuthorSchedule, Author, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: AuthorScheduleOpts) {
     super(em, authorScheduleMeta, AuthorScheduleCodegen.defaultValues, opts);
@@ -182,5 +181,9 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
 
   isLoaded<H extends LoadHint<AuthorSchedule>>(hint: H): this is Loaded<AuthorSchedule, H> {
     return isLoaded(this as any as AuthorSchedule, hint);
+  }
+
+  get author(): ManyToOneReference<AuthorSchedule, Author, never> {
+    return this.#author ??= hasOne(this as any as AuthorSchedule, authorMeta, "author", "schedules");
   }
 }

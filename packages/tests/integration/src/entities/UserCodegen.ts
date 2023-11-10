@@ -142,29 +142,9 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: UserIdsOpts;
     factoryOptsType: Parameters<typeof newUser>[1];
   };
-
-  readonly createdComments: Collection<User, Comment> = hasMany(
-    commentMeta,
-    "createdComments",
-    "user",
-    "user_id",
-    undefined,
-  );
-
-  readonly authorManyToOne: ManyToOneReference<User, Author, undefined> = hasOne(
-    authorMeta,
-    "authorManyToOne",
-    "userOneToOne",
-  );
-
-  readonly likedComments: Collection<User, Comment> = hasManyToMany(
-    "users_to_comments",
-    "likedComments",
-    "liked_by_user_id",
-    commentMeta,
-    "likedByUsers",
-    "comment_id",
-  );
+  #createdComments: Collection<User, Comment> | undefined = undefined;
+  #authorManyToOne: ManyToOneReference<User, Author, undefined> | undefined = undefined;
+  #likedComments: Collection<User, Comment> | undefined = undefined;
 
   constructor(em: EntityManager, opts: UserOpts) {
     super(em, userMeta, UserCodegen.defaultValues, opts);
@@ -264,5 +244,32 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<User>>(hint: H): this is Loaded<User, H> {
     return isLoaded(this as any as User, hint);
+  }
+
+  get createdComments(): Collection<User, Comment> {
+    return this.#createdComments ??= hasMany(
+      this as any as User,
+      commentMeta,
+      "createdComments",
+      "user",
+      "user_id",
+      undefined,
+    );
+  }
+
+  get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
+    return this.#authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
+  }
+
+  get likedComments(): Collection<User, Comment> {
+    return this.#likedComments ??= hasManyToMany(
+      this as any as User,
+      "users_to_comments",
+      "likedComments",
+      "liked_by_user_id",
+      commentMeta,
+      "likedByUsers",
+      "comment_id",
+    );
   }
 }

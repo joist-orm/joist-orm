@@ -1,13 +1,4 @@
-import {
-  currentlyInstantiatingEntity,
-  deTagId,
-  ensureNotDeleted,
-  getEmInternalApi,
-  IdOf,
-  LoadedReference,
-  setField,
-  TaggedId,
-} from "../";
+import { deTagId, ensureNotDeleted, getEmInternalApi, IdOf, LoadedReference, setField, TaggedId } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
@@ -60,12 +51,12 @@ export function isLoadedOneToOneReference(
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
+  entity: T,
   otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): OneToOneReference<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 

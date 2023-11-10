@@ -1,6 +1,6 @@
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
 import { Entity } from "../Entity";
-import { currentlyInstantiatingEntity, IdOf } from "../EntityManager";
+import { IdOf } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToManyCollection, toTaggedId } from "../index";
 import { remove } from "../utils";
@@ -9,6 +9,7 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyLargeCollection`s. */
 export function hasLargeManyToMany<T extends Entity, U extends Entity>(
+  entity: T,
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
@@ -16,7 +17,6 @@ export function hasLargeManyToMany<T extends Entity, U extends Entity>(
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new ManyToManyLargeCollection(
     joinTableName,
     entity,

@@ -98,8 +98,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
     optIdsType: CriticColumnIdsOpts;
     factoryOptsType: Parameters<typeof newCriticColumn>[1];
   };
-
-  readonly critic: ManyToOneReference<CriticColumn, Critic, never> = hasOne(criticMeta, "critic", "criticColumn");
+  #critic: ManyToOneReference<CriticColumn, Critic, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: CriticColumnOpts) {
     super(em, criticColumnMeta, CriticColumnCodegen.defaultValues, opts);
@@ -172,5 +171,9 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
 
   isLoaded<H extends LoadHint<CriticColumn>>(hint: H): this is Loaded<CriticColumn, H> {
     return isLoaded(this as any as CriticColumn, hint);
+  }
+
+  get critic(): ManyToOneReference<CriticColumn, Critic, never> {
+    return this.#critic ??= hasOne(this as any as CriticColumn, criticMeta, "critic", "criticColumn");
   }
 }

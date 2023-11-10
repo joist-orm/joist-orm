@@ -127,15 +127,8 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     optIdsType: BookReviewIdsOpts;
     factoryOptsType: Parameters<typeof newBookReview>[1];
   };
-
-  readonly book: ManyToOneReference<BookReview, Book, never> = hasOne(bookMeta, "book", "reviews");
-
-  readonly comment: OneToOneReference<BookReview, Comment> = hasOneToOne(
-    commentMeta,
-    "comment",
-    "parent",
-    "parent_book_review_id",
-  );
+  #book: ManyToOneReference<BookReview, Book, never> | undefined = undefined;
+  #comment: OneToOneReference<BookReview, Comment> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookReviewOpts) {
     super(em, bookReviewMeta, BookReviewCodegen.defaultValues, opts);
@@ -210,5 +203,19 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
 
   isLoaded<H extends LoadHint<BookReview>>(hint: H): this is Loaded<BookReview, H> {
     return isLoaded(this as any as BookReview, hint);
+  }
+
+  get book(): ManyToOneReference<BookReview, Book, never> {
+    return this.#book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+  }
+
+  get comment(): OneToOneReference<BookReview, Comment> {
+    return this.#comment ??= hasOneToOne(
+      this as any as BookReview,
+      commentMeta,
+      "comment",
+      "parent",
+      "parent_book_review_id",
+    );
   }
 }

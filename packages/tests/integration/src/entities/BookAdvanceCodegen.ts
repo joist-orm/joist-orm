@@ -119,14 +119,8 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
     optIdsType: BookAdvanceIdsOpts;
     factoryOptsType: Parameters<typeof newBookAdvance>[1];
   };
-
-  readonly book: ManyToOneReference<BookAdvance, Book, never> = hasOne(bookMeta, "book", "advances");
-
-  readonly publisher: ManyToOneReference<BookAdvance, Publisher, never> = hasOne(
-    publisherMeta,
-    "publisher",
-    "bookAdvances",
-  );
+  #book: ManyToOneReference<BookAdvance, Book, never> | undefined = undefined;
+  #publisher: ManyToOneReference<BookAdvance, Publisher, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: BookAdvanceOpts) {
     super(em, bookAdvanceMeta, BookAdvanceCodegen.defaultValues, opts);
@@ -213,5 +207,13 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
 
   isLoaded<H extends LoadHint<BookAdvance>>(hint: H): this is Loaded<BookAdvance, H> {
     return isLoaded(this as any as BookAdvance, hint);
+  }
+
+  get book(): ManyToOneReference<BookAdvance, Book, never> {
+    return this.#book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
+  }
+
+  get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
+    return this.#publisher ??= hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
   }
 }

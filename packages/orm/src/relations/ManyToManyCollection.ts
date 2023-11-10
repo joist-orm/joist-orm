@@ -1,6 +1,5 @@
 import {
   Collection,
-  currentlyInstantiatingEntity,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
@@ -18,6 +17,7 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
+  entity: T,
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
@@ -25,7 +25,6 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new ManyToManyCollection<T, U>(
     joinTableName,
     entity,

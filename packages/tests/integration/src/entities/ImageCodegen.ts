@@ -134,12 +134,9 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: ImageIdsOpts;
     factoryOptsType: Parameters<typeof newImage>[1];
   };
-
-  readonly author: ManyToOneReference<Image, Author, undefined> = hasOne(authorMeta, "author", "image");
-
-  readonly book: ManyToOneReference<Image, Book, undefined> = hasOne(bookMeta, "book", "image");
-
-  readonly publisher: ManyToOneReference<Image, Publisher, undefined> = hasOne(publisherMeta, "publisher", "images");
+  #author: ManyToOneReference<Image, Author, undefined> | undefined = undefined;
+  #book: ManyToOneReference<Image, Book, undefined> | undefined = undefined;
+  #publisher: ManyToOneReference<Image, Publisher, undefined> | undefined = undefined;
 
   constructor(em: EntityManager, opts: ImageOpts) {
     super(em, imageMeta, ImageCodegen.defaultValues, opts);
@@ -234,5 +231,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Image>>(hint: H): this is Loaded<Image, H> {
     return isLoaded(this as any as Image, hint);
+  }
+
+  get author(): ManyToOneReference<Image, Author, undefined> {
+    return this.#author ??= hasOne(this as any as Image, authorMeta, "author", "image");
+  }
+
+  get book(): ManyToOneReference<Image, Book, undefined> {
+    return this.#book ??= hasOne(this as any as Image, bookMeta, "book", "image");
+  }
+
+  get publisher(): ManyToOneReference<Image, Publisher, undefined> {
+    return this.#publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
   }
 }

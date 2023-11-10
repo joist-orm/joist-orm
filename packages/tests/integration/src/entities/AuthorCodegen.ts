@@ -280,59 +280,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     optIdsType: AuthorIdsOpts;
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
-
-  readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id", undefined);
-
-  readonly schedules: Collection<Author, AuthorSchedule> = hasMany(
-    authorScheduleMeta,
-    "schedules",
-    "author",
-    "author_id",
-    undefined,
-  );
-
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", {
-    "field": "order",
-    "direction": "ASC",
-  });
-
-  readonly comments: Collection<Author, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_author_id",
-    undefined,
-  );
-
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
-
-  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
-    bookMeta,
-    "currentDraftBook",
-    "currentDraftAuthor",
-  );
-
+  #authors: Collection<Author, Author> | undefined = undefined;
+  #schedules: Collection<Author, AuthorSchedule> | undefined = undefined;
+  #books: Collection<Author, Book> | undefined = undefined;
+  #comments: Collection<Author, Comment> | undefined = undefined;
+  #mentor: ManyToOneReference<Author, Author, undefined> | undefined = undefined;
+  #currentDraftBook: ManyToOneReference<Author, Book, undefined> | undefined = undefined;
   abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
-
-  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
-
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
-
-  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne(
-    userMeta,
-    "userOneToOne",
-    "authorManyToOne",
-    "author_id",
-  );
-
-  readonly tags: Collection<Author, Tag> = hasManyToMany(
-    "authors_to_tags",
-    "tags",
-    "author_id",
-    tagMeta,
-    "authors",
-    "tag_id",
-  );
+  #publisher: ManyToOneReference<Author, Publisher, undefined> | undefined = undefined;
+  #image: OneToOneReference<Author, Image> | undefined = undefined;
+  #userOneToOne: OneToOneReference<Author, User> | undefined = undefined;
+  #tags: Collection<Author, Tag> | undefined = undefined;
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
@@ -569,5 +527,76 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {
     return isLoaded(this as any as Author, hint);
+  }
+
+  get authors(): Collection<Author, Author> {
+    return this.#authors ??= hasMany(this as any as Author, authorMeta, "authors", "mentor", "mentor_id", undefined);
+  }
+
+  get schedules(): Collection<Author, AuthorSchedule> {
+    return this.#schedules ??= hasMany(
+      this as any as Author,
+      authorScheduleMeta,
+      "schedules",
+      "author",
+      "author_id",
+      undefined,
+    );
+  }
+
+  get books(): Collection<Author, Book> {
+    return this.#books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+      "field": "order",
+      "direction": "ASC",
+    });
+  }
+
+  get comments(): Collection<Author, Comment> {
+    return this.#comments ??= hasMany(
+      this as any as Author,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_author_id",
+      undefined,
+    );
+  }
+
+  get mentor(): ManyToOneReference<Author, Author, undefined> {
+    return this.#mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
+  }
+
+  get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
+    return this.#currentDraftBook ??= hasOne(this as any as Author, bookMeta, "currentDraftBook", "currentDraftAuthor");
+  }
+
+  get publisher(): ManyToOneReference<Author, Publisher, undefined> {
+    return this.#publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
+  }
+
+  get image(): OneToOneReference<Author, Image> {
+    return this.#image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
+  }
+
+  get userOneToOne(): OneToOneReference<Author, User> {
+    return this.#userOneToOne ??= hasOneToOne(
+      this as any as Author,
+      userMeta,
+      "userOneToOne",
+      "authorManyToOne",
+      "author_id",
+    );
+  }
+
+  get tags(): Collection<Author, Tag> {
+    return this.#tags ??= hasManyToMany(
+      this as any as Author,
+      "authors_to_tags",
+      "tags",
+      "author_id",
+      tagMeta,
+      "authors",
+      "tag_id",
+    );
   }
 }

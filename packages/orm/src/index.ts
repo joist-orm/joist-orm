@@ -350,11 +350,23 @@ export function getEm(entity: Entity): EntityManager<any> {
 }
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
-  return Object.values(entity).filter((v: any) => v instanceof AbstractRelationImpl);
+  const fields = [
+    ...Object.values(entity),
+    ...Object.values(getMetadata(entity).allFields)
+      .filter((f) => f.fieldName !== "id")
+      .map((f) => (entity as any)[f.fieldName]),
+  ];
+  return fields.filter((v: any) => v instanceof AbstractRelationImpl);
 }
 
 export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
-  return Object.entries(entity).filter(([_, v]: any) => v instanceof AbstractRelationImpl);
+  const fields = [
+    ...Object.entries(entity),
+    ...Object.values(getMetadata(entity).allFields)
+      .filter((f) => f.fieldName !== "id")
+      .map((f) => [f.fieldName, (entity as any)[f.fieldName]] as const),
+  ];
+  return fields.filter(([_, v]) => v instanceof AbstractRelationImpl) as any;
 }
 
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {

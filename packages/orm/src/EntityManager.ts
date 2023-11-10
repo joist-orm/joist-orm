@@ -725,7 +725,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // 3. Now mutate the m2o relations. We focus on only m2o's because they "own" the field/column,
     // and will drive percolation to keep the other-side o2m & o2o updated.
     clones.forEach(([, clone]) => {
-      Object.entries(clone).forEach(([fieldName, value]) => {
+      getRelationEntries(clone).forEach(([fieldName, value]) => {
         if (
           value instanceof ManyToOneReferenceImpl ||
           value instanceof PolymorphicReferenceImpl ||

@@ -251,87 +251,70 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   });
 
   // Add ManyToOne entities
-  const m2o = meta.manyToOnes.map((m2o) => {
+  type Relation = { kind: "abstract"; line: Code } | { kind: "concrete"; fieldName: string; decl: Code; init: Code };
+
+  const m2o: Relation[] = meta.manyToOnes.map((m2o) => {
     const { fieldName, otherEntity, otherFieldName, notNull } = m2o;
     const maybeOptional = notNull ? "never" : "undefined";
-
     if (m2o.derived === "async") {
-      return code`
+      const line = code`
         abstract readonly ${fieldName}: ${PersistedAsyncReference}<${entity.name}, ${otherEntity.type}, ${maybeOptional}>;
       `;
+      return { kind: "abstract", line } as const;
     }
-
-    return code`
-      readonly ${fieldName}: ${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}> =
-        ${hasOne}(
-          ${otherEntity.metaType},
-          "${fieldName}",
-          "${otherFieldName}",
-        );
-    `;
+    const decl = code`${ManyToOneReference}<${entity.type}, ${otherEntity.type}, ${maybeOptional}>`;
+    const init = code`${hasOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}")`;
+    return { kind: "concrete", fieldName, decl, init };
   });
 
   // Add OneToMany
-  const o2m = meta.oneToManys.map((o2m) => {
+  const o2m: Relation[] = meta.oneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity, orderBy } = o2m;
-    return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasMany}(
-        ${otherEntity.metaType},
-        "${fieldName}",
-        "${otherFieldName}",
-        "${otherColumnName}",
-        ${orderBy},
-      );
-    `;
+    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`${hasMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}", ${orderBy})`;
+    return { kind: "concrete", fieldName, decl, init };
   });
 
   // Add large OneToMany
-  const lo2m = meta.largeOneToManys.map((o2m) => {
+  const lo2m: Relation[] = meta.largeOneToManys.map((o2m) => {
     const { fieldName, otherFieldName, otherColumnName, otherEntity } = o2m;
-    return code`
-      readonly ${fieldName}: ${LargeCollection}<${entity.type}, ${otherEntity.type}> = ${hasLargeMany}(
-        ${otherEntity.metaType},
-        "${fieldName}",
-        "${otherFieldName}",
-        "${otherColumnName}"
-      );
-    `;
+    const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`${hasLargeMany}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    return { kind: "concrete", fieldName, decl, init };
   });
 
   // Add OneToOne
-  const o2o = meta.oneToOnes.map((o2o) => {
+  const o2o: Relation[] = meta.oneToOnes.map((o2o) => {
     const { fieldName, otherEntity, otherFieldName, otherColumnName } = o2o;
-    return code`
-      readonly ${fieldName}: ${OneToOneReference}<${entity.type}, ${otherEntity.type}> =
-        ${hasOneToOne}(
-          ${otherEntity.metaType},
-          "${fieldName}",
-          "${otherFieldName}",
-          "${otherColumnName}",
-        );
-    `;
+    const decl = code`${OneToOneReference}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`${hasOneToOne}(this as any as ${entityName}, ${otherEntity.metaType}, "${fieldName}", "${otherFieldName}", "${otherColumnName}")`;
+    return { kind: "concrete", fieldName, decl, init };
   });
 
   // Add ManyToMany
-  const m2m = meta.manyToManys.map((m2m) => {
+  const m2m: Relation[] = meta.manyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
-    return code`
-      readonly ${fieldName}: ${Collection}<${entity.type}, ${otherEntity.type}> = ${hasManyToMany}(
+    const decl = code`${Collection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`
+      ${hasManyToMany}(
+        this as any as ${entityName},
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
         ${otherEntity.metaType},
         "${otherFieldName}",
         "${otherColumnName}",
-      );
-    `;
+      )`;
+    return { kind: "concrete", fieldName, decl, init };
   });
 
   // Add large ManyToMany
-  const lm2m = meta.largeManyToManys.map((m2m) => {
+  const lm2m: Relation[] = meta.largeManyToManys.map((m2m) => {
     const { joinTableName, fieldName, columnName, otherEntity, otherFieldName, otherColumnName } = m2m;
-    return code`
-      readonly ${fieldName}: ${LargeCollection}<${entity.type}, ${otherEntity.type}> = ${hasLargeManyToMany}(
+    const decl = code`${LargeCollection}<${entity.type}, ${otherEntity.type}>`;
+    const init = code`
+      ${hasLargeManyToMany}(
+        this as any as ${entityName},
         "${joinTableName}",
         "${fieldName}",
         "${columnName}",
@@ -340,18 +323,19 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         "${otherColumnName}",
       );
     `;
+    return { kind: "concrete", fieldName, decl, init };
   });
 
   // Add Polymorphic
-  const polymorphic = meta.polymorphics.map((p) => {
+  const polymorphic: Relation[] = meta.polymorphics.map((p) => {
     const { fieldName, notNull, fieldType } = p;
     const maybeOptional = notNull ? "never" : "undefined";
-    return code`
-      readonly ${fieldName}: ${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}> = ${hasOnePolymorphic}(
-        "${fieldName}",
-      );
-    `;
+    const decl = code`${PolymorphicReference}<${entity.type}, ${fieldType}, ${maybeOptional}>`;
+    const init = code`${hasOnePolymorphic}(this as any as ${entityName}, "${fieldName}")`;
+    return { kind: "concrete", fieldName, decl, init };
   });
+
+  const relations = [o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic].flat();
 
   const configName = `${camelCase(entityName)}Config`;
   const metadata = imp(`${camelCase(entityName)}Meta@./entities`);
@@ -505,7 +489,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         optIdsType: ${entityName}IdsOpts;
         factoryOptsType: Parameters<typeof ${factoryMethod}>[1];
       };
-      ${[o2m, lo2m, m2o, o2o, m2m, lm2m, polymorphic]}
+      ${relations.map((r) => {
+        if (r.kind === "abstract") {
+          return r.line;
+        } else {
+          return code`#${r.fieldName}: ${r.decl} | undefined = undefined;`;
+        }
+      })}
 
       ${cstr}
 
@@ -556,6 +546,18 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       isLoaded<H extends ${LoadHint}<${entityName}>>(hint: H): this is ${Loaded}<${entityName}${maybeOtherLoaded}, H> {
         return ${isLoaded}(this as any as ${entityName}, hint);
       }
+
+      ${relations.map((r) => {
+        if (r.kind === "abstract") {
+          return "";
+        } else {
+          return code`
+            get ${r.fieldName}(): ${r.decl} {
+              return this.#${r.fieldName} ??= ${r.init};
+            }
+          `;
+        }
+      })}
     }
   `;
 }

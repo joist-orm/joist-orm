@@ -2,7 +2,6 @@ import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
   Collection,
-  currentlyInstantiatingEntity,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
@@ -21,13 +20,13 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
+  entity: T,
   otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
   orderBy: { field: keyof U; direction: OrderBy } | undefined,
 ): Collection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName, orderBy);
 }
 

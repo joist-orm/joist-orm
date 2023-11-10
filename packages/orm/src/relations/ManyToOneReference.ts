@@ -1,33 +1,33 @@
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
-import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
+import { Entity,isEntity } from "../Entity";
+import { IdOf,TaggedId,getEmInternalApi,sameEntity } from "../EntityManager";
+import { EntityMetadata,ManyToOneField,getMetadata } from "../EntityMetadata";
 import {
-  BaseEntity,
-  OneToManyLargeCollection,
-  OneToOneReferenceImpl,
-  Reference,
-  deTagId,
-  ensureNotDeleted,
-  ensureTagged,
-  fail,
-  maybeResolveReferenceToId,
-  setField,
-  toIdOf,
-  toTaggedId,
+BaseEntity,
+OneToManyLargeCollection,
+OneToOneReferenceImpl,
+Reference,
+deTagId,
+ensureNotDeleted,
+ensureTagged,
+fail,
+maybeResolveReferenceToId,
+setField,
+toIdOf,
+toTaggedId,
 } from "../index";
-import { maybeAdd, maybeRemove } from "../utils";
+import { maybeAdd,maybeRemove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { OneToManyCollection } from "./OneToManyCollection";
 import { ReferenceN } from "./Reference";
-import { RelationT, RelationU } from "./Relation";
+import { RelationT,RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
+  entity: T,
   otherMeta: EntityMetadata,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
 ): ManyToOneReference<T, U, N> {
-  const entity = currentlyInstantiatingEntity as T;
   return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
 }
 

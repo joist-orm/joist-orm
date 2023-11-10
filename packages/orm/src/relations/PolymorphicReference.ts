@@ -1,5 +1,5 @@
 import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
+import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
 import {
   OneToOneReference,
@@ -19,9 +19,9 @@ import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
 export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
+  entity: T,
   fieldName: keyof T & string,
 ): PolymorphicReference<T, U, N> {
-  const entity = currentlyInstantiatingEntity as T;
   return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
 }
 

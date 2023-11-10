@@ -105,16 +105,8 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
     optIdsType: PublisherGroupIdsOpts;
     factoryOptsType: Parameters<typeof newPublisherGroup>[1];
   };
-
-  readonly publishers: Collection<PublisherGroup, Publisher> = hasMany(
-    publisherMeta,
-    "publishers",
-    "group",
-    "group_id",
-    undefined,
-  );
-
-  readonly critics: LargeCollection<PublisherGroup, Critic> = hasLargeMany(criticMeta, "critics", "group", "group_id");
+  #publishers: Collection<PublisherGroup, Publisher> | undefined = undefined;
+  #critics: LargeCollection<PublisherGroup, Critic> | undefined = undefined;
 
   constructor(em: EntityManager, opts: PublisherGroupOpts) {
     super(em, publisherGroupMeta, PublisherGroupCodegen.defaultValues, opts);
@@ -187,5 +179,20 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
 
   isLoaded<H extends LoadHint<PublisherGroup>>(hint: H): this is Loaded<PublisherGroup, H> {
     return isLoaded(this as any as PublisherGroup, hint);
+  }
+
+  get publishers(): Collection<PublisherGroup, Publisher> {
+    return this.#publishers ??= hasMany(
+      this as any as PublisherGroup,
+      publisherMeta,
+      "publishers",
+      "group",
+      "group_id",
+      undefined,
+    );
+  }
+
+  get critics(): LargeCollection<PublisherGroup, Critic> {
+    return this.#critics ??= hasLargeMany(this as any as PublisherGroup, criticMeta, "critics", "group", "group_id");
   }
 }

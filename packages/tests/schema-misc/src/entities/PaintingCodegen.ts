@@ -98,8 +98,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     optIdsType: PaintingIdsOpts;
     factoryOptsType: Parameters<typeof newPainting>[1];
   };
-
-  readonly artist: ManyToOneReference<Painting, Artist, never> = hasOne(artistMeta, "artist", "paintings");
+  #artist: ManyToOneReference<Painting, Artist, never> | undefined = undefined;
 
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, paintingMeta, PaintingCodegen.defaultValues, opts);
@@ -170,5 +169,9 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
 
   isLoaded<H extends LoadHint<Painting>>(hint: H): this is Loaded<Painting, H> {
     return isLoaded(this as any as Painting, hint);
+  }
+
+  get artist(): ManyToOneReference<Painting, Artist, never> {
+    return this.#artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
   }
 }

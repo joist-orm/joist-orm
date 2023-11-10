@@ -1403,7 +1403,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const todos = createTodos(entities);
       await beforeDelete(this.ctx, todos);
       // For all relations, unhook the entity from the other side
-      await Promise.all(entities.flatMap(getRelationEntries).map(([n, r]) => r.cleanupOnEntityDeleted()));
+      await Promise.all(entities.flatMap(getRelations).map((r) => r.cleanupOnEntityDeleted()));
       entities = this.#pendingCascadeDeletes;
       this.#pendingCascadeDeletes = [];
     }

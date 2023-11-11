@@ -16,7 +16,7 @@ const fieldConfig = z.object({
   zodSchema: z.optional(z.string()),
   type: z.optional(z.string()),
   serde: z.optional(z.string()),
-});
+}).strict();
 
 export type FieldConfig = z.infer<typeof fieldConfig>;
 
@@ -24,7 +24,7 @@ const relationConfig = z.object({
   polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
   large: z.optional(z.boolean()),
   orderBy: z.optional(z.string()),
-});
+}).strict();
 
 export type RelationConfig = z.infer<typeof relationConfig>;
 
@@ -36,7 +36,7 @@ const entityConfig = z.object({
   /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
   abstract: z.optional(z.boolean()),
   orderBy: z.optional(z.string()),
-});
+}).strict();
 
 export type EntityConfig = z.infer<typeof entityConfig>;
 
@@ -45,7 +45,7 @@ const timestampConfig = z.object({
   names: z.array(z.string()),
   /** Whether this timestamp column is required to consider a table an entity, defaults to `false`. */
   required: z.optional(z.boolean()),
-});
+}).strict();
 
 export type TimestampConfig = z.infer<typeof timestampConfig>;
 
@@ -88,7 +88,7 @@ export const config = z.object({
   idType: z
     .optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")]))
     .default("tagged-string"),
-});
+}).strict();
 
 export type Config = z.infer<typeof config> & {
   // We don't persist this, and instead just use it as a cache

@@ -105,7 +105,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
 
   const pluginFiles: CodegenFile[] = (
     await Promise.all(
-      config.codegenPlugins.map((p) => {
+      (config.codegenPlugins ?? []).map((p) => {
         const plugin = require(p);
         return plugin.run(config, entities, enums);
       }),

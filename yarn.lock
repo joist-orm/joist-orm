@@ -10260,8 +10260,10 @@ __metadata:
     ts-node-dev: ^2.0.0
     ts-poet: ^6.6.0
     tsconfig-paths: ^4.2.0
+    tsx: ^4.1.1
     typescript: ^5.2.2
     zod: ^3.22.4
+    zod-to-json-schema: ^3.21.4
   languageName: unknown
   linkType: soft
 
@@ -15996,6 +15998,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"tsx@npm:^4.1.1":
+  version: 4.1.1
+  resolution: "tsx@npm:4.1.1"
+  dependencies:
+    esbuild: ~0.18.20
+    fsevents: ~2.3.3
+    get-tsconfig: ^4.7.2
+    source-map-support: ^0.5.21
+  dependenciesMeta:
+    fsevents:
+      optional: true
+  bin:
+    tsx: dist/cli.mjs
+  checksum: 3229cb7c1dff362e12f46fdf917ec31a03a96d02b2974ddcac43d11a4ba978d9bdfb4ddcc27a2b4da3d75f44dc22a9a0dc4f7a4aa291eba358b56714bf423527
+  languageName: node
+  linkType: hard
+
 "tuf-js@npm:^2.1.0":
   version: 2.1.0
   resolution: "tuf-js@npm:2.1.0"
@@ -17154,6 +17173,15 @@ __metadata:
   version: 1.0.0
   resolution: "yocto-queue@npm:1.0.0"
   checksum: 2cac84540f65c64ccc1683c267edce396b26b1e931aa429660aefac8fbe0188167b7aee815a3c22fa59a28a58d898d1a2b1825048f834d8d629f4c2a5d443801
+  languageName: node
+  linkType: hard
+
+"zod-to-json-schema@npm:^3.21.4":
+  version: 3.21.4
+  resolution: "zod-to-json-schema@npm:3.21.4"
+  peerDependencies:
+    zod: ^3.21.4
+  checksum: 899c1f461fb6547c0b08a265c82040c250be9b88d3f408f2f3ff77a418fdfad7549077e589d418fccb312c1f6d555c3c7217b199cc9072762e1fab20716dd2a6
   languageName: node
   linkType: hard
 

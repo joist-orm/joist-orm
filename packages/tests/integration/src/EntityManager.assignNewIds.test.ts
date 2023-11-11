@@ -1,6 +1,7 @@
 import { isNew } from "joist-orm";
 import { newPublisher } from "./entities";
-import { newEntityManager } from "./setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("EntityManager.assignNewIds", () => {
   it("can assign entity IDs on request", async () => {

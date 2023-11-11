@@ -50,7 +50,8 @@ import {
   newAuthor,
   newBook,
 } from "./entities";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
+
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 const am = getMetadata(Author);
 const bm = getMetadata(Book);

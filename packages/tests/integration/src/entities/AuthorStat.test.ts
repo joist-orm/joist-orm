@@ -1,5 +1,6 @@
 import { newAuthorStat } from "../entities";
-import { newEntityManager } from "../setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("AuthorStat", () => {
   describe("minValueRule", () => {

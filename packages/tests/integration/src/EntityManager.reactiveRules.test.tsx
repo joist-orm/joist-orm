@@ -12,7 +12,7 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { select } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { getMetadata } from "joist-orm";
 
 const sm = expect.stringMatching;

@@ -6,11 +6,12 @@ import {
   insertPublisher,
   select,
 } from "@src/entities/inserts";
+import { newEntityManager } from "@src/testEm";
 import { defaultValue, getMetadata, jan1, jan2 } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import pgStructure from "pg-structure";
 import { Author, Book, BookId, Publisher, PublisherSize, newAuthor, newPublisher } from "../entities";
-import { makeApiCall, newEntityManager } from "../setupDbTests";
+import { makeApiCall } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
 const inspect = Symbol.for("nodejs.util.inspect.custom");

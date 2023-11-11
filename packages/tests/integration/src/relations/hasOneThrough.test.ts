@@ -1,6 +1,7 @@
 import { Author, BookReview, newBookReview } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("hasOneThrough", () => {
   it("can load a reference", async () => {

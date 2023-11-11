@@ -2,7 +2,7 @@ import { GraphQLFileLoader } from "@graphql-tools/graphql-file-loader";
 import { loadSchema } from "@graphql-tools/load";
 import { Author } from "@src/entities";
 import { insertAuthor, insertBook, insertPublisher, update } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { entityResolver } from "joist-graphql-resolver-utils";
 
 describe("entityResolver", () => {

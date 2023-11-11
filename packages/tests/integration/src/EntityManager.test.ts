@@ -12,6 +12,7 @@ import {
   select,
   update,
 } from "@src/entities/inserts";
+import { isPreloadingEnabled, knex, newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 import {
   EntityConstructor,
   FilterWithAlias,
@@ -36,15 +37,7 @@ import {
   newBookReview,
   newPublisher,
 } from "./entities";
-import {
-  isPreloadingEnabled,
-  knex,
-  maybeBeginAndCommit,
-  newEntityManager,
-  numberOfQueries,
-  queries,
-  resetQueryCount,
-} from "./setupDbTests";
+import { maybeBeginAndCommit } from "./setupDbTests";
 
 describe("EntityManager", () => {
   it("can load an entity", async () => {

@@ -1,5 +1,5 @@
 import { Author, newAuthor } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { deTagId, getMetadata, tagId, tagIds } from "joist-orm";
 
 describe("taggedIds", () => {

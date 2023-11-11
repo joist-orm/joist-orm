@@ -1,7 +1,8 @@
 import { insertTag } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
 import { Tag, newPublisher } from "./entities";
-import { newEntityManager } from "./setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 jest.setTimeout(30_000);
 

@@ -11,7 +11,8 @@ import {
   select,
 } from "@src/entities/inserts";
 import { Author, Book } from "./entities";
-import { newEntityManager } from "./setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("EntityManager.createOrUpdatePartial", () => {
   it("can create new entity with valid data", async () => {

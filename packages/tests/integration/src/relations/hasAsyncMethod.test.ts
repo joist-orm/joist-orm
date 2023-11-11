@@ -1,6 +1,7 @@
 import { Author, newAuthor } from "@src/entities";
 import { insertAuthor, insertBook } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("hasAsyncMethod", () => {
   it("can be accessed via a promise", async () => {

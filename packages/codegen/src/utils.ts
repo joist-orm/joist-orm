@@ -144,12 +144,15 @@ export function fail(message?: string): never {
 export function sortKeys<T extends object>(o: T): T {
   return Object.keys(o)
     .sort()
-    .reduce((acc, key) => {
-      const value = o[key as keyof T];
-      const newValue = typeof value === "object" && isPlainObject(value) ? sortKeys(value as any as object) : value;
-      acc[key as keyof T] = newValue as any;
-      return acc;
-    }, {} as any as T);
+    .reduce(
+      (acc, key) => {
+        const value = o[key as keyof T];
+        const newValue = typeof value === "object" && isPlainObject(value) ? sortKeys(value as any as object) : value;
+        acc[key as keyof T] = newValue as any;
+        return acc;
+      },
+      {} as any as T,
+    );
 }
 
 export function parseOrder(order: string | undefined): { field: string; direction: "ASC" | "DESC" } | undefined {

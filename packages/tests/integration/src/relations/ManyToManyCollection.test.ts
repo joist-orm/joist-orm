@@ -1,7 +1,7 @@
 import { countOfBookToTags, insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { Author, Book, Tag, User, newAuthor, newBook, newTag } from "../entities";
 import { IpAddress } from "../entities/types";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
 import { zeroTo } from "../utils";
 
 describe("ManyToManyCollection", () => {

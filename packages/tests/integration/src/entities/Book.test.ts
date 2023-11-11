@@ -1,5 +1,6 @@
 import { Author, Book, newAuthor, newBook } from "../entities";
-import { newEntityManager } from "../setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("Book", () => {
   it("non-null reference might still have a null id", async () => {

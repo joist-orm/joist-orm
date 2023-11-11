@@ -1,5 +1,6 @@
 import { Context } from "@src/context";
-import { inMemory, knex, newEntityManager } from "@src/setupDbTests";
+
+import { inMemory, knex, newEntityManager } from "@src/testEm";
 
 type itWithCtxFn = (ctx: Context) => Promise<void>;
 

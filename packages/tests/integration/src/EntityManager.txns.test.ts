@@ -3,7 +3,8 @@ import { Publisher, SmallPublisher } from "@src/entities";
 import { select } from "@src/entities/inserts";
 import { newPgConnectionConfig } from "joist-orm";
 import { Pool } from "pg";
-import { knex, newEntityManager } from "./setupDbTests";
+
+import { knex, newEntityManager } from "@src/testEm";
 
 describe("EntityManager", () => {
   it("reproduces anomalies w/o transactions", async () => {

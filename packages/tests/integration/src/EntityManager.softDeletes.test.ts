@@ -1,7 +1,8 @@
 import { insertAuthor, insertBook, insertBookToTag, insertPublisher, insertTag } from "@src/entities/inserts";
 import { jan1 } from "joist-orm";
 import { Author, Book, Publisher, Tag } from "./entities";
-import { newEntityManager } from "./setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("EntityManager.softDeletes", () => {
   it("o2m.get skips soft deleted entities", async () => {

@@ -15,7 +15,8 @@ import {
   newPublisher,
   newSmallPublisher,
 } from "./entities";
-import { newEntityManager } from "./setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("EntityManager.clone", () => {
   it("can clone entities", async () => {

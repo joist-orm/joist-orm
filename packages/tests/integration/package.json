@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "joist-orm": "workspace:*",
-    "joist-plugin-join-preloading": "workspace:*"
+    "joist-plugin-join-preloading": "workspace:*",
+    "mitata": "^0.1.6"
   },
   "devDependencies": {
     "@graphql-tools/graphql-file-loader": "^8.0.0",

@@ -23,7 +23,8 @@ import {
   newPublisher,
   newSmallPublisher,
 } from "./entities";
-import { newEntityManager, testDriver } from "./setupDbTests";
+
+import { newEntityManager, testDriver } from "@src/testEm";
 
 describe("Inheritance", () => {
   it("can insert a subtype into two tables", async () => {

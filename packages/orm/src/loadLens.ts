@@ -125,10 +125,7 @@ export function isAllSqlPaths(meta: EntityMetadata, paths: string[]): boolean {
 }
 
 // Given BookReview+[book, author] return [Author, books+bookReviews]
-export function mapPathsToTarget(
-  source: EntityMetadata,
-  paths: string[],
-): [EntityMetadata, [EntityMetadata, Field][]] {
+export function mapPathsToTarget(source: EntityMetadata, paths: string[]): [EntityMetadata, [EntityMetadata, Field][]] {
   let other = source;
   let fields: [EntityMetadata, Field][] = [];
   for (let i = 0; i < paths.length; i++) {

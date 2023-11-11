@@ -1,5 +1,5 @@
 import { Book } from "@src/entities";
-import { knex } from "@src/setupDbTests";
+import { knex } from "@src/testEm";
 import { getMetadata, ParsedFindQuery, parseFindQuery } from "joist-orm";
 import { buildKnexQuery } from "joist-orm/build/src/drivers/buildKnexQuery";
 

@@ -22,7 +22,7 @@ describe("keys", () => {
 
     it("fails on invalid uuid ids", () => {
       const meta: any = { idType: "uuid" };
-      expect(isTaggedId(meta,"a:20000000-0000-0000-0000-00000000000!")).toBe(false);
+      expect(isTaggedId(meta, "a:20000000-0000-0000-0000-00000000000!")).toBe(false);
     });
   });
 });

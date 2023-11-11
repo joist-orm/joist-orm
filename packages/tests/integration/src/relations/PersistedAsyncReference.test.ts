@@ -1,6 +1,7 @@
 import { Author } from "@src/entities";
 import { insertAuthor, insertBook, update } from "@src/entities/inserts";
-import { newEntityManager, queries, resetQueryCount } from "@src/setupDbTests";
+
+import { newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 describe("PersistedAsyncReference", () => {
   it("load populates if calculate for new entity", async () => {

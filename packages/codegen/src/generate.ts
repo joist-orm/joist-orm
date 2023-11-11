@@ -7,7 +7,7 @@ import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
-import {configureMetadata, EntityManager, Entity, JoistEntityManager} from "./symbols";
+import { configureMetadata, Entity, JoistEntityManager } from "./symbols";
 import { merge, tableToEntityName } from "./utils";
 
 export type DPrintOptions = Record<string, unknown>;

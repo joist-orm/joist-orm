@@ -1,6 +1,7 @@
 import { PublisherType } from "@src/entities/PublisherType";
 import { SmallPublisher } from "@src/entities/SmallPublisher";
-import { newEntityManager } from "@src/setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("Publisher", () => {
   it("has a default type", async () => {

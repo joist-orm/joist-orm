@@ -18,6 +18,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/plugins/join-preloading/build" />
       <excludeFolder url="file://$MODULE_DIR$/packages/test-utils/build" />
       <excludeFolder url="file://$MODULE_DIR$/packages/tests/integration/build" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/tests/integration/.clinic" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

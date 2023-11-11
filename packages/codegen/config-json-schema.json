@@ -1,0 +1,79 @@
+{
+  "$ref": "#/definitions/mySchema",
+  "definitions": {
+    "mySchema": {
+      "type": "object",
+      "properties": {
+        "databaseUrl": { "type": "string" },
+        "contextType": { "type": "string" },
+        "timestampColumns": {
+          "type": "object",
+          "properties": {
+            "createdAt": {
+              "type": "object",
+              "properties": {
+                "names": { "type": "array", "items": { "type": "string" } },
+                "required": { "type": "boolean" }
+              },
+              "required": ["names"],
+              "additionalProperties": false
+            },
+            "updatedAt": { "$ref": "#/definitions/mySchema/properties/timestampColumns/properties/createdAt" },
+            "deletedAt": { "$ref": "#/definitions/mySchema/properties/timestampColumns/properties/createdAt" }
+          },
+          "additionalProperties": false
+        },
+        "createFlushFunction": { "anyOf": [{ "type": "boolean" }, { "type": "array", "items": { "type": "string" } }] },
+        "entitiesDirectory": { "type": "string", "default": "./src/entities" },
+        "codegenPlugins": { "type": "array", "items": { "type": "string" } },
+        "entities": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "tag": { "type": "string" },
+              "tableName": { "type": "string" },
+              "fields": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "derived": { "type": "string", "enum": ["sync", "async"] },
+                    "protected": { "type": "boolean" },
+                    "ignore": { "type": "boolean" },
+                    "superstruct": { "type": "string" },
+                    "zodSchema": { "type": "string" },
+                    "type": { "type": "string" },
+                    "serde": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "relations": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "properties": {
+                    "polymorphic": { "type": ["string", "boolean"], "enum": ["notNull", true] },
+                    "large": { "type": "boolean" },
+                    "orderBy": { "type": "string" }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "abstract": { "type": "boolean" },
+              "orderBy": { "type": "string" }
+            },
+            "required": ["tag"],
+            "additionalProperties": false
+          },
+          "default": {}
+        },
+        "ignoredTables": { "type": "array", "items": { "type": "string" } },
+        "idType": { "type": "string", "enum": ["tagged-string", "untagged-string", "number"] }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

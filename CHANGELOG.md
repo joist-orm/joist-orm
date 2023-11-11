@@ -1,3 +1,10 @@
+# [1.122.0](https://github.com/stephenh/joist-ts/compare/v1.121.1...v1.122.0) (2023-11-11)
+
+
+### Features
+
+* Add a Zod/json-schema config for joist-config.json file ([#864](https://github.com/stephenh/joist-ts/issues/864)) ([ff6d308](https://github.com/stephenh/joist-ts/commit/ff6d30894fea99d188c8beb4df786ed1ad5d20df))
+
 ## [1.121.1](https://github.com/stephenh/joist-ts/compare/v1.121.0...v1.121.1) (2023-11-09)
 
 

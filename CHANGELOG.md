@@ -1,3 +1,10 @@
+# [1.123.0](https://github.com/stephenh/joist-ts/compare/v1.122.0...v1.123.0) (2023-11-11)
+
+
+### Features
+
+* Make codegen relations lazy. ([#860](https://github.com/stephenh/joist-ts/issues/860)) ([3a7b6f0](https://github.com/stephenh/joist-ts/commit/3a7b6f032eb45e1283f8967e96e8167a9dad1746)), closes [#836](https://github.com/stephenh/joist-ts/issues/836)
+
 # [1.122.0](https://github.com/stephenh/joist-ts/compare/v1.121.1...v1.122.0) (2023-11-11)
 
 

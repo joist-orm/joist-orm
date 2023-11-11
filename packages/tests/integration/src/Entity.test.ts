@@ -63,13 +63,6 @@ describe("Entity", () => {
             "isReactive": true,
           },
         },
-        "authors": {
-          "fieldName": "authors",
-          "loaded": undefined,
-          "otherColumnName": "mentor_id",
-          "otherFieldName": "mentor",
-          "undefined": null,
-        },
         "bookComments": {
           "fieldName": "bookComments",
           "fn": {},
@@ -81,13 +74,6 @@ describe("Entity", () => {
             },
           },
         },
-        "books": {
-          "fieldName": "books",
-          "loaded": undefined,
-          "otherColumnName": "author_id",
-          "otherFieldName": "author",
-          "undefined": null,
-        },
         "booksTitles": {
           "fn": {},
           "loadPromise": undefined,
@@ -97,20 +83,6 @@ describe("Entity", () => {
           "fn": {},
           "loadPromise": undefined,
           "loaded": false,
-        },
-        "comments": {
-          "fieldName": "comments",
-          "loaded": undefined,
-          "otherColumnName": "parent_author_id",
-          "otherFieldName": "parent",
-          "undefined": null,
-        },
-        "currentDraftBook": {
-          "_isLoaded": false,
-          "fieldName": "currentDraftBook",
-          "loaded": undefined,
-          "otherFieldName": "currentDraftAuthor",
-          "undefined": null,
         },
         "favoriteBook": {
           "_isLoaded": false,
@@ -123,15 +95,6 @@ describe("Entity", () => {
               "reviews_ro": "rating",
             },
           },
-          "undefined": null,
-        },
-        "image": {
-          "_isLoaded": false,
-          "fieldName": "image",
-          "isCascadeDelete": true,
-          "loaded": undefined,
-          "otherColumnName": "author_id",
-          "otherFieldName": "author",
           "undefined": null,
         },
         "latestComment": {
@@ -157,13 +120,6 @@ describe("Entity", () => {
           "loadPromise": undefined,
           "loaded": false,
           "opts": {},
-        },
-        "mentor": {
-          "_isLoaded": false,
-          "fieldName": "mentor",
-          "loaded": undefined,
-          "otherFieldName": "authors",
-          "undefined": null,
         },
         "numberOfBooks": {
           "fieldName": "numberOfBooks",
@@ -213,13 +169,6 @@ describe("Entity", () => {
             },
           },
         },
-        "publisher": {
-          "_isLoaded": false,
-          "fieldName": "publisher",
-          "loaded": undefined,
-          "otherFieldName": "authors",
-          "undefined": null,
-        },
         "reviewedBooks": {
           "_isLoaded": false,
           "loadPromise": undefined,
@@ -240,23 +189,6 @@ describe("Entity", () => {
             "isLoaded": {},
             "load": {},
           },
-        },
-        "schedules": {
-          "fieldName": "schedules",
-          "loaded": undefined,
-          "otherColumnName": "author_id",
-          "otherFieldName": "author",
-          "undefined": null,
-        },
-        "tags": {
-          "addedBeforeLoaded": undefined,
-          "columnName": "author_id",
-          "fieldName": "tags",
-          "joinTableName": "authors_to_tags",
-          "loaded": undefined,
-          "otherColumnName": "tag_id",
-          "otherFieldName": "authors",
-          "removedBeforeLoaded": undefined,
         },
         "tagsOfAllBooks": {
           "fieldName": "tagsOfAllBooks",
@@ -287,15 +219,6 @@ describe("Entity", () => {
           "mentorRuleInvoked": 0,
           "numberOfBooksCalcInvoked": 0,
           "setGraduatedInFlush": false,
-        },
-        "userOneToOne": {
-          "_isLoaded": false,
-          "fieldName": "userOneToOne",
-          "isCascadeDelete": false,
-          "loaded": undefined,
-          "otherColumnName": "author_id",
-          "otherFieldName": "authorManyToOne",
-          "undefined": null,
         },
       }
     `);

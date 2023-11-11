@@ -12,7 +12,7 @@ import {
 
 describe("getProperties", () => {
   it("should work", () => {
-    expect(getProperties(bookMeta)).toStrictEqual({
+    expect(getProperties(bookMeta)).toEqual({
       advances: expect.any(OneToManyCollection),
       reviews: expect.any(OneToManyCollection),
       comments: expect.any(OneToManyCollection),

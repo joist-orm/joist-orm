@@ -1,17 +1,17 @@
+import { isOrWasNew } from "../Entity";
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import {
   Collection,
-  currentlyInstantiatingEntity,
-  ensureNotDeleted,
   Entity,
   EntityMetadata,
-  getEmInternalApi,
-  getMetadata,
   IdOf,
-  maybeResolveReferenceToId,
   OneToManyField,
   OrderBy,
+  ensureNotDeleted,
+  getEmInternalApi,
+  getMetadata,
+  maybeResolveReferenceToId,
   sameEntity,
 } from "../index";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
@@ -21,13 +21,13 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyCollection`s. */
 export function hasMany<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata,
+  entity: T,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
   orderBy: { field: keyof U; direction: OrderBy } | undefined,
 ): Collection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new OneToManyCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName, orderBy);
 }
 
@@ -60,6 +60,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     this.#entity = entity;
     this.#fieldName = fieldName;
     this.#orderBy = orderBy;
+    if (isOrWasNew(entity)) {
+      this.loaded = [];
+    }
   }
 
   // opts is an internal parameter
@@ -198,13 +201,6 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   setFromOpts(others: U[]): void {
     this.loaded = [];
     others.forEach((o) => this.add(o));
-  }
-
-  initializeForNewEntity(): void {
-    // Don't overwrite any opts values
-    if (this.loaded === undefined) {
-      this.loaded = [];
-    }
   }
 
   removeIfLoaded(other: U) {

@@ -179,47 +179,6 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
     factoryOptsType: Parameters<typeof newPublisher>[1];
   };
 
-  readonly authors: Collection<Publisher, Author> = hasMany(
-    authorMeta,
-    "authors",
-    "publisher",
-    "publisher_id",
-    undefined,
-  );
-
-  readonly bookAdvances: Collection<Publisher, BookAdvance> = hasMany(
-    bookAdvanceMeta,
-    "bookAdvances",
-    "publisher",
-    "publisher_id",
-    undefined,
-  );
-
-  readonly comments: Collection<Publisher, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_publisher_id",
-    undefined,
-  );
-
-  readonly images: Collection<Publisher, Image> = hasMany(imageMeta, "images", "publisher", "publisher_id", undefined);
-
-  readonly group: ManyToOneReference<Publisher, PublisherGroup, undefined> = hasOne(
-    publisherGroupMeta,
-    "group",
-    "publishers",
-  );
-
-  readonly tags: Collection<Publisher, Tag> = hasManyToMany(
-    "publishers_to_tags",
-    "tags",
-    "publisher_id",
-    tagMeta,
-    "publishers",
-    "tag_id",
-  );
-
   constructor(em: EntityManager, opts: PublisherOpts) {
     if (arguments.length === 4) {
       // @ts-ignore
@@ -365,5 +324,71 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
 
   isLoaded<H extends LoadHint<Publisher>>(hint: H): this is Loaded<Publisher, H> {
     return isLoaded(this as any as Publisher, hint);
+  }
+
+  get authors(): Collection<Publisher, Author> {
+    const { relations } = this.__orm;
+    return relations.authors ??= hasMany(
+      this as any as Publisher,
+      authorMeta,
+      "authors",
+      "publisher",
+      "publisher_id",
+      undefined,
+    );
+  }
+
+  get bookAdvances(): Collection<Publisher, BookAdvance> {
+    const { relations } = this.__orm;
+    return relations.bookAdvances ??= hasMany(
+      this as any as Publisher,
+      bookAdvanceMeta,
+      "bookAdvances",
+      "publisher",
+      "publisher_id",
+      undefined,
+    );
+  }
+
+  get comments(): Collection<Publisher, Comment> {
+    const { relations } = this.__orm;
+    return relations.comments ??= hasMany(
+      this as any as Publisher,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_publisher_id",
+      undefined,
+    );
+  }
+
+  get images(): Collection<Publisher, Image> {
+    const { relations } = this.__orm;
+    return relations.images ??= hasMany(
+      this as any as Publisher,
+      imageMeta,
+      "images",
+      "publisher",
+      "publisher_id",
+      undefined,
+    );
+  }
+
+  get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
+    const { relations } = this.__orm;
+    return relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
+  }
+
+  get tags(): Collection<Publisher, Tag> {
+    const { relations } = this.__orm;
+    return relations.tags ??= hasManyToMany(
+      this as any as Publisher,
+      "publishers_to_tags",
+      "tags",
+      "publisher_id",
+      tagMeta,
+      "publishers",
+      "tag_id",
+    );
   }
 }

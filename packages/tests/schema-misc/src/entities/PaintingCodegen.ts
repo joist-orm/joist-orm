@@ -99,8 +99,6 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
     factoryOptsType: Parameters<typeof newPainting>[1];
   };
 
-  readonly artist: ManyToOneReference<Painting, Artist, never> = hasOne(artistMeta, "artist", "paintings");
-
   constructor(em: EntityManager, opts: PaintingOpts) {
     super(em, paintingMeta, PaintingCodegen.defaultValues, opts);
     setOpts(this as any as Painting, opts, { calledFromConstructor: true });
@@ -170,5 +168,10 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
 
   isLoaded<H extends LoadHint<Painting>>(hint: H): this is Loaded<Painting, H> {
     return isLoaded(this as any as Painting, hint);
+  }
+
+  get artist(): ManyToOneReference<Painting, Artist, never> {
+    const { relations } = this.__orm;
+    return relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
   }
 }

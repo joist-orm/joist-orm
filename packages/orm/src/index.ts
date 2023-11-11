@@ -221,9 +221,6 @@ export function setOpts<T extends Entity>(
       (entity as any)[key] = value;
     }
   });
-  if (calledFromConstructor) {
-    getRelations(entity).forEach((v) => v.initializeForNewEntity());
-  }
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {
@@ -350,11 +347,15 @@ export function getEm(entity: Entity): EntityManager<any> {
 }
 
 export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
-  return Object.values(entity).filter((v: any) => v instanceof AbstractRelationImpl);
+  return Object.entries(getProperties(getMetadata(entity)))
+    .filter(([, v]) => v instanceof AbstractRelationImpl)
+    .map(([name]) => (entity as any)[name]);
 }
 
 export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
-  return Object.entries(entity).filter(([_, v]: any) => v instanceof AbstractRelationImpl);
+  return Object.entries(getProperties(getMetadata(entity)))
+    .filter(([, v]) => v instanceof AbstractRelationImpl)
+    .map(([name]) => [name, (entity as any)[name]]);
 }
 
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {

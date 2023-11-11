@@ -1,5 +1,5 @@
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, currentlyInstantiatingEntity, getEmInternalApi, sameEntity } from "../EntityManager";
+import { Entity, isEntity, isOrWasNew } from "../Entity";
+import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
 import {
   BaseEntity,
@@ -23,11 +23,11 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToOneReference`s. */
 export function hasOne<T extends Entity, U extends Entity, N extends never | undefined>(
-  otherMeta: EntityMetadata,
+  entity: T,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
 ): ManyToOneReference<T, U, N> {
-  const entity = currentlyInstantiatingEntity as T;
   return new ManyToOneReferenceImpl<T, U, N>(entity, otherMeta, fieldName, otherFieldName);
 }
 
@@ -86,6 +86,9 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    if (isOrWasNew(entity)) {
+      this._isLoaded = true;
+    }
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
@@ -231,14 +234,6 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   setFromOpts(other: U | IdOf<U> | N): void {
     this.setImpl(other);
-  }
-
-  initializeForNewEntity(): void {
-    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
-    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    if (this.current() === undefined) {
-      this._isLoaded = true;
-    }
   }
 
   maybeCascadeDelete(): void {

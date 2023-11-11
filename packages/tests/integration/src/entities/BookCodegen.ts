@@ -162,31 +162,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly advances: Collection<Book, BookAdvance> = hasMany(bookAdvanceMeta, "advances", "book", "book_id", undefined);
-
-  readonly reviews: Collection<Book, BookReview> = hasMany(bookReviewMeta, "reviews", "book", "book_id", undefined);
-
-  readonly comments: Collection<Book, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_book_id",
-    undefined,
-  );
-
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
-
-  readonly currentDraftAuthor: OneToOneReference<Book, Author> = hasOneToOne(
-    authorMeta,
-    "currentDraftAuthor",
-    "currentDraftBook",
-    "current_draft_book_id",
-  );
-
-  readonly image: OneToOneReference<Book, Image> = hasOneToOne(imageMeta, "image", "book", "book_id");
-
-  readonly tags: Collection<Book, Tag> = hasManyToMany("books_to_tags", "tags", "book_id", tagMeta, "books", "tag_id");
-
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
     setOpts(this as any as Book, opts, { calledFromConstructor: true });
@@ -273,5 +248,68 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
     return isLoaded(this as any as Book, hint);
+  }
+
+  get advances(): Collection<Book, BookAdvance> {
+    const { relations } = this.__orm;
+    return relations.advances ??= hasMany(
+      this as any as Book,
+      bookAdvanceMeta,
+      "advances",
+      "book",
+      "book_id",
+      undefined,
+    );
+  }
+
+  get reviews(): Collection<Book, BookReview> {
+    const { relations } = this.__orm;
+    return relations.reviews ??= hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
+  }
+
+  get comments(): Collection<Book, Comment> {
+    const { relations } = this.__orm;
+    return relations.comments ??= hasMany(
+      this as any as Book,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_book_id",
+      undefined,
+    );
+  }
+
+  get author(): ManyToOneReference<Book, Author, never> {
+    const { relations } = this.__orm;
+    return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
+  }
+
+  get currentDraftAuthor(): OneToOneReference<Book, Author> {
+    const { relations } = this.__orm;
+    return relations.currentDraftAuthor ??= hasOneToOne(
+      this as any as Book,
+      authorMeta,
+      "currentDraftAuthor",
+      "currentDraftBook",
+      "current_draft_book_id",
+    );
+  }
+
+  get image(): OneToOneReference<Book, Image> {
+    const { relations } = this.__orm;
+    return relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
+  }
+
+  get tags(): Collection<Book, Tag> {
+    const { relations } = this.__orm;
+    return relations.tags ??= hasManyToMany(
+      this as any as Book,
+      "books_to_tags",
+      "tags",
+      "book_id",
+      tagMeta,
+      "books",
+      "tag_id",
+    );
   }
 }

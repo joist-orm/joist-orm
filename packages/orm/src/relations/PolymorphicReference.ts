@@ -1,5 +1,5 @@
-import { Entity, isEntity } from "../Entity";
-import { IdOf, TaggedId, currentlyInstantiatingEntity, sameEntity } from "../EntityManager";
+import { Entity, isEntity, isOrWasNew } from "../Entity";
+import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
 import {
   OneToOneReference,
@@ -19,9 +19,9 @@ import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
 export function hasOnePolymorphic<T extends Entity, U extends Entity, N extends never | undefined>(
+  entity: T,
   fieldName: keyof T & string,
 ): PolymorphicReference<T, U, N> {
-  const entity = currentlyInstantiatingEntity as T;
   return new PolymorphicReferenceImpl<T, U, N>(entity, fieldName);
 }
 
@@ -73,6 +73,9 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   ) {
     super();
     this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
+    if (isOrWasNew(entity)) {
+      this._isLoaded = true;
+    }
   }
 
   private get currentComponent(): PolymorphicFieldComponent | N {
@@ -168,14 +171,6 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   setFromOpts(other: U): void {
     this.setImpl(other);
-  }
-
-  initializeForNewEntity(): void {
-    // Usually our codegened opts ensures that polys are only initialized with entities,
-    // but em.clone currently passes in strings
-    if (this.current() === undefined) {
-      this._isLoaded = true;
-    }
   }
 
   maybeCascadeDelete(): void {

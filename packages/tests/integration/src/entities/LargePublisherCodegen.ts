@@ -93,14 +93,6 @@ export abstract class LargePublisherCodegen extends Publisher {
     factoryOptsType: Parameters<typeof newLargePublisher>[1];
   };
 
-  readonly critics: Collection<LargePublisher, Critic> = hasMany(
-    criticMeta,
-    "critics",
-    "favoriteLargePublisher",
-    "favorite_large_publisher_id",
-    undefined,
-  );
-
   constructor(em: EntityManager, opts: LargePublisherOpts) {
     // @ts-ignore
     super(em, largePublisherMeta, LargePublisherCodegen.defaultValues, opts);
@@ -165,5 +157,17 @@ export abstract class LargePublisherCodegen extends Publisher {
 
   isLoaded<H extends LoadHint<LargePublisher>>(hint: H): this is Loaded<LargePublisher | Publisher, H> {
     return isLoaded(this as any as LargePublisher, hint);
+  }
+
+  get critics(): Collection<LargePublisher, Critic> {
+    const { relations } = this.__orm;
+    return relations.critics ??= hasMany(
+      this as any as LargePublisher,
+      criticMeta,
+      "critics",
+      "favoriteLargePublisher",
+      "favorite_large_publisher_id",
+      undefined,
+    );
   }
 }

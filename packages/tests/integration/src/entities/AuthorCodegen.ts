@@ -281,58 +281,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly authors: Collection<Author, Author> = hasMany(authorMeta, "authors", "mentor", "mentor_id", undefined);
-
-  readonly schedules: Collection<Author, AuthorSchedule> = hasMany(
-    authorScheduleMeta,
-    "schedules",
-    "author",
-    "author_id",
-    undefined,
-  );
-
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", {
-    "field": "order",
-    "direction": "ASC",
-  });
-
-  readonly comments: Collection<Author, Comment> = hasMany(
-    commentMeta,
-    "comments",
-    "parent",
-    "parent_author_id",
-    undefined,
-  );
-
-  readonly mentor: ManyToOneReference<Author, Author, undefined> = hasOne(authorMeta, "mentor", "authors");
-
-  readonly currentDraftBook: ManyToOneReference<Author, Book, undefined> = hasOne(
-    bookMeta,
-    "currentDraftBook",
-    "currentDraftAuthor",
-  );
-
   abstract readonly favoriteBook: PersistedAsyncReference<Author, Book, undefined>;
-
-  readonly publisher: ManyToOneReference<Author, Publisher, undefined> = hasOne(publisherMeta, "publisher", "authors");
-
-  readonly image: OneToOneReference<Author, Image> = hasOneToOne(imageMeta, "image", "author", "author_id");
-
-  readonly userOneToOne: OneToOneReference<Author, User> = hasOneToOne(
-    userMeta,
-    "userOneToOne",
-    "authorManyToOne",
-    "author_id",
-  );
-
-  readonly tags: Collection<Author, Tag> = hasManyToMany(
-    "authors_to_tags",
-    "tags",
-    "author_id",
-    tagMeta,
-    "authors",
-    "tag_id",
-  );
 
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
@@ -569,5 +518,98 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {
     return isLoaded(this as any as Author, hint);
+  }
+
+  get authors(): Collection<Author, Author> {
+    const { relations } = this.__orm;
+    return relations.authors ??= hasMany(
+      this as any as Author,
+      authorMeta,
+      "authors",
+      "mentor",
+      "mentor_id",
+      undefined,
+    );
+  }
+
+  get schedules(): Collection<Author, AuthorSchedule> {
+    const { relations } = this.__orm;
+    return relations.schedules ??= hasMany(
+      this as any as Author,
+      authorScheduleMeta,
+      "schedules",
+      "author",
+      "author_id",
+      undefined,
+    );
+  }
+
+  get books(): Collection<Author, Book> {
+    const { relations } = this.__orm;
+    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
+      "field": "order",
+      "direction": "ASC",
+    });
+  }
+
+  get comments(): Collection<Author, Comment> {
+    const { relations } = this.__orm;
+    return relations.comments ??= hasMany(
+      this as any as Author,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_author_id",
+      undefined,
+    );
+  }
+
+  get mentor(): ManyToOneReference<Author, Author, undefined> {
+    const { relations } = this.__orm;
+    return relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
+  }
+
+  get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
+    const { relations } = this.__orm;
+    return relations.currentDraftBook ??= hasOne(
+      this as any as Author,
+      bookMeta,
+      "currentDraftBook",
+      "currentDraftAuthor",
+    );
+  }
+
+  get publisher(): ManyToOneReference<Author, Publisher, undefined> {
+    const { relations } = this.__orm;
+    return relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
+  }
+
+  get image(): OneToOneReference<Author, Image> {
+    const { relations } = this.__orm;
+    return relations.image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
+  }
+
+  get userOneToOne(): OneToOneReference<Author, User> {
+    const { relations } = this.__orm;
+    return relations.userOneToOne ??= hasOneToOne(
+      this as any as Author,
+      userMeta,
+      "userOneToOne",
+      "authorManyToOne",
+      "author_id",
+    );
+  }
+
+  get tags(): Collection<Author, Tag> {
+    const { relations } = this.__orm;
+    return relations.tags ??= hasManyToMany(
+      this as any as Author,
+      "authors_to_tags",
+      "tags",
+      "author_id",
+      tagMeta,
+      "authors",
+      "tag_id",
+    );
   }
 }

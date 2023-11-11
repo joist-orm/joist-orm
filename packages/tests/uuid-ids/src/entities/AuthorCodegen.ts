@@ -101,8 +101,6 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
     factoryOptsType: Parameters<typeof newAuthor>[1];
   };
 
-  readonly books: Collection<Author, Book> = hasMany(bookMeta, "books", "author", "author_id", undefined);
-
   constructor(em: EntityManager, opts: AuthorOpts) {
     super(em, authorMeta, AuthorCodegen.defaultValues, opts);
     setOpts(this as any as Author, opts, { calledFromConstructor: true });
@@ -180,5 +178,10 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Author>>(hint: H): this is Loaded<Author, H> {
     return isLoaded(this as any as Author, hint);
+  }
+
+  get books(): Collection<Author, Book> {
+    const { relations } = this.__orm;
+    return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
   }
 }

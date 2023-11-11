@@ -99,8 +99,6 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> {
     factoryOptsType: Parameters<typeof newBook>[1];
   };
 
-  readonly author: ManyToOneReference<Book, Author, never> = hasOne(authorMeta, "author", "books");
-
   constructor(em: EntityManager, opts: BookOpts) {
     super(em, bookMeta, BookCodegen.defaultValues, opts);
     setOpts(this as any as Book, opts, { calledFromConstructor: true });
@@ -167,5 +165,10 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, number> {
 
   isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
     return isLoaded(this as any as Book, hint);
+  }
+
+  get author(): ManyToOneReference<Book, Author, never> {
+    const { relations } = this.__orm;
+    return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

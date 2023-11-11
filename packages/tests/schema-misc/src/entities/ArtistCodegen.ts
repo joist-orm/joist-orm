@@ -102,14 +102,6 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
     factoryOptsType: Parameters<typeof newArtist>[1];
   };
 
-  readonly paintings: Collection<Artist, Painting> = hasMany(
-    paintingMeta,
-    "paintings",
-    "artist",
-    "artistId",
-    undefined,
-  );
-
   constructor(em: EntityManager, opts: ArtistOpts) {
     super(em, artistMeta, ArtistCodegen.defaultValues, opts);
     setOpts(this as any as Artist, opts, { calledFromConstructor: true });
@@ -187,5 +179,17 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Artist>>(hint: H): this is Loaded<Artist, H> {
     return isLoaded(this as any as Artist, hint);
+  }
+
+  get paintings(): Collection<Artist, Painting> {
+    const { relations } = this.__orm;
+    return relations.paintings ??= hasMany(
+      this as any as Artist,
+      paintingMeta,
+      "paintings",
+      "artist",
+      "artistId",
+      undefined,
+    );
   }
 }

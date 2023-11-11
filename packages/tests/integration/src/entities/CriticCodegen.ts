@@ -125,25 +125,6 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
     factoryOptsType: Parameters<typeof newCritic>[1];
   };
 
-  readonly favoriteLargePublisher: ManyToOneReference<Critic, LargePublisher, undefined> = hasOne(
-    largePublisherMeta,
-    "favoriteLargePublisher",
-    "critics",
-  );
-
-  readonly group: ManyToOneReference<Critic, PublisherGroup, undefined> = hasOne(
-    publisherGroupMeta,
-    "group",
-    "critics",
-  );
-
-  readonly criticColumn: OneToOneReference<Critic, CriticColumn> = hasOneToOne(
-    criticColumnMeta,
-    "criticColumn",
-    "critic",
-    "critic_id",
-  );
-
   constructor(em: EntityManager, opts: CriticOpts) {
     super(em, criticMeta, CriticCodegen.defaultValues, opts);
     setOpts(this as any as Critic, opts, { calledFromConstructor: true });
@@ -213,5 +194,31 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Critic>>(hint: H): this is Loaded<Critic, H> {
     return isLoaded(this as any as Critic, hint);
+  }
+
+  get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {
+    const { relations } = this.__orm;
+    return relations.favoriteLargePublisher ??= hasOne(
+      this as any as Critic,
+      largePublisherMeta,
+      "favoriteLargePublisher",
+      "critics",
+    );
+  }
+
+  get group(): ManyToOneReference<Critic, PublisherGroup, undefined> {
+    const { relations } = this.__orm;
+    return relations.group ??= hasOne(this as any as Critic, publisherGroupMeta, "group", "critics");
+  }
+
+  get criticColumn(): OneToOneReference<Critic, CriticColumn> {
+    const { relations } = this.__orm;
+    return relations.criticColumn ??= hasOneToOne(
+      this as any as Critic,
+      criticColumnMeta,
+      "criticColumn",
+      "critic",
+      "critic_id",
+    );
   }
 }

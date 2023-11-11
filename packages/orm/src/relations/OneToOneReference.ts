@@ -1,15 +1,6 @@
-import {
-  currentlyInstantiatingEntity,
-  deTagId,
-  ensureNotDeleted,
-  getEmInternalApi,
-  IdOf,
-  LoadedReference,
-  setField,
-  TaggedId,
-} from "../";
+import { deTagId, ensureNotDeleted, getEmInternalApi, IdOf, LoadedReference, setField, TaggedId } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
-import { Entity } from "../Entity";
+import { Entity, isOrWasNew } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
@@ -60,12 +51,12 @@ export function isLoadedOneToOneReference(
 
 /** An alias for creating `OneToOneReference`s. */
 export function hasOneToOne<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata,
+  entity: T,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): OneToOneReference<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new OneToOneReferenceImpl<T, U>(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 
@@ -108,6 +99,9 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     this.#entity = entity;
     this.#otherMeta = otherMeta;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
+    if (isOrWasNew(entity)) {
+      this._isLoaded = true;
+    }
   }
 
   get id(): IdOf<U> {
@@ -233,10 +227,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   setFromOpts(other: U): void {
     this.set(other);
-  }
-
-  initializeForNewEntity(): void {
-    this._isLoaded = true;
   }
 
   maybeCascadeDelete(): void {

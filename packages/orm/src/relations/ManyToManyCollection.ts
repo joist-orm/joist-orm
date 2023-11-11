@@ -1,6 +1,5 @@
 import {
   Collection,
-  currentlyInstantiatingEntity,
   ensureNotDeleted,
   Entity,
   EntityMetadata,
@@ -12,20 +11,21 @@ import {
 } from "../";
 import { manyToManyDataLoader } from "../dataloaders/manyToManyDataLoader";
 import { manyToManyFindDataLoader } from "../dataloaders/manyToManyFindDataLoader";
+import { isOrWasNew } from "../Entity";
 import { maybeAdd, maybeRemove, remove } from "../utils";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `ManyToManyCollections`s. */
 export function hasManyToMany<T extends Entity, U extends Entity>(
+  entity: T,
   joinTableName: string,
   fieldName: keyof T & string,
   columnName: string,
-  otherMeta: EntityMetadata,
+  otherMeta: EntityMetadata<U>,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): Collection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new ManyToManyCollection<T, U>(
     joinTableName,
     entity,
@@ -64,6 +64,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
+    if (isOrWasNew(entity)) {
+      this.loaded = [];
+    }
   }
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
@@ -211,13 +214,6 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   setFromOpts(others: U[]): void {
     this.loaded = [];
     others.forEach((o) => this.add(o));
-  }
-
-  initializeForNewEntity(): void {
-    // Don't overwrite any opts values
-    if (this.loaded === undefined) {
-      this.loaded = [];
-    }
   }
 
   maybeCascadeDelete() {

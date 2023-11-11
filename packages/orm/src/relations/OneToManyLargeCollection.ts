@@ -1,6 +1,6 @@
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
 import { Entity } from "../Entity";
-import { currentlyInstantiatingEntity, IdOf, sameEntity } from "../EntityManager";
+import { IdOf, sameEntity } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { ensureNotDeleted, getMetadata, ManyToOneReferenceImpl } from "../index";
 import { remove } from "../utils";
@@ -9,12 +9,12 @@ import { RelationT, RelationU } from "./Relation";
 
 /** An alias for creating `OneToManyLargeCollection`s. */
 export function hasLargeMany<T extends Entity, U extends Entity>(
-  otherMeta: EntityMetadata,
+  entity: T,
+  otherMeta: EntityMetadata<U>,
   fieldName: keyof T & string,
   otherFieldName: keyof U & string,
   otherColumnName: string,
 ): LargeCollection<T, U> {
-  const entity = currentlyInstantiatingEntity as T;
   return new OneToManyLargeCollection(entity, otherMeta, fieldName, otherFieldName, otherColumnName);
 }
 

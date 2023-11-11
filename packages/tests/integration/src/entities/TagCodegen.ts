@@ -114,33 +114,6 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
     factoryOptsType: Parameters<typeof newTag>[1];
   };
 
-  readonly books: Collection<Tag, Book> = hasManyToMany(
-    "books_to_tags",
-    "books",
-    "tag_id",
-    bookMeta,
-    "tags",
-    "book_id",
-  );
-
-  readonly publishers: Collection<Tag, Publisher> = hasManyToMany(
-    "publishers_to_tags",
-    "publishers",
-    "tag_id",
-    publisherMeta,
-    "tags",
-    "publisher_id",
-  );
-
-  readonly authors: LargeCollection<Tag, Author> = hasLargeManyToMany(
-    "authors_to_tags",
-    "authors",
-    "tag_id",
-    authorMeta,
-    "tags",
-    "author_id",
-  );
-
   constructor(em: EntityManager, opts: TagOpts) {
     super(em, tagMeta, TagCodegen.defaultValues, opts);
     setOpts(this as any as Tag, opts, { calledFromConstructor: true });
@@ -207,5 +180,44 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> {
 
   isLoaded<H extends LoadHint<Tag>>(hint: H): this is Loaded<Tag, H> {
     return isLoaded(this as any as Tag, hint);
+  }
+
+  get books(): Collection<Tag, Book> {
+    const { relations } = this.__orm;
+    return relations.books ??= hasManyToMany(
+      this as any as Tag,
+      "books_to_tags",
+      "books",
+      "tag_id",
+      bookMeta,
+      "tags",
+      "book_id",
+    );
+  }
+
+  get publishers(): Collection<Tag, Publisher> {
+    const { relations } = this.__orm;
+    return relations.publishers ??= hasManyToMany(
+      this as any as Tag,
+      "publishers_to_tags",
+      "publishers",
+      "tag_id",
+      publisherMeta,
+      "tags",
+      "publisher_id",
+    );
+  }
+
+  get authors(): LargeCollection<Tag, Author> {
+    const { relations } = this.__orm;
+    return relations.authors ??= hasLargeManyToMany(
+      this as any as Tag,
+      "authors_to_tags",
+      "authors",
+      "tag_id",
+      authorMeta,
+      "tags",
+      "author_id",
+    );
   }
 }

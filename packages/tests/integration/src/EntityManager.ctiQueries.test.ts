@@ -1,5 +1,5 @@
 import { newSmallPublisher, Publisher, SmallPublisher } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { alias } from "joist-orm";
 
 describe("EntityManager.ctiQueries", () => {

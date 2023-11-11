@@ -1,7 +1,8 @@
 import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
 import { Author, Book, User, newAuthor, newPublisher } from "../entities";
 import { IpAddress } from "../entities/types";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {

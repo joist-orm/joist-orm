@@ -1,6 +1,7 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
 import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {

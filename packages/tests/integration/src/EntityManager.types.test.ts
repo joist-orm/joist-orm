@@ -1,6 +1,7 @@
 import { insertPublisher, select } from "@src/entities/inserts";
 import { Publisher, SmallPublisher } from "./entities";
-import { newEntityManager, testDriver } from "./setupDbTests";
+
+import { newEntityManager, testDriver } from "@src/testEm";
 
 describe("EntityManager.types", () => {
   it("supports decimals", async () => {

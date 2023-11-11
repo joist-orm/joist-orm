@@ -1,6 +1,6 @@
 import { Author } from "@src/entities";
 import { insertAuthor, insertBook, insertBookReview, insertComment } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { isLoaded } from "joist-orm";
 
 describe("isLoaded", () => {

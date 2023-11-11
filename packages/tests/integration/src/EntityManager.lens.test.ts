@@ -9,7 +9,8 @@ import {
 } from "@src/entities/inserts";
 import { Lens, getLens, getMetadata, testing } from "joist-orm";
 import { Author, Book, Image, Publisher, Tag } from "./entities";
-import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
+
+import { lastQuery, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 const { isAllSqlPaths } = testing;
 

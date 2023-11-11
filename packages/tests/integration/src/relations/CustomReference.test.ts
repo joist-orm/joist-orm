@@ -1,6 +1,7 @@
 import { insertAuthor, insertBook, insertBookReview, insertImage, select } from "@src/entities/inserts";
 import { Author, Book, BookReview, Image, ImageType } from "../entities";
-import { newEntityManager } from "../setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("CustomReference", () => {
   it("can load a reference", async () => {

@@ -1,4 +1,4 @@
-import { recordQuery } from "@src/setupDbTests";
+import { recordQuery } from "@src/testEm";
 import { Driver, InMemoryDriver, PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";

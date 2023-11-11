@@ -1,6 +1,6 @@
 import { Critic, newCritic, newPublisherGroup, newTag, Publisher, PublisherGroup } from "@src/entities";
 import { insertCritic, insertPublisher, insertPublisherGroup, select } from "@src/entities/inserts";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/setupDbTests";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { LoadHint } from "joist-orm";
 
 describe("OneToManyLargeCollection", () => {

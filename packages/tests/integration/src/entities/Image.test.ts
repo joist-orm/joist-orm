@@ -1,6 +1,7 @@
 import { Author, Image, ImageType, SmallPublisher } from "@src/entities";
 import { insertAuthor, insertImage } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("Image", () => {
   it("can have an owner", async () => {

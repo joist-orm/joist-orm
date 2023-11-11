@@ -1,5 +1,5 @@
 import { newAuthor } from "@src/entities";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { withLoaded } from "joist-orm/build/src/withLoaded";
 
 describe("withLoaded", () => {

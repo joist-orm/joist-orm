@@ -23,7 +23,8 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { maybeNew, maybeNewPoly, newTestInstance, testIndex } from "joist-orm";
-import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "./setupDbTests";
+
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {

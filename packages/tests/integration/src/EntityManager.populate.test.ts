@@ -1,7 +1,8 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { setDefaultEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
-import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "./setupDbTests";
+
+import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {

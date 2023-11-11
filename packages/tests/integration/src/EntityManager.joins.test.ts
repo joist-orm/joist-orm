@@ -14,7 +14,8 @@ import {
 import { jan1, jan2 } from "joist-orm";
 import { testing } from "joist-plugin-join-preloading";
 import { Author, Book, Critic, LargePublisher, Publisher } from "./entities";
-import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "./setupDbTests";
+
+import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
 
 const { partitionHint } = testing;
 

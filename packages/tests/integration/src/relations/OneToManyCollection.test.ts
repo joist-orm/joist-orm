@@ -1,7 +1,8 @@
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
 import { Author, Book, Publisher, User, newAuthor, newBook, newPublisher } from "../entities";
 import { IpAddress } from "../entities/types";
-import { newEntityManager, numberOfQueries, resetQueryCount } from "../setupDbTests";
+
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {

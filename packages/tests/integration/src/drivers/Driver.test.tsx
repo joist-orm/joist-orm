@@ -1,6 +1,6 @@
 import { Author, Book, newBook, newTag, Tag } from "@src/entities";
 import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+import { newEntityManager } from "@src/testEm";
 import { getMetadata, setField } from "joist-orm";
 
 // This will test whatever driver the test suite is currently being run against

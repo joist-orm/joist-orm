@@ -1,6 +1,7 @@
 import { insertAuthor, insertBook, insertBookReview } from "@src/entities/inserts";
 import { Author, Book, BookReview, newAuthor } from "../entities";
-import { newEntityManager } from "../setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("hasManyDerived", () => {
   it("can load a collection", async () => {

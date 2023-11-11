@@ -1,6 +1,7 @@
 import { Author, newAuthor, newBook } from "@src/entities";
 import { insertAuthor } from "@src/entities/inserts";
-import { newEntityManager } from "@src/setupDbTests";
+
+import { newEntityManager } from "@src/testEm";
 
 describe("Entity", () => {
   it("can toJSON a new entity", () => {

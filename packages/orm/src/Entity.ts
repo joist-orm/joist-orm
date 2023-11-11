@@ -54,7 +54,7 @@ export class EntityOrmField {
   /** Whether our entity should flush regardless of any other changes. */
   isTouched: boolean = false;
   /** Whether we were created in this EM, even if we've since been flushed. */
-  wasNewInThisEm: boolean = false;
+  wasNew: boolean = false;
 
   constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any>) {
     this.em = em;
@@ -66,7 +66,7 @@ export class EntityOrmField {
   resetAfterFlushed() {
     this.originalData = {};
     this.isTouched = false;
-    this.wasNewInThisEm ||= this.isNew;
+    this.wasNew ||= this.isNew;
     this.isNew = false;
     if (this.deleted === "pending") {
       this.deleted = "deleted";
@@ -87,5 +87,5 @@ export class EntityOrmField {
  * created it, so we can set the OneToManyCollection to loaded.
  */
 export function isOrWasNew(entity: Entity): boolean {
-  return entity.isNewEntity || entity.__orm.wasNewInThisEm;
+  return entity.isNewEntity || entity.__orm.wasNew;
 }

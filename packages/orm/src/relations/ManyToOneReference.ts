@@ -86,10 +86,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
     super();
     this.#entity = entity;
     this.#fieldName = fieldName;
-    // We can be initialized with [entity | id | undefined], and if it's entity or id, then setImpl
-    // will set loaded appropriately; but if we're initialized undefined, then mark loaded here
-    // if ((entity.isNewEntity || entity.__orm.wasNewInThisEm) && this.current() === undefined) {
-    if (isOrWasNew(entity) && this.current() === undefined) {
+    if (isOrWasNew(entity)) {
       this._isLoaded = true;
     }
   }

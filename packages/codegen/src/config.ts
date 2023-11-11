@@ -194,7 +194,15 @@ export async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
     const content = await fs.readFile(configPath);
-    return config.parse(JSON.parse(content.toString()));
+    const result = config.safeParse(JSON.parse(content.toString()));
+    if (!result.success) {
+      throw new Error(
+        `Invalid joist-config.json: ${result.error.errors
+          .map((ze) => `${ze.path.map(String).join("/")} ${ze.message}`)
+          .join("\n")}`,
+      );
+    }
+    return result.data;
   }
   return config.parse({});
 }

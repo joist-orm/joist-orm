@@ -1,4 +1,4 @@
-import { defaultConfig } from "./config";
+import { config } from "./config";
 import { collectionName, makeEntity, oneToOneName, referenceName } from "./EntityDbMetadata";
 import { tableToEntityName } from "./utils";
 
@@ -8,6 +8,7 @@ const author = makeEntity("Author");
 const book = makeEntity("Book");
 const bookReview = makeEntity("BookReview");
 const image = makeEntity("Image");
+const defaultConfig = config.parse({});
 
 describe("EntityDbMetadata", () => {
   describe("tableToEntityName", () => {

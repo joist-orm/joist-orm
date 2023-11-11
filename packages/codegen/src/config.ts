@@ -3,50 +3,57 @@ import { getBuffer } from "@dprint/json";
 import { DbMetadata, Entity } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
+import { z } from "zod";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());
 
-export interface FieldConfig {
-  derived?: "sync" | "async";
-  protected?: boolean;
-  ignore?: true;
-  superstruct?: string;
-  zodSchema?: string;
-  type?: string;
-  serde?: string;
-}
+const fieldConfig = z.object({
+  derived: z.optional(z.union([z.literal("sync"), z.literal("async")])),
+  protected: z.optional(z.boolean()),
+  ignore: z.optional(z.boolean()),
+  superstruct: z.optional(z.string()),
+  zodSchema: z.optional(z.string()),
+  type: z.optional(z.string()),
+  serde: z.optional(z.string()),
+});
 
-export interface RelationConfig {
-  polymorphic?: "notNull" | true;
-  large?: true;
-  orderBy?: string;
-}
+export type FieldConfig = z.infer<typeof fieldConfig>;
 
-export interface EntityConfig {
-  tag: string;
-  tableName?: string;
-  fields?: Record<string, FieldConfig>;
-  relations?: Record<string, RelationConfig>;
+const relationConfig = z.object({
+  polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
+  large: z.optional(z.boolean()),
+  orderBy: z.optional(z.string()),
+});
+
+export type RelationConfig = z.infer<typeof relationConfig>;
+
+const entityConfig = z.object({
+  tag: z.string(),
+  tableName: z.optional(z.string()),
+  fields: z.optional(z.record(fieldConfig)),
+  relations: z.optional(z.record(relationConfig)),
   /** Whether this entity should be abstract, e.g. for inheritance a subtype must be instantiated instead of this type. */
-  abstract?: boolean;
-  orderBy?: string;
-}
+  abstract: z.optional(z.boolean()),
+  orderBy: z.optional(z.string()),
+});
 
-export interface TimestampConfig {
+export type EntityConfig = z.infer<typeof entityConfig>;
+
+const timestampConfig = z.object({
   /** The names to check for this timestamp, i.e. `created_at` `created`, etc. */
-  names: string[];
+  names: z.array(z.string()),
   /** Whether this timestamp column is required to consider a table an entity, defaults to `false`. */
-  required?: boolean;
-}
+  required: z.optional(z.boolean()),
+});
 
-export interface Config {
+export type TimestampConfig = z.infer<typeof timestampConfig>;
+
+export const config = z.object({
   /** The _build-time_ database URL for reading database metadata. */
-  databaseUrl?: string;
-
+  databaseUrl: z.optional(z.string()),
   /** Your application's request-level `Context` type. */
-  contextType?: string;
-
+  contextType: z.optional(z.string()),
   /**
    * Allows the user to specify the `updated_at` / `created_at` column names to look up, and if they're optional.
    *
@@ -56,11 +63,13 @@ export interface Config {
    * These defaults are the most lenient, to facilitate running Joist against an existing schema and
    * seeing all of your entities, regardless of your previous conventions.
    */
-  timestampColumns?: {
-    createdAt?: TimestampConfig;
-    updatedAt?: TimestampConfig;
-    deletedAt?: TimestampConfig;
-  };
+  timestampColumns: z.optional(
+    z.object({
+      createdAt: z.optional(timestampConfig),
+      updatedAt: z.optional(timestampConfig),
+      deletedAt: z.optional(timestampConfig),
+    }),
+  ),
   /**
    * By default, we create a `flush_database` function for fast testing.
    *
@@ -70,22 +79,20 @@ export interface Config {
    * If you have more than one test database, you can set `createFlushFunction` to the array
    * of test database names, i.e. `mydb_test_1`, `mydb_test_2`, etc.
    */
-  createFlushFunction?: boolean | string[];
-  entitiesDirectory: string;
-  codegenPlugins: string[];
-  entities: Record<string, EntityConfig>;
-  ignoredTables?: string[];
+  createFlushFunction: z.optional(z.union([z.boolean(), z.array(z.string())])),
+  entitiesDirectory: z.string().default("./src/entities"),
+  codegenPlugins: z.array(z.string()).default([]),
+  entities: z.record(entityConfig).default({}),
+  ignoredTables: z.optional(z.array(z.string())),
   /** The type of entity `id` fields; defaults to `tagged-string`. */
-  idType?: "tagged-string" | "untagged-string" | "number";
+  idType: z
+    .optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")]))
+    .default("tagged-string"),
+});
+
+export type Config = z.infer<typeof config> & {
   // We don't persist this, and instead just use it as a cache
   __tableToEntityName?: Record<string, string>;
-}
-
-export const defaultConfig: Config = {
-  entitiesDirectory: "./src/entities",
-  codegenPlugins: [],
-  entities: {},
-  __tableToEntityName: {},
 };
 
 export const ormMaintainedFields = ["createdAt", "updatedAt"];
@@ -179,12 +186,9 @@ export async function loadConfig(): Promise<Config> {
   const exists = await trueIfResolved(fs.access(configPath));
   if (exists) {
     const content = await fs.readFile(configPath);
-    return {
-      ...defaultConfig,
-      ...(JSON.parse(content.toString()) as Config),
-    };
+    return config.parse(JSON.parse(content.toString()));
   }
-  return defaultConfig;
+  return config.parse({});
 }
 
 /**

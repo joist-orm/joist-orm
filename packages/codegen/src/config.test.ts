@@ -1,4 +1,4 @@
-import { Config, defaultConfig, FieldConfig, isFieldIgnored } from "./config";
+import { config, Config, FieldConfig, isFieldIgnored } from "./config";
 import { makeEntity } from "./EntityDbMetadata";
 
 describe("config", () => {
@@ -57,8 +57,7 @@ describe("config", () => {
 });
 
 function newAuthorConfig(fields?: Record<string, FieldConfig>): Config {
-  return {
-    ...defaultConfig,
+  return config.parse({
     entities: { Author: { tag: "a", fields } },
-  };
+  });
 }

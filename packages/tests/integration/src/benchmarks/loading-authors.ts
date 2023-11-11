@@ -11,23 +11,23 @@ async function main() {
   INSERT INTO books (author_id, title) SELECT i, 'b' || i::text FROM generate_series(1, 50000) AS t(i);
    */
 
-  group("load just authors", () => {
-    baseline("baseline", async () => {
+  group("loading one level", () => {
+    bench("authors", async () => {
       const em = newEntityManager();
-      const authors = await em.find(Author, {});
+      await em.find(Author, {});
     });
   });
 
-  await run({
-    avg: true, // enable/disable avg column (default: true)
-    json: false, // enable/disable json output (default: false)
-    colors: true, // enable/disable colors (default: true)
-    min_max: true, // enable/disable min/max column (default: true)
-    collect: false, // enable/disable collecting returned values into an array during the benchmark (default: false)
-    percentiles: false, // enable/disable percentiles column (default: true)
+  group("loading two levels", () => {
+    bench("authors", async () => {
+      const em = newEntityManager();
+      await em.find(Author, { id: { lt: 20_000 } } as any, { populate: "books" });
+    });
   });
 
+  await run({});
   await testDriver.destroy();
 }
 
+// yarn env-cmd tsx ./src/benchmarks/loading-authors.ts
 main();

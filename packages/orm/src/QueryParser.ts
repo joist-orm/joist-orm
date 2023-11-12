@@ -432,11 +432,14 @@ export function parseFindQuery(
 function maybeAddIdNotNulls(query: ParsedFindQuery): void {
   visitConditions(query, {
     visitCond(c: ColumnCondition) {
+      // Check `c.prunable` to make sure we don't catch our injected `deleted_at is null` conditions
+      if (c.cond.kind !== "is-null" || c.column === "id" || c.pruneable) {
+        return c;
+      }
+      // This is an `some_column IS NULL`, is it in an outer join?
       const table = query.tables.find((t) => t.alias === c.alias);
-      // Check `!c.prunable` to make sure we don't catch our injected `deleted_at is null` conditions
-      if (table && table.join === "outer" && c.cond.kind === "is-null" && c.column !== "id" && !c.pruneable) {
+      if (table && table.join === "outer") {
         const meta = getMetadataForTable(table.table);
-        // Wrap this null condition with `id is not null`
         return {
           op: "and",
           conditions: [c, { alias: c.alias, column: "id", dbType: meta.idDbType, cond: { kind: "not-null" } }],

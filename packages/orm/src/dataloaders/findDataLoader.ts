@@ -12,7 +12,6 @@ import {
   ParsedExpressionFilter,
   ParsedFindQuery,
   ParsedValueFilter,
-  combineConditions,
   getTables,
   joinKeywords,
   parseFindQuery,
@@ -83,7 +82,7 @@ export function findDataLoader<T extends Entity>(
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings = createBindings(meta, queries);
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
-      const [conditions] = buildConditions(combineConditions(query));
+      const [conditions] = buildConditions(query.condition!);
 
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       const groupBys = selects
@@ -236,8 +235,7 @@ function visit(query: ParsedFindQuery, visitor: Visitor): void {
       }
     });
   }
-  query.conditions.forEach(visitCond);
-  query.complexConditions?.forEach(visitExpFilter);
+  if (query.condition) visitExpFilter(query.condition);
 }
 
 // Create the a1.firstName=data.firstName AND a2.lastName=data.lastName

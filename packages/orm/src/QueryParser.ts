@@ -64,10 +64,8 @@ export interface ParsedFindQuery {
   tables: ParsedTable[];
   /** Any cross lateral joins, where the `joins: string[]` has the full join as raw SQL; currently only for preloading. */
   lateralJoins?: { joins: string[]; bindings: any[] };
-  /** Simple conditions that are ANDd together. */
-  conditions: ColumnCondition[];
-  /** Any optional complex conditions that will be ANDd with the simple conditions. */
-  complexConditions?: ParsedExpressionFilter[];
+  /** The query's conditions. */
+  condition?: ParsedExpressionFilter;
   /** Any optional orders to add before the default 'order by id'. */
   orderBys: ParsedOrderBy[];
 }
@@ -86,17 +84,17 @@ export function parseFindQuery(
 ): ParsedFindQuery {
   const selects: string[] = [];
   const tables: ParsedTable[] = [];
-  const conditions: ColumnCondition[] = [];
   const orderBys: ParsedOrderBy[] = [];
-  const query = { selects, tables, conditions, orderBys };
-  const complexConditions: ParsedExpressionFilter[] = [];
+  const query = { selects, tables, orderBys };
   const {
     orderBy = undefined,
-    conditions: expression = undefined,
+    conditions: optsExpression = undefined,
     softDeletes = "exclude",
     pruneJoins = true,
     keepAliases = [],
   } = opts;
+  const inlineConditions: ColumnCondition[] = [];
+  const inlineExpressions: ParsedExpressionFilter[] = [];
 
   const aliases: Record<string, number> = {};
   function getAlias(tableName: string): string {
@@ -113,7 +111,7 @@ export function parseFindQuery(
   function maybeAddNotSoftDeleted(meta: EntityMetadata, alias: string): void {
     if (filterSoftDeletes(meta)) {
       const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0]!;
-      conditions.push({
+      inlineConditions.push({
         alias,
         column: column.columnName,
         dbType: column.dbType,
@@ -170,7 +168,7 @@ export function parseFindQuery(
         if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
-            conditions.push({
+            inlineConditions.push({
               alias: fa,
               column: column.columnName,
               dbType: column.dbType,
@@ -193,7 +191,7 @@ export function parseFindQuery(
             const a = getAlias(field.otherMetadata().tableName);
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
-            conditions.push({
+            inlineConditions.push({
               alias: fa,
               column: column.columnName,
               dbType: column.dbType,
@@ -215,7 +213,7 @@ export function parseFindQuery(
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-              conditions.push({
+              inlineConditions.push({
                 alias: fa,
                 column: comp.columnName,
                 dbType: column.dbType,
@@ -225,7 +223,7 @@ export function parseFindQuery(
               // Add a condition for every component--these can be AND-d with the rest of the simple/inline conditions
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
-                conditions.push({
+                inlineConditions.push({
                   alias: fa,
                   column: comp.columnName,
                   dbType: column.dbType,
@@ -245,7 +243,7 @@ export function parseFindQuery(
                   cond: mapToDb(column, { kind: "in", value: ids }),
                 };
               });
-              complexConditions.push({ op: "or", conditions });
+              inlineExpressions.push({ op: "or", conditions });
             } else {
               throw new Error(`Filters on polys for ${f.kind} are not supported`);
             }
@@ -319,7 +317,7 @@ export function parseFindQuery(
                 return value === null ? value : keyToNumber(meta, maybeResolveReferenceToId(value));
               },
             };
-            conditions.push({
+            inlineConditions.push({
               alias: ja,
               column: field.columnNames[1],
               dbType: meta.idDbType,
@@ -332,7 +330,7 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      conditions.push({ alias, column: "id", dbType: meta.idDbType, cond: mapToDb(column, ef) });
+      inlineConditions.push({ alias, column: "id", dbType: meta.idDbType, cond: mapToDb(column, ef) });
     }
   }
 
@@ -381,20 +379,26 @@ export function parseFindQuery(
   const alias = getAlias(meta.tableName);
   selects.push(`${kq(alias)}.*`);
   addTable(meta, alias, "primary", "n/a", "n/a", filter);
-  if (expression) {
-    const parsed = parseExpression(expression);
-    if (parsed) {
-      complexConditions.push(parsed);
-    }
+
+  // If they passed extra `conditions: ...`, parse that
+  if (optsExpression) {
+    const parsed = parseExpression(optsExpression);
+    if (parsed) inlineExpressions.push(parsed);
   }
+  // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
+  if (inlineConditions.length === 0 && inlineExpressions.length === 1) {
+    Object.assign(query, { condition: inlineExpressions[0] });
+  } else if (inlineConditions.length > 0 || inlineExpressions.length > 0) {
+    Object.assign(query, {
+      condition: { op: "and", conditions: [...inlineConditions, ...inlineExpressions] },
+    });
+  }
+
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
   }
   maybeAddOrderBy(query, meta, alias);
 
-  if (complexConditions.length > 0) {
-    Object.assign(query, { complexConditions });
-  }
   if (pruneJoins) {
     pruneUnusedJoins(query, keepAliases);
   }
@@ -406,10 +410,9 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   // Mark all terminal usages
   const used = new Set<string>();
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
-  parsed.conditions.filter((c) => !c.pruneable).forEach((c) => used.add(c.alias));
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  flattenComplexConditions(parsed.complexConditions).forEach((c) => used.add(c.alias));
+  if (parsed.condition) flattenComplexConditions(parsed.condition).forEach((c) => used.add(c.alias));
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];
@@ -426,15 +429,18 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   }
   // Now remove any unused joins
   parsed.tables = parsed.tables.filter((t) => used.has(t.alias));
-  // And then remove any soft-delete conditions we don't need anymore
-  parsed.conditions = parsed.conditions.filter((c) => {
-    const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
-    return !prune;
-  });
+  // And then remove any inline soft-delete conditions we don't need anymore
+  if (parsed.condition && parsed.condition.op === "and") {
+    parsed.condition.conditions = parsed.condition.conditions.filter((c) => {
+      if ("op" in c) return c;
+      const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
+      return !prune;
+    });
+  }
 }
 
-function flattenComplexConditions(conditions: ParsedExpressionFilter[] | undefined): ColumnCondition[] {
-  const todo = conditions ? [...conditions] : [];
+function flattenComplexConditions(condition: ParsedExpressionFilter | undefined): ColumnCondition[] {
+  const todo = condition ? [condition] : [];
   const result: ColumnCondition[] = [];
   while (todo.length !== 0) {
     const cc = todo.pop()!;
@@ -802,21 +808,6 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
     return undefined;
   }
   return { op, conditions: valid.filter(isDefined) };
-}
-
-/**
- * Combines the simple & complex compressions of `query` into a single `ParsedExpressionFilter`.
- *
- * The two `query.conditions` and `query.complexConditions` separated generally for historical
- * reasons in the `parseFindQuery` implementation, but are effectively a single expression of
- * `AND`-ing the conditions with the complex conditions.
- */
-export function combineConditions(query: ParsedFindQuery): ParsedExpressionFilter {
-  if (query.complexConditions) {
-    return { op: "and", conditions: [...query.conditions, ...query.complexConditions] };
-  } else {
-    return { op: "and", conditions: query.conditions };
-  }
 }
 
 export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {

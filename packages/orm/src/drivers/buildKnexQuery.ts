@@ -55,14 +55,7 @@ export function buildKnexQuery(
     query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
   }
 
-  parsed.conditions.forEach((c) => {
-    addColumnCondition(knex, query, c);
-  });
-
-  parsed.complexConditions &&
-    parsed.complexConditions.forEach((c) => {
-      addComplexCondition(knex, query, c);
-    });
+  parsed.condition && addComplexCondition(knex, query, parsed.condition);
 
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {

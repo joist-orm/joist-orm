@@ -45,23 +45,20 @@ async function load<T extends Entity, U extends Entity>(
   const query: ParsedFindQuery = {
     selects: [`"${alias}".*`],
     tables: [{ alias, join: "primary", table: collection.joinTableName }],
-    conditions: [],
     // Or together `where tag_id in (...)` or `book_id in (...)` if we're loading both sides simultaneously
-    complexConditions: [
-      {
-        op: "or",
-        conditions: Object.entries(columns).map(([columnId, values]) => {
-          // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-          const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
-          return {
-            alias,
-            column: columnId,
-            dbType: meta.idDbType,
-            cond: { kind: "in", value: values.map((id) => keyToNumber(meta, id)!) },
-          };
-        }),
-      },
-    ],
+    condition: {
+      op: "or",
+      conditions: Object.entries(columns).map(([columnId, values]) => {
+        // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
+        const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
+        return {
+          alias,
+          column: columnId,
+          dbType: meta.idDbType,
+          cond: { kind: "in", value: values.map((id) => keyToNumber(meta, id)!) },
+        };
+      }),
+    },
     orderBys: [{ alias, column: "id", order: "ASC" }],
   };
 

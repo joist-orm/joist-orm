@@ -20,7 +20,10 @@ export function loadDataLoader<T extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: keys } }],
+      condition: {
+        op: "and",
+        conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: keys } }],
+      },
       orderBys: [{ alias, column: "id", order: "ASC" }],
     };
     addTablePerClassJoinsAndClassTag(query, meta, alias, true);

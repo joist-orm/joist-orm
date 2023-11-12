@@ -55,14 +55,10 @@ export function buildKnexQuery(
     query.joinRaw(parsed.lateralJoins.joins.join("\n"), parsed.lateralJoins.bindings);
   }
 
-  parsed.conditions.forEach((c) => {
-    addColumnCondition(knex, query, c);
-  });
-
-  parsed.complexConditions &&
-    parsed.complexConditions.forEach((c) => {
-      addComplexCondition(knex, query, c);
-    });
+  if (parsed.condition) {
+    const [sql, bindings] = buildWhereClause(parsed.condition);
+    query.whereRaw(sql, bindings);
+  }
 
   parsed.orderBys &&
     parsed.orderBys.forEach(({ alias, column, order }) => {
@@ -84,22 +80,20 @@ export function buildKnexQuery(
   return query;
 }
 
-function addComplexCondition(knex: Knex, query: QueryBuilder, complex: ParsedExpressionFilter): void {
-  query.where((q) => {
-    const op = complex.op === "and" ? "andWhere" : "orWhere";
-    complex.conditions.forEach((c) => {
-      if ("op" in c) {
-        q[op]((q) => addComplexCondition(knex, q, c));
-      } else {
-        q[op]((q) => addColumnCondition(knex, q, c));
-      }
-    });
+function buildWhereClause(exp: ParsedExpressionFilter): [string, any[]] {
+  const tuples = exp.conditions.map((c) => {
+    if ("op" in c) {
+      return buildWhereClause(c);
+    } else {
+      return buildCondition(c);
+    }
   });
+  return [tuples.map(([sql]) => sql).join(` ${exp.op} `), tuples.flatMap(([, bindings]) => bindings)];
 }
 
-function addColumnCondition(knex: Knex, query: QueryBuilder, cc: ColumnCondition) {
+function buildCondition(cc: ColumnCondition): [string, any[]] {
   const { alias, column, cond } = cc;
-  const columnName = knex.raw(kqDot(alias, column)) as any;
+  const columnName = kqDot(alias, column);
   switch (cond.kind) {
     case "eq":
     case "ne":
@@ -115,25 +109,17 @@ function addColumnCondition(knex: Knex, query: QueryBuilder, cc: ColumnCondition
     case "containedBy":
     case "overlaps":
       const fn = opToFn[cond.kind] ?? fail(`Invalid operator ${cond.kind}`);
-      query.where(columnName, fn, cond.value);
-      break;
+      return [`${columnName} ${fn} ?`, [cond.value]];
     case "is-null":
-      query.whereNull(columnName);
-      break;
+      return [`${columnName} is null`, []];
     case "not-null":
-      query.whereNotNull(columnName);
-      break;
+      return [`${columnName} is not null`, []];
     case "in":
-      query.whereIn(columnName, cond.value);
-      break;
+      return [`${columnName} = any(?)`, [cond.value]];
     case "nin":
-      query.whereNotIn(columnName, cond.value);
-      break;
+      return [`${columnName} != any(?)`, [cond.value]];
     case "between":
-      const [min, max] = cond.value;
-      query.where(columnName, ">=", min);
-      query.where(columnName, "<=", max);
-      break;
+      return [`${columnName} between ? and ?`, cond.value];
     default:
       assertNever(cond);
   }

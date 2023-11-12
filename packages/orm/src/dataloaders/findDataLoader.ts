@@ -12,11 +12,11 @@ import {
   ParsedExpressionFilter,
   ParsedFindQuery,
   ParsedValueFilter,
-  combineConditions,
   getTables,
   joinKeywords,
   parseFindQuery,
 } from "../QueryParser";
+import { visitConditions } from "../QueryVisitor";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
 import { assertNever, cleanSql } from "../utils";
@@ -83,7 +83,7 @@ export function findDataLoader<T extends Entity>(
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings = createBindings(meta, queries);
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
-      const [conditions] = buildConditions(combineConditions(query));
+      const [conditions] = buildConditions(query.condition!);
 
       // Because we want to use `array_agg(tag)`, add `GROUP BY`s to the values we're selecting
       const groupBys = selects
@@ -162,7 +162,7 @@ export function whereFilterHash(where: FilterAndSettings<any>): any {
 /** Collects & names all the args in a query, i.e. `['arg1', 'arg2']`--not the actual values. */
 export function collectArgs(query: ParsedFindQuery): { columnName: string; dbType: string }[] {
   const args: { columnName: string; dbType: string }[] = [];
-  visit(query, {
+  visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         const { kind } = c.cond;
@@ -194,7 +194,7 @@ export function createBindings(meta: EntityMetadata, queries: readonly FilterAnd
 
 /** Pushes the arg values of a given query in the cross-query `bindings` array. */
 function collectValues(bindings: any[], query: ParsedFindQuery): void {
-  visit(query, {
+  visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         // between has two values
@@ -211,33 +211,13 @@ function collectValues(bindings: any[], query: ParsedFindQuery): void {
 
 /** Replaces all values with `*` so we can see the generic structure of the query. */
 function stripValues(query: ParsedFindQuery): void {
-  visit(query, {
+  visitConditions(query, {
     visitCond(c: ColumnCondition) {
       if ("value" in c.cond) {
         c.cond.value = "*";
       }
     },
   });
-}
-
-/** A generic visitor over the simple & complex conditions of a query. */
-interface Visitor {
-  visitExpFilter?(c: ParsedExpressionFilter): void;
-  visitCond(c: ColumnCondition): void;
-}
-function visit(query: ParsedFindQuery, visitor: Visitor): void {
-  const { visitCond } = visitor;
-  function visitExpFilter(ef: ParsedExpressionFilter) {
-    ef.conditions.forEach((c) => {
-      if ("cond" in c) {
-        visitCond(c);
-      } else {
-        visitExpFilter(c);
-      }
-    });
-  }
-  query.conditions.forEach(visitCond);
-  query.complexConditions?.forEach(visitExpFilter);
 }
 
 // Create the a1.firstName=data.firstName AND a2.lastName=data.lastName

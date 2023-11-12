@@ -55,7 +55,7 @@ export interface ArtistIdsOpts {
 }
 
 export interface ArtistFilter {
-  id?: ValueFilter<ArtistId, never>;
+  id?: ValueFilter<ArtistId, never> | null;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;

@@ -81,7 +81,7 @@ export interface ImageIdsOpts {
 }
 
 export interface ImageFilter {
-  id?: ValueFilter<ImageId, never>;
+  id?: ValueFilter<ImageId, never> | null;
   fileName?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

@@ -25,38 +25,35 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions: [],
-      complexConditions: [
-        {
-          // Or together `where (id = X and book_id = Y)`
-          op: "or",
-          conditions: keys.map((key) => {
-            const [one, two] = key.split(",");
-            // columnOne is the `id=`, so is really the "other" side of the o2m
-            const [columnOne, idOne] = one.split("=");
-            const [columnTwo, idTwo] = two.split("=");
-            const [meta1, meta2] = [collection.otherMeta, collection.meta];
-            // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
-            return {
-              op: "and",
-              conditions: [
-                {
-                  alias,
-                  column: columnOne,
-                  dbType: meta1.idDbType,
-                  cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
-                },
-                {
-                  alias,
-                  column: columnTwo,
-                  dbType: meta2.idDbType,
-                  cond: { kind: "eq", value: keyToNumber(meta2, idTwo) },
-                },
-              ],
-            };
-          }),
-        },
-      ],
+      // Or together `where (id = X and book_id = Y)`
+      condition: {
+        op: "or",
+        conditions: keys.map((key) => {
+          const [one, two] = key.split(",");
+          // columnOne is the `id=`, so is really the "other" side of the o2m
+          const [columnOne, idOne] = one.split("=");
+          const [columnTwo, idTwo] = two.split("=");
+          const [meta1, meta2] = [collection.otherMeta, collection.meta];
+          // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
+          return {
+            op: "and",
+            conditions: [
+              {
+                alias,
+                column: columnOne,
+                dbType: meta1.idDbType,
+                cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
+              },
+              {
+                alias,
+                column: columnTwo,
+                dbType: meta2.idDbType,
+                cond: { kind: "eq", value: keyToNumber(meta2, idTwo) },
+              },
+            ],
+          };
+        }),
+      },
       orderBys: [{ alias, column: "id", order: "ASC" }],
     };
 

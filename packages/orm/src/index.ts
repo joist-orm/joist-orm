@@ -243,6 +243,7 @@ export function getRequiredKeys<T extends Entity>(entityOrType: T | EntityConstr
 }
 
 const tagToConstructorMap = new Map<string, MaybeAbstractEntityConstructor<any>>();
+const tableToMetaMap = new Map<string, EntityMetadata>();
 
 /** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
 export function configureMetadata(metas: EntityMetadata[]): void {
@@ -252,6 +253,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
       // Add each constructor into our tag -> constructor map for future lookups
       tagToConstructorMap.set(meta.tagName, meta.cstr);
     }
+    tableToMetaMap.set(meta.tableName, meta);
     // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {
       if (isCannotBeUpdatedRule(rule.fn) && rule.fn.immutable) {
@@ -361,6 +363,10 @@ export function getRelationEntries(entity: Entity): [string, AbstractRelationImp
 export function getConstructorFromTaggedId(id: TaggedId): MaybeAbstractEntityConstructor<any> {
   const tag = tagFromId(id);
   return tagToConstructorMap.get(tag) ?? fail(`Unknown tag: "${tag}" `);
+}
+
+export function getMetadataForTable(tableName: string): EntityMetadata {
+  return tableToMetaMap.get(tableName) ?? fail(`Unknown table ${tableName}`);
 }
 
 export function maybeGetConstructorFromReference(

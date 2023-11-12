@@ -62,7 +62,7 @@ export interface AuthorScheduleIdsOpts {
 }
 
 export interface AuthorScheduleFilter {
-  id?: ValueFilter<AuthorScheduleId, never>;
+  id?: ValueFilter<AuthorScheduleId, never> | null;
   overview?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

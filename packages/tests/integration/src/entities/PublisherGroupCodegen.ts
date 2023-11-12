@@ -64,7 +64,7 @@ export interface PublisherGroupIdsOpts {
 }
 
 export interface PublisherGroupFilter {
-  id?: ValueFilter<PublisherGroupId, never>;
+  id?: ValueFilter<PublisherGroupId, never> | null;
   name?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

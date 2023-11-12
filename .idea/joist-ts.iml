@@ -19,6 +19,7 @@
       <excludeFolder url="file://$MODULE_DIR$/packages/test-utils/build" />
       <excludeFolder url="file://$MODULE_DIR$/packages/tests/integration/build" />
       <excludeFolder url="file://$MODULE_DIR$/packages/tests/integration/.clinic" />
+      <excludeFolder url="file://$MODULE_DIR$/packages/tests/uuid-ids/build" />
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />

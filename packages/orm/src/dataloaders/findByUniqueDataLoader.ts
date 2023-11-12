@@ -27,7 +27,7 @@ export function findByUniqueDataLoader<T extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`${alias}.*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions,
+      condition: { op: "and", conditions },
       orderBys: [],
     };
 

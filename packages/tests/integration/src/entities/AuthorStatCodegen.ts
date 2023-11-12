@@ -67,7 +67,7 @@ export interface AuthorStatIdsOpts {
 }
 
 export interface AuthorStatFilter {
-  id?: ValueFilter<AuthorStatId, never>;
+  id?: ValueFilter<AuthorStatId, never> | null;
   smallint?: ValueFilter<number, never>;
   integer?: ValueFilter<number, never>;
   nullableInteger?: ValueFilter<number, null>;

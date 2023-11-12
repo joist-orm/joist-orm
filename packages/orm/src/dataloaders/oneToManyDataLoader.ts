@@ -29,9 +29,12 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      conditions: [
-        { alias, column: collection.otherColumnName, dbType: meta.idDbType, cond: { kind: "in", value: keys } },
-      ],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias, column: collection.otherColumnName, dbType: meta.idDbType, cond: { kind: "in", value: keys } },
+        ],
+      },
       orderBys: [{ alias, column: "id", order: "ASC" }],
     };
 

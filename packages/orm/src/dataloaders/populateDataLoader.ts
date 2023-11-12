@@ -57,7 +57,10 @@ export function populateDataLoader(
               // We already have the entities loaded, so can do just `SELECT a.id` + the preload columns
               selects: [kqDot(alias, "id")],
               tables: [{ alias, join: "primary", table: meta.tableName }],
-              conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: ids } }],
+              condition: {
+                op: "and",
+                conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: ids } }],
+              },
               orderBys: [],
             };
             const hydrator = preloader.addPreloading(em, meta, layerNode, query);

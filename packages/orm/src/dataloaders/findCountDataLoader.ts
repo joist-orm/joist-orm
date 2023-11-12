@@ -3,7 +3,7 @@ import { Entity } from "../Entity";
 import { FilterAndSettings } from "../EntityFilter";
 import { EntityManager, MaybeAbstractEntityConstructor } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { combineConditions, getTables, joinKeywords, parseFindQuery } from "../QueryParser";
+import { getTables, joinKeywords, parseFindQuery } from "../QueryParser";
 import { kq } from "../keywords";
 import { cleanSql, fail } from "../utils";
 import {
@@ -67,7 +67,7 @@ export function findCountDataLoader<T extends Entity>(
       // For each unique query, capture its filter values in `bindings` to populate the CTE _find table
       const bindings = createBindings(meta, queries);
       // Create the JOIN clause, i.e. ON a.firstName = _find.arg0
-      const [conditions] = buildConditions(combineConditions(query));
+      const [conditions] = buildConditions(query.condition!);
 
       const sql = `
         ${buildValuesCte("_find", args, queries)}

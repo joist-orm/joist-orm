@@ -1,3 +1,10 @@
+## [1.123.1](https://github.com/stephenh/joist-ts/compare/v1.123.0...v1.123.1) (2023-11-12)
+
+
+### Bug Fixes
+
+* Fix querying on child null columns ([#866](https://github.com/stephenh/joist-ts/issues/866)) ([b3019e6](https://github.com/stephenh/joist-ts/commit/b3019e6dddb943eefc061c5249776493ce48d12e))
+
 # [1.123.0](https://github.com/stephenh/joist-ts/compare/v1.122.0...v1.123.0) (2023-11-11)
 
 

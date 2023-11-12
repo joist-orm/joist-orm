@@ -9,9 +9,9 @@ interface Visitor {
 /**
  * Visits the nested conditions within `query`.
  *
- * If the visitors return a new condition or expression,
- *
- * */
+ * If the visitors return a new condition or expression, the returned expression
+ * will replace the original one at that location in the expression.
+ */
 export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void {
   function visit(ef: ParsedExpressionFilter) {
     ef.conditions.forEach((c, i) => {

@@ -76,7 +76,7 @@ export interface CriticIdsOpts {
 }
 
 export interface CriticFilter {
-  id?: ValueFilter<CriticId, never>;
+  id?: ValueFilter<CriticId, never> | null;
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

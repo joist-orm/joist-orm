@@ -81,7 +81,7 @@ export interface UserIdsOpts {
 }
 
 export interface UserFilter {
-  id?: ValueFilter<UserId, never>;
+  id?: ValueFilter<UserId, never> | null;
   name?: ValueFilter<string, never>;
   email?: ValueFilter<string, never>;
   ipAddress?: ValueFilter<IpAddress, null>;

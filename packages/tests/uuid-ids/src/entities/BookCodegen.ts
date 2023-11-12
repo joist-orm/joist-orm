@@ -54,7 +54,7 @@ export interface BookIdsOpts {
 }
 
 export interface BookFilter {
-  id?: ValueFilter<BookId, never>;
+  id?: ValueFilter<BookId, never> | null;
   title?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

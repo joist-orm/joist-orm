@@ -69,7 +69,7 @@ export interface TagIdsOpts {
 }
 
 export interface TagFilter {
-  id?: ValueFilter<TagId, never>;
+  id?: ValueFilter<TagId, never> | null;
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

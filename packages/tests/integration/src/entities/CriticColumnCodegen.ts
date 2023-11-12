@@ -54,7 +54,7 @@ export interface CriticColumnIdsOpts {
 }
 
 export interface CriticColumnFilter {
-  id?: ValueFilter<CriticColumnId, never>;
+  id?: ValueFilter<CriticColumnId, never> | null;
   name?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

@@ -54,7 +54,7 @@ export interface PaintingIdsOpts {
 }
 
 export interface PaintingFilter {
-  id?: ValueFilter<PaintingId, never>;
+  id?: ValueFilter<PaintingId, never> | null;
   title?: ValueFilter<string, never>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

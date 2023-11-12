@@ -43,7 +43,7 @@ export interface DatabaseOwnerIdsOpts {
 }
 
 export interface DatabaseOwnerFilter {
-  id?: ValueFilter<DatabaseOwnerId, never>;
+  id?: ValueFilter<DatabaseOwnerId, never> | null;
   name?: ValueFilter<string, never>;
 }
 

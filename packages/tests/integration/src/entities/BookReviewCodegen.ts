@@ -73,7 +73,7 @@ export interface BookReviewIdsOpts {
 }
 
 export interface BookReviewFilter {
-  id?: ValueFilter<BookReviewId, never>;
+  id?: ValueFilter<BookReviewId, never> | null;
   rating?: ValueFilter<number, never>;
   isPublic?: BooleanFilter<never>;
   isTest?: BooleanFilter<never>;

@@ -733,7 +733,8 @@ function generateOptIdsFields(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 function generateFilterFields(meta: EntityDbMetadata): Code[] {
-  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.name}Id, never>;`];
+  // Always allow filtering on null to do "child.id is null" for detecting "has no children"
+  const maybeId = meta.baseClassName ? [] : [code`id?: ${ValueFilter}<${meta.entity.name}Id, never> | null;`];
   const primitives = meta.primitives.map(({ fieldName, fieldType, notNull }) => {
     if (fieldType === "boolean") {
       return code`${fieldName}?: ${BooleanFilter}<${nullOrNever(notNull)}>;`;

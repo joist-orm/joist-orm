@@ -152,7 +152,7 @@ export interface AuthorIdsOpts {
 }
 
 export interface AuthorFilter {
-  id?: ValueFilter<AuthorId, never>;
+  id?: ValueFilter<AuthorId, never> | null;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null>;
   ssn?: ValueFilter<string, null>;

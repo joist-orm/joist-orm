@@ -109,7 +109,7 @@ export interface PublisherIdsOpts {
 }
 
 export interface PublisherFilter {
-  id?: ValueFilter<PublisherId, never>;
+  id?: ValueFilter<PublisherId, never> | null;
   name?: ValueFilter<string, never>;
   latitude?: ValueFilter<number, null>;
   longitude?: ValueFilter<number, null>;

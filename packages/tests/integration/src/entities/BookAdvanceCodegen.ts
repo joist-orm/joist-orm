@@ -71,7 +71,7 @@ export interface BookAdvanceIdsOpts {
 }
 
 export interface BookAdvanceFilter {
-  id?: ValueFilter<BookAdvanceId, never>;
+  id?: ValueFilter<BookAdvanceId, never> | null;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   status?: ValueFilter<AdvanceStatus, never>;

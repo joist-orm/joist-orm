@@ -86,7 +86,7 @@ export interface CommentIdsOpts {
 }
 
 export interface CommentFilter {
-  id?: ValueFilter<CommentId, never>;
+  id?: ValueFilter<CommentId, never> | null;
   text?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;

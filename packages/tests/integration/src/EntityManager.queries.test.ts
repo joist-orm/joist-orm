@@ -1774,9 +1774,55 @@ describe("EntityManager.queries", () => {
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+        { alias: "b", table: "books", join: "inner", col1: "a.id", col2: "b.author_id" },
       ],
       conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "eq", value: 2 } }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m matching on a null column", async () => {
+    // Given two authors
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    // And only one of them has a book with a null `notes` column
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // When we query for books with a null book.notes column
+    const where = { books: { notes: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    // Then we only get back the 1st author
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "inner", col1: "a.id", col2: "b.author_id" },
+      ],
+      conditions: [{ alias: "b", column: "notes", dbType: "text", cond: { kind: "is-null" } }],
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through o2m matching on a null id column", async () => {
+    // Given two authors
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    // And only one of them has a book with a null `notes` column
+    await insertBook({ title: "b1", author_id: 1 });
+    const em = newEntityManager();
+    // When we query for books with a null book.id column
+    const where = { books: { id: null } } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    // Then we only get back 2nd author
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [
+        { alias: "a", table: "authors", join: "primary" },
+        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
+      ],
+      conditions: [{ alias: "b", column: "id", dbType: "int", cond: { kind: "is-null" } }],
       orderBys: [expect.anything()],
     });
   });

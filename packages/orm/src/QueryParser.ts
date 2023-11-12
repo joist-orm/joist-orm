@@ -5,6 +5,7 @@ import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
+import { visitConditions } from "./QueryVisitor";
 import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
@@ -394,6 +395,10 @@ export function parseFindQuery(
     });
   }
 
+  if (query.tables.some((t) => t.join === "outer")) {
+    maybeAddIdNotNulls(query);
+  }
+
   if (orderBy) {
     addOrderBy(meta, alias, orderBy);
   }
@@ -405,6 +410,35 @@ export function parseFindQuery(
   return query;
 }
 
+/**
+ * Look for conditions doing `some_column IS NULL` in an outer join that
+ * need an `id IS NOT NULL` to make sure they don't match inadvertently on
+ * the child row simply not existing.
+ *
+ * Note: Instead of injecting an extra `id IS NOT NULL` condition, I had tried
+ * using all INNER JOINs and flipping joins to OUTER only if the user explicit
+ * had `id IS NULL` in their filter, but that didn't work for queries that wanted
+ * to do an `OR` across two different children (which queries both children being
+ * OUTER JOINs, and detecting that case seemed complicated).
+ */
+function maybeAddIdNotNulls(query: ParsedFindQuery): void {
+  visitConditions(query, {
+    visitCond(c: ColumnCondition) {
+      const table = query.tables.find((t) => t.alias === c.alias);
+      // Check `!c.prunable` to make sure we don't catch our injected `deleted_at is null` conditions
+      if (table && table.join === "outer" && c.cond.kind === "is-null" && c.column !== "id" && !c.pruneable) {
+        // Wrap this null condition with `id is not null`
+        return {
+          op: "and",
+          // Need to fix the hard-coded dbType:int, but can we
+          conditions: [c, { alias: c.alias, column: "id", dbType: "int", cond: { kind: "not-null" } }],
+        };
+      }
+      return c;
+    },
+  });
+}
+
 // Remove any joins that are not used in the select or conditions
 function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void {
   // Mark all terminal usages
@@ -412,7 +446,9 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  if (parsed.condition) flattenComplexConditions(parsed.condition).forEach((c) => used.add(c.alias));
+  flattenComplexConditions(parsed.condition)
+    .filter((c) => !c.pruneable)
+    .forEach((c) => used.add(c.alias));
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];

@@ -1948,15 +1948,37 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     // Then we only get back the 1st author
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where)).toEqual({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
-        { alias: "b", table: "books", join: "inner", col1: "a.id", col2: "b.author_id" },
+        { alias: "b", table: "books", join: "outer", col1: "a.id", col2: "b.author_id" },
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "b", column: "notes", dbType: "text", cond: { kind: "is-null" } }],
+        conditions: [
+          {
+            alias: "a",
+            column: "deleted_at",
+            dbType: "timestamp with time zone",
+            cond: { kind: "is-null" },
+            pruneable: true,
+          },
+          {
+            alias: "b",
+            column: "deleted_at",
+            dbType: "timestamp with time zone",
+            cond: { kind: "is-null" },
+            pruneable: true,
+          },
+          {
+            op: "and",
+            conditions: [
+              { alias: "b", column: "notes", dbType: "text", cond: { kind: "is-null" } },
+              { alias: "b", column: "id", dbType: "int", cond: { kind: "not-null" } },
+            ],
+          },
+        ],
       },
       orderBys: [expect.anything()],
     });

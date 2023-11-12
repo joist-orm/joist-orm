@@ -1988,7 +1988,7 @@ describe("EntityManager.queries", () => {
     // Given two authors
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
-    // And only one of them has a book with a null `notes` column
+    // And only the 1st author has a book
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();
     // When we query for books with a null book.id column

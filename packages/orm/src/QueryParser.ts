@@ -6,7 +6,14 @@ import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";
 import { EntityMetadata } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
 import { visitConditions } from "./QueryVisitor";
-import { Column, getConstructorFromTaggedId, isDefined, keyToNumber, maybeResolveReferenceToId } from "./index";
+import {
+  Column,
+  getConstructorFromTaggedId,
+  getMetadataForTable,
+  isDefined,
+  keyToNumber,
+  maybeResolveReferenceToId,
+} from "./index";
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
@@ -428,11 +435,11 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
       const table = query.tables.find((t) => t.alias === c.alias);
       // Check `!c.prunable` to make sure we don't catch our injected `deleted_at is null` conditions
       if (table && table.join === "outer" && c.cond.kind === "is-null" && c.column !== "id" && !c.pruneable) {
+        const meta = getMetadataForTable(table.table);
         // Wrap this null condition with `id is not null`
         return {
           op: "and",
-          // Need to fix the hard-coded dbType:int, but can we
-          conditions: [c, { alias: c.alias, column: "id", dbType: "int", cond: { kind: "not-null" } }],
+          conditions: [c, { alias: c.alias, column: "id", dbType: meta.idDbType, cond: { kind: "not-null" } }],
         };
       }
       return c;

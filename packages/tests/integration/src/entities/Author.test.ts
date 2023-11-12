@@ -17,6 +17,13 @@ import { zeroTo } from "../utils";
 const inspect = Symbol.for("nodejs.util.inspect.custom");
 
 describe("Author", () => {
+  it("can load an entity with a tagged id", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.find(Author, {});
+    expect(a1[0].id).toEqual("a:1");
+  });
+
   it("data for query", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

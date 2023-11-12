@@ -10,13 +10,20 @@ describe("Author", () => {
     expect(a1[0].id).toEqual(1);
   });
 
-  it("can create entities with numberic ids", async () => {
+  it("can create entities with number ids", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     const a2 = newAuthor(em);
     await em.flush();
     expect(a1.id).toEqual(1);
     expect(a2.id).toEqual(2);
+  });
+
+  it("can load entities number ids", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, 1);
+    expect(a1.id).toEqual(1);
   });
 
   it("can run multiple find calls", async () => {

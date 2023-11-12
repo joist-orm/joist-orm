@@ -8,7 +8,7 @@ import { Knex, knex as createKnex } from "knex";
 // Create a shared test context that tests can use and also we'll use to auto-flush the db between tests.
 export let knex: Knex;
 
-export function newEntityManager(opts?: PostgresDriverOpts) {
+export function newEntityManager(opts?: PostgresDriverOpts): EntityManager {
   const ctx = { knex };
   const em = new EntityManager(ctx as any, new PostgresDriver(knex, opts));
   Object.assign(ctx, { em });

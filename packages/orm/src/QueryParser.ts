@@ -386,10 +386,11 @@ export function parseFindQuery(
     const parsed = parseExpression(optsExpression);
     if (parsed) inlineExpressions.push(parsed);
   }
-  // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
   if (inlineConditions.length === 0 && inlineExpressions.length === 1) {
+    // If no inline conditions, and just 1 opt expression, just use that
     Object.assign(query, { condition: inlineExpressions[0] });
   } else if (inlineConditions.length > 0 || inlineExpressions.length > 0) {
+    // Combine the conditions within the `em.find` join literal & the `conditions` as ANDs
     Object.assign(query, {
       condition: { op: "and", conditions: [...inlineConditions, ...inlineExpressions] },
     });

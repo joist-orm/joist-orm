@@ -1,3 +1,10 @@
+# [1.124.0](https://github.com/stephenh/joist-ts/compare/v1.123.1...v1.124.0) (2023-11-13)
+
+
+### Features
+
+* Allow accessing ids in derived fields. ([#868](https://github.com/stephenh/joist-ts/issues/868)) ([b5b88c3](https://github.com/stephenh/joist-ts/commit/b5b88c321db6cc5737fd21d4333cc565cc2d09e5)), closes [#808](https://github.com/stephenh/joist-ts/issues/808)
+
 ## [1.123.1](https://github.com/stephenh/joist-ts/compare/v1.123.0...v1.123.1) (2023-11-12)
 
 

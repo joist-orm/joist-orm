@@ -304,6 +304,7 @@ describe("EntityManager.reactiveRules", () => {
       { cstr, name: "numberOfPublicReviews", fields: ["author"], path: ["author"] },
       { cstr, name: "numberOfPublicReviews2", fields: ["author"], path: ["author"] },
       { cstr, name: "tagsOfAllBooks", fields: ["author", "tags"], path: ["author"] },
+      { cstr, name: "search", fields: ["author", "title"], path: ["author"] },
       { cstr, name: "favoriteBook", fields: ["author"], path: ["author"] },
       { cstr, name: "isPublic", fields: ["author"], path: ["reviews"] },
     ]);
@@ -463,6 +464,15 @@ describe("EntityManager.reactiveRules", () => {
       p.authors.get[2].publisher.set(undefined);
       // Then it fails
       await expect(em.flush()).rejects.toThrow("A publisher cannot have 15 books");
+    });
+
+    it.withCtx("can reference the entity's own id", async ({ em }) => {
+      // Given a new author
+      newAuthor(em);
+      await em.flush();
+      // Then the search field included the author's own id
+      const rows = await select("authors");
+      expect(rows[0].search).toBe("a:1 a1");
     });
 
     describe("numberOfPublicReviews", () => {

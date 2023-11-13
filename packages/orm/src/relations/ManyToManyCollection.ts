@@ -38,10 +38,9 @@ export function hasManyToMany<T extends Entity, U extends Entity>(
 }
 
 export class ManyToManyCollection<T extends Entity, U extends Entity>
-  extends AbstractRelationImpl<U[]>
+  extends AbstractRelationImpl<T, U[]>
   implements Collection<T, U>
 {
-  readonly #entity: T;
   readonly #fieldName: keyof T & string;
   private loaded: U[] | undefined;
   private addedBeforeLoaded: U[] | undefined;
@@ -61,8 +60,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
-    super();
-    this.#entity = entity;
+    super(entity);
     this.#fieldName = fieldName;
     if (isOrWasNew(entity)) {
       this.loaded = [];
@@ -77,17 +75,17 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
-    ensureNotDeleted(this.#entity, "pending");
-    if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
-      const key = `${this.columnName}=${this.#entity.id}`;
-      this.loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.#entity.em, this).load(key));
+    ensureNotDeleted(this.entity, "pending");
+    if (this.loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
+      const key = `${this.columnName}=${this.entity.id}`;
+      this.loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.entity.em, this).load(key));
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this.loaded !== undefined) {
       return this.loaded.find((u) => u.id === id);
     } else {
@@ -96,15 +94,15 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         return added;
       }
       // Make a cacheable tuple to look up this specific m2m row
-      const key = `${this.columnName}=${this.#entity.id},${this.otherColumnName}=${id}`;
-      const includes = await manyToManyFindDataLoader(this.#entity.em, this).load(key);
+      const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${id}`;
+      const includes = await manyToManyFindDataLoader(this.entity.em, this).load(key);
       const taggedId = toTaggedId(this.otherMeta, id);
-      return includes ? (this.#entity.em.load(taggedId) as Promise<U>) : undefined;
+      return includes ? (this.entity.em.load(taggedId) as Promise<U>) : undefined;
     }
   }
 
   async includes(other: U): Promise<boolean> {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this.loaded !== undefined) {
       return this.loaded.includes(other);
     } else {
@@ -114,13 +112,13 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
         return false;
       }
       // Make a cacheable tuple to look up this specific m2m row
-      const key = `${this.columnName}=${this.#entity.id},${this.otherColumnName}=${other.id}`;
-      return manyToManyFindDataLoader(this.#entity.em, this).load(key);
+      const key = `${this.columnName}=${this.entity.id},${this.otherColumnName}=${other.id}`;
+      return manyToManyFindDataLoader(this.entity.em, this).load(key);
     }
   }
 
   add(other: U, percolated = false): void {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
 
     if (this.loaded !== undefined) {
       if (this.loaded.includes(other)) return;
@@ -131,17 +129,17 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     }
 
     if (!percolated) {
-      getEmInternalApi(this.#entity.em).joinRows(this).addNew(this, this.#entity, other);
-      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.#entity, true);
+      getEmInternalApi(this.entity.em).joinRows(this).addNew(this, this.entity, other);
+      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).add(this.entity, true);
     }
   }
 
   remove(other: U, percolated = false): void {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
 
     if (!percolated) {
-      getEmInternalApi(this.#entity.em).joinRows(this).addRemove(this, this.#entity, other);
-      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.#entity, true);
+      getEmInternalApi(this.entity.em).joinRows(this).addRemove(this, this.entity, other);
+      (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
     }
 
     if (this.loaded !== undefined) {
@@ -166,7 +164,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   private doGet(): U[] {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not loaded");
@@ -183,7 +181,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   set(values: U[]): void {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
@@ -200,7 +198,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   removeAll(): void {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       throw new Error("removeAll was called when not loaded");
     }
@@ -218,7 +216,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   maybeCascadeDelete() {
     if (this.isCascadeDelete) {
-      this.current({ withDeleted: true }).forEach((e) => this.#entity.em.delete(e));
+      this.current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
     }
   }
 
@@ -228,7 +226,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     const entities = await this.load({ withDeleted: true });
     entities.forEach((other) => {
       const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;
-      m2m.remove(this.#entity);
+      m2m.remove(this.entity);
     });
     this.loaded = [];
   }
@@ -239,7 +237,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       // this.addedBeforeLoaded = [];
       this.removedBeforeLoaded?.forEach((other) => {
         remove(this.loaded!, other);
-        getEmInternalApi(this.#entity.em).joinRows(this).addRemove(this, this.#entity, other);
+        getEmInternalApi(this.entity.em).joinRows(this).addRemove(this, this.entity, other);
       });
       this.removedBeforeLoaded = [];
     }
@@ -249,31 +247,25 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     return this.filterDeleted(this.loaded ?? this.addedBeforeLoaded ?? [], opts);
   }
 
-  public get entity(): T {
-    return this.#entity;
-  }
-
   public get meta(): EntityMetadata {
-    return getMetadata(this.#entity);
+    return getMetadata(this.entity);
   }
 
   public get otherMeta(): EntityMetadata {
-    return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToManyField).otherMetadata();
+    return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToManyField).otherMetadata();
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.otherMeta.type
-    }, otherFieldName: ${this.otherFieldName})`;
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
   private getPreloaded(): U[] | undefined {
-    if (this.#entity.isNewEntity) return undefined;
-    return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
+    if (this.entity.isNewEntity) return undefined;
+    return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

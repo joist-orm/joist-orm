@@ -53,7 +53,7 @@ describe("Author", () => {
     const em = newEntityManager();
     new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
     await expect(em.flush()).rejects.toThrow(
-      "Validation errors (2): Author#1 firstName and lastName must be different, lastName is invalid",
+      "Validation errors (2): Author:1 firstName and lastName must be different, lastName is invalid",
     );
   });
 
@@ -62,7 +62,7 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "a1", author: a1 });
     await expect(em.flush()).rejects.toThrow(
-      "Validation error: Author#1 A book title cannot be the author's firstName",
+      "Validation error: Author:1 A book title cannot be the author's firstName",
     );
   });
 
@@ -187,7 +187,8 @@ describe("Author", () => {
     b1.title = "a1";
 
     // Then the author validation rule can be skipped
-    await expect(em.flush({ skipValidation: true })).resolves.toEqual([expect.objectContaining({ title: "a1" })]);
+    const result = await em.flush({ skipValidation: true });
+    expect(result).toMatchEntity([a1, b1]);
   });
 
   it("skips the afterValidation hook when skipValidation is true", async () => {
@@ -458,7 +459,7 @@ describe("Author", () => {
   it("gets not-null validation rules for free", async () => {
     const em = newEntityManager();
     em.createPartial(Author, {});
-    await expect(em.flush()).rejects.toThrow("Validation error: Author#1 firstName is required");
+    await expect(em.flush()).rejects.toThrow("Validation error: Author:1 firstName is required");
   });
 
   it("has an index on the publisher_id foreign key", async () => {

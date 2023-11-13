@@ -29,9 +29,11 @@
     "numberOfPublicReviews2",
     "publisher",
     "schedules",
+    "search",
     "ssn",
     "tags",
     "tagsOfAllBooks",
+    "tsSearch",
     "updatedAt",
     "userOneToOne",
     "wasEverPopular"
@@ -182,8 +184,10 @@
     "numberOfPublicReviews",
     "numberOfPublicReviews2",
     "publisherId",
+    "search",
     "ssn",
     "tagsOfAllBooks",
+    "tsSearch",
     "updatedAt",
     "wasEverPopular"
   ],

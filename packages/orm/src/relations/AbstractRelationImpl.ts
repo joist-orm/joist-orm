@@ -1,7 +1,13 @@
+import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
+
 /**
  * Defines common hooks that relations can respond to to keep the entity graph in sync.
  */
-export abstract class AbstractRelationImpl<U> {
+export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T> {
+  constructor(entity: T) {
+    super(entity);
+  }
+
   /** Called with the opts from a `new` or `em.create` call, i.e. on a new entity. */
   abstract setFromOpts(value: U): void;
 

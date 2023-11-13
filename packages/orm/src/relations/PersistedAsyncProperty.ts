@@ -3,6 +3,7 @@ import { currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
+import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
 /**
@@ -72,9 +73,9 @@ export function hasPersistedAsyncProperty<T extends Entity, const H extends Reac
 }
 
 export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T>, V>
+  extends AbstractPropertyImpl<T>
   implements PersistedAsyncProperty<T, V>
 {
-  readonly #entity: T;
   readonly #reactiveHint: H;
   private loaded = false;
   private loadPromise: any;
@@ -84,13 +85,13 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => V,
   ) {
-    this.#entity = entity;
+    super(entity);
     this.#reactiveHint = reactiveHint;
   }
 
   load(opts?: { forceReload?: boolean }): Promise<V> {
     if (!this.loaded || opts?.forceReload) {
-      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, { hint: this.loadHint } as any).then(() => {
+      return (this.loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
         this.loadPromise = undefined;
         this.loaded = true;
         // Go through `this.get` so that `setField` is called to set our latest value
@@ -103,29 +104,29 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */
   get get(): V {
     const { fn } = this;
-    if (this.loaded || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {
-      const newValue = fn(this.#entity as Reacted<T, H>);
+    if (this.loaded || (!this.isSet && isLoaded(this.entity, this.loadHint))) {
+      const newValue = fn(this.entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
-      if (!getEmInternalApi(this.#entity.em).isValidating) {
-        setField(this.#entity, this.fieldName, newValue);
+      if (!getEmInternalApi(this.entity.em).isValidating) {
+        setField(this.entity, this.fieldName, newValue);
       }
       return newValue;
     } else if (this.isSet) {
-      return this.#entity.__orm.data[this.fieldName];
+      return this.entity.__orm.data[this.fieldName];
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
     }
   }
 
   get fieldValue(): V {
-    return this.#entity.__orm.data[this.fieldName];
+    return this.entity.__orm.data[this.fieldName];
   }
 
   get isSet() {
-    return this.fieldName in this.#entity.__orm.data;
+    return this.fieldName in this.entity.__orm.data;
   }
 
   get isLoaded() {
@@ -133,7 +134,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   }
 
   get loadHint(): any {
-    return getMetadata(this.#entity).config.__data.cachedReactiveLoadHints[this.fieldName];
+    return getMetadata(this.entity).config.__data.cachedReactiveLoadHints[this.fieldName];
   }
 
   [AsyncPropertyT] = undefined as any as T;

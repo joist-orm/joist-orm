@@ -16,6 +16,8 @@ import {
   hasPersistedAsyncProperty,
   hasPersistedAsyncReference,
   hasReactiveAsyncProperty,
+  isDefined,
+  withLoaded,
 } from "joist-orm";
 import { AuthorCodegen, Book, BookReview, Comment, bookMeta, authorConfig as config } from "./entities";
 
@@ -81,6 +83,15 @@ export class Author extends AuthorCodegen {
         .flatMap((b) => b.tags.get)
         .map((t) => t.name)
         .join(", "),
+  );
+
+  readonly search: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+    "search",
+    { books: "title", firstName: {} },
+    (a) => {
+      const { books } = withLoaded(a);
+      return [a.id, a.firstName, ...books.map((b) => b.title)].filter(isDefined).join(" ");
+    },
   );
 
   public transientFields = {

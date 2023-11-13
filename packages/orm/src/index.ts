@@ -348,13 +348,13 @@ export function getEm(entity: Entity): EntityManager<any> {
   return entity.em;
 }
 
-export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
+export function getRelations(entity: Entity): AbstractRelationImpl<any, any>[] {
   return Object.entries(getProperties(getMetadata(entity)))
     .filter(([, v]) => v instanceof AbstractRelationImpl)
     .map(([name]) => (entity as any)[name]);
 }
 
-export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
+export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any, any>][] {
   return Object.entries(getProperties(getMetadata(entity)))
     .filter(([, v]) => v instanceof AbstractRelationImpl)
     .map(([name]) => [name, (entity as any)[name]]);
@@ -392,4 +392,18 @@ function equal(a: any, b: any): boolean {
 /** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */
 export function asConcreteCstr<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): EntityConstructor<T> {
   return cstr as any;
+}
+
+/**
+ * Thrown when `.id` is accessed on an entity that does not have an id yet.
+ *
+ * For Postgres, entities are actually allowed to have ids pre-INSERT, if you call
+ * `em.assignIds()`. Other databases typically require INSERTs to trigger the auto
+ * id assignment.
+ */
+export class NoIdError extends Error {}
+
+/** Throws a `NoIdError` for `entity`, i.e. because `id` was called before being saved. */
+export function failNoIdYet(entity: string): never {
+  throw new NoIdError(`${entity} has no id yet`);
 }

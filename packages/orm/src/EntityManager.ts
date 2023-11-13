@@ -1068,7 +1068,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   async assignNewIds() {
     let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idTaggedMaybe);
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
-      let todos = createTodos([...entities]);
+      let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
       return entities;
     }).loadMany(pendingEntities);
@@ -1129,6 +1129,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           await this.cascadeDeletes();
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingDerivedValues();
+
+          if (this.#rm.hasFieldsPendingAssignedIds) {
+            await this.assignNewIds();
+            await this.#rm.recalcRelationsPendingAssignedIds();
+          }
 
           for (const e of pendingEntities) hooksInvoked.add(e);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
@@ -1761,12 +1766,12 @@ export function isDefined<T extends any>(param: T | undefined | null): param is 
   return param !== null && param !== undefined;
 }
 
-function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any>[] {
+function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any, any>[] {
   return getAllMetas(getMetadata(entity)).flatMap((meta) => {
     return meta.config.__data.cascadeDeleteFields.map((fieldName) => (entity as any)[fieldName]);
   });
 }
 
-function isCustomRelation(r: AbstractRelationImpl<any>): boolean {
+function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof PersistedAsyncReferenceImpl;
 }

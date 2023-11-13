@@ -78,13 +78,12 @@ export function hasOneToOne<T extends Entity, U extends Entity>(
  * `Reference` seemed worth the downside of a un-type-safe `.id` property.
  */
 export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
-  extends AbstractRelationImpl<U>
+  extends AbstractRelationImpl<T, U>
   implements OneToOneReference<T, U>
 {
   private loaded: U | undefined;
   private _isLoaded: boolean = false;
   private isCascadeDelete: boolean;
-  readonly #entity: T;
   readonly #otherMeta: EntityMetadata;
 
   constructor(
@@ -95,8 +94,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     public otherFieldName: keyof U & string,
     public otherColumnName: string,
   ) {
-    super();
-    this.#entity = entity;
+    super(entity);
     this.#otherMeta = otherMeta;
     this.isCascadeDelete = getMetadata(entity).config.__data.cascadeDeleteFields.includes(fieldName as any);
     if (isOrWasNew(entity)) {
@@ -113,7 +111,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
       failIfNewEntity(this.loaded);
       return this.idMaybe;
     }
-    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   get idUntagged(): string {
@@ -126,19 +124,19 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private get idMaybe(): IdOf<U> | undefined {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this._isLoaded) {
       return this.loaded?.idMaybe as IdOf<U> | undefined;
     }
-    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this._isLoaded) {
       return this.loaded?.idTaggedMaybe;
     }
-    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   private get idUntaggedMaybe(): string | undefined {
@@ -149,18 +147,18 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     if (this._isLoaded) {
       return this.loaded !== undefined;
     }
-    throw new Error(`${this.#entity}.${this.fieldName} was not loaded`);
+    throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | undefined> {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (!this._isLoaded || opts.forceReload) {
-      if (!this.#entity.isNewEntity) {
+      if (!this.entity.isNewEntity) {
         const joinLoaded = this.getPreloaded();
         this.loaded = joinLoaded
           ? joinLoaded[0]
-          : await oneToOneDataLoader(this.#entity.em, this).load(this.#entity.idTagged);
+          : await oneToOneDataLoader(this.entity.em, this).load(this.entity.idTagged);
       }
       this._isLoaded = true;
     }
@@ -168,7 +166,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   set(other: U, opts: { percolating?: boolean } = {}): void {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (other === this.loaded) {
       return;
     }
@@ -181,7 +179,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     this._isLoaded = true;
     // This will no-op and mark other dirty if necessary
     if (other && !opts.percolating) {
-      this.getOtherRelation(other).set(this.#entity);
+      this.getOtherRelation(other).set(this.entity);
     }
   }
 
@@ -202,10 +200,6 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
     return this.filterDeleted(this.doGet(), { withDeleted: true });
   }
 
-  get entity(): T {
-    return this.#entity;
-  }
-
   get get(): U | undefined {
     return this.filterDeleted(this.doGet(), { withDeleted: false });
   }
@@ -215,7 +209,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private doGet(): U | undefined {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (!this._isLoaded) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not loaded");
@@ -231,7 +225,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
 
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete && this.loaded) {
-      this.#entity.em.delete(this.loaded);
+      this.entity.em.delete(this.loaded);
     }
   }
 
@@ -248,9 +242,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `OneToOneReference(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.otherMeta.type
-    }, otherFieldName: ${this.otherFieldName})`;
+    return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
   private filterDeleted(entity: U | undefined, opts?: { withDeleted?: boolean }): U | undefined {
@@ -263,8 +255,8 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   private getPreloaded(): U[] | undefined {
-    if (this.#entity.isNewEntity) return undefined;
-    return getEmInternalApi(this.#entity.em).getPreloadedRelation(this.#entity.idTagged, this.fieldName);
+    if (this.entity.isNewEntity) return undefined;
+    return getEmInternalApi(this.entity.em).getPreloadedRelation(this.entity.idTagged, this.fieldName);
   }
 
   [RelationT] = null!;

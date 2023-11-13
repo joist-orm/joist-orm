@@ -7,7 +7,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -112,7 +112,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get id(): AuthorScheduleId {
-    return this.idMaybe || fail("AuthorSchedule has no id yet");
+    return this.idMaybe || failNoIdYet("AuthorSchedule");
   }
 
   get idMaybe(): AuthorScheduleId | undefined {
@@ -120,7 +120,7 @@ export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, st
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("AuthorSchedule has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("AuthorSchedule");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

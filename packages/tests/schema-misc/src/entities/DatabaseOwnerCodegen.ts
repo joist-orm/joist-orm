@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   Flavor,
   isLoaded,
   Lens,
@@ -82,7 +82,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   get id(): DatabaseOwnerId {
-    return this.idMaybe || fail("DatabaseOwner has no id yet");
+    return this.idMaybe || failNoIdYet("DatabaseOwner");
   }
 
   get idMaybe(): DatabaseOwnerId | undefined {
@@ -90,7 +90,7 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("DatabaseOwner has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("DatabaseOwner");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

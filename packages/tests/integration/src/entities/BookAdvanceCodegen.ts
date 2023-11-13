@@ -6,7 +6,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -126,7 +126,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get id(): BookAdvanceId {
-    return this.idMaybe || fail("BookAdvance has no id yet");
+    return this.idMaybe || failNoIdYet("BookAdvance");
   }
 
   get idMaybe(): BookAdvanceId | undefined {
@@ -134,7 +134,7 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("BookAdvance has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("BookAdvance");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

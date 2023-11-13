@@ -1137,6 +1137,7 @@ describe("EntityManager", () => {
       tagsOfAllBooks: null,
       publisher: "p:1",
       quotes: null,
+      search: null,
       ssn: null,
       updatedAt: expect.anything(),
       wasEverPopular: null,

@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { EntityMetadata, getAllMetas, getMetadata, PrimitiveField } from "../EntityMetadata";
+import { EntityMetadata, getAllMetas, getAllMetasWithSubClasses, getMetadata, PrimitiveField } from "../EntityMetadata";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
 import { Todo } from "../Todo";
@@ -128,7 +128,7 @@ function addDeletes(ops: Ops, todo: Todo): void {
     const meta = todo.metadata;
     const ids = todo.deletes.map((e) => keyToNumber(meta, e.idTagged!).toString());
     if (meta.subTypes.length > 0) {
-      getAllMetas(meta).forEach((meta) => {
+      getAllMetasWithSubClasses(meta).forEach((meta) => {
         ops.deletes.push({ tableName: meta.tableName, ids });
       });
     } else {

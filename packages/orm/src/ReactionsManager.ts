@@ -4,7 +4,7 @@ import { ReactiveField } from "./config";
 import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
 import { Relation } from "./relations";
-import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { AbstractPropertyImpl } from "./relations/AbstractPropertyImpl";
 
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
@@ -180,7 +180,7 @@ export class ReactionsManager {
     const relations = [...this.relationsPendingAssignIds];
     this.relationsPendingAssignIds.clear();
     await Promise.all(
-      relations.filter((r) => r instanceof AbstractRelationImpl && !r.entity.isDeletedEntity).map((r: any) => r.load()),
+      relations.filter((r) => r instanceof AbstractPropertyImpl && !r.entity.isDeletedEntity).map((r: any) => r.load()),
     );
   }
 

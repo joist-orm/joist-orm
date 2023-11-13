@@ -394,6 +394,13 @@ export function asConcreteCstr<T extends Entity>(cstr: MaybeAbstractEntityConstr
   return cstr as any;
 }
 
+/**
+ * Thrown when `.id` is accessed on an entity that does not have an id yet.
+ *
+ * For Postgres, entities are actually allowed to have ids pre-INSERT, if you call
+ * `em.assignIds()`. Other databases typically require INSERTs to trigger the auto
+ * id assignment.
+ */
 export class NoIdError extends Error {}
 
 /** Throws a `NoIdError` for `entity`, i.e. because `id` was called before being saved. */

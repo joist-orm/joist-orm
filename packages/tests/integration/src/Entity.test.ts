@@ -190,6 +190,16 @@ describe("Entity", () => {
             "load": {},
           },
         },
+        "search": {
+          "fieldName": "search",
+          "fn": {},
+          "loadPromise": undefined,
+          "loaded": false,
+          "reactiveHint": {
+            "books": "title",
+            "firstName": {},
+          },
+        },
         "tagsOfAllBooks": {
           "fieldName": "tagsOfAllBooks",
           "fn": {},

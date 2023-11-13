@@ -38,7 +38,7 @@ import {
   ValueGraphQLFilter,
   Zod,
   cleanStringValue,
-  fail as failSymbol,
+  failNoIdYet,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -53,7 +53,7 @@ import {
   newRequiredRule,
   setField,
   setOpts,
-  toIdOf, failNoIdYet,
+  toIdOf,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 

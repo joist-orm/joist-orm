@@ -2,6 +2,8 @@ import { BigIntSerde, configureMetadata, CustomSerdeAdapter, DecimalToNumberSerd
 import { Context } from "src/context";
 import { address, AddressSchema, PasswordValueSerde, quotes } from "src/entities/types";
 import {
+  AdminUser,
+  adminUserConfig,
   AdvanceStatuses,
   Author,
   authorConfig,
@@ -27,6 +29,7 @@ import {
   ImageTypes,
   LargePublisher,
   largePublisherConfig,
+  newAdminUser,
   newAuthor,
   newAuthorSchedule,
   newAuthorStat,
@@ -64,6 +67,26 @@ export interface Entity extends Entity2 {
   em: EntityManager;
 }
 
+export const adminUserMeta: EntityMetadata<AdminUser> = {
+  cstr: AdminUser,
+  type: "AdminUser",
+  baseType: "User",
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "u",
+  tableName: "admin_users",
+  fields: { "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("u", "id", "id", "int"), immutable: true }, "role": { kind: "primitive", fieldName: "role", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("role", "role", "character varying"), immutable: false } },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
+  config: adminUserConfig,
+  factory: newAdminUser,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(AdminUser as any).metadata = adminUserMeta;
+
 export const authorMeta: EntityMetadata<Author> = {
   cstr: Author,
   type: "Author",
@@ -93,7 +116,6 @@ export const authorMeta: EntityMetadata<Author> = {
     "numberOfPublicReviews": { kind: "primitive", fieldName: "numberOfPublicReviews", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews", "number_of_public_reviews", "int"), immutable: false },
     "numberOfPublicReviews2": { kind: "primitive", fieldName: "numberOfPublicReviews2", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews2", "numberOfPublicReviews2", "int"), immutable: false },
     "tagsOfAllBooks": { kind: "primitive", fieldName: "tagsOfAllBooks", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("tagsOfAllBooks", "tags_of_all_books", "character varying"), immutable: false },
-    "search": { kind: "primitive", fieldName: "search", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("search", "search", "text"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "favoriteShape": { kind: "primitive", fieldName: "favoriteShape", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("favoriteShape", "favorite_shape", "favorite_shape"), immutable: false },
@@ -567,5 +589,5 @@ export const userMeta: EntityMetadata<User> = {
 
 (User as any).metadata = userMeta;
 
-export const allMetadata = [authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
+export const allMetadata = [adminUserMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
 configureMetadata(allMetadata);

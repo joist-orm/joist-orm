@@ -1,5 +1,5 @@
 import { Entity } from "../Entity";
-import { EntityMetadata, getAllMetas, getBaseAndSelfMetas, getMetadata, PrimitiveField } from "../EntityMetadata";
+import { EntityMetadata, getAllMetas, getMetadata, PrimitiveField } from "../EntityMetadata";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
 import { Todo } from "../Todo";
@@ -140,7 +140,7 @@ function addDeletes(ops: Ops, todo: Todo): void {
 function groupEntitiesByTable(entities: Entity[]): Array<[EntityMetadata, Entity[]]> {
   const entitiesByType: Map<EntityMetadata, Entity[]> = new Map();
   for (const e of entities) {
-    for (const m of getBaseAndSelfMetas(getMetadata(e))) {
+    for (const m of getAllMetas(getMetadata(e))) {
       let list = entitiesByType.get(m);
       if (!list) {
         list = [];

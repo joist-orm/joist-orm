@@ -2,6 +2,7 @@
   "codegenPlugins": ["joist-graphql-codegen"],
   "contextType": "Context@src/context",
   "entities": {
+    "AdminUser": { "tag": "u" },
     "Author": {
       "fields": {
         "address": { "superstruct": "address@src/entities/types" },

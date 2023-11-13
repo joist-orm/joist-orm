@@ -1,4 +1,16 @@
 {
+  "AdminUser": [
+    "authorManyToOne",
+    "bio",
+    "createdAt",
+    "createdComments",
+    "email",
+    "id",
+    "likedComments",
+    "name",
+    "role",
+    "updatedAt"
+  ],
   "Author": [
     "address",
     "age",
@@ -123,6 +135,7 @@
     "updatedAt"
   ],
   "Mutation": [
+    "saveAdminUser",
     "saveAuthor",
     "saveAuthorSchedule",
     "saveAuthorStat",
@@ -161,6 +174,8 @@
     "updatedAt"
   ],
   "PublisherGroup": ["createdAt", "critics", "id", "name", "publishers", "updatedAt"],
+  "SaveAdminUserInput": ["authorManyToOneId", "bio", "email", "id", "name", "role"],
+  "SaveAdminUserResult": ["adminUser"],
   "SaveAuthorInput": [
     "address",
     "age",

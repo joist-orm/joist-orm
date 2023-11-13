@@ -1,5 +1,7 @@
 {
   "files": [
+    "resolvers/mutations/adminUser/saveAdminUserResolver.test.ts",
+    "resolvers/mutations/adminUser/saveAdminUserResolver.ts",
     "resolvers/mutations/author/saveAuthorResolver.test.ts",
     "resolvers/mutations/author/saveAuthorResolver.ts",
     "resolvers/mutations/authorSchedule/saveAuthorScheduleResolver.test.ts",
@@ -32,6 +34,8 @@
     "resolvers/mutations/tag/saveTagResolver.ts",
     "resolvers/mutations/user/saveUserResolver.test.ts",
     "resolvers/mutations/user/saveUserResolver.ts",
+    "resolvers/objects/adminUser/adminUserResolvers.test.ts",
+    "resolvers/objects/adminUser/adminUserResolvers.ts",
     "resolvers/objects/author/authorResolvers.test.ts",
     "resolvers/objects/author/authorResolvers.ts",
     "resolvers/objects/authorSchedule/authorScheduleResolvers.test.ts",

@@ -1,4 +1,5 @@
 const mappers = {
+  AdminUser: "src/entities#AdminUser",
   AdvanceStatusDetail: "src/entities#AdvanceStatus",
   Author: "src/entities#Author",
   AuthorSchedule: "src/entities#AuthorSchedule",

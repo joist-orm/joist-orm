@@ -193,10 +193,6 @@ export function isCollectionField(ormField: Field): ormField is OneToManyField |
 }
 
 export function getAllMetas(meta: EntityMetadata): EntityMetadata[] {
-  return [...meta.baseTypes, meta, ...meta.subTypes];
-}
-
-export function getBaseAndSelfMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta];
 }
 

@@ -6,7 +6,7 @@ import {
   Field,
   PolymorphicField,
   PolymorphicFieldComponent,
-  getBaseAndSelfMetas,
+  getAllMetas,
   getMetadata,
 } from "./EntityMetadata";
 import { ColumnCondition, ParsedValueFilter, mapToDb, skipCondition } from "./QueryParser";
@@ -79,7 +79,7 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         // Do we have mismatched `em.find(ChildMeta)` with a `alias(BaseMeta)`? If so, the
         // usual `${field.aliasSuffix}` won't know it should have a suffix, so we need to calc it.
         if (newMeta !== meta) {
-          const bases = getBaseAndSelfMetas(newMeta);
+          const bases = getAllMetas(newMeta);
           const fieldIsFromBase = bases.includes(newMeta);
           if (fieldIsFromBase) {
             cond.alias = `${newAlias}_b0`;

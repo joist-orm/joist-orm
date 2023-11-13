@@ -20,8 +20,8 @@ import {
   Tag,
   newAuthor,
   newLargePublisher,
-  newPublisher,
   newSmallPublisher,
+  newUser,
 } from "./entities";
 
 import { newEntityManager, testDriver } from "@src/testEm";
@@ -53,24 +53,12 @@ describe("Inheritance", () => {
   });
 
   // We cannot test this scenario anymore b/c we made `Publisher` abstract
-  it.skip("can insert a base-only instance", async () => {
+  it("can insert a base-only instance", async () => {
     const em = newEntityManager();
-    newPublisher(em, { name: "sp1" });
+    newUser(em, { name: "u1" });
     await em.flush();
-    expect(await testDriver.select("publishers")).toMatchObject([
-      {
-        id: 1,
-        huge_number: null,
-        latitude: null,
-        longitude: null,
-        name: "sp1",
-        size_id: null,
-        type_id: 1,
-        created_at: expect.any(Date),
-        updated_at: expect.any(Date),
-      },
-    ]);
-    expect(await testDriver.select("small_publishers")).toMatchObject([]);
+    expect(await testDriver.select("users")).toMatchObject([{ id: 1 }]);
+    expect(await testDriver.select("admin_users")).toMatchObject([]);
   });
 
   it("can update a subtype across two tables", async () => {

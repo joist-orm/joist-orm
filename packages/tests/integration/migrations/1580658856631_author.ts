@@ -224,6 +224,10 @@ export function up(b: MigrationBuilder): void {
     bio: { type: "varchar(255)", notNull: true, default: "" },
   });
 
+  createSubTable(b, "users", "admin_users", {
+    role: { type: "varchar(255)", notNull: true },
+  });
+
   // for testing polymorphic references
   createEntityTable(b, "comments", {
     // inverse is o2m
@@ -268,7 +272,7 @@ export function up(b: MigrationBuilder): void {
     { table: "comments", collectionName: "likedComments" },
   );
 
-  // for testing abbreviations that are SQL keywords
+  // for testing abbreviations that are SQL keywords, i.s. `author_schedules` ==> `as`
   createEntityTable(b, "author_schedules", {
     author_id: foreignKey("authors", { notNull: true }),
     overview: "text",

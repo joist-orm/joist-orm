@@ -19,7 +19,7 @@ export class Todo {
 /**
  * Scans `entities` for new/updated entities and groups them by type (by base type if applicable).
  */
-export function createTodos(entities: Entity[]): Record<string, Todo> {
+export function createTodos(entities: readonly Entity[]): Record<string, Todo> {
   const todos: Record<string, Todo> = {};
   for (const entity of entities) {
     if (entity.isPendingFlush) {

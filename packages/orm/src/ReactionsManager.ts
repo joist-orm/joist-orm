@@ -30,7 +30,7 @@ export class ReactionsManager {
    * Derived fields we tried to calculate, but they failed with `NoIdError`s, so we'll
    * try again during `em.flush`.
    */
-  private relationsPendingAssignIds: Set<Relation<any, any>> = new Set();
+  private relationsPendingAssignedIds: Set<Relation<any, any>> = new Set();
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -150,7 +150,7 @@ export class ReactionsManager {
       results.forEach((result, i) => {
         if (result.status === "rejected") {
           if (result.reason instanceof NoIdError) {
-            this.relationsPendingAssignIds.add(unique[i]);
+            this.relationsPendingAssignedIds.add(unique[i]);
           } else {
             failures.push(result.reason);
           }
@@ -172,13 +172,13 @@ export class ReactionsManager {
     this.pendingFieldReactions = new Map();
   }
 
-  hasRelationsPendingAssignIds(): boolean {
-    return this.relationsPendingAssignIds.size > 0;
+  get hasFieldsPendingAssignedIds(): boolean {
+    return this.relationsPendingAssignedIds.size > 0;
   }
 
-  async recalcRelationsPendingAssignIds(): Promise<void> {
-    const relations = [...this.relationsPendingAssignIds];
-    this.relationsPendingAssignIds.clear();
+  async recalcRelationsPendingAssignedIds(): Promise<void> {
+    const relations = [...this.relationsPendingAssignedIds];
+    this.relationsPendingAssignedIds.clear();
     await Promise.all(
       relations.filter((r) => r instanceof AbstractPropertyImpl && !r.entity.isDeletedEntity).map((r: any) => r.load()),
     );

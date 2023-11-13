@@ -1068,7 +1068,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   async assignNewIds() {
     let pendingEntities = this.entities.filter((e) => e.isNewEntity && !e.isDeletedEntity && !e.idTaggedMaybe);
     await this.getLoader<Entity, Entity>("assign-new-ids", "global", async (entities) => {
-      let todos = createTodos([...entities]);
+      let todos = createTodos(entities);
       await this.driver.assignNewIds(this, todos);
       return entities;
     }).loadMany(pendingEntities);
@@ -1130,9 +1130,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingDerivedValues();
 
-          if (this.#rm.hasRelationsPendingAssignIds()) {
+          if (this.#rm.hasFieldsPendingAssignedIds) {
             await this.assignNewIds();
-            await this.#rm.recalcRelationsPendingAssignIds();
+            await this.#rm.recalcRelationsPendingAssignedIds();
           }
 
           for (const e of pendingEntities) hooksInvoked.add(e);

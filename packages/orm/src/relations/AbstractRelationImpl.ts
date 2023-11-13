@@ -1,17 +1,11 @@
-import { Entity } from "../Entity";
+import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 
 /**
  * Defines common hooks that relations can respond to to keep the entity graph in sync.
  */
-export abstract class AbstractRelationImpl<T, U> {
-  #entity: T;
-
+export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T> {
   constructor(entity: T) {
-    this.#entity = entity;
-  }
-
-  get entity(): T {
-    return this.#entity;
+    super(entity);
   }
 
   /** Called with the opts from a `new` or `em.create` call, i.e. on a new entity. */

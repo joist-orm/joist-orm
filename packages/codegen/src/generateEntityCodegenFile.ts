@@ -53,7 +53,7 @@ import {
   newRequiredRule,
   setField,
   setOpts,
-  toIdOf,
+  toIdOf, failNoIdYet,
 } from "./symbols";
 import { assertNever, fail, uncapitalize } from "./utils";
 
@@ -501,7 +501,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       ${cstr}
 
       get id(): ${entityName}Id {
-        return this.idMaybe || ${failSymbol}("${entityName} has no id yet");
+        return this.idMaybe || ${failNoIdYet}("${entityName}");
       }
 
       get idMaybe(): ${entityName}Id | undefined {
@@ -509,7 +509,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       }
 
       get idTagged(): ${TaggedId} {
-        return this.idTaggedMaybe || ${failSymbol}("${entityName} has no id yet");
+        return this.idTaggedMaybe || ${failNoIdYet}("${entityName}");
       }
 
       get idTaggedMaybe(): ${TaggedId} | undefined {

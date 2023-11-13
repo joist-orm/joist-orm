@@ -8,7 +8,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -134,7 +134,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get id(): BookReviewId {
-    return this.idMaybe || fail("BookReview has no id yet");
+    return this.idMaybe || failNoIdYet("BookReview");
   }
 
   get idMaybe(): BookReviewId | undefined {
@@ -142,7 +142,7 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("BookReview has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("BookReview");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

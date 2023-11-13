@@ -7,7 +7,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -105,7 +105,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get id(): PaintingId {
-    return this.idMaybe || fail("Painting has no id yet");
+    return this.idMaybe || failNoIdYet("Painting");
   }
 
   get idMaybe(): PaintingId | undefined {
@@ -113,7 +113,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("Painting has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("Painting");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

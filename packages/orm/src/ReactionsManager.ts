@@ -1,7 +1,9 @@
-import { ReactiveField } from "./config";
 import { Entity } from "./Entity";
 import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
+import { ReactiveField } from "./config";
+import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
+import { Relation } from "./relations";
 
 /**
  * Manages the reactivity of tracking which source fields have changed and finding/recalculating
@@ -23,6 +25,11 @@ export class ReactionsManager {
    * Instead, we just track the dirty fields by type-of-entity, which is enough for `isPendingRecalc`.
    */
   private dirtyFields: Map<string, Set<string>> = new Map();
+  /**
+   * Derived fields we tried to calculate, but they failed with `NoIdError`s, so we'll
+   * try again during `em.flush`.
+   */
+  private relationsPendingAssignIds: Set<Relation<any, any>> = new Set();
 
   /**
    * Queue all downstream reactive fields that depend on `fieldName` as a source field.
@@ -134,8 +141,22 @@ export class ReactionsManager {
       );
       // Multiple reactions could have pointed back to the same reactive field, so
       // dedupe the found relations before calling .load.
-      const unique = new Set(relations.flat());
-      await Promise.all([...unique].map((r: any) => r.load()));
+      const unique = [...new Set(relations.flat())];
+
+      // Use allSettled so that we can watch for derived values that want to use the entity'd id
+      const results = await Promise.allSettled(unique.map((r: any) => r.load()));
+      const failures: any[] = [];
+      results.forEach((result, i) => {
+        if (result.status === "rejected") {
+          if (result.reason instanceof NoIdError) {
+            this.relationsPendingAssignIds.add(unique[i]);
+          } else {
+            failures.push(result.reason);
+          }
+        }
+      });
+      if (failures.length > 0) throw failures[0];
+
       // This should generally not happen, only if two reactive fields depend on each other,
       // which in theory should probably be caught/blow up in the `configureMetadata` step,
       // but if it's not caught sooner, at least don't infinite loop.
@@ -148,6 +169,16 @@ export class ReactionsManager {
   /** Clears all the pending source fields, i.e. after `em.flush` is complete. */
   clear(): void {
     this.pendingFieldReactions = new Map();
+  }
+
+  hasRelationsPendingAssignIds(): boolean {
+    return this.relationsPendingAssignIds.size > 0;
+  }
+
+  async recalcRelationsPendingAssignIds(): Promise<void> {
+    const relations = [...this.relationsPendingAssignIds];
+    this.relationsPendingAssignIds.clear();
+    await Promise.all(relations.map((r: any) => r.load()));
   }
 
   private getPending(rf: ReactiveField): { todo: Set<Entity>; done: Set<Entity> } {

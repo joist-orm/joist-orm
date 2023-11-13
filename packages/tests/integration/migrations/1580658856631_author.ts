@@ -99,10 +99,12 @@ export function up(b: MigrationBuilder): void {
     // for foreign key tests
     publisher_id: foreignKey("publishers", { notNull: false }),
     mentor_id: foreignKey("authors", { notNull: false }),
-    // for testing jsbon columns
+    // for testing jsonb columns
     address: { type: "jsonb", notNull: false },
     business_address: { type: "jsonb", notNull: false },
+    // for testing jsonb columns that are arrays
     quotes: { type: "jsonb", notNull: false },
+    // for testing bigints
     number_of_atoms: { type: "bigint", notNull: false },
     deleted_at: { type: "timestamptz", notNull: false },
     // for testing derived fields using other derived fields
@@ -111,7 +113,16 @@ export function up(b: MigrationBuilder): void {
     numberOfPublicReviews2: { type: "int", notNull: false },
     // for testing derived fields through m2ms
     tags_of_all_books: { type: "varchar", notNull: false },
+    // for testing full-text-search fields that want to use `id`
+    search: { type: "text", notNull: false },
   });
+
+  // For testing full-text-search
+  b.sql(`
+    ALTER TABLE authors ADD COLUMN ts_search tsvector
+    GENERATED ALWAYS AS (to_tsvector('english', coalesce(search, ''))) STORED;
+    CREATE INDEX authors_ts_search_idx ON authors USING GIN (ts_search);
+  `);
 
   // A publisher can only have one author named `Jim`, but still have other authors
   // Verifies that partial unique indexes do not result in o2o collections

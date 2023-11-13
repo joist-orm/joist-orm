@@ -8,7 +8,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -149,7 +149,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get id(): UserId {
-    return this.idMaybe || fail("User has no id yet");
+    return this.idMaybe || failNoIdYet("User");
   }
 
   get idMaybe(): UserId | undefined {
@@ -157,7 +157,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("User has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("User");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

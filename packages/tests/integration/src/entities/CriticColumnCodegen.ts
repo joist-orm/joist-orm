@@ -7,7 +7,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -105,7 +105,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get id(): CriticColumnId {
-    return this.idMaybe || fail("CriticColumn has no id yet");
+    return this.idMaybe || failNoIdYet("CriticColumn");
   }
 
   get idMaybe(): CriticColumnId | undefined {
@@ -113,7 +113,7 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("CriticColumn has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("CriticColumn");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

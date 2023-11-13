@@ -31,6 +31,8 @@ type Author {
   numberOfAtoms: Int
   tagsOfAllBooks: String!
   nickNames: String
+  search: String
+  tsSearch: String
 }
 
 input SaveAuthorInput {
@@ -55,6 +57,8 @@ input SaveAuthorInput {
   favoriteBookId: ID
   numberOfAtoms: Int
   nickNames: String
+  search: String
+  tsSearch: String
 }
 
 type SaveAuthorResult {

@@ -393,3 +393,10 @@ function equal(a: any, b: any): boolean {
 export function asConcreteCstr<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): EntityConstructor<T> {
   return cstr as any;
 }
+
+export class NoIdError extends Error {}
+
+/** Throws a `NoIdError` for `entity`, i.e. because `id` was called before being saved. */
+export function failNoIdYet(entity: string): never {
+  throw new NoIdError(`${entity} has no id yet`);
+}

@@ -17,7 +17,9 @@
         "numberOfPublicReviews": { "derived": "async" },
         "numberOfPublicReviews2": { "derived": "async" },
         "quotes": { "superstruct": "quotes@src/entities/types" },
+        "search": { "derived": "async" },
         "tagsOfAllBooks": { "derived": "async" },
+        "tsSearch": { "ignore": true },
         "wasEverPopular": { "protected": true }
       },
       "relations": { "books": { "orderBy": "order" } },

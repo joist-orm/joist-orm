@@ -5,7 +5,7 @@ import {
   ConfigApi,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   Flavor,
   isLoaded,
   Lens,
@@ -155,7 +155,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get id(): AuthorStatId {
-    return this.idMaybe || fail("AuthorStat has no id yet");
+    return this.idMaybe || failNoIdYet("AuthorStat");
   }
 
   get idMaybe(): AuthorStatId | undefined {
@@ -163,7 +163,7 @@ export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("AuthorStat has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("AuthorStat");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

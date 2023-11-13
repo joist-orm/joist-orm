@@ -7,7 +7,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -100,7 +100,7 @@ export abstract class LargePublisherCodegen extends Publisher {
   }
 
   get id(): LargePublisherId {
-    return this.idMaybe || fail("LargePublisher has no id yet");
+    return this.idMaybe || failNoIdYet("LargePublisher");
   }
 
   get idMaybe(): LargePublisherId | undefined {
@@ -108,7 +108,7 @@ export abstract class LargePublisherCodegen extends Publisher {
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("LargePublisher has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("LargePublisher");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

@@ -4,7 +4,7 @@ import {
   ConfigApi,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   Flavor,
   isLoaded,
   Lens,
@@ -95,7 +95,7 @@ export abstract class SmallPublisherCodegen extends Publisher {
   }
 
   get id(): SmallPublisherId {
-    return this.idMaybe || fail("SmallPublisher has no id yet");
+    return this.idMaybe || failNoIdYet("SmallPublisher");
   }
 
   get idMaybe(): SmallPublisherId | undefined {
@@ -103,7 +103,7 @@ export abstract class SmallPublisherCodegen extends Publisher {
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("SmallPublisher has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("SmallPublisher");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

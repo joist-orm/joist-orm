@@ -8,7 +8,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -108,7 +108,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get id(): ArtistId {
-    return this.idMaybe || fail("Artist has no id yet");
+    return this.idMaybe || failNoIdYet("Artist");
   }
 
   get idMaybe(): ArtistId | undefined {
@@ -116,7 +116,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("Artist has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("Artist");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

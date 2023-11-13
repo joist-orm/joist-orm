@@ -8,7 +8,7 @@ import {
   EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
-  fail,
+  failNoIdYet,
   FieldsOf,
   FilterOf,
   Flavor,
@@ -194,7 +194,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get id(): PublisherId {
-    return this.idMaybe || fail("Publisher has no id yet");
+    return this.idMaybe || failNoIdYet("Publisher");
   }
 
   get idMaybe(): PublisherId | undefined {
@@ -202,7 +202,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get idTagged(): TaggedId {
-    return this.idTaggedMaybe || fail("Publisher has no id yet");
+    return this.idTaggedMaybe || failNoIdYet("Publisher");
   }
 
   get idTaggedMaybe(): TaggedId | undefined {

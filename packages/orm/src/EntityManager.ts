@@ -1130,6 +1130,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // The hooks could have changed fields, so recalc again.
           await this.#rm.recalcPendingDerivedValues();
 
+          if (this.#rm.hasRelationsPendingAssignIds()) {
+            await this.assignNewIds();
+            await this.#rm.recalcRelationsPendingAssignIds();
+          }
+
           for (const e of pendingEntities) hooksInvoked.add(e);
           pendingEntities = this.entities.filter((e) => e.isPendingFlush && !hooksInvoked.has(e));
         });

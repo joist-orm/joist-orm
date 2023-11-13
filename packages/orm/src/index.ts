@@ -348,13 +348,13 @@ export function getEm(entity: Entity): EntityManager<any> {
   return entity.em;
 }
 
-export function getRelations(entity: Entity): AbstractRelationImpl<any>[] {
+export function getRelations(entity: Entity): AbstractRelationImpl<any, any>[] {
   return Object.entries(getProperties(getMetadata(entity)))
     .filter(([, v]) => v instanceof AbstractRelationImpl)
     .map(([name]) => (entity as any)[name]);
 }
 
-export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any>][] {
+export function getRelationEntries(entity: Entity): [string, AbstractRelationImpl<any, any>][] {
   return Object.entries(getProperties(getMetadata(entity)))
     .filter(([, v]) => v instanceof AbstractRelationImpl)
     .map(([name]) => [name, (entity as any)[name]]);

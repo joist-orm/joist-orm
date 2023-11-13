@@ -1766,12 +1766,12 @@ export function isDefined<T extends any>(param: T | undefined | null): param is 
   return param !== null && param !== undefined;
 }
 
-function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any>[] {
+function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any, any>[] {
   return getAllMetas(getMetadata(entity)).flatMap((meta) => {
     return meta.config.__data.cascadeDeleteFields.map((fieldName) => (entity as any)[fieldName]);
   });
 }
 
-function isCustomRelation(r: AbstractRelationImpl<any>): boolean {
+function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof PersistedAsyncReferenceImpl;
 }

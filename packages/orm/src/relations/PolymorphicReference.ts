@@ -59,7 +59,7 @@ export interface PolymorphicReference<T extends Entity, U extends Entity, N exte
  * side, i.e. `BookReview.comment` will use a `OneToOneReference` to point back to us.
  */
 export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N extends never | undefined>
-  extends AbstractRelationImpl<U>
+  extends AbstractRelationImpl<T, U>
   implements PolymorphicReference<T, U, N>
 {
   private loaded: U | N | undefined;
@@ -68,10 +68,10 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   private field: PolymorphicField;
 
   constructor(
-    private entity: T,
+    entity: T,
     private fieldName: keyof T & string,
   ) {
-    super();
+    super(entity);
     this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
     if (isOrWasNew(entity)) {
       this._isLoaded = true;

@@ -71,10 +71,9 @@ export class PersistedAsyncReferenceImpl<
     H extends ReactiveHint<T>,
     N extends never | undefined,
   >
-  extends AbstractRelationImpl<U>
+  extends AbstractRelationImpl<T, U>
   implements PersistedAsyncReference<T, U, N>
 {
-  readonly #entity: T;
   readonly #fieldName: keyof T & string;
   readonly #otherMeta: EntityMetadata;
   readonly #reactiveHint: H;
@@ -90,8 +89,7 @@ export class PersistedAsyncReferenceImpl<
     public reactiveHint: H,
     private fn: (entity: Reacted<T, H>) => U | N,
   ) {
-    super();
-    this.#entity = entity;
+    super(entity);
     this.#fieldName = fieldName;
     this.#otherMeta = otherMeta;
     this.#reactiveHint = reactiveHint;
@@ -103,14 +101,14 @@ export class PersistedAsyncReferenceImpl<
   }
 
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     const { loadHint } = this;
     if (!this.loaded || opts?.forceReload) {
-      const { em } = this.#entity;
+      const { em } = this.entity;
       // Only use the full load hint if we need recalculated, otherwise just load our cached value
-      const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.#entity, this.fieldName);
+      const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (recalc) {
-        return (this.loadPromise ??= em.populate(this.#entity, { hint: loadHint, ...opts }).then(() => {
+        return (this.loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
           this.loadPromise = undefined;
           this._isLoaded = "full";
           // Go through `this.get` so that `setField` is called to set our latest value
@@ -138,14 +136,14 @@ export class PersistedAsyncReferenceImpl<
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     const { fn } = this;
-    ensureNotDeleted(this.#entity, "pending");
-    if (this._isLoaded === "full" || (!this.isSet && isLoaded(this.#entity, this.loadHint))) {
-      const newValue = this.filterDeleted(fn(this.#entity as Reacted<T, H>), opts);
+    ensureNotDeleted(this.entity, "pending");
+    if (this._isLoaded === "full" || (!this.isSet && isLoaded(this.entity, this.loadHint))) {
+      const newValue = this.filterDeleted(fn(this.entity as Reacted<T, H>), opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
-      if (!getEmInternalApi(this.#entity.em).isValidating) {
+      if (!getEmInternalApi(this.entity.em).isValidating) {
         this.setImpl(newValue);
       }
       return this.maybeFindEntity();
@@ -157,7 +155,7 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get fieldValue(): U {
-    return this.#entity.__orm.data[this.fieldName];
+    return this.entity.__orm.data[this.fieldName];
   }
 
   get getWithDeleted(): U | N {
@@ -182,7 +180,7 @@ export class PersistedAsyncReferenceImpl<
 
   // Internal method used by OneToManyCollection
   setImpl(other: U | IdOf<U> | N): void {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
 
     // If the project is not using tagged ids, we still want it tagged internally
     const _other = ensureTagged(this.otherMeta, other) as U | TaggedId | N;
@@ -193,7 +191,7 @@ export class PersistedAsyncReferenceImpl<
 
     const previous = this.maybeFindEntity();
     // Prefer to keep the id in our data hash, but if this is a new entity w/o an id, use the entity itself
-    setField(this.#entity, this.fieldName, isEntity(_other) ? _other.idTaggedMaybe ?? _other : _other);
+    setField(this.entity, this.fieldName, isEntity(_other) ? _other.idTaggedMaybe ?? _other : _other);
 
     if (typeof _other === "string") {
       this.loaded = undefined;
@@ -213,7 +211,7 @@ export class PersistedAsyncReferenceImpl<
 
   /** Returns the tagged id of the current value. */
   get idTaggedMaybe(): TaggedId | N {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     return maybeResolveReferenceToId(this.current()) as TaggedId | N;
   }
 
@@ -236,14 +234,14 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get loadHint(): any {
-    return getMetadata(this.#entity).config.__data.cachedReactiveLoadHints[this.fieldName];
+    return getMetadata(this.entity).config.__data.cachedReactiveLoadHints[this.fieldName];
   }
 
   // private impl
 
   /** Returns the id of the current value. */
   private get idMaybe(): IdOf<U> | undefined {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     return toIdOf(this.otherMeta, this.idTaggedMaybe);
   }
 
@@ -259,7 +257,7 @@ export class PersistedAsyncReferenceImpl<
     if (this.isCascadeDelete) {
       const current = this.current({ withDeleted: true });
       if (current !== undefined && typeof current !== "string") {
-        this.#entity.em.delete(current as U);
+        this.entity.em.delete(current as U);
       }
     }
   }
@@ -268,14 +266,14 @@ export class PersistedAsyncReferenceImpl<
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
     const current = await this.load({ withDeleted: true });
-    setField(this.#entity, this.fieldName, undefined);
+    setField(this.entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = false;
   }
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | string | N {
-    const current = this.#entity.__orm.data[this.fieldName];
+    const current = this.entity.__orm.data[this.fieldName];
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }
@@ -283,13 +281,11 @@ export class PersistedAsyncReferenceImpl<
   }
 
   public get otherMeta(): EntityMetadata<U> {
-    return (getMetadata(this.#entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
+    return (getMetadata(this.entity).allFields[this.#fieldName] as ManyToOneField).otherMetadata();
   }
 
   public toString(): string {
-    return `PersistedAsyncReference(entity: ${this.#entity}, hint: ${this.loadHint}, fieldName: ${
-      this.fieldName
-    }, otherMeta: {
+    return `PersistedAsyncReference(entity: ${this.entity}, hint: ${this.loadHint}, fieldName: ${this.fieldName}, otherMeta: {
       this.otherMeta.type
     }, id: ${this.id})`;
   }
@@ -311,7 +307,7 @@ export class PersistedAsyncReferenceImpl<
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
   /**
@@ -323,7 +319,7 @@ export class PersistedAsyncReferenceImpl<
     const { idTaggedMaybe } = this;
     return (
       this.loaded ??
-      (idTaggedMaybe !== undefined ? (this.#entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
+      (idTaggedMaybe !== undefined ? (this.entity.em.getEntity(idTaggedMaybe) as U | N) : (undefined as N))
     );
   }
 

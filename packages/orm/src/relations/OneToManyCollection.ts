@@ -32,10 +32,9 @@ export function hasMany<T extends Entity, U extends Entity>(
 }
 
 export class OneToManyCollection<T extends Entity, U extends Entity>
-  extends AbstractRelationImpl<U[]>
+  extends AbstractRelationImpl<T, U[]>
   implements Collection<T, U>
 {
-  readonly #entity: T;
   readonly #fieldName: keyof T & string;
   readonly #orderBy: { field: keyof U; direction: OrderBy } | undefined;
   private loaded: U[] | undefined;
@@ -56,8 +55,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     public otherColumnName: string,
     orderBy: { field: keyof U; direction: OrderBy } | undefined,
   ) {
-    super();
-    this.#entity = entity;
+    super(entity);
     this.#fieldName = fieldName;
     this.#orderBy = orderBy;
     if (isOrWasNew(entity)) {
@@ -67,17 +65,17 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   // opts is an internal parameter
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<readonly U[]> {
-    ensureNotDeleted(this.#entity, "pending");
-    if (this.loaded === undefined || (opts.forceReload && !this.#entity.isNewEntity)) {
+    ensureNotDeleted(this.entity, "pending");
+    if (this.loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
       this.loaded =
-        this.getPreloaded() ?? (await oneToManyDataLoader(this.#entity.em, this).load(this.#entity.idTagged!));
+        this.getPreloaded() ?? (await oneToManyDataLoader(this.entity.em, this).load(this.entity.idTagged!));
       this.maybeAppendAddedBeforeLoaded();
     }
     return this.filterDeleted(this.loaded, opts);
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this.loaded !== undefined) {
       return this.loaded.find((other) => other.id === id);
     } else {
@@ -86,13 +84,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
         return added;
       }
       // Make a cacheable tuple to look up this specific o2m row
-      const key = `id=${id},${this.otherColumnName}=${this.#entity.id}`;
-      return oneToManyFindDataLoader(this.#entity.em, this).load(key);
+      const key = `id=${id},${this.otherColumnName}=${this.entity.id}`;
+      return oneToManyFindDataLoader(this.entity.em, this).load(key);
     }
   }
 
   async includes(other: U): Promise<boolean> {
-    return sameEntity(this.#entity, this.getOtherRelation(other).current());
+    return sameEntity(this.entity, this.getOtherRelation(other).current());
   }
 
   get isLoaded(): boolean {
@@ -117,7 +115,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private doGet(): U[] {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this.loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not loaded");
@@ -126,7 +124,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   set(values: U[]): void {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
@@ -135,7 +133,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     const otherCannotChange = this.otherMeta.fields[this.otherFieldName].immutable;
     if (this.isCascadeDelete && otherCannotChange) {
       const implicitlyDeleted = this.loaded.filter((e) => !values.includes(e));
-      implicitlyDeleted.forEach((e) => this.#entity.em.delete(e));
+      implicitlyDeleted.forEach((e) => this.entity.em.delete(e));
       // Keep the implicitlyDeleted values for `getWithDeleted` to return
       values.push(...implicitlyDeleted);
     }
@@ -156,7 +154,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   add(other: U): void {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       this.#addedBeforeLoaded ??= [];
       maybeAdd(this.#addedBeforeLoaded, other);
@@ -165,13 +163,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
       maybeAdd(this.loaded, other);
     }
     // This will no-op and mark other dirty if necessary
-    this.getOtherRelation(other).set(this.#entity);
+    this.getOtherRelation(other).set(this.entity);
   }
 
   // We're not supported remove(other) because that might leave other.otherFieldName as undefined,
   // which we don't know if that's valid or not, i.e. depending on whether the field is nullable.
   remove(other: U, opts: { requireLoaded: boolean } = { requireLoaded: true }) {
-    ensureNotDeleted(this.#entity, "pending");
+    ensureNotDeleted(this.entity, "pending");
     if (this.loaded === undefined && opts.requireLoaded) {
       throw new Error("remove was called when not loaded");
     }
@@ -187,7 +185,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   removeAll(): void {
-    ensureNotDeleted(this.#entity);
+    ensureNotDeleted(this.entity);
     if (this.loaded === undefined) {
       throw new Error("removeAll was called when not loaded");
     }
@@ -213,7 +211,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
 
   maybeCascadeDelete(): void {
     if (this.isCascadeDelete) {
-      this.current({ withDeleted: true }).forEach((e) => this.#entity.em.delete(e));
+      this.current({ withDeleted: true }).forEach((e) => this.entity.em.delete(e));
     }
   }
 
@@ -224,7 +222,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     const current = await this.load({ withDeleted: true });
     current.forEach((other) => {
       const m2o = this.getOtherRelation(other);
-      if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.#entity.idMaybe) {
+      if (maybeResolveReferenceToId(m2o.current({ withDeleted: true })) === this.entity.idMaybe) {
         // TODO What if other.otherFieldName is required/not-null?
         m2o.set(undefined);
       }
@@ -241,9 +239,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     // (Note that we don't have to handle the case for "removed before loaded" here because
     // the oneToManyDataLoader already handles that; although maybe arguably that logic should
     // be handled here?)
-    if (!this.#entity.isNewEntity) {
-      const { em } = this.#entity;
-      const pending = getEmInternalApi(em).pendingChildren.get(this.#entity.idTagged!)?.get(this.fieldName);
+    if (!this.entity.isNewEntity) {
+      const { em } = this.entity;
+      const pending = getEmInternalApi(em).pendingChildren.get(this.entity.idTagged!)?.get(this.fieldName);
       if (pending) {
         (this.#addedBeforeLoaded ??= []).push(...(pending.adds as U[]));
         (this.#removedBeforeLoaded ??= []).push(...(pending.removes as U[]));
@@ -268,21 +266,15 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public get meta(): EntityMetadata {
-    return getMetadata(this.#entity);
-  }
-
-  public get entity(): T {
-    return this.#entity;
+    return getMetadata(this.entity);
   }
 
   public get otherMeta(): EntityMetadata {
-    return (getMetadata(this.#entity).allFields[this.#fieldName] as OneToManyField).otherMetadata();
+    return (getMetadata(this.entity).allFields[this.#fieldName] as OneToManyField).otherMetadata();
   }
 
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.#entity}, fieldName: ${this.fieldName}, otherType: ${
-      this.otherMeta.type
-    }, otherFieldName: ${this.otherFieldName})`;
+    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
   }
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */
@@ -304,12 +296,12 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.#entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
   }
 
   private getPreloaded(): U[] | undefined {
-    if (this.#entity.isNewEntity) return undefined;
-    return getEmInternalApi(this.#entity.em).getPreloadedRelation<U>(this.#entity.idTagged, this.fieldName);
+    if (this.entity.isNewEntity) return undefined;
+    return getEmInternalApi(this.entity.em).getPreloadedRelation<U>(this.entity.idTagged, this.fieldName);
   }
 
   [RelationT]: T = null!;

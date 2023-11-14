@@ -196,7 +196,7 @@ export function getBaseAndSelfMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta];
 }
 
-export function getAllMetasWithSubClasses(meta: EntityMetadata): EntityMetadata[] {
+export function getBaseSelfAndSubMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta, ...meta.subTypes];
 }
 

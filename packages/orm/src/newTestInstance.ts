@@ -18,7 +18,7 @@ import {
   PolymorphicField,
   PrimitiveField,
   getBaseAndSelfMetas,
-  getAllMetasWithSubClasses,
+  getBaseSelfAndSubMetas,
   getMetadata,
   isManyToOneField,
   isOneToOneField,
@@ -276,7 +276,7 @@ function metaFromFieldAndOpt<T extends Entity>(
     field.components.find(
       (component) =>
         opt instanceof MaybeNew &&
-        getAllMetasWithSubClasses(component.otherMetadata())
+        getBaseSelfAndSubMetas(component.otherMetadata())
           .map((m) => m.cstr)
           .includes(opt.polyRefPreferredOrder[0]),
     ) ?? field.components[0];

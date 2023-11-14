@@ -25,6 +25,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { DatabaseOwner, databaseOwnerMeta, newDatabaseOwner } from "./entities";
 import type { EntityManager } from "./entities";
 
@@ -61,7 +62,7 @@ export const databaseOwnerConfig = new ConfigApi<DatabaseOwner, Context>();
 
 databaseOwnerConfig.addRule(newRequiredRule("name"));
 
-export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> {
+export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "do";
   static readonly metadata: EntityMetadata<DatabaseOwner>;

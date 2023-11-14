@@ -31,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { Artist, artistMeta, newArtist, Painting, PaintingId, paintingMeta } from "./entities";
 import type { EntityManager } from "./entities";
 
@@ -87,7 +88,7 @@ artistConfig.addRule(newRequiredRule("lastName"));
 artistConfig.addRule(newRequiredRule("createdAt"));
 artistConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> {
+export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "artist";
   static readonly metadata: EntityMetadata<Artist>;

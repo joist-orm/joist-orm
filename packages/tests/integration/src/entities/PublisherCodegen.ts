@@ -35,6 +35,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   Author,
   AuthorId,
@@ -164,7 +165,7 @@ publisherConfig.addRule(newRequiredRule("createdAt"));
 publisherConfig.addRule(newRequiredRule("updatedAt"));
 publisherConfig.addRule(newRequiredRule("type"));
 
-export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> {
+export abstract class PublisherCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = { type: PublisherType.Big };
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<Publisher>;

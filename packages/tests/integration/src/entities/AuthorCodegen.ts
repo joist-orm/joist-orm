@@ -40,6 +40,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { Address, address, AddressSchema, Quotes, quotes } from "src/entities/types";
 import { assert } from "superstruct";
 import { z } from "zod";
@@ -100,6 +101,7 @@ export interface AuthorFields {
   numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined };
+  search: { kind: "primitive"; type: string; unique: false; nullable: undefined };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
@@ -172,6 +174,7 @@ export interface AuthorFilter {
   numberOfPublicReviews?: ValueFilter<number, null>;
   numberOfPublicReviews2?: ValueFilter<number, null>;
   tagsOfAllBooks?: ValueFilter<string, null>;
+  search?: ValueFilter<string, null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   favoriteColors?: ValueFilter<Color[], null>;
@@ -210,6 +213,7 @@ export interface AuthorGraphQLFilter {
   numberOfPublicReviews?: ValueGraphQLFilter<number>;
   numberOfPublicReviews2?: ValueGraphQLFilter<number>;
   tagsOfAllBooks?: ValueGraphQLFilter<string>;
+  search?: ValueGraphQLFilter<string>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   favoriteColors?: ValueGraphQLFilter<Color[]>;
@@ -248,6 +252,7 @@ export interface AuthorOrder {
   numberOfPublicReviews?: OrderBy;
   numberOfPublicReviews2?: OrderBy;
   tagsOfAllBooks?: OrderBy;
+  search?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   favoriteColors?: OrderBy;
@@ -266,7 +271,7 @@ authorConfig.addRule(newRequiredRule("numberOfBooks"));
 authorConfig.addRule(newRequiredRule("createdAt"));
 authorConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
+export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "a";
   static readonly metadata: EntityMetadata<Author>;
@@ -429,6 +434,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> {
   abstract readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number | undefined>;
 
   abstract readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string | undefined>;
+
+  abstract readonly search: PersistedAsyncProperty<Author, string | undefined>;
 
   get createdAt(): Date {
     return this.__orm.data["createdAt"];

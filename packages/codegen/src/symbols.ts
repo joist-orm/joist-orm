@@ -4,6 +4,7 @@ export const ConfigApi = imp("ConfigApi@joist-orm");
 export const FieldStatus = imp("FieldStatus@joist-orm");
 export const Entity = imp("Entity@joist-orm");
 export const BaseEntity = imp("BaseEntity@joist-orm");
+export const ProjectEntity = imp("Entity@src/entities");
 export const Flavor = imp("Flavor@joist-orm");
 export const Reference = imp("Reference@joist-orm");
 export const Collection = imp("Collection@joist-orm");

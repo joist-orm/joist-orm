@@ -25,6 +25,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { AuthorStat, authorStatMeta, newAuthorStat } from "./entities";
 import type { EntityManager } from "./entities";
 
@@ -134,7 +135,7 @@ authorStatConfig.addRule(newRequiredRule("doublePrecision"));
 authorStatConfig.addRule(newRequiredRule("createdAt"));
 authorStatConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string> {
+export abstract class AuthorStatCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "as";
   static readonly metadata: EntityMetadata<AuthorStat>;

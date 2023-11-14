@@ -30,6 +30,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   AdvanceStatus,
   AdvanceStatusDetails,
@@ -105,7 +106,7 @@ bookAdvanceConfig.addRule(newRequiredRule("status"));
 bookAdvanceConfig.addRule(newRequiredRule("book"));
 bookAdvanceConfig.addRule(newRequiredRule("publisher"));
 
-export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> {
+export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "ba";
   static readonly metadata: EntityMetadata<BookAdvance>;

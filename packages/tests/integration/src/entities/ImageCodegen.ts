@@ -31,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   Author,
   AuthorId,
@@ -120,7 +121,7 @@ imageConfig.addRule(newRequiredRule("createdAt"));
 imageConfig.addRule(newRequiredRule("updatedAt"));
 imageConfig.addRule(newRequiredRule("type"));
 
-export abstract class ImageCodegen extends BaseEntity<EntityManager, string> {
+export abstract class ImageCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "i";
   static readonly metadata: EntityMetadata<Image>;

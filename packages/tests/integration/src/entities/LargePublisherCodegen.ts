@@ -29,6 +29,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   Critic,
   CriticId,
@@ -78,7 +79,7 @@ export interface LargePublisherOrder extends PublisherOrder {
 
 export const largePublisherConfig = new ConfigApi<LargePublisher, Context>();
 
-export abstract class LargePublisherCodegen extends Publisher {
+export abstract class LargePublisherCodegen extends Publisher implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<LargePublisher>;

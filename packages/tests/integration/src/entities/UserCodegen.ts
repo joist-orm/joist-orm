@@ -35,6 +35,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { IpAddress, PasswordValue } from "src/entities/types";
 import {
   AdminUser,
@@ -130,7 +131,7 @@ userConfig.addRule(newRequiredRule("bio"));
 userConfig.addRule(newRequiredRule("createdAt"));
 userConfig.addRule(newRequiredRule("updatedAt"));
 
-export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
+export abstract class UserCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = { bio: "" };
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<User>;

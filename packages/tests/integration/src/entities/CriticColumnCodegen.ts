@@ -31,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { Critic, CriticColumn, criticColumnMeta, CriticId, criticMeta, CriticOrder, newCriticColumn } from "./entities";
 import type { EntityManager } from "./entities";
 
@@ -84,7 +85,7 @@ criticColumnConfig.addRule(newRequiredRule("createdAt"));
 criticColumnConfig.addRule(newRequiredRule("updatedAt"));
 criticColumnConfig.addRule(newRequiredRule("critic"));
 
-export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, string> {
+export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "cc";
   static readonly metadata: EntityMetadata<CriticColumn>;

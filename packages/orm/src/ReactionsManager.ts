@@ -1,5 +1,5 @@
 import { Entity } from "./Entity";
-import { EntityMetadata, getAllMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { ReactiveField } from "./config";
 import { NoIdError } from "./index";
 import { followReverseHint } from "./reactiveHints";
@@ -41,7 +41,7 @@ export class ReactionsManager {
    */
   queueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveFields that configureMetadata sets up
-    const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       if (rf.fields.includes(fieldName)) {
         // We always queue the RF/entity, even if we're mid-flush or even mid-recalc, to avoid:
@@ -61,7 +61,7 @@ export class ReactionsManager {
   /** Dequeues reactivity on `fieldName`, i.e. if it's no longer dirty. */
   dequeueDownstreamReactiveFields(entity: Entity, fieldName: string): void {
     // Use the reverse index of ReactiveFields that configureMetadata sets up
-    const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       if (rf.fields.includes(fieldName)) {
         const pending = this.getPending(rf);
@@ -87,7 +87,7 @@ export class ReactionsManager {
 
   /** Queue all downstream reactive fields that depend on this entity being created or deleted. */
   queueAllDownstreamFields(entity: Entity): void {
-    const rfs = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
+    const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
       this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);

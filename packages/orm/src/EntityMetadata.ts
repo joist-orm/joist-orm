@@ -192,12 +192,12 @@ export function isCollectionField(ormField: Field): ormField is OneToManyField |
   return ormField.kind === "o2m" || ormField.kind === "m2m";
 }
 
-export function getAllMetas(meta: EntityMetadata): EntityMetadata[] {
-  return [...meta.baseTypes, meta, ...meta.subTypes];
-}
-
 export function getBaseAndSelfMetas(meta: EntityMetadata): EntityMetadata[] {
   return [...meta.baseTypes, meta];
+}
+
+export function getBaseSelfAndSubMetas(meta: EntityMetadata): EntityMetadata[] {
+  return [...meta.baseTypes, meta, ...meta.subTypes];
 }
 
 export function getBaseMeta(meta: EntityMetadata): EntityMetadata {

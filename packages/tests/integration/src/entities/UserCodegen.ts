@@ -9,6 +9,7 @@ import {
   EntityMetadata,
   EntityOrmField,
   failNoIdYet,
+  FieldsOf,
   FilterOf,
   Flavor,
   GraphQLFilterOf,
@@ -36,6 +37,7 @@ import {
 import { Context } from "src/context";
 import { IpAddress, PasswordValue } from "src/entities/types";
 import {
+  AdminUser,
   Author,
   AuthorId,
   authorMeta,
@@ -144,8 +146,13 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
   };
 
   constructor(em: EntityManager, opts: UserOpts) {
-    super(em, userMeta, UserCodegen.defaultValues, opts);
-    setOpts(this as any as User, opts, { calledFromConstructor: true });
+    if (arguments.length === 4) {
+      // @ts-ignore
+      super(em, arguments[1], { ...arguments[2], ...UserCodegen.defaultValues }, arguments[3]);
+    } else {
+      super(em, userMeta, UserCodegen.defaultValues, opts);
+      setOpts(this as any as User, opts, { calledFromConstructor: true });
+    }
   }
 
   get id(): UserId {
@@ -220,7 +227,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> {
     setOpts(this as any as User, opts as OptsOf<User>, { partial: true });
   }
 
-  get changes(): Changes<User> {
+  get changes(): Changes<User, keyof FieldsOf<User> | keyof FieldsOf<AdminUser>> {
     return newChangesProxy(this) as any;
   }
 

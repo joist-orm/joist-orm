@@ -39,7 +39,7 @@ import {
   ValidationRuleResult,
   asConcreteCstr,
   assertIdIsTagged,
-  getAllMetas,
+  getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
   getMetadata,
@@ -1522,7 +1522,7 @@ async function validateReactiveRules(
   const p1 = Object.values(todos).flatMap((todo) => {
     const entities = [...todo.inserts, ...todo.updates, ...todo.deletes];
     // Find each statically-declared reactive rule for the given entity type
-    const rules = getAllMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
+    const rules = getBaseAndSelfMetas(todo.metadata).flatMap((m) => m.config.__data.reactiveRules);
     return rules.map((rule) => {
       // Of all changed entities of this type, how many specifically trigger this rule?
       const triggered = entities.filter(
@@ -1542,7 +1542,7 @@ async function validateReactiveRules(
       .flatMap((jr) => Object.values(jr))
       .filter((e) => e instanceof BaseEntity) as any;
     // Do the first side
-    const p1 = getAllMetas(todo.m2m.meta)
+    const p1 = getBaseAndSelfMetas(todo.m2m.meta)
       .flatMap((m) => m.config.__data.reactiveRules)
       .filter((rule) => rule.fields.includes(todo.m2m.fieldName))
       .map((rule) => {
@@ -1550,7 +1550,7 @@ async function validateReactiveRules(
         return followAndQueue(triggered, rule);
       });
     // And the second side
-    const p2 = getAllMetas(todo.m2m.otherMeta)
+    const p2 = getBaseAndSelfMetas(todo.m2m.otherMeta)
       .flatMap((m) => m.config.__data.reactiveRules)
       .filter((rule) => rule.fields.includes(todo.m2m.otherFieldName))
       .map((rule) => {
@@ -1565,7 +1565,7 @@ async function validateReactiveRules(
   // Also re-validate anything that is touched
   for (const todo of Object.values(todos)) {
     // Get the dummy reactive rules that point to the owning entity itself, which are usually triggered on new
-    const rules = getAllMetas(todo.metadata)
+    const rules = getBaseAndSelfMetas(todo.metadata)
       .flatMap((m) => m.config.__data.reactiveRules)
       .filter((r) => r.path.length === 0);
     for (const entity of todo.updates) {
@@ -1600,7 +1600,7 @@ async function validateSimpleRules(todos: Record<string, Todo>): Promise<void> {
     return [...inserts, ...updates]
       .filter((e) => !e.isDeletedEntity)
       .flatMap((entity) => {
-        const rules = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.rules);
+        const rules = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.rules);
         return rules
           .filter((rule) => rule.hint === undefined)
           .flatMap(async ({ fn }) => coerceError(entity, await fn(entity)));
@@ -1630,7 +1630,7 @@ async function runHook(
     return keys
       .flatMap((k) => todo[k].filter((e) => k === "deletes" || !e.isDeletedEntity))
       .flatMap((entity) => {
-        const hookFns = getAllMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
+        const hookFns = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
         // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
         // hook blowing up doesn't orphan the others .
         return hookFns.map(async (fn) => fn(entity, ctx as any));
@@ -1701,7 +1701,7 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
   );
 
   for (const entity of entities) {
-    const derivedFields = getAllMetas(getMetadata(entity)).flatMap((m) => derivedFieldsByMeta.get(m) || []);
+    const derivedFields = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => derivedFieldsByMeta.get(m) || []);
     derivedFields.forEach((fieldName) => {
       // setField will intelligently mark/not mark the field as dirty.
       setField(entity, fieldName as any, (entity as any)[fieldName]);
@@ -1767,7 +1767,7 @@ export function isDefined<T extends any>(param: T | undefined | null): param is 
 }
 
 function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any, any>[] {
-  return getAllMetas(getMetadata(entity)).flatMap((meta) => {
+  return getBaseAndSelfMetas(getMetadata(entity)).flatMap((meta) => {
     return meta.config.__data.cascadeDeleteFields.map((fieldName) => (entity as any)[fieldName]);
   });
 }

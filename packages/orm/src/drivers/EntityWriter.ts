@@ -1,5 +1,11 @@
 import { Entity } from "../Entity";
-import { EntityMetadata, getBaseAndSelfMetas, getBaseSelfAndSubMetas, getMetadata, PrimitiveField } from "../EntityMetadata";
+import {
+  EntityMetadata,
+  getBaseAndSelfMetas,
+  getBaseSelfAndSubMetas,
+  getMetadata,
+  PrimitiveField,
+} from "../EntityMetadata";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
 import { Todo } from "../Todo";

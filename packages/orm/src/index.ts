@@ -328,7 +328,9 @@ export function configureMetadata(metas: EntityMetadata[]): void {
         if (ap?.reactiveHint) {
           // Cache the load hint so that we don't constantly re-calc it on instantiation.
           const loadHint = convertToLoadHint(meta, ap.reactiveHint);
-          getBaseAndSelfMetas(meta).forEach((m) => (m.config.__data.cachedReactiveLoadHints[field.fieldName] = loadHint));
+          getBaseAndSelfMetas(meta).forEach(
+            (m) => (m.config.__data.cachedReactiveLoadHints[field.fieldName] = loadHint),
+          );
 
           const reversals = reverseReactiveHint(meta.cstr, meta.cstr, ap.reactiveHint);
           reversals.forEach(({ entity, path, fields }) => {

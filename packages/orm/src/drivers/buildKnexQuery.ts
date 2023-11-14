@@ -86,19 +86,10 @@ export function buildKnexQuery(
 
 /** Returns a tuple of `["cond AND (cond OR cond)", bindings]`. */
 function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false): [string, any[]] | undefined {
-  const tuples = exp.conditions
-    .map((c) => {
-      if ("op" in c) {
-        return buildWhereClause(c);
-      } else {
-        return buildCondition(c);
-      }
-    })
-    .filter(isDefined);
+  const tuples = exp.conditions.map((c) => ("op" in c ? buildWhereClause(c) : buildCondition(c))).filter(isDefined);
   // If we don't have any conditions to combine, just return undefined;
-  if (tuples.length === 0) {
-    return undefined;
-  }
+  if (tuples.length === 0) return undefined;
+  // Wrap/join the sql strings together first, and then flatten the bindings.
   let sql = tuples.map(([sql]) => sql).join(` ${exp.op} `);
   if (!topLevel) sql = `(${sql})`;
   return [sql, tuples.flatMap(([, bindings]) => bindings)];

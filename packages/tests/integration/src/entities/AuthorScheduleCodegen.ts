@@ -31,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   Author,
   AuthorId,
@@ -91,7 +92,7 @@ authorScheduleConfig.addRule(newRequiredRule("createdAt"));
 authorScheduleConfig.addRule(newRequiredRule("updatedAt"));
 authorScheduleConfig.addRule(newRequiredRule("author"));
 
-export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> {
+export abstract class AuthorScheduleCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "authorSchedule";
   static readonly metadata: EntityMetadata<AuthorSchedule>;

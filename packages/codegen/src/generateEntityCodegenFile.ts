@@ -32,6 +32,7 @@ import {
   PersistedAsyncProperty,
   PersistedAsyncReference,
   PolymorphicReference,
+  ProjectEntity,
   SSAssert,
   TaggedId,
   ValueFilter,
@@ -473,7 +474,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     ${generateDefaultValidationRules(meta, configName)}
     
-    export abstract class ${entityName}Codegen extends ${base} {
+    export abstract class ${entityName}Codegen extends ${base} implements ${ProjectEntity} {
       static defaultValues: object = {
         ${defaultValues}
       };

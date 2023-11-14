@@ -24,6 +24,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   AdminUser,
   adminUserMeta,
@@ -68,7 +69,7 @@ export const adminUserConfig = new ConfigApi<AdminUser, Context>();
 
 adminUserConfig.addRule(newRequiredRule("role"));
 
-export abstract class AdminUserCodegen extends User {
+export abstract class AdminUserCodegen extends User implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "u";
   static readonly metadata: EntityMetadata<AdminUser>;

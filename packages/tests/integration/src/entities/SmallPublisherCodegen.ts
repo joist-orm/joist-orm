@@ -25,6 +25,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import {
   newSmallPublisher,
   Publisher,
@@ -73,7 +74,7 @@ export const smallPublisherConfig = new ConfigApi<SmallPublisher, Context>();
 
 smallPublisherConfig.addRule(newRequiredRule("city"));
 
-export abstract class SmallPublisherCodegen extends Publisher {
+export abstract class SmallPublisherCodegen extends Publisher implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "p";
   static readonly metadata: EntityMetadata<SmallPublisher>;

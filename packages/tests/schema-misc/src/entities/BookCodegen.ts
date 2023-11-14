@@ -31,6 +31,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
+import { Entity } from "src/entities";
 import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, newBook } from "./entities";
 import type { EntityManager } from "./entities";
 
@@ -74,7 +75,7 @@ export const bookConfig = new ConfigApi<Book, Context>();
 bookConfig.addRule(newRequiredRule("title"));
 bookConfig.addRule(newRequiredRule("author"));
 
-export abstract class BookCodegen extends BaseEntity<EntityManager, string> {
+export abstract class BookCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
   static readonly tagName = "b";
   static readonly metadata: EntityMetadata<Book>;

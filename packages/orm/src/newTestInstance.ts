@@ -17,7 +17,7 @@ import {
   OneToOneField,
   PolymorphicField,
   PrimitiveField,
-  getAllMetas,
+  getBaseAndSelfMetas,
   getAllMetasWithSubClasses,
   getMetadata,
   isManyToOneField,
@@ -545,7 +545,7 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
 function addForAllMetas(map: UseMap, e: Entity, explicit: boolean) {
   const meta = getMetadata(e);
   if (meta.baseType || meta.subTypes.length) {
-    getAllMetas(meta).forEach((m) => map.set(m.cstr, [e, explicit]));
+    getBaseAndSelfMetas(meta).forEach((m) => map.set(m.cstr, [e, explicit]));
   } else {
     map.set(meta.cstr, [e, explicit]);
   }
@@ -587,7 +587,7 @@ function getCodegenDefault(cstr: any, fieldName: string): any {
     return (m.cstr as any).defaultValues[fieldName];
   } else {
     // Look for defaults for fields in base types
-    return getAllMetas(m)
+    return getBaseAndSelfMetas(m)
       .map((m) => (m.cstr as any).defaultValues[fieldName])
       .filter((v) => v !== undefined)[0];
   }

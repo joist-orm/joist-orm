@@ -1,3 +1,10 @@
+## [1.124.2](https://github.com/stephenh/joist-ts/compare/v1.124.1...v1.124.2) (2023-11-14)
+
+
+### Bug Fixes
+
+* Implement the per-application Entity in codegen. ([#870](https://github.com/stephenh/joist-ts/issues/870)) ([b226fcf](https://github.com/stephenh/joist-ts/commit/b226fcf94b21bd6576ae225cccaccc2984527627))
+
 ## [1.124.1](https://github.com/stephenh/joist-ts/compare/v1.124.0...v1.124.1) (2023-11-14)
 
 

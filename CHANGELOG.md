@@ -1,3 +1,10 @@
+## [1.124.3](https://github.com/stephenh/joist-ts/compare/v1.124.2...v1.124.3) (2023-11-14)
+
+
+### Bug Fixes
+
+* Fix and/or precedence in where clauses. ([#871](https://github.com/stephenh/joist-ts/issues/871)) ([deea649](https://github.com/stephenh/joist-ts/commit/deea64989f0a6948bc25ac1ab2e6b233a41beeaf))
+
 ## [1.124.2](https://github.com/stephenh/joist-ts/compare/v1.124.1...v1.124.2) (2023-11-14)
 
 

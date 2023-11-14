@@ -1,3 +1,10 @@
+## [1.124.1](https://github.com/stephenh/joist-ts/compare/v1.124.0...v1.124.1) (2023-11-14)
+
+
+### Bug Fixes
+
+* Fix base classes getting rules from sub classes. ([#869](https://github.com/stephenh/joist-ts/issues/869)) ([4938bd5](https://github.com/stephenh/joist-ts/commit/4938bd5e38d3502e6853a55fc79a5c8e2a7b684c))
+
 # [1.124.0](https://github.com/stephenh/joist-ts/compare/v1.123.1...v1.124.0) (2023-11-13)
 
 

@@ -251,7 +251,9 @@ export function parseFindQuery(
                   cond: mapToDb(column, { kind: "in", value: ids }),
                 };
               });
-              inlineExpressions.push({ op: "or", conditions });
+              if (conditions.length > 0) {
+                inlineExpressions.push({ op: "or", conditions });
+              }
             } else {
               throw new Error(`Filters on polys for ${f.kind} are not supported`);
             }

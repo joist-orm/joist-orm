@@ -405,7 +405,30 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("can find by foreign key id in list that is undefined", async () => {
+  it("can find by foreign key id in empty list of polys", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertComment({ text: "comment", parent_author_id: 1 });
+
+    const em = newEntityManager();
+    const where = { text: "comment", parent: [] } satisfies CommentFilter;
+    // Make sure the `parent: []` doesn't turn into an empty `()` condition
+    const comments = await em.find(Comment, where);
+    expect(comments.length).toEqual(1);
+    expect(comments[0].text).toEqual("comment");
+
+    expect(parseFindQuery(cm, where, opts)).toEqual({
+      selects: [`c.*`],
+      tables: [{ alias: "c", table: "comments", join: "primary" }],
+      condition: {
+        op: "and",
+        // And we prune the entire parent condition
+        conditions: [{ alias: "c", column: "text", dbType: "text", cond: { kind: "eq", value: "comment" } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find by foreign key id in undefined list", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });

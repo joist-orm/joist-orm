@@ -56,7 +56,7 @@ export function buildKnexQuery(
   }
 
   if (parsed.condition) {
-    const [sql, bindings] = buildWhereClause(parsed.condition);
+    const [sql, bindings] = buildWhereClause(parsed.condition, true);
     query.whereRaw(sql, bindings);
   }
 
@@ -80,7 +80,7 @@ export function buildKnexQuery(
   return query;
 }
 
-function buildWhereClause(exp: ParsedExpressionFilter): [string, any[]] {
+function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false): [string, any[]] {
   const tuples = exp.conditions.map((c) => {
     if ("op" in c) {
       return buildWhereClause(c);
@@ -88,7 +88,9 @@ function buildWhereClause(exp: ParsedExpressionFilter): [string, any[]] {
       return buildCondition(c);
     }
   });
-  return [tuples.map(([sql]) => sql).join(` ${exp.op} `), tuples.flatMap(([, bindings]) => bindings)];
+  let sql = tuples.map(([sql]) => sql).join(` ${exp.op} `);
+  if (!topLevel) sql = `(${sql})`;
+  return [sql, tuples.flatMap(([, bindings]) => bindings)];
 }
 
 function buildCondition(cc: ColumnCondition): [string, any[]] {

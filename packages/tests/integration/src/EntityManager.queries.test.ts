@@ -51,7 +51,7 @@ import {
   newBook,
 } from "./entities";
 
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { newEntityManager, numberOfQueries, queries, resetQueryCount } from "@src/testEm";
 
 const am = getMetadata(Author);
 const bm = getMetadata(Book);
@@ -2080,6 +2080,29 @@ describe("EntityManager.queries", () => {
         },
         orderBys: [expect.anything()],
       });
+    });
+
+    it("correctly merges inline conditions with complex ors", async () => {
+      // Given two authors
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      resetQueryCount();
+      const authors = await em.find(
+        Author,
+        // And we have an inline condition that matches only 1 author
+        { as: a, firstName: { like: "a1" } },
+        // And a complex OR that would match both
+        { ...opts, conditions: { or: [a.firstName.eq("a1"), a.firstName.eq("a2")] } },
+      );
+      // Then we grouped the ors
+      expect(queries[0]).toEqual(
+        "select a.* from authors as a where a.first_name LIKE $1 and (a.first_name = $2 or a.first_name = $3) order by a.id ASC limit $4",
+      );
+      // And only returned the 1 matching author
+      expect(authors.length).toEqual(1);
     });
 
     it("can use aliases as an m2o entity filter", async () => {

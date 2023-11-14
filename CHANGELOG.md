@@ -1,3 +1,10 @@
+## [1.124.4](https://github.com/stephenh/joist-ts/compare/v1.124.3...v1.124.4) (2023-11-14)
+
+
+### Bug Fixes
+
+* Fix em.find with empty poly lists. ([#872](https://github.com/stephenh/joist-ts/issues/872)) ([c5a57eb](https://github.com/stephenh/joist-ts/commit/c5a57eb50a7b6f1712ba2be2d852b01667f5c4ee))
+
 ## [1.124.3](https://github.com/stephenh/joist-ts/compare/v1.124.2...v1.124.3) (2023-11-14)
 
 

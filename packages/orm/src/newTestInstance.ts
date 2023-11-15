@@ -373,16 +373,25 @@ export function defaultValue<T>(): T {
 }
 
 /**
- * Allows a factory to provide a default, i.e. for a field that would otherwise
- * be optional, but still have that field be override by opts & use, without
- * accidentally creating an extra entity as a side-effect.
+ * Allows a factory to declare that an optional relation should be filled in with an
+ * "obvious default", or a new entity if one doesn't exist.
+ *
+ * This "obvious default or new entity" is what Joist already does for _required_ relations,
+ * and so `maybeNew` lets the factory tell Joist to apply the same behavior to an optional
+ * field.
  *
  * I.e.:
  *
  * ```typescript
  * export function newAuthor(em: Entity, opts: FactoryOpts<Author>) {
  *   return newTestInstance(em, Author, {
- *     // publisher is not technically required, but make one
+ *     // this always make a new publisher, unless explicitly overridden by the test,
+ *     // i.e. when each author really needs "their own" publisher.
+ *     publisher: {},
+ *     // this will make a new publisher but first looks for "good defaults" in the
+ *     // test, i.e. an already-created publisher. This is the default behavior of
+ *     // required fields ("look for a good default"), and `maybeNew` lets you tell
+ *     // Joist to invoke that same "maybe new" behavior for an optional field.
  *     publisher: maybeNew<Publisher>({}),
  *     ...opts,
  *   });

@@ -7,10 +7,12 @@ import {
   insertPublisherOnly,
   insertPublisherToTag,
   insertTag,
+  insertUser,
   select,
 } from "@src/entities/inserts";
 import { zeroTo } from "@src/utils";
 import {
+  AdminUser,
   Author,
   Critic,
   LargePublisher,
@@ -18,6 +20,7 @@ import {
   PublisherGroup,
   SmallPublisher,
   Tag,
+  User,
   newAuthor,
   newLargePublisher,
   newSmallPublisher,
@@ -25,6 +28,7 @@ import {
 } from "./entities";
 
 import { newEntityManager, testDriver } from "@src/testEm";
+import { jan1 } from "joist-orm";
 
 describe("Inheritance", () => {
   it("can insert a subtype into two tables", async () => {
@@ -62,7 +66,7 @@ describe("Inheritance", () => {
   });
 
   it("can update a subtype across two tables", async () => {
-    await insertPublisher({ name: "sp1" });
+    await insertPublisher({ name: "sp1", updated_at: jan1 });
     await insertLargePublisher({ id: 2, name: "lp1" });
 
     const em = newEntityManager();
@@ -74,28 +78,40 @@ describe("Inheritance", () => {
     lp.country = "countrya";
     await em.flush();
 
-    expect(await testDriver.select("publishers")).toMatchObject([
+    const baseRows = await testDriver.select("publishers");
+    expect(baseRows).toMatchObject([
       { id: 1, name: "spa" },
       { id: 2, name: "lpa" },
     ]);
+    expect(baseRows[0].updated_at.getTime() > jan1.getTime()).toBe(true);
+    expect(baseRows[1].updated_at.getTime() > jan1.getTime()).toBe(true);
     expect(await testDriver.select("small_publishers")).toMatchObject([{ id: 1, city: "citya" }]);
     expect(await testDriver.select("large_publishers")).toMatchObject([{ id: 2, country: "countrya" }]);
   });
 
-  // We cannot test this scenario anymore b/c we made `Publisher` abstract
-  it.skip("can update just base-only instance", async () => {
-    await insertPublisherOnly({ name: "p1" });
+  it("can update just base-only instance", async () => {
+    await insertUser({ name: "u1", email: "p1@sample.com", password: "password" });
 
     const em = newEntityManager();
-    const p = await em.load(Publisher, "p:1");
-    expect(p).toBeInstanceOf(Publisher);
-    expect(p).not.toBeInstanceOf(SmallPublisher);
-    expect(p).not.toBeInstanceOf(LargePublisher);
+    const u = await em.load(User, "u:1");
+    expect(u).toBeInstanceOf(User);
+    expect(u).not.toBeInstanceOf(AdminUser);
 
-    p.name = "pa";
+    u.name = "u2";
     await em.flush();
 
-    expect(await testDriver.select("publishers")).toMatchObject([{ id: 1, name: "pa" }]);
+    const rows = await testDriver.select("users");
+    expect(rows).toMatchObject([{ id: 1, name: "u2" }]);
+  });
+
+  it("updates updated_at on the base table", async () => {
+    await insertPublisher({ name: "sp1", updated_at: jan1 });
+    const em = newEntityManager();
+    const sp = await em.load(SmallPublisher, "p:1");
+    sp.city = "citya";
+    await em.flush();
+    const baseRows = await testDriver.select("publishers");
+    expect(baseRows[0].updated_at.getTime() > jan1.getTime()).toBe(true);
   });
 
   it("runs base type validation rules against the sub type", async () => {

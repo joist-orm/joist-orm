@@ -91,6 +91,7 @@ export async function insertPublisher(row: {
   size_id?: number;
   group_id?: number;
   city?: string;
+  updated_at?: Date;
 }) {
   await testDriver.insert("publishers", row);
   await testDriver.insert("small_publishers", { id: row.id ?? 1, city: row.city ?? "city" });
@@ -106,6 +107,7 @@ export async function insertLargePublisher(row: {
   size_id?: number;
   group_id?: number;
   country?: string;
+  updated_at?: Date;
 }) {
   const { country = "country", ...others } = row;
   await testDriver.insert("publishers", others);

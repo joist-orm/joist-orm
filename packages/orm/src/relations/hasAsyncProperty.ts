@@ -3,6 +3,7 @@ import { currentlyInstantiatingEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded } from "../loadHints";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";
+import { tryResolve } from "../utils";
 
 export const AsyncPropertyT = Symbol();
 
@@ -76,7 +77,7 @@ export class AsyncPropertyImpl<T extends Entity, H extends LoadHint<T>, V> imple
         return fn(loaded);
       }));
     }
-    return Promise.resolve(this.get);
+    return tryResolve(() => this.get);
   }
 
   get loadHint(): H {

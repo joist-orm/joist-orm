@@ -3,6 +3,7 @@ import { currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
+import { tryResolve } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
@@ -98,7 +99,7 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
         return this.get;
       }));
     }
-    return Promise.resolve(this.get);
+    return tryResolve(() => this.get);
   }
 
   /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */

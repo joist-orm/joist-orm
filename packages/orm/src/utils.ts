@@ -32,6 +32,19 @@ export function getOrSet<T extends Record<keyof unknown, unknown>>(
   return record[key];
 }
 
+/**
+ * A utility to ensure a Promise-returning method actually returns a promise and doesn't
+ * early exit. Using `async function` guarantees these semantics, but sometimes we avoid
+ * `async` as a likely-premature optimization to avoid the overhead.
+ */
+export function tryResolve<T>(fn: () => T): Promise<T> {
+  try {
+    return Promise.resolve(fn());
+  } catch (e) {
+    return Promise.reject(e);
+  }
+}
+
 export function fail(message?: string): never {
   throw new Error(message || "Failed");
 }

@@ -1,6 +1,7 @@
 import { Entity } from "../Entity";
 import { currentlyInstantiatingEntity } from "../EntityManager";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
+import { tryResolve } from "../utils";
 
 const AsyncMethodM = Symbol();
 
@@ -51,7 +52,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
         return isPopulate ? undefined : fn(loaded, ...args);
       }));
     }
-    return Promise.resolve(isPopulate ? (undefined as any) : this.call(...args));
+    return tryResolve(isPopulate ? (undefined as any) : this.call(...args));
   }
 
   call(...args: A): V {

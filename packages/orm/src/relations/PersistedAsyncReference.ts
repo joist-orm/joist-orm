@@ -131,7 +131,7 @@ export class PersistedAsyncReferenceImpl<
         }
       }
     }
-    return Promise.resolve(this.doGet(opts));
+    return this.doGet(opts);
   }
 
   private doGet(opts?: { withDeleted?: boolean }): U | N {

@@ -1,3 +1,10 @@
+## [1.124.5](https://github.com/stephenh/joist-ts/compare/v1.124.4...v1.124.5) (2023-11-17)
+
+
+### Bug Fixes
+
+* Fix PersistedAsyncReferenceImpl.load not returning a promise. ([#877](https://github.com/stephenh/joist-ts/issues/877)) ([079eb58](https://github.com/stephenh/joist-ts/commit/079eb58584cfd7d01a6f41338cce8881968f7ecb))
+
 ## [1.124.4](https://github.com/stephenh/joist-ts/compare/v1.124.3...v1.124.4) (2023-11-14)
 
 

@@ -21,7 +21,7 @@ describe("PersistedAsyncProperty", () => {
     // Then calc it again, it will blow up (b/c the new b2 hasn't had its reviews loaded)
     expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not loaded");
     // Even if we try to .load it again (it's already loaded, and doesn't know to reload its dependencies)
-    expect(() => a.numberOfPublicReviews.load()).toThrow("get was called when not loaded");
+    await expect(a.numberOfPublicReviews.load()).rejects.toThrow("get was called when not loaded");
     // But if we force the load
     expect(await a.numberOfPublicReviews.load({ forceReload: true })).toBe(1);
   });

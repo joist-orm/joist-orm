@@ -1,3 +1,10 @@
+## [1.124.6](https://github.com/stephenh/joist-ts/compare/v1.124.5...v1.124.6) (2023-11-18)
+
+
+### Bug Fixes
+
+* Keep the pound symbol for assigned-but-new entities. ([#878](https://github.com/stephenh/joist-ts/issues/878)) ([558cfca](https://github.com/stephenh/joist-ts/commit/558cfca0af8af200424b91ad76d3cf752ee34dfc))
+
 ## [1.124.5](https://github.com/stephenh/joist-ts/compare/v1.124.4...v1.124.5) (2023-11-17)
 
 

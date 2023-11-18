@@ -40,7 +40,6 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Entity } from "src/entities";
 import { Address, address, AddressSchema, Quotes, quotes } from "src/entities/types";
 import { assert } from "superstruct";
 import { z } from "zod";
@@ -60,6 +59,8 @@ import {
   Comment,
   CommentId,
   commentMeta,
+  Entity,
+  EntityManager,
   FavoriteShape,
   Image,
   ImageId,
@@ -76,7 +77,6 @@ import {
   UserId,
   userMeta,
 } from "./entities";
-import type { EntityManager } from "./entities";
 
 export type AuthorId = Flavor<string, Author>;
 

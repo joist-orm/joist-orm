@@ -25,8 +25,9 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Entity } from "src/entities";
 import {
+  Entity,
+  EntityManager,
   newSmallPublisher,
   Publisher,
   PublisherFields,
@@ -38,7 +39,6 @@ import {
   SmallPublisher,
   smallPublisherMeta,
 } from "./entities";
-import type { EntityManager } from "./entities";
 
 export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
 

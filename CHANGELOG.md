@@ -1,3 +1,10 @@
+## [1.124.9](https://github.com/stephenh/joist-ts/compare/v1.124.8...v1.124.9) (2023-11-18)
+
+
+### Bug Fixes
+
+* Fix post-flush toString of created-then-deleted entities. ([#882](https://github.com/stephenh/joist-ts/issues/882)) ([f98e3bc](https://github.com/stephenh/joist-ts/commit/f98e3bcdb15bca4737c0926b97b9293d3eb8499a))
+
 ## [1.124.8](https://github.com/stephenh/joist-ts/compare/v1.124.7...v1.124.8) (2023-11-18)
 
 

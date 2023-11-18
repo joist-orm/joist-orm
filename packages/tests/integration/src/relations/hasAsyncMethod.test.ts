@@ -1,7 +1,7 @@
 import { Author, newAuthor } from "@src/entities";
 import { insertAuthor, insertBook } from "@src/entities/inserts";
 
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("hasAsyncMethod", () => {
   it("can be accessed via a promise", async () => {
@@ -14,6 +14,12 @@ describe("hasAsyncMethod", () => {
     const books = await a1.booksWithTitle.load("programming");
     // Then we get back the expected value
     expect(books).toMatchEntity([{ title: "programming in action" }]);
+    // And it call it again via load
+    resetQueryCount();
+    const book2 = await a1.booksWithTitle.load("programming");
+    expect(books).toMatchEntity([{ title: "programming in action" }]);
+    // Then it didn't reload
+    expect(numberOfQueries).toBe(0);
   });
 
   it("cannot be accessed via a call when unloaded", async () => {

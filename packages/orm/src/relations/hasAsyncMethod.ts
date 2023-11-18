@@ -52,7 +52,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
         return isPopulate ? undefined : fn(loaded, ...args);
       }));
     }
-    return tryResolve(isPopulate ? (undefined as any) : this.call(...args));
+    return isPopulate ? (undefined as any) : tryResolve(() => this.call(...args));
   }
 
   call(...args: A): V {

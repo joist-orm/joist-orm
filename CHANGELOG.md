@@ -1,3 +1,10 @@
+## [1.124.8](https://github.com/stephenh/joist-ts/compare/v1.124.7...v1.124.8) (2023-11-18)
+
+
+### Bug Fixes
+
+* Fix imports for differnet entityDirectories. ([#881](https://github.com/stephenh/joist-ts/issues/881)) ([15a5247](https://github.com/stephenh/joist-ts/commit/15a52471570cb9adb9b84bd6cb7add7b64ee4c2a)), closes [#880](https://github.com/stephenh/joist-ts/issues/880)
+
 ## [1.124.7](https://github.com/stephenh/joist-ts/compare/v1.124.6...v1.124.7) (2023-11-18)
 
 

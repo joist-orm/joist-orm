@@ -12,6 +12,7 @@ import {
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
+  EntityManager,
   EntityMetadata,
   EntityOrmField,
   FieldsOf,
@@ -345,7 +346,6 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
   const contextType = config.contextType ? imp(config.contextType) : "{}";
   const factoryMethod = imp(`new${entity.name}@./entities`);
-  const EntityManager = imp("t:EntityManager@./entities");
 
   // If we're not tagged-strings, detag on the way out of id
   const idMaybeCode =

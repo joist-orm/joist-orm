@@ -35,7 +35,6 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Entity } from "src/entities";
 import {
   Book,
   BookId,
@@ -46,9 +45,10 @@ import {
   Comment,
   CommentId,
   commentMeta,
+  Entity,
+  EntityManager,
   newBookReview,
 } from "./entities";
-import type { EntityManager } from "./entities";
 
 export type BookReviewId = Flavor<string, BookReview>;
 

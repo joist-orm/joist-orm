@@ -25,9 +25,7 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Entity } from "src/entities";
-import { AuthorStat, authorStatMeta, newAuthorStat } from "./entities";
-import type { EntityManager } from "./entities";
+import { AuthorStat, authorStatMeta, Entity, EntityManager, newAuthorStat } from "./entities";
 
 export type AuthorStatId = Flavor<string, AuthorStat>;
 

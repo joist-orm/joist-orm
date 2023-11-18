@@ -24,10 +24,11 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Entity } from "src/entities";
 import {
   AdminUser,
   adminUserMeta,
+  Entity,
+  EntityManager,
   newAdminUser,
   User,
   UserFields,
@@ -37,7 +38,6 @@ import {
   UserOpts,
   UserOrder,
 } from "./entities";
-import type { EntityManager } from "./entities";
 
 export type AdminUserId = Flavor<string, AdminUser> & Flavor<string, "User">;
 

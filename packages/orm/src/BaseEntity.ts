@@ -96,7 +96,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
     const meta = getMetadata(this);
     // Even if we've been `em.assignNewIds`-d before an `em.flush`, also have new entities
     // return the `Author#1` syntax because it's really helpful for debugging to see what's new.
-    if (this.isNewEntity) {
+    if (this.isNewEntity || this.idMaybe === undefined) {
       const sameType = this.em.entities.filter((e) => e instanceof meta.cstr);
       // Returns `Author#1` as a hint that it's a test id and not the real id
       return `${meta.type}#${sameType.indexOf(this) + 1}`;

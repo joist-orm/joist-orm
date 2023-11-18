@@ -13,6 +13,15 @@ describe("Entity", () => {
     expect(a.toString()).toBe("Author:1");
   });
 
+  it("can toString a new-then-deleted entity", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    em.delete(a);
+    expect(a.toString()).toBe("Author#1");
+    await em.flush();
+    expect(a.toString()).toBe("Author#1");
+  });
+
   it("can toJSON a new entity", () => {
     const em = newEntityManager();
     const a = newAuthor(em);

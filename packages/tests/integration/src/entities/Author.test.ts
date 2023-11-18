@@ -53,7 +53,7 @@ describe("Author", () => {
     const em = newEntityManager();
     new Author(em, { firstName: "NotAllowedLastName", lastName: "NotAllowedLastName" });
     await expect(em.flush()).rejects.toThrow(
-      "Validation errors (2): Author:1 firstName and lastName must be different, lastName is invalid",
+      "Validation errors (2): Author#1 firstName and lastName must be different, lastName is invalid",
     );
   });
 
@@ -62,7 +62,7 @@ describe("Author", () => {
     const a1 = new Author(em, { firstName: "a1" });
     new Book(em, { title: "a1", author: a1 });
     await expect(em.flush()).rejects.toThrow(
-      "Validation error: Author:1 A book title cannot be the author's firstName",
+      "Validation error: Author#1 A book title cannot be the author's firstName",
     );
   });
 
@@ -459,7 +459,7 @@ describe("Author", () => {
   it("gets not-null validation rules for free", async () => {
     const em = newEntityManager();
     em.createPartial(Author, {});
-    await expect(em.flush()).rejects.toThrow("Validation error: Author:1 firstName is required");
+    await expect(em.flush()).rejects.toThrow("Validation error: Author#1 firstName is required");
   });
 
   it("has an index on the publisher_id foreign key", async () => {

@@ -94,15 +94,17 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
 
   toString(): string {
     const meta = getMetadata(this);
-    if (this.idMaybe) {
+    // Even if we've been `em.assignNewIds`-d before an `em.flush`, also have new entities
+    // return the `Author#1` syntax because it's really helpful for debugging to see what's new.
+    if (this.isNewEntity) {
+      const sameType = this.em.entities.filter((e) => e instanceof meta.cstr);
+      // Returns `Author#1` as a hint that it's a test id and not the real id
+      return `${meta.type}#${sameType.indexOf(this) + 1}`;
+    } else {
       // Strip the tag because we add back the entity prefix
       const id = keyToNumber(meta, this.id) || "new";
       // Returns `Author:1` instead of `author:1` to differentiate the instance's toString from the tagged id itself
       return `${meta.type}:${id}`;
-    } else {
-      const sameType = this.em.entities.filter((e) => e instanceof meta.cstr);
-      // Returns `Author#1` as a hint that it's a test id and not the real id
-      return `${meta.type}#${sameType.indexOf(this) + 1}`;
     }
   }
 

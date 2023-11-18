@@ -74,6 +74,7 @@ function getTestId(em: EntityManager, entity: Entity): string {
  * that are returned from GraphQL object resolvers.
  */
 export type MatchedEntity<T> =
+  | undefined
   | T
   | {
       [K in keyof T]?: T[K] extends Reference<any, infer U, any>

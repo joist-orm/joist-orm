@@ -28,6 +28,13 @@ describe("toMatchEntity", () => {
     expect(b1).toMatchEntity(b1);
   });
 
+  it("can match entity that is undefined", async () => {
+    const em = newEntityManager();
+    const b1 = newBook(em, {}) as Book;
+    const b2 = b1 as Book | undefined;
+    expect(b1).toMatchEntity(b2);
+  });
+
   it("can match loaded references", async () => {
     const em = newEntityManager();
     const a1 = newAuthor(em, {});

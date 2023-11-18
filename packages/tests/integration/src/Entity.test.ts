@@ -1,9 +1,18 @@
 import { Author, newAuthor, newBook } from "@src/entities";
 import { insertAuthor } from "@src/entities/inserts";
-
 import { newEntityManager } from "@src/testEm";
 
 describe("Entity", () => {
+  it("has a toString", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    expect(a.toString()).toBe("Author#1");
+    await em.assignNewIds();
+    expect(a.toString()).toBe("Author#1");
+    await em.flush();
+    expect(a.toString()).toBe("Author:1");
+  });
+
   it("can toJSON a new entity", () => {
     const em = newEntityManager();
     const a = newAuthor(em);

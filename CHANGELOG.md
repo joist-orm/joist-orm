@@ -1,3 +1,10 @@
+## [1.124.7](https://github.com/stephenh/joist-ts/compare/v1.124.6...v1.124.7) (2023-11-18)
+
+
+### Bug Fixes
+
+* Fix async methods that have load called twice. ([#879](https://github.com/stephenh/joist-ts/issues/879)) ([190e61d](https://github.com/stephenh/joist-ts/commit/190e61d41ff20bde76f0efe02c1bcfe04cc37d35))
+
 ## [1.124.6](https://github.com/stephenh/joist-ts/compare/v1.124.5...v1.124.6) (2023-11-18)
 
 

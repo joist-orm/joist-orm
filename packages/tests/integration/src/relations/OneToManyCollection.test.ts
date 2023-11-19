@@ -150,7 +150,6 @@ describe("OneToManyCollection", () => {
     expect(books[1].idMaybe).toEqual(undefined);
   });
 
-  // Skipped due to the first/naive implementation causing performance issues
   it("combines both pre-added and persisted entities when not in memory yet", async () => {
     // Given an author with one book
     await insertAuthor({ first_name: "a1" });
@@ -212,6 +211,28 @@ describe("OneToManyCollection", () => {
 
     // Then when we later load the author's books, it is empty
     expect((await a1.books.load()).length).toEqual(0);
+  });
+
+  it("ignores added-then-deleted entities when not in memory yet", async () => {
+    // Given an author with two books
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    const em = newEntityManager();
+    // When we create a 3rd book
+    const b3 = em.createPartial(Book, { author: "a:1" });
+    // But then delete it
+    em.delete(b3);
+    // When we later do load the Author
+    const a1 = await em.load(Author, "a:1", "books");
+    // Then a1.books only has both books
+    expect(a1.books.get.length).toBe(2);
+    expect(a1).toMatchEntity({ books: [{ title: "b1" }, { title: "b2" }] });
+    // And getWithDeleted has all three
+    expect(a1.books.getWithDeleted.length).toBe(3);
+    // And after we flush, the book will correctly complain when being used
+    await em.flush();
+    await expect(b3.author.load()).rejects.toThrow("marked as deleted");
   });
 
   it("removes deleted entities from other collections", async () => {

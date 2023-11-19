@@ -115,9 +115,19 @@ export class PostgresDriver implements Driver {
         await batchInsert(knex, insert);
       }
     }
+
     for (const update of ops.updates) {
-      await batchUpdate(knex, update);
+      const parameterTotal = update.columns.length * update.rows.length;
+      if (parameterTotal > parameterLimit) {
+        const batchSize = Math.floor(parameterLimit / update.columns.length);
+        await Promise.all(
+          batched(update.rows, batchSize).map((batch) => batchUpdate(knex, { ...update, rows: batch })),
+        );
+      } else {
+        await batchUpdate(knex, update);
+      }
     }
+
     for (const del of ops.deletes) {
       await batchDelete(knex, del);
     }

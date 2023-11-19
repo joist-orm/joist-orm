@@ -1,3 +1,10 @@
+## [1.124.10](https://github.com/stephenh/joist-ts/compare/v1.124.9...v1.124.10) (2023-11-19)
+
+
+### Bug Fixes
+
+* Don't populate relations if there are args. ([#883](https://github.com/stephenh/joist-ts/issues/883)) ([a595edb](https://github.com/stephenh/joist-ts/commit/a595edb189cc43866fb5a2e1f05efa150eb27230))
+
 ## [1.124.9](https://github.com/stephenh/joist-ts/compare/v1.124.8...v1.124.9) (2023-11-18)
 
 

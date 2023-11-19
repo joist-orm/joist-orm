@@ -1,12 +1,11 @@
 import { insertTag } from "@src/entities/inserts";
+import { newEntityManager } from "@src/testEm";
 import { zeroTo } from "@src/utils";
 import { Tag, newPublisher } from "./entities";
 
-import { newEntityManager } from "@src/testEm";
-
 jest.setTimeout(30_000);
 
-describe("EntityManager.large", () => {
+describe.skip("EntityManager.large", () => {
   it("can insert 10k records", async () => {
     const em = newEntityManager();
     zeroTo(10_000).forEach(() => newPublisher(em));

@@ -9,6 +9,7 @@ import {
   OneToManyField,
   OrderBy,
   ensureNotDeleted,
+  getBaseAndSelfMetas,
   getEmInternalApi,
   getMetadata,
   maybeResolveReferenceToId,
@@ -296,7 +297,9 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   private get isCascadeDelete(): boolean {
-    return getMetadata(this.entity).config.__data.cascadeDeleteFields.includes(this.#fieldName as any);
+    return getBaseAndSelfMetas(getMetadata(this.entity)).some((meta) =>
+      meta.config.__data.cascadeDeleteFields.includes(this.#fieldName as any),
+    );
   }
 
   private getPreloaded(): U[] | undefined {

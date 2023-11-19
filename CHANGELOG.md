@@ -1,3 +1,10 @@
+# [1.125.0](https://github.com/stephenh/joist-ts/compare/v1.124.10...v1.125.0) (2023-11-19)
+
+
+### Features
+
+* Allow validation rules to return string arrays ([#885](https://github.com/stephenh/joist-ts/issues/885)) ([abfdc6f](https://github.com/stephenh/joist-ts/commit/abfdc6fa6379f9381b18d15d79d139f3e3301e4d))
+
 ## [1.124.10](https://github.com/stephenh/joist-ts/compare/v1.124.9...v1.124.10) (2023-11-19)
 
 

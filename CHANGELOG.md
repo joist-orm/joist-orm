@@ -1,3 +1,10 @@
+## [1.126.1](https://github.com/stephenh/joist-ts/compare/v1.126.0...v1.126.1) (2023-11-19)
+
+
+### Bug Fixes
+
+* Fix cascade deletes declared in base classes. ([#887](https://github.com/stephenh/joist-ts/issues/887)) ([fc31a71](https://github.com/stephenh/joist-ts/commit/fc31a7111d9c3e7a3d107c14970923b5b6b21fd8))
+
 # [1.126.0](https://github.com/stephenh/joist-ts/compare/v1.125.0...v1.126.0) (2023-11-19)
 
 

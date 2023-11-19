@@ -258,6 +258,13 @@ config.addRule((a) => {
   }
 });
 
+// Example of returning multiple validation errors as string[]
+config.addRule((a) => {
+  if (a.firstName === "very bad") {
+    return ["First Name is invalid one", "First Name is invalid two"];
+  }
+});
+
 // Example of reactive rule being fired on Book change
 config.addRule({ books: ["title"], firstName: {} }, async (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {

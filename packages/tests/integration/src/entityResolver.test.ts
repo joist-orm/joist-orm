@@ -63,6 +63,34 @@ describe("entityResolver", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("m2o does not call populate if there are arguments", async () => {
+    const schema = await loadSchema("./schema/**/*.graphql", { loaders: [new GraphQLFileLoader()] });
+
+    // Given an author with a publisher
+    await insertPublisher({ name: "p1" });
+    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    const em = newEntityManager();
+    // When we access it via the entity resolver
+    const a = await em.load(Author, "a:1");
+    // And we want the next level of images
+    const info = {
+      returnType: schema.getType("Publisher"),
+      fieldNodes: [
+        {
+          // And there are also some custom arguments like filtering
+          arguments: [{ name: { value: "filter" }, value: { kind: "StringValue", value: "p1" } }],
+          selectionSet: {
+            selections: [{ kind: "Field", name: { value: "images" }, selectionSet: { selections: [] } }],
+          },
+        },
+      ],
+    } as any;
+    const spy = jest.spyOn(em, "populate");
+    const p = await entityResolver(Author).publisher(a, {}, {}, info);
+    // Then we didn't need to call populate
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it("derived m2o calls populate if selection set", async () => {
     const em = newEntityManager();
     const schema = await loadSchema("./schema/**/*.graphql", { loaders: [new GraphQLFileLoader()] });

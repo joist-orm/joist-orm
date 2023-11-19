@@ -18,8 +18,9 @@ export function convertInfoToLoadHint<T extends Entity>(
   // Author.books fieldResolver ==> objectType = Book, or
   // query.authors fieldResolver ==> objectType = Author
   const objectType = convertToObjectType(info.returnType);
-  const selectionSet = info.fieldNodes[0].selectionSet;
-  if (objectType && selectionSet) {
+  const { selectionSet, arguments: args } = info.fieldNodes[0];
+  const hasArgs = !!args && args.length > 0;
+  if (objectType && selectionSet && !hasArgs) {
     const hint = selectionSetToObject(info, meta, objectType, selectionSet);
     // Don't return an empty hint
     return Object.keys(hint).length === 0 ? undefined : hint;

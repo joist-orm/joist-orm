@@ -63,3 +63,6 @@ config.addRule({ authors: "numberOfBooks" }, (p) => {
     return "A publisher cannot have 15 books";
   }
 });
+
+// Example of an abstract/base CTI cascade deleting
+config.cascadeDelete("bookAdvances");

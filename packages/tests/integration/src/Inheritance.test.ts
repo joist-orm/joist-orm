@@ -22,7 +22,9 @@ import {
   Tag,
   User,
   newAuthor,
+  newBook,
   newLargePublisher,
+  newPublisher,
   newSmallPublisher,
   newUser,
 } from "./entities";
@@ -365,5 +367,20 @@ describe("Inheritance", () => {
     zeroTo(6).forEach(() => newAuthor(em, { publisher: lg }));
     // Then the rule isn't ran
     await expect(em.flush()).resolves.toBeDefined();
+  });
+
+  it("can cascade delete relations that are on the base type", async () => {
+    const em = newEntityManager();
+    // Given a large publisher
+    const p = newPublisher(em);
+    expect(p).toBeInstanceOf(LargePublisher);
+    // And a book with a BookAdvance from the sp
+    const b = newBook(em, { advances: [{ publisher: p }] });
+    await em.flush();
+    // When we delete the sp
+    em.delete(p);
+    await em.flush();
+    // Then the book was not deleted
+    expect(b.isDeletedEntity).toBe(false);
   });
 });

@@ -265,6 +265,14 @@ config.addRule((a) => {
   }
 });
 
+// Example of returning multiple validation errors as { message: string }[]
+// Nov 2023: I don't remember why/if we're using this format vs. just raw string[]s
+config.addRule((a) => {
+  if (a.firstName === "very bad message") {
+    return [{ message: "First Name is invalid one" }, { message: "First Name is invalid two" }];
+  }
+});
+
 // Example of reactive rule being fired on Book change
 config.addRule({ books: ["title"], firstName: {} }, async (a) => {
   if (a.books.get.length > 0 && a.books.get.find((b) => b.title === a.firstName)) {

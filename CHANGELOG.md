@@ -1,3 +1,10 @@
+# [1.126.0](https://github.com/stephenh/joist-ts/compare/v1.125.0...v1.126.0) (2023-11-19)
+
+
+### Features
+
+* Batch updates. ([#886](https://github.com/stephenh/joist-ts/issues/886)) ([e07d897](https://github.com/stephenh/joist-ts/commit/e07d8973ccde8dc7fe7fe39d131c2829426676f6)), closes [#415](https://github.com/stephenh/joist-ts/issues/415)
+
 # [1.125.0](https://github.com/stephenh/joist-ts/compare/v1.124.10...v1.125.0) (2023-11-19)
 
 

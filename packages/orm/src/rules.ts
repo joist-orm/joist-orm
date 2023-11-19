@@ -8,7 +8,7 @@ import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
  *
  * Consumers can extend `GenericError` to add fields relevant for their application.
  */
-export type ValidationRuleResult<E extends GenericError> = string | E | E[] | undefined;
+export type ValidationRuleResult<E extends GenericError> = string | string[] | E | E[] | undefined;
 
 /** An entity validation rule. */
 export type ValidationRule<T extends Entity> = (entity: T) => MaybePromise<ValidationRuleResult<any>>;

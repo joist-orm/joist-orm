@@ -1678,6 +1678,22 @@ describe("EntityManager", () => {
       em.touch(entity);
     }
   });
+
+  it("supports rules that return string arrays", async () => {
+    const em = newEntityManager();
+    // Given an author with a very bad first name
+    newAuthor(em, { firstName: "very bad" });
+    // Then we see both error messages
+    await expect(em.flush()).rejects.toThrow("Author#1 First Name is invalid one, First Name is invalid two");
+  });
+
+  it("supports rules that return error literals", async () => {
+    const em = newEntityManager();
+    // Given an author with a very bad first name
+    newAuthor(em, { firstName: "very bad message" });
+    // Then we see both error messages
+    await expect(em.flush()).rejects.toThrow("Author#1 First Name is invalid one, First Name is invalid two");
+  });
 });
 
 function delay(ms: number): Promise<void> {

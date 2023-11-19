@@ -25,7 +25,6 @@ import {
   EntityMetadata,
   ExpressionFilter,
   FilterWithAlias,
-  GenericError,
   GraphQLFilterWithAlias,
   Lens,
   ManyToManyCollection,
@@ -1678,7 +1677,13 @@ function coerceError(entity: Entity, maybeError: ValidationRuleResult<any>): Val
   } else if (typeof maybeError === "string") {
     return [{ entity, message: maybeError }];
   } else if (Array.isArray(maybeError)) {
-    return (maybeError as GenericError[]).map((ve) => ({ entity, ...ve }));
+    return maybeError.map((e) => {
+      if (typeof e === "string") {
+        return { entity, message: e };
+      } else {
+        return { entity, ...e };
+      }
+    });
   } else {
     return [{ entity, ...maybeError }];
   }

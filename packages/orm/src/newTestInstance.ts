@@ -64,7 +64,7 @@ export function newTestInstance<T extends Entity>(
   testOpts: FactoryOpts<T> = {},
   /** The factory file's default opts. */
   factoryOpts: FactoryOpts<T> & {
-    useSingleton?: (opts: OptsOf<T>, existing: T) => boolean;
+    useSingleton?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
   } = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
@@ -169,7 +169,7 @@ export function newTestInstance<T extends Entity>(
   if (factoryOpts.useSingleton) {
     const existing = em.entities
       .filter((e) => e instanceof meta.cstr)
-      .find((e) => factoryOpts.useSingleton!(createOpts as OptsOf<T>, e as T));
+      .find((e) => factoryOpts.useSingleton!(createOpts as OptsOf<T>, e as DeepNew<T>));
     if (existing) {
       return existing as DeepNew<T>;
     }

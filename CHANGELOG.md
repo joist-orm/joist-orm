@@ -1,3 +1,10 @@
+# [1.127.0](https://github.com/stephenh/joist-ts/compare/v1.126.1...v1.127.0) (2023-11-20)
+
+
+### Features
+
+* Add useSingleton for factories ([#889](https://github.com/stephenh/joist-ts/issues/889)) ([5eef52c](https://github.com/stephenh/joist-ts/commit/5eef52c90a98f5e80da147fbcae12e6b5b40c88d))
+
 ## [1.126.1](https://github.com/stephenh/joist-ts/compare/v1.126.0...v1.126.1) (2023-11-19)
 
 

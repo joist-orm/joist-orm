@@ -22,9 +22,8 @@ import {
   PublisherType,
   SmallPublisher,
 } from "@src/entities";
-import { maybeNew, maybeNewPoly, newTestInstance, testIndex } from "joist-orm";
-
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
+import { maybeNew, maybeNewPoly, newTestInstance, testIndex } from "joist-orm";
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
@@ -346,6 +345,21 @@ describe("EntityManager.factories", () => {
     const em = newEntityManager();
     newBook(em, { tags: [{}, {}] });
     await em.flush();
+  });
+
+  it("can create a singleton", async () => {
+    const em = newEntityManager();
+    // Given we have an existing author
+    const a1 = newTestInstance(em, Author, {}, {});
+    // And a factory wants to dedup authors on firstName
+    const a2 = newTestInstance(
+      em,
+      Author,
+      {},
+      { useSingleton: (opts, existing) => opts.firstName === existing.firstName },
+    );
+    // Then we got back the same author
+    expect(a2).toMatchEntity(a1);
   });
 
   describe("maybeNew", () => {

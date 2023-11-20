@@ -49,14 +49,23 @@ export const jan2 = new Date(2018, 0, 2);
 export const jan3 = new Date(2018, 0, 3);
 export let testDate = jan1;
 
-/** Creates a test instance of `T`. */
+/**
+ * Creates a test instance of `T`.
+ *
+ * If the factory code passes factoryOpts.useSingleton, they can "intercept" the `em.create`
+ * to try and resolve "already created" / singleton instances. The `useSingleton` callback is
+ * useful b/c the `opts` will be the "resolved-to-entity" opts, and not the raw "maybe object
+ * literal, maybe object instance" opts that tests pass into the factory.
+ */
 export function newTestInstance<T extends Entity>(
   em: EntityManager,
   cstr: EntityConstructor<T>,
   /** The test's test-specific override opts. */
   testOpts: FactoryOpts<T> = {},
   /** The factory file's default opts. */
-  factoryOpts: FactoryOpts<T> = {},
+  factoryOpts: FactoryOpts<T> & {
+    useSingleton?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
+  } = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
   const opts = mergeOpts(testOpts, factoryOpts);
@@ -155,7 +164,18 @@ export function newTestInstance<T extends Entity>(
     })
     .filter((t) => t.length > 0);
 
-  const entity = em.create(cstr, Object.fromEntries(initialOpts)) as New<T>;
+  const createOpts = Object.fromEntries(initialOpts);
+
+  if (factoryOpts.useSingleton) {
+    const existing = em.entities
+      .filter((e) => e instanceof meta.cstr)
+      .find((e) => factoryOpts.useSingleton!(createOpts as OptsOf<T>, e as DeepNew<T>));
+    if (existing) {
+      return existing as DeepNew<T>;
+    }
+  }
+
+  const entity = em.create(cstr, createOpts) as New<T>;
 
   // If the type we just made doesn't exist in `use` yet, remember it. This works better than
   // looking at the values in `fullOpts`, because instead of waiting until the end of the
@@ -568,6 +588,8 @@ function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, an
   }
   const opts: any = { ...testOpts };
   Object.entries(factoryOpts).forEach(([key, factoryValue]) => {
+    // Skip special opts
+    if (key === "useSingleton") return;
     const testValue = testOpts[key];
     if (testOpts[key] === undefined) {
       // If the test doesn't define an opt, we have nothing to merge...unless

@@ -1,3 +1,10 @@
+## [1.128.2](https://github.com/stephenh/joist-ts/compare/v1.128.1...v1.128.2) (2023-11-21)
+
+
+### Bug Fixes
+
+* Fix findOrCreate with citext not caching correctly. ([#892](https://github.com/stephenh/joist-ts/issues/892)) ([9a08386](https://github.com/stephenh/joist-ts/commit/9a08386e98fba6ecd5fc55e9b460252e33397b4d))
+
 ## [1.128.1](https://github.com/stephenh/joist-ts/compare/v1.128.0...v1.128.1) (2023-11-21)
 
 

@@ -24,11 +24,11 @@ export function findOrCreateDataLoader<T extends Entity>(
   const cacheKeyFn: (key: Key<T>) => Key<T> = !hasAnyCitext
     ? whereFilterHash
     : (key) =>
-        ({
+        whereFilterHash({
           where: maybeLower(meta, key.where),
           ifNew: maybeLower(meta, key.ifNew as any),
           upsert: maybeLower(meta, key.upsert),
-        }) as Key<T>;
+        } as any) as Key<T>;
 
   // Use `whereFilterHash` to batch the same `findOrCreate` `where: { firstName: "a1" }` calls together
   // to avoid creating duplicates. Also use `whereFilterHash` b/c if a new entity is included in `where`,

@@ -85,6 +85,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       : isArray
       ? code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}[]", true)`
       : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
+    const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`
       {
         kind: "primitive",
@@ -96,6 +97,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         type: ${typeof p.rawFieldType === "string" ? `"${p.rawFieldType}"` : p.rawFieldType},
         serde: ${serdeType},
         immutable: false,
+        ${extras}
       }`;
   });
 

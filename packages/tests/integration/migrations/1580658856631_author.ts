@@ -12,6 +12,8 @@ import {
 import { MigrationBuilder } from "node-pg-migrate";
 
 export function up(b: MigrationBuilder): void {
+  b.sql(`CREATE EXTENSION IF NOT EXISTS citext;`)
+
   createUpdatedAtFunction(b);
   createCreatedAtFunction(b);
 
@@ -31,7 +33,8 @@ export function up(b: MigrationBuilder): void {
   // - Tag.authors is a large m2m
   // - Tag.publishers is a table-per-class m2m
   createEntityTable(b, "tags", {
-    name: { type: "varchar(255)", notNull: true },
+    // Used for testing `em.findOrCreate` on citext columns
+    name: { type: "citext", notNull: true },
   });
 
   // Used for PublisherGroup.publishers to test table-per-class o2ms

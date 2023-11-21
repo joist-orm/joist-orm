@@ -1,3 +1,10 @@
+# [1.128.0](https://github.com/stephenh/joist-ts/compare/v1.127.0...v1.128.0) (2023-11-21)
+
+
+### Features
+
+* Add citext support to findOrCreate. ([#890](https://github.com/stephenh/joist-ts/issues/890)) ([550a1ad](https://github.com/stephenh/joist-ts/commit/550a1ad3385f6cc3f0c14b41672d241247e2b402))
+
 # [1.127.0](https://github.com/stephenh/joist-ts/compare/v1.126.1...v1.127.0) (2023-11-20)
 
 

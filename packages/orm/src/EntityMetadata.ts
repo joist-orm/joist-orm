@@ -78,6 +78,7 @@ export type PrimitiveField = {
   type: string | Function;
   serde: FieldSerde;
   immutable: boolean;
+  citext?: boolean;
 };
 
 export type EnumField = {

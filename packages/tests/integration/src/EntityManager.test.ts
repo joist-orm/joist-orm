@@ -32,10 +32,12 @@ import {
   Publisher,
   PublisherSize,
   PublisherType,
+  Tag,
   newAuthor,
   newBook,
   newBookReview,
   newPublisher,
+  newTag,
 } from "./entities";
 import { maybeBeginAndCommit } from "./setupDbTests";
 
@@ -903,6 +905,44 @@ describe("EntityManager", () => {
     ]);
     expect(a1).toEqual(a);
     expect(a2).toEqual(a);
+  });
+
+  it("can find existing with findOrCreate in a loop with citext", async () => {
+    await insertTag({ name: "t1" });
+    const em = newEntityManager();
+    resetQueryCount();
+    const [t1, t2] = await Promise.all([
+      em.findOrCreate(Tag, { name: "t1" }, {}),
+      em.findOrCreate(Tag, { name: "T1" }, {}),
+    ]);
+    expect(numberOfQueries).toBe(1);
+    expect(t1).toMatchEntity(t2);
+    expect(t1.isNewEntity).toBe(false);
+  });
+
+  it("can find new with findOrCreate in a loop with citext", async () => {
+    const em = newEntityManager();
+    const t = newTag(em, { name: "t1" });
+    resetQueryCount();
+    const [t1, t2] = await Promise.all([
+      em.findOrCreate(Tag, { name: "t1" }, {}),
+      em.findOrCreate(Tag, { name: "T1" }, {}),
+    ]);
+    expect(numberOfQueries).toBe(0);
+    expect(t1).toMatchEntity(t);
+    expect(t2).toMatchEntity(t1);
+  });
+
+  it("can create with findOrCreate in a loop with citext", async () => {
+    const em = newEntityManager();
+    resetQueryCount();
+    const [t1, t2] = await Promise.all([
+      em.findOrCreate(Tag, { name: "t1" }, {}),
+      em.findOrCreate(Tag, { name: "T1" }, {}),
+    ]);
+    expect(numberOfQueries).toBe(1);
+    expect(t1).toMatchEntity(t2);
+    expect(t1.isNewEntity).toBe(true);
   });
 
   it("can find already new entity by FK with findOrCreate in a loop", async () => {

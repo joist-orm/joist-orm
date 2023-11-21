@@ -1863,7 +1863,7 @@ describe("EntityManager.queries", () => {
       ],
       condition: {
         op: "and",
-        conditions: [{ alias: "t", column: "name", dbType: "character varying", cond: { kind: "eq", value: "t1" } }],
+        conditions: [{ alias: "t", column: "name", dbType: "citext", cond: { kind: "eq", value: "t1" } }],
       },
       orderBys: [expect.anything()],
     });

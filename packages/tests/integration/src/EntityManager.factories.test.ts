@@ -12,12 +12,16 @@ import {
   newBook,
   newBookAdvance,
   newBookReview,
+  newChild,
+  newChildGroup,
   newCritic,
   newCriticColumn,
   newImage,
   newLargePublisher,
+  newParentGroup,
   newPublisher,
   newSmallPublisher,
+  parentGroupValue,
   Publisher,
   PublisherType,
   SmallPublisher,
@@ -634,5 +638,108 @@ describe("EntityManager.factories", () => {
     const [b1, b2] = [newBook(em), newBook(em)];
     expect(b1.order).toBe(1);
     expect(b2.order).toBe(2);
+  });
+
+  describe("multi-path schemas", () => {
+    it("can hook up parent items when creating parentGroup from child group", async () => {
+      const em = newEntityManager();
+      // Given an existing pg to turn off the "pick one" behavior
+      newParentGroup(em);
+      // And the child group creates a new parentGroup
+      const cg = newChildGroup(em, {
+        parentGroup: { name: "pg1" },
+        childItems: [{}, {}],
+      });
+      // Then the childItems hooked up to the new parentGroup
+      expect(cg.childItems.get[0].parentItem.get.parentGroup.get).toMatchEntity(cg.parentGroup.get);
+      expect(cg.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg.parentGroup.get);
+      await em.flush();
+    });
+
+    it("can hook up parent items when using parentGroup from child group", async () => {
+      const em = newEntityManager();
+      // Given two existing pgs to turn off the "pick one" behavior
+      newParentGroup(em);
+      const pg2 = newParentGroup(em);
+      // And the child group uses pg2
+      const cg = newChildGroup(em, {
+        parentGroup: pg2,
+        childItems: [{}, {}],
+      });
+      // Then the childItems hooked up to the pg2 as well
+      expect(cg.childItems.get[0].parentItem.get.parentGroup.get).toMatchEntity(cg.parentGroup.get);
+      expect(cg.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg.parentGroup.get);
+      await em.flush();
+    });
+
+    it("can hook up separate branches of children within the same factory call", async () => {
+      const em = newEntityManager();
+      // Given we come into the group from down in the tree
+      const c = newChild(em, {
+        groups: [
+          // And we ask for two groups
+          {
+            parentGroup: {},
+            childItems: [{}, {}],
+          },
+          {
+            parentGroup: {},
+            childItems: [{}, {}],
+          },
+        ],
+      });
+      // Then the groups were connected within each other
+      const [cg1, cg2] = c.groups.get;
+      expect(cg1.childItems.get[0].parentItem.get.parentGroup.get).toMatchEntity(cg1.parentGroup.get);
+      expect(cg2.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg2.parentGroup.get);
+    });
+
+    it("can hook up separate branches of children within the same factory call with existing", async () => {
+      const em = newEntityManager();
+      // Given an existing parentGroup that would normally be a "one and only one" / obvious default
+      const pg0 = newParentGroup(em);
+      // And we come into the group from down in the tree
+      const c = newChild(em, {
+        groups: [
+          // And we ask for two groups
+          {
+            parentGroup: {},
+            childItems: [{}, {}],
+          },
+          {
+            parentGroup: {},
+            childItems: [{}, {}],
+          },
+        ],
+      });
+      // Then the groups were connected within each other
+      const [cg1, cg2] = c.groups.get;
+      expect(cg1.parentGroup.get).not.toMatchEntity(pg0);
+      expect(cg1.childItems.get[0].parentItem.get.parentGroup.get).toMatchEntity(cg1.parentGroup.get);
+      expect(cg2.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg2.parentGroup.get);
+    });
+
+    it("respects object literals if factory requests new entities", async () => {
+      try {
+        // Given the ParentItem factory wants the parent group to be `{}`
+        parentGroupValue[0] = {};
+        const em = newEntityManager();
+        const pg = newParentGroup(em);
+        // When we make a new child group
+        const cg = newChildGroup(em, {
+          parentGroup: pg,
+          childItems: [{}, {}],
+        });
+        // Then each ParentItem always get back a new group. Originally I tried to get the factories to see
+        // that `parentGroup: pg` meant the "in-call" pg should override the factory's requested
+        // `{}` value, but this heuristic fails as the "in-call" graph getters larger and larger,
+        // i.e. as a factory from ~two-three levels away kicks off the call. The logic to override
+        // the `{}` value actually needs to more locality aware than just "in the factory call".
+        expect(cg.childItems.get[0].parentItem.get.parentGroup.get).not.toMatchEntity(pg);
+        expect(cg.childItems.get[1].parentItem.get.parentGroup.get).not.toMatchEntity(pg);
+      } finally {
+        parentGroupValue[0] = undefined;
+      }
+    });
   });
 });

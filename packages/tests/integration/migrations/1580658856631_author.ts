@@ -12,7 +12,7 @@ import {
 import { MigrationBuilder } from "node-pg-migrate";
 
 export function up(b: MigrationBuilder): void {
-  b.sql(`CREATE EXTENSION IF NOT EXISTS citext;`)
+  b.sql(`CREATE EXTENSION IF NOT EXISTS citext;`);
 
   createUpdatedAtFunction(b);
   createCreatedAtFunction(b);

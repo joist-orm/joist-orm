@@ -17,6 +17,12 @@ import {
   bookConfig,
   BookReview,
   bookReviewConfig,
+  Child,
+  childConfig,
+  ChildGroup,
+  childGroupConfig,
+  ChildItem,
+  childItemConfig,
   Colors,
   Comment,
   commentConfig,
@@ -36,16 +42,25 @@ import {
   newBook,
   newBookAdvance,
   newBookReview,
+  newChild,
+  newChildGroup,
+  newChildItem,
   newComment,
   newCritic,
   newCriticColumn,
   newImage,
   newLargePublisher,
+  newParentGroup,
+  newParentItem,
   newPublisher,
   newPublisherGroup,
   newSmallPublisher,
   newTag,
   newUser,
+  ParentGroup,
+  parentGroupConfig,
+  ParentItem,
+  parentItemConfig,
   Publisher,
   publisherConfig,
   PublisherGroup,
@@ -297,6 +312,87 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
+export const childMeta: EntityMetadata<Child> = {
+  cstr: Child,
+  type: "Child",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "child",
+  tableName: "children",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("child", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "groups": { kind: "o2m", fieldName: "groups", fieldIdName: "groupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "childGroupId", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: childConfig,
+  factory: newChild,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(Child as any).metadata = childMeta;
+
+export const childGroupMeta: EntityMetadata<ChildGroup> = {
+  cstr: ChildGroup,
+  type: "ChildGroup",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "cg",
+  tableName: "child_groups",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("cg", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "childGroupId": { kind: "m2o", fieldName: "childGroupId", fieldIdName: "childGroupIdId", derived: false, required: true, otherMetadata: () => childMeta, otherFieldName: "groups", serde: new KeySerde("child", "childGroupId", "child_id_group_id", "int"), immutable: false },
+    "parentGroup": { kind: "m2o", fieldName: "parentGroup", fieldIdName: "parentGroupId", derived: false, required: true, otherMetadata: () => parentGroupMeta, otherFieldName: "childGroups", serde: new KeySerde("parentGroup", "parentGroup", "parent_group_id", "int"), immutable: false },
+    "childItems": { kind: "o2m", fieldName: "childItems", fieldIdName: "childItemIds", required: false, otherMetadata: () => childItemMeta, otherFieldName: "childGroup", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: childGroupConfig,
+  factory: newChildGroup,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(ChildGroup as any).metadata = childGroupMeta;
+
+export const childItemMeta: EntityMetadata<ChildItem> = {
+  cstr: ChildItem,
+  type: "ChildItem",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "ci",
+  tableName: "child_items",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("ci", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "childGroup": { kind: "m2o", fieldName: "childGroup", fieldIdName: "childGroupId", derived: false, required: true, otherMetadata: () => childGroupMeta, otherFieldName: "childItems", serde: new KeySerde("cg", "childGroup", "child_group_id", "int"), immutable: false },
+    "parentItem": { kind: "m2o", fieldName: "parentItem", fieldIdName: "parentItemId", derived: false, required: true, otherMetadata: () => parentItemMeta, otherFieldName: "childItems", serde: new KeySerde("pi", "parentItem", "parent_item_id", "int"), immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: childItemConfig,
+  factory: newChildItem,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(ChildItem as any).metadata = childItemMeta;
+
 export const commentMeta: EntityMetadata<Comment> = {
   cstr: Comment,
   type: "Comment",
@@ -444,6 +540,60 @@ export const largePublisherMeta: EntityMetadata<LargePublisher> = {
 
 (LargePublisher as any).metadata = largePublisherMeta;
 
+export const parentGroupMeta: EntityMetadata<ParentGroup> = {
+  cstr: ParentGroup,
+  type: "ParentGroup",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "parentGroup",
+  tableName: "parent_groups",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("parentGroup", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "childGroups": { kind: "o2m", fieldName: "childGroups", fieldIdName: "childGroupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "parentGroup", serde: undefined, immutable: false },
+    "parentItems": { kind: "o2m", fieldName: "parentItems", fieldIdName: "parentItemIds", required: false, otherMetadata: () => parentItemMeta, otherFieldName: "parentGroup", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: parentGroupConfig,
+  factory: newParentGroup,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(ParentGroup as any).metadata = parentGroupMeta;
+
+export const parentItemMeta: EntityMetadata<ParentItem> = {
+  cstr: ParentItem,
+  type: "ParentItem",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "pi",
+  tableName: "parent_items",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pi", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "parentGroup": { kind: "m2o", fieldName: "parentGroup", fieldIdName: "parentGroupId", derived: false, required: true, otherMetadata: () => parentGroupMeta, otherFieldName: "parentItems", serde: new KeySerde("parentGroup", "parentGroup", "parent_group_id", "int"), immutable: false },
+    "childItems": { kind: "o2m", fieldName: "childItems", fieldIdName: "childItemIds", required: false, otherMetadata: () => childItemMeta, otherFieldName: "parentItem", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: parentItemConfig,
+  factory: newParentItem,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(ParentItem as any).metadata = parentItemMeta;
+
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
@@ -590,5 +740,5 @@ export const userMeta: EntityMetadata<User> = {
 
 (User as any).metadata = userMeta;
 
-export const allMetadata = [adminUserMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
+export const allMetadata = [adminUserMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, childMeta, childGroupMeta, childItemMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, parentGroupMeta, parentItemMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
 configureMetadata(allMetadata);

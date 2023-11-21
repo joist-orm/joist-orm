@@ -1,3 +1,10 @@
+## [1.128.1](https://github.com/stephenh/joist-ts/compare/v1.128.0...v1.128.1) (2023-11-21)
+
+
+### Bug Fixes
+
+* Rename useSingleton to useExisting. ([#891](https://github.com/stephenh/joist-ts/issues/891)) ([e948819](https://github.com/stephenh/joist-ts/commit/e94881904eabfb3586eea1509ce85c367a35d68e))
+
 # [1.128.0](https://github.com/stephenh/joist-ts/compare/v1.127.0...v1.128.0) (2023-11-21)
 
 

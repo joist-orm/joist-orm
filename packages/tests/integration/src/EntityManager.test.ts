@@ -945,6 +945,18 @@ describe("EntityManager", () => {
     expect(t1.isNewEntity).toBe(true);
   });
 
+  it("can create with findOrCreate in a loop with citext with a tick", async () => {
+    const em = newEntityManager();
+    resetQueryCount();
+    const p1 = em.findOrCreate(Tag, { name: "t1" }, {});
+    await delay(0);
+    const p2 = em.findOrCreate(Tag, { name: "T1" }, {});
+    const [t1, t2] = await Promise.all([p1, p2]);
+    expect(numberOfQueries).toBe(1);
+    expect(t1).toMatchEntity(t2);
+    expect(t1.isNewEntity).toBe(true);
+  });
+
   it("can find already new entity by FK with findOrCreate in a loop", async () => {
     const em = newEntityManager();
     const [p1, p2] = [newPublisher(em), newPublisher(em)];

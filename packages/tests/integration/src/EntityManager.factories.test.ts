@@ -356,7 +356,7 @@ describe("EntityManager.factories", () => {
       em,
       Author,
       {},
-      { useSingleton: (opts, existing) => opts.firstName === existing.firstName },
+      { useExisting: (opts, existing) => opts.firstName === existing.firstName },
     );
     // Then we got back the same author
     expect(a2).toMatchEntity(a1);

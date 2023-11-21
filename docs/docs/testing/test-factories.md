@@ -303,7 +303,7 @@ Also see Joist's [toMatchEntity](./entity-matcher.md), which provides another er
 
 :::
 
-## `useSingleton` option
+## `useExisting` option
 
 Sometimes with factories, even though a test has already called `newSomeEntity` to create a new `SomeEntity` be created, within the factory code, you realize that, due to the business logic/constraints of your domain model, the entity being requested actually already exists.
 
@@ -322,7 +322,7 @@ newPublisher(em, { type: { name: "large" } });
 
 In these situations, you effectively want your factory to "scan existing entities" and look for an entity that matches the test's requested opts.
 
-To do this, you can use the `useSingleton` flag on `newTestInstance`, which is a lambda that returns "does the request opts match this existing PublisherType"?:
+To do this, you can use the `useExisting` flag on `newTestInstance`, which is a lambda that returns "does the request opts match this existing PublisherType"?:
 
 ```ts
 export function newPublisherType(
@@ -332,11 +332,11 @@ export function newPublisherType(
   return newTestInstance(
     em,
     {},
-    { useSingleton: (opts, existing) => existing.name === opts.name },
+    { useExisting: (opts, existing) => existing.name === opts.name },
   );
 }
 ```
 
-The benefit of using `useSingleton` is that the `existing` param will already be typed to your given entity type (i.e. `PublisherType`), and the `opts` param will be the "post-resolution" opts, i.e. instead of "maybe object literals or maybe object instances", they will be object instances (basically `OptsOf<PublisherType>`), which simplifies the lambda's matching logic.
+The benefit of using `useExisting` is that the `existing` param will already be typed to your given entity type (i.e. `PublisherType`), and the `opts` param will be the "post-resolution" opts, i.e. instead of "maybe object literals or maybe object instances", they will be object instances (basically `OptsOf<PublisherType>`), which simplifies the lambda's matching logic.
 
 

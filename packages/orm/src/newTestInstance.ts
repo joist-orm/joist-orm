@@ -52,8 +52,8 @@ export let testDate = jan1;
 /**
  * Creates a test instance of `T`.
  *
- * If the factory code passes factoryOpts.useSingleton, they can "intercept" the `em.create`
- * to try and resolve "already created" / singleton instances. The `useSingleton` callback is
+ * If the factory code passes factoryOpts.useExisting, they can "intercept" the `em.create`
+ * to try and resolve "already created" / singleton instances. The `useExisting` callback is
  * useful b/c the `opts` will be the "resolved-to-entity" opts, and not the raw "maybe object
  * literal, maybe object instance" opts that tests pass into the factory.
  */
@@ -64,7 +64,7 @@ export function newTestInstance<T extends Entity>(
   testOpts: FactoryOpts<T> = {},
   /** The factory file's default opts. */
   factoryOpts: FactoryOpts<T> & {
-    useSingleton?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
+    useExisting?: (opts: OptsOf<T>, existing: DeepNew<T>) => boolean;
   } = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
@@ -166,10 +166,10 @@ export function newTestInstance<T extends Entity>(
 
   const createOpts = Object.fromEntries(initialOpts);
 
-  if (factoryOpts.useSingleton) {
+  if (factoryOpts.useExisting) {
     const existing = em.entities
       .filter((e) => e instanceof meta.cstr)
-      .find((e) => factoryOpts.useSingleton!(createOpts as OptsOf<T>, e as DeepNew<T>));
+      .find((e) => factoryOpts.useExisting!(createOpts as OptsOf<T>, e as DeepNew<T>));
     if (existing) {
       return existing as DeepNew<T>;
     }
@@ -589,7 +589,7 @@ function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, an
   const opts: any = { ...testOpts };
   Object.entries(factoryOpts).forEach(([key, factoryValue]) => {
     // Skip special opts
-    if (key === "useSingleton") return;
+    if (key === "useExisting") return;
     const testValue = testOpts[key];
     if (testOpts[key] === undefined) {
       // If the test doesn't define an opt, we have nothing to merge...unless

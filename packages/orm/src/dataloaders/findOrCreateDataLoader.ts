@@ -142,12 +142,13 @@ function compareCaseInsensitive(str1: any, str2: any): boolean {
   );
 }
 
+/** Returns a copy of `opts` with any `citext` values turned to lower case. */
 function maybeLower(meta: EntityMetadata, opts: object | undefined) {
   if (!opts) return opts;
   return Object.fromEntries(
     Object.entries(opts).map(([k, v]) => {
       const field = meta.allFields[k];
-      return [k, field.kind === "primitive" && field.citext ? v?.toString().toLowerCase() : v];
+      return [k, field.kind === "primitive" && field.citext ? v?.toLowerCase() : v];
     }),
   );
 }

@@ -200,13 +200,13 @@ export function newTestInstance<T extends Entity>(
         fieldName,
         (optValue as Array<any>).map((opt) => {
           // console.log(`${field.fieldName}`, i);
-          return resolveFactoryOpt(em, withNewUseMap(opts), field, opt, entity);
+          return resolveFactoryOpt(em, withBranchMap(opts), field, opt, entity);
         }),
       ];
     } else if (field.kind == "m2m") {
       return [
         fieldName,
-        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withNewUseMap(opts), field, opt, [entity] as any)),
+        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any)),
       ];
     } else if (field.kind === "o2o") {
       // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
@@ -592,7 +592,9 @@ type AllowRelationsOrPartials<T> = {
 //     | "diffBranch" == created internally within the current factory call, but a different branch of children
 //     | "sameBranch" === created internally within the current factory call, in the current branch of entities
 // ]
-type UseMap = Map<Function, [Entity, "testOpts" | "testUse" | "sameBranch" | "diffBranch"]>;
+type UseMapSource = "testOpts" | "testUse" | "sameBranch" | "diffBranch";
+type UseMapValue = [Entity, UseMapSource];
+type UseMap = Map<Function, UseMapValue>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use, which we'll
 // then re-use across all `newTestInstance` calls within a given `new<Entity>` call.
@@ -635,7 +637,7 @@ function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
 }
 
 // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-function addForAllMetas(map: UseMap, e: Entity, source: "testOpts" | "testUse" | "sameBranch" | "diffBranch") {
+function addForAllMetas(map: UseMap, e: Entity, source: UseMapSource) {
   const meta = getMetadata(e);
   if (meta.baseType || meta.subTypes.length) {
     getBaseAndSelfMetas(meta).forEach((m) => {
@@ -709,28 +711,35 @@ function getCodegenDefault(cstr: any, fieldName: string): any {
 }
 
 // As we branch out to children, going down the tree, give each branch its own playground of entities
-function withNewUseMap(opts: object): object {
+function withBranchMap(opts: object): object {
   const oldMap = (opts as any).use;
-  const newMap = new Map(oldMap);
-  const newSet = newMap.set.bind(newMap);
-  newMap.set = (k: any, v: any) => {
-    // console.log(`Putting ${v[0].toString()} into ${objectId(oldMap)} and ${objectId(newMap)} as ${v[1]}`);
-    // Purposefully downgrade this to source=diffBranch so that it will not be used by `branchValue()`
-    // calls that override `{}`, but can still be used to in-fan, i.e. if making multiple books by
-    // default they get the same author.
-    oldMap.set(k, [v[0], "diffBranch"]);
-    return newSet(k, v);
-  };
+  const newMap = new CopyMap(oldMap);
   return { ...opts, use: newMap };
 }
 
-const objectId = (() => {
-  let currentId = 0;
-  const map = new WeakMap();
-  return (object: object): number => {
-    if (!map.has(object)) {
-      map.set(object, ++currentId);
-    }
-    return map.get(object)!;
-  };
-})();
+/** Writes new entities into our branch's map (this map), as well as the root we came from. */
+class CopyMap extends Map<Function, UseMapValue> {
+  constructor(private readonly root: UseMap) {
+    super(root);
+  }
+  set(k: Function, v: UseMapValue): this {
+    // Purposefully downgrade this to source=diffBranch so that it will not be used by `branchValue()`
+    // calls that override `{}`, but can still be used to in-fan, i.e. if making multiple books by
+    // default they get the same author.
+    // ...also use `root?` because the `super(root)` will call `set` while copying the other map
+    // but our `this.root` has not been set yet; which is fine, we want to ignore those anyway.
+    this.root?.set(k, [v[0], "diffBranch"]);
+    return super.set(k, v);
+  }
+}
+
+// const objectId = (() => {
+//   let currentId = 0;
+//   const map = new WeakMap();
+//   return (object: object): number => {
+//     if (!map.has(object)) {
+//       map.set(object, ++currentId);
+//     }
+//     return map.get(object)!;
+//   };
+// })();

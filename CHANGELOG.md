@@ -1,3 +1,10 @@
+# [1.129.0](https://github.com/stephenh/joist-ts/compare/v1.128.2...v1.129.0) (2023-11-22)
+
+
+### Features
+
+* Upgrade factories to handle multi-path graphs. ([#893](https://github.com/stephenh/joist-ts/issues/893)) ([83eb33e](https://github.com/stephenh/joist-ts/commit/83eb33e267130cbd4e874603e356a92780381bd8))
+
 ## [1.128.2](https://github.com/stephenh/joist-ts/compare/v1.128.1...v1.128.2) (2023-11-21)
 
 

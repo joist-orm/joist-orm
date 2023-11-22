@@ -595,7 +595,12 @@ function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
     // map as we go down the tree, to keep branches of siblings isolated from each other.
     [...groupBy(em.entities, (e) => getMetadata(e).tagName).entries()].forEach(([, entities]) => {
       if (entities.length === 1) {
-        addForAllMetas(map, entities[0], "em");
+        // Don't override higher-priority testUse sources, as `use`-s are proactively
+        // passed into `newFactory` calls, where-as testOpts are just looked up lazily.
+        const first = entities[0];
+        if (!map.has(first.constructor)) {
+          addForAllMetas(map, first, "em");
+        }
       }
     });
   }

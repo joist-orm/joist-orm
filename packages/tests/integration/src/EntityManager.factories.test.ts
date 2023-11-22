@@ -20,7 +20,8 @@ import {
   newLargePublisher,
   newParentGroup,
   newPublisher,
-  newSmallPublisher, parentGroupBranchValue,
+  newSmallPublisher,
+  parentGroupBranchValue,
   Publisher,
   PublisherType,
   SmallPublisher,
@@ -99,6 +100,23 @@ describe("EntityManager.factories", () => {
     await em.flush();
     // Then it is used
     expect(b1.author.get).toEqual(a1);
+  });
+
+  it("can create a child and use an single parent from use", async () => {
+    const em = newEntityManager();
+    // Given there is only one author
+    const a1 = newAuthor(em);
+    // When we explicitly pass it as use
+    newBookReview(em, { use: a1 });
+    await em.flush();
+    // Then it's passed as part of the opts
+    expect(lastBookFactoryOpts).toStrictEqual({
+      title: expect.anything(),
+      author: a1,
+      currentDraftAuthor: a1,
+      reviews: [],
+      use: expect.any(Map),
+    });
   });
 
   it("can create a child and use an existing parent from EntityManager", async () => {

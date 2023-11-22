@@ -750,6 +750,25 @@ describe("EntityManager.factories", () => {
       expect(cg2.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg2.parentGroup.get);
     });
 
+    it("can hook up separate branches of children without the parentGroup set", async () => {
+      const em = newEntityManager();
+      // Given an existing parentGroup that would normally be a "one and only one" / obvious default
+      const pg0 = newParentGroup(em);
+      // And we come into the group from down in the tree
+      const c = newChild(em, {
+        groups: [
+          // And we ask for two groups w/o an explicit parentGroup key
+          { childItems: [{}, {}] },
+          { childItems: [{}, {}] },
+        ],
+      });
+      // Then the groups were connected within each other
+      const [cg1, cg2] = c.groups.get;
+      expect(cg1.parentGroup.get).not.toMatchEntity(pg0);
+      expect(cg1.childItems.get[0].parentItem.get.parentGroup.get).toMatchEntity(cg1.parentGroup.get);
+      expect(cg2.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg2.parentGroup.get);
+    });
+
     it("will still share/fan-in entities created across branches", async () => {
       const em = newEntityManager();
       const c = newCritic(em, {

@@ -392,7 +392,7 @@ export function defaultValue<T>(): T {
 /**
  * A marker value to never set a field, even if it's required.
  *
- * The factories treat `{ author: undefined }` as "fill in the author", because of how easy
+ * The factories treat `{ author: undefined }` as "still set the author", because of how easy
  * it is for destructuring/restructuring opts to implicitly set `undefined` values.
  *
  * If you want to force a field to not be set, you can use `{ author: noValue() }`.
@@ -402,15 +402,41 @@ export function noValue<T>(): T {
 }
 
 /**
- * A marker value to never set a field.
+ * A marker value to accept values only if explicitly created-or-passed within the current,
+ * unique "branch" of a factory call.
  *
- * The factories treat `{ author: undefined }` as "fill in the author", because of how easy
- * it is for destructuring/restructuring opts to implicitly set `undefined` values.
+ * This is useful for "diamond-shape" entity models like:
  *
- * If you want to force a field to not be set, you can use `{ author: noValue() }`.
+ * ```
+ *  ParentGroup <-- ParentItem
+ *      |              |
+ *   ChildGroup  <-- ChildItem
+ * ```
+ *
+ * Where it's important that the `ChildItem -> ParentItem -> ParentGroup` path matches
+ * the `ChildItem -> ChildGroup -> ParentGroup` path.
+ *
+ * This can be hard to achieve in normal factory behavior, i.e. for a call like
+ *
+ * ```
+ * const c = newChild(em, {
+ *   groups: [
+ *     { childItems: [{}, {}] },
+ *     { childItems: [{}, {}] },
+ *   ],
+ * });
+ * ```
+ *
+ * The first `ChildGroup` will create a new `ParentGroup` that is used by everything, which
+ * is not our intent. An initial idea is to set `parentGroup: {}` in the factories, because
+ * that turns off "reusing existing instances", but for this problem the `{}` approach is
+ * "too good" at creating new instances, b/c the above diamond pattern will be disconnected.
+ *
+ * So `branchValue` provides a middle ground, where _usually_ it will be a new entity, unless
+ * it was explicitly created within the same "branch" of a factory call.
  */
 export function maybeBranchValue<T>(opts?: ActualFactoryOpts<T>): T {
-  // opts get mutated so we have to return a new value
+  // opts get mutated, so we have to return a new value
   return { [branchValueSym]: true, ...(opts ? opts : undefined) } as any;
 }
 

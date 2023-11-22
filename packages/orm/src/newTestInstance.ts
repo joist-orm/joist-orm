@@ -322,6 +322,11 @@ function getObviousDefault<T extends Entity>(
     // console.log(`Found ${e[0].toString()} in ${objectId(use)} as ${e[1]}`);
     return use.get(metadata.cstr)![0] as T;
   }
+  // If there is a single existing instance of this type, assume the caller is fine with that
+  const existing = em.entities.filter((e) => e instanceof metadata.cstr);
+  if (existing.length === 1) {
+    return existing[0] as T;
+  }
   return undefined;
 }
 

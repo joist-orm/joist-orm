@@ -121,6 +121,19 @@ describe("EntityManager.factories", () => {
     });
   });
 
+  it("finds entities created within the factory but as side-effects", async () => {
+    const em = newEntityManager();
+    // Given a factory is called
+    newCritic(em, {
+      // And one of the special opts internally creates an Author
+      group: { withSideEffectAuthor: true },
+      // And some other chain expects to find the author
+      bookReviews: [{}, {}],
+    });
+    // Then we only created 1 author
+    expect(em.entities.filter((e) => e instanceof Author)).toMatchEntity([{}]);
+  });
+
   it("can create a child and use an existing parent from EntityManager", async () => {
     const em = newEntityManager();
     // Given there is only a single author

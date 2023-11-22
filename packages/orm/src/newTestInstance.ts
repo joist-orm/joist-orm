@@ -322,7 +322,10 @@ function getObviousDefault<T extends Entity>(
     // console.log(`Found ${e[0].toString()} in ${objectId(use)} as ${e[1]}`);
     return use.get(metadata.cstr)![0] as T;
   }
-  // If there is a single existing instance of this type, assume the caller is fine with that
+  // If there is a single existing instance of this type, assume the caller is fine with that.
+  // ...in theory seeding our `use` map with the only-one entities was supposed to prevent the
+  // need for doing this (the entities would already be in the use map that we just checked),
+  // but that approach doesn't catch created-as-side-effect entities.
   const existing = em.entities.filter((e) => e instanceof metadata.cstr);
   if (existing.length === 1) {
     return existing[0] as T;

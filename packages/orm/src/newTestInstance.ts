@@ -25,7 +25,7 @@ import {
 } from "./EntityMetadata";
 import { DeepNew, New } from "./index";
 import { tagId } from "./keys";
-import { assertNever, groupBy } from "./utils";
+import { assertNever } from "./utils";
 
 /**
  * DeepPartial-esque type specific to our `newTestInstance` factory.
@@ -181,8 +181,8 @@ export function newTestInstance<T extends Entity>(
   // looking at the values in `fullOpts`, because instead of waiting until the end of the
   // `build fullOpts` loop, we're also invoking `newTestInstance` as we go through the loop itself,
   // creating each test instance within nested/recursive `newTestInstance` calls.
-  if (!use.has(entity.constructor) || use.get(entity.constructor)![1] === "em") {
-    addForAllMetas(use, entity, "created");
+  if (!use.has(entity.constructor) || use.get(entity.constructor)![1] === "diffBranch") {
+    addForAllMetas(use, entity, "sameBranch");
   }
 
   // Now that we've got the entity, do a 2nd pass for o2m/m2m where we pass
@@ -587,12 +587,12 @@ type AllowRelationsOrPartials<T> = {
 
 // Map of constructor --> [
 //   default entity,
-//     | "em" == found in the EM
 //     | "testOpts" === explicitly passed into the top-level `newFactory` that creates the UseMap
 //     | "testUse === explicitly passed in as a `use` flag
-//     | "created" === created internally within the factory call
+//     | "diffBranch" == created internally within the current factory call, but a different branch of children
+//     | "sameBranch" === created internally within the current factory call, in the current branch of entities
 // ]
-type UseMap = Map<Function, [Entity, "em" | "testOpts" | "testUse" | "created"]>;
+type UseMap = Map<Function, [Entity, "testOpts" | "testUse" | "sameBranch" | "diffBranch"]>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use, which we'll
 // then re-use across all `newTestInstance` calls within a given `new<Entity>` call.
@@ -627,19 +627,6 @@ function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
         }
       });
     }
-    // Seed the map with the "one-and-only-one entities" as-of the time of our call. After
-    // this, the use map will have em.create-d entities added to it, but we'll also fork the
-    // map as we go down the tree, to keep branches of siblings isolated from each other.
-    [...groupBy(em.entities, (e) => getMetadata(e).tagName).entries()].forEach(([, entities]) => {
-      if (entities.length === 1) {
-        // Don't override higher-priority testUse sources, as `use`-s are proactively
-        // passed into `newFactory` calls, where-as testOpts are just looked up lazily.
-        const first = entities[0];
-        if (!map.has(first.constructor)) {
-          addForAllMetas(map, first, "em");
-        }
-      }
-    });
   }
   // Store our potentially-massaged map back into opts i.e. in case resolveFactoryOpt needs it.
   // Use as any b/c UseMap is our internal impl detail and not public.
@@ -648,7 +635,7 @@ function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
 }
 
 // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-function addForAllMetas(map: UseMap, e: Entity, source: "em" | "testOpts" | "testUse" | "created") {
+function addForAllMetas(map: UseMap, e: Entity, source: "testOpts" | "testUse" | "sameBranch" | "diffBranch") {
   const meta = getMetadata(e);
   if (meta.baseType || meta.subTypes.length) {
     getBaseAndSelfMetas(meta).forEach((m) => {
@@ -694,9 +681,9 @@ function mergeOpts(meta: EntityMetadata, testOpts: Record<string, any>, factoryO
     if (opts[key]?.[branchValueSym]) {
       const field = meta.allFields[key];
       if (field.kind === "m2o") {
-        const use = testOpts.use as any;
+        const use = testOpts.use as UseMap;
         const inTree = use?.get(field.otherMetadata().cstr);
-        if (inTree && (inTree[1] === "created" || inTree[1] === "testOpts")) {
+        if (inTree && (inTree[1] === "sameBranch" || inTree[1] === "testOpts")) {
           // console.log(`Putting ${field.fieldName} to`, inTree[0]);
           opts[key] = inTree[0];
         }
@@ -728,10 +715,10 @@ function withNewUseMap(opts: object): object {
   const newSet = newMap.set.bind(newMap);
   newMap.set = (k: any, v: any) => {
     // console.log(`Putting ${v[0].toString()} into ${objectId(oldMap)} and ${objectId(newMap)} as ${v[1]}`);
-    // Purposefully downgrade this to source=em so that it will not be used by
-    // `branchValue()` calls that override `{}`, but can still be used to in-fan,
-    // i.e. if making multiple books by default they get the same author.
-    oldMap.set(k, [v[0], "em"]);
+    // Purposefully downgrade this to source=diffBranch so that it will not be used by `branchValue()`
+    // calls that override `{}`, but can still be used to in-fan, i.e. if making multiple books by
+    // default they get the same author.
+    oldMap.set(k, [v[0], "diffBranch"]);
     return newSet(k, v);
   };
   return { ...opts, use: newMap };

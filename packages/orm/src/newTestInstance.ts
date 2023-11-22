@@ -68,7 +68,7 @@ export function newTestInstance<T extends Entity>(
   } = {},
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
-  const opts = mergeOpts(testOpts, factoryOpts);
+  const opts = mergeOpts(meta, testOpts, factoryOpts);
   const use = getOrCreateUseMap(opts);
 
   const selfFields: string[] = [];
@@ -181,8 +181,8 @@ export function newTestInstance<T extends Entity>(
   // looking at the values in `fullOpts`, because instead of waiting until the end of the
   // `build fullOpts` loop, we're also invoking `newTestInstance` as we go through the loop itself,
   // creating each test instance within nested/recursive `newTestInstance` calls.
-  if (!use.has(entity.constructor)) {
-    addForAllMetas(use, entity, false);
+  if (!use.has(entity.constructor) || use.get(entity.constructor)![1] === "diffBranch") {
+    addForAllMetas(use, entity, "sameBranch");
   }
 
   // Now that we've got the entity, do a 2nd pass for o2m/m2m where we pass
@@ -196,11 +196,17 @@ export function newTestInstance<T extends Entity>(
     }
     if (field.kind === "o2m") {
       // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
-      return [fieldName, (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, entity))];
+      return [
+        fieldName,
+        (optValue as Array<any>).map((opt) => {
+          // console.log(`${field.fieldName}`, i);
+          return resolveFactoryOpt(em, withBranchMap(opts), field, opt, entity);
+        }),
+      ];
     } else if (field.kind == "m2m") {
       return [
         fieldName,
-        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, opts, field, opt, [entity] as any)),
+        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withBranchMap(opts), field, opt, [entity] as any)),
       ];
     } else if (field.kind === "o2o") {
       // If this is an o2o, i.e. author.image, just pass the optValue (i.e. it won't be a list)
@@ -271,11 +277,12 @@ function resolveFactoryOpt<T extends Entity>(
         }
       }
     }
+    const use = getOrCreateUseMap(opts);
     // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
       // Because of the `!isPlainObject` above, opt will either be undefined or an object here
-      ...applyUse((opt as any) || {}, getOrCreateUseMap(opts), meta),
+      ...applyUse((opt as any) || {}, use, meta),
       ...(opt instanceof MaybeNew && opt.opts),
       [otherFieldName]: maybeEntity,
     });
@@ -303,25 +310,22 @@ function metaFromFieldAndOpt<T extends Entity>(
   return { meta: componentToUse.otherMetadata(), otherFieldName: componentToUse.otherFieldName };
 }
 
-/** We look for `use`-cached and "if-only-one" defaults. */
+/** We look for `use`-cached entities, which are either those we created, or had "if-only-one" defaults. */
 function getObviousDefault<T extends Entity>(
   em: EntityManager,
   metadata: EntityMetadata,
   opts: FactoryOpts<any>,
 ): T | undefined {
-  // If neither the user nor the factory (i.e. for an explicit "fan out" case) set this field then look in use
   const use = getOrCreateUseMap(opts);
-  // ...we used to check "explicit use" vs. "implicit use" here and only use implicit values
-  // if the field was required; but in theory our "use if-only-one" heuristic was already looser
-  // that this, so it seems fine to just always check use, regardless of field required/optional.
-  //
-  // Note that we still use explicit/implicit use to know whether the user's `newAuthor` factory
-  // should have a use param passed to it, or if we should apply it here after-the-fact. (This gives
-  // `newAuthor` the opportunity to apply defaults.)
   if (use.has(metadata.cstr)) {
+    // const e = use.get(metadata.cstr) as any;
+    // console.log(`Found ${e[0].toString()} in ${objectId(use)} as ${e[1]}`);
     return use.get(metadata.cstr)![0] as T;
   }
-  // If there is a single existing instance of this type, assume the caller is fine with that
+  // If there is a single existing instance of this type, assume the caller is fine with that.
+  // ...in theory seeding our `use` map with the only-one entities was supposed to prevent the
+  // need for doing this (the entities would already be in the use map that we just checked),
+  // but that approach doesn't catch created-as-side-effect entities.
   const existing = em.entities.filter((e) => e instanceof metadata.cstr);
   if (existing.length === 1) {
     return existing[0] as T;
@@ -355,7 +359,7 @@ function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata): 
         const def = use.get(f.otherMetadata().cstr)!;
         // Only pass explicit/user-defined `use` entities, so that factories can "fan out" if they want,
         // and not see other factory-created entities look like user-specific values.
-        if (def[1]) {
+        if (def[1] === "testUse") {
           (opts as any)[f.fieldName] = def[0];
         }
       }
@@ -375,6 +379,7 @@ export const testIndex: number = -1_111_111_222;
 const testIndexString = String(testIndex);
 
 const defaultValueMarker: any = {};
+const branchValueSym = Symbol("branchValue");
 
 /**
  * A marker value for the default `newTestInstance` behavior.
@@ -390,6 +395,60 @@ const defaultValueMarker: any = {};
  */
 export function defaultValue<T>(): T {
   return defaultValueMarker;
+}
+
+/**
+ * A marker value to never set a field, even if it's required.
+ *
+ * The factories treat `{ author: undefined }` as "still set the author", because of how easy
+ * it is for destructuring/restructuring opts to implicitly set `undefined` values.
+ *
+ * If you want to force a field to not be set, you can use `{ author: noValue() }`.
+ */
+export function noValue<T>(): T {
+  return null as T;
+}
+
+/**
+ * A marker value to accept values only if explicitly created-or-passed within the current,
+ * unique "branch" of a factory call.
+ *
+ * This is useful for "diamond-shape" entity models like:
+ *
+ * ```
+ *  ParentGroup <-- ParentItem
+ *      |              |
+ *   ChildGroup  <-- ChildItem
+ * ```
+ *
+ * Where it's important that the `ChildItem -> ParentItem -> ParentGroup` path matches
+ * the `ChildItem -> ChildGroup -> ParentGroup` path.
+ *
+ * This can be hard to achieve in normal factory behavior, i.e. for a call like:
+ *
+ * ```ts
+ * const c = newChild(em, {
+ *   groups: [
+ *     { childItems: [{}, {}] },
+ *     { childItems: [{}, {}] },
+ *   ],
+ * });
+ * ```
+ *
+ * The first `ChildGroup` will create a new `ParentGroup` that is used by everything, which
+ * is not our intent, as both `ChildGroup`s, and all four `ParentItem`s, will live in a single
+ * `ParentGroup`.
+ *
+ * An initial idea is to pass `parentGroup: {}` in the factories, because that turns off "reusing
+ * existing instances", but for this problem the `{}` approach is "too good" at creating new
+ * instances, b/c the above diamond pattern will be disconnected.
+ *
+ * So `branchValue` provides a middle ground, where _usually_ it will be a new entity, unless
+ * it was explicitly created within the same "branch" of a factory call.
+ */
+export function maybeBranchValue<T>(opts?: ActualFactoryOpts<T>): T {
+  // opts get mutated, so we have to return a new value
+  return { [branchValueSym]: true, ...(opts ? opts : undefined) } as any;
 }
 
 /**
@@ -526,8 +585,16 @@ type AllowRelationsOrPartials<T> = {
     : T[P];
 };
 
-// Map of constructor --> [default entity, explicitly passed/created internally]
-type UseMap = Map<Function, [Entity, boolean]>;
+// Map of constructor --> [
+//   default entity,
+//     | "testOpts" === explicitly passed into the top-level `newFactory` that creates the UseMap
+//     | "testUse === explicitly passed in as a `use` flag
+//     | "diffBranch" == created internally within the current factory call, but a different branch of children
+//     | "sameBranch" === created internally within the current factory call, in the current branch of entities
+// ]
+type UseMapSource = "testOpts" | "testUse" | "sameBranch" | "diffBranch";
+type UseMapValue = [Entity, UseMapSource];
+type UseMap = Map<Function, UseMapValue>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use, which we'll
 // then re-use across all `newTestInstance` calls within a given `new<Entity>` call.
@@ -542,20 +609,19 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
     map = new Map();
     if (use instanceof Array) {
       // it's a top-level `newAuthor` with a user-passed `use: array`
-      use.forEach((e) => addForAllMetas(map, e, true));
+      use.forEach((e) => addForAllMetas(map, e, "testUse"));
     } else if (use) {
       // it's a top-level `newAuthor` w/o a `use: entity` param
-      addForAllMetas(map, use, true);
+      addForAllMetas(map, use, "testUse");
     }
-    // Scan opts for entities to implicitly add to the map, i.e. if the user
-    // calls `newAuthor(em, { book: b1 })`, we'll use `b1` for any other books we
-    // might happen to create.
+    // Scan opts for entities to add to the map, i.e. if the user calls `newAuthor(em, { book: b1 })`,
+    // we'll use `b1` for any other books we might happen to create.
     const todo = [opts];
     while (todo.length > 0) {
       const opts = todo.pop();
       Object.values(opts || {}).forEach((opt) => {
         if (isEntity(opt) && !map.has(opt.constructor)) {
-          addForAllMetas(map, opt, false);
+          addForAllMetas(map, opt, "testOpts");
         } else if (opt instanceof Array) {
           todo.push(...opt);
         } else if (isPlainObject(opt)) {
@@ -571,21 +637,26 @@ function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
 }
 
 // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-function addForAllMetas(map: UseMap, e: Entity, explicit: boolean) {
+function addForAllMetas(map: UseMap, e: Entity, source: UseMapSource) {
   const meta = getMetadata(e);
   if (meta.baseType || meta.subTypes.length) {
-    getBaseAndSelfMetas(meta).forEach((m) => map.set(m.cstr, [e, explicit]));
+    getBaseAndSelfMetas(meta).forEach((m) => {
+      // console.log(`Putting ${e.toString()} into ${objectId(map)} as ${source}`);
+      map.set(m.cstr, [e, source]);
+    });
   } else {
-    map.set(meta.cstr, [e, explicit]);
+    // console.log(`Putting ${e.toString()} into ${objectId(map)} as ${source}`);
+    map.set(meta.cstr, [e, source]);
   }
 }
 
 /** Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged. */
-function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, any>): object {
+function mergeOpts(meta: EntityMetadata, testOpts: Record<string, any>, factoryOpts: Record<string, any>): object {
   // Merge the factory's opts and the test's opts so that `{ age: 40 }` and `{ firstName: "b1" }` get merged
   if (testOpts.useFactoryDefaults === false || testOpts.useFactoryDefaults === "none") {
     return testOpts;
   }
+
   const opts: any = { ...testOpts };
   Object.entries(factoryOpts).forEach(([key, factoryValue]) => {
     // Skip special opts
@@ -599,14 +670,29 @@ function mergeOpts(testOpts: Record<string, any>, factoryOpts: Record<string, an
       }
     } else if (isPlainObject(factoryValue) && isPlainObject(testValue)) {
       // Should this deep merge? Probably?
-      opts[key] = mergeOpts(testValue, factoryValue);
+      opts[key] = mergeOpts(meta, testValue, factoryValue);
     } else if (factoryValue instanceof MaybeNew && isPlainObject(testValue)) {
-      opts[key] = mergeOpts(testValue, factoryValue.opts);
+      opts[key] = mergeOpts(meta, testValue, factoryValue.opts);
     } else if (factoryValue instanceof MaybeNew && testValue instanceof MaybeNew) {
       opts[key] = new MaybeNew<any>(
-        mergeOpts(testValue.opts, factoryValue.opts),
+        mergeOpts(meta, testValue.opts, factoryValue.opts),
         testValue.polyRefPreferredOrder ?? factoryValue.polyRefPreferredOrder,
       );
+    }
+    // This seemed like a good idea
+    if (opts[key]?.[branchValueSym]) {
+      const field = meta.allFields[key];
+      if (field.kind === "m2o") {
+        const use = testOpts.use as UseMap;
+        const inTree = use?.get(field.otherMetadata().cstr);
+        if (inTree && (inTree[1] === "sameBranch" || inTree[1] === "testOpts")) {
+          // console.log(`Putting ${field.fieldName} to`, inTree[0]);
+          opts[key] = inTree[0];
+        }
+      } else {
+        throw new Error(`branchValue is not implemented for ${field.kind}`);
+      }
+      delete opts[key]?.[branchValueSym];
     }
   });
   return opts;
@@ -623,3 +709,37 @@ function getCodegenDefault(cstr: any, fieldName: string): any {
       .filter((v) => v !== undefined)[0];
   }
 }
+
+// As we branch out to children, going down the tree, give each branch its own playground of entities
+function withBranchMap(opts: object): object {
+  const oldMap = (opts as any).use;
+  const newMap = new CopyMap(oldMap);
+  return { ...opts, use: newMap };
+}
+
+/** Writes new entities into our branch's map (this map), as well as the root we came from. */
+class CopyMap extends Map<Function, UseMapValue> {
+  constructor(private readonly root: UseMap) {
+    super(root);
+  }
+  set(k: Function, v: UseMapValue): this {
+    // Purposefully downgrade this to source=diffBranch so that it will not be used by `branchValue()`
+    // calls that override `{}`, but can still be used to in-fan, i.e. if making multiple books by
+    // default they get the same author.
+    // ...also use `root?` because the `super(root)` will call `set` while copying the other map
+    // but our `this.root` has not been set yet; which is fine, we want to ignore those anyway.
+    this.root?.set(k, [v[0], "diffBranch"]);
+    return super.set(k, v);
+  }
+}
+
+// const objectId = (() => {
+//   let currentId = 0;
+//   const map = new WeakMap();
+//   return (object: object): number => {
+//     if (!map.has(object)) {
+//       map.set(object, ++currentId);
+//     }
+//     return map.get(object)!;
+//   };
+// })();

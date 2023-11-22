@@ -31,6 +31,9 @@
     "Book": { "orderBy": "title", "tag": "b" },
     "BookAdvance": { "tag": "ba" },
     "BookReview": { "fields": { "isPublic": { "derived": "async" }, "isTest": { "derived": "async" } }, "tag": "br" },
+    "Child": { "tag": "child" },
+    "ChildGroup": { "tag": "cg" },
+    "ChildItem": { "tag": "ci" },
     "Comment": { "relations": { "parent": { "polymorphic": "notNull" } }, "tag": "comment" },
     "Critic": {
       "fields": {
@@ -43,6 +46,8 @@
     "CriticColumn": { "tag": "cc" },
     "Image": { "tag": "i" },
     "LargePublisher": { "tag": "p" },
+    "ParentGroup": { "tag": "parentGroup" },
+    "ParentItem": { "tag": "pi" },
     "Publisher": { "abstract": true, "tag": "p" },
     "PublisherGroup": { "relations": { "critics": { "large": true } }, "tag": "pg" },
     "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },

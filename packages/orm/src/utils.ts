@@ -75,7 +75,7 @@ export function zeroTo(n: number): number[] {
   return [...Array(n).keys()];
 }
 
-export function groupBy<T, Y = T, K = string>(list: T[], fn: (x: T) => K, valueFn?: (x: T) => Y): Map<K, Y[]> {
+export function groupBy<T, Y = T, K = string>(list: readonly T[], fn: (x: T) => K, valueFn?: (x: T) => Y): Map<K, Y[]> {
   const result = new Map<K, Y[]>();
   list.forEach((o) => {
     const group = fn(o);

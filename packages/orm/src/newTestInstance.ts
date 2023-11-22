@@ -416,9 +416,9 @@ export function noValue<T>(): T {
  * Where it's important that the `ChildItem -> ParentItem -> ParentGroup` path matches
  * the `ChildItem -> ChildGroup -> ParentGroup` path.
  *
- * This can be hard to achieve in normal factory behavior, i.e. for a call like
+ * This can be hard to achieve in normal factory behavior, i.e. for a call like:
  *
- * ```
+ * ```ts
  * const c = newChild(em, {
  *   groups: [
  *     { childItems: [{}, {}] },
@@ -428,9 +428,12 @@ export function noValue<T>(): T {
  * ```
  *
  * The first `ChildGroup` will create a new `ParentGroup` that is used by everything, which
- * is not our intent. An initial idea is to set `parentGroup: {}` in the factories, because
- * that turns off "reusing existing instances", but for this problem the `{}` approach is
- * "too good" at creating new instances, b/c the above diamond pattern will be disconnected.
+ * is not our intent, as both `ChildGroup`s, and all four `ParentItem`s, will live in a single
+ * `ParentGroup`.
+ *
+ * An initial idea is to pass `parentGroup: {}` in the factories, because that turns off "reusing
+ * existing instances", but for this problem the `{}` approach is "too good" at creating new
+ * instances, b/c the above diamond pattern will be disconnected.
  *
  * So `branchValue` provides a middle ground, where _usually_ it will be a new entity, unless
  * it was explicitly created within the same "branch" of a factory call.

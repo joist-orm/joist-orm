@@ -398,7 +398,7 @@ describe("EntityManager.factories", () => {
     expect(a2).toMatchEntity(a1);
   });
 
-  it("can create a leave required fields unset", async () => {
+  it("can create and leave required fields unset with noValue", async () => {
     const em = newEntityManager();
     // Given we want to make a Book
     const b = newTestInstance(
@@ -686,7 +686,7 @@ describe("EntityManager.factories", () => {
     expect(b2.order).toBe(2);
   });
 
-  describe("multi-path schemas", () => {
+  describe("diamond schemas", () => {
     it("can hook up parent items when creating parentGroup from child group", async () => {
       const em = newEntityManager();
       // Given an existing pg to turn off the "pick one" behavior
@@ -702,7 +702,7 @@ describe("EntityManager.factories", () => {
       await em.flush();
     });
 
-    it("can hook up parent items when using parentGroup from child group", async () => {
+    it("can hook up parent items with existing parentGroup from child group", async () => {
       const em = newEntityManager();
       // Given two existing pgs to turn off the "pick one" behavior
       newParentGroup(em);
@@ -724,14 +724,8 @@ describe("EntityManager.factories", () => {
       const c = newChild(em, {
         groups: [
           // And we ask for two groups
-          {
-            parentGroup: {},
-            childItems: [{}, {}],
-          },
-          {
-            parentGroup: {},
-            childItems: [{}, {}],
-          },
+          { parentGroup: {}, childItems: [{}, {}] },
+          { parentGroup: {}, childItems: [{}, {}] },
         ],
       });
       // Then the groups were connected within each other
@@ -748,14 +742,8 @@ describe("EntityManager.factories", () => {
       const c = newChild(em, {
         groups: [
           // And we ask for two groups
-          {
-            parentGroup: {},
-            childItems: [{}, {}],
-          },
-          {
-            parentGroup: {},
-            childItems: [{}, {}],
-          },
+          { parentGroup: {}, childItems: [{}, {}] },
+          { parentGroup: {}, childItems: [{}, {}] },
         ],
       });
       // Then the groups were connected within each other

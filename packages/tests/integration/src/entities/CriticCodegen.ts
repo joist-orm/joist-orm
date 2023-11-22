@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Changes,
   cleanStringValue,
+  Collection,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -11,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   GraphQLFilterOf,
+  hasMany,
   hasOne,
   hasOneToOne,
   isLoaded,
@@ -34,6 +36,9 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import {
+  BookReview,
+  BookReviewId,
+  bookReviewMeta,
   Critic,
   CriticColumn,
   CriticColumnId,
@@ -68,12 +73,14 @@ export interface CriticOpts {
   favoriteLargePublisher?: LargePublisher | LargePublisherId | null;
   group?: PublisherGroup | PublisherGroupId | null;
   criticColumn?: CriticColumn | null;
+  bookReviews?: BookReview[];
 }
 
 export interface CriticIdsOpts {
   favoriteLargePublisherId?: LargePublisherId | null;
   groupId?: PublisherGroupId | null;
   criticColumnId?: CriticColumnId | null;
+  bookReviewIds?: BookReviewId[] | null;
 }
 
 export interface CriticFilter {
@@ -84,6 +91,7 @@ export interface CriticFilter {
   favoriteLargePublisher?: EntityFilter<LargePublisher, LargePublisherId, FilterOf<LargePublisher>, null>;
   group?: EntityFilter<PublisherGroup, PublisherGroupId, FilterOf<PublisherGroup>, null>;
   criticColumn?: EntityFilter<CriticColumn, CriticColumnId, FilterOf<CriticColumn>, null | undefined>;
+  bookReviews?: EntityFilter<BookReview, BookReviewId, FilterOf<BookReview>, null | undefined>;
 }
 
 export interface CriticGraphQLFilter {
@@ -94,6 +102,7 @@ export interface CriticGraphQLFilter {
   favoriteLargePublisher?: EntityGraphQLFilter<LargePublisher, LargePublisherId, GraphQLFilterOf<LargePublisher>, null>;
   group?: EntityGraphQLFilter<PublisherGroup, PublisherGroupId, GraphQLFilterOf<PublisherGroup>, null>;
   criticColumn?: EntityGraphQLFilter<CriticColumn, CriticColumnId, GraphQLFilterOf<CriticColumn>, null | undefined>;
+  bookReviews?: EntityGraphQLFilter<BookReview, BookReviewId, GraphQLFilterOf<BookReview>, null | undefined>;
 }
 
 export interface CriticOrder {
@@ -195,6 +204,18 @@ export abstract class CriticCodegen extends BaseEntity<EntityManager, string> im
 
   isLoaded<H extends LoadHint<Critic>>(hint: H): this is Loaded<Critic, H> {
     return isLoaded(this as any as Critic, hint);
+  }
+
+  get bookReviews(): Collection<Critic, BookReview> {
+    const { relations } = this.__orm;
+    return relations.bookReviews ??= hasMany(
+      this as any as Critic,
+      bookReviewMeta,
+      "bookReviews",
+      "critic",
+      "critic_id",
+      undefined,
+    );
   }
 
   get favoriteLargePublisher(): ManyToOneReference<Critic, LargePublisher, undefined> {

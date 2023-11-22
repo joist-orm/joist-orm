@@ -20,8 +20,7 @@ import {
   newLargePublisher,
   newParentGroup,
   newPublisher,
-  newSmallPublisher,
-  parentGroupValue,
+  newSmallPublisher, parentGroupBranchValue,
   Publisher,
   PublisherType,
   SmallPublisher,
@@ -719,10 +718,20 @@ describe("EntityManager.factories", () => {
       expect(cg2.childItems.get[1].parentItem.get.parentGroup.get).toMatchEntity(cg2.parentGroup.get);
     });
 
+    it("will still share/fan-in entities created across branches", async () => {
+      const em = newEntityManager();
+      const c = newCritic(em, {
+        bookReviews: [{}, {}],
+      });
+      const a1 = c.bookReviews.get[0].book.get.author.get;
+      const a2 = c.bookReviews.get[1].book.get.author.get;
+      expect(a1).toMatchEntity(a2);
+    });
+
     it("respects object literals if factory requests new entities", async () => {
       try {
         // Given the ParentItem factory wants the parent group to be `{}`
-        parentGroupValue[0] = {};
+        parentGroupBranchValue[0] = false;
         const em = newEntityManager();
         const pg = newParentGroup(em);
         // When we make a new child group
@@ -731,14 +740,14 @@ describe("EntityManager.factories", () => {
           childItems: [{}, {}],
         });
         // Then each ParentItem always get back a new group. Originally I tried to get the factories to see
-        // that `parentGroup: pg` meant the "in-call" pg should override the factory's requested
+        // that `parentGroup: {}` meant the "in-call" / "in-branch" pg should override the factory's requested
         // `{}` value, but this heuristic fails as the "in-call" graph getters larger and larger,
         // i.e. as a factory from ~two-three levels away kicks off the call. The logic to override
         // the `{}` value actually needs to more locality aware than just "in the factory call".
         expect(cg.childItems.get[0].parentItem.get.parentGroup.get).not.toMatchEntity(pg);
         expect(cg.childItems.get[1].parentItem.get.parentGroup.get).not.toMatchEntity(pg);
       } finally {
-        parentGroupValue[0] = undefined;
+        parentGroupBranchValue[0] = true;
       }
     });
   });

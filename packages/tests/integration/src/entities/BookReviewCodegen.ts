@@ -45,6 +45,10 @@ import {
   Comment,
   CommentId,
   commentMeta,
+  Critic,
+  CriticId,
+  criticMeta,
+  CriticOrder,
   Entity,
   EntityManager,
   newBookReview,
@@ -60,16 +64,19 @@ export interface BookReviewFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
   book: { kind: "m2o"; type: Book; nullable: never };
+  critic: { kind: "m2o"; type: Critic; nullable: undefined };
 }
 
 export interface BookReviewOpts {
   rating: number;
   book: Book | BookId;
+  critic?: Critic | CriticId | null;
   comment?: Comment | null;
 }
 
 export interface BookReviewIdsOpts {
   bookId?: BookId | null;
+  criticId?: CriticId | null;
   commentId?: CommentId | null;
 }
 
@@ -81,6 +88,7 @@ export interface BookReviewFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   book?: EntityFilter<Book, BookId, FilterOf<Book>, never>;
+  critic?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null>;
   comment?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
@@ -92,6 +100,7 @@ export interface BookReviewGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   book?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, never>;
+  critic?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null>;
   comment?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
@@ -103,6 +112,7 @@ export interface BookReviewOrder {
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
   book?: BookOrder;
+  critic?: CriticOrder;
 }
 
 export const bookReviewConfig = new ConfigApi<BookReview, Context>();
@@ -207,6 +217,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   get book(): ManyToOneReference<BookReview, Book, never> {
     const { relations } = this.__orm;
     return relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
+  }
+
+  get critic(): ManyToOneReference<BookReview, Critic, undefined> {
+    const { relations } = this.__orm;
+    return relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {

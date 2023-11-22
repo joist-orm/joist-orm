@@ -188,6 +188,8 @@ export function up(b: MigrationBuilder): void {
     book_id: foreignKey("books", { notNull: true }),
     is_public: { type: "boolean", notNull: true },
     is_test: { type: "boolean", notNull: true },
+    // for testing factory fan-out/fan-in, optionaln to reduce churn in existing tests
+    critic_id: foreignKey("critics", { notNull: false }),
   });
 
   createEnumTable(b, "image_type", [

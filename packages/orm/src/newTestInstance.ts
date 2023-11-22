@@ -198,7 +198,10 @@ export function newTestInstance<T extends Entity>(
       // If this is a list of children, i.e. book.authors, handle partials to newTestInstance'd
       return [
         fieldName,
-        (optValue as Array<any>).map((opt) => resolveFactoryOpt(em, withNewUseMap(opts), field, opt, entity)),
+        (optValue as Array<any>).map((opt) => {
+          // console.log(`${field.fieldName}`, i);
+          return resolveFactoryOpt(em, withNewUseMap(opts), field, opt, entity);
+        }),
       ];
     } else if (field.kind == "m2m") {
       return [
@@ -315,6 +318,8 @@ function getObviousDefault<T extends Entity>(
 ): T | undefined {
   const use = getOrCreateUseMap(em, opts);
   if (use.has(metadata.cstr)) {
+    // const e = use.get(metadata.cstr) as any;
+    // console.log(`Found ${e[0].toString()} in ${objectId(use)} as ${e[1]}`);
     return use.get(metadata.cstr)![0] as T;
   }
   return undefined;
@@ -346,7 +351,7 @@ function applyUse(optsMaybeNew: object, use: UseMap, metadata: EntityMetadata): 
         const def = use.get(f.otherMetadata().cstr)!;
         // Only pass explicit/user-defined `use` entities, so that factories can "fan out" if they want,
         // and not see other factory-created entities look like user-specific values.
-        if (def[1] === "opts") {
+        if (def[1] === "testUse") {
           (opts as any)[f.fieldName] = def[0];
         }
       }
@@ -366,6 +371,7 @@ export const testIndex: number = -1_111_111_222;
 const testIndexString = String(testIndex);
 
 const defaultValueMarker: any = {};
+const branchValueSym = Symbol("branchValue");
 
 /**
  * A marker value for the default `newTestInstance` behavior.
@@ -381,6 +387,31 @@ const defaultValueMarker: any = {};
  */
 export function defaultValue<T>(): T {
   return defaultValueMarker;
+}
+
+/**
+ * A marker value to never set a field.
+ *
+ * The factories treat `{ author: undefined }` as "fill in the author", because of how easy
+ * it is for destructuring/restructuring opts to implicitly set `undefined` values.
+ *
+ * If you want to force a field to not be set, you can use `{ author: noValue() }`.
+ */
+export function noValue<T>(): T {
+  return null as T;
+}
+
+/**
+ * A marker value to never set a field.
+ *
+ * The factories treat `{ author: undefined }` as "fill in the author", because of how easy
+ * it is for destructuring/restructuring opts to implicitly set `undefined` values.
+ *
+ * If you want to force a field to not be set, you can use `{ author: noValue() }`.
+ */
+export function maybeBranchValue<T>(opts?: ActualFactoryOpts<T>): T {
+  // opts get mutated so we have to return a new value
+  return { [branchValueSym]: true, ...(opts ? opts : undefined) } as any;
 }
 
 /**
@@ -519,9 +550,12 @@ type AllowRelationsOrPartials<T> = {
 
 // Map of constructor --> [
 //   default entity,
-//   "em" == found in the EM | "opts" === explicitly passed | "created" == created internally
+//     | "em" == found in the EM
+//     | "testOpts" === explicitly passed into the top-level `newFactory` that creates the UseMap
+//     | "testUse === explicitly passed in as a `use` flag
+//     | "created" === created internally within the factory call
 // ]
-type UseMap = Map<Function, [Entity, "em" | "opts" | "created"]>;
+type UseMap = Map<Function, [Entity, "em" | "testOpts" | "testUse" | "created"]>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use, which we'll
 // then re-use across all `newTestInstance` calls within a given `new<Entity>` call.
@@ -536,20 +570,19 @@ function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
     map = new Map();
     if (use instanceof Array) {
       // it's a top-level `newAuthor` with a user-passed `use: array`
-      use.forEach((e) => addForAllMetas(map, e, "opts"));
+      use.forEach((e) => addForAllMetas(map, e, "testUse"));
     } else if (use) {
       // it's a top-level `newAuthor` w/o a `use: entity` param
-      addForAllMetas(map, use, "opts");
+      addForAllMetas(map, use, "testUse");
     }
-    // Scan opts for entities to implicitly add to the map, i.e. if the user
-    // calls `newAuthor(em, { book: b1 })`, we'll use `b1` for any other books we
-    // might happen to create.
+    // Scan opts for entities to add to the map, i.e. if the user calls `newAuthor(em, { book: b1 })`,
+    // we'll use `b1` for any other books we might happen to create.
     const todo = [opts];
     while (todo.length > 0) {
       const opts = todo.pop();
       Object.values(opts || {}).forEach((opt) => {
         if (isEntity(opt) && !map.has(opt.constructor)) {
-          addForAllMetas(map, opt, "em"); // should be "opts"?
+          addForAllMetas(map, opt, "testOpts");
         } else if (opt instanceof Array) {
           todo.push(...opt);
         } else if (isPlainObject(opt)) {
@@ -573,13 +606,15 @@ function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
 }
 
 // If e is a subtype like SmallPublisher, register it for the base Publisher as well
-function addForAllMetas(map: UseMap, e: Entity, source: "em" | "opts" | "created") {
+function addForAllMetas(map: UseMap, e: Entity, source: "em" | "testOpts" | "testUse" | "created") {
   const meta = getMetadata(e);
   if (meta.baseType || meta.subTypes.length) {
     getBaseAndSelfMetas(meta).forEach((m) => {
+      // console.log(`Putting ${e.toString()} into ${objectId(map)} as ${source}`);
       map.set(m.cstr, [e, source]);
     });
   } else {
+    // console.log(`Putting ${e.toString()} into ${objectId(map)} as ${source}`);
     map.set(meta.cstr, [e, source]);
   }
 }
@@ -614,16 +649,20 @@ function mergeOpts(meta: EntityMetadata, testOpts: Record<string, any>, factoryO
       );
     }
     // This seemed like a good idea
-    // if (isPlainObject(opts[key]) && Object.keys(opts[key]).length === 0) {
-    //   const field = meta.allFields[key];
-    //   if (field.kind === "m2o") {
-    //     const use = testOpts.use as any;
-    //     const inTree = use?.get(field.otherMetadata().cstr);
-    //     if (inTree) {
-    //       opts[key] = inTree[0];
-    //     }
-    //   }
-    // }
+    if (opts[key]?.[branchValueSym]) {
+      const field = meta.allFields[key];
+      if (field.kind === "m2o") {
+        const use = testOpts.use as any;
+        const inTree = use?.get(field.otherMetadata().cstr);
+        if (inTree && (inTree[1] === "created" || inTree[1] === "testOpts")) {
+          // console.log(`Putting ${field.fieldName} to`, inTree[0]);
+          opts[key] = inTree[0];
+        }
+      } else {
+        throw new Error(`branchValue is not implemented for ${field.kind}`);
+      }
+      delete opts[key]?.[branchValueSym];
+    }
   });
   return opts;
 }
@@ -643,5 +682,24 @@ function getCodegenDefault(cstr: any, fieldName: string): any {
 // As we branch out to children, going down the tree, give each branch its own playground of entities
 function withNewUseMap(opts: object): object {
   const oldMap = (opts as any).use;
-  return { ...opts, use: new Map(oldMap) };
+  const newMap = new Map(oldMap);
+  const newSet = newMap.set.bind(newMap);
+  newMap.set = (k: any, v: any) => {
+    // console.log(`Putting ${v[0].toString()} into ${objectId(oldMap)} and ${objectId(newMap)} as ${v[1]}`);
+    // Purposefully downgrade this to source=em
+    oldMap.set(k, [v[0], "em"]);
+    return newSet(k, v);
+  };
+  return { ...opts, use: newMap };
 }
+
+const objectId = (() => {
+  let currentId = 0;
+  const map = new WeakMap();
+  return (object: object): number => {
+    if (!map.has(object)) {
+      map.set(object, ++currentId);
+    }
+    return map.get(object)!;
+  };
+})();

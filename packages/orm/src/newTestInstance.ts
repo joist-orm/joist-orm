@@ -691,7 +691,9 @@ function withNewUseMap(opts: object): object {
   const newSet = newMap.set.bind(newMap);
   newMap.set = (k: any, v: any) => {
     // console.log(`Putting ${v[0].toString()} into ${objectId(oldMap)} and ${objectId(newMap)} as ${v[1]}`);
-    // Purposefully downgrade this to source=em
+    // Purposefully downgrade this to source=em so that it will not be used by
+    // `branchValue()` calls that override `{}`, but can still be used to in-fan,
+    // i.e. if making multiple books by default they get the same author.
     oldMap.set(k, [v[0], "em"]);
     return newSet(k, v);
   };

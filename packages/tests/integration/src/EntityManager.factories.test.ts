@@ -109,7 +109,9 @@ describe("EntityManager.factories", () => {
     // When we explicitly pass it as use
     newBookReview(em, { use: a1 });
     await em.flush();
-    // Then it's passed as part of the opts
+    // Then it's passed as part of the opts (which is what makes `use` special, as "obvious defaults"
+    // are not passed as opts to the factory functions, and only looked up within `newTestInstance`).
+    // Effectively, `use` is a way to trump all factory defaults for a given type.
     expect(lastBookFactoryOpts).toStrictEqual({
       title: expect.anything(),
       author: a1,

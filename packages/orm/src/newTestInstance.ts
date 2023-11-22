@@ -390,7 +390,7 @@ export function defaultValue<T>(): T {
 }
 
 /**
- * A marker value to never set a field.
+ * A marker value to never set a field, even if it's required.
  *
  * The factories treat `{ author: undefined }` as "fill in the author", because of how easy
  * it is for destructuring/restructuring opts to implicitly set `undefined` values.

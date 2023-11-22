@@ -27,7 +27,7 @@ import {
   SmallPublisher,
 } from "@src/entities";
 import { isPreloadingEnabled, newEntityManager, queries, resetQueryCount } from "@src/testEm";
-import { maybeNew, maybeNewPoly, newTestInstance, testIndex } from "joist-orm";
+import { maybeNew, maybeNewPoly, newTestInstance, noValue, testIndex } from "joist-orm";
 
 describe("EntityManager.factories", () => {
   it("can create a single top-level entity", async () => {
@@ -381,6 +381,20 @@ describe("EntityManager.factories", () => {
     );
     // Then we got back the same author
     expect(a2).toMatchEntity(a1);
+  });
+
+  it("can create a leave required fields unset", async () => {
+    const em = newEntityManager();
+    // Given we want to make a Book
+    const b = newTestInstance(
+      em,
+      Book,
+      {},
+      // And leave the required author field unset
+      { author: noValue<Author>() },
+    );
+    // Then it was not set
+    expect(b.author.get).toBeUndefined();
   });
 
   describe("maybeNew", () => {

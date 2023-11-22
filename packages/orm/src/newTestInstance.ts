@@ -69,7 +69,7 @@ export function newTestInstance<T extends Entity>(
 ): DeepNew<T> {
   const meta = getMetadata(cstr);
   const opts = mergeOpts(meta, testOpts, factoryOpts);
-  const use = getOrCreateUseMap(em, opts);
+  const use = getOrCreateUseMap(opts);
 
   const selfFields: string[] = [];
 
@@ -277,7 +277,7 @@ function resolveFactoryOpt<T extends Entity>(
         }
       }
     }
-    const use = getOrCreateUseMap(em, opts);
+    const use = getOrCreateUseMap(opts);
     // If this is image.author (m2o) but the other-side is a o2o, pass null instead of []
     maybeEntity ??= (meta.allFields[otherFieldName].kind === "o2o" ? null : []) as any;
     return meta.factory(em, {
@@ -316,7 +316,7 @@ function getObviousDefault<T extends Entity>(
   metadata: EntityMetadata,
   opts: FactoryOpts<any>,
 ): T | undefined {
-  const use = getOrCreateUseMap(em, opts);
+  const use = getOrCreateUseMap(opts);
   if (use.has(metadata.cstr)) {
     // const e = use.get(metadata.cstr) as any;
     // console.log(`Found ${e[0].toString()} in ${objectId(use)} as ${e[1]}`);
@@ -598,7 +598,7 @@ type UseMap = Map<Function, UseMapValue>;
 
 // Do a one-time conversion of the user's `use` array into a map for internal use, which we'll
 // then re-use across all `newTestInstance` calls within a given `new<Entity>` call.
-function getOrCreateUseMap(em: EntityManager, opts: FactoryOpts<any>): UseMap {
+function getOrCreateUseMap(opts: FactoryOpts<any>): UseMap {
   const use: Entity | Entity[] | UseMap | undefined = opts.use;
   let map: UseMap;
 

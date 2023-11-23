@@ -216,20 +216,20 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get id(): IdOf<U> {
-    return this.idMaybe || failNoId(this.current());
+    return this.idMaybe || failNoId(this.fieldName, this.current());
   }
 
   get idUntagged(): string {
-    return this.idUntaggedMaybe || failNoId(this.current());
+    return this.idUntaggedMaybe || failNoId(this.fieldName, this.current());
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.current());
+    failIfNewEntity(this.fieldName, this.current());
     return this.idMaybe;
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.current());
+    failIfNewEntity(this.fieldName, this.current());
     return this.idUntaggedMaybe;
   }
 

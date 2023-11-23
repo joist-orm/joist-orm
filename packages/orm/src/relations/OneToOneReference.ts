@@ -103,23 +103,23 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   get id(): IdOf<U> {
-    return this.idMaybe || failNoId(this.loaded);
+    return this.idMaybe || failNoId(this.fieldName, this.loaded);
   }
 
   get idIfSet(): IdOf<U> | undefined {
     if (this._isLoaded) {
-      failIfNewEntity(this.loaded);
+      failIfNewEntity(this.fieldName, this.loaded);
       return this.idMaybe;
     }
     throw new Error(`${this.entity}.${this.fieldName} was not loaded`);
   }
 
   get idUntagged(): string {
-    return this.idUntaggedMaybe || failNoId(this.loaded);
+    return this.idUntaggedMaybe || failNoId(this.fieldName, this.loaded);
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.loaded);
+    failIfNewEntity(this.fieldName, this.loaded);
     return this.idUntaggedMaybe;
   }
 

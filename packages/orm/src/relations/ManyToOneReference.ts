@@ -152,7 +152,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 
   /** Returns the id of the current value. */
   get id(): IdOf<U> {
-    return this.idMaybe || failNoId(this.current());
+    return this.idMaybe || failNoId(this.fieldName, this.current());
   }
 
   /** Sets the m2o to `id`, and allows accepting `undefined` (`N`) if this is a nullable relation. */
@@ -174,16 +174,16 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.current());
+    failIfNewEntity(this.fieldName, this.current());
     return this.idMaybe;
   }
 
   get idUntagged(): string {
-    return this.idUntaggedMaybe || failNoId(this.current());
+    return this.idUntaggedMaybe || failNoId(this.fieldName, this.current());
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.current());
+    failIfNewEntity(this.fieldName, this.current());
     return this.idUntaggedMaybe;
   }
 
@@ -383,13 +383,13 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
 }
 
 /** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
-export function failNoId(current: string | Entity | undefined): never {
-  if (!current) fail("Reference is unset");
-  if (current instanceof BaseEntity && current.isNewEntity) fail("Reference is assigned to a new entity");
-  fail("Reference is unset or assigned to a new entity");
+export function failNoId(fieldName: string, current: string | Entity | undefined): never {
+  if (!current) fail(`Reference ${fieldName} is unset`);
+  if (current instanceof BaseEntity && current.isNewEntity) fail(`Reference ${fieldName} is assigned to a new entity`);
+  fail(`Reference ${fieldName} is unset or assigned to a new entity`);
 }
 
 /** Fails when we can't return an id for a reference, i.e. it's unset or a new entity. */
-export function failIfNewEntity<U>(current: string | Entity | undefined): void {
-  if (current instanceof BaseEntity && current.isNewEntity) fail("Reference is assigned to a new entity");
+export function failIfNewEntity<U>(fieldName: string, current: string | Entity | undefined): void {
+  if (current instanceof BaseEntity && current.isNewEntity) fail(`Reference ${fieldName} is assigned to a new entity`);
 }

@@ -112,7 +112,7 @@ describe("OneToOneReference", () => {
     expect(() => (a1.image as any).idMaybe).toThrow("Author:1.image was not loaded");
     expect(() => (a1.image as any).idIfSet).toThrow("Author:1.image was not loaded");
     await a1.image.load();
-    expect(() => (a1.image as any).id).toThrow("Reference image is unset");
+    expect(() => (a1.image as any).id).toThrow("Reference Author:1.image is unset");
     expect((a1.image as any).idMaybe).toBeUndefined();
     expect((a1.image as any).idIfSet).toBeUndefined();
   });
@@ -122,8 +122,8 @@ describe("OneToOneReference", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1", "image");
     a1.image.set(newImage(em));
-    expect(() => a1.image.id).toThrow("Reference image is assigned to a new entity");
-    expect(() => a1.image.idIfSet).toThrow("Reference image is assigned to a new entity");
+    expect(() => a1.image.id).toThrow("Reference Author:1.image is assigned to a new entity");
+    expect(() => a1.image.idIfSet).toThrow("Reference Author:1.image is assigned to a new entity");
   });
 
   it("can cascade delete", async () => {

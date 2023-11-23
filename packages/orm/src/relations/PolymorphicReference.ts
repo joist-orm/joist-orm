@@ -145,7 +145,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get id(): IdOf<U> {
-    return this.idMaybe || failNoId(this.fieldName, this.current());
+    return this.idMaybe || failNoId(this.entity, this.fieldName, this.current());
   }
 
   get idMaybe(): IdOf<U> | undefined {
@@ -154,12 +154,12 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.fieldName, this.current());
+    failIfNewEntity(this.entity, this.fieldName, this.current());
     return this.idMaybe;
   }
 
   get idTagged(): string {
-    return this.idTaggedMaybe || failNoId(this.fieldName, this.current());
+    return this.idTaggedMaybe || failNoId(this.entity, this.fieldName, this.current());
   }
 
   get idTaggedMaybe(): string | undefined {

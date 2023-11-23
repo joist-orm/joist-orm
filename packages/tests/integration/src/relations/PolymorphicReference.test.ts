@@ -20,7 +20,7 @@ describe("PolymorphicReference", () => {
     const em = newEntityManager();
     const comment = await em.load(Comment, "1", "parent");
     expect(comment.parent.get).toBeUndefined();
-    expect(() => comment.parent.id).toThrow("Reference parent is unset");
+    expect(() => comment.parent.id).toThrow("Reference Comment:1.parent is unset");
   });
 
   it("can save a foreign key", async () => {

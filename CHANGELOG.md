@@ -1,3 +1,10 @@
+## [1.129.1](https://github.com/stephenh/joist-ts/compare/v1.129.0...v1.129.1) (2023-11-24)
+
+
+### Bug Fixes
+
+* Include field name in reference errors. ([#894](https://github.com/stephenh/joist-ts/issues/894)) ([67c6523](https://github.com/stephenh/joist-ts/commit/67c6523cabc6afa7a7688e97769a965fb393d9c0))
+
 # [1.129.0](https://github.com/stephenh/joist-ts/compare/v1.128.2...v1.129.0) (2023-11-22)
 
 

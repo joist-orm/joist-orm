@@ -1,8 +1,7 @@
 import { insertAuthor, insertBook, insertPublisher, select, update } from "@src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { Author, Book, User, newAuthor, newPublisher } from "../entities";
 import { IpAddress } from "../entities/types";
-
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("ManyToOneReference", () => {
   it("can load a foreign key", async () => {
@@ -28,7 +27,7 @@ describe("ManyToOneReference", () => {
     await insertAuthor({ first_name: "f" });
     const em = newEntityManager();
     const author = await em.load(Author, "1");
-    expect(() => author.publisher.id).toThrow("Reference is unset");
+    expect(() => author.publisher.id).toThrow("Reference Author:1.publisher is unset");
     expect(author.publisher.idIfSet).toBe(undefined);
     expect(author.publisher.idMaybe).toBeUndefined();
   });
@@ -38,8 +37,8 @@ describe("ManyToOneReference", () => {
     const em = newEntityManager();
     const author = await em.load(Author, "1");
     author.publisher.set(newPublisher(em));
-    expect(() => author.publisher.id).toThrow("Reference is assigned to a new entity");
-    expect(() => author.publisher.idIfSet).toThrow("Reference is assigned to a new entity");
+    expect(() => author.publisher.id).toThrow("Reference Author:1.publisher is assigned to a new entity");
+    expect(() => author.publisher.idIfSet).toThrow("Reference Author:1.publisher is assigned to a new entity");
     expect(author.publisher.idMaybe).toBeUndefined();
   });
 

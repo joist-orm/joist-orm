@@ -216,20 +216,20 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get id(): IdOf<U> {
-    return this.idMaybe || failNoId(this.current());
+    return this.idMaybe || failNoId(this.entity, this.fieldName, this.current());
   }
 
   get idUntagged(): string {
-    return this.idUntaggedMaybe || failNoId(this.current());
+    return this.idUntaggedMaybe || failNoId(this.entity, this.fieldName, this.current());
   }
 
   get idIfSet(): IdOf<U> | N | undefined {
-    failIfNewEntity(this.current());
+    failIfNewEntity(this.entity, this.fieldName, this.current());
     return this.idMaybe;
   }
 
   get idUntaggedIfSet(): string | undefined {
-    failIfNewEntity(this.current());
+    failIfNewEntity(this.entity, this.fieldName, this.current());
     return this.idUntaggedMaybe;
   }
 
@@ -265,7 +265,6 @@ export class PersistedAsyncReferenceImpl<
   async cleanupOnEntityDeleted(): Promise<void> {
     // if we are going to delete this relation as well, then we don't need to clean it up
     if (this.isCascadeDelete) return;
-    const current = await this.load({ withDeleted: true });
     setField(this.entity, this.fieldName, undefined);
     this.loaded = undefined as any;
     this._isLoaded = false;

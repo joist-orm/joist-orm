@@ -1,7 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
-import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
-
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -21,7 +20,7 @@ describe("PolymorphicReference", () => {
     const em = newEntityManager();
     const comment = await em.load(Comment, "1", "parent");
     expect(comment.parent.get).toBeUndefined();
-    expect(() => comment.parent.id).toThrow("Reference is unset");
+    expect(() => comment.parent.id).toThrow("Reference Comment:1.parent is unset");
   });
 
   it("can save a foreign key", async () => {

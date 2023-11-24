@@ -821,6 +821,11 @@ describe("EntityManager", () => {
     expect(a.firstName).toEqual("a1");
   });
 
+  it("can find by undefined field with findOrCreate", async () => {
+    const em = newEntityManager();
+    await em.findOrCreate(Author, { publisher: undefined }, { firstName: "a2" });
+  });
+
   it("can create with findOrCreate", async () => {
     const em = newEntityManager();
     new Author(em, { firstName: "a1" });

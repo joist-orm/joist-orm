@@ -225,10 +225,11 @@ export function up(b: MigrationBuilder): void {
     }),
     ip_address: { type: "varchar(255)", notNull: false },
     password: { type: "varchar(255)", notNull: false },
-
+    // For testing `default: ""` should signal to keep empty strings
     bio: { type: "varchar(255)", notNull: true, default: "" },
   });
 
+  // For testing subclasses with their own rules...
   createSubTable(b, "users", "admin_users", {
     role: { type: "varchar(255)", notNull: true },
   });

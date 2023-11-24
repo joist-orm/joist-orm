@@ -1,4 +1,4 @@
-import { isPlainObject } from "is-plain-object";
+import { isPlainObject } from "joist-utils";
 import { Entity, isEntity } from "./Entity";
 import {
   ActualFactoryOpts,

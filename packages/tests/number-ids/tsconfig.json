@@ -1,28 +1,14 @@
 {
+  "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2022",
-    "module": "commonjs",
-    "strict": true,
-    "types": ["jest", "node"],
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "composite": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./",
     "baseUrl": "./",
     "paths": {
-      "joist-codegen": ["../../codegen"],
-      "joist-graphql-codegen": ["../../graphql-codegen"],
-      "joist-migration-utils": ["../../migration-utils"],
-      "joist-test-utils": ["../../test-utils"],
-      "joist-orm": ["../../orm"],
-      "joist-utils": ["../../utils"],
       "@src/*": ["src/*"]
     }
   },
+  "include": ["./src", "./migrations"],
   "references": [
     { "path": "../../codegen" },
     { "path": "../../graphql-codegen" },

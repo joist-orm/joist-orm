@@ -1,7 +1,6 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
 // @ts-ignore
 import matchers from "expect/build/matchers";
-import { isPlainObject } from "is-plain-object";
 import {
   AsyncProperty,
   BaseEntity,
@@ -17,6 +16,7 @@ import {
   isReference,
   Reference,
 } from "joist-orm";
+import { isPlainObject } from "joist-utils";
 
 /**
  * Provides convenient `toMatchObject`-style matching for Joist entities.
@@ -113,7 +113,7 @@ function deepMirror(expected: any, actual: any): any {
   for (const key of keys) {
     if (key in actual) {
       // Even if actualValue is an Entity, if expected has a key drilling in to it, we want to object literal-ize it
-      subset[key] = deepMirror(expected[key], maybeGetRelation(actual[key]));
+      subset[key] = deepMirror((expected as any)[key], maybeGetRelation(actual[key]));
     }
   }
   return subset;

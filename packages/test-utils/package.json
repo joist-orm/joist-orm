@@ -11,7 +11,7 @@
     "build"
   ],
   "dependencies": {
-    "is-plain-object": "^5.0.0"
+    "joist-utils": "workspace:*"
   },
   "devDependencies": {
     "@swc/core": "^1.3.95",

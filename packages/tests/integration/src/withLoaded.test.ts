@@ -1,6 +1,6 @@
 import { newAuthor } from "@src/entities";
 import { newEntityManager } from "@src/testEm";
-import { withLoaded } from "joist-orm/build/src/withLoaded";
+import { withLoaded } from "joist-orm";
 
 describe("withLoaded", () => {
   it("with a m2o", async () => {

@@ -1,7 +1,7 @@
 import { Book } from "@src/entities";
 import { knex } from "@src/testEm";
 import { getMetadata, ParsedFindQuery, parseFindQuery } from "joist-orm";
-import { buildKnexQuery } from "joist-orm/build/src/drivers/buildKnexQuery";
+import { buildKnexQuery } from "joist-orm/build/drivers/buildKnexQuery";
 
 function generateSql(t: ParsedFindQuery) {
   return buildKnexQuery(knex, t, {}).toSQL().sql;

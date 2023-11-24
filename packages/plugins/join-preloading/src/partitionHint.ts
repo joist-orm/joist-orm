@@ -1,6 +1,12 @@
-import { EntityMetadata, getProperties, LoadHint, PersistedAsyncReferenceImpl } from "joist-orm";
-import { NestedLoadHint } from "joist-orm/build/src/loadHints";
-import { deepNormalizeHint, normalizeHint } from "joist-orm/build/src/normalizeHints";
+import {
+  deepNormalizeHint,
+  EntityMetadata,
+  getProperties,
+  LoadHint,
+  NestedLoadHint,
+  normalizeHint,
+  PersistedAsyncReferenceImpl,
+} from "joist-orm";
 import { canPreload } from "./canPreload";
 
 /** Partitions a hint into SQL-able and non-SQL-able hints. */

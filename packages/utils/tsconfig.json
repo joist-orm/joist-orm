@@ -1,18 +1,9 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2022",
-    "module": "commonjs",
-    "strict": true,
-    "noImplicitReturns": true,
-    "types": ["jest", "node"],
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "composite": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
     "outDir": "./build",
     "rootDir": "./src",
-    "baseUrl": "./src"
-  }
+    "baseUrl": "./"
+  },
+  "include": ["./src"]
 }

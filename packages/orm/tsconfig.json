@@ -1,21 +1,9 @@
 {
+  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "target": "es2022",
-    "module": "commonjs",
-    "strict": true,
-    "noImplicitReturns": true,
-    "types": ["jest", "node"],
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "composite": true,
-    "sourceMap": true,
-    "declaration": true,
-    "declarationMap": true,
     "outDir": "./build",
-    "baseUrl": ".",
-    "paths": {
-      "joist-utils": ["../utils"]
-    }
+    "rootDir": "./src",
+    "baseUrl": "./src"
   },
   "include": ["./src"],
   "references": [{ "path": "../utils" }]

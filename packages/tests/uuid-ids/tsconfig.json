@@ -14,12 +14,6 @@
     "rootDir": "./",
     "baseUrl": "./",
     "paths": {
-      "joist-codegen": ["../../codegen"],
-      "joist-graphql-codegen": ["../../graphql-codegen"],
-      "joist-migration-utils": ["../../migration-utils"],
-      "joist-test-utils": ["../../test-utils"],
-      "joist-orm": ["../../orm"],
-      "joist-utils": ["../../utils"],
       "@src/*": ["src/*"]
     }
   },

@@ -1,5 +1,4 @@
-import { isPlainObject } from "is-plain-object";
-import { groupBy } from "joist-utils";
+import { groupBy, isPlainObject } from "joist-utils";
 import { aliasMgmt, isAlias } from "./Aliases";
 import { Entity, isEntity } from "./Entity";
 import { ExpressionFilter, OrderBy, ValueFilter } from "./EntityFilter";

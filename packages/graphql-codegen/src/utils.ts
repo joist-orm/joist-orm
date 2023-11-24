@@ -1,5 +1,5 @@
 import { promises as fs } from "fs";
-import { isPlainObject } from "is-plain-object";
+import { isPlainObject } from "joist-utils";
 import { dirname } from "path";
 
 /** A super-simple file system abstraction for testing. */

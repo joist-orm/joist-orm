@@ -1,6 +1,6 @@
 import { Author, Book, BookReview, Comment, Image, Tag } from "@src/entities";
 import { LoadHint, Loaded, Reacted, ReactiveHint, getMetadata, reverseReactiveHint } from "joist-orm";
-import { convertToLoadHint } from "joist-orm/build/src/reactiveHints";
+import { convertToLoadHint } from "joist-orm/build/reactiveHints";
 
 const am = getMetadata(Author);
 

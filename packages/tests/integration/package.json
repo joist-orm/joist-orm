@@ -8,6 +8,8 @@
     "url": "https://github.com/stephenh/joist-ts.git",
     "directory": "packages/tests/integration"
   },
+  "main": "build/src/index.js",
+  "types": "build/src/index.d.ts",
   "scripts": {
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "yarn test-stock && yarn test-preloading",
@@ -19,6 +21,7 @@
     "docker:reset": "docker compose exec db ./reset.sh"
   },
   "dependencies": {
+    "joist-graphql-resolver-utils": "workspace:*",
     "joist-orm": "workspace:*",
     "joist-plugin-join-preloading": "workspace:*",
     "mitata": "^0.1.6"

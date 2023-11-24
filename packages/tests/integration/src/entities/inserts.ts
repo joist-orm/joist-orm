@@ -65,8 +65,12 @@ export function insertComment(row: {
   return testDriver.insert("comments", row);
 }
 
-export function insertUser(row: { id?: number; name: string; email: string; password: string }) {
-  return testDriver.insert("users", row);
+export function insertUser(row: { id?: number; name: string; email?: string; password?: string; author_id?: number }) {
+  return testDriver.insert("users", {
+    email: `${row.name}@example.com`,
+    password: "password",
+    ...row,
+  });
 }
 
 export function insertPublisherOnly(row: {

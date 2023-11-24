@@ -2,7 +2,7 @@
   "version": "1.129.2",
   "name": "joist",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tspc --build",
     "semantic-release": "semantic-release",
     "migrate": "yarn workspaces foreach run migrate",
     "codegen": "yarn workspaces foreach run codegen",
@@ -21,6 +21,7 @@
     "packages/migration-utils",
     "packages/orm",
     "packages/plugins/join-preloading",
+    "packages/plugins/rebac-auth",
     "packages/utils",
     "packages/test-utils",
     "packages/tests/integration",
@@ -36,8 +37,11 @@
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^9.2.1",
     "@semantic-release/release-notes-generator": "^12.0.0",
+    "@tsconfig/node20": "^20.1.2",
     "env-cmd": "^10.1.0",
-    "semantic-release": "^22.0.5"
+    "semantic-release": "^22.0.5",
+    "ts-patch": "^3.0.2",
+    "typescript-transform-paths": "^3.4.6"
   },
   "dependencies": {
     "typescript": "^5.2.2"

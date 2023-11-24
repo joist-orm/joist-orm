@@ -1,4 +1,5 @@
 export { ConnectionConfig, newPgConnectionConfig } from "./connection";
+export { isPlainObject } from "./is-plain-object";
 
 export function fail(message?: string): never {
   throw new Error(message || "Failed");

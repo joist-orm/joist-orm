@@ -1,5 +1,5 @@
 import { pascalCase } from "change-case";
-import { isPlainObject } from "is-plain-object";
+import { isPlainObject } from "joist-utils";
 import { Table } from "pg-structure";
 import pluralize from "pluralize";
 import { DatabaseColumnType, PrimitiveTypescriptType } from "./EntityDbMetadata";

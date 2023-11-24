@@ -6,6 +6,7 @@
     { "path": "./packages/migration-utils" },
     { "path": "./packages/orm" },
     { "path": "./packages/plugins/join-preloading" },
+    { "path": "./packages/plugins/rebac-auth" },
     { "path": "./packages/tests/integration" },
     { "path": "./packages/tests/number-ids" },
     { "path": "./packages/tests/schema-misc" },
@@ -13,6 +14,10 @@
     { "path": "./packages/utils" }
   ],
   "files": [],
-  "include": [],
-  "exclude": ["**/node_modules"]
+  "compilerOptions": {
+    "plugins": [
+      { "transform": "typescript-transform-paths" },
+      { "transform": "typescript-transform-paths", "afterDeclarations": true }
+    ]
+  }
 }

@@ -997,6 +997,20 @@ describe("EntityManager", () => {
     expect(a1.lastName).toBe("l1");
   });
 
+  it("can find existing with findOrCreate with undefined FKs", async () => {
+    await insertPublisher({ name: "p1" });
+    // Given two authors, both with same age, but one has a publisher
+    await insertAuthor({ first_name: "a1", age: 20, publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", age: 20 });
+    const em = newEntityManager();
+    resetQueryCount();
+    // When we findOrCreate for the { age: 20, publisher: undefined } author
+    const a1 = await em.findOrCreate(Author, { age: 20, publisher: undefined }, { firstName: "a3" });
+    expect(numberOfQueries).toBe(1);
+    // Then we got back the existing a2 author
+    expect(a1).toMatchEntity({ firstName: "a2", isNewEntity: false });
+  });
+
   it("findOrCreate still creates dups with different where clauses in a loop", async () => {
     const em = newEntityManager();
     // Given two findOrCreates that are creating two entities

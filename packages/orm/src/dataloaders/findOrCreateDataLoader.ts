@@ -1,6 +1,5 @@
 import DataLoader from "dataloader";
 import { Entity, isEntity } from "../Entity";
-import { FilterWithAlias } from "../EntityFilter";
 import { EntityConstructor, EntityManager, OptsOf, TooManyError, sameEntity } from "../EntityManager";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
 import { ManyToOneReference, PolymorphicReference, isLoadedReference } from "../relations";
@@ -18,8 +17,9 @@ export function findOrCreateDataLoader<T extends Entity>(
   where: Partial<OptsOf<T>>,
   softDeletes: "include" | "exclude",
 ): DataLoader<Key<T>, T> {
-  // Do some extra logic to make citext not create duplicate entities
   const meta = getMetadata(type);
+
+  // Do some extra logic to make citext not create duplicate entities
   const hasAnyCitext = Object.values(meta.allFields).some((f) => f.kind === "primitive" && f.citext);
   const cacheKeyFn: (key: Key<T>) => Key<T> = !hasAnyCitext
     ? whereFilterHash
@@ -49,6 +49,7 @@ export function findOrCreateDataLoader<T extends Entity>(
       // conditions, which we could fail on, but for now just take the first tuple of
       // {where/ifNew/upsert} and assume it wins
       const [{ where, ifNew, upsert }] = keys;
+
       // Before we find/create an entity, see if we have a maybe-new one in the EM already.
       // This will also use any WIP changes we've made to the found entity, which ideally is
       // something `em.find` would do as well, but its queries are much more complex..
@@ -75,7 +76,12 @@ export function findOrCreateDataLoader<T extends Entity>(
       }
 
       // If we didn't find it in the EM, do the db query/em.create
-      const entities = await em.find(type, { ...(where as FilterWithAlias<T>) }, { softDeletes });
+      const entities = await em.find(
+        type,
+        // Convert `publisher: undefined` --> `publisher: null`, and we need to make a copy anyway
+        Object.fromEntries(Object.entries(where).map(([k, v]) => [k, v === undefined ? null : v])) as any,
+        { softDeletes },
+      );
       let entity: T;
       if (entities.length > 1) {
         throw new TooManyError(`Found more than one existing ${type.name} with ${whereAsString(where)}`);
@@ -103,22 +109,22 @@ function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<T>>): b
     switch (field.kind) {
       case "primaryKey":
       case "enum":
-        return entity[fn] === opts[fn];
+        return entity[fn] === value;
       case "primitive":
         if (field.citext) {
-          return compareCaseInsensitive(entity[fn], opts[fn]);
+          return compareCaseInsensitive(entity[fn], value);
         } else {
-          return entity[fn] === opts[fn];
+          return entity[fn] === value;
         }
       case "m2o":
       case "poly":
         const relation = entity[fn] as ManyToOneReference<T, any, any> | PolymorphicReference<T, any, any>;
         if (isLoadedReference(relation)) {
           // Prefer using `.get` because it will handle new/id-less entities
-          return sameEntity(relation.get, (opts as any)[fn]);
+          return sameEntity(relation.get, value as any);
         } else {
           // Otherwise use ids
-          return sameEntity(relation.id as any, (opts as any)[fn]);
+          return sameEntity(relation.id as any, value as any);
         }
       default:
         throw new Error(`Unsupported field ${fieldName}`);

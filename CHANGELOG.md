@@ -1,3 +1,10 @@
+## [1.129.2](https://github.com/stephenh/joist-ts/compare/v1.129.1...v1.129.2) (2023-11-24)
+
+
+### Bug Fixes
+
+* Fix findOrCreate with undefined. ([#896](https://github.com/stephenh/joist-ts/issues/896)) ([d4d135b](https://github.com/stephenh/joist-ts/commit/d4d135b4a6da5011ac1c72a8a605caa713cdbd3d))
+
 ## [1.129.1](https://github.com/stephenh/joist-ts/compare/v1.129.0...v1.129.1) (2023-11-24)
 
 

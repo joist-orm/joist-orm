@@ -1,8 +1,8 @@
 import DataLoader from "dataloader";
+import { AliasAssigner } from "../AliasAssigner";
 import { Entity } from "../Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TaggedId } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, OneToManyField, OneToOneField, getMetadata } from "../EntityMetadata";
-import { abbreviation } from "../QueryBuilder";
 import {
   ColumnCondition,
   ParsedFindQuery,
@@ -30,13 +30,7 @@ export function lensDataLoader<T extends Entity>(
   // Batch lens loads by type + path to avoid N+1s
   const batchKey = `${type.name}-${paths.join("/")}`;
   return em.getLoader("lens", batchKey, async (sourceIds) => {
-    const aliases: Record<string, number> = {};
-    function getAlias(tableName: string): string {
-      const abbrev = abbreviation(tableName);
-      const i = aliases[abbrev] || 0;
-      aliases[abbrev] = i + 1;
-      return i === 0 ? abbrev : `${abbrev}${i}`;
-    }
+    const { getAlias } = new AliasAssigner();
 
     // br.load(br => br.book.author)
     // select br.id as __source_id, a.*

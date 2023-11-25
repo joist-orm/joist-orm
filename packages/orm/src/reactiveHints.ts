@@ -188,7 +188,7 @@ export function reverseReactiveHint<T extends Entity>(
 /**
  * Walks `reverseHint` for every entity in `entities`.
  *
- * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all of the books' authors' publishers.
+ * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all the books' authors' publishers.
  */
 export async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
   // Start at the current entities

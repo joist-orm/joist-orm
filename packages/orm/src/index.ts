@@ -40,6 +40,7 @@ export * from "./getProperties";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
+  AsyncMethodsIn,
   DeepNew,
   LoadHint,
   Loadable,
@@ -60,6 +61,7 @@ export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
+export * from "./relations/hasAsyncMethod";
 export {
   GenericError,
   ValidationError,

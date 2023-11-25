@@ -228,5 +228,8 @@ export function ensureLoaded<T extends Entity, H extends LoadHint<T>, L extends 
 /** From any `Relations` field in `T`, i.e. for loader hints. */
 export type RelationsIn<T extends Entity> = SubType<T, Relation<any, any>>;
 
+/** From any `Relations` field in `T`, i.e. for loader hints. */
+export type AsyncMethodsIn<T extends Entity> = SubType<T, AsyncMethod<any, any, any>>;
+
 // https://medium.com/dailyjs/typescript-create-a-condition-based-subset-types-9d902cea5b8c
 type SubType<T, C> = Pick<T, { [K in keyof T]: T[K] extends C ? K : never }[keyof T]>;

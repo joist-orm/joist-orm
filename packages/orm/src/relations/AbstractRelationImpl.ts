@@ -1,9 +1,13 @@
+import { Entity } from "../Entity";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 
 /**
  * Defines common hooks that relations can respond to to keep the entity graph in sync.
  */
-export abstract class AbstractRelationImpl<T, U> extends AbstractPropertyImpl<T> {
+export abstract class AbstractRelationImpl<
+  T extends Entity,
+  U extends Entity | Entity[],
+> extends AbstractPropertyImpl<T> {
   constructor(entity: T) {
     super(entity);
   }

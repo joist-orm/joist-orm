@@ -17,13 +17,13 @@ export const isPreloadingEnabled = plugins.includes("join-preloading");
 
 let makeApiCall: Function = null!;
 
-export function newEntityManager(): EntityManager {
+export function newEntityManager(opts?: Partial<EntityManagerOpts>): EntityManager {
   const ctx = { knex };
-  const opts: EntityManagerOpts = {
+  const em = new EntityManager(ctx as any, {
     driver: testDriver.driver,
     preloadPlugin: isPreloadingEnabled ? new JsonAggregatePreloader() : undefined,
-  };
-  const em = new EntityManager(ctx as any, opts);
+    ...opts,
+  });
   Object.assign(ctx, { em, makeApiCall });
   return em;
 }

@@ -53,6 +53,11 @@ export function findDataLoader<T extends Entity>(
         // We have to parseFindQuery queries[0], b/c our query variable may be captured from
         // a prior invocation that instantiated our dataloader instance.
         const query = parseFindQuery(meta, where, opts);
+        // Maybe do auth checks
+        const { findPlugin } = getEmInternalApi(em);
+        if (findPlugin) {
+          findPlugin.beforeFind(meta, query);
+        }
         // Maybe add preload joins
         const { preloader } = getEmInternalApi(em);
         const preloadHydrator = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
@@ -70,6 +75,7 @@ export function findDataLoader<T extends Entity>(
       // )
       // SELECT array_agg(d.tag), a.*
       // FROM authors a
+      // <...maybe auth/etc. filters...>
       // JOIN data d ON (d.arg1 = a.first_name OR d.arg2 = a.last_name)
       // group by a.id;
 
@@ -107,6 +113,17 @@ export function findDataLoader<T extends Entity>(
             j.selects.map((s) => `(array_agg(${s.value}))[1] AS ${s.as}`),
           ),
         );
+      }
+
+      // look for a filter api. give it this query? ask it to give back filters?
+      // what do we need to know?
+      // what joins and conditions to add to this query.
+      // should we ask for additions? or pass the query?
+      // eventually we should support being escape hatched for method invocations
+
+      const { findPlugin } = getEmInternalApi(em);
+      if (findPlugin) {
+        findPlugin.beforeFind(meta, query);
       }
 
       const sql = `

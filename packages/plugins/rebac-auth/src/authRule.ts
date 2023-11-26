@@ -52,7 +52,7 @@ export type AuthRule<T extends Entity> = {
     : never;
 };
 
-type ParsedAuthRule<T extends Entity> = {
+export type ParsedAuthRule<T extends Entity> = {
   meta: EntityMetadata<T>;
   fields: Record<string, FieldAccess>;
   methods: Record<string, MethodAccess>;
@@ -103,7 +103,7 @@ function parse(
       }
     }
   }
-  const parsed = { meta, fields, methods, relations, where, pathToUser };
+  const parsed = { meta, fields, methods, relations, where, pathToUser: pathToUser.reverse() };
   // What about CTI base/child classes?
   (result[meta.cstr.name] ??= []).push(parsed);
   return parsed;

@@ -1,4 +1,3 @@
-import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
 import { EntityOrId, HintNode } from "../HintTree";
@@ -40,7 +39,7 @@ export interface PreloadPlugin {
    * Note that the actual relations themselves won't be loaded, just the preload
    * cache populated to make the relation `.preload()` / `.load()` fast.
    */
-  addPreloading<T extends Entity>(
+  addPreloading(
     em: EntityManager,
     meta: EntityMetadata,
     tree: HintNode<EntityOrId>,
@@ -56,7 +55,7 @@ export interface PreloadPlugin {
    * are crafting their own SQL query for `driver.executeQuery` (basically this is `em.findAll`
    * because it uses a complicated CTE + join strategy to do batching).
    */
-  getPreloadJoins<T extends Entity>(
+  getPreloadJoins(
     em: EntityManager,
     meta: EntityMetadata,
     tree: HintNode<EntityOrId>,

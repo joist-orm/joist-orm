@@ -1,6 +1,7 @@
 import { getMetadata } from "joist-orm";
-import { insertAuthor, insertBook, insertUser, newEntityManager, User } from "joist-tests-integration";
+import { Book, insertAuthor, insertBook, insertUser, newEntityManager, User } from "joist-tests-integration";
 import { AuthRule, parseAuthRule } from "./authRule";
+import { RebacAuthPlugin } from "./RebacAuthPlugin";
 
 const um = getMetadata(User);
 const r = "r";
@@ -60,8 +61,12 @@ describe("rebac-auth", () => {
     await insertBook({ title: "b2", author_id: 2 });
     await insertUser({ name: "u1", author_id: 1 });
 
-    // and the user can only see one
-    const em = newEntityManager();
+    // and the user can only see one book
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    const books = await em.find(Book, {});
+    expect(books.length).toBe(1);
   });
 
   it("can parse star field rules", () => {
@@ -75,7 +80,7 @@ describe("rebac-auth", () => {
     expect(parsed).toMatchObject({
       User: [{ fields: { "*": "rw" }, pathToUser: [] }],
       Author: [{ fields: {}, pathToUser: ["userOneToOne"] }],
-      Book: [{ fields: { "*": "r" }, pathToUser: ["userOneToOne", "author"] }],
+      Book: [{ fields: { "*": "r" }, pathToUser: ["author", "userOneToOne"] }],
     });
   });
 

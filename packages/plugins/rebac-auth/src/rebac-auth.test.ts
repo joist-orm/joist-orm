@@ -38,6 +38,7 @@ describe("rebac-auth", () => {
         // Support binding alias { as: m }
         where: { firstName: "u1" },
         books: {
+          entity: "crud",
           title: rw,
           "*": rw,
           publish: i,

@@ -16,6 +16,7 @@ import {
 
 export type FieldAccess = "r" | "rw" | "w";
 export type MethodAccess = "i";
+export type CrudValue = "crud" | "cru" | "crd" | "cr" | "cu" | "cd" | "c" | "ru" | "rd" | "r" | "ud" | "u" | "d";
 
 /**
  * Describes an auth rule for an entity `T`.
@@ -32,6 +33,7 @@ export type AuthRule<T extends Entity> = {
     | keyof FieldsOf<T>
     | keyof RelationsIn<T>
     | keyof AsyncMethodsIn<T>
+    | "entity"
     | "*"
     | "where"]?: K extends keyof RelationsIn<T>
     ? T[K] extends Reference<T, infer U, any>
@@ -47,6 +49,8 @@ export type AuthRule<T extends Entity> = {
       : never
     : K extends "*"
     ? FieldAccess
+    : K extends "entity"
+    ? CrudValue
     : K extends "where"
     ? FilterWithAlias<T>
     : never;

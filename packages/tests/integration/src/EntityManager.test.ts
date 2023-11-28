@@ -826,6 +826,13 @@ describe("EntityManager", () => {
     await em.findOrCreate(Author, { publisher: undefined }, { firstName: "a2" });
   });
 
+  it("can find by undefined unloaded m2o field with findOrCreate", async () => {
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    await em.load(Author, "a:1");
+    await em.findOrCreate(Author, { publisher: undefined }, { firstName: "a2" });
+  });
+
   it("can create with findOrCreate", async () => {
     const em = newEntityManager();
     new Author(em, { firstName: "a1" });

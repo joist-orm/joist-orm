@@ -1,3 +1,10 @@
+## [1.129.3](https://github.com/stephenh/joist-ts/compare/v1.129.2...v1.129.3) (2023-11-28)
+
+
+### Bug Fixes
+
+* Fix findOrCreate with unloaded & unset m2o references. ([#899](https://github.com/stephenh/joist-ts/issues/899)) ([0a64ae5](https://github.com/stephenh/joist-ts/commit/0a64ae5bac6a17bba5d27e1c0b12ee8fda36a963))
+
 ## [1.129.2](https://github.com/stephenh/joist-ts/compare/v1.129.1...v1.129.2) (2023-11-24)
 
 

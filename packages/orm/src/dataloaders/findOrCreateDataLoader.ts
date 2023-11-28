@@ -122,9 +122,11 @@ function entityMatches<T extends Entity>(entity: T, opts: Partial<OptsOf<T>>): b
         if (isLoadedReference(relation)) {
           // Prefer using `.get` because it will handle new/id-less entities
           return sameEntity(relation.get, value as any);
-        } else {
+        } else if (relation.isSet) {
           // Otherwise use ids
           return sameEntity(relation.id as any, value as any);
+        } else {
+          return value === undefined;
         }
       default:
         throw new Error(`Unsupported field ${fieldName}`);

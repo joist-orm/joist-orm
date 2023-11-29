@@ -90,7 +90,13 @@ export class ReactionsManager {
     const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
-      this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+      // If the `rf.path = []`, we don't need to mark those as dirty, b/c they're
+      // primarily for handling new & deleted entities, and getDirtyFields is only
+      // for telling other entities that _might_ be pointed at this one, that their
+      // reactive rules are potentially dirty.
+      if (rf.path.length > 0) {
+        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+      }
     }
   }
 
@@ -144,7 +150,8 @@ export class ReactionsManager {
       // dedupe the found relations before calling .load.
       const unique = [...new Set(relations.flat())];
 
-      // Use allSettled so that we can watch for derived values that want to use the entity'd id
+      // Use allSettled so that we can watch for derived values that want to use the entity'd id,
+      // i.e. they can fail but we'll queue them from later.
       const results = await Promise.allSettled(unique.map((r: any) => r.load()));
       const failures: any[] = [];
       results.forEach((result, i) => {

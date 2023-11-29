@@ -509,6 +509,29 @@ describe("EntityManager.reactiveRules", () => {
         expect(await select("authors")).toMatchObject([{ id: 1, number_of_public_reviews: 1 }]);
       });
 
+      it.withCtx("calculates after subgraph mutations", async ({ em }) => {
+        // Given two authors that have public reviews
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
+        newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1 }] }] });
+        await em.flush();
+
+        // Use a new em to ensure nothing is cached
+        const em2 = newEntityManager();
+        const a1 = await em2.load(Author, "a:1");
+        // And we've initially loaded a1.numberOfPublicReviews's subgraph
+        await a1.numberOfPublicReviews.load();
+        // When a new book is added to the a1.numberOfPublicReviews tree
+        const b2 = await em2.load(Book, "b:2");
+        b2.author.set(a1);
+        // Then the ReactionsManager successfully re-loaded the subgraph
+        await em2.flush();
+        // And the results were updated
+        expect(await select("authors")).toMatchObject([
+          { id: 1, number_of_public_reviews: 2 },
+          { id: 2, number_of_public_reviews: 0 },
+        ]);
+      });
+
       it.withCtx("calculates on async property change", async ({ em }) => {
         // Given a public review
         newAuthor(em, { age: 40, graduated: new Date(), books: [{ reviews: [{ rating: 1, comment: {} }] }] });

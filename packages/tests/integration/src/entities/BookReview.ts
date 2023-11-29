@@ -13,7 +13,7 @@ import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from
 export class BookReview extends BookReviewCodegen {
   // Currently this infers as Reference<BookReview, Author, undefined> --> it should be never...
   readonly author: Reference<BookReview, Author, never> = hasOneThrough((review) => review.book.author);
-  transientFields = { numberOfIsPublicCalcs: 0 };
+  transientFields = { numberOfIsPublicCalcs: 0, numberOfIsPublic2Calcs: 0 };
 
   // This is kind of silly domain wise, but used as an example of hasOneDerived with a load hint. We don't
   // technically have any conditional logic in `get` so could use a lens, but we want to test hasOneDerived.
@@ -49,6 +49,7 @@ export class BookReview extends BookReviewCodegen {
 
   // Used to test reactivity to hasReactiveAsyncProperty results changing.
   readonly isPublic2: AsyncProperty<BookReview, boolean> = hasReactiveAsyncProperty({ comment: "text" }, (review) => {
+    review.transientFields.numberOfIsPublic2Calcs++;
     return !review.comment.get?.text?.includes("Ignore");
   });
 }

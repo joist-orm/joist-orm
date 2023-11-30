@@ -1145,7 +1145,8 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     em.delete(a1);
-    await em.flush();
+    // Book review has a beforeDelete that ensures the relation graph isn't cleaned up until after hooks are run
+    await expect(em.flush()).resolves.not.toThrow();
     const bookRows = await select("books");
     const bookReviewRows = await select("book_reviews");
     expect(bookRows).toHaveLength(0);

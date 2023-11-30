@@ -111,9 +111,10 @@ describe("PersistedAsyncProperty", () => {
     expect(await a1.numberOfPublicReviews2.load()).toBe(2);
     // And we calc'd the br2.isPublic b/c it's new
     expect(br2.transientFields.numberOfIsPublicCalcs).toBe(2);
-    // But we did not calc the br1.isPublic b/c it was already available
+    // _Ideally_ we would not calc the br1.isPublic b/c it was already available, but
+    // our new BookReview marked all the same fields as dirty.
     const br1 = await em2.load(BookReview, "br:1");
-    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0);
+    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(2);
   });
 
   it("can save when async derived values don't change", async () => {

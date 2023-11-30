@@ -53,9 +53,7 @@ export class ReactionsManager {
         //   its `.load()` called again so that it's `setField` marks `initials` as
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
         this.getPending(rf).todo.add(entity);
-        if (rf.path.length > 0) {
-          this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
-        }
+        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
       }
     }
   }
@@ -92,13 +90,7 @@ export class ReactionsManager {
     const rfs = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.reactiveDerivedValues);
     for (const rf of rfs) {
       this.getPending(rf).todo.add(entity);
-      // If the `rf.path = []`, we don't need to mark those as dirty, b/c they're
-      // primarily for handling new & deleted entities, and getDirtyFields is only
-      // for telling other entities that _might_ be pointed at this one, that their
-      // reactive rules are potentially dirty.
-      if (rf.path.length > 0) {
-        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
-      }
+      this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
     }
   }
 

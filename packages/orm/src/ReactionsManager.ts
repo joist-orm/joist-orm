@@ -53,7 +53,9 @@ export class ReactionsManager {
         //   its `.load()` called again so that it's `setField` marks `initials` as
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
         this.getPending(rf).todo.add(entity);
-        this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+        if (rf.path.length > 0) {
+          this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+        }
       }
     }
   }
@@ -103,12 +105,12 @@ export class ReactionsManager {
   /**
    * Returns whether this field might be pending recalc.
    *
-   * This is technically a guess, b/c our reaction infra may not yet have crawled up an upstream
+   * This is technically a guess, b/c our reaction infra may not yet have crawled from an upstream
    * source field down to the `N` specific target entities that need recalced, and instead just
    * knows "it will need to do that soon" i.e. at the next `em.flush`.
    *
-   * So, instead this is a heuristic that says this `fieldName` has been marked dirty for _some_
-   * entities, but we don't technically know if it's _this_ entity.
+   * So, instead this is a heuristic that reports if `fieldName` has been marked dirty for _some_
+   * entities of type `entity`, but we don't technically know if that's _this_ entity.
    *
    * I.e. this might return false positives, but should never return false negatives.
    */

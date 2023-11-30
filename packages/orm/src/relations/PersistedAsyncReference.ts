@@ -105,8 +105,13 @@ export class PersistedAsyncReferenceImpl<
     const { loadHint } = this;
     if (!this.isLoaded || opts?.forceReload) {
       const { em } = this.entity;
-      // Only use the full load hint if we need recalculated, otherwise just load our cached value
-      const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+      // Just because we're not loaded, doesn't mean we necessarily need to load our full
+      // hint. Ideally we only need to load our previously-calculated/persisted value, and
+      // only load the full load hint if we need recalculated.
+      const recalc =
+        opts?.forceReload ||
+        this.entity.isNewEntity ||
+        getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (recalc) {
         return (this.loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
           this.loadPromise = undefined;
@@ -168,7 +173,9 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get isLoaded(): boolean {
-    const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+    // Check isNewEntity b/c entities don't have their immediate fields marked as dirty in the ReactionsManager
+    const maybeDirty =
+      this.entity.isNewEntity || getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
     // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
     // check if our tree is loaded, b/c it might have recently been mutated.
     if (maybeDirty) {
@@ -178,6 +185,7 @@ export class PersistedAsyncReferenceImpl<
       }
       return hintLoaded;
     } else {
+      // If we're not dirty, then either being "full" or "ref" loaded is fine
       return !!this._isLoaded;
     }
   }

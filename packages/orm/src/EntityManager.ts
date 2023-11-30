@@ -1397,6 +1397,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   private async cascadeDeletes(): Promise<void> {
     let entities = this.#pendingCascadeDeletes;
     this.#pendingCascadeDeletes = [];
+    const relationsToCleanup: AbstractRelationImpl<unknown, unknown>[] = [];
     // Loop if our deletes cascade to other deletes
     while (entities.length > 0) {
       // For cascade delete relations, cascade the delete...
@@ -1407,10 +1408,12 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       const todos = createTodos(entities);
       await beforeDelete(this.ctx, todos);
       // For all relations, unhook the entity from the other side
-      await Promise.all(entities.flatMap(getRelations).map((r) => r.cleanupOnEntityDeleted()));
+      relationsToCleanup.push(...entities.flatMap(getRelations));
       entities = this.#pendingCascadeDeletes;
       this.#pendingCascadeDeletes = [];
     }
+    // For all relations, unhook the entity from the other side
+    await Promise.all(relationsToCleanup.map((r) => r.cleanupOnEntityDeleted()));
   }
 }
 

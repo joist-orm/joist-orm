@@ -56,3 +56,14 @@ export class BookReview extends BookReviewCodegen {
 
 // Example of cannotBeUpdated on a m2o so "it won't be reactive" (but really is b/c of creates & deletes)
 config.addRule(cannotBeUpdated("book"));
+
+config.beforeDelete({ book: "author" }, (br) => {
+  // to ensure relations are not cleared out until after all beforeDelete hooks are run, we walk through cascade delete
+  // relations and ensure they're still present for the test "can cascade deletes through multiple levels" in
+  // EntityManager.test.ts
+  const book = br.book.getWithDeleted;
+  const author = book.author.getWithDeleted;
+  if (author === undefined) {
+    throw new Error("author should be defined");
+  }
+});

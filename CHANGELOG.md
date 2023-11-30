@@ -1,3 +1,10 @@
+## [1.129.5](https://github.com/stephenh/joist-ts/compare/v1.129.4...v1.129.5) (2023-11-30)
+
+
+### Bug Fixes
+
+* fixed ordering of beforeDelete and cleanupOnEntityDeleted so relations will always remain until all beforeDeletes are called ([#902](https://github.com/stephenh/joist-ts/issues/902)) ([19f85d2](https://github.com/stephenh/joist-ts/commit/19f85d25619e1bde3f845afef5b205ee24447ddc))
+
 ## [1.129.4](https://github.com/stephenh/joist-ts/compare/v1.129.3...v1.129.4) (2023-11-30)
 
 

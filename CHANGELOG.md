@@ -1,3 +1,10 @@
+## [1.129.4](https://github.com/stephenh/joist-ts/compare/v1.129.3...v1.129.4) (2023-11-30)
+
+
+### Bug Fixes
+
+* Fix reactions recalculating after graph mutations. ([#900](https://github.com/stephenh/joist-ts/issues/900)) ([1f62cbf](https://github.com/stephenh/joist-ts/commit/1f62cbfd9aa32cd2e593c74190f14d66a1d2f087))
+
 ## [1.129.3](https://github.com/stephenh/joist-ts/compare/v1.129.2...v1.129.3) (2023-11-28)
 
 

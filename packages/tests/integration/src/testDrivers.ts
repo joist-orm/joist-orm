@@ -1,5 +1,5 @@
-import { recordQuery } from "@src/testEm";
-import { Driver, InMemoryDriver, PostgresDriver } from "joist-orm";
+import { recordFind, recordQuery } from "@src/testEm";
+import { Driver, EntityManager, InMemoryDriver, ParsedFindQuery, PostgresDriver } from "joist-orm";
 import { newPgConnectionConfig } from "joist-utils";
 import { Knex, knex as createKnex } from "knex";
 
@@ -39,7 +39,21 @@ export class PostgresTestDriver implements TestDriver {
     }).on("query", (e: any) => {
       recordQuery(e.sql);
     });
-    this.driver = new PostgresDriver(this.knex);
+    const { knex } = this;
+    this.driver = new (class extends PostgresDriver {
+      constructor() {
+        super(knex);
+      }
+
+      async executeFind(
+        em: EntityManager,
+        parsed: ParsedFindQuery,
+        settings: { limit?: number; offset?: number },
+      ): Promise<any[]> {
+        recordFind(parsed);
+        return super.executeFind(em, parsed, settings);
+      }
+    })();
   }
 
   async beforeEach() {

@@ -78,8 +78,8 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   implements PersistedAsyncProperty<T, V>
 {
   readonly #reactiveHint: H;
-  private loaded = false;
-  private loadPromise: any;
+  #loadPromise: any;
+  #loaded: boolean;
   constructor(
     entity: T,
     public fieldName: keyof T & string,
@@ -88,13 +88,14 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   ) {
     super(entity);
     this.#reactiveHint = reactiveHint;
+    this.#loaded = false;
   }
 
   load(opts?: { forceReload?: boolean }): Promise<V> {
-    if (!this.loaded || opts?.forceReload) {
-      return (this.loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
-        this.loadPromise = undefined;
-        this.loaded = true;
+    if (!this.isLoaded || opts?.forceReload) {
+      return (this.#loadPromise ??= this.entity.em.populate(this.entity, { hint: this.loadHint } as any).then(() => {
+        this.#loadPromise = undefined;
+        this.#loaded = true;
         // Go through `this.get` so that `setField` is called to set our latest value
         return this.get;
       }));
@@ -105,7 +106,9 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   /** Returns either the latest calculated value (if loaded) or the previously-calculated value (if not loaded). */
   get get(): V {
     const { fn } = this;
-    if (this.loaded || (!this.isSet && isLoaded(this.entity, this.loadHint))) {
+    // Check #loaded to make sure we don't revert to stale values if our subgraph has been changed since
+    // the last `.load()`. It's better to fail and tell the user.
+    if (this.#loaded || this.isLoaded) {
       const newValue = fn(this.entity as Reacted<T, H>);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -131,7 +134,11 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
   }
 
   get isLoaded() {
-    return this.loaded;
+    const hintLoaded = isLoaded(this.entity, this.loadHint);
+    if (hintLoaded) {
+      this.#loaded = true;
+    }
+    return hintLoaded;
   }
 
   get loadHint(): any {

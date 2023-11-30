@@ -97,12 +97,12 @@ export class ReactionsManager {
   /**
    * Returns whether this field might be pending recalc.
    *
-   * This is technically a guess, b/c our reaction infra may not yet have crawled up an upstream
+   * This is technically a guess, b/c our reaction infra may not yet have crawled from an upstream
    * source field down to the `N` specific target entities that need recalced, and instead just
    * knows "it will need to do that soon" i.e. at the next `em.flush`.
    *
-   * So, instead this is a heuristic that says this `fieldName` has been marked dirty for _some_
-   * entities, but we don't technically know if it's _this_ entity.
+   * So, instead this is a heuristic that reports if `fieldName` has been marked dirty for _some_
+   * entities of type `entity`, but we don't technically know if that's _this_ entity.
    *
    * I.e. this might return false positives, but should never return false negatives.
    */
@@ -144,7 +144,8 @@ export class ReactionsManager {
       // dedupe the found relations before calling .load.
       const unique = [...new Set(relations.flat())];
 
-      // Use allSettled so that we can watch for derived values that want to use the entity'd id
+      // Use allSettled so that we can watch for derived values that want to use the entity'd id,
+      // i.e. they can fail but we'll queue them from later.
       const results = await Promise.allSettled(unique.map((r: any) => r.load()));
       const failures: any[] = [];
       results.forEach((result, i) => {

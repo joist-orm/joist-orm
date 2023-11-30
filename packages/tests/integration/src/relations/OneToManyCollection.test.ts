@@ -1,8 +1,7 @@
 import { insertAuthor, insertBook, insertBookReview, insertPublisher, select } from "@src/entities/inserts";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { Author, Book, Publisher, User, newAuthor, newBook, newPublisher } from "../entities";
 import { IpAddress } from "../entities/types";
-
-import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("OneToManyCollection", () => {
   it("loads collections", async () => {
@@ -129,6 +128,23 @@ describe("OneToManyCollection", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     b1.author.set(a1);
     expect(a1.books.get).toContain(b1);
+  });
+
+  it.skip("works with forceReload", async () => {
+    // Given an author
+    await insertAuthor({ first_name: "a1" });
+    const em = newEntityManager();
+    // And we load the books collection
+    const a1 = await em.load(Author, "a:1", "books");
+    a1.firstName = "a2";
+    // And we reset the dataloader cache
+    await em.flush();
+    // When we add a new book
+    const b1 = newBook(em, { author: a1 });
+    // Then it's added to a1.books
+    expect(a1.books.get).toMatchEntity([b1]);
+    // And when we forceReload the books collections it's still there
+    expect(await a1.books.load({ forceReload: true } as any)).toMatchEntity([b1]);
   });
 
   it("combines both pre-loaded and post-loaded entities", async () => {

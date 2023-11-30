@@ -103,9 +103,11 @@ export class PersistedAsyncReferenceImpl<
   async load(opts?: { withDeleted?: true; forceReload?: true }): Promise<U | N> {
     ensureNotDeleted(this.entity, "pending");
     const { loadHint } = this;
-    if (!this.loaded || opts?.forceReload) {
+    if (!this.isLoaded || opts?.forceReload) {
       const { em } = this.entity;
-      // Only use the full load hint if we need recalculated, otherwise just load our cached value
+      // Just because we're not loaded, doesn't mean we necessarily need to load our full
+      // hint. Ideally we only need to load our previously-calculated/persisted value, and
+      // only load the full load hint if we need recalculated.
       const recalc = opts?.forceReload || getEmInternalApi(em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
       if (recalc) {
         return (this.loadPromise ??= em.populate(this.entity, { hint: loadHint, ...opts }).then(() => {
@@ -137,7 +139,8 @@ export class PersistedAsyncReferenceImpl<
   private doGet(opts?: { withDeleted?: boolean }): U | N {
     const { fn } = this;
     ensureNotDeleted(this.entity, "pending");
-    if (this._isLoaded === "full" || (!this.isSet && isLoaded(this.entity, this.loadHint))) {
+    // We assume `isLoaded` has been called coming into this to manage
+    if (this._isLoaded === "full") {
       const newValue = this.filterDeleted(fn(this.entity as Reacted<T, H>), opts);
       // It's cheap to set this every time we're called, i.e. even if it's not the
       // official "being called during em.flush" update (...unless we're accessing it
@@ -167,7 +170,19 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get isLoaded(): boolean {
-    return !!this._isLoaded;
+    const maybeDirty = getEmInternalApi(this.entity.em).rm.isMaybePendingRecalc(this.entity, this.fieldName);
+    // If we might be dirty, it doesn't matter what our last _isLoaded value was, we need to
+    // check if our tree is loaded, b/c it might have recently been mutated.
+    if (maybeDirty) {
+      const hintLoaded = isLoaded(this.entity, this.loadHint);
+      if (hintLoaded) {
+        this._isLoaded = "full";
+      }
+      return hintLoaded;
+    } else {
+      // If we're not dirty, then either being "full" or "ref" loaded is fine
+      return !!this._isLoaded;
+    }
   }
 
   set(other: U | N): void {

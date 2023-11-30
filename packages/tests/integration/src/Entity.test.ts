@@ -84,8 +84,6 @@ describe("Entity", () => {
         "bookComments": {
           "fieldName": "bookComments",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "comments": "text",
@@ -142,8 +140,6 @@ describe("Entity", () => {
         "numberOfBooks": {
           "fieldName": "numberOfBooks",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": [
             "books",
             "firstName",
@@ -160,8 +156,6 @@ describe("Entity", () => {
         "numberOfPublicReviews": {
           "fieldName": "numberOfPublicReviews",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "reviews": [
@@ -175,8 +169,6 @@ describe("Entity", () => {
         "numberOfPublicReviews2": {
           "fieldName": "numberOfPublicReviews2",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "reviews": [
@@ -211,8 +203,6 @@ describe("Entity", () => {
         "search": {
           "fieldName": "search",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": "title",
             "firstName": {},
@@ -221,8 +211,6 @@ describe("Entity", () => {
         "tagsOfAllBooks": {
           "fieldName": "tagsOfAllBooks",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "tags": "name",

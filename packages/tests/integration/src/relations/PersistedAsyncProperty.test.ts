@@ -20,9 +20,9 @@ describe("PersistedAsyncProperty", () => {
     b2.author.set(a);
     // Then calc it again, it will blow up (b/c the new b2 hasn't had its reviews loaded)
     expect(() => a.numberOfPublicReviews.get).toThrow("get was called when not loaded");
-    // Even if we try to .load it again (it's already loaded, and doesn't know to reload its dependencies)
-    await expect(a.numberOfPublicReviews.load()).rejects.toThrow("get was called when not loaded");
-    // But if we force the load
+    // But if we try to .load it again, it will know it needs to reload its subgraph
+    expect(await a.numberOfPublicReviews.load()).toBe(1);
+    // And also if we call force the load
     expect(await a.numberOfPublicReviews.load({ forceReload: true })).toBe(1);
   });
 
@@ -92,25 +92,29 @@ describe("PersistedAsyncProperty", () => {
   });
 
   it("can load derived fields that depend on derived fields", async () => {
-    const em = newEntityManager();
-    // Given an author with a derived field, numberOfPublicReviews2, that uses a derived field on BookReview, isPublic
-    const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
-    const b1 = newBook(em, { author: a1 });
-    const br = newBookReview(em, { rating: 1, book: b1 });
-    const comment = newComment(em, { text: "", parent: br });
-    await em.flush();
+    {
+      const em = newEntityManager();
+      // Given an author with a derived field, numberOfPublicReviews2, that uses a derived field on BookReview, isPublic
+      const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
+      const b1 = newBook(em, { author: a1 });
+      const br = newBookReview(em, { rating: 1, book: b1 });
+      newComment(em, { text: "", parent: br });
+      await em.flush();
+    }
     // When we want to recalc numberOfPublicReviews2
     const em2 = newEntityManager();
-    const a2 = await em2.load(Author, a1.id, "books");
+    const a1 = await em2.load(Author, "a:1");
+    const b1 = await em2.load(Book, "b:1");
     // And we make a new BookReview that doesn't have isPublic calculated yet
-    const br2 = em.create(BookReview, { book: a2.books.get[0], rating: 2 });
+    const br2 = em2.create(BookReview, { book: b1, rating: 2 });
     // Then the numberOfPublicReviews2.load will ensure br2.isPublic is loaded first
-    expect(await a2.numberOfPublicReviews2.load()).toBe(2);
+    expect(await a1.numberOfPublicReviews2.load()).toBe(2);
     // And we calc'd the br2.isPublic b/c it's new
     expect(br2.transientFields.numberOfIsPublicCalcs).toBe(2);
-    // But we did not calc the br2.isPublic b/c it was already available
-    const [br1] = await a2.books.get[0].reviews.load();
-    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(0);
+    // _Ideally_ we would not calc the br1.isPublic b/c it was already available, but
+    // our new BookReview marked all the same fields as dirty.
+    const br1 = await em2.load(BookReview, "br:1");
+    expect(br1.transientFields.numberOfIsPublicCalcs).toBe(2);
   });
 
   it("can save when async derived values don't change", async () => {

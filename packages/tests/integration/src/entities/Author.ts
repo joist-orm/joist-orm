@@ -61,8 +61,14 @@ export class Author extends AuthorCodegen {
   readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfPublicReviews",
     { books: { reviews: ["isPublic", "isPublic2", "rating"] } },
-    (a) =>
-      a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && r.isPublic2.get && r.rating > 0).length,
+    (a) => {
+      // Break this out for easier debugging when things break
+      const books = a.books.get;
+      const reviews = a.books.get.flatMap((b) => b.reviews.get);
+      const filtered = reviews.filter((r) => r.isPublic.get && r.isPublic2.get && r.rating > 0);
+      // console.log(a, books, reviews, filtered, filtered.length);
+      return filtered.length;
+    },
   );
 
   // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity

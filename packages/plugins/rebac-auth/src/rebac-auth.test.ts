@@ -69,7 +69,7 @@ describe("rebac-auth", () => {
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 2 });
     await insertUser({ name: "u1", author_id: 1 });
-    // And the user can only see one book
+    // And the user can only see their one book
     const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
     const em = newEntityManager({
       findPlugin: new RebacAuthPlugin(um, "u:1", rule),
@@ -81,6 +81,7 @@ describe("rebac-auth", () => {
     expect(finds[0].tables).toEqual([
       { alias: "b", table: "books", join: "primary" },
       { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+      { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
     ]);
   });
 

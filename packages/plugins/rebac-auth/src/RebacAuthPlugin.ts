@@ -38,7 +38,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     // Work with just one rule for now
     const [rule] = rules;
 
-    const { getAlias } = new AliasAssigner(query);
+    const { getAlias, findOrCreateJoin } = new AliasAssigner(query);
     const joins: JoinTable[] = [];
 
     // We've got basically a lens from `meta` --> our `rootMeta`, so we
@@ -54,15 +54,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         case "m2o": {
           // Inject a new table for our new join
           // I.e. currentTable is `books` and we're looking at `Book.author`.
-          const newMeta = field.otherMetadata();
-          const alias = getAlias(newMeta.tableName);
-          joins.push({
-            alias: alias,
-            table: newMeta.tableName,
-            join: "inner",
-            col1: kqDot(currentTable.alias, field.serde.columns[0].columnName),
-            col2: kqDot(alias, "id"),
-          });
+          const join = findOrCreateJoin(query, currentTable.alias, field);
           // conditions.push({
           //   alias,
           //   column: "id",
@@ -70,7 +62,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
           //   cond: { kind: "eq", value: deTagIds(source, sourceIds) },
           // });
           currentMeta = field.otherMetadata();
-          currentTable = joins[joins.length - 1];
+          currentTable = join;
           break;
         }
         case "o2o": {

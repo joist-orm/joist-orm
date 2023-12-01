@@ -13,5 +13,9 @@ export interface FindPlugin {
   // twice in the AuthRule, the callback might need the raw `row` as well, to
   // integrate which AuthRule the entity came from.
 
+  // Also for AsyncMethods/PotentialOperations/Operations
+  // beforeInvoke
+  // isAllowed
+
   beforeFind(meta: EntityMetadata, query: ParsedFindQuery): void;
 }

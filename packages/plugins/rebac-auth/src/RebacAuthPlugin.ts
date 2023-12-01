@@ -6,7 +6,6 @@ import {
   EntityMetadata,
   FindPlugin,
   JoinTable,
-  kqDot,
   ParsedFindQuery,
 } from "joist-orm";
 import { AuthRule, parseAuthRule, ParsedAuthRule } from "./authRule";
@@ -38,7 +37,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     // Work with just one rule for now
     const [rule] = rules;
 
-    const { getAlias, findOrCreateJoin } = new AliasAssigner(query);
+    const aa = new AliasAssigner(query);
     const joins: JoinTable[] = [];
 
     // We've got basically a lens from `meta` --> our `rootMeta`, so we
@@ -54,30 +53,14 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         case "m2o": {
           // Inject a new table for our new join
           // I.e. currentTable is `books` and we're looking at `Book.author`.
-          const join = findOrCreateJoin(query, currentTable.alias, field);
-          // conditions.push({
-          //   alias,
-          //   column: "id",
-          //   dbType: newMeta.idDbType,
-          //   cond: { kind: "eq", value: deTagIds(source, sourceIds) },
-          // });
+          currentTable = aa.findOrCreateManyToOneJoin(query, currentTable.alias, field);
           currentMeta = field.otherMetadata();
-          currentTable = join;
           break;
         }
         case "o2o": {
           // I.e. currentTable is 'authors' and we're looking at `Author.userOneToOne`
-          const newMeta = field.otherMetadata();
-          const alias = getAlias(newMeta.tableName);
-          joins.push({
-            alias: alias,
-            table: newMeta.tableName,
-            join: "inner",
-            col1: kqDot(currentTable.alias, "id"),
-            col2: kqDot(alias, field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName),
-          });
+          currentTable = aa.findOrCreateOneToOneJoin(query, currentTable.alias, field);
           currentMeta = field.otherMetadata();
-          currentTable = joins[joins.length - 1];
           break;
         }
         default:

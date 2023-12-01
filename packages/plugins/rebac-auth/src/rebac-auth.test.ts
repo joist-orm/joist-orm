@@ -45,7 +45,7 @@ const rule: AuthRule<User> = {
 };
 
 describe("rebac-auth", () => {
-  it("should work", async () => {
+  it("can filter em.find with a new o2m join", async () => {
     // Given two authors with their own books
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -60,9 +60,15 @@ describe("rebac-auth", () => {
     // Then we only got one back
     const books = await em.find(Book, {});
     expect(books.length).toBe(1);
+    // And we added a new join
+    expect(finds[0].tables).toEqual([
+      { alias: "b", table: "books", join: "primary" },
+      { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+      { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
+    ]);
   });
 
-  it("can filter em.find with an overlapping join", async () => {
+  it("can filter em.find with existing o2m join", async () => {
     // Given two authors with their own books
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -78,6 +84,7 @@ describe("rebac-auth", () => {
     const books = await em.find(Book, { author: "a:1" });
     // Then we only got one back
     expect(books.length).toBe(1);
+    // And we reused the existing authors join
     expect(finds[0].tables).toEqual([
       { alias: "b", table: "books", join: "primary" },
       { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
@@ -136,3 +143,15 @@ const words = w(`foo bar zaz`);
 
 // maybe use it for auth rules like:
 // { read: "fullName email", write: "firstName lastName" }
+
+
+// Should 'Permissions' be an explicit entity? Why/why not?
+// The two obvious permissions are "read" and "write" ... CRUD.
+// Everything else is "can I invoke operation x?"
+// Maybe that's what we do, is build in PotentialOperation as Operation,
+// which can be `book.publish.isAllowed()` or `book.publish.call()`d, i.e.
+// very similar to AsyncMethods but when the ability to say "the user is
+// or is not allowed to do this".
+// And then because `book.publish` shows up in the AuthRule graph, it can
+// the auth-side side of allowed could be handled by the rebac plugin?
+

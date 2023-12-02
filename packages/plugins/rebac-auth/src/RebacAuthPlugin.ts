@@ -74,7 +74,16 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
       dbType: currentMeta.idDbType,
       cond: { kind: "eq", value: deTagId(this.#rootMeta, this.#rootId) },
     };
-    query.condition = { op: "and", conditions: [cond] };
+    if (!query.condition) {
+      query.condition = { op: "and", conditions: [cond] };
+    } else if (query.condition.op === "and") {
+      query.condition.conditions.push(cond);
+    } else {
+      query.condition = {
+        op: "and",
+        conditions: [query.condition, cond],
+      };
+    }
     query.tables.push(...joins);
 
     // throw new Error(`Method not implemented ${rule.pathToUser.join("/")}`);

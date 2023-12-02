@@ -1,7 +1,7 @@
-import { getMetadata } from "joist-orm";
-import { Book, finds, insertAuthor, insertBook, insertUser, newEntityManager, User } from "joist-tests-integration";
-import { AuthRule, parseAuthRule } from "./authRule";
+import { alias, getMetadata } from "joist-orm";
+import { Book, User, finds, insertAuthor, insertBook, insertUser, newEntityManager } from "joist-tests-integration";
 import { RebacAuthPlugin } from "./RebacAuthPlugin";
+import { AuthRule, parseAuthRule } from "./authRule";
 
 const um = getMetadata(User);
 const r = "r";
@@ -92,6 +92,64 @@ describe("rebac-auth", () => {
     ]);
   });
 
+  it("can filter em.find with existing o2m join and existing and condition", async () => {
+    // Given two authors with their own books
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "a1", author_id: 1 });
+    await insertBook({ title: "a2", author_id: 1 });
+    await insertBook({ title: "b1", author_id: 2 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And the user can only see their one book
+    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we query for books with `1` in the title
+    const books = await em.find(Book, { title: { like: "%1%" } });
+    expect(books.length).toBe(1);
+  });
+
+  it("can filter em.find with existing o2m join and existing or condition", async () => {
+    // Given two authors with their own books
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "a1", author_id: 1 });
+    await insertBook({ title: "a2", author_id: 1 });
+    await insertBook({ title: "b1", author_id: 2 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And the user can only see their one book
+    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we query for books with `1` in the title
+    const b = alias(Book);
+    const books = await em.find(
+      Book,
+      { as: b },
+      {
+        conditions: { or: [b.title.eq("a1"), b.title.eq("b1")] },
+        softDeletes: "include",
+      },
+    );
+    // Then we only got one back
+    expect(books.length).toBe(1);
+    expect(finds[0].condition).toEqual({
+      op: "and",
+      conditions: [
+        {
+          op: "or",
+          conditions: [
+            { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+            { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } },
+          ],
+        },
+        { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
+      ],
+    });
+  });
+
   it("can parse star field rules", () => {
     // Given a rule that uses `*` to mean "all fields"
     const rule: AuthRule<User> = {
@@ -144,7 +202,6 @@ const words = w(`foo bar zaz`);
 // maybe use it for auth rules like:
 // { read: "fullName email", write: "firstName lastName" }
 
-
 // Should 'Permissions' be an explicit entity? Why/why not?
 // The two obvious permissions are "read" and "write" ... CRUD.
 // Everything else is "can I invoke operation x?"
@@ -154,4 +211,3 @@ const words = w(`foo bar zaz`);
 // or is not allowed to do this".
 // And then because `book.publish` shows up in the AuthRule graph, it can
 // the auth-side side of allowed could be handled by the rebac plugin?
-

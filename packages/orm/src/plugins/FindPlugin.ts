@@ -17,5 +17,16 @@ export interface FindPlugin {
   // beforeInvoke
   // isAllowed
 
+  // Needs to be called from:
+  // findDataloader
+  // findOrCreateDataloader
+  // findCountDataloader
+  // findByUniqueDataloader
+  // manyToManyFindLoader
+  // oneToManyFindLoader
   beforeFind(meta: EntityMetadata, query: ParsedFindQuery): void;
+
+  // Should o2m.load call a beforeLoad? Should the oneToManyLoader call to driver.executeFind
+  // be considered a "beforeFind" for the purposes of the plugin API? The auth API will want to
+  // differentiate "new queries into the graph" vs. "navigations within the graph".
 }

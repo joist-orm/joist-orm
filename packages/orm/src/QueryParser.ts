@@ -633,7 +633,7 @@ export type ParsedValueFilter<V> =
   | { kind: "between"; value: [V, V] };
 
 /**
- * Parses the many/hodgepdoge (ergonomic!) patterns of value filters into a `ParsedValueFilter`.
+ * Parses the many/hodgepodge (ergonomic!) patterns of value filters into a `ParsedValueFilter`.
  */
 export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFilter<V>[] {
   if (filter === null) {

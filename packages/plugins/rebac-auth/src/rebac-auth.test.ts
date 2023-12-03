@@ -110,6 +110,29 @@ describe("rebac-auth", () => {
     expect(books.length).toBe(1);
   });
 
+  it("can filter em.find with existing o2m join with where", async () => {
+    // Given two books
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And the user can only see certain books
+    const rule: AuthRule<User> = {
+      authorManyToOne: {
+        books: {
+          where: { title: "b2" },
+        },
+      },
+    };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we query for books with `b` in the title
+    const books = await em.find(Book, { title: { like: "b%" } });
+    // Then we also limited it to the b2 title
+    expect(books.length).toBe(1);
+  });
+
   it("can filter em.find with existing o2m join and existing or condition", async () => {
     // Given two authors with their own books
     await insertAuthor({ first_name: "a1" });
@@ -135,6 +158,7 @@ describe("rebac-auth", () => {
     );
     // Then we only got one back
     expect(books.length).toBe(1);
+    // And we wrapped the `or` condition with our own `and`
     expect(finds[0].condition).toEqual({
       op: "and",
       conditions: [

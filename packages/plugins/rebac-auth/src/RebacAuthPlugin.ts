@@ -4,9 +4,13 @@ import {
   deTagId,
   Entity,
   EntityMetadata,
+  fail,
   FindPlugin,
   JoinTable,
+  mapToDb,
   ParsedFindQuery,
+  parseEntityFilter,
+  parseValueFilter,
 } from "joist-orm";
 import { AuthRule, parseAuthRule, ParsedAuthRule } from "./authRule";
 
@@ -45,6 +49,35 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     let currentMeta = meta;
     let currentTable = query.tables.find((t) => t.join === "primary")!;
 
+    const inlineConditions: ColumnCondition[] = [];
+
+    if (rule.where) {
+      const alias = currentTable.alias;
+      const ef = parseEntityFilter(rule.meta, rule.where);
+      if (ef && ef.kind === "join") {
+        // subFilter really means we're matching against the entity columns/further joins
+        Object.keys(ef.subFilter).forEach((key) => {
+          // Skip the `{ as: ... }` alias binding
+          if (key === "as") return;
+          const field = meta.allFields[key] ?? fail(`Field '${key}' not found on ${meta.tableName}`);
+          const fa = `${alias}${field.aliasSuffix}`;
+          if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
+            const column = field.serde.columns[0];
+            parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
+              inlineConditions.push({
+                alias: fa,
+                column: column.columnName,
+                dbType: column.dbType,
+                cond: mapToDb(column, filter),
+              });
+            });
+          } else {
+            throw new Error(`Unsupported field ${key}`);
+          }
+        });
+      }
+    }
+
     // I.e. start at `Book`, and walk `author` -> `userOneToOne`
     for (const path of rule.pathToUser) {
       const field = currentMeta.allFields[path];
@@ -74,6 +107,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
       dbType: currentMeta.idDbType,
       cond: { kind: "eq", value: deTagId(this.#rootMeta, this.#rootId) },
     };
+
     if (!query.condition) {
       query.condition = { op: "and", conditions: [cond] };
     } else if (query.condition.op === "and") {
@@ -84,6 +118,8 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         conditions: [query.condition, cond],
       };
     }
+    query.condition.conditions.push(...inlineConditions);
+
     query.tables.push(...joins);
 
     // throw new Error(`Method not implemented ${rule.pathToUser.join("/")}`);

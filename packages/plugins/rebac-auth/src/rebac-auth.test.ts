@@ -135,7 +135,7 @@ describe("rebac-auth", () => {
 
   it("can filter em.find with existing o2m join with where in middle of path", async () => {
     // Given two books
-    await insertAuthor({ first_name: "a1", age: 50 });
+    await insertAuthor({ first_name: "a1", age: 20 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     await insertUser({ name: "u1", author_id: 1 });
@@ -150,9 +150,17 @@ describe("rebac-auth", () => {
       findPlugin: new RebacAuthPlugin(um, "u:1", rule),
     });
     // When we query for books with `b` in the title
-    const books = await em.find(Book, { title: { like: "b%" } });
+    const books = await em.find(Book, { title: { like: "b%" } }, { softDeletes: "include" });
     // Then we didn't get back any books
     expect(books.length).toBe(0);
+    expect(finds[0].condition).toEqual({
+      op: "and",
+      conditions: [
+        { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b%" } },
+        { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
+        { alias: "a", column: "age", dbType: "int", cond: { kind: "gt", value: 30 } },
+      ],
+    });
   });
 
   it("can filter em.find with existing o2m join and existing or condition", async () => {

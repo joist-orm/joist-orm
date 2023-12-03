@@ -102,6 +102,33 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         default:
           throw new Error(`Unsupported kind ${field.kind}`);
       }
+
+      if (where) {
+        const alias = currentTable.alias;
+        const ef = parseEntityFilter(meta, where);
+        if (ef && ef.kind === "join") {
+          // subFilter really means we're matching against the entity columns/further joins
+          Object.keys(ef.subFilter).forEach((key) => {
+            // Skip the `{ as: ... }` alias binding
+            if (key === "as") return;
+            const field = meta.allFields[key] ?? fail(`Field '${key}' not found on ${meta.tableName}`);
+            const fa = `${alias}${field.aliasSuffix}`;
+            if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
+              const column = field.serde.columns[0];
+              parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
+                inlineConditions.push({
+                  alias: fa,
+                  column: column.columnName,
+                  dbType: column.dbType,
+                  cond: mapToDb(column, filter),
+                });
+              });
+            } else {
+              throw new Error(`Unsupported field ${key}`);
+            }
+          });
+        }
+      }
     }
 
     const cond: ColumnCondition = {

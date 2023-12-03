@@ -19,9 +19,11 @@ export type MethodAccess = "i";
 export type CrudValue = "crud" | "cru" | "crd" | "cr" | "cu" | "cd" | "c" | "ru" | "rd" | "r" | "ud" | "u" | "d";
 
 /**
- * Describes an auth rule for an entity `T`.
+ * Declares the authorization rule for an entity `T`, which can either be the root
+ * of the auth tree (by started at the `User` entity) or a specific node further down
+ * in the tree.
  *
- * The auth rule is a collection of:
+ * Each auth rule is a collection of:
  *
  * - Fields that can be read/written
  * - Async methods that can be invoked
@@ -56,15 +58,26 @@ export type AuthRule<T extends Entity> = {
     : never;
 };
 
-export type ParsedAuthRule<T extends Entity> = {
+/** The Auth rule for a specific entity, i.e. the root User or a child node, within the overall tree. */
+export interface ParsedAuthRule<T extends Entity> {
   meta: EntityMetadata<T>;
   fields: Record<string, FieldAccess>;
   methods: Record<string, MethodAccess>;
   relations: Record<string, ParsedAuthRule<any>>;
   where: FilterWithAlias<T> | undefined;
-  pathToUser: string[];
-};
+  // Needs to be a tuple of [path, where]
+  pathToUser: ParsedAuthPath[];
+}
 
+interface ParsedAuthPath {
+  meta: EntityMetadata;
+  relation: string;
+  where: FilterWithAlias<any> | undefined;
+}
+
+/**
+ * Parses the root, declarative `rule` into a map of `entity` -> `ParsedAuthRule`s.
+ */
 export function parseAuthRule<T extends Entity>(
   meta: EntityMetadata<T>,
   rule: AuthRule<T>,
@@ -78,7 +91,7 @@ function parse(
   result: Record<string, ParsedAuthRule<any>[]>,
   meta: EntityMetadata,
   hint: AuthRule<any>,
-  pathToUser: string[],
+  pathToUser: ParsedAuthPath[],
 ): ParsedAuthRule<any> {
   const fields: Record<string, FieldAccess> = {};
   const methods: Record<string, MethodAccess> = {};
@@ -94,12 +107,15 @@ function parse(
       fields[key] = value as unknown as FieldAccess;
     } else if (key in properties) {
       const property = properties[key];
-      if (property instanceof ManyToOneReferenceImpl) {
-        relations[key] = parse(result, property.otherMeta, value as any, [...pathToUser, property.otherFieldName]);
-      } else if (property instanceof ManyToManyCollection) {
-        relations[key] = parse(result, property.otherMeta, value as any, [...pathToUser, property.otherFieldName]);
-      } else if (property instanceof OneToManyCollection) {
-        relations[key] = parse(result, property.otherMeta, value as any, [...pathToUser, property.otherFieldName]);
+      if (
+        property instanceof ManyToOneReferenceImpl ||
+        property instanceof ManyToManyCollection ||
+        property instanceof OneToManyCollection
+      ) {
+        relations[key] = parse(result, property.otherMeta, value as any, [
+          ...pathToUser,
+          { meta, relation: property.otherFieldName, where },
+        ]);
       } else if (property instanceof AsyncMethodImpl) {
         methods[key] = value as unknown as MethodAccess;
       } else {
@@ -107,6 +123,7 @@ function parse(
       }
     }
   }
+
   const parsed = { meta, fields, methods, relations, where, pathToUser: pathToUser.reverse() };
   // What about CTI base/child classes?
   (result[meta.cstr.name] ??= []).push(parsed);

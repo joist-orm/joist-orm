@@ -110,16 +110,16 @@ describe("rebac-auth", () => {
     expect(books.length).toBe(1);
   });
 
-  it("can filter em.find with existing o2m join with where", async () => {
+  it("can filter em.find with existing o2m join with where at end of path", async () => {
     // Given two books
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     await insertUser({ name: "u1", author_id: 1 });
-    // And the user can only see certain books
     const rule: AuthRule<User> = {
       authorManyToOne: {
         books: {
+          // And the user can only see certain books
           where: { title: "b2" },
         },
       },
@@ -131,6 +131,28 @@ describe("rebac-auth", () => {
     const books = await em.find(Book, { title: { like: "b%" } });
     // Then we also limited it to the b2 title
     expect(books.length).toBe(1);
+  });
+
+  it("can filter em.find with existing o2m join with where in middle of path", async () => {
+    // Given two books
+    await insertAuthor({ first_name: "a1", age: 50 });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    const rule: AuthRule<User> = {
+      authorManyToOne: {
+        // And the user can only see certain authors
+        where: { age: { gt: 30 } },
+        books: {},
+      },
+    };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we query for books with `b` in the title
+    const books = await em.find(Book, { title: { like: "b%" } });
+    // Then we didn't get back any books
+    expect(books.length).toBe(0);
   });
 
   it("can filter em.find with existing o2m join and existing or condition", async () => {
@@ -184,8 +206,8 @@ describe("rebac-auth", () => {
     const parsed = parseAuthRule(um, rule);
     expect(parsed).toMatchObject({
       User: [{ fields: { "*": "rw" }, pathToUser: [] }],
-      Author: [{ fields: {}, pathToUser: ["userOneToOne"] }],
-      Book: [{ fields: { "*": "r" }, pathToUser: ["author", "userOneToOne"] }],
+      Author: [{ fields: {}, pathToUser: [{ relation: "userOneToOne" }] }],
+      Book: [{ fields: { "*": "r" }, pathToUser: [{ relation: "author" }, { relation: "userOneToOne" }] }],
     });
   });
 
@@ -210,6 +232,27 @@ describe("rebac-auth", () => {
     const parsed = parseAuthRule(um, rule);
     expect(parsed).toMatchObject({
       Book: [{ where: { title: "b1" } }],
+    });
+  });
+
+  it("can parse where scopes in the middle", () => {
+    // Given a rule that can invoke the `publish` method
+    const rule: AuthRule<User> = {
+      authorManyToOne: { where: { age: { gt: 20 } }, books: {} },
+    };
+    // Then we can parse it
+    const parsed = parseAuthRule(um, rule);
+    expect(parsed).toMatchObject({
+      Book: [
+        {
+          where: undefined,
+          pathToUser: [
+            // one
+            { relation: "author", where: { age: { gt: 20 } } },
+            { relation: "userOneToOne" },
+          ],
+        },
+      ],
     });
   });
 });

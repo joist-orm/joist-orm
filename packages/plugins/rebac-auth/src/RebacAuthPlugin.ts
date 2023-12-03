@@ -79,8 +79,11 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     }
 
     // I.e. start at `Book`, and walk `author` -> `userOneToOne`
-    for (const path of rule.pathToUser) {
-      const field = currentMeta.allFields[path];
+    for (const { meta, relation, where } of rule.pathToUser) {
+      const field = currentMeta.allFields[relation];
+
+      // Need to have the where clause as well...
+
       // console.log(field);
       switch (field.kind) {
         case "m2o": {

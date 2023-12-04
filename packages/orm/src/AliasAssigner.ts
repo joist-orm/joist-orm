@@ -1,9 +1,19 @@
-import { ManyToOneField, OneToOneField } from "./EntityMetadata";
+import { FilterWithAlias } from "EntityFilter";
+import { EntityMetadata, ManyToOneField, OneToOneField } from "./EntityMetadata";
 import { abbreviation } from "./QueryBuilder";
-import { JoinTable, ParsedFindQuery } from "./QueryParser";
+import {
+  ColumnCondition,
+  JoinTable,
+  ParsedFindQuery,
+  mapToDb,
+  parseEntityFilter,
+  parseValueFilter,
+} from "./QueryParser";
 import { kqDot } from "./keywords";
+import { fail } from "./utils";
 
 export class AliasAssigner {
+  // A map of tableName => next alias number
   #aliases: Record<string, number> = {};
 
   constructor(query?: ParsedFindQuery) {
@@ -26,6 +36,38 @@ export class AliasAssigner {
     const i = this.#aliases[abbrev] || 0;
     this.#aliases[abbrev] = i + 1;
     return i === 0 ? abbrev : `${abbrev}${i}`;
+  }
+
+  addFilter(
+    query: ParsedFindQuery,
+    inlineConditions: ColumnCondition[],
+    alias: string,
+    meta: EntityMetadata,
+    where: FilterWithAlias<any>,
+  ): void {
+    const ef = parseEntityFilter(meta, where);
+    if (ef && ef.kind === "join") {
+      // subFilter really means we're matching against the entity columns/further joins
+      Object.keys(ef.subFilter).forEach((key) => {
+        // Skip the `{ as: ... }` alias binding
+        if (key === "as") return;
+        const field = meta.allFields[key] ?? fail(`Field '${key}' not found on ${meta.tableName}`);
+        const fa = `${alias}${field.aliasSuffix}`;
+        if (field.kind === "primitive" || field.kind === "primaryKey" || field.kind === "enum") {
+          const column = field.serde.columns[0];
+          parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
+            inlineConditions.push({
+              alias: fa,
+              column: column.columnName,
+              dbType: column.dbType,
+              cond: mapToDb(column, filter),
+            });
+          });
+        } else {
+          throw new Error(`Unsupported field ${key}`);
+        }
+      });
+    }
   }
 
   // from: alias + column

@@ -339,7 +339,8 @@ export function configureMetadata(metas: EntityMetadata[]): void {
           reversals.forEach(({ entity, path, fields }) => {
             getMetadata(entity).config.__data.reactiveDerivedValues.push({
               cstr: meta.cstr,
-              name: `${meta.cstr.name}.${field.fieldName}`,
+              // I wanted to make this `Entity.fieldName`, but turns out it's used for something
+              name: field.fieldName,
               path,
               fields,
             });

@@ -228,7 +228,7 @@ describe("rebac-auth", () => {
     // Then we can access their books
     expect(await a.books.load()).toEqual([]);
     // But not their comments
-    await expect(a.comments.load()).rejects.toThrow("cannot load");
+    await expect(a.comments.load()).rejects.toThrow("Access denied to Author:1.comments");
   });
 
   it("can load a o2m then o2m relation", async () => {
@@ -249,7 +249,7 @@ describe("rebac-auth", () => {
     // And the book's reviews
     expect(await books[0].reviews.load()).toMatchEntity([{ rating: 1 }]);
     // But not the review's comments
-    await expect(books[0].comments.load()).rejects.toThrow("cannot load");
+    await expect(books[0].comments.load()).rejects.toThrow("Access denied to Book:1.comments");
   });
 
   it("can parse star field rules", () => {

@@ -116,7 +116,7 @@ export class ManyToManyLargeCollection<T extends Entity, U extends Entity> imple
   }
 
   public toString(): string {
-    return `ManyToManyLargeCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   isLoaded = false;

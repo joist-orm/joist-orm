@@ -69,12 +69,13 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     ensureNotDeleted(this.entity, "pending");
     if (this.loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
       const { findPlugin } = getEmInternalApi(this.entity.em);
-      if (findPlugin && findPlugin.beforeLoad) {
-        findPlugin.beforeLoad(this.meta, this.entity, this);
-      }
+      findPlugin?.beforeLoad?.(this.meta, this.entity, this);
+
       this.loaded =
         this.getPreloaded() ?? (await oneToManyDataLoader(this.entity.em, this).load(this.entity.idTagged!));
       this.maybeAppendAddedBeforeLoaded();
+
+      findPlugin?.afterLoad?.(this.meta, this.entity, this);
     }
     return this.filterDeleted(this.loaded, opts);
   }
@@ -279,7 +280,7 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   /** Removes pending-hard-delete or soft-deleted entities, unless explicitly asked for. */

@@ -84,7 +84,7 @@ export class OneToManyLargeCollection<T extends Entity, U extends Entity> implem
   }
 
   public toString(): string {
-    return `OneToManyLargeCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   /** Returns the other relation that points back at us, i.e. we're `Author.image` and this is `Image.author_id`. */

@@ -284,9 +284,7 @@ export class PersistedAsyncReferenceImpl<
   }
 
   public toString(): string {
-    return `PersistedAsyncReference(entity: ${this.entity}, hint: ${this.loadHint}, fieldName: ${this.fieldName}, otherMeta: {
-      this.otherMeta.type
-    }, id: ${this.id})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   /**

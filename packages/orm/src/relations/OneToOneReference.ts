@@ -242,7 +242,7 @@ export class OneToOneReferenceImpl<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `OneToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   private filterDeleted(entity: U | undefined, opts?: { withDeleted?: boolean }): U | undefined {

@@ -141,7 +141,7 @@ export class CustomCollection<T extends Entity, U extends Entity>
   }
 
   toString(): string {
-    return `CustomCollection(entity: ${this.entity}, fieldName: ${this.fieldName})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   private doGet(opts?: { withDeleted?: boolean }): readonly U[] {

@@ -32,6 +32,7 @@ export interface FindPlugin {
   // be considered a "beforeFind" for the purposes of the plugin API? The auth API will want to
   // differentiate "new queries into the graph" vs. "navigations within the graph".
   beforeLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
+  afterLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
 }
 
 export type FindCallback = undefined | ((entities: Entity[]) => void);

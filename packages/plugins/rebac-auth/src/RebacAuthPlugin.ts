@@ -5,6 +5,7 @@ import {
   Entity,
   EntityMetadata,
   FindPlugin,
+  isLoadedCollection,
   JoinTable,
   OneToManyCollection,
   ParsedFindQuery,
@@ -37,7 +38,23 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         const r = rule.relations[relation.fieldName];
         if (r) {
         } else {
-          throw new Error(`cannot load ${relation.fieldName}`);
+          throw new Error(`Access denied to ${relation}`);
+        }
+      }
+    } else {
+      throw new Error(`Access denied to ${relation}`);
+    }
+  }
+
+  afterLoad(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void {
+    // What rule loaded this entity into the graph?
+    const rule = this.#entities.get(entity);
+    if (rule) {
+      if (isLoadedCollection(relation)) {
+        const entities = relation.get;
+        const nextRule = rule.relations[(relation as any).fieldName];
+        for (const entity of entities) {
+          this.#entities.set(entity, nextRule);
         }
       }
     }

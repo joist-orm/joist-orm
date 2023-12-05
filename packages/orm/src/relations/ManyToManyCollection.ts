@@ -260,7 +260,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   public toString(): string {
-    return `OneToManyCollection(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   private getPreloaded(): U[] | undefined {

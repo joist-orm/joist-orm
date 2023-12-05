@@ -337,7 +337,7 @@ export class ManyToOneReferenceImpl<T extends Entity, U extends Entity, N extend
   }
 
   public toString(): string {
-    return `ManyToOneReference(entity: ${this.entity}, fieldName: ${this.fieldName}, otherType: ${this.otherMeta.type}, otherFieldName: ${this.otherFieldName}, id: ${this.id})`;
+    return `${this.entity}.${this.fieldName}`;
   }
 
   /**

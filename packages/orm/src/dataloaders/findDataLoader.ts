@@ -19,6 +19,7 @@ import {
 import { visitConditions } from "../QueryVisitor";
 import { kq, kqDot } from "../keywords";
 import { LoadHint } from "../loadHints";
+import { FindCallback } from "../plugins/FindPlugin";
 import { assertNever, cleanSql } from "../utils";
 
 export function findDataLoader<T extends Entity>(
@@ -55,8 +56,9 @@ export function findDataLoader<T extends Entity>(
         const query = parseFindQuery(meta, where, opts);
         // Maybe do auth checks
         const { findPlugin } = getEmInternalApi(em);
+        let findCallback: FindCallback;
         if (findPlugin) {
-          findPlugin.beforeFind(meta, query);
+          findCallback = findPlugin.beforeFind(meta, query);
         }
         // Maybe add preload joins
         const { preloader } = getEmInternalApi(em);
@@ -64,6 +66,7 @@ export function findDataLoader<T extends Entity>(
         const rows = await em.driver.executeFind(em, query, opts);
         ensureUnderLimit(em, rows);
         const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
+        findCallback?.(entities);
         preloadHydrator?.(rows, entities);
         return [entities];
       }
@@ -122,8 +125,9 @@ export function findDataLoader<T extends Entity>(
       // eventually we should support being escape hatched for method invocations
 
       const { findPlugin } = getEmInternalApi(em);
+      let findCallback: FindCallback;
       if (findPlugin) {
-        findPlugin.beforeFind(meta, query);
+        findCallback = findPlugin.beforeFind(meta, query);
       }
 
       const sql = `
@@ -143,6 +147,8 @@ export function findDataLoader<T extends Entity>(
 
       const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));
+
+      findCallback?.(entities);
 
       // Make an empty array for each batched query, per the dataloader contract
       const results = queries.map(() => [] as T[]);

@@ -1,5 +1,7 @@
+import { Entity } from "../Entity";
 import { EntityMetadata } from "../EntityMetadata";
 import { ParsedFindQuery } from "../QueryParser";
+import { Relation } from "../relations/index";
 
 export interface FindPlugin {
   // Will also need:
@@ -24,9 +26,12 @@ export interface FindPlugin {
   // findByUniqueDataloader
   // manyToManyFindLoader
   // oneToManyFindLoader
-  beforeFind(meta: EntityMetadata, query: ParsedFindQuery): void;
+  beforeFind(meta: EntityMetadata, query: ParsedFindQuery): FindCallback;
 
   // Should o2m.load call a beforeLoad? Should the oneToManyLoader call to driver.executeFind
   // be considered a "beforeFind" for the purposes of the plugin API? The auth API will want to
   // differentiate "new queries into the graph" vs. "navigations within the graph".
+  beforeLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
 }
+
+export type FindCallback = undefined | ((entities: Entity[]) => void);

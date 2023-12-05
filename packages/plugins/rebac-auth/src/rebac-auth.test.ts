@@ -1,5 +1,14 @@
 import { alias, getMetadata } from "joist-orm";
-import { Book, User, finds, insertAuthor, insertBook, insertUser, newEntityManager } from "joist-tests-integration";
+import {
+  Author,
+  Book,
+  User,
+  finds,
+  insertAuthor,
+  insertBook,
+  insertUser,
+  newEntityManager,
+} from "joist-tests-integration";
 import { RebacAuthPlugin } from "./RebacAuthPlugin";
 import { AuthRule, parseAuthRule } from "./authRule";
 
@@ -202,6 +211,23 @@ describe("rebac-auth", () => {
         { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
       ],
     });
+  });
+
+  it("can load a o2m relation", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And they can only see their books but not their comments
+    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the author
+    const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, {});
+    // Then we can access their books
+    expect(await a.books.load()).toEqual([]);
+    // But not their comments
+    await expect(a.comments.load()).rejects.toThrow("cannot load");
   });
 
   it("can parse star field rules", () => {

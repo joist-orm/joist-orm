@@ -1,6 +1,6 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityManager } from "../EntityManager";
+import { EntityManager, getEmInternalApi } from "../EntityManager";
 import {
   abbreviation,
   addTablePerClassJoinsAndClassTag,

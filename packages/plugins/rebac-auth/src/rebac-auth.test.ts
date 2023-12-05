@@ -6,6 +6,7 @@ import {
   finds,
   insertAuthor,
   insertBook,
+  insertBookReview,
   insertUser,
   newEntityManager,
 } from "joist-tests-integration";
@@ -230,6 +231,27 @@ describe("rebac-auth", () => {
     await expect(a.comments.load()).rejects.toThrow("cannot load");
   });
 
+  it("can load a o2m then o2m relation", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And they can see their books and reviews
+    const rule: AuthRule<User> = { authorManyToOne: { books: { reviews: {} } } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the author
+    const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, {});
+    // Then we can access their books
+    const books = await a.books.load();
+    // And the book's reviews
+    expect(await books[0].reviews.load()).toMatchEntity([{ rating: 1 }]);
+    // But not the review's comments
+    await expect(books[0].comments.load()).rejects.toThrow("cannot load");
+  });
+
   it("can parse star field rules", () => {
     // Given a rule that uses `*` to mean "all fields"
     const rule: AuthRule<User> = {
@@ -290,15 +312,6 @@ describe("rebac-auth", () => {
     });
   });
 });
-
-type ToWords<S extends string> = S extends `${infer H} ${infer T}` ? H | `${ToWords<T>}` : S;
-
-function w<S extends string>(_: S): ToWords<S>[] {
-  return _.split(" ") as ToWords<S>[];
-}
-
-// gets typed as `("foo" | "bar" | "zaz")[]`
-const words = w(`foo bar zaz`);
 
 // maybe use it for auth rules like:
 // { read: "fullName email", write: "firstName lastName" }

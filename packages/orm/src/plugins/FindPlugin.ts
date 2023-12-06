@@ -34,6 +34,7 @@ export interface FindPlugin {
   beforeLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
   afterLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
 
+  beforeGetField?(entity: Entity, fieldName: string): void;
   beforeSetField?(entity: Entity, fieldName: string, newValue: unknown): void;
 }
 

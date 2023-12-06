@@ -94,6 +94,9 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  * called by trusted codegen anyway.
  */
 export function getField(entity: Entity, fieldName: string): any {
+  const { findPlugin } = getEmInternalApi(entity.em);
+  findPlugin?.beforeGetField?.(entity, fieldName);
+
   return entity.__orm.data[fieldName];
 }
 

@@ -60,6 +60,17 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     }
   }
 
+  beforeGetField(entity: Entity, fieldName: string) {
+    if (fieldName === "id") return;
+    const rule = this.#entities.get(entity);
+    const field = rule?.fields[fieldName];
+    if (field === "r" || field === "rw") {
+      return;
+    } else {
+      throw new Error(`Access denied to ${entity}.${fieldName}`);
+    }
+  }
+
   beforeSetField(entity: Entity, fieldName: string, newValue: unknown) {
     const rule = this.#entities.get(entity);
     const field = rule?.fields[fieldName];

@@ -66,6 +66,7 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
   // asConcreteCstr is safe b/c we're just doing property scanning and not real instantiation
   return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
+      __api: {},
       register: (metadata: any, entity: any) => {
         em.currentlyInstantiatingEntity = entity;
         entity.__orm.metadata = meta;

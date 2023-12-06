@@ -11,6 +11,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -145,11 +146,11 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get name(): string | undefined {
-    return this.__orm.data["name"];
+    return getField(this, "name");
   }
 
   set name(name: string | undefined) {
@@ -157,11 +158,11 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<ChildGroupOpts>): void {

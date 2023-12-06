@@ -10,6 +10,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -126,11 +127,11 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get name(): string {
-    return this.__orm.data["name"];
+    return getField(this, "name");
   }
 
   set name(name: string) {
@@ -138,11 +139,11 @@ export abstract class CriticColumnCodegen extends BaseEntity<EntityManager, stri
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<CriticColumnOpts>): void {

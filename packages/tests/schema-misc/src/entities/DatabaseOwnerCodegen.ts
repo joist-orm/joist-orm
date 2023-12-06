@@ -7,6 +7,7 @@ import {
   EntityOrmField,
   failNoIdYet,
   Flavor,
+  getField,
   isLoaded,
   Lens,
   Loaded,
@@ -93,11 +94,11 @@ export abstract class DatabaseOwnerCodegen extends BaseEntity<EntityManager, str
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get name(): string {
-    return this.__orm.data["name"];
+    return getField(this, "name");
   }
 
   set name(name: string) {

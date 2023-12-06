@@ -12,6 +12,7 @@ import {
   FieldsOf,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -207,11 +208,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get name(): string {
-    return this.__orm.data["name"];
+    return getField(this, "name");
   }
 
   set name(name: string) {
@@ -219,7 +220,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get latitude(): number | undefined {
-    return this.__orm.data["latitude"];
+    return getField(this, "latitude");
   }
 
   set latitude(latitude: number | undefined) {
@@ -227,7 +228,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get longitude(): number | undefined {
-    return this.__orm.data["longitude"];
+    return getField(this, "longitude");
   }
 
   set longitude(longitude: number | undefined) {
@@ -235,7 +236,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get hugeNumber(): number | undefined {
-    return this.__orm.data["hugeNumber"];
+    return getField(this, "hugeNumber");
   }
 
   set hugeNumber(hugeNumber: number | undefined) {
@@ -243,15 +244,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   get size(): PublisherSize | undefined {
-    return this.__orm.data["size"];
+    return getField(this, "size");
   }
 
   get sizeDetails(): PublisherSizeDetails | undefined {
@@ -263,15 +264,15 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get isSizeSmall(): boolean {
-    return this.__orm.data["size"] === PublisherSize.Small;
+    return getField(this, "size") === PublisherSize.Small;
   }
 
   get isSizeLarge(): boolean {
-    return this.__orm.data["size"] === PublisherSize.Large;
+    return getField(this, "size") === PublisherSize.Large;
   }
 
   get type(): PublisherType {
-    return this.__orm.data["type"];
+    return getField(this, "type");
   }
 
   get typeDetails(): PublisherTypeDetails {
@@ -283,11 +284,11 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get isTypeSmall(): boolean {
-    return this.__orm.data["type"] === PublisherType.Small;
+    return getField(this, "type") === PublisherType.Small;
   }
 
   get isTypeBig(): boolean {
-    return this.__orm.data["type"] === PublisherType.Big;
+    return getField(this, "type") === PublisherType.Big;
   }
 
   set(opts: Partial<PublisherOpts>): void {

@@ -83,7 +83,27 @@ interface Flavoring<FlavorT> {
 
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
 
-export function setField<T extends Entity>(entity: T, fieldName: keyof T & string, newValue: any): boolean {
+/**
+ * Returns the current value of `fieldName`, this is an internal method that should
+ * only be called by the code-generated getters.
+ *
+ * We skip any typing like `fieldName: keyof T` because this method should only be
+ * called by trusted codegen anyway.
+ */
+export function getField(entity: Entity, fieldName: string): any {
+  return entity.__orm.data[fieldName];
+}
+
+/**
+ * Sets the current value of `fieldName`, this is an internal method that should
+ * only be called by the code-generated setters.
+ *
+ * We skip any typing like `fieldName: keyof T` because this method should only be
+ * called by trusted codegen anyway.
+ *
+ * Returns `true` if the value was changed, or `false` if it was a noop.
+ */
+export function setField(entity: Entity, fieldName: string, newValue: any): boolean {
   ensureNotDeleted(entity, "pending");
   const { em } = entity;
 

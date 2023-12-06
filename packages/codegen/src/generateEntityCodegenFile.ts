@@ -41,6 +41,7 @@ import {
   Zod,
   cleanStringValue,
   failNoIdYet,
+  getField,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -88,13 +89,13 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     } else if (p.zodSchema) {
       getter = code`
         get ${fieldName}(): ${Zod}.output<typeof ${p.zodSchema}>${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
+          return ${getField}(this, "${fieldName}");
         }
      `;
     } else {
       getter = code`
         get ${fieldName}(): ${fieldType}${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
+          return ${getField}(this, "${fieldName}");
         }
      `;
     }
@@ -156,7 +157,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       const getByCode = code`${enumDetailType}.getByCode(this.${fieldName})`;
       const getter = code`
         get ${fieldName}(): ${enumType}${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
+          return ${getField}(this, "${fieldName}");
         }
 
         get ${fieldName}Details(): ${enumDetailsType}${maybeOptional} {
@@ -177,7 +178,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       const accessors = enumRows.map(
         (row) => code`
           get is${shouldPrefixAccessors ? pascalCase(fieldName) : ""}${pascalCase(row.code)}(): boolean {
-            return this.__orm.data["${fieldName}"] === ${enumType}.${pascalCase(row.code)};
+            return ${getField}(this, "${fieldName}") === ${enumType}.${pascalCase(row.code)};
           }
         `,
       );
@@ -192,7 +193,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       const { fieldName, enumType, enumDetailType, enumDetailsType, enumRows } = e;
       const getter = code`
         get ${fieldName}(): ${enumType}[] {
-          return this.__orm.data["${fieldName}"] || [];
+          return ${getField}(this, "${fieldName}") || [];
         }
 
         get ${fieldName}Details(): ${enumDetailsType}[] {
@@ -227,7 +228,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     const getter = code`
         get ${fieldName}(): ${enumType}${maybeOptional} {
-          return this.__orm.data["${fieldName}"];
+          return ${getField}(this, "${fieldName}");
         }
      `;
     const setter = code`
@@ -514,7 +515,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       }
 
       get idTaggedMaybe(): ${TaggedId} | undefined {
-        return this.__orm.data["id"];
+        return ${getField}(this, "id");
       }
 
       ${primitives}

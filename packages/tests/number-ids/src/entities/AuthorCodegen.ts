@@ -11,6 +11,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -118,11 +119,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get firstName(): string {
-    return this.__orm.data["firstName"];
+    return getField(this, "firstName");
   }
 
   set firstName(firstName: string) {
@@ -130,7 +131,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get lastName(): string | undefined {
-    return this.__orm.data["lastName"];
+    return getField(this, "lastName");
   }
 
   set lastName(lastName: string | undefined) {
@@ -138,11 +139,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, number> im
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<AuthorOpts>): void {

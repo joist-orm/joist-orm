@@ -9,6 +9,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -139,19 +140,19 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   get status(): AdvanceStatus {
-    return this.__orm.data["status"];
+    return getField(this, "status");
   }
 
   get statusDetails(): AdvanceStatusDetails {
@@ -163,15 +164,15 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get isPending(): boolean {
-    return this.__orm.data["status"] === AdvanceStatus.Pending;
+    return getField(this, "status") === AdvanceStatus.Pending;
   }
 
   get isSigned(): boolean {
-    return this.__orm.data["status"] === AdvanceStatus.Signed;
+    return getField(this, "status") === AdvanceStatus.Signed;
   }
 
   get isPaid(): boolean {
-    return this.__orm.data["status"] === AdvanceStatus.Paid;
+    return getField(this, "status") === AdvanceStatus.Paid;
   }
 
   set(opts: Partial<BookAdvanceOpts>): void {

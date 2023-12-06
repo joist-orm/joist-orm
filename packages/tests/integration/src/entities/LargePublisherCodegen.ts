@@ -10,6 +10,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -113,11 +114,11 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get country(): string | undefined {
-    return this.__orm.data["country"];
+    return getField(this, "country");
   }
 
   set country(country: string | undefined) {

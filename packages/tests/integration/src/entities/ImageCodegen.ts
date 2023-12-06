@@ -10,6 +10,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -154,11 +155,11 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get fileName(): string {
-    return this.__orm.data["fileName"];
+    return getField(this, "fileName");
   }
 
   set fileName(fileName: string) {
@@ -166,15 +167,15 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   get type(): ImageType {
-    return this.__orm.data["type"];
+    return getField(this, "type");
   }
 
   get typeDetails(): ImageTypeDetails {
@@ -186,15 +187,15 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get isBookImage(): boolean {
-    return this.__orm.data["type"] === ImageType.BookImage;
+    return getField(this, "type") === ImageType.BookImage;
   }
 
   get isAuthorImage(): boolean {
-    return this.__orm.data["type"] === ImageType.AuthorImage;
+    return getField(this, "type") === ImageType.AuthorImage;
   }
 
   get isPublisherImage(): boolean {
-    return this.__orm.data["type"] === ImageType.PublisherImage;
+    return getField(this, "type") === ImageType.PublisherImage;
   }
 
   set(opts: Partial<ImageOpts>): void {

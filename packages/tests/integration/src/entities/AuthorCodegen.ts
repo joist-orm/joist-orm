@@ -13,6 +13,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -306,11 +307,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get firstName(): string {
-    return this.__orm.data["firstName"];
+    return getField(this, "firstName");
   }
 
   set firstName(firstName: string) {
@@ -318,7 +319,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get lastName(): string | undefined {
-    return this.__orm.data["lastName"];
+    return getField(this, "lastName");
   }
 
   set lastName(lastName: string | undefined) {
@@ -326,7 +327,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get ssn(): string | undefined {
-    return this.__orm.data["ssn"];
+    return getField(this, "ssn");
   }
 
   set ssn(ssn: string | undefined) {
@@ -340,7 +341,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly bookComments: PersistedAsyncProperty<Author, string | undefined>;
 
   get isPopular(): boolean | undefined {
-    return this.__orm.data["isPopular"];
+    return getField(this, "isPopular");
   }
 
   set isPopular(isPopular: boolean | undefined) {
@@ -348,7 +349,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get age(): number | undefined {
-    return this.__orm.data["age"];
+    return getField(this, "age");
   }
 
   set age(age: number | undefined) {
@@ -356,7 +357,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get graduated(): Date | undefined {
-    return this.__orm.data["graduated"];
+    return getField(this, "graduated");
   }
 
   set graduated(graduated: Date | undefined) {
@@ -364,7 +365,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get nickNames(): string[] | undefined {
-    return this.__orm.data["nickNames"];
+    return getField(this, "nickNames");
   }
 
   set nickNames(nickNames: string[] | undefined) {
@@ -372,7 +373,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get wasEverPopular(): boolean | undefined {
-    return this.__orm.data["wasEverPopular"];
+    return getField(this, "wasEverPopular");
   }
 
   protected setWasEverPopular(wasEverPopular: boolean | undefined) {
@@ -380,7 +381,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get address(): Address | undefined {
-    return this.__orm.data["address"];
+    return getField(this, "address");
   }
 
   set address(_address: Address | undefined) {
@@ -391,7 +392,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get businessAddress(): z.output<typeof AddressSchema> | undefined {
-    return this.__orm.data["businessAddress"];
+    return getField(this, "businessAddress");
   }
 
   set businessAddress(_businessAddress: z.input<typeof AddressSchema> | undefined) {
@@ -403,7 +404,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get quotes(): Quotes | undefined {
-    return this.__orm.data["quotes"];
+    return getField(this, "quotes");
   }
 
   set quotes(_quotes: Quotes | undefined) {
@@ -414,7 +415,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get numberOfAtoms(): bigint | undefined {
-    return this.__orm.data["numberOfAtoms"];
+    return getField(this, "numberOfAtoms");
   }
 
   set numberOfAtoms(numberOfAtoms: bigint | undefined) {
@@ -422,7 +423,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get deletedAt(): Date | undefined {
-    return this.__orm.data["deletedAt"];
+    return getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -438,15 +439,15 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   abstract readonly search: PersistedAsyncProperty<Author, string | undefined>;
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   get favoriteColors(): Color[] {
-    return this.__orm.data["favoriteColors"] || [];
+    return getField(this, "favoriteColors") || [];
   }
 
   get favoriteColorsDetails(): ColorDetails[] {
@@ -470,7 +471,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get favoriteShape(): FavoriteShape | undefined {
-    return this.__orm.data["favoriteShape"];
+    return getField(this, "favoriteShape");
   }
 
   set favoriteShape(favoriteShape: FavoriteShape | undefined) {

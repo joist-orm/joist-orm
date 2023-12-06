@@ -10,6 +10,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -126,11 +127,11 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get title(): string {
-    return this.__orm.data["title"];
+    return getField(this, "title");
   }
 
   set title(title: string) {
@@ -138,11 +139,11 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<PaintingOpts>): void {

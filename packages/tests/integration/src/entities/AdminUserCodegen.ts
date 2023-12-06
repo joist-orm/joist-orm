@@ -6,6 +6,7 @@ import {
   EntityOrmField,
   failNoIdYet,
   Flavor,
+  getField,
   isLoaded,
   Lens,
   Loaded,
@@ -103,11 +104,11 @@ export abstract class AdminUserCodegen extends User implements Entity {
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get role(): string {
-    return this.__orm.data["role"];
+    return getField(this, "role");
   }
 
   set role(role: string) {

@@ -10,6 +10,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -106,11 +107,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get title(): string {
-    return this.__orm.data["title"];
+    return getField(this, "title");
   }
 
   set title(title: string) {

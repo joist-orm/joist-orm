@@ -11,6 +11,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -186,11 +187,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get title(): string {
-    return this.__orm.data["title"];
+    return getField(this, "title");
   }
 
   set title(title: string) {
@@ -198,7 +199,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get order(): number {
-    return this.__orm.data["order"];
+    return getField(this, "order");
   }
 
   set order(order: number) {
@@ -206,7 +207,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get notes(): string | undefined {
-    return this.__orm.data["notes"];
+    return getField(this, "notes");
   }
 
   set notes(notes: string | undefined) {
@@ -214,7 +215,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get deletedAt(): Date | undefined {
-    return this.__orm.data["deletedAt"];
+    return getField(this, "deletedAt");
   }
 
   set deletedAt(deletedAt: Date | undefined) {
@@ -222,11 +223,11 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<BookOpts>): void {

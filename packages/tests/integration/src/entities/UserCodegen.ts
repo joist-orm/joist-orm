@@ -12,6 +12,7 @@ import {
   FieldsOf,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -169,11 +170,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get name(): string {
-    return this.__orm.data["name"];
+    return getField(this, "name");
   }
 
   set name(name: string) {
@@ -181,7 +182,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get email(): string {
-    return this.__orm.data["email"];
+    return getField(this, "email");
   }
 
   set email(email: string) {
@@ -189,7 +190,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get ipAddress(): IpAddress | undefined {
-    return this.__orm.data["ipAddress"];
+    return getField(this, "ipAddress");
   }
 
   set ipAddress(ipAddress: IpAddress | undefined) {
@@ -197,7 +198,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get password(): PasswordValue | undefined {
-    return this.__orm.data["password"];
+    return getField(this, "password");
   }
 
   set password(password: PasswordValue | undefined) {
@@ -205,7 +206,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get bio(): string {
-    return this.__orm.data["bio"];
+    return getField(this, "bio");
   }
 
   set bio(bio: string) {
@@ -213,11 +214,11 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<UserOpts>): void {

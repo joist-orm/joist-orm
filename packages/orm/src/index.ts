@@ -92,6 +92,9 @@ export function setField<T extends Entity>(entity: T, fieldName: keyof T & strin
 
   getEmInternalApi(em).checkWritesAllowed();
 
+  const { findPlugin } = getEmInternalApi(em);
+  findPlugin?.beforeSetField?.(entity, fieldName, newValue);
+
   const { data, originalData } = entity.__orm;
 
   // "Un-dirty" our originalData if newValue is reverting to originalData

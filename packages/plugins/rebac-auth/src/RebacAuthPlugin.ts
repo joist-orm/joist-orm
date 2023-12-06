@@ -60,6 +60,16 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     }
   }
 
+  beforeSetField(entity: Entity, fieldName: string, newValue: unknown) {
+    const rule = this.#entities.get(entity);
+    const field = rule?.fields[fieldName];
+    if (field === "w" || field === "rw") {
+      return;
+    } else {
+      throw new Error(`Access denied to ${entity}.${fieldName}`);
+    }
+  }
+
   beforeFind(meta: EntityMetadata<any>, query: ParsedFindQuery): FindCallback {
     // How would we tell if this is loading an o2m like book -> reviews,
     // and a) we've already auth'd book, and b) reviews is included as
@@ -137,12 +147,11 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
 
     query.tables.push(...joins);
 
+    // After the entities are loaded, record where in the auth graph they came from
     return (entities) => {
       for (const entity of entities) {
         this.#entities.set(entity, rule);
       }
     };
-
-    // throw new Error(`Method not implemented ${rule.pathToUser.join("/")}`);
   }
 }

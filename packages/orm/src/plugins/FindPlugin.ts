@@ -33,6 +33,8 @@ export interface FindPlugin {
   // differentiate "new queries into the graph" vs. "navigations within the graph".
   beforeLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
   afterLoad?(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void;
+
+  beforeSetField?(entity: Entity, fieldName: string, newValue: unknown): void;
 }
 
 export type FindCallback = undefined | ((entities: Entity[]) => void);

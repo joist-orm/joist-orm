@@ -19,6 +19,24 @@ export type MethodAccess = "i";
 export type CrudValue = "crud" | "cru" | "crd" | "cr" | "cu" | "cd" | "c" | "ru" | "rd" | "r" | "ud" | "u" | "d";
 
 /**
+ * Need to allow both the current `AuthRule` "graph from root" but also probably
+ * just "top-level entity" rules, like:
+ *
+ * ```
+ * entities: {
+ *   UserStatus: { code: "r", name: "r" },
+ *   CommitmentStatus: "r",
+ *   CostCode: "r",
+ *   Book: {
+ *     where: { isPublished: true },
+ *     title: "r",
+ *     reviews: "r",
+ *   }
+ * }
+ * ```
+ */
+
+/**
  * Declares the authorization rule for an entity `T`, which can either be the root
  * of the auth tree (by started at the `User` entity) or a specific node further down
  * in the tree.
@@ -121,6 +139,10 @@ function parse(
       } else {
         throw new Error(`Unsupported property ${key} on ${meta.cstr.name}`);
       }
+    } else if (key in meta.allFields) {
+      fields[key] = value as unknown as FieldAccess;
+    } else {
+      throw new Error(`Unsupported key ${key}`);
     }
   }
 

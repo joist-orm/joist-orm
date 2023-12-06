@@ -252,6 +252,24 @@ describe("rebac-auth", () => {
     await expect(books[0].comments.load()).rejects.toThrow("Access denied to Book:1.comments");
   });
 
+  it("can auth field writes", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And they can write their own first name, but only read their ssn
+    const rule: AuthRule<User> = { authorManyToOne: { firstName: "rw", ssn: "r" } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the author
+    const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, {});
+    // Then we can write to the firstName
+    a.firstName = "a2";
+    // But cannot write to the ssn
+    expect(() => (a.ssn = "ssn2")).toThrow("Access denied to Author:1.ssn");
+  });
+
   it("can parse star field rules", () => {
     // Given a rule that uses `*` to mean "all fields"
     const rule: AuthRule<User> = {
@@ -264,6 +282,20 @@ describe("rebac-auth", () => {
       User: [{ fields: { "*": "rw" }, pathToUser: [] }],
       Author: [{ fields: {}, pathToUser: [{ relation: "userOneToOne" }] }],
       Book: [{ fields: { "*": "r" }, pathToUser: [{ relation: "author" }, { relation: "userOneToOne" }] }],
+    });
+  });
+
+  it("can explicit field rules", () => {
+    // Given a rule that uses `*` to mean "all fields"
+    const rule: AuthRule<User> = {
+      authorManyToOne: { firstName: rw, ssn: r, books: { title: r } },
+    };
+    // Then we can parse it
+    const parsed = parseAuthRule(um, rule);
+    expect(parsed).toMatchObject({
+      User: [{ fields: {} }],
+      Author: [{ fields: { firstName: rw, ssn: r } }],
+      Book: [{ fields: { title: r } }],
     });
   });
 

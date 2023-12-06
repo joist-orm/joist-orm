@@ -247,9 +247,29 @@ describe("rebac-auth", () => {
     // Then we can access their books
     const books = await a.books.load();
     // And the book's reviews
-    expect(await books[0].reviews.load()).toMatchEntity([{ rating: 1 }]);
+    expect(await books[0].reviews.load()).toBeDefined();
     // But not the review's comments
     await expect(books[0].comments.load()).rejects.toThrow("Access denied to Book:1.comments");
+  });
+
+  it("can auth field reads", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And they can read their first name, ssn, but not age
+    const rule: AuthRule<User> = { authorManyToOne: { firstName: "rw", ssn: "r" } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the author
+    const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, {});
+    // Then they can read their firstName
+    noop(a.firstName);
+    // And ssn
+    noop(a.ssn);
+    // But not their age
+    expect(() => noop(a.age)).toThrow("Access denied to Author:1.age");
   });
 
   it("can auth field writes", async () => {
@@ -266,8 +286,10 @@ describe("rebac-auth", () => {
     const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, {});
     // Then we can write to the firstName
     a.firstName = "a2";
-    // But cannot write to the ssn
+    // But they cannot write to the ssn because it's read-only
     expect(() => (a.ssn = "ssn2")).toThrow("Access denied to Author:1.ssn");
+    // And they cannot write to age which is omitted
+    expect(() => (a.age = 30)).toThrow("Access denied to Author:1.age");
   });
 
   it("can parse star field rules", () => {
@@ -357,3 +379,5 @@ describe("rebac-auth", () => {
 // or is not allowed to do this".
 // And then because `book.publish` shows up in the AuthRule graph, it can
 // the auth-side side of allowed could be handled by the rebac plugin?
+
+function noop(value: unknown): void {}

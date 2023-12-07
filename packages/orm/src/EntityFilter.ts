@@ -38,6 +38,8 @@ export type EntityFilter<T extends Entity, I = IdOf<T>, F = FilterOf<T>, N = nev
   // But only allow `null` for `nullable` relations
   | N
   | { ne: T | I | N | undefined }
+  // Allow setting `true` for `is not null` or `false` for `is null`
+  | boolean
   | Alias<T>;
 
 export type BooleanFilter<N> = true | false | N;

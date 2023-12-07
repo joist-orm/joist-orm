@@ -6,5 +6,5 @@ export async function saveEntities<T extends Entity>(
   type: EntityConstructor<T>,
   inputs: DeepPartialOrNull<T>[],
 ): Promise<T[]> {
-  return await Promise.all(inputs.map((input) => ctx.em.createOrUpdatePartial(type, input)));
+  return Promise.all(inputs.map((input) => ctx.em.createOrUpdatePartial(type, input)));
 }

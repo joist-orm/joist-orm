@@ -1,3 +1,10 @@
+# [1.131.0](https://github.com/stephenh/joist-ts/compare/v1.130.0...v1.131.0) (2023-12-08)
+
+
+### Features
+
+* Add getField. ([#906](https://github.com/stephenh/joist-ts/issues/906)) ([9e80f2b](https://github.com/stephenh/joist-ts/commit/9e80f2b336210d4ff22e8bccf1195444424f6fe8))
+
 # [1.130.0](https://github.com/stephenh/joist-ts/compare/v1.129.5...v1.130.0) (2023-12-08)
 
 

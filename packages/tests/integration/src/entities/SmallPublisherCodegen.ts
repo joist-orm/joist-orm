@@ -6,6 +6,7 @@ import {
   EntityOrmField,
   failNoIdYet,
   Flavor,
+  getField,
   isLoaded,
   Lens,
   Loaded,
@@ -108,11 +109,11 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get city(): string {
-    return this.__orm.data["city"];
+    return getField(this, "city");
   }
 
   set city(city: string) {

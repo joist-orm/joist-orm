@@ -11,6 +11,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasManyToMany,
   hasOne,
@@ -153,11 +154,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get text(): string | undefined {
-    return this.__orm.data["text"];
+    return getField(this, "text");
   }
 
   set text(text: string | undefined) {
@@ -165,11 +166,11 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<CommentOpts>): void {

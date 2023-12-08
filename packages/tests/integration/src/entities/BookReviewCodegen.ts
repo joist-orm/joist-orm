@@ -11,6 +11,7 @@ import {
   failNoIdYet,
   FilterOf,
   Flavor,
+  getField,
   GraphQLFilterOf,
   hasOne,
   hasOneToOne,
@@ -157,11 +158,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get idTaggedMaybe(): TaggedId | undefined {
-    return this.__orm.data["id"];
+    return getField(this, "id");
   }
 
   get rating(): number {
-    return this.__orm.data["rating"];
+    return getField(this, "rating");
   }
 
   set rating(rating: number) {
@@ -173,11 +174,11 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   abstract readonly isTest: PersistedAsyncProperty<BookReview, boolean>;
 
   get createdAt(): Date {
-    return this.__orm.data["createdAt"];
+    return getField(this, "createdAt");
   }
 
   get updatedAt(): Date {
-    return this.__orm.data["updatedAt"];
+    return getField(this, "updatedAt");
   }
 
   set(opts: Partial<BookReviewOpts>): void {

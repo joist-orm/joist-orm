@@ -1,3 +1,10 @@
+# [1.130.0](https://github.com/stephenh/joist-ts/compare/v1.129.5...v1.130.0) (2023-12-08)
+
+
+### Features
+
+* Allow filtering on foreign key is boolean. ([#905](https://github.com/stephenh/joist-ts/issues/905)) ([766bf53](https://github.com/stephenh/joist-ts/commit/766bf535386ee7585bacff97e6322d2d65faa633))
+
 ## [1.129.5](https://github.com/stephenh/joist-ts/compare/v1.129.4...v1.129.5) (2023-11-30)
 
 

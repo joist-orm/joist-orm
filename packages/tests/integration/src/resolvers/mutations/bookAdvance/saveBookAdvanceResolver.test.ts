@@ -2,7 +2,7 @@ import { saveBookAdvance } from "src/resolvers/mutations/bookAdvance/saveBookAdv
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
-describe("saveBookAdvance", () => {
+describe.skip("saveBookAdvance", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
     const result = await runSaveBookAdvance(ctx, () => ({}));

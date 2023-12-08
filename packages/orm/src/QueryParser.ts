@@ -527,6 +527,8 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     return { kind: "is-null" };
   } else if (typeof filter === "string" || typeof filter === "number") {
     return { kind: "eq", value: filter };
+  } else if (typeof filter === "boolean") {
+    return filter ? { kind: "not-null" } : { kind: "is-null" };
   } else if (Array.isArray(filter)) {
     return {
       kind: "in",

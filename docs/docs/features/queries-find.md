@@ -103,6 +103,9 @@ Inline conditions can be any of the following formats/operators:
   * `{ firstName: ["a1", "a2"] }` becomes `first_name IN ("a1", "a2")`
 * Just the entity itself, i.e. `{ publisher: p1 }`
   * `{ publisher: [p1, p2] }` becomes `publisher_id IN (1, 2)`
+  * `{ publisher: true }` becomes `publisher_id IS NOT NULL`
+  * `{ publisher: false }` becomes `publisher_id IS NULL`
+  * `{ publisher: undefined }` is ignored
 * A variety of operator literals, i.e.
   * `{ eq: "a1" }`
   * `{ ne: "a1" }`

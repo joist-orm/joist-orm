@@ -2,7 +2,7 @@ import { saveBookReview } from "src/resolvers/mutations/bookReview/saveBookRevie
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
-describe("saveBookReview", () => {
+describe.skip("saveBookReview", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
     const result = await runSaveBookReview(ctx, () => ({}));

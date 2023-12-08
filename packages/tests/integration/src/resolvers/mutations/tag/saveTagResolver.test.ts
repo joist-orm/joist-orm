@@ -5,7 +5,7 @@ import "src/setupDbTests";
 describe("saveTag", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
-    const result = await runSaveTag(ctx, () => ({}));
+    const result = await runSaveTag(ctx, () => ({ name: "t1" }));
     // const t = await em.load(Tag, result.tag);
   });
 });

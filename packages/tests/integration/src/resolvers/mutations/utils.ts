@@ -1,10 +1,10 @@
 import { Context } from "@src/context";
-import { DeepPartialOrNull, Entity, EntityConstructor, IdOf } from "joist-orm";
+import { DeepPartialOrNull, Entity, EntityConstructor } from "joist-orm";
 
 export async function saveEntities<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
-  input: DeepPartialOrNull<T>[],
-): Promise<IdOf<T>[]> {
-  return [];
+  inputs: DeepPartialOrNull<T>[],
+): Promise<T[]> {
+  return Promise.all(inputs.map((input) => ctx.em.createOrUpdatePartial(type, input)));
 }

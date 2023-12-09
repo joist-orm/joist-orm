@@ -137,6 +137,11 @@ describe("Entity", () => {
           "loaded": false,
           "opts": {},
         },
+        "nickNamesUpper": {
+          "fieldName": "nickNamesUpper",
+          "fn": {},
+          "reactiveHint": "nickNames",
+        },
         "numberOfBooks": {
           "fieldName": "numberOfBooks",
           "fn": {},

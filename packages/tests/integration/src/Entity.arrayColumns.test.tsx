@@ -1,15 +1,47 @@
 import { Author, newAuthor } from "@src/entities";
 import { insertAuthor, select } from "@src/entities/inserts";
 
-import { newEntityManager } from "@src/testEm";
+import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("Entity.arrayColumns", () => {
   it("can save string[] columns", async () => {
     const em = newEntityManager();
-    const a = newAuthor(em, { nickNames: ["a", "b"] });
+    newAuthor(em, { nickNames: ["a", "b"] });
     await em.flush();
     const rows = await select("authors");
     expect(rows[0].nick_names).toEqual(["a", "b"]);
+  });
+
+  it("can save string[] columns as derived fields", async () => {
+    const em = newEntityManager();
+    // Given an author with nicknames
+    const a = newAuthor(em, { nickNames: ["a", "b"] });
+    // When we save
+    await em.flush();
+    // Then the uppercase names were calculated
+    const rows = await select("authors");
+    expect(rows[0].nick_names_upper).toEqual(["A", "B"]);
+
+    // When the field is accessed again
+    a.nickNamesUpper.get;
+    // Then it's not considered changed
+    expect(a.changes.nickNamesUpper.hasChanged).toBe(false);
+    // And if we flush, then nothing has changed
+    resetQueryCount();
+    await em.flush();
+    expect(numberOfQueries).toBe(0);
+
+    // But if we change the nicknames
+    a.nickNames = ["b", "a"];
+    // And re-access the field
+    a.nickNamesUpper.get;
+    // Then the derived field is marked as changed
+    expect(a.changes.nickNamesUpper.hasChanged).toBe(true);
+
+    // And when we save
+    await em.flush();
+    // Then it's updated
+    expect((await select("authors"))[0].nick_names_upper).toEqual(["B", "A"]);
   });
 
   it("can load string[] columns", async () => {

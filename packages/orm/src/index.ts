@@ -401,10 +401,16 @@ export function maybeGetConstructorFromReference(
 function equalOrSameEntity(a: any, b: any): boolean {
   return (
     equal(a, b) ||
+    (Array.isArray(a) && Array.isArray(b) && equalArrays(a, b)) ||
     // This is kind of gross, but make sure not to compare two both-new entities
     (((isEntity(a) && !a.isNewEntity) || (isEntity(b) && !b.isNewEntity)) &&
       maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
   );
+}
+
+function equalArrays(a: any[], b: any[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((_: any, i) => equal(a[i], b[i]));
 }
 
 function equal(a: any, b: any): boolean {

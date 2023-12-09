@@ -93,6 +93,7 @@ export interface AuthorFields {
   age: { kind: "primitive"; type: number; unique: false; nullable: undefined };
   graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
   nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined };
+  nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined };
   wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
   address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
   businessAddress: { kind: "primitive"; type: z.input<typeof AddressSchema>; unique: false; nullable: undefined };
@@ -166,6 +167,7 @@ export interface AuthorFilter {
   age?: ValueFilter<number, null>;
   graduated?: ValueFilter<Date, null>;
   nickNames?: ValueFilter<string[], null>;
+  nickNamesUpper?: ValueFilter<string[], null>;
   wasEverPopular?: BooleanFilter<null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
@@ -205,6 +207,7 @@ export interface AuthorGraphQLFilter {
   age?: ValueGraphQLFilter<number>;
   graduated?: ValueGraphQLFilter<Date>;
   nickNames?: ValueGraphQLFilter<string[]>;
+  nickNamesUpper?: ValueGraphQLFilter<string[]>;
   wasEverPopular?: BooleanGraphQLFilter;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
@@ -244,6 +247,7 @@ export interface AuthorOrder {
   age?: OrderBy;
   graduated?: OrderBy;
   nickNames?: OrderBy;
+  nickNamesUpper?: OrderBy;
   wasEverPopular?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
@@ -371,6 +375,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   set nickNames(nickNames: string[] | undefined) {
     setField(this, "nickNames", nickNames);
   }
+
+  abstract readonly nickNamesUpper: PersistedAsyncProperty<Author, string[] | undefined>;
 
   get wasEverPopular(): boolean | undefined {
     return getField(this, "wasEverPopular");

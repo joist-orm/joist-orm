@@ -100,6 +100,12 @@ export class Author extends AuthorCodegen {
     },
   );
 
+  readonly nickNamesUpper: PersistedAsyncProperty<Author, string[]> = hasPersistedAsyncProperty(
+    "nickNamesUpper",
+    "nickNames",
+    (a) => (a.nickNames ?? []).map((n) => n.toUpperCase()),
+  );
+
   public transientFields = {
     beforeFlushRan: false,
     beforeCreateRan: false,

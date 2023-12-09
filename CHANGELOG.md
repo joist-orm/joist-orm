@@ -1,3 +1,10 @@
+## [1.131.1](https://github.com/stephenh/joist-ts/compare/v1.131.0...v1.131.1) (2023-12-09)
+
+
+### Bug Fixes
+
+* Array columns were not deeply dirty checked. ([#907](https://github.com/stephenh/joist-ts/issues/907)) ([f684b83](https://github.com/stephenh/joist-ts/commit/f684b83b72c455edccc2fb5ec3fd3b32250030f5))
+
 # [1.131.0](https://github.com/stephenh/joist-ts/compare/v1.130.0...v1.131.0) (2023-12-08)
 
 

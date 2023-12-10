@@ -18,6 +18,7 @@
     "packages/codegen",
     "packages/graphql-codegen",
     "packages/graphql-resolver-utils",
+    "packages/ide",
     "packages/migration-utils",
     "packages/orm",
     "packages/plugins/join-preloading",

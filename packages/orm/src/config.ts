@@ -88,7 +88,7 @@ export class ConfigApi<T extends Entity, C> {
         return maybeFn!(loaded, ctx);
       };
       // Squirrel our hint away where configureMetadata can find it
-      (fn as any).hint = ruleOrHint;
+      // (fn as any).hint = ruleOrHint;
       this.__data.hooks[hook].push(fn);
     }
   }

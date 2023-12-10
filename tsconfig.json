@@ -3,6 +3,7 @@
     { "path": "./packages/codegen" },
     { "path": "./packages/graphql-codegen" },
     { "path": "./packages/graphql-resolver-utils" },
+    { "path": "./packages/ide" },
     { "path": "./packages/migration-utils" },
     { "path": "./packages/orm" },
     { "path": "./packages/plugins/join-preloading" },

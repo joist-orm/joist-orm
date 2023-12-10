@@ -17,10 +17,6 @@ export function getMetadata<T extends Entity>(
 
 /**
  * Runtime metadata about an entity.
- *
- * Note: This has no generic, like `T extends Entity`, because `Entity<IdType>` i.e. with
- * an unknown string/id type, causes issues when we want to generically mix `EntityMetadata`
- * of different types, that even liberally using `EntityMetadata<any>` did not avoid.
  */
 export interface EntityMetadata<T extends Entity = any> {
   cstr: MaybeAbstractEntityConstructor<T>;

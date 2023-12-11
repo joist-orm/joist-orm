@@ -1635,7 +1635,7 @@ async function runHook(
         const hookFns = getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) => m.config.__data.hooks[hook]);
         // Use an explicit `async` here to ensure all hooks are promises, i.e. so that a non-promise
         // hook blowing up doesn't orphan the others .
-        return hookFns.map(async (fn) => fn(entity, ctx as any));
+        return hookFns.map(async (hook) => hook.fn(entity, ctx as any));
       });
   });
   // Use `allSettled` so that even if 1 hook blows up, we don't orphan other hooks mid-flush

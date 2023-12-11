@@ -20,6 +20,13 @@ export type EntityHook =
   | "afterValidation"
   | "beforeCommit"
   | "afterCommit";
+
+export interface HookConfig<T extends Entity, C> {
+  callerName: string;
+  hint: LoadHint<T> | undefined;
+  fn: HookFn<T, C>;
+}
+
 type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
 export const constraintNameToValidationError: Record<string, string> = {};
@@ -78,31 +85,41 @@ export class ConfigApi<T extends Entity, C> {
     this.__data.cascadeDeleteFields.push(relation);
   }
 
-  private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
+  private addHook(
+    callerName: string,
+    hook: EntityHook,
+    ruleOrHint: HookFn<T, C> | any,
+    maybeFn?: HookFn<Loaded<T, any>, C>,
+  ) {
     if (typeof ruleOrHint === "function") {
-      this.__data.hooks[hook].push(ruleOrHint);
+      this.__data.hooks[hook].push({
+        callerName,
+        hint: undefined,
+        fn: ruleOrHint,
+      });
     } else {
-      const fn = async (entity: T, ctx: C) => {
-        // TODO Use this for reactive beforeFlush
-        const loaded = await entity.em.populate(entity, ruleOrHint);
-        return maybeFn!(loaded, ctx);
-      };
-      // Squirrel our hint away where configureMetadata can find it
-      // (fn as any).hint = ruleOrHint;
-      this.__data.hooks[hook].push(fn);
+      this.__data.hooks[hook].push({
+        callerName,
+        hint: ruleOrHint,
+        fn: async (entity: T, ctx: C) => {
+          // TODO Use this for reactive beforeFlush
+          const loaded = await entity.em.populate(entity, ruleOrHint);
+          return maybeFn!(loaded, ctx);
+        },
+      });
     }
   }
 
   beforeDelete<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
   beforeDelete(fn: HookFn<T, C>): void;
   beforeDelete(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
-    this.addHook("beforeDelete", ruleOrHint, maybeFn);
+    this.addHook(getCallerName(), "beforeDelete", ruleOrHint, maybeFn);
   }
 
   beforeFlush<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
   beforeFlush(fn: HookFn<T, C>): void;
   beforeFlush(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
-    this.addHook("beforeFlush", ruleOrHint, maybeFn);
+    this.addHook(getCallerName(), "beforeFlush", ruleOrHint, maybeFn);
   }
 
   // beforeCreate still needs to take a hint because even though the entity itself is New<T>, we might want to load
@@ -110,27 +127,27 @@ export class ConfigApi<T extends Entity, C> {
   beforeCreate<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
   beforeCreate(fn: HookFn<T, C>): void;
   beforeCreate(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
-    this.addHook("beforeCreate", ruleOrHint, maybeFn);
+    this.addHook(getCallerName(), "beforeCreate", ruleOrHint, maybeFn);
   }
 
   beforeUpdate<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
   beforeUpdate(fn: HookFn<T, C>): void;
   beforeUpdate(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
-    this.addHook("beforeUpdate", ruleOrHint, maybeFn);
+    this.addHook(getCallerName(), "beforeUpdate", ruleOrHint, maybeFn);
   }
 
   afterValidation<H extends LoadHint<T>>(populate: H, fn: HookFn<Loaded<T, H>, C>): void;
   afterValidation(fn: HookFn<T, C>): void;
   afterValidation(ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>): void {
-    this.addHook("afterValidation", ruleOrHint, maybeFn);
+    this.addHook(getCallerName(), "afterValidation", ruleOrHint, maybeFn);
   }
 
   beforeCommit(fn: HookFn<T, C>): void {
-    this.addHook("beforeCommit", fn);
+    this.addHook(getCallerName(), "beforeCommit", fn);
   }
 
   afterCommit(fn: HookFn<T, C>): void {
-    this.addHook("afterCommit", fn);
+    this.addHook(getCallerName(), "afterCommit", fn);
   }
 
   /**
@@ -180,7 +197,7 @@ export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
   /** The hooks for this instance. */
-  hooks: Record<EntityHook, HookFn<T, C>[]> = {
+  hooks: Record<EntityHook, HookConfig<T, C>[]> = {
     beforeDelete: [],
     beforeFlush: [],
     beforeCreate: [],

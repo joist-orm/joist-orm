@@ -4,14 +4,14 @@ import { File } from "@babel/types";
 import { Dirent } from "fs";
 import { readdir, readFile } from "fs/promises";
 
-interface FieldComment {
+export interface FieldComment {
   kind: "field";
   entity: string;
   field: string;
   comment: string;
 }
 
-interface HookComment {
+export interface HookComment {
   kind: "hook";
   entity: string;
   hook: string;
@@ -19,7 +19,7 @@ interface HookComment {
   comment: string;
 }
 
-interface ClassComment {
+export interface ClassComment {
   kind: "class";
   entity: string;
   comment: string;
@@ -99,7 +99,7 @@ function findComments(entity: string, source: ParseResult<File>): Comment[] {
 
 /** Looks in the `src/entities` directory but ignores tests, factories, and codegen files. */
 async function getFilesToParse(dirPath: string): Promise<Dirent[]> {
-  const entries = await readdir(dirPath, { withFileTypes: true, recursive: false });
+  const entries = await readdir(dirPath, { withFileTypes: true, recursive: true });
   return entries
     .filter((e) => e.isFile() && e.name.endsWith(".ts"))
     .filter(

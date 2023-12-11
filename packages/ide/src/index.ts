@@ -15,7 +15,7 @@ async function main() {
   });
 
   allMetadata.forEach((m) => {
-    console.log(m.cstr.name);
+    console.log(`${m.cstr.name} - ${Object.values(m.config.__data.hooks).flat().length} hooks`);
     Object.entries(m.config.__data.hooks).forEach(([hook, fns]) => {
       if (fns.length > 0) {
         console.log(`  ${hook}: ${fns.length}`);

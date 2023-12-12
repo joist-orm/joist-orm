@@ -1,4 +1,4 @@
-import { cannotBeUpdated, Collection, CustomCollection, getEm, Loaded } from "joist-orm";
+import { cannotBeUpdated, Collection, CustomCollection, getEm, isLoaded, Loaded } from "joist-orm";
 import { publisherConfig as config, Image, ImageType, ImageTypes, PublisherCodegen } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
@@ -36,6 +36,7 @@ export abstract class Publisher extends PublisherCodegen {
         getEm(entity).delete(value);
       }
     },
+    isLoaded: () => isLoaded(this, allImagesHint as any),
   });
 }
 

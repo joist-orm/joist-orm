@@ -111,4 +111,25 @@ describe("hasManyDerived", () => {
     // Then it still works
     expect(a.reviewedBooks.get).toBeDefined();
   });
+
+  it("re-evaluates whether the relation is loaded on changes to the graph", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "a2" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBook({ title: "b2", author_id: 2 });
+    await insertBookReview({ rating: 5, book_id: 1 });
+
+    const em = newEntityManager();
+    // When I populate reviewedBooks
+    const author = await em.load(Author, "1", "reviewedBooks");
+    // Then it is loaded
+    expect(author.reviewedBooks.isLoaded).toEqual(true);
+
+    // When I add a book to the author which does not have it's reviews loaded
+    const b2 = await em.load(Book, "2");
+    author.books.add(b2);
+
+    // Then the collection is no longer loaded
+    expect(author.reviewedBooks.isLoaded).toEqual(false);
+  });
 });

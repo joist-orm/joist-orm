@@ -1,3 +1,10 @@
+# [1.132.0](https://github.com/stephenh/joist-ts/compare/v1.131.1...v1.132.0) (2023-12-12)
+
+
+### Features
+
+* Really check if relations are loaded for CustomCollection and CustomReference ([#911](https://github.com/stephenh/joist-ts/issues/911)) ([55b3a6b](https://github.com/stephenh/joist-ts/commit/55b3a6b7d2d987d356c9bddd528316400dd8387d))
+
 ## [1.131.1](https://github.com/stephenh/joist-ts/compare/v1.131.0...v1.131.1) (2023-12-09)
 
 

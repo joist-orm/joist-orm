@@ -114,7 +114,6 @@ describe("Entity", () => {
           "undefined": null,
         },
         "latestComment": {
-          "_isLoaded": false,
           "loadPromise": undefined,
           "opts": {
             "get": {},
@@ -185,7 +184,6 @@ describe("Entity", () => {
           },
         },
         "reviewedBooks": {
-          "_isLoaded": false,
           "loadPromise": undefined,
           "opts": {
             "add": {},
@@ -197,7 +195,6 @@ describe("Entity", () => {
           },
         },
         "reviews": {
-          "_isLoaded": false,
           "loadPromise": undefined,
           "opts": {
             "get": {},

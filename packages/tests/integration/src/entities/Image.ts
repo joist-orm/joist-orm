@@ -15,6 +15,7 @@ export class Image extends ImageCodegen {
       // TODO should validate other matches ImageType
       image.ownerRef.set(other as any);
     },
+    isLoaded: () => this.ownerRef.isLoaded,
   });
 
   private get ownerRef() {

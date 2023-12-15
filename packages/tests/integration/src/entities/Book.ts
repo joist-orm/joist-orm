@@ -1,4 +1,4 @@
-import { BookCodegen, bookConfig as config } from "./entities";
+import { Author, BookCodegen, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
   rulesInvoked = 0;
@@ -47,6 +47,12 @@ config.setDefault("notes", (b) => `Notes for ${b.title}`);
 
 /** Example of an asynchronous default. */
 config.setDefault("order", { author: "books" }, (b) => b.author.get.books.get.length);
+
+/** Example of an asynchronous default that returns an entity. */
+config.setDefault("author", "title", async (b, { em }) => {
+  // See if we have an author with the same name as the book title
+  return em.findOne(Author, { lastName: b.title });
+});
 
 config.cascadeDelete("reviews");
 

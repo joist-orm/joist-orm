@@ -5,9 +5,9 @@ export type EntityFields<T> = {
 
 export type EntityField =
   | { kind: "primitive"; type: unknown; unique: boolean; nullable: never | undefined; derived: boolean }
-  | { kind: "enum"; type: unknown; unique: false; nullable: never | unknown; native: boolean }
-  | { kind: "m2o"; type: unknown; unique: false; nullable: never | unknown; derived: boolean }
-  | { kind: "poly"; type: unknown; unique: false; nullable: never | unknown };
+  | { kind: "enum"; type: unknown; nullable: never | unknown; native: boolean }
+  | { kind: "m2o"; type: unknown; nullable: never | unknown; derived: boolean }
+  | { kind: "poly"; type: unknown; nullable: never | unknown };
 
 /** The subset of primitive, enum, and m2o fields from the `F` that are settable, i.e. not derived. */
 export type SettableFields<F> = {

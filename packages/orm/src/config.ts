@@ -147,13 +147,16 @@ export class ConfigApi<T extends Entity, C> {
     hint: H,
     fn: (
       entity: Reacted<T, H>,
-    ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"]> : never,
+      ctx: C,
+    ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | undefined> : never,
   ): void;
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFn: any, fn?: any): void {
     if (fn) {
-      this.__data.asyncDefaults[fieldName] = async (entity: T) => {
-        const loaded = await entity.em.populate(entity, hintOrFn);
-        return fn(loaded);
+      this.__data.asyncDefaults[fieldName] = async (entity: T, ctx: C) => {
+        // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
+        const loadHint = convertToLoadHint(getMetadata(entity), hintOrFn);
+        const loaded = await entity.em.populate(entity, loadHint);
+        return fn(loaded, ctx);
       };
     } else {
       this.__data.syncDefaults[fieldName] = hintOrFn;

@@ -44,6 +44,7 @@ import {
   getMetadata,
   getRelationEntries,
   getRelations,
+  isLoadedReference,
   keyToTaggedId,
   loadLens,
   parseFindQuery,
@@ -1725,8 +1726,11 @@ function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<un
       todo.inserts.flatMap((entity) =>
         getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) =>
           Object.entries(m.config.__data.asyncDefaults).map(async ([fieldName, fn]) => {
-            if ((entity as any)[fieldName] === undefined) {
+            const value = (entity as any)[fieldName];
+            if (value === undefined) {
               (entity as any)[fieldName] = await fn(entity, ctx);
+            } else if (isLoadedReference(value) && !value.isSet) {
+              value.set(await fn(entity, ctx));
             }
           }),
         ),

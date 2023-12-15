@@ -9,6 +9,7 @@ export type EntityField =
   | { kind: "m2o"; type: unknown; unique: false; nullable: never | unknown; derived: boolean }
   | { kind: "poly"; type: unknown; unique: false; nullable: never | unknown };
 
+/** The subset of primitive, enum, and m2o fields from the `F` that are settable, i.e. not derived. */
 export type SettableFields<F> = {
   [K in keyof F]: F[K] extends { kind: "primitive"; derived: false }
     ? F[K]

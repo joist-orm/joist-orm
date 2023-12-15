@@ -47,11 +47,11 @@ import {
 export type AuthorScheduleId = Flavor<string, AuthorSchedule>;
 
 export interface AuthorScheduleFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  overview: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  author: { kind: "m2o"; type: Author; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  overview: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
 export interface AuthorScheduleOpts {

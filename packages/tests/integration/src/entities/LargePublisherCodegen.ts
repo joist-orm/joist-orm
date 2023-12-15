@@ -51,8 +51,8 @@ import {
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  country: { kind: "primitive"; type: string; unique: false; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {

@@ -67,14 +67,14 @@ import {
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never };
-  order: { kind: "primitive"; type: number; unique: false; nullable: never };
-  notes: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  author: { kind: "m2o"; type: Author; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  order: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  notes: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
 export interface BookOpts {

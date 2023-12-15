@@ -31,8 +31,8 @@ import { DatabaseOwner, databaseOwnerMeta, Entity, EntityManager, newDatabaseOwn
 export type DatabaseOwnerId = Flavor<string, DatabaseOwner>;
 
 export interface DatabaseOwnerFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
 }
 
 export interface DatabaseOwnerOpts {

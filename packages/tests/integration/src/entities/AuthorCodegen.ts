@@ -82,36 +82,42 @@ import {
 export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  ssn: { kind: "primitive"; type: string; unique: true; nullable: undefined };
-  initials: { kind: "primitive"; type: string; unique: false; nullable: never };
-  numberOfBooks: { kind: "primitive"; type: number; unique: false; nullable: never };
-  bookComments: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
-  age: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
-  nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined };
-  nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined };
-  wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
-  address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
-  businessAddress: { kind: "primitive"; type: z.input<typeof AddressSchema>; unique: false; nullable: undefined };
-  quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined };
-  numberOfAtoms: { kind: "primitive"; type: bigint; unique: false; nullable: undefined };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
-  numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  search: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  ssn: { kind: "primitive"; type: string; unique: true; nullable: undefined; derived: false };
+  initials: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
+  numberOfBooks: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
+  bookComments: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  age: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: false };
+  nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: true };
+  wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  address: { kind: "primitive"; type: Address; unique: false; nullable: undefined; derived: false };
+  businessAddress: {
+    kind: "primitive";
+    type: z.input<typeof AddressSchema>;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+  };
+  quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined; derived: false };
+  numberOfAtoms: { kind: "primitive"; type: bigint; unique: false; nullable: undefined; derived: false };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
+  numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
+  tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
-  mentor: { kind: "m2o"; type: Author; nullable: undefined };
-  currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined };
-  favoriteBook: { kind: "m2o"; type: Book; nullable: undefined };
-  publisher: { kind: "m2o"; type: Publisher; nullable: undefined };
+  mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
+  favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
+  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
 }
 
 export interface AuthorOpts {

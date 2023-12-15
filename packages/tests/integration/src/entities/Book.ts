@@ -42,10 +42,11 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.numberOfBooks2RuleInvoked++;
 });
 
-type A = string | never;
+/** Example of a synchronous default. */
+config.setDefault("notes", (b) => `Notes for ${b.title}`);
 
-// config.setDefault("title", { author: "firstName" }, (b) => `${b.author.get.firstName.get} Book`);
-config.setDefault("title", (b) => `Book`);
+/** Example of an asynchronous default. */
+config.setDefault("order", { author: "books" }, (b) => b.author.get.books.get.length);
 
 config.cascadeDelete("reviews");
 

@@ -117,4 +117,30 @@ The getter will still be public.
 }
 ```
 
+## Field Defaults
 
+### Schema Defaults
+
+If your database schema has default values for columns, i.e. an integer that defaults to 0, Joist will immediately apply those defaults to entities as they're created, i.e. via `em.create`.
+
+This gives your business logic immediate access to the default value that would be applied by the database, but without waiting for an `em.flush` to happen.
+
+### Dynamic Defaults
+
+If you need to use `async`, cross-entity business logic to set field defaults, you can use the `config.setDefault` method:
+
+```typescript
+/** Example of a synchronous default. */
+config.setDefault("notes", (b) => `Notes for ${b.title}`);
+
+/** Example of an asynchronous default. */
+config.setDefault("order", { author: "books" }, (b) => b.author.get.books.get.length);
+```
+
+Any `setDefault` without a load hint (the 1st example) must be synchronous, and will be *applied immediately* upon creation, i.e. `em.create` calls, just like the schema default values.
+
+Any `setDefault` with a load hint (the 2nd exmaple) can be asynchronous, and will *not be applied until `em.flush()`*, because the `async` nature means we have to wait to invoke them.
+
+### Hooks
+
+You can also use `beforeCreate` hooks to apply defaults, but `setDefault` is preferred because it's the most accurate modeling of intent, and follows our general recommendation to use hooks sparingly.

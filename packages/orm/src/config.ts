@@ -1,5 +1,7 @@
 import { Entity } from "./Entity";
 import {
+  EntityField,
+  FieldsOf,
   getMetadata,
   Loaded,
   LoadHint,
@@ -7,6 +9,7 @@ import {
   Reacted,
   ReactiveHint,
   RelationsIn,
+  SettableFields,
 } from "./index";
 import { convertToLoadHint } from "./reactiveHints";
 import { ValidationRule, ValidationRuleInternal } from "./rules";
@@ -133,6 +136,30 @@ export class ConfigApi<T extends Entity, C> {
     this.addHook("afterCommit", fn);
   }
 
+  /** Adds a synchronous default for `fieldName`. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(
+    fieldName: K,
+    fn: (entity: T) => FieldsOf<T>[K] extends EntityField ? FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"] : never,
+  ): void;
+  /** Adds an asynchronous default for `fieldName`. */
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string, const H extends ReactiveHint<T>>(
+    fieldName: K,
+    hint: H,
+    fn: (
+      entity: Reacted<T, H>,
+    ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | FieldsOf<T>[K]["nullable"]> : never,
+  ): void;
+  setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFn: any, fn?: any): void {
+    if (fn) {
+      this.__data.asyncDefaults[fieldName] = async (entity: T) => {
+        const loaded = await entity.em.populate(entity, hintOrFn);
+        return fn(loaded);
+      };
+    } else {
+      this.__data.syncDefaults[fieldName] = hintOrFn;
+    }
+  }
+
   /**
    * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
    * until the user is ready to use it. */
@@ -179,7 +206,7 @@ export interface ReactiveField {
 export class ConfigData<T extends Entity, C> {
   /** The validation rules for this entity type. */
   rules: ValidationRuleInternal<T>[] = [];
-  /** The hooks for this instance. */
+  /** The hooks for this entity type. */
   hooks: Record<EntityHook, HookFn<T, C>[]> = {
     beforeDelete: [],
     beforeFlush: [],
@@ -189,6 +216,11 @@ export class ConfigData<T extends Entity, C> {
     beforeCommit: [],
     afterCommit: [],
   };
+  /** Synchronous defaults for this entity type, invoked on `em.create`. */
+  syncDefaults: Record<string, (entity: T) => void> = {};
+  /** Asynchronous defaults for this entity type, invoked on `em.flush`. */
+  asyncDefaults: Record<string, (entity: T, ctx: C) => MaybePromise<T>> = {};
+
   // An array of the reactive rules that depend on this entity
   reactiveRules: ReactiveRule[] = [];
   // An array of the reactive fields that depend on this entity

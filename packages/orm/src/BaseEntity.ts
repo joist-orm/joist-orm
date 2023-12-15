@@ -24,7 +24,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   // that sufficiently overlaps.
   readonly fullNonReactiveAccess!: this;
 
-  protected constructor(em: EM, metadata: any, defaultValues: object, opts: any) {
+  protected constructor(em: EM, metadata: any, defaultValues: object, optsOrId: any) {
     Object.defineProperty(this, "__orm", {
       value: new EntityOrmField(em, metadata, defaultValues),
       enumerable: false,
@@ -35,8 +35,8 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
       writable: false,
     });
     // Ensure we have at least id set so the `EntityManager.register` works
-    if (typeof opts === "string") {
-      this.__orm.data["id"] = opts;
+    if (typeof optsOrId === "string") {
+      this.__orm.data["id"] = optsOrId;
       this.__orm.isNew = false;
     }
     em.register(metadata, this);

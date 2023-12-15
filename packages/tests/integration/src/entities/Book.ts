@@ -42,6 +42,11 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.numberOfBooks2RuleInvoked++;
 });
 
+type A = string | never;
+
+// config.setDefault("title", { author: "firstName" }, (b) => `${b.author.get.firstName.get} Book`);
+config.setDefault("title", (b) => `Book`);
+
 config.cascadeDelete("reviews");
 
 // Verify that beforeDelete hooks see their pre-unhooked-state, because if they run
@@ -55,4 +60,4 @@ config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
 });
 
-function noop(param: any): void {}
+function noop(_: any): void {}

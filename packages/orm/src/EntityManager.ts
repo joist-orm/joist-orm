@@ -115,7 +115,7 @@ export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
 export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
 
-export type FieldsOf<T> = T extends { __orm: { fieldsType: infer O } } ? O : never;
+export type FieldsOf<T> = T extends { __orm: { fieldsType: infer F } } ? F : never;
 
 export type OptIdsOf<T> = T extends { __orm: { optIdsType: infer O } } ? O : never;
 
@@ -1115,6 +1115,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos(pendingEntities);
+          await setAsyncDefaults(this.ctx, todos);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);
@@ -1715,6 +1716,23 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
       setField(entity, fieldName as any, (entity as any)[fieldName]);
     });
   }
+}
+
+/** Run the async defaults for all inserted entities in `todos`. */
+function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
+  return Promise.all(
+    Object.values(todos).flatMap((todo) =>
+      todo.inserts.flatMap((entity) =>
+        getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) =>
+          Object.entries(m.config.__data.asyncDefaults).map(async ([fieldName, fn]) => {
+            if ((entity as any)[fieldName] === undefined) {
+              (entity as any)[fieldName] = await fn(entity, ctx);
+            }
+          }),
+        ),
+      ),
+    ),
+  );
 }
 
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */

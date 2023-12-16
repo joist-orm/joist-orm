@@ -1,3 +1,10 @@
+## [1.134.1](https://github.com/stephenh/joist-ts/compare/v1.134.0...v1.134.1) (2023-12-16)
+
+
+### Bug Fixes
+
+* Fix enum defaults. ([#916](https://github.com/stephenh/joist-ts/issues/916)) ([6a5dfd1](https://github.com/stephenh/joist-ts/commit/6a5dfd1e71e89a8b775893fb2844d2d52774d75d))
+
 # [1.134.0](https://github.com/stephenh/joist-ts/compare/v1.133.0...v1.134.0) (2023-12-16)
 
 

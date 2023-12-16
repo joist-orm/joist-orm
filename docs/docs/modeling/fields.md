@@ -141,6 +141,12 @@ Any `setDefault` without a load hint (the 1st example) must be synchronous, and 
 
 Any `setDefault` with a load hint (the 2nd exmaple) can be asynchronous, and will *not be applied until `em.flush()`*, because the `async` nature means we have to wait to invoke them.
 
+:::info
+
+We could probably add an async `em.assignDefaults`, similar to `em.assignNewIds`, to allow code to trigger async default assignment, without kicking off an `em.flush`.
+
+:::
+
 ### Hooks
 
 You can also use `beforeCreate` hooks to apply defaults, but `setDefault` is preferred because it's the most accurate modeling of intent, and follows our general recommendation to use hooks sparingly.

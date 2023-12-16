@@ -47,11 +47,11 @@ import {
 export type CriticColumnId = Flavor<string, CriticColumn>;
 
 export interface CriticColumnFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  critic: { kind: "m2o"; type: Critic; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  critic: { kind: "m2o"; type: Critic; nullable: never; derived: false };
 }
 
 export interface CriticColumnOpts {

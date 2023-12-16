@@ -61,12 +61,12 @@ import {
 export type CriticId = Flavor<string, Critic>;
 
 export interface CriticFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  favoriteLargePublisher: { kind: "m2o"; type: LargePublisher; nullable: undefined; derived: false };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
 }
 
 export interface CriticOpts {

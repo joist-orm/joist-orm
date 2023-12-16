@@ -1,5 +1,6 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
+import { setAsyncDefaults } from "./defaults";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
@@ -115,7 +116,7 @@ export type MaybeAbstractEntityConstructor<T> = abstract new (em: EntityManager<
 /** Return the `FooOpts` type a given `Foo` entity constructor. */
 export type OptsOf<T> = T extends { __orm: { optsType: infer O } } ? O : never;
 
-export type FieldsOf<T> = T extends { __orm: { fieldsType: infer O } } ? O : never;
+export type FieldsOf<T> = T extends { __orm: { fieldsType: infer F } } ? F : never;
 
 export type OptIdsOf<T> = T extends { __orm: { optIdsType: infer O } } ? O : never;
 
@@ -1115,6 +1116,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         await this.#fl.allowWrites(async () => {
           // Run our hooks
           let todos = createTodos(pendingEntities);
+          await setAsyncDefaults(this.ctx, todos);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);

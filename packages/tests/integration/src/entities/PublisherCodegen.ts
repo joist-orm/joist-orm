@@ -74,16 +74,16 @@ import {
 export type PublisherId = Flavor<string, Publisher>;
 
 export interface PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
-  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
   type: { kind: "enum"; type: PublisherType; nullable: never };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
 }
 
 export interface PublisherOpts {

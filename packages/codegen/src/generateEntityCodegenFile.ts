@@ -681,12 +681,12 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
 
 // Make our fields type
 function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
-  const id = code`id: { kind: "primitive"; type: ${meta.primaryKey.fieldType}; unique: ${true}; nullable: false };`;
+  const id = code`id: { kind: "primitive"; type: ${meta.primaryKey.fieldType}; unique: ${true}; nullable: never };`;
   const primitives = meta.primitives.map((field) => {
-    const { fieldName, fieldType, notNull, unique } = field;
+    const { fieldName, fieldType, notNull, unique, derived } = field;
     return code`${fieldName}: { kind: "primitive"; type: ${fieldType}; unique: ${unique}; nullable: ${undefinedOrNever(
       notNull,
-    )} };`;
+    )}, derived: ${derived !== false} };`;
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
@@ -701,8 +701,10 @@ function generateFieldsType(config: Config, meta: EntityDbMetadata): Code[] {
     const nullable = undefinedOrNever(notNull);
     return code`${fieldName}: { kind: "enum"; type: ${enumType}; nullable: ${nullable}; native: true };`;
   });
-  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull }) => {
-    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(notNull)} };`;
+  const m2o = meta.manyToOnes.map(({ fieldName, otherEntity, notNull, derived }) => {
+    return code`${fieldName}: { kind: "m2o"; type: ${otherEntity.type}; nullable: ${undefinedOrNever(
+      notNull,
+    )}, derived: ${derived !== false} };`;
   });
   const polys = meta.polymorphics.map(({ fieldName, notNull, fieldType }) => {
     return code`${fieldName}: { kind: "poly"; type: ${fieldType}; nullable: ${undefinedOrNever(notNull)} };`;

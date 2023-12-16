@@ -37,11 +37,11 @@ import { Author, authorMeta, Book, BookId, bookMeta, Entity, EntityManager, newA
 export type AuthorId = Flavor<number, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface AuthorOpts {

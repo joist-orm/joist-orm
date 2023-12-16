@@ -56,15 +56,15 @@ import {
 export type UserId = Flavor<string, User>;
 
 export interface UserFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
-  email: { kind: "primitive"; type: string; unique: false; nullable: never };
-  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined };
-  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined };
-  bio: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
+  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
+  bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
 }
 
 export interface UserOpts {

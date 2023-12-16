@@ -1,11 +1,12 @@
+import { setSyncDefaults } from "./defaults";
 import { Entity, EntityOrmField, isEntity } from "./Entity";
 import {
   EntityConstructor,
   EntityManager,
+  getEmInternalApi,
   MaybeAbstractEntityConstructor,
   OptsOf,
   TaggedId,
-  getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
@@ -23,58 +24,59 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
 export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
+export * from "./EntityFields";
 export * from "./EntityFilter";
 export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
-export { EntityOrId, HintNode } from "./HintTree";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
 export * from "./getProperties";
+export { EntityOrId, HintNode } from "./HintTree";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
-  DeepNew,
-  LoadHint,
-  Loadable,
-  Loaded,
-  MarkLoaded,
-  NestedLoadHint,
-  New,
-  RelationsIn,
   assertLoaded,
+  DeepNew,
   ensureLoaded,
   isLoaded,
   isNew,
+  Loadable,
+  Loaded,
+  LoadHint,
+  MarkLoaded,
   maybePopulateThen,
+  NestedLoadHint,
+  New,
+  RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  GenericError,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
   cannotBeUpdated,
+  GenericError,
   maxValueRule,
   minValueRule,
   newRequiredRule,
   rangeValueRule,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+  ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
+export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -155,92 +157,99 @@ export function setOpts<T extends Entity>(
   values: Partial<OptsOf<T>> | string | undefined,
   opts?: { calledFromConstructor?: boolean; partial?: boolean },
 ): void {
-  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row, so skip all this,
-  // because `hydrate` manually calls `serde.setOnEntity`.
-  // If `values` is undefined, we're being called by `createPartial` that will do its own opt handling.
-  if (values === undefined || typeof values === "string") {
-    return;
-  }
   const { calledFromConstructor, partial } = opts || {};
-  const meta = getMetadata(entity);
 
-  Object.entries(values as {}).forEach(([key, _value]) => {
-    const field = meta.allFields[key];
-    if (!field) {
-      // Allow setting non-field properties like fullName setters
-      const prop = getProperties(meta)[key];
-      if (!prop) {
-        throw new Error(`Unknown field ${key}`);
+  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row,
+  // so skip all this, because `hydrate` manually calls `serde.setOnEntity`.
+  if (typeof values === "string") return;
+
+  // If `values` is undefined, we're being called by `createPartial` that will do its
+  // own opt handling, but we still want the sync defaults applied after this opts handling.
+  if (values !== undefined) {
+    const meta = getMetadata(entity);
+    Object.entries(values as {}).forEach(([key, _value]) => {
+      const field = meta.allFields[key];
+      if (!field) {
+        // Allow setting non-field properties like fullName setters
+        const prop = getProperties(meta)[key];
+        if (!prop) {
+          throw new Error(`Unknown field ${key}`);
+        }
       }
-    }
 
-    // If ignoreUndefined is set, we treat undefined as a noop
-    if (partial && _value === undefined) {
-      return;
-    }
-    // We let optional opts fields be `| null` for convenience, and convert to undefined.
-    const value = _value === null ? undefined : _value;
-    const current = (entity as any)[key];
-    if (current instanceof AbstractRelationImpl) {
-      if (calledFromConstructor) {
-        current.setFromOpts(value);
-      } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
-        const values = value as any[];
+      // If ignoreUndefined is set, we treat undefined as a noop
+      if (partial && _value === undefined) {
+        return;
+      }
+      // We let optional opts fields be `| null` for convenience, and convert to undefined.
+      const value = _value === null ? undefined : _value;
+      const current = (entity as any)[key];
+      if (current instanceof AbstractRelationImpl) {
+        if (calledFromConstructor) {
+          current.setFromOpts(value);
+        } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
+          const values = value as any[];
 
-        // For setPartial collections, we used to individually add/remove instead of set, but this
-        // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
-        // you'd still have `[a]` around. Note that we still support `delete: true` command to go
-        // further than "remove from collection" to "actually delete the entity".
-        const allowDelete = !field.otherMetadata().fields["delete"];
-        const allowRemove = !field.otherMetadata().fields["remove"];
+          // For setPartial collections, we used to individually add/remove instead of set, but this
+          // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
+          // you'd still have `[a]` around. Note that we still support `delete: true` command to go
+          // further than "remove from collection" to "actually delete the entity".
+          const allowDelete = !field.otherMetadata().fields["delete"];
+          const allowRemove = !field.otherMetadata().fields["remove"];
 
-        // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
-        // When passed in, all values must have it, and we kick into incremental mode, i.e. we
-        // individually add/remove/delete entities.
-        //
-        // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
-        const allowOp = !field.otherMetadata().fields["op"];
-        const anyValueHasOp = allowOp && values.some((v) => !!v.op);
-        if (anyValueHasOp) {
-          const anyValueMissingOp = values.some((v) => !v.op);
-          if (anyValueMissingOp) {
-            throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+          // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
+          // When passed in, all values must have it, and we kick into incremental mode, i.e. we
+          // individually add/remove/delete entities.
+          //
+          // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
+          const allowOp = !field.otherMetadata().fields["op"];
+          const anyValueHasOp = allowOp && values.some((v) => !!v.op);
+          if (anyValueHasOp) {
+            const anyValueMissingOp = values.some((v) => !v.op);
+            if (anyValueMissingOp) {
+              throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+            }
+            values.forEach((v) => {
+              if (v.op === "delete") {
+                entity.em.delete(v);
+              } else if (v.op === "remove") {
+                (current as any).remove(v);
+              } else if (v.op === "include") {
+                (current as any).add(v);
+              } else if (v.op === "incremental") {
+                // This is a marker entry to opt-in to incremental behavior, just drop it
+              }
+            });
+            return; // return from the op-based incremental behavior
           }
-          values.forEach((v) => {
-            if (v.op === "delete") {
-              entity.em.delete(v);
-            } else if (v.op === "remove") {
-              (current as any).remove(v);
-            } else if (v.op === "include") {
-              (current as any).add(v);
-            } else if (v.op === "incremental") {
-              // This is a marker entry to opt-in to incremental behavior, just drop it
+
+          const toSet: any[] = [];
+          values.forEach((e) => {
+            if (allowDelete && e.delete === true) {
+              // Delete the entity, but still include it in `toSet` so that `a1.books.getWithDeleted` will still see it.
+              entity.em.delete(e);
+              toSet.push(e);
+            } else if (allowRemove && e.remove === true) {
+              // Just leave out of `toSet`
+            } else {
+              toSet.push(e);
             }
           });
-          return; // return from the op-based incremental behavior
+
+          current.set(toSet);
+        } else {
+          current.set(value);
         }
-
-        const toSet: any[] = [];
-        values.forEach((e) => {
-          if (allowDelete && e.delete === true) {
-            // Delete the entity, but still include it in `toSet` so that `a1.books.getWithDeleted` will still see it.
-            entity.em.delete(e);
-            toSet.push(e);
-          } else if (allowRemove && e.remove === true) {
-            // Just leave out of `toSet`
-          } else {
-            toSet.push(e);
-          }
-        });
-
-        current.set(toSet);
       } else {
-        current.set(value);
+        (entity as any)[key] = value;
       }
-    } else {
-      (entity as any)[key] = value;
-    }
-  });
+    });
+  }
+
+  // Apply any synchronous defaults, after the opts have been applied
+  if (!(entity.em as any).fakeInstance) {
+    setSyncDefaults(entity);
+  }
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {

@@ -1,4 +1,4 @@
-import { BookCodegen, bookConfig as config } from "./entities";
+import { Author, BookCodegen, bookConfig as config } from "./entities";
 
 export class Book extends BookCodegen {
   rulesInvoked = 0;
@@ -42,6 +42,18 @@ config.addRule({ author: "numberOfBooks2" }, (b) => {
   b.fullNonReactiveAccess.numberOfBooks2RuleInvoked++;
 });
 
+/** Example of a synchronous default. */
+config.setDefault("notes", (b) => `Notes for ${b.title}`);
+
+/** Example of an asynchronous default. */
+config.setDefault("order", { author: "books" }, (b) => b.author.get.books.get.length);
+
+/** Example of an asynchronous default that returns an entity. */
+config.setDefault("author", "title", async (b, { em }) => {
+  // See if we have an author with the same name as the book title
+  return em.findOne(Author, { lastName: b.title });
+});
+
 config.cascadeDelete("reviews");
 
 // Verify that beforeDelete hooks see their pre-unhooked-state, because if they run
@@ -55,4 +67,4 @@ config.addRule("tags", (b) => {
   return b.tags.get.length === 3 ? "Cannot have exactly three tags" : undefined;
 });
 
-function noop(param: any): void {}
+function noop(_: any): void {}

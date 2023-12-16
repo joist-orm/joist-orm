@@ -5,7 +5,7 @@ export type EntityFields<T> = {
 
 export type EntityField =
   | { kind: "primitive"; type: unknown; unique: boolean; nullable: never | undefined; derived: boolean }
-  | { kind: "enum"; type: unknown; nullable: never | unknown; native: boolean }
+  | { kind: "enum"; type: unknown; nullable: never | unknown }
   | { kind: "m2o"; type: unknown; nullable: never | unknown; derived: boolean }
   | { kind: "poly"; type: unknown; nullable: never | unknown };
 

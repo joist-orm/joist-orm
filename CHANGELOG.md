@@ -1,3 +1,10 @@
+# [1.134.0](https://github.com/stephenh/joist-ts/compare/v1.133.0...v1.134.0) (2023-12-16)
+
+
+### Features
+
+* Support uuid-based enum tables. ([#914](https://github.com/stephenh/joist-ts/issues/914)) ([769a488](https://github.com/stephenh/joist-ts/commit/769a488a63250accbe69730b580086a2d5cd62f5))
+
 # [1.133.0](https://github.com/stephenh/joist-ts/compare/v1.132.0...v1.133.0) (2023-12-16)
 
 

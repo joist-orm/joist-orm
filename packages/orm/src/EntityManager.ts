@@ -1,5 +1,6 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
+import { setAsyncDefaults } from "./defaults";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
@@ -44,7 +45,6 @@ import {
   getMetadata,
   getRelationEntries,
   getRelations,
-  isLoadedReference,
   keyToTaggedId,
   loadLens,
   parseFindQuery,
@@ -1717,26 +1717,6 @@ function recalcSynchronousDerivedFields(todos: Record<string, Todo>) {
       setField(entity, fieldName as any, (entity as any)[fieldName]);
     });
   }
-}
-
-/** Run the async defaults for all inserted entities in `todos`. */
-function setAsyncDefaults(ctx: unknown, todos: Record<string, Todo>): Promise<unknown> {
-  return Promise.all(
-    Object.values(todos).flatMap((todo) =>
-      todo.inserts.flatMap((entity) =>
-        getBaseAndSelfMetas(getMetadata(entity)).flatMap((m) =>
-          Object.entries(m.config.__data.asyncDefaults).map(async ([fieldName, fn]) => {
-            const value = (entity as any)[fieldName];
-            if (value === undefined) {
-              (entity as any)[fieldName] = await fn(entity, ctx);
-            } else if (isLoadedReference(value) && !value.isSet) {
-              value.set(await fn(entity, ctx));
-            }
-          }),
-        ),
-      ),
-    ),
-  );
 }
 
 /** Recursively crawls through `entity`, with the given populate `deep` hint, and adds anything found to `found`. */

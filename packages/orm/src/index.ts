@@ -1,11 +1,12 @@
+import { setSyncDefaults } from "./defaults";
 import { Entity, EntityOrmField, isEntity } from "./Entity";
 import {
   EntityConstructor,
   EntityManager,
+  getEmInternalApi,
   MaybeAbstractEntityConstructor,
   OptsOf,
   TaggedId,
-  getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
@@ -23,6 +24,10 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity } from "./BaseEntity";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
 export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";
@@ -30,52 +35,48 @@ export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
-export { EntityOrId, HintNode } from "./HintTree";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
 export * from "./getProperties";
+export { EntityOrId, HintNode } from "./HintTree";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
-  DeepNew,
-  LoadHint,
-  Loadable,
-  Loaded,
-  MarkLoaded,
-  NestedLoadHint,
-  New,
-  RelationsIn,
   assertLoaded,
+  DeepNew,
   ensureLoaded,
   isLoaded,
   isNew,
+  Loadable,
+  Loaded,
+  LoadHint,
+  MarkLoaded,
   maybePopulateThen,
+  NestedLoadHint,
+  New,
+  RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  GenericError,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
   cannotBeUpdated,
+  GenericError,
   maxValueRule,
   minValueRule,
   newRequiredRule,
   rangeValueRule,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+  ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
+export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -247,13 +248,7 @@ export function setOpts<T extends Entity>(
 
   // Apply any synchronous defaults, after the opts have been applied
   if (!(entity.em as any).fakeInstance) {
-    getBaseAndSelfMetas(getMetadata(entity)).forEach((m) => {
-      for (const [field, fn] of Object.entries(m.config.__data.syncDefaults)) {
-        if ((entity as any)[field] === undefined) {
-          (entity as any)[field] = fn(entity);
-        }
-      }
-    });
+    setSyncDefaults(entity);
   }
 }
 

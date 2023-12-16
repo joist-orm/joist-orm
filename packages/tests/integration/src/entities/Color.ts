@@ -20,7 +20,7 @@ export const ColorDetails: Record<Color[0], ColorDetails> = {
   Blue: details[Color.Blue],
 };
 
-export const Colors: EnumMetadata<Color, ColorDetails> = {
+export const Colors: EnumMetadata<Color, ColorDetails, number> = {
   name: "Color",
 
   getByCode(code: Color): ColorDetails {

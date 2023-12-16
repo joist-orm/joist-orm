@@ -1,5 +1,6 @@
 import { newAuthor } from "@src/entities/Author.factories";
 import { Book } from "@src/entities/Book";
+import { BookStatus } from "@src/entities/BookStatus";
 import { newEntityManager } from "@src/setupDbTests";
 
 describe("EntityManager.uuid.find", () => {
@@ -14,8 +15,8 @@ describe("EntityManager.uuid.find", () => {
     const a1 = newAuthor(em);
     const b1 = await Promise.all([
       //
-      em.findOrCreate(Book, { author: a1 }, { title: "b1" }),
-      em.findOrCreate(Book, { author: a1 }, { title: "b1" }),
+      em.findOrCreate(Book, { author: a1 }, { title: "b1", status: BookStatus.Draft }),
+      em.findOrCreate(Book, { author: a1 }, { title: "b1", status: BookStatus.Draft }),
     ]);
   });
 
@@ -23,8 +24,8 @@ describe("EntityManager.uuid.find", () => {
     const em = newEntityManager();
     const a1 = newAuthor(em);
     const b1 = await Promise.all([
-      em.findOrCreate(Book, { title: "t1" }, { author: a1 }),
-      em.findOrCreate(Book, { title: "t2" }, { author: a1 }),
+      em.findOrCreate(Book, { title: "t1" }, { author: a1, status: BookStatus.Draft }),
+      em.findOrCreate(Book, { title: "t2" }, { author: a1, status: BookStatus.Draft }),
     ]);
   });
 });

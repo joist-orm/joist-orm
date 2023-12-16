@@ -48,7 +48,7 @@ export const ImageTypeDetails: Record<ImageType[0], ImageTypeDetails> = {
   PublisherImage: details[ImageType.PublisherImage],
 };
 
-export const ImageTypes: EnumMetadata<ImageType, ImageTypeDetails> = {
+export const ImageTypes: EnumMetadata<ImageType, ImageTypeDetails, number> = {
   name: "ImageType",
 
   getByCode(code: ImageType): ImageTypeDetails {

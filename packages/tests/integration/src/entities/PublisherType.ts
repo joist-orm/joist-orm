@@ -17,7 +17,7 @@ export const PublisherTypeDetails: Record<PublisherType[0], PublisherTypeDetails
   Big: details[PublisherType.Big],
 };
 
-export const PublisherTypes: EnumMetadata<PublisherType, PublisherTypeDetails> = {
+export const PublisherTypes: EnumMetadata<PublisherType, PublisherTypeDetails, number> = {
   name: "PublisherType",
 
   getByCode(code: PublisherType): PublisherTypeDetails {

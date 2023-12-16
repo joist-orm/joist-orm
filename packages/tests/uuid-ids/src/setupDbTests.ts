@@ -51,6 +51,14 @@ afterAll(async () => {
   await knex.destroy();
 });
 
+export function select(tableName: string): Promise<readonly any[]> {
+  return knex.select("*").from(tableName).orderBy("id");
+}
+
+export async function insert(tableName: string, row: Record<string, any>): Promise<void> {
+  await knex.insert(row).into(tableName);
+}
+
 export function resetQueryCount() {
   numberOfQueries = 0;
   queries = [];

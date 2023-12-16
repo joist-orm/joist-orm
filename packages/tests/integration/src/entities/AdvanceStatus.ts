@@ -20,7 +20,7 @@ export const AdvanceStatusDetails: Record<AdvanceStatus[0], AdvanceStatusDetails
   Paid: details[AdvanceStatus.Paid],
 };
 
-export const AdvanceStatuses: EnumMetadata<AdvanceStatus, AdvanceStatusDetails> = {
+export const AdvanceStatuses: EnumMetadata<AdvanceStatus, AdvanceStatusDetails, number> = {
   name: "AdvanceStatus",
 
   getByCode(code: AdvanceStatus): AdvanceStatusDetails {

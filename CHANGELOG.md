@@ -1,3 +1,10 @@
+# [1.133.0](https://github.com/stephenh/joist-ts/compare/v1.132.0...v1.133.0) (2023-12-16)
+
+
+### Features
+
+* Add config.setDefault API ([#913](https://github.com/stephenh/joist-ts/issues/913)) ([d68e753](https://github.com/stephenh/joist-ts/commit/d68e753ba39de25fed293234f13de25e5f3e385f))
+
 # [1.132.0](https://github.com/stephenh/joist-ts/compare/v1.131.1...v1.132.0) (2023-12-12)
 
 

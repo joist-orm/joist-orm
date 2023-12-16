@@ -49,7 +49,7 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
         .join(",")}
     };
     
-    export const ${detailsName}: Record<${enumName}[0], ${detailsName}> = {
+    export const ${detailsName} = {
       ${rows.map((row) => `${pascalCase(row.code)}: details[${enumName}.${pascalCase(row.code)}]`).join(",")}
     };
 

@@ -42,7 +42,7 @@ const details: Record<ImageType, ImageTypeDetails> = {
   },
 };
 
-export const ImageTypeDetails: Record<ImageType[0], ImageTypeDetails> = {
+export const ImageTypeDetails = {
   BookImage: details[ImageType.BookImage],
   AuthorImage: details[ImageType.AuthorImage],
   PublisherImage: details[ImageType.PublisherImage],

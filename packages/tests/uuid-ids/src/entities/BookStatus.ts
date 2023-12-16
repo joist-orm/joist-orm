@@ -12,10 +12,7 @@ const details: Record<BookStatus, BookStatusDetails> = {
   [BookStatus.Published]: { id: "00000000-0000-0000-0000-000000000002", code: BookStatus.Published, name: "Published" },
 };
 
-export const BookStatusDetails: Record<BookStatus[0], BookStatusDetails> = {
-  Draft: details[BookStatus.Draft],
-  Published: details[BookStatus.Published],
-};
+export const BookStatusDetails = { Draft: details[BookStatus.Draft], Published: details[BookStatus.Published] };
 
 export const BookStatuses: EnumMetadata<BookStatus, BookStatusDetails, string> = {
   name: "BookStatus",

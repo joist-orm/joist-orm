@@ -12,10 +12,7 @@ const details: Record<PublisherType, PublisherTypeDetails> = {
   [PublisherType.Big]: { id: 2, code: PublisherType.Big, name: "Big" },
 };
 
-export const PublisherTypeDetails: Record<PublisherType[0], PublisherTypeDetails> = {
-  Small: details[PublisherType.Small],
-  Big: details[PublisherType.Big],
-};
+export const PublisherTypeDetails = { Small: details[PublisherType.Small], Big: details[PublisherType.Big] };
 
 export const PublisherTypes: EnumMetadata<PublisherType, PublisherTypeDetails, number> = {
   name: "PublisherType",

@@ -1,3 +1,10 @@
+## [1.134.2](https://github.com/stephenh/joist-ts/compare/v1.134.1...v1.134.2) (2023-12-17)
+
+
+### Bug Fixes
+
+* Remove hardcoded db type for enums. ([#917](https://github.com/stephenh/joist-ts/issues/917)) ([1f63bc0](https://github.com/stephenh/joist-ts/commit/1f63bc0146deb985a62ba5fb936f6d5bc315b2e3))
+
 ## [1.134.1](https://github.com/stephenh/joist-ts/compare/v1.134.0...v1.134.1) (2023-12-16)
 
 

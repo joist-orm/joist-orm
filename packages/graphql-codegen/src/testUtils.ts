@@ -71,6 +71,7 @@ export function newEnumField(fieldName: string, opts: Partial<EnumField> = {}): 
     kind: "enum",
     fieldName,
     columnName: snakeCase(fieldName),
+    columnType: "int",
     columnDefault: null,
     enumName,
     enumType,

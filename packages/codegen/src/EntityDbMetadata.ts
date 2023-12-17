@@ -112,6 +112,7 @@ export type PrimitiveField = Field & {
 export type EnumField = Field & {
   kind: "enum";
   columnName: string;
+  columnType: DatabaseColumnType;
   columnDefault: number | boolean | string | null;
   enumName: string;
   enumType: Import;
@@ -440,6 +441,7 @@ function fkFieldDerived(config: Config, entity: Entity, fieldName: string): Many
 function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: EnumMetadata): EnumField {
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
+  const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const fieldName = enumFieldName(column.name);
   const enumName = tableToEntityName(config, r.targetTable);
   const enumType = imp(`${enumName}@./entities`);
@@ -451,6 +453,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
     kind: "enum",
     fieldName,
     columnName,
+    columnType,
     columnDefault: column.default,
     enumName,
     enumType,
@@ -465,6 +468,7 @@ function newEnumField(config: Config, entity: Entity, r: M2ORelation, enums: Enu
 
 function newEnumArrayField(config: Config, entity: Entity, column: Column, enums: EnumMetadata): EnumField {
   const columnName = column.name;
+  const columnType = (column.type.shortName || column.type.name) as DatabaseColumnType;
   const fieldName = enumFieldName(column.name);
   // Find the enum table name via the comment hint (instead of a FK constraint), and strip the enum= prefix
   const enumTable = column.comment!.replace("enum=", "");
@@ -478,6 +482,7 @@ function newEnumArrayField(config: Config, entity: Entity, column: Column, enums
     kind: "enum",
     fieldName,
     columnName,
+    columnType,
     columnDefault: column.default,
     enumName,
     enumType,

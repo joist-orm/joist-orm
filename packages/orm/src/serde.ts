@@ -258,13 +258,13 @@ export class PolymorphicKeySerde implements FieldSerde {
 }
 
 export class EnumFieldSerde implements FieldSerde {
-  dbType = "int";
   isArray = false;
   columns = [this];
 
   constructor(
     private fieldName: string,
     public columnName: string,
+    public dbType: "int" | "uuid",
     private enumObject: any,
   ) {}
 
@@ -286,13 +286,13 @@ export class EnumFieldSerde implements FieldSerde {
 }
 
 export class EnumArrayFieldSerde implements FieldSerde {
-  dbType = "int[]";
   isArray = true;
   columns = [this];
 
   constructor(
     private fieldName: string,
     public columnName: string,
+    public dbType: "int[]" | "uuid[]",
     private enumObject: any,
   ) {}
 

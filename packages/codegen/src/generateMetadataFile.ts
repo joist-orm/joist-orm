@@ -117,7 +117,9 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
       }`;
   });
 
-  dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull, isArray, columnName }) => {
+  dbMetadata.enums.forEach(({ fieldName, enumDetailType, notNull, isArray, columnName, columnType }) => {
+    const serdeType = isArray ? EnumArrayFieldSerde : EnumFieldSerde;
+    const columnTypeWithArray = `${columnType}${isArray ? "[]" : ""}`;
     fields[fieldName] = code`
       {
         kind: "enum",
@@ -125,9 +127,7 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
         fieldIdName: undefined,
         required: ${notNull},
         enumDetailType: ${enumDetailType},
-        serde: new ${
-          isArray ? EnumArrayFieldSerde : EnumFieldSerde
-        }("${fieldName}", "${columnName}", ${enumDetailType}),
+        serde: new ${serdeType}("${fieldName}", "${columnName}", "${columnTypeWithArray}", ${enumDetailType}),
         immutable: false,
       }
     `;

@@ -214,7 +214,31 @@ This approach is admittedly contrary to `null` vs. `undefined` behavior in the r
 
 :::
 
+## Incrementally Building Queries
 
+Joist's filters, specifically the `FilterWithAlias` type, can be used to incrementally create/combine queries, in a fashion similar to Rails relations. For example something like:
+
+```ts
+const where: FilterWithAlias<Book> = {};
+if (authorCondition) {
+  where.author = authorCondition
+}
+if (titleCondition) {
+  where.title = titleCondition;
+}
+return await em.find(Book, where);
+```
+
+Often times it can be most ergonomic to use spreading to do this inline:
+
+```
+return await em.find(Book, {
+  author: { ...authorCondition, title },
+  title,
+});
+```
+
+But, in general, the `FilterWithAlias` type allows you to create/pass around snippets of filters.
 
 ## Methods
 

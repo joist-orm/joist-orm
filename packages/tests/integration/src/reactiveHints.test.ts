@@ -1,5 +1,14 @@
 import { Author, Book, BookReview, Comment, Image, Tag } from "@src/entities";
-import { LoadHint, Loaded, Reacted, ReactiveHint, getMetadata, reverseReactiveHint } from "joist-orm";
+import {
+  Entity,
+  LoadHint,
+  Loaded,
+  MaybeAbstractEntityConstructor,
+  Reacted,
+  ReactiveHint,
+  getMetadata,
+  reverseReactiveHint,
+} from "joist-orm";
 import { convertToLoadHint } from "joist-orm/build/reactiveHints";
 
 const am = getMetadata(Author);
@@ -70,6 +79,14 @@ describe("reactiveHints", () => {
       { entity: Author, fields: [], path: [] },
       { entity: Book, fields: ["author", "tags"], path: ["author"] },
       { entity: Tag, fields: ["books", "name"], path: ["books", "author"] },
+    ]);
+  });
+
+  it("can do hasThroughMany field names", () => {
+    expect(reverse(Author, { reviews: "comment" })).toMatchObject([
+      { entity: "Author", fields: [], path: [] },
+      { entity: "Book", fields: ["author"], path: ["author"] },
+      { entity: "BookReview", fields: ["book"], path: ["book", "author"] },
     ]);
   });
 
@@ -240,3 +257,9 @@ describe("reactiveHints", () => {
     }
   });
 });
+
+function reverse<T extends Entity>(rootType: MaybeAbstractEntityConstructor<T>, hint: ReactiveHint<T>): any[] {
+  return reverseReactiveHint(rootType, rootType, hint).map((r) => {
+    return { ...r, entity: r.entity.name };
+  });
+}

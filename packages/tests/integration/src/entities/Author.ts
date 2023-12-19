@@ -76,9 +76,8 @@ export class Author extends AuthorCodegen {
   // as well as a regular primitive (rating)
   readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
     "numberOfPublicReviews2",
-    { books: { reviews: ["isPublic", "isTest", "rating"] } },
-    (a) =>
-      a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
+    { reviews: ["isPublic", "isTest", "rating"] },
+    (a) => a.reviews.get.filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
   );
 
   readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(

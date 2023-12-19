@@ -1,7 +1,8 @@
 import { Entity } from "../Entity";
 import { IdOf, TaggedId } from "../EntityManager";
-import { Reference, ensureNotDeleted, fail } from "../index";
+import { ReactiveHint, Reference, ensureNotDeleted, fail } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
+import { MaybeReactiveProperty } from "./MaybeReactiveProperty";
 import { ReferenceN } from "./Reference";
 import { RelationT, RelationU } from "./Relation";
 
@@ -13,6 +14,8 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
   set?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded: () => boolean;
+  /** Whether the reference can be reacted against the given reactive hint. */
+  toExpandedReactiveHint?: ReactiveHint<T> | undefined;
 };
 
 /**
@@ -28,7 +31,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
  */
 export class CustomReference<T extends Entity, U extends Entity, N extends never | undefined>
   extends AbstractRelationImpl<T, U>
-  implements Reference<T, U, N>
+  implements Reference<T, U, N>, MaybeReactiveProperty
 {
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
@@ -120,6 +123,10 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
   async cleanupOnEntityDeleted(): Promise<void> {}
   maybeCascadeDelete(): void {}
+
+  get toExpandedReactiveHint() {
+    return this.opts?.toExpandedReactiveHint;
+  }
 
   /** Finds this CustomReferences field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {

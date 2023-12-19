@@ -15,8 +15,8 @@ import {
   OneToOneReference,
   Reference,
 } from "./relations";
+import { isMaybeReactiveProperty } from "./relations/MaybeReactiveProperty";
 import { LoadedOneToOneReference } from "./relations/OneToOneReference";
-import { AsyncPropertyImpl } from "./relations/hasAsyncProperty";
 import { fail, mergeNormalizedHints } from "./utils";
 
 /** The keys in `T` that rules & hooks can react to. */
@@ -162,15 +162,18 @@ export function reverseReactiveHint<T extends Entity>(
       // handle them ^, because the EntityManager.flush loop will notice their primitive values
       // changing, and kicking off any downstream reactive fields as necessary.
       const p = getProperties(meta)[key];
-      if (p instanceof AsyncPropertyImpl) {
-        if (!p.reactiveHint) {
+      if (isMaybeReactiveProperty(p)) {
+        if (!p.toExpandedReactiveHint) {
           throw new Error(
             `AsyncProperty ${key} cannot be used in reactive hints in ${rootType.name}.ts hint ${JSON.stringify(
               hint,
             )}, please use hasReactiveAsyncProperty instead`,
           );
         }
-        return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
+        // merge together the expanded hint + subhint
+        // for now can assume it lines up
+        console.log(subHint);
+        return reverseReactiveHint(rootType, meta.cstr, p.toExpandedReactiveHint, undefined, false);
       } else {
         throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
       }
@@ -258,8 +261,9 @@ export function convertToLoadHint<T extends Entity>(meta: EntityMetadata, hint: 
       }
     } else {
       const p = getProperties(meta)[key];
-      if (p && p.reactiveHint) {
-        mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.reactiveHint));
+      if (p && isMaybeReactiveProperty(p) && p.toExpandedReactiveHint) {
+        console.log({ expanded: p.toExpandedReactiveHint });
+        mergeNormalizedHints(loadHint, convertToLoadHint(meta, p.toExpandedReactiveHint));
       } else {
         fail(`Invalid reactive hint on ${meta.tableName} ${JSON.stringify(hint)}`);
       }

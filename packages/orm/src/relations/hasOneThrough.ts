@@ -1,4 +1,5 @@
 import {
+  convertLensToLoadHint,
   currentlyInstantiatingEntity,
   CustomReference,
   Entity,
@@ -24,5 +25,6 @@ export function hasOneThrough<T extends Entity, U extends Entity, N extends neve
     load: (entity, opts) => loadLens(entity, lens, opts),
     get: () => getLens(entity, lens),
     isLoaded: () => isLensLoaded(entity, lens),
+    toExpandedReactiveHint: convertLensToLoadHint(lens) as any,
   });
 }

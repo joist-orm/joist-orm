@@ -1,5 +1,6 @@
 import {
   Collection,
+  convertLensToLoadHint,
   currentlyInstantiatingEntity,
   CustomCollection,
   Entity,
@@ -24,5 +25,6 @@ export function hasManyThrough<T extends Entity, U extends Entity>(
     load: (entity, opts) => loadLens(entity, lens, opts),
     get: () => getLens(entity, lens),
     isLoaded: () => isLensLoaded(entity, lens),
+    toExpandedReactiveHint: convertLensToLoadHint(lens) as any,
   });
 }

@@ -1,6 +1,7 @@
-import { lensDataLoader } from "./dataloaders/lensDataLoader";
+import { LoadHint } from "loadHints";
 import { Entity, isEntity } from "./Entity";
 import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
+import { lensDataLoader } from "./dataloaders/lensDataLoader";
 
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };
@@ -112,6 +113,17 @@ export async function loadLens<T extends Entity, U, V>(
   return current!;
 }
 
+export function convertLensToLoadHint<T extends Entity, U, V>(fn: (lens: Lens<T>) => Lens<U, V>): LoadHint<T> {
+  const paths = collectPaths(fn);
+  const hint: any = {};
+  let current = hint;
+  for (let i = 0; i < paths.length; i++) {
+    current[paths[i]] = {};
+    current = current[paths[i]];
+  }
+  return hint;
+}
+
 export function isAllSqlPaths(meta: EntityMetadata, paths: string[]): boolean {
   for (let i = 0, current = meta; i < paths.length; i++) {
     const next = current.allFields[paths[i]];
@@ -216,7 +228,7 @@ function collectPaths(fn: Function): string[] {
   const proxy = new Proxy(
     {},
     {
-      get(object, property, receiver) {
+      get(_, property, receiver) {
         paths.push(String(property));
         return receiver;
       },

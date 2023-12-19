@@ -1,6 +1,6 @@
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
-import { Collection, ensureNotDeleted, fail } from "../index";
+import { Collection, ensureNotDeleted, fail, ReactiveHint } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { RelationT, RelationU } from "./Relation";
 
@@ -15,6 +15,8 @@ export type CustomCollectionOpts<T extends Entity, U extends Entity> = {
   remove?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
   isLoaded: () => boolean;
+  /** Whether the reference can be reacted against the given reactive hint. */
+  toExpandedReactiveHint?: ReactiveHint<T> | undefined;
 };
 
 /**
@@ -132,6 +134,10 @@ export class CustomCollection<T extends Entity, U extends Entity>
   // these callbacks should be no-ops as they ought to be handled by the underlying relations
   async cleanupOnEntityDeleted(): Promise<void> {}
   maybeCascadeDelete(): void {}
+
+  get toExpandedReactiveHint() {
+    return this.opts?.toExpandedReactiveHint;
+  }
 
   /** Finds this CustomCollections field name by looking in the entity for the key that we're assigned to. */
   get fieldName(): string {

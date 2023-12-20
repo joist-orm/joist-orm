@@ -1,3 +1,10 @@
+# [1.135.0](https://github.com/stephenh/joist-ts/compare/v1.134.2...v1.135.0) (2023-12-20)
+
+
+### Features
+
+* Add AllEnumDetails to graphql codegen ([#918](https://github.com/stephenh/joist-ts/issues/918)) ([0c342da](https://github.com/stephenh/joist-ts/commit/0c342dad37a38dbcd426d9dda4416d5e89e3831b))
+
 ## [1.134.2](https://github.com/stephenh/joist-ts/compare/v1.134.1...v1.134.2) (2023-12-17)
 
 

@@ -159,6 +159,7 @@
     "saveParentItem",
     "savePublisher",
     "savePublisherGroup",
+    "saveReviewComment",
     "saveSmallPublisher",
     "saveTag",
     "saveUser"
@@ -186,6 +187,7 @@
     "updatedAt"
   ],
   "PublisherGroup": ["createdAt", "critics", "id", "name", "publishers", "updatedAt"],
+  "ReviewComment": ["createdAt", "id", "likedByUsers", "parent", "score", "text", "updatedAt", "user"],
   "SaveAdminUserInput": ["authorManyToOneId", "bio", "email", "id", "name", "role"],
   "SaveAdminUserResult": ["adminUser"],
   "SaveAuthorInput": [
@@ -298,6 +300,8 @@
     "updatedAt"
   ],
   "SavePublisherResult": ["publisher"],
+  "SaveReviewCommentInput": ["id", "parentId", "score", "text", "userId"],
+  "SaveReviewCommentResult": ["reviewComment"],
   "SaveSmallPublisherInput": [
     "allAuthorNames",
     "city",

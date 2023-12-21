@@ -51,6 +51,7 @@
     "ParentItem": { "tag": "pi" },
     "Publisher": { "abstract": true, "tag": "p" },
     "PublisherGroup": { "relations": { "critics": { "large": true } }, "tag": "pg" },
+    "ReviewComment": { "tag": "comment" },
     "SmallPublisher": { "fields": { "allAuthorNames": { "derived": "async" } }, "tag": "p" },
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
     "User": {

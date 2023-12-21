@@ -1,4 +1,4 @@
-import { maybeBranchValue, DeepNew, FactoryOpts, newTestInstance } from "joist-orm";
+import { DeepNew, FactoryOpts, maybeBranchValue, newTestInstance } from "joist-orm";
 import { ChildItem, EntityManager, ParentItem } from "./entities";
 
 export function newChildItem(em: EntityManager, opts: FactoryOpts<ChildItem> = {}): DeepNew<ChildItem> {

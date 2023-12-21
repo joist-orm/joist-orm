@@ -1,0 +1,26 @@
+extend type Mutation {
+  saveReviewComment(input: SaveReviewCommentInput!): SaveReviewCommentResult!
+}
+
+type ReviewComment {
+  id: ID!
+  text: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  user: User
+  likedByUsers: [User!]!
+  parent: CommentParent
+  score: Int!
+}
+
+input SaveReviewCommentInput {
+  id: ID
+  text: String
+  userId: ID
+  parentId: ID
+  score: Int
+}
+
+type SaveReviewCommentResult {
+  reviewComment: ReviewComment!
+}

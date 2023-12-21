@@ -17,6 +17,7 @@ export * from "./ParentGroup.factories";
 export * from "./ParentItem.factories";
 export * from "./Publisher.factories";
 export * from "./PublisherGroup.factories";
+export * from "./ReviewComment.factories";
 export * from "./SmallPublisher.factories";
 export * from "./Tag.factories";
 export * from "./User.factories";

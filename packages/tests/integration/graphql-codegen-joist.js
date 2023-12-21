@@ -23,6 +23,7 @@ const mappers = {
   PublisherGroup: "src/entities#PublisherGroup",
   PublisherSizeDetail: "src/entities#PublisherSize",
   PublisherTypeDetail: "src/entities#PublisherType",
+  ReviewComment: "src/entities#ReviewComment",
   SmallPublisher: "src/entities#SmallPublisher",
   Tag: "src/entities#Tag",
   User: "src/entities#User",

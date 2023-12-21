@@ -249,6 +249,11 @@ export function up(b: MigrationBuilder): void {
     text: "text",
   });
 
+  //for testing baseclass' polymorphic references on subclasses
+  createSubTable(b, "comments", "review_comments", {
+    score: { type: "integer", notNull: true },
+  });
+
   createEntityTable(b, "author_stats", {
     smallint: { type: "smallint", notNull: true },
     integer: { type: "integer", notNull: true },

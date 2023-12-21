@@ -21,7 +21,9 @@ import { q } from "./utils";
 export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: EntityDbMetadata): Code {
   const { entity, createdAt, updatedAt, deletedAt } = meta;
 
-  const fields = generateFields(config, meta);
+  const baseEntity = meta.baseClassName ? dbMeta.entities.find((e) => e.name === meta.baseClassName)! : undefined;
+
+  const fields = generateFields(config, meta, baseEntity);
 
   Object.values(fields).forEach((code) => code.asOneline());
 
@@ -54,7 +56,11 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   `;
 }
 
-function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<string, Code> {
+function generateFields(
+  config: Config,
+  dbMetadata: EntityDbMetadata,
+  baseEntity?: EntityDbMetadata,
+): Record<string, Code> {
   const fields: Record<string, Code> = {};
 
   fields["id"] = code`

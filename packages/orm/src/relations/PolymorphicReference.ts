@@ -72,7 +72,10 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     private fieldName: keyof T & string,
   ) {
     super(entity);
-    this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
+    // If this polymorphic field is a subclass of another entity
+    const meta = getMetadata(entity);
+    const baseMeta = meta.baseTypes[0];
+    this.field = (baseMeta ?? meta).fields[this.fieldName] as PolymorphicField;
     if (isOrWasNew(entity)) {
       this._isLoaded = true;
     }

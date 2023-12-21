@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Book, BookReview, Comment, ReviewComment, isCommentParent, newBook } from "../entities";
+import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -131,19 +131,5 @@ describe("PolymorphicReference", () => {
     expect(isCommentParent({})).toBe(false);
     expect(isCommentParent(null)).toBe(false);
     expect(isCommentParent(undefined)).toBe(false);
-  });
-
-  it("subtypes can use base type's polymorphic reference", async () => {
-    const em = newEntityManager();
-    // Given a book
-    const book = em.createPartial(Book, { title: "t", author: "a:1" });
-
-    // When we create a review
-    const review = em.createPartial(ReviewComment, { parent: book, score: 0 });
-    // And we flush
-    await em.flush();
-
-    // Then the review's parent is the book
-    expect(await review.parent.load()).toEqual(book);
   });
 });

@@ -9,7 +9,6 @@ import {
   EntityMetadata,
   EntityOrmField,
   failNoIdYet,
-  FieldsOf,
   FilterOf,
   Flavor,
   getField,
@@ -50,7 +49,6 @@ import {
   EntityManager,
   newComment,
   Publisher,
-  ReviewComment,
   User,
   UserId,
   userMeta,
@@ -139,13 +137,8 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   };
 
   constructor(em: EntityManager, opts: CommentOpts) {
-    if (arguments.length === 4) {
-      // @ts-ignore
-      super(em, arguments[1], { ...arguments[2], ...CommentCodegen.defaultValues }, arguments[3]);
-    } else {
-      super(em, commentMeta, CommentCodegen.defaultValues, opts);
-      setOpts(this as any as Comment, opts, { calledFromConstructor: true });
-    }
+    super(em, commentMeta, CommentCodegen.defaultValues, opts);
+    setOpts(this as any as Comment, opts, { calledFromConstructor: true });
   }
 
   get id(): CommentId {
@@ -188,7 +181,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
     setOpts(this as any as Comment, opts as OptsOf<Comment>, { partial: true });
   }
 
-  get changes(): Changes<Comment, keyof FieldsOf<Comment> | keyof FieldsOf<ReviewComment>> {
+  get changes(): Changes<Comment> {
     return newChangesProxy(this) as any;
   }
 

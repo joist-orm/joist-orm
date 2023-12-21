@@ -54,7 +54,6 @@ import {
   newParentItem,
   newPublisher,
   newPublisherGroup,
-  newReviewComment,
   newSmallPublisher,
   newTag,
   newUser,
@@ -68,8 +67,6 @@ import {
   publisherGroupConfig,
   PublisherSizes,
   PublisherTypes,
-  ReviewComment,
-  reviewCommentConfig,
   SmallPublisher,
   smallPublisherConfig,
   Tag,
@@ -663,26 +660,6 @@ export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
 
 (PublisherGroup as any).metadata = publisherGroupMeta;
 
-export const reviewCommentMeta: EntityMetadata<ReviewComment> = {
-  cstr: ReviewComment,
-  type: "ReviewComment",
-  baseType: "Comment",
-  idType: "tagged-string",
-  idDbType: "int",
-  tagName: "comment",
-  tableName: "review_comments",
-  fields: { "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("comment", "id", "id", "int"), immutable: true }, "score": { kind: "primitive", fieldName: "score", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("score", "score", "int"), immutable: false } },
-  allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
-  config: reviewCommentConfig,
-  factory: newReviewComment,
-  baseTypes: [],
-  subTypes: [],
-};
-
-(ReviewComment as any).metadata = reviewCommentMeta;
-
 export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
   cstr: SmallPublisher,
   type: "SmallPublisher",
@@ -766,5 +743,5 @@ export const userMeta: EntityMetadata<User> = {
 
 (User as any).metadata = userMeta;
 
-export const allMetadata = [adminUserMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, childMeta, childGroupMeta, childItemMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, parentGroupMeta, parentItemMeta, publisherMeta, publisherGroupMeta, reviewCommentMeta, smallPublisherMeta, tagMeta, userMeta];
+export const allMetadata = [adminUserMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, childMeta, childGroupMeta, childItemMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, parentGroupMeta, parentItemMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, userMeta];
 configureMetadata(allMetadata);

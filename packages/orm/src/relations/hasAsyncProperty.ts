@@ -1,5 +1,5 @@
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { currentlyInstantiatingEntity } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { LoadHint, Loaded } from "../loadHints";
 import { Reacted, ReactiveHint, convertToLoadHint } from "../reactiveHints";

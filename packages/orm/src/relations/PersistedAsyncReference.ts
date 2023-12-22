@@ -15,8 +15,9 @@ import {
   setField,
   toIdOf,
 } from "..";
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { IdOf, currentlyInstantiatingEntity } from "../EntityManager";
+import { IdOf } from "../EntityManager";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";

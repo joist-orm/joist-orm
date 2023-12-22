@@ -148,8 +148,6 @@ export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
 }
 
-export let currentlyInstantiatingEntity: Entity | undefined;
-
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 
 type HookFn = (em: EntityManager, knex: Knex.Transaction) => MaybePromise<any>;
@@ -1012,7 +1010,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
-  register(meta: EntityMetadata, entity: Entity): void {
+  register(entity: Entity): void {
     if (entity.idTaggedMaybe) {
       if (this.findExistingInstance(entity.idTagged) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
@@ -1028,16 +1026,10 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
       const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
-      if (createdAt) {
-        entity.__orm.data[createdAt] = new Date();
-      }
-      if (updatedAt) {
-        entity.__orm.data[updatedAt] = new Date();
-      }
+      if (createdAt) entity.__orm.data[createdAt] = new Date();
+      if (updatedAt) entity.__orm.data[updatedAt] = new Date();
       this.#rm.queueAllDownstreamFields(entity);
     }
-
-    currentlyInstantiatingEntity = entity;
   }
 
   /**
@@ -1340,6 +1332,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
         entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
         Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+        this.register(entity as any);
       } else if (options?.overwriteExisting !== false) {
         const meta = getMetadata(entity);
         // Usually if the entity already exists, we don't write over it, but in this case

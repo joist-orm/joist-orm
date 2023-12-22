@@ -43,8 +43,8 @@ export class EntityOrmField {
   readonly metadata: EntityMetadata;
   /** A bag for our lazy-initialized relations. */
   relations: Record<any, any> = {};
-  /** A bag for our primitives/fk column values. */
-  data: Record<any, any>;
+  /** The database row returned by the driver, basically as-is. */
+  data!: Record<string, any>;
   /** A bag to keep the original values, lazily populated. */
   originalData: Record<any, any>;
   /** Whether our entity has been deleted or not. */
@@ -56,10 +56,17 @@ export class EntityOrmField {
   /** Whether we were created in this EM, even if we've since been flushed. */
   wasNew: boolean = false;
 
-  constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any>) {
+  /** Creates the `__orm` field; defaultValues is only provided when instantiating new entities. */
+  constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any> | undefined) {
     this.em = em;
     this.metadata = metadata;
-    this.data = { ...defaultValues };
+    if (defaultValues) {
+      this.data = { ...defaultValues };
+    } else {
+      this.isNew = false;
+      // Let em.hydrate assign data directly from the driver (soon)
+      this.data = {};
+    }
     this.originalData = {};
   }
 

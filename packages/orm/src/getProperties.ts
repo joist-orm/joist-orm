@@ -1,10 +1,6 @@
 import { Entity } from "./Entity";
-import * as EM from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { asConcreteCstr } from "./index";
-
-// Hack to make currentlyInstantiatingEntity assignable
-const em = EM;
 
 /**
  * Returns the relations in `meta`, both those defined in the codegen file + any user-defined `CustomReference`s.
@@ -66,8 +62,7 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
   // asConcreteCstr is safe b/c we're just doing property scanning and not real instantiation
   return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
-      register: (metadata: any, entity: any) => {
-        em.currentlyInstantiatingEntity = entity;
+      register: (entity: any) => {
         entity.__orm.metadata = meta;
         entity.__orm.data = {};
       },

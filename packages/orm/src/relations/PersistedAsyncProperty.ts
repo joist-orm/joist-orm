@@ -1,5 +1,6 @@
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { currentlyInstantiatingEntity, getEmInternalApi } from "../EntityManager";
+import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
 import { isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";

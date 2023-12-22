@@ -1,13 +1,5 @@
-import {
-  Collection,
-  currentlyInstantiatingEntity,
-  CustomCollection,
-  Entity,
-  getLens,
-  isLensLoaded,
-  Lens,
-  loadLens,
-} from "../index";
+import { currentlyInstantiatingEntity } from "../BaseEntity";
+import { Collection, CustomCollection, Entity, getLens, isLensLoaded, Lens, loadLens } from "../index";
 
 /**
  * Creates a CustomCollection that will walk across references in the object graph.

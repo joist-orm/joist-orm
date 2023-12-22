@@ -1,4 +1,5 @@
-import { currentlyInstantiatingEntity, isLoaded } from "../";
+import { isLoaded } from "../";
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { LoadHint, Loaded } from "../loadHints";
 import { CustomReference } from "./CustomReference";

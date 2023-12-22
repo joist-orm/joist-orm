@@ -120,6 +120,7 @@
   ],
   "CriticColumn": ["createdAt", "critic", "id", "name", "updatedAt"],
   "Image": ["author", "book", "createdAt", "fileName", "id", "publisher", "type", "updatedAt"],
+  "InternalComment": ["createdAt", "id", "likedByUsers", "parent", "text", "textInternal", "updatedAt", "user"],
   "LargePublisher": [
     "authors",
     "bookAdvances",
@@ -154,6 +155,7 @@
     "saveCritic",
     "saveCriticColumn",
     "saveImage",
+    "saveInternalComment",
     "saveLargePublisher",
     "saveParentGroup",
     "saveParentItem",
@@ -265,6 +267,8 @@
   "SaveCriticResult": ["critic"],
   "SaveImageInput": ["authorId", "bookId", "createdAt", "fileName", "id", "publisherId", "type", "updatedAt"],
   "SaveImageResult": ["image"],
+  "SaveInternalCommentInput": ["id", "parentId", "text", "textInternal", "userId"],
+  "SaveInternalCommentResult": ["internalComment"],
   "SaveLargePublisherInput": [
     "country",
     "groupId",

@@ -16,6 +16,7 @@ const mappers = {
   CriticColumn: "src/entities#CriticColumn",
   Image: "src/entities#Image",
   ImageTypeDetail: "src/entities#ImageType",
+  InternalComment: "src/entities#InternalComment",
   LargePublisher: "src/entities#LargePublisher",
   ParentGroup: "src/entities#ParentGroup",
   ParentItem: "src/entities#ParentItem",

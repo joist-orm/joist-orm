@@ -249,6 +249,10 @@ export function up(b: MigrationBuilder): void {
     text: "text",
   });
 
+  createSubTable(b, "comments", "internal_comments", {
+    text_internal: "text",
+  });
+
   createEntityTable(b, "author_stats", {
     smallint: { type: "smallint", notNull: true },
     integer: { type: "integer", notNull: true },

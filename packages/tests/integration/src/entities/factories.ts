@@ -12,6 +12,7 @@ export * from "./Comment.factories";
 export * from "./Critic.factories";
 export * from "./CriticColumn.factories";
 export * from "./Image.factories";
+export * from "./InternalComment.factories";
 export * from "./LargePublisher.factories";
 export * from "./ParentGroup.factories";
 export * from "./ParentItem.factories";

@@ -46,6 +46,7 @@
     },
     "CriticColumn": { "tag": "cc" },
     "Image": { "tag": "i" },
+    "InternalComment": { "tag": "comment" },
     "LargePublisher": { "tag": "p" },
     "ParentGroup": { "tag": "parentGroup" },
     "ParentItem": { "tag": "pi" },

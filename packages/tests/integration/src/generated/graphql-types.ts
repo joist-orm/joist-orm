@@ -13,6 +13,7 @@ import {
   Critic,
   Image,
   ImageType,
+  InternalComment,
   LargePublisher,
   Publisher,
   PublisherGroup,
@@ -43,6 +44,9 @@ export type BookReviewResolvers = {
 };
 export type CommentResolvers = {
   comment: Resolver<Comment, any, string | undefined | null>;
+};
+export type InternalCommentResolvers = {
+  textInternal: Resolver<InternalComment, any, string | undefined | null>;
 };
 export type ImageResolvers = {
   fileName: Resolver<Image, any, string>;
@@ -79,6 +83,7 @@ export type SaveAuthorStatInput = {};
 export type SaveBookAdvanceInput = {};
 export type SaveBookReviewInput = {};
 export type SaveCommentInput = {};
+export type SaveInternalCommentInput = {};
 export type SaveImageInput = {};
 export type SavePublisherInput = {};
 export type SaveSmallPublisherInput = {};
@@ -95,6 +100,7 @@ export type MutationResolvers = {
   saveBookAdvance(root: any, args: any, ctx: Context, info: any): any;
   saveBookReview(root: any, args: any, ctx: Context, info: any): any;
   saveComment(root: any, args: any, ctx: Context, info: any): any;
+  saveInternalComment(root: any, args: any, ctx: Context, info: any): any;
   saveImage(root: any, args: any, ctx: Context, info: any): any;
   savePublisher(root: any, args: any, ctx: Context, info: any): any;
   saveLargePublisher(root: any, args: any, ctx: Context, info: any): any;

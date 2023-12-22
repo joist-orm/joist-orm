@@ -351,7 +351,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const query = parseFindQuery(getMetadata(type), where, rest);
     const rows = await this.driver.executeFind(this, query, { limit, offset });
     // check row limit
-    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
+    const result = this.hydrate(type, rows, { overwriteExisting: false });
     if (populate) {
       await this.populate(result, populate);
     }
@@ -476,7 +476,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     if (!row) {
       return undefined;
     } else {
-      const entity = this.hydrate(type, row);
+      const [entity] = this.hydrate(type, [row]);
       if (populate) {
         await this.populate(entity, populate);
       }
@@ -897,7 +897,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       query.limit(this.entityLimit);
     }
     const rows = await query;
-    const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const entities = this.hydrate(type, rows, { overwriteExisting: false });
     if (populate) {
       await this.populate(entities, populate);
     }
@@ -916,7 +916,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     rows: unknown[],
     populate?: any,
   ): Promise<T[]> {
-    const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const entities = this.hydrate(type, rows, { overwriteExisting: false });
     if (populate) {
       await this.populate(entities, populate);
     }
@@ -1320,30 +1320,37 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   public hydrate<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    row: any,
+    rows: any[],
     options?: { overwriteExisting?: boolean },
-  ): T {
+  ): T[] {
     const maybeBaseMeta = getMetadata(type);
-    const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
-    // See if this is already in our UoW
-    let entity = this.findExistingInstance(taggedId) as T;
-    if (!entity) {
-      // Look for __class from the driver telling us which subtype to instantiate
-      const meta = row.__class
-        ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
-        : maybeBaseMeta;
-      // Pass id as a hint that we're in hydrate mode
-      // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
-      entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
-      Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
-    } else if (options?.overwriteExisting !== false) {
-      const meta = getMetadata(entity);
-      // Usually if the entity already exists, we don't write over it, but in this case
-      // we assume that `EntityManager.refresh` is telling us to explicitly load the
-      // latest data.
-      Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+
+    let i = 0;
+    const entities = new Array(rows.length);
+    for (const row of rows) {
+      const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
+      // See if this is already in our UoW
+      let entity = this.findExistingInstance(taggedId) as T;
+      if (!entity) {
+        // Look for __class from the driver telling us which subtype to instantiate
+        const meta = row.__class
+          ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
+          : maybeBaseMeta;
+        // Pass id as a hint that we're in hydrate mode
+        // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
+        entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
+        Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+      } else if (options?.overwriteExisting !== false) {
+        const meta = getMetadata(entity);
+        // Usually if the entity already exists, we don't write over it, but in this case
+        // we assume that `EntityManager.refresh` is telling us to explicitly load the
+        // latest data.
+        Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+      }
+      entities[i++] = entity;
     }
-    return entity;
+
+    return entities;
   }
 
   /**
@@ -1422,11 +1429,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
+
   /** Map of taggedId -> fieldName -> pending children. */
   pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
+
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
+
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
   preloader: PreloadPlugin | undefined;

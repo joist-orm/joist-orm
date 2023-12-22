@@ -44,7 +44,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
 
     const rows = await em.driver.executeFind(em, query, {});
 
-    const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: false }));
+    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting: false });
     // .filter((e) => !e.isDeletedEntity);
 
     const entitiesById = groupBy(entities, (entity) => {

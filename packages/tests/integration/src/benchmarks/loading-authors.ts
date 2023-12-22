@@ -21,13 +21,13 @@ async function main() {
   // });
 
   group("loading 50k authors", () => {
-    bench("postgres.js", async () => {
-      await sql`select * from authors`;
-    });
-
-    bench("knex", async () => {
-      await knex.select("*").from("authors");
-    });
+    // bench("postgres.js", async () => {
+    //   await sql`select * from authors`;
+    // });
+    //
+    // bench("knex", async () => {
+    //   await knex.select("*").from("authors");
+    // });
 
     bench("em.find", async () => {
       const em = newEntityManager();

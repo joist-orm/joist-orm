@@ -208,13 +208,15 @@ function addJoins<I extends EntityOrId>(
           const taggedId = keyToTaggedId(otherMeta, array[m2mOffset] as any)!;
           const entity =
             em.findExistingInstance<Entity>(taggedId) ??
-            (em.hydrate(
-              otherMeta.cstr,
-              // Turn the array into a hash for em.hydrate
-              Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])])),
-              // When em.refreshing this should be true?
-              { overwriteExisting: false },
-            ) as Entity);
+            (
+              em.hydrate(
+                otherMeta.cstr,
+                // Turn the array into a hash for em.hydrate
+                [Object.fromEntries(columns.map((c, i) => [c.columnName, c.mapFromJsonAgg(array[m2mOffset + i])]))],
+                // When em.refreshing this should be true?
+                { overwriteExisting: false },
+              ) as Entity[]
+            )[0];
           // Tell the internal JoinRow booking-keeping about this m2m row
           if (field.kind === "m2m") {
             const m2m = (parent as any)[key];

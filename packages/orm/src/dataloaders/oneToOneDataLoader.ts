@@ -45,7 +45,7 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
 
     const rows = await em.driver.executeFind(em, query, {});
 
-    const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
+    const entities = em.hydrate(otherMeta.cstr, rows, { overwriteExisting: false });
 
     const entitiesByOtherId = groupBy(entities, (entity) => {
       // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.

@@ -183,7 +183,7 @@ export function lensDataLoader<T extends Entity>(
       [...groupBy(rows, (row) => row["__source_id"]).entries()].map(([sourceId, rows]) => {
         // We may technically re-hydrate the same entity twice if it was reached
         // via multiple sources, but that should be fine/get deduped by hydrate.
-        return [tagId(source, sourceId), rows.map((row) => em.hydrate(target.cstr, row))];
+        return [tagId(source, sourceId), em.hydrate(target.cstr, rows)];
       }),
     );
 

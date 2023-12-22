@@ -686,7 +686,7 @@ describe("EntityManager", () => {
   it.unlessInMemory("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const a1 = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
+    const [a1] = em.hydrate(Author, await knex.select("*").from("authors"));
     expect(a1.firstName).toEqual("a1");
   });
 
@@ -695,7 +695,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await knex.update({ first_name: "a1b" }).into("authors");
-    const a1b = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
+    const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"));
     expect(a1b).toStrictEqual(a1);
     expect(a1b.firstName).toEqual("a1b");
   });

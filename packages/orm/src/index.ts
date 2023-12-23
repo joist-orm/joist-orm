@@ -108,6 +108,17 @@ export function isChangeableField(entity: Entity, fieldName: string): boolean {
   return !!getMetadata(entity).allFields[fieldName].serde;
 }
 
+/** Returns whether `fieldName` has been set, even if it's undefined, on `entity`. */
+export function isFieldSet(entity: Entity, fieldName: string): boolean {
+  if (fieldName in entity.__orm.data) return true;
+  // Avoid calling `getField` on new entities because it will populate the field
+  // as a side effect.
+  if (entity.isNewEntity) return false;
+  // We may not have converted the database column value into domain values yet.
+  getField(entity, fieldName);
+  return fieldName in entity.__orm.data;
+}
+
 /**
  * Sets the current value of `fieldName`, this is an internal method that should
  * only be called by the code-generated setters.

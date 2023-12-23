@@ -2,7 +2,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { isLoaded, setField } from "../index";
+import { getField, isFieldSet, isLoaded, setField } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
 import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
@@ -120,18 +120,18 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
       }
       return newValue;
     } else if (this.isSet) {
-      return this.entity.__orm.data[this.fieldName];
+      return this.fieldValue;
     } else {
       throw new Error(`${this.fieldName} has not been derived yet`);
     }
   }
 
   get fieldValue(): V {
-    return this.entity.__orm.data[this.fieldName];
+    return getField(this.entity, this.fieldName);
   }
 
   get isSet() {
-    return this.fieldName in this.entity.__orm.data;
+    return isFieldSet(this.entity, this.fieldName);
   }
 
   get isLoaded() {

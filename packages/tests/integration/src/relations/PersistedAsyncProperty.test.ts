@@ -1,7 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, select } from "@src/entities/inserts";
-import { Author, Book, BookReview, newAuthor, newBook, newBookReview, newComment } from "../entities";
-
 import { knex, newEntityManager } from "@src/testEm";
+import { Author, Book, BookReview, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
 describe("PersistedAsyncProperty", () => {
   it("can repopulate a changed tree", async () => {

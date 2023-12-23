@@ -1,8 +1,7 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
 import { Author, Book, newAuthor, newBook } from "@src/entities";
-import { getOrmField, jan1 } from "joist-orm";
-
 import { newEntityManager } from "@src/testEm";
+import { getOrmField, jan1 } from "joist-orm";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 

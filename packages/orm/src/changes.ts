@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
-import { Field, getConstructorFromTaggedId, getField, getMetadata } from "./index";
+import { Field, getConstructorFromTaggedId, getField, getMetadata, isChangeableField } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -66,6 +66,10 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         ) as (keyof OptsOf<T>)[];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
+      }
+
+      if (!isChangeableField(entity, p as any)) {
+        throw new Error(`Invalid changes field ${p}`);
       }
 
       // If `p` is in originalData, always respect that, even if it's undefined

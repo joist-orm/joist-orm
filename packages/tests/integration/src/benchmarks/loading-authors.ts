@@ -1,5 +1,6 @@
-import { Author } from "@src/entities";
+import { Author, Book } from "@src/entities";
 import { knex, newEntityManager, testDriver } from "@src/testEm";
+import { bench } from "mitata";
 import postgres from "postgres";
 
 async function main() {
@@ -20,7 +21,7 @@ async function main() {
   //   });
   // });
 
-  group("loading 50k authors", () => {
+  // group("loading 50k authors", () => {
     // bench("postgres.js", async () => {
     //   await sql`select * from authors`;
     // });
@@ -28,10 +29,26 @@ async function main() {
     // bench("knex", async () => {
     //   await knex.select("*").from("authors");
     // });
+    //
+    // bench("em.find", async () => {
+    //   const em = newEntityManager();
+    //   await em.find(Author, {});
+    // });
+  // });
 
+  group("loading 50k books", () => {
+    // bench("postgres.js", async () => {
+    //   await sql`select * from books`;
+    // });
+    //
+    // bench("knex", async () => {
+    //   await knex.select("*").from("books");
+    // });
+
+    // 200ms for 50k books, vs. 360ms for 50k authors --> the field initializers are slow
     bench("em.find", async () => {
       const em = newEntityManager();
-      await em.find(Author, {});
+      await em.find(Book, {});
     });
   });
 

@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -162,7 +163,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.critics ??= hasMany(
       this as any as LargePublisher,
       criticMeta,

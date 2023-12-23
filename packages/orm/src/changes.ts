@@ -1,3 +1,4 @@
+import { getOrmField } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
 import { Field, getConstructorFromTaggedId, getField, getMetadata, isChangeableField } from "./index";
@@ -59,10 +60,10 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         return (
           entity.isNewEntity
             ? // Cloning sometimes leaves unset keys in data as undefined, so drop them
-              Object.entries(entity.__orm.data)
+              Object.entries(getOrmField(entity).data)
                 .filter(([, value]) => value !== undefined)
                 .map(([key]) => key)
-            : Object.keys(entity.__orm.originalData)
+            : Object.keys(getOrmField(entity).originalData)
         ) as (keyof OptsOf<T>)[];
       } else if (typeof p === "symbol") {
         throw new Error(`Unsupported call to ${String(p)}`);
@@ -72,13 +73,14 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
         throw new Error(`Invalid changes field ${p}`);
       }
 
+      const { originalData, data } = getOrmField(entity);
       // If `p` is in originalData, always respect that, even if it's undefined
-      const originalValue = p in entity.__orm.originalData ? entity.__orm.originalData[p] : getField(entity, p as any);
+      const originalValue = p in originalData ? originalData[p] : getField(entity, p as any);
       // Use `__orm.data[p] !== undefined` instead of `p in entity.__orm.data` because if a new (or cloned) entity
       // sets-then-unsets a value, it will return to `undefined` but still be present in `__orm.data`.
-      const hasChanged = entity.isNewEntity ? entity.__orm.data[p] !== undefined : p in entity.__orm.originalData;
+      const hasChanged = entity.isNewEntity ? data[p] !== undefined : p in originalData;
       // const hasChanged = entity.isNewEntity ? p in entity.__orm.data : p in entity.__orm.originalData;
-      const hasUpdated = !entity.isNewEntity && p in entity.__orm.originalData;
+      const hasUpdated = !entity.isNewEntity && p in originalData;
 
       const fields = {
         hasChanged,

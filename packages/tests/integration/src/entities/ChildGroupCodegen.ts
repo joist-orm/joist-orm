@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -200,7 +201,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get childItems(): Collection<ChildGroup, ChildItem> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.childItems ??= hasMany(
       this as any as ChildGroup,
       childItemMeta,
@@ -212,12 +213,12 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get childGroupId(): ManyToOneReference<ChildGroup, Child, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.childGroupId ??= hasOne(this as any as ChildGroup, childMeta, "childGroupId", "groups");
   }
 
   get parentGroup(): ManyToOneReference<ChildGroup, ParentGroup, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.parentGroup ??= hasOne(this as any as ChildGroup, parentGroupMeta, "parentGroup", "childGroups");
   }
 }

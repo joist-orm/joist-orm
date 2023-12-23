@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasLargeManyToMany,
   hasManyToMany,
@@ -185,7 +186,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get books(): Collection<Tag, Book> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.books ??= hasManyToMany(
       this as any as Tag,
       "books_to_tags",
@@ -198,7 +199,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get publishers(): Collection<Tag, Publisher> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.publishers ??= hasManyToMany(
       this as any as Tag,
       "publishers_to_tags",
@@ -211,7 +212,7 @@ export abstract class TagCodegen extends BaseEntity<EntityManager, string> imple
   }
 
   get authors(): LargeCollection<Tag, Author> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.authors ??= hasLargeManyToMany(
       this as any as Tag,
       "authors_to_tags",

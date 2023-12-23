@@ -160,7 +160,7 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get fieldValue(): U {
-    return this.entity.__orm.data[this.fieldName];
+    return getField(this.entity, this.fieldName);
   }
 
   get getWithDeleted(): U | N {

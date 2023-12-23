@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   hasOneToOne,
@@ -216,17 +217,17 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
   }
 
   get book(): ManyToOneReference<BookReview, Book, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.book ??= hasOne(this as any as BookReview, bookMeta, "book", "reviews");
   }
 
   get critic(): ManyToOneReference<BookReview, Critic, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.critic ??= hasOne(this as any as BookReview, criticMeta, "critic", "bookReviews");
   }
 
   get comment(): OneToOneReference<BookReview, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.comment ??= hasOneToOne(
       this as any as BookReview,
       commentMeta,

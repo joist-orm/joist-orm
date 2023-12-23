@@ -11,7 +11,7 @@ For these columns, Joist automatically adds getters & setters to your domain mod
 // This code is auto-generated
 class AuthorCodegen {
   get firstName(): string {
-    return this.__orm.data["firstName"];
+    return getField(this, "firstName");
   }
 
   set firstName(firstName: string) {

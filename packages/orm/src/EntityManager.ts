@@ -1,8 +1,9 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
+import { getOrmField } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
+import { Entity, EntityOrmField, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
@@ -76,6 +77,7 @@ export interface EntityConstructor<T> {
   // either the string literal for a real `T`, or `any` if using `EntityConstructor<any>`.
   tagName: any;
   metadata: EntityMetadata;
+  getOrmField(entity: Entity): EntityOrmField;
 }
 
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
@@ -960,7 +962,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
-    const meta = list[0]?.__orm.metadata;
+    const meta = getMetadata(list[0]);
 
     if (this.#preloader) {
       // If we can preload, prevent promise deadlocking by one large-batch preload populate (which can't have
@@ -1027,8 +1029,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
       const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
-      if (createdAt) entity.__orm.data[createdAt] = new Date();
-      if (updatedAt) entity.__orm.data[updatedAt] = new Date();
+      const { data } = getOrmField(entity);
+      if (createdAt) data[createdAt] = new Date();
+      if (updatedAt) data[updatedAt] = new Date();
       this.#rm.queueAllDownstreamFields(entity);
     }
   }
@@ -1046,10 +1049,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   delete(entity: Entity): void {
     // Early return if already deleted.
-    if (entity.__orm.deleted) {
+    const orm = getOrmField(entity);
+    if (orm.deleted) {
       return;
     }
-    entity.__orm.deleted = "pending";
+    orm.deleted = "pending";
     // Any derived fields that read this entity will need recalc-d
     this.#rm.queueAllDownstreamFields(entity);
     // Synchronously unhook the entity if the relations are loaded
@@ -1087,7 +1091,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     await this.#fl.allowWrites(async () => {
       // Recalc any touched entities
-      const touched = this.entities.filter((e) => e.__orm.isTouched);
+      const touched = this.entities.filter((e) => getOrmField(e).isTouched);
       if (touched.length > 0) {
         await recalcTouchedEntities(touched);
       }
@@ -1176,7 +1180,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           if (e.isNewEntity && !e.isDeletedEntity) {
             this.#entityIndex.set(e.idTagged, e);
           }
-          e.__orm.resetAfterFlushed();
+          getOrmField(e).resetAfterFlushed();
         }
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
@@ -1252,7 +1256,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
       const [custom, builtin] = partition(
         entities
-          .filter((e) => e && e.__orm.deleted === undefined)
+          .filter((e) => e && getOrmField(e).deleted === undefined)
           .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
@@ -1333,7 +1337,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           : maybeBaseMeta;
         // Pass id as a hint that we're in hydrate mode
         entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
-        entity.__orm.row = row;
+        getOrmField(entity).row = row;
 
         // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
         this.#entityIndex.set(taggedId, entity as any);
@@ -1346,8 +1350,9 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // Usually if the entity already exists, we don't write over it, but in this case
         // we assume that `EntityManager.refresh` is telling us to explicitly load the
         // latest data.
+        const { data } = getOrmField(entity);
         for (const f of Object.values(meta.allFields)) {
-          f.serde?.setOnEntity(entity!.__orm.data, row);
+          f.serde?.setOnEntity(data, row);
         }
       }
       entities[i++] = entity;
@@ -1367,7 +1372,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    * - Rerun all simple & reactive rules on the entity.
    */
   public touch(entity: EntityW) {
-    entity.__orm.isTouched = true;
+    getOrmField(entity).isTouched = true;
   }
 
   public beforeTransaction(fn: HookFn) {
@@ -1586,7 +1591,7 @@ async function validateReactiveRules(
       .flatMap((m) => m.config.__data.reactiveRules)
       .filter((r) => r.path.length === 0);
     for (const entity of todo.updates) {
-      if (entity.__orm.isTouched) {
+      if (getOrmField(entity).isTouched) {
         for (const rule of rules) {
           let entities = fns.get(rule.fn);
           if (!entities) {
@@ -1808,8 +1813,9 @@ function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
         // bump's timestamp isn't actually different from the current value, and skip treating
         // it has changed. This is technically true, but this will break the oplock SQL generation,
         // so force the field to be dirty.
-        e.__orm.originalData[updatedAt] = getField(e, updatedAt);
-        e.__orm.data[updatedAt] = now;
+        const orm = getOrmField(e);
+        orm.originalData[updatedAt] = getField(e, updatedAt);
+        orm.data[updatedAt] = now;
       }
     }
   }

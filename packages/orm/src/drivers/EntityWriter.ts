@@ -1,3 +1,4 @@
+import { getOrmField } from "../BaseEntity";
 import { Entity } from "../Entity";
 import {
   EntityMetadata,
@@ -80,11 +81,11 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
   for (const entity of entities) {
-    Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
+    Object.keys(getOrmField(entity).originalData).forEach((key) => changedFields.add(key));
   }
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't
   // actually changed, it'll be a noop, so just short-circuit if it looks like that happened. Unless touched.
-  if (changedFields.size === 0 && !entities.some((e) => e.__orm.isTouched)) {
+  if (changedFields.size === 0 && !entities.some((e) => getOrmField(e).isTouched)) {
     return undefined;
   }
 
@@ -153,9 +154,10 @@ interface BindingColumn {
 function collectBindings(entities: Entity[], columns: BindingColumn[]): any[][] {
   const rows = [];
   for (const entity of entities) {
+    const { data, originalData } = getOrmField(entity);
     const bindings = [];
     for (const column of columns) {
-      bindings.push(column.dbValue(entity.__orm.data, entity.__orm.originalData) ?? null);
+      bindings.push(column.dbValue(data, originalData) ?? null);
     }
     rows.push(bindings);
   }

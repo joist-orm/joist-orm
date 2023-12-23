@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -266,7 +267,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get advances(): Collection<Book, BookAdvance> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.advances ??= hasMany(
       this as any as Book,
       bookAdvanceMeta,
@@ -278,12 +279,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get reviews(): Collection<Book, BookReview> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.reviews ??= hasMany(this as any as Book, bookReviewMeta, "reviews", "book", "book_id", undefined);
   }
 
   get comments(): Collection<Book, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.comments ??= hasMany(
       this as any as Book,
       commentMeta,
@@ -295,12 +296,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 
   get currentDraftAuthor(): OneToOneReference<Book, Author> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.currentDraftAuthor ??= hasOneToOne(
       this as any as Book,
       authorMeta,
@@ -311,12 +312,12 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get image(): OneToOneReference<Book, Image> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.image ??= hasOneToOne(this as any as Book, imageMeta, "image", "book", "book_id");
   }
 
   get tags(): Collection<Book, Tag> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.tags ??= hasManyToMany(
       this as any as Book,
       "books_to_tags",

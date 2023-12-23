@@ -282,7 +282,7 @@ export interface ReactiveTarget {
 async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string | undefined) {
   if (viaPolyType) {
     const loaded: Entity = await loadPromise;
-    return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
+    return loaded && getMetadata(loaded).type === viaPolyType ? loaded : undefined;
   }
   return loadPromise;
 }

@@ -1,9 +1,9 @@
 import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
-import { PartialOrNull } from "./index";
+import { BaseEntity, PartialOrNull } from "./index";
 
 export function isEntity(maybeEntity: unknown): maybeEntity is Entity {
-  return !!maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
+  return maybeEntity instanceof BaseEntity;
 }
 
 /** All the types we support for entity `id` fields. */
@@ -16,8 +16,6 @@ export interface Entity {
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: TaggedId;
   idTaggedMaybe: TaggedId | undefined;
-  /** Joist internal metadata, should be considered a private implementation detail. */
-  readonly __orm: EntityOrmField;
   readonly em: EntityManager;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
@@ -35,7 +33,7 @@ export interface Entity {
   toString(): string;
 }
 
-/** The `__orm` metadata field we track on each instance. */
+/** The `#orm` metadata field we track on each instance. */
 export class EntityOrmField {
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   readonly em: EntityManager;
@@ -58,7 +56,7 @@ export class EntityOrmField {
   /** Whether we were created in this EM, even if we've since been flushed. */
   wasNew: boolean = false;
 
-  /** Creates the `__orm` field; defaultValues is only provided when instantiating new entities. */
+  /** Creates the `#orm` field; defaultValues is only provided when instantiating new entities. */
   constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any> | undefined) {
     this.em = em;
     this.metadata = metadata;
@@ -97,5 +95,5 @@ export class EntityOrmField {
  * created it, so we can set the OneToManyCollection to loaded.
  */
 export function isOrWasNew(entity: Entity): boolean {
-  return entity.isNewEntity || entity.__orm.wasNew;
+  return entity.isNewEntity || BaseEntity.getOrmField(entity).wasNew;
 }

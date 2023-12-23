@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+import { getOrmField } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
@@ -47,7 +48,7 @@ export function loadDataLoader<T extends Entity>(
       if (entity === undefined) {
         const existingEntity = em.findExistingInstance<T>(id);
         if (existingEntity) {
-          existingEntity.__orm.deleted = "deleted";
+          getOrmField(existingEntity).deleted = "deleted";
         }
       }
       return entity;

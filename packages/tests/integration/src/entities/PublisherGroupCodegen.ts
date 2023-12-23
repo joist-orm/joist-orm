@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasLargeMany,
   hasMany,
@@ -182,7 +183,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get publishers(): Collection<PublisherGroup, Publisher> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.publishers ??= hasMany(
       this as any as PublisherGroup,
       publisherMeta,
@@ -194,7 +195,7 @@ export abstract class PublisherGroupCodegen extends BaseEntity<EntityManager, st
   }
 
   get critics(): LargeCollection<PublisherGroup, Critic> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.critics ??= hasLargeMany(
       this as any as PublisherGroup,
       criticMeta,

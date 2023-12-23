@@ -1,3 +1,4 @@
+import { getOrmField } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityMetadata } from "./EntityMetadata";
 import { asConcreteCstr } from "./index";
@@ -63,8 +64,9 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
   return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
       register: (entity: any) => {
-        entity.__orm.metadata = meta;
-        entity.__orm.data = {};
+        const orm = getOrmField(entity);
+        (orm as any).metadata = meta;
+        orm.data = {};
       },
       // Tell our "cannot instantiate an abstract class" constructor logic check to chill
       fakeInstance: true,

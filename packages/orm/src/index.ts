@@ -1,14 +1,15 @@
-import { setSyncDefaults } from "./defaults";
+import { getOrmField } from "./BaseEntity";
 import { Entity, EntityOrmField, isEntity } from "./Entity";
 import {
   EntityConstructor,
   EntityManager,
-  getEmInternalApi,
   MaybeAbstractEntityConstructor,
   OptsOf,
   TaggedId,
+  getEmInternalApi,
 } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { setSyncDefaults } from "./defaults";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
@@ -23,11 +24,7 @@ export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
-export { BaseEntity } from "./BaseEntity";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
+export { BaseEntity, getOrmField } from "./BaseEntity";
 export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";
@@ -35,48 +32,52 @@ export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
-export * from "./getProperties";
 export { EntityOrId, HintNode } from "./HintTree";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
+export * from "./getProperties";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
-  assertLoaded,
   DeepNew,
-  ensureLoaded,
-  isLoaded,
-  isNew,
+  LoadHint,
   Loadable,
   Loaded,
-  LoadHint,
   MarkLoaded,
-  maybePopulateThen,
   NestedLoadHint,
   New,
   RelationsIn,
+  assertLoaded,
+  ensureLoaded,
+  isLoaded,
+  isNew,
+  maybePopulateThen,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  cannotBeUpdated,
   GenericError,
-  maxValueRule,
-  minValueRule,
-  newRequiredRule,
-  rangeValueRule,
   ValidationError,
   ValidationErrors,
   ValidationRule,
   ValidationRuleResult,
+  cannotBeUpdated,
+  maxValueRule,
+  minValueRule,
+  newRequiredRule,
+  rangeValueRule,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
+export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -94,12 +95,13 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  */
 export function getField(entity: Entity, fieldName: string): any {
   // We may not have converted the database column value into domain values yet
-  if (fieldName in entity.__orm.data) {
-    return entity.__orm.data[fieldName];
+  const orm = getOrmField(entity);
+  if (fieldName in orm.data) {
+    return orm.data[fieldName];
   } else {
     const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-    serde.setOnEntity(entity.__orm.data, entity.__orm.row);
-    return entity.__orm.data[fieldName];
+    serde.setOnEntity(orm.data, orm.row);
+    return orm.data[fieldName];
   }
 }
 
@@ -110,13 +112,14 @@ export function isChangeableField(entity: Entity, fieldName: string): boolean {
 
 /** Returns whether `fieldName` has been set, even if it's undefined, on `entity`. */
 export function isFieldSet(entity: Entity, fieldName: string): boolean {
-  if (fieldName in entity.__orm.data) return true;
+  const orm = getOrmField(entity);
+  if (fieldName in orm.data) return true;
   // Avoid calling `getField` on new entities because it will populate the field
   // as a side effect.
   if (entity.isNewEntity) return false;
   // We may not have converted the database column value into domain values yet.
   getField(entity, fieldName);
-  return fieldName in entity.__orm.data;
+  return fieldName in orm.data;
 }
 
 /**
@@ -134,7 +137,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
 
   getEmInternalApi(em).checkWritesAllowed();
 
-  const { data, originalData } = entity.__orm;
+  const { data, originalData } = getOrmField(entity);
 
   // "Un-dirty" our originalData if newValue is reverting to originalData
   if (fieldName in originalData) {
@@ -276,7 +279,7 @@ export function setOpts<T extends Entity>(
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {
-  if (entity.isDeletedEntity && (ignore === undefined || entity.__orm.deleted !== ignore)) {
+  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).deleted !== ignore)) {
     fail(`${entity} is marked as deleted`);
   }
 }

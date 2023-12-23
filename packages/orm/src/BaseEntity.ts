@@ -15,20 +15,27 @@ import {
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
+export function getOrmField(entity: Entity): EntityOrmField {
+  return BaseEntity.getOrmField(entity);
+}
+
 /**
  * The base class for all entities.
  *
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
 export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
-  readonly __orm!: EntityOrmField;
+  public static getOrmField(entity: Entity): EntityOrmField {
+    return (entity as BaseEntity<any>).#orm;
+  }
+  readonly #orm!: EntityOrmField;
 
   protected constructor(em: EM, metadata: any, defaultValues: object, optsOrId: any) {
     // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
     if (typeof optsOrId === "string") {
-      this.__orm = new EntityOrmField(em, metadata, undefined);
+      this.#orm = new EntityOrmField(em, metadata, undefined);
     } else {
-      this.__orm = new EntityOrmField(em, metadata, defaultValues);
+      this.#orm = new EntityOrmField(em, metadata, defaultValues);
       em.register(this);
     }
     currentlyInstantiatingEntity = this;
@@ -72,23 +79,23 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
    * is no longer new; this only flips to `false` after the `flush` transaction has been committed.
    */
   get isNewEntity(): boolean {
-    return this.__orm.isNew;
+    return this.#orm.isNew;
   }
 
   get isDeletedEntity(): boolean {
-    return this.__orm.deleted !== undefined;
+    return this.#orm.deleted !== undefined;
   }
 
   get isDirtyEntity(): boolean {
-    return Object.keys(this.__orm.originalData).length > 0;
+    return Object.keys(this.#orm.originalData).length > 0;
   }
 
   get isPendingFlush(): boolean {
-    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.__orm.isTouched;
+    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.#orm.isTouched;
   }
 
   get isPendingDelete(): boolean {
-    return this.__orm.deleted === "pending";
+    return this.#orm.deleted === "pending";
   }
 
   toString(): string {
@@ -108,7 +115,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   }
 
   public get em(): EM {
-    return this.__orm.em as EM;
+    return this.#orm.em as EM;
   }
 
   /**

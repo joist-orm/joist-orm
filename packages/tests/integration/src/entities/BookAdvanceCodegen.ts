@@ -10,6 +10,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -210,12 +211,12 @@ export abstract class BookAdvanceCodegen extends BaseEntity<EntityManager, strin
   }
 
   get book(): ManyToOneReference<BookAdvance, Book, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.book ??= hasOne(this as any as BookAdvance, bookMeta, "book", "advances");
   }
 
   get publisher(): ManyToOneReference<BookAdvance, Publisher, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.publisher ??= hasOne(this as any as BookAdvance, publisherMeta, "publisher", "bookAdvances");
   }
 }

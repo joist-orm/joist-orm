@@ -95,13 +95,13 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  */
 export function getField(entity: Entity, fieldName: string): any {
   // We may not have converted the database column value into domain values yet
-  const orm = getOrmField(entity);
-  if (fieldName in orm.data) {
-    return orm.data[fieldName];
+  const { data, row } = getOrmField(entity);
+  if (fieldName in data) {
+    return data[fieldName];
   } else {
     const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-    serde.setOnEntity(orm.data, orm.row);
-    return orm.data[fieldName];
+    serde.setOnEntity(data, row);
+    return data[fieldName];
   }
 }
 
@@ -112,14 +112,13 @@ export function isChangeableField(entity: Entity, fieldName: string): boolean {
 
 /** Returns whether `fieldName` has been set, even if it's undefined, on `entity`. */
 export function isFieldSet(entity: Entity, fieldName: string): boolean {
-  const orm = getOrmField(entity);
-  if (fieldName in orm.data) return true;
-  // Avoid calling `getField` on new entities because it will populate the field
-  // as a side effect.
+  const { data } = getOrmField(entity);
+  if (fieldName in data) return true;
+  // Avoid calling `getField` on new entities because it populates the field as a side effect.
   if (entity.isNewEntity) return false;
   // We may not have converted the database column value into domain values yet.
   getField(entity, fieldName);
-  return fieldName in orm.data;
+  return fieldName in data;
 }
 
 /**

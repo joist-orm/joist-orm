@@ -93,7 +93,19 @@ export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
  * called by trusted codegen anyway.
  */
 export function getField(entity: Entity, fieldName: string): any {
-  return entity.__orm.data[fieldName];
+  // We may not have converted the database column value into domain values yet
+  if (fieldName in entity.__orm.data) {
+    return entity.__orm.data[fieldName];
+  } else {
+    const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
+    serde.setOnEntity(entity.__orm.data, entity.__orm.row);
+    return entity.__orm.data[fieldName];
+  }
+}
+
+/** Returns whether `fieldName` is a field/column on `entity` that can be changed. */
+export function isChangeableField(entity: Entity, fieldName: string): boolean {
+  return !!getMetadata(entity).allFields[fieldName].serde;
 }
 
 /**
@@ -124,7 +136,7 @@ export function setField(entity: Entity, fieldName: string, newValue: any): bool
   }
 
   // Push this logic into a field serde type abstraction?
-  const currentValue = data[fieldName];
+  const currentValue = getField(entity, fieldName);
   if (equalOrSameEntity(currentValue, newValue)) {
     return false;
   }

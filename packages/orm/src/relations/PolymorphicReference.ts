@@ -8,6 +8,7 @@ import {
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
+  getField,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
   setField,
@@ -253,7 +254,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | TaggedId | N {
-    const current = this.entity.__orm.data[this.fieldName];
+    const current = getField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }

@@ -1,7 +1,8 @@
-import { Changes, EntityChanges } from "./changes";
 import { Entity } from "./Entity";
+import { Changes, EntityChanges } from "./changes";
+import { getField } from "./index";
 import { ReactiveHint } from "./reactiveHints";
-import { groupBy, MaybePromise, maybePromiseThen } from "./utils";
+import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 
 /**
  * The return type of `ValidationRule`.
@@ -53,7 +54,8 @@ export class ValidationErrors extends Error {
  * This is added automatically by codegen to entities based on FK not-nulls.
  */
 export function newRequiredRule<T extends Entity>(key: keyof T & string): ValidationRule<T> {
-  return (entity) => (entity.__orm.data[key] === undefined ? `${key} is required` : undefined);
+  // Use getField so that we peer through relations
+  return (entity) => (getField(entity, key) === undefined ? `${key} is required` : undefined);
 }
 
 /**

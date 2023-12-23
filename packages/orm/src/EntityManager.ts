@@ -42,6 +42,7 @@ import {
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
+  getField,
   getMetadata,
   getRelationEntries,
   getRelations,
@@ -691,14 +692,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
             switch (f.kind) {
               case "primitive":
                 if (!f.derived && !f.protected) {
-                  return [f.fieldName, entity.__orm.data[f.fieldName]];
+                  return [f.fieldName, getField(entity, f.fieldName)];
                 } else {
                   return undefined;
                 }
               case "m2o":
               case "poly":
               case "enum":
-                return [f.fieldName, entity.__orm.data[f.fieldName]];
+                return [f.fieldName, getField(entity, f.fieldName)];
               case "primaryKey":
               case "o2m":
               case "m2m":
@@ -730,7 +731,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           value instanceof PersistedAsyncReferenceImpl
         ) {
           // What's the existing entity? Have we cloned it?
-          const existingIdOrEntity = clone.__orm.data[fieldName];
+          const existingIdOrEntity = getField(clone, fieldName);
           const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
@@ -1101,6 +1102,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     const hooksInvoked: Set<Entity> = new Set();
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+    const now = getNow();
 
     try {
       while (pendingEntities.length > 0) {
@@ -1109,6 +1111,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // Run our hooks
           let todos = createTodos(pendingEntities);
           await setAsyncDefaults(this.ctx, todos);
+          maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);
@@ -1329,16 +1332,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
           : maybeBaseMeta;
         // Pass id as a hint that we're in hydrate mode
-        // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
         entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
-        Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+        entity.__orm.row = row;
         this.register(entity as any);
       } else if (options?.overwriteExisting !== false) {
         const meta = getMetadata(entity);
         // Usually if the entity already exists, we don't write over it, but in this case
         // we assume that `EntityManager.refresh` is telling us to explicitly load the
         // latest data.
-        Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+        for (const f of Object.values(meta.allFields)) {
+          f.serde?.setOnEntity(entity!.__orm.data, row);
+        }
       }
       entities[i++] = entity;
     }
@@ -1787,4 +1791,36 @@ function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any, an
 
 function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof PersistedAsyncReferenceImpl;
+}
+
+function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
+  for (const todo of Object.values(todos)) {
+    const { updatedAt } = todo.metadata.timestampFields;
+    if (updatedAt) {
+      for (const e of todo.updates) {
+        // We avoid going through `setField` because in unit tests, it might detect that our
+        // bump's timestamp isn't actually different from the current value, and skip treating
+        // it has changed. This is technically true, but this will break the oplock SQL generation,
+        // so force the field to be dirty.
+        e.__orm.originalData[updatedAt] = getField(e, updatedAt);
+        e.__orm.data[updatedAt] = now;
+      }
+    }
+  }
+}
+
+let lastNow = new Date();
+
+function getNow(): Date {
+  let now = new Date();
+  // If we detect time has not progressed (or went backwards), we're probably in test that
+  // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
+  // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
+  // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
+  // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
+  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
+    now = new Date(lastNow.getTime() + 1);
+  }
+  lastNow = now;
+  return now;
 }

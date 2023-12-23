@@ -1,6 +1,6 @@
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
-import { Field, getConstructorFromTaggedId, getMetadata } from "./index";
+import { Field, getConstructorFromTaggedId, getField, getMetadata } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */
 export interface FieldStatus<T> {
@@ -69,7 +69,7 @@ export function newChangesProxy<T extends Entity>(entity: T): Changes<T> {
       }
 
       // If `p` is in originalData, always respect that, even if it's undefined
-      const originalValue = p in entity.__orm.originalData ? entity.__orm.originalData[p] : entity.__orm.data[p];
+      const originalValue = p in entity.__orm.originalData ? entity.__orm.originalData[p] : getField(entity, p as any);
       // Use `__orm.data[p] !== undefined` instead of `p in entity.__orm.data` because if a new (or cloned) entity
       // sets-then-unsets a value, it will return to `undefined` but still be present in `__orm.data`.
       const hasChanged = entity.isNewEntity ? entity.__orm.data[p] !== undefined : p in entity.__orm.originalData;

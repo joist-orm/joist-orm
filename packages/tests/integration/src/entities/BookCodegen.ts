@@ -243,7 +243,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get isSoftDeletedEntity(): boolean {
-    return this.__orm.data.deletedAt !== undefined;
+    return this.deletedAt !== undefined;
   }
 
   load<U, V>(fn: (lens: Lens<Book>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {

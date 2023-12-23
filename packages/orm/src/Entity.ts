@@ -43,10 +43,12 @@ export class EntityOrmField {
   readonly metadata: EntityMetadata;
   /** A bag for our lazy-initialized relations. */
   relations: Record<any, any> = {};
-  /** The database row returned by the driver, basically as-is. */
-  data!: Record<string, any>;
-  /** A bag to keep the original values, lazily populated. */
-  originalData: Record<any, any>;
+  /** The database-value of columns, as-is returned from the driver. */
+  row!: Record<string, any>;
+  /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
+  data: Record<string, any>;
+  /** A bag to keep the original values, lazily populated as fields are mutated. */
+  originalData: Record<any, any> = {};
   /** Whether our entity has been deleted or not. */
   deleted?: "pending" | "deleted";
   /** Whether our entity is new or not. */
@@ -61,13 +63,14 @@ export class EntityOrmField {
     this.em = em;
     this.metadata = metadata;
     if (defaultValues) {
+      // Our default values are driven from the database `DEFAULT`s, so we can use it for the row
       this.data = { ...defaultValues };
+      this.row = { ...defaultValues };
     } else {
       this.isNew = false;
-      // Let em.hydrate assign data directly from the driver (soon)
       this.data = {};
+      // em.hydrate will populate this.row
     }
-    this.originalData = {};
   }
 
   resetAfterFlushed() {

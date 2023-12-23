@@ -1,14 +1,14 @@
 import { Entity } from "../Entity";
 import {
   EntityMetadata,
+  PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-  PrimitiveField,
 } from "../EntityMetadata";
+import { Todo } from "../Todo";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
-import { Todo } from "../Todo";
 
 type Column = { columnName: string; dbType: string };
 export type InsertOp = { tableName: string; columns: Column[]; rows: any[][] };
@@ -29,12 +29,11 @@ type Ops = { inserts: InsertOp[]; updates: UpdateOp[]; deletes: DeleteOp[] };
  *
  * But this should let us experiment with knex vs. raw client/etc.
  */
-export function generateOps(todos: Record<string, Todo>, now: Date): Ops {
+export function generateOps(todos: Record<string, Todo>): Ops {
   const ops: Ops = { inserts: [], updates: [], deletes: [] };
   for (const todo of Object.values(todos)) {
-    const meta = todo.metadata;
     addInserts(ops, todo);
-    addUpdates(ops, todo, now);
+    addUpdates(ops, todo);
     addDeletes(ops, todo);
   }
   return ops;
@@ -61,11 +60,9 @@ function newInsertOp(meta: EntityMetadata, entities: Entity[]): InsertOp {
   return { tableName: meta.tableName, columns, rows };
 }
 
-function addUpdates(ops: Ops, todo: Todo, now: Date): void {
+function addUpdates(ops: Ops, todo: Todo): void {
   if (todo.updates.length > 0) {
     const meta = todo.metadata;
-    // Maybe this should be done in `em.flush`? Odd to have a side-effect here.
-    maybeBumpUpdatedAt(meta, todo, now);
     if (meta.subTypes.length > 0) {
       for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
         const op = newUpdateOp(meta, group);
@@ -75,17 +72,6 @@ function addUpdates(ops: Ops, todo: Todo, now: Date): void {
       const op = newUpdateOp(meta, todo.updates);
       if (op) ops.updates.push(op);
     }
-  }
-}
-
-function maybeBumpUpdatedAt(meta: EntityMetadata, todo: Todo, now: Date): void {
-  const { updatedAt } = todo.metadata.timestampFields;
-  if (updatedAt) {
-    todo.updates.forEach((e) => {
-      // Should we just go through a setter?
-      e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
-      e.__orm.data[updatedAt] = now;
-    });
   }
 }
 

@@ -1575,7 +1575,8 @@ describe("EntityManager", () => {
       await insertAuthor({ first_name: "f", business_address: { street2: "123 Main" } });
       const em = newEntityManager();
       await expect(async () => {
-        await em.load(Author, "a:1");
+        const a = await em.load(Author, "a:1");
+        console.log(a.businessAddress);
       }).rejects.toThrow(
         JSON.stringify(
           [

@@ -358,7 +358,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const maybeIsSoftDeleted = meta.deletedAt
     ? code`
     get isSoftDeletedEntity(): boolean {
-      return this.__orm.data.${meta.deletedAt.fieldName} !== undefined;
+      return this.${meta.deletedAt.fieldName} !== undefined;
     }
   `
     : "";

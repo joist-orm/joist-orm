@@ -3,6 +3,7 @@ import { FieldsOf, MaybeAbstractEntityConstructor, getEmInternalApi } from "./En
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getProperties } from "./getProperties";
+import { isChangeableField } from "./index";
 import { LoadHint, Loadable, Loaded } from "./loadHints";
 import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
 import {
@@ -208,8 +209,8 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
         const fieldKind = getMetadata(c).fields[fieldName]?.kind;
         const isReference = fieldKind === "m2o" || fieldKind === "poly";
         const isManyToMany = fieldKind === "m2m";
-        const changed = c.changes[fieldName] as FieldStatus<any>;
-        if (isReference && changed.hasUpdated && changed.originalValue) {
+        const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
+        if (isReference && changed && changed.hasUpdated && changed.originalValue) {
           return [
             currentValuePromise,
             maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity, viaPolyType),

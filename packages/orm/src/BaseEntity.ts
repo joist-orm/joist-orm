@@ -4,6 +4,7 @@ import {
   Entity,
   EntityManager,
   EntityOrmField,
+  getField,
   getMetadata,
   isEntity,
   keyToNumber,
@@ -132,7 +133,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
             case "primitive":
               if (f.derived === "async") {
                 // Use the raw value instead of the PersistedAsyncProperty
-                return [[f.fieldName, (this as any).__orm.data[f.fieldName] || null]];
+                return [[f.fieldName, getField(this as any, f.fieldName) || null]];
               } else {
                 return [[f.fieldName, (this as any)[f.fieldName] || null]];
               }

@@ -7,6 +7,7 @@ import {
   ensureTagged,
   fail,
   getEmInternalApi,
+  getField,
   getMetadata,
   isEntity,
   isLoaded,
@@ -288,7 +289,7 @@ export class PersistedAsyncReferenceImpl<
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | string | N {
-    const current = this.entity.__orm.data[this.fieldName];
+    const current = getField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }

@@ -1,5 +1,6 @@
 import { newBook } from "@src/entities";
 import { newEntityManager, queries } from "@src/setupDbTests";
+import { getOrmField } from "joist-orm";
 
 describe("Book", () => {
   it.withCtx("can save", async () => {
@@ -7,7 +8,7 @@ describe("Book", () => {
     // Given we make a book
     const b = newBook(em);
     // Then we did not set any updatedAt/createdAt values
-    expect(b.__orm.data).toEqual({
+    expect(getOrmField(b).data).toEqual({
       author: expect.anything(),
       title: "title",
     });
@@ -23,7 +24,7 @@ describe("Book", () => {
       ]
     `);
     // Then we still don't see any values
-    expect(b.__orm.data).toEqual({
+    expect(getOrmField(b).data).toEqual({
       id: "b:1",
       author: expect.anything(),
       title: "title",

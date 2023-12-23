@@ -8,6 +8,7 @@ import {
   getMetadata,
 } from "../EntityMetadata";
 import { Todo } from "../Todo";
+import { getField } from "../index";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
 
@@ -89,9 +90,20 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     return undefined;
   }
 
+  // We may have loaded a1 and a2, and changed a1.firstName, and a2.lastName, but either one
+  // might be missing the other's changed fields in it's lazy-initialized data field...
   const { updatedAt } = meta.timestampFields;
+  changedFields.add("id");
+  if (updatedAt) changedFields.add(updatedAt);
+  for (const entity of entities) {
+    const { data } = getOrmField(entity);
+    for (const key of changedFields) {
+      if (!(key in data)) getField(entity, key);
+    }
+  }
+
   const columns: Array<Column & BindingColumn> = Object.values(meta.fields)
-    .filter((f) => changedFields.has(f.fieldName) || f.fieldName === "id" || f.fieldName === updatedAt)
+    .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
 

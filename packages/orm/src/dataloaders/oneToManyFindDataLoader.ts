@@ -63,7 +63,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
 
     const rows = await em.driver.executeFind(em, query, {});
 
-    const entities = rows.map((row) => em.hydrate(collection.otherMeta.cstr, row, { overwriteExisting: false }));
+    const entities = em.hydrate(collection.otherMeta.cstr, rows, { overwriteExisting: false });
     // Decode `id=b:1,author_id=a:1`
     return keys.map((k) => {
       const [otherKey, parentKey] = k.split(",");

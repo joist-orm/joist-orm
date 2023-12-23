@@ -1334,7 +1334,13 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         // Pass id as a hint that we're in hydrate mode
         entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
         entity.__orm.row = row;
-        this.register(entity as any);
+
+        // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
+        this.#entityIndex.set(taggedId, entity as any);
+        this.#entities.push(entity as any);
+        if (this.#entities.length >= this.entityLimit) {
+          throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
+        }
       } else if (options?.overwriteExisting !== false) {
         const meta = getMetadata(entity);
         // Usually if the entity already exists, we don't write over it, but in this case

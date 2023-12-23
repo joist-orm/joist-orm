@@ -8,7 +8,7 @@ import {
   getMetadata,
 } from "../EntityMetadata";
 import { Todo } from "../Todo";
-import { getField } from "../index";
+import { getField, isChangeableField } from "../index";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
 
@@ -98,7 +98,11 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
   for (const entity of entities) {
     const { data } = getOrmField(entity);
     for (const key of changedFields) {
-      if (!(key in data)) getField(entity, key);
+      // Check isChangeableField because we might be updating the base `publishers` table
+      // and `originalData` might have fields from a subclass `large_publishers` table.
+      if (!(key in data) && isChangeableField(entity, key)) {
+        getField(entity, key);
+      }
     }
   }
 

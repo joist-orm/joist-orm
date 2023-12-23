@@ -107,7 +107,7 @@ export function getField(entity: Entity, fieldName: string): any {
 
 /** Returns whether `fieldName` is a field/column on `entity` that can be changed. */
 export function isChangeableField(entity: Entity, fieldName: string): boolean {
-  return !!getMetadata(entity).allFields[fieldName].serde;
+  return !!getMetadata(entity).allFields[fieldName]?.serde;
 }
 
 /** Returns whether `fieldName` has been set, even if it's undefined, on `entity`. */

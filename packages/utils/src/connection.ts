@@ -1,5 +1,6 @@
 import { ConnectionConfig as PgConnectionConfig } from "pg";
 import { parse } from "pg-connection-string";
+import { setupLatestPgTypes } from "./setupLatestPgTypes";
 
 type DatabaseUrlEnv = { DATABASE_URL: string };
 type DbSettingsEnv = { DB_USER: string; DB_PASSWORD: string; DB_HOST: string; DB_DATABASE: string; DB_PORT: string };
@@ -32,6 +33,7 @@ export type ConnectionConfig = Omit<PgConnectionConfig, "password" | "types" | "
  * ts-app-env, you can pass in a specific `env` variable.
  */
 export function newPgConnectionConfig(env?: ConnectionEnv): ConnectionConfig {
+  setupLatestPgTypes();
   if (process.env.DATABASE_URL || (env && "DATABASE_URL" in env)) {
     const url = process.env.DATABASE_URL ?? (env as DatabaseUrlEnv).DATABASE_URL;
     // It'd be great if `parse` returned ConnectionConfig directly

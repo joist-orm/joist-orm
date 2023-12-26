@@ -1,4 +1,16 @@
 
+## Overview
+
+Optimizations during December 2023 to make loading many rows faster.1
+
+* Changed `em.hydrate` to take an array (minimal)
+* Removed `Object.defineProperties` in `BaseEntity` constructor (~20ms)
+* Moved `register` into `hydrate` / simplify `BaseEntity` constructor (~20ms)
+* Lazy `setOnEntity` (~80ms)
+* `#orm` refactor (~15ms)
+
+Dec 2023
+
 ## baseline
 
 ```

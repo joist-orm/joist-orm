@@ -595,6 +595,10 @@ function fieldHasDefaultValue(field: PrimitiveField | EnumField): boolean {
 }
 
 function generatePolymorphicTypes(meta: EntityDbMetadata, baseEntity?: EntityDbMetadata) {
+  // If this entity has a base class we will filter out any polymorphic fields that are from the base class
+  if (meta.baseClassName && baseEntity) {
+    meta.polymorphics = meta.polymorphics.filter((p) => !baseEntity.polymorphics.includes(p));
+  }
   return meta.polymorphics.flatMap((pf) => [
     code`export type ${pf.fieldType} = ${pf.components.map((c) => code`| ${c.otherEntity.type}`)};`,
     code`export function get${pf.fieldType}Constructors(): ${MaybeAbstractEntityConstructor}<${pf.fieldType}>[] {

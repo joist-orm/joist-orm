@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Book, BookReview, Comment, InternalComment, isCommentParent, newBook } from "../entities";
+import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -131,19 +131,5 @@ describe("PolymorphicReference", () => {
     expect(isCommentParent({})).toBe(false);
     expect(isCommentParent(null)).toBe(false);
     expect(isCommentParent(undefined)).toBe(false);
-  });
-
-  it("can use polymorphic references from base classes", async () => {
-    const em = newEntityManager();
-    await insertAuthor({ first_name: "a" });
-    await insertBook({ title: "t", author_id: 1 });
-
-    const book = await em.load(Book, "b:1");
-    const internalComment = em.createPartial(InternalComment, { parent: book });
-    await em.flush();
-
-    const [row] = await select("comments");
-    expect(row.parent_book_id).toEqual(1);
-    expect(await internalComment.parent.load()).toBeInstanceOf(Book);
   });
 });

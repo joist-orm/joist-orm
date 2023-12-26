@@ -7,6 +7,7 @@ import {
   ensureTagged,
   fail,
   getEmInternalApi,
+  getField,
   getMetadata,
   isEntity,
   isLoaded,
@@ -15,8 +16,9 @@ import {
   setField,
   toIdOf,
 } from "..";
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { IdOf, currentlyInstantiatingEntity } from "../EntityManager";
+import { IdOf } from "../EntityManager";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
@@ -158,7 +160,7 @@ export class PersistedAsyncReferenceImpl<
   }
 
   get fieldValue(): U {
-    return this.entity.__orm.data[this.fieldName];
+    return getField(this.entity, this.fieldName);
   }
 
   get getWithDeleted(): U | N {
@@ -287,7 +289,7 @@ export class PersistedAsyncReferenceImpl<
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | string | N {
-    const current = this.entity.__orm.data[this.fieldName];
+    const current = getField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }

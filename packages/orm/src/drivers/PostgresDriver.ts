@@ -18,8 +18,6 @@ import { Driver } from "./Driver";
 import { DeleteOp, generateOps, InsertOp, UpdateOp } from "./EntityWriter";
 import { IdAssigner, SequenceIdAssigner } from "./IdAssigner";
 
-let lastNow = new Date();
-
 export interface PostgresDriverOpts {
   idAssigner?: IdAssigner;
 }
@@ -97,8 +95,7 @@ export class PostgresDriver implements Driver {
     const knex = this.getMaybeInTxnKnex(em);
     await this.idAssigner.assignNewIds(knex, todos);
 
-    const now = getNow();
-    const ops = generateOps(todos, now);
+    const ops = generateOps(todos);
 
     // Do INSERTs+UPDATEs first so that we avoid DELETE cascades invalidating oplocks
     // See https://github.com/stephenh/joist-ts/issues/591
@@ -236,18 +233,4 @@ async function batchUpdate(knex: Knex, op: UpdateOp): Promise<void> {
 async function batchDelete(knex: Knex, op: DeleteOp): Promise<void> {
   const { tableName, ids } = op;
   await knex(tableName).del().whereIn("id", ids);
-}
-
-function getNow(): Date {
-  let now = new Date();
-  // If we detect time has not progressed (or went backwards), we're probably in test that
-  // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
-  // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
-  // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
-  // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
-  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
-    now = new Date(lastNow.getTime() + 1);
-  }
-  lastNow = now;
-  return now;
 }

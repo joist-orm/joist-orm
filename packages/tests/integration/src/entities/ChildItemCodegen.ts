@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -191,12 +192,12 @@ export abstract class ChildItemCodegen extends BaseEntity<EntityManager, string>
   }
 
   get childGroup(): ManyToOneReference<ChildItem, ChildGroup, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.childGroup ??= hasOne(this as any as ChildItem, childGroupMeta, "childGroup", "childItems");
   }
 
   get parentItem(): ManyToOneReference<ChildItem, ParentItem, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.parentItem ??= hasOne(this as any as ChildItem, parentItemMeta, "parentItem", "childItems");
   }
 }

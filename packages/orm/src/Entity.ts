@@ -1,9 +1,9 @@
 import { EntityManager, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
-import { PartialOrNull } from "./index";
+import { BaseEntity, PartialOrNull } from "./index";
 
 export function isEntity(maybeEntity: unknown): maybeEntity is Entity {
-  return !!maybeEntity && typeof maybeEntity === "object" && "id" in maybeEntity && "__orm" in maybeEntity;
+  return maybeEntity instanceof BaseEntity;
 }
 
 /** All the types we support for entity `id` fields. */
@@ -16,8 +16,6 @@ export interface Entity {
   /** The entity id that is always tagged, regardless of the idType config. */
   idTagged: TaggedId;
   idTaggedMaybe: TaggedId | undefined;
-  /** Joist internal metadata, should be considered a private implementation detail. */
-  readonly __orm: EntityOrmField;
   readonly em: EntityManager;
   readonly isNewEntity: boolean;
   readonly isDeletedEntity: boolean;
@@ -35,7 +33,7 @@ export interface Entity {
   toString(): string;
 }
 
-/** The `__orm` metadata field we track on each instance. */
+/** The `#orm` metadata field we track on each instance. */
 export class EntityOrmField {
   /** All entities must be associated to an `EntityManager` to handle lazy loading/etc. */
   readonly em: EntityManager;
@@ -43,10 +41,12 @@ export class EntityOrmField {
   readonly metadata: EntityMetadata;
   /** A bag for our lazy-initialized relations. */
   relations: Record<any, any> = {};
-  /** A bag for our primitives/fk column values. */
-  data: Record<any, any>;
-  /** A bag to keep the original values, lazily populated. */
-  originalData: Record<any, any>;
+  /** The database-value of columns, as-is returned from the driver. */
+  row!: Record<string, any>;
+  /** The domain-value of fields, lazily converted (if needed) on read from the database columns. */
+  data: Record<string, any>;
+  /** A bag to keep the original values, lazily populated as fields are mutated. */
+  originalData: Record<any, any> = {};
   /** Whether our entity has been deleted or not. */
   deleted?: "pending" | "deleted";
   /** Whether our entity is new or not. */
@@ -56,11 +56,19 @@ export class EntityOrmField {
   /** Whether we were created in this EM, even if we've since been flushed. */
   wasNew: boolean = false;
 
-  constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any>) {
+  /** Creates the `#orm` field; defaultValues is only provided when instantiating new entities. */
+  constructor(em: EntityManager, metadata: EntityMetadata, defaultValues: Record<any, any> | undefined) {
     this.em = em;
     this.metadata = metadata;
-    this.data = { ...defaultValues };
-    this.originalData = {};
+    if (defaultValues) {
+      // Our default values are driven from the database `DEFAULT`s, so we can use it for the row
+      this.data = { ...defaultValues };
+      this.row = { ...defaultValues };
+    } else {
+      this.isNew = false;
+      this.data = {};
+      // em.hydrate will populate this.row
+    }
   }
 
   resetAfterFlushed() {
@@ -87,5 +95,5 @@ export class EntityOrmField {
  * created it, so we can set the OneToManyCollection to loaded.
  */
 export function isOrWasNew(entity: Entity): boolean {
-  return entity.isNewEntity || entity.__orm.wasNew;
+  return entity.isNewEntity || BaseEntity.getOrmField(entity).wasNew;
 }

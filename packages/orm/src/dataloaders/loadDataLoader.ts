@@ -1,4 +1,5 @@
 import DataLoader from "dataloader";
+import { getOrmField } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { EntityManager, getEmInternalApi } from "../EntityManager";
 import { EntityMetadata } from "../EntityMetadata";
@@ -34,7 +35,7 @@ export function loadDataLoader<T extends Entity>(
     // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
     const rows = await em.driver.executeFind(em, query, {});
     // Pass overwriteExisting (which is the default anyway) because it might be EntityManager.refresh calling us.
-    const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: true }));
+    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting: true });
     preloadHydrator && preloadHydrator(rows, entities);
 
     // Return the results back in the same order as the keys
@@ -47,7 +48,7 @@ export function loadDataLoader<T extends Entity>(
       if (entity === undefined) {
         const existingEntity = em.findExistingInstance<T>(id);
         if (existingEntity) {
-          existingEntity.__orm.deleted = "deleted";
+          getOrmField(existingEntity).deleted = "deleted";
         }
       }
       return entity;

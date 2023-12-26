@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -207,7 +208,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

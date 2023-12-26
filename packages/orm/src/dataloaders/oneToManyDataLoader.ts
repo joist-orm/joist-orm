@@ -6,6 +6,7 @@ import {
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
+  getField,
   maybeResolveReferenceToId,
   OneToManyCollection,
   ParsedFindQuery,
@@ -44,12 +45,12 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
 
     const rows = await em.driver.executeFind(em, query, {});
 
-    const entities = rows.map((row) => em.hydrate(meta.cstr, row, { overwriteExisting: false }));
+    const entities = em.hydrate(meta.cstr, rows, { overwriteExisting: false });
     // .filter((e) => !e.isDeletedEntity);
 
     const entitiesById = groupBy(entities, (entity) => {
       // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
-      const ownerId = maybeResolveReferenceToId(entity.__orm.data[collection.otherFieldName]);
+      const ownerId = maybeResolveReferenceToId(getField(entity, collection.otherFieldName));
       // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
       // directly from a SQL row with owner_id=X, however we might be loading this collection
       // (i.e. find all children where owner_id=X) when the SQL thinks a child is still pointing

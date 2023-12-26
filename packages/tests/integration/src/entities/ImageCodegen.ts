@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -233,17 +234,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
   }
 }

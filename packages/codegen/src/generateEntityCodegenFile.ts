@@ -42,6 +42,7 @@ import {
   cleanStringValue,
   failNoIdYet,
   getField,
+  getOrmField,
   hasLargeMany,
   hasLargeManyToMany,
   hasMany,
@@ -358,7 +359,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
   const maybeIsSoftDeleted = meta.deletedAt
     ? code`
     get isSoftDeletedEntity(): boolean {
-      return this.__orm.data.${meta.deletedAt.fieldName} !== undefined;
+      return this.${meta.deletedAt.fieldName} !== undefined;
     }
   `
     : "";
@@ -556,7 +557,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
         } else {
           return code`
             get ${r.fieldName}(): ${r.decl} {
-              const { relations } = this.__orm;
+              const { relations } = ${getOrmField}(this);
               return relations.${r.fieldName} ??= ${r.init};
             }
           `;

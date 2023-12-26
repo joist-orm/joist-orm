@@ -13,6 +13,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -253,7 +254,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdComments(): Collection<User, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.createdComments ??= hasMany(
       this as any as User,
       commentMeta,
@@ -265,12 +266,12 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
   }
 
   get likedComments(): Collection<User, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.likedComments ??= hasManyToMany(
       this as any as User,
       "users_to_comments",

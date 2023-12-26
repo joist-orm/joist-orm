@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -176,7 +177,7 @@ export abstract class ChildCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get groups(): Collection<Child, ChildGroup> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.groups ??= hasMany(
       this as any as Child,
       childGroupMeta,

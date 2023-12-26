@@ -7,6 +7,7 @@ import {
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
+  getField,
   maybeResolveReferenceToId,
   ParsedFindQuery,
 } from "../index";
@@ -45,11 +46,11 @@ export function oneToOneDataLoader<T extends Entity, U extends Entity>(
 
     const rows = await em.driver.executeFind(em, query, {});
 
-    const entities = rows.map((row) => em.hydrate(otherMeta.cstr, row, { overwriteExisting: false }));
+    const entities = em.hydrate(otherMeta.cstr, rows, { overwriteExisting: false });
 
     const entitiesByOtherId = groupBy(entities, (entity) => {
       // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
-      const ownerId = maybeResolveReferenceToId(entity.__orm.data[otherFieldName]);
+      const ownerId = maybeResolveReferenceToId(getField(entity, otherFieldName));
       // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
       // directly from a SQL row with owner_id=X, however we might be loading this reference
       // (i.e. find all children where owner_id=X) when the SQL thinks a child is still pointing

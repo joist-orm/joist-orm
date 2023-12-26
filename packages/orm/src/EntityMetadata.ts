@@ -1,6 +1,7 @@
-import { ConfigApi } from "./config";
+import { getOrmField } from "./BaseEntity";
 import { Entity } from "./Entity";
 import { EntityManager, MaybeAbstractEntityConstructor, TimestampFields } from "./EntityManager";
+import { ConfigApi } from "./config";
 import { DeepNew } from "./loadHints";
 import { FieldSerde, PolymorphicKeySerde } from "./serde";
 
@@ -11,7 +12,7 @@ export function getMetadata<T extends Entity>(
   param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata,
 ): EntityMetadata {
   return (
-    typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : param.__orm.metadata
+    typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : getOrmField(param).metadata
   ) as EntityMetadata;
 }
 

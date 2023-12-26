@@ -1,8 +1,9 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
 import { Knex } from "knex";
+import { getOrmField } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
-import { Entity, Entity as EntityW, IdType, isEntity } from "./Entity";
+import { Entity, EntityOrmField, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
 import { JoinRows } from "./JoinRows";
 import { ReactionsManager } from "./ReactionsManager";
@@ -42,6 +43,7 @@ import {
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
+  getField,
   getMetadata,
   getRelationEntries,
   getRelations,
@@ -75,6 +77,7 @@ export interface EntityConstructor<T> {
   // either the string literal for a real `T`, or `any` if using `EntityConstructor<any>`.
   tagName: any;
   metadata: EntityMetadata;
+  getOrmField(entity: Entity): EntityOrmField;
 }
 
 /** Options for the auto-batchable `em.find` queries, i.e. limit & offset aren't allowed. */
@@ -147,8 +150,6 @@ export type TaggedId = string;
 export function isId(value: any): value is IdOf<unknown> {
   return value && typeof value === "string";
 }
-
-export let currentlyInstantiatingEntity: Entity | undefined;
 
 export type EntityManagerHook = "beforeTransaction" | "afterTransaction";
 
@@ -351,7 +352,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     const query = parseFindQuery(getMetadata(type), where, rest);
     const rows = await this.driver.executeFind(this, query, { limit, offset });
     // check row limit
-    const result = rows.map((row) => this.hydrate(type, row, { overwriteExisting: false }));
+    const result = this.hydrate(type, rows, { overwriteExisting: false });
     if (populate) {
       await this.populate(result, populate);
     }
@@ -476,7 +477,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     if (!row) {
       return undefined;
     } else {
-      const entity = this.hydrate(type, row);
+      const [entity] = this.hydrate(type, [row]);
       if (populate) {
         await this.populate(entity, populate);
       }
@@ -693,14 +694,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
             switch (f.kind) {
               case "primitive":
                 if (!f.derived && !f.protected) {
-                  return [f.fieldName, entity.__orm.data[f.fieldName]];
+                  return [f.fieldName, getField(entity, f.fieldName)];
                 } else {
                   return undefined;
                 }
               case "m2o":
               case "poly":
               case "enum":
-                return [f.fieldName, entity.__orm.data[f.fieldName]];
+                return [f.fieldName, getField(entity, f.fieldName)];
               case "primaryKey":
               case "o2m":
               case "m2m":
@@ -732,7 +733,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           value instanceof PersistedAsyncReferenceImpl
         ) {
           // What's the existing entity? Have we cloned it?
-          const existingIdOrEntity = clone.__orm.data[fieldName];
+          const existingIdOrEntity = getField(clone, fieldName);
           const existing = this.entities.find((e) => sameEntity(e, existingIdOrEntity));
           // If we didn't find a loaded entity for this value, assume that it a) itself is not being cloned,
           // and b) we don't need to bother telling it about the newly cloned entity
@@ -897,7 +898,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       query.limit(this.entityLimit);
     }
     const rows = await query;
-    const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const entities = this.hydrate(type, rows, { overwriteExisting: false });
     if (populate) {
       await this.populate(entities, populate);
     }
@@ -916,7 +917,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     rows: unknown[],
     populate?: any,
   ): Promise<T[]> {
-    const entities = rows.map((row: any) => this.hydrate(type, row, { overwriteExisting: false }));
+    const entities = this.hydrate(type, rows, { overwriteExisting: false });
     if (populate) {
       await this.populate(entities, populate);
     }
@@ -961,7 +962,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       return !fn ? (entityOrList as any) : fn(entityOrList as any);
     }
 
-    const meta = list[0]?.__orm.metadata;
+    const meta = getMetadata(list[0]);
 
     if (this.#preloader) {
       // If we can preload, prevent promise deadlocking by one large-batch preload populate (which can't have
@@ -1012,7 +1013,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   }
 
   /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
-  register(meta: EntityMetadata, entity: Entity): void {
+  register(entity: Entity): void {
     if (entity.idTaggedMaybe) {
       if (this.findExistingInstance(entity.idTagged) !== undefined) {
         throw new Error(`Entity ${entity} has a duplicate instance already loaded`);
@@ -1028,16 +1029,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
       const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
-      if (createdAt) {
-        entity.__orm.data[createdAt] = new Date();
-      }
-      if (updatedAt) {
-        entity.__orm.data[updatedAt] = new Date();
-      }
+      const { data } = getOrmField(entity);
+      if (createdAt) data[createdAt] = new Date();
+      if (updatedAt) data[updatedAt] = new Date();
       this.#rm.queueAllDownstreamFields(entity);
     }
-
-    currentlyInstantiatingEntity = entity;
   }
 
   /**
@@ -1053,10 +1049,11 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   delete(entity: Entity): void {
     // Early return if already deleted.
-    if (entity.__orm.deleted) {
+    const orm = getOrmField(entity);
+    if (orm.deleted) {
       return;
     }
-    entity.__orm.deleted = "pending";
+    orm.deleted = "pending";
     // Any derived fields that read this entity will need recalc-d
     this.#rm.queueAllDownstreamFields(entity);
     // Synchronously unhook the entity if the relations are loaded
@@ -1094,7 +1091,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     await this.#fl.allowWrites(async () => {
       // Recalc any touched entities
-      const touched = this.entities.filter((e) => e.__orm.isTouched);
+      const touched = this.entities.filter((e) => getOrmField(e).isTouched);
       if (touched.length > 0) {
         await recalcTouchedEntities(touched);
       }
@@ -1109,6 +1106,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     const hooksInvoked: Set<Entity> = new Set();
     let pendingEntities = this.entities.filter((e) => e.isPendingFlush);
+    const now = getNow();
 
     try {
       while (pendingEntities.length > 0) {
@@ -1117,6 +1115,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           // Run our hooks
           let todos = createTodos(pendingEntities);
           await setAsyncDefaults(this.ctx, todos);
+          maybeBumpUpdatedAt(todos, now);
           await beforeCreate(this.ctx, todos);
           await beforeUpdate(this.ctx, todos);
           await beforeFlush(this.ctx, todos);
@@ -1181,7 +1180,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           if (e.isNewEntity && !e.isDeletedEntity) {
             this.#entityIndex.set(e.idTagged, e);
           }
-          e.__orm.resetAfterFlushed();
+          getOrmField(e).resetAfterFlushed();
         }
         // Reset the find caches b/c data will have changed in the db
         this.#dataloaders = {};
@@ -1257,7 +1256,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       // preloader cache, if in use, it doesn't actually get each relation into a loaded state.)
       const [custom, builtin] = partition(
         entities
-          .filter((e) => e && e.__orm.deleted === undefined)
+          .filter((e) => e && getOrmField(e).deleted === undefined)
           .flatMap((entity) => getRelations(entity!).filter((r) => deepLoad || r.isLoaded)),
         isCustomRelation,
       );
@@ -1320,30 +1319,46 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    */
   public hydrate<T extends EntityW>(
     type: MaybeAbstractEntityConstructor<T>,
-    row: any,
+    rows: any[],
     options?: { overwriteExisting?: boolean },
-  ): T {
+  ): T[] {
     const maybeBaseMeta = getMetadata(type);
-    const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
-    // See if this is already in our UoW
-    let entity = this.findExistingInstance(taggedId) as T;
-    if (!entity) {
-      // Look for __class from the driver telling us which subtype to instantiate
-      const meta = row.__class
-        ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
-        : maybeBaseMeta;
-      // Pass id as a hint that we're in hydrate mode
-      // `asConcreteCstr` is safe b/c we should have detected the right subtype via __class
-      entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
-      Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
-    } else if (options?.overwriteExisting !== false) {
-      const meta = getMetadata(entity);
-      // Usually if the entity already exists, we don't write over it, but in this case
-      // we assume that `EntityManager.refresh` is telling us to explicitly load the
-      // latest data.
-      Object.values(meta.allFields).forEach((f) => f.serde?.setOnEntity(entity!.__orm.data, row));
+
+    let i = 0;
+    const entities = new Array(rows.length);
+    for (const row of rows) {
+      const taggedId = keyToTaggedId(maybeBaseMeta, row["id"]) || fail("No id column was available");
+      // See if this is already in our UoW
+      let entity = this.findExistingInstance(taggedId) as T;
+      if (!entity) {
+        // Look for __class from the driver telling us which subtype to instantiate
+        const meta = row.__class
+          ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
+          : maybeBaseMeta;
+        // Pass id as a hint that we're in hydrate mode
+        entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
+        getOrmField(entity).row = row;
+
+        // This is a mini copy-paste of em.register that doesn't re-findExistingInstance
+        this.#entityIndex.set(taggedId, entity as any);
+        this.#entities.push(entity as any);
+        if (this.#entities.length >= this.entityLimit) {
+          throw new Error(`More than ${this.entityLimit} entities have been instantiated`);
+        }
+      } else if (options?.overwriteExisting !== false) {
+        const meta = getMetadata(entity);
+        // Usually if the entity already exists, we don't write over it, but in this case
+        // we assume that `EntityManager.refresh` is telling us to explicitly load the
+        // latest data.
+        const { data } = getOrmField(entity);
+        for (const f of Object.values(meta.allFields)) {
+          f.serde?.setOnEntity(data, row);
+        }
+      }
+      entities[i++] = entity;
     }
-    return entity;
+
+    return entities;
   }
 
   /**
@@ -1357,7 +1372,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    * - Rerun all simple & reactive rules on the entity.
    */
   public touch(entity: EntityW) {
-    entity.__orm.isTouched = true;
+    getOrmField(entity).isTouched = true;
   }
 
   public beforeTransaction(fn: HookFn) {
@@ -1422,11 +1437,14 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 /** Provides an internal API to the `EntityManager`. */
 export interface EntityManagerInternalApi {
   joinRows: (m2m: ManyToManyCollection<any, any>) => JoinRows;
+
   /** Map of taggedId -> fieldName -> pending children. */
   pendingChildren: Map<string, Map<string, { adds: Entity[]; removes: Entity[] }>>;
+
   /** Map of taggedId -> fieldName -> join-loaded data. */
   getPreloadedRelation<U>(taggedId: string, fieldName: string): U[] | undefined;
   setPreloadedRelation<U>(taggedId: string, fieldName: string, children: U[]): void;
+
   hooks: Record<EntityManagerHook, HookFn[]>;
   rm: ReactionsManager;
   preloader: PreloadPlugin | undefined;
@@ -1573,7 +1591,7 @@ async function validateReactiveRules(
       .flatMap((m) => m.config.__data.reactiveRules)
       .filter((r) => r.path.length === 0);
     for (const entity of todo.updates) {
-      if (entity.__orm.isTouched) {
+      if (getOrmField(entity).isTouched) {
         for (const rule of rules) {
           let entities = fns.get(rule.fn);
           if (!entities) {
@@ -1784,4 +1802,37 @@ function getCascadeDeleteRelations(entity: Entity): AbstractRelationImpl<any, an
 
 function isCustomRelation(r: AbstractRelationImpl<any, any>): boolean {
   return r instanceof CustomCollection || r instanceof CustomReference || r instanceof PersistedAsyncReferenceImpl;
+}
+
+function maybeBumpUpdatedAt(todos: Record<string, Todo>, now: Date): void {
+  for (const todo of Object.values(todos)) {
+    const { updatedAt } = todo.metadata.timestampFields;
+    if (updatedAt) {
+      for (const e of todo.updates) {
+        // We avoid going through `setField` because in unit tests, it might detect that our
+        // bump's timestamp isn't actually different from the current value, and skip treating
+        // it has changed. This is technically true, but this will break the oplock SQL generation,
+        // so force the field to be dirty.
+        const orm = getOrmField(e);
+        orm.originalData[updatedAt] = getField(e, updatedAt);
+        orm.data[updatedAt] = now;
+      }
+    }
+  }
+}
+
+let lastNow = new Date();
+
+function getNow(): Date {
+  let now = new Date();
+  // If we detect time has not progressed (or went backwards), we're probably in test that
+  // has frozen time, which can throw off our oplocks b/c if Joist issues multiple `UPDATE`s
+  // with exactly the same `updated_at`, the `updated_at` SQL trigger fallback will think "the caller
+  // didn't self-manage `updated_at`" and so bump it for them. Which is fine, but now
+  // Joist doesn't know about the bumped time, and the 2nd `UPDATE` will fail.
+  if (lastNow.getTime() === now.getTime() || now.getTime() < lastNow.getTime()) {
+    now = new Date(lastNow.getTime() + 1);
+  }
+  lastNow = now;
+  return now;
 }

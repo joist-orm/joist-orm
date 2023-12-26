@@ -20,6 +20,7 @@ import {
   Loaded,
   MaybeAbstractEntityConstructor,
   OptsOf,
+  getOrmField,
   sameEntity,
 } from "joist-orm";
 import {
@@ -555,7 +556,7 @@ describe("EntityManager", () => {
     // When we refresh the entity
     await em.refresh(a1);
     // Then we're marked as deleted
-    expect(a1.__orm.deleted).toEqual("deleted");
+    expect(getOrmField(a1).deleted).toEqual("deleted");
     expect(a1.isDeletedEntity).toEqual(true);
   });
 
@@ -686,7 +687,7 @@ describe("EntityManager", () => {
   it.unlessInMemory("can hydrate from custom queries ", async () => {
     await insertAuthor({ first_name: "a1" });
     const em = newEntityManager();
-    const a1 = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
+    const [a1] = em.hydrate(Author, await knex.select("*").from("authors"));
     expect(a1.firstName).toEqual("a1");
   });
 
@@ -695,7 +696,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     await knex.update({ first_name: "a1b" }).into("authors");
-    const a1b = em.hydrate(Author, (await knex.select("*").from("authors"))[0]);
+    const [a1b] = em.hydrate(Author, await knex.select("*").from("authors"));
     expect(a1b).toStrictEqual(a1);
     expect(a1b.firstName).toEqual("a1b");
   });
@@ -705,7 +706,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.firstName = "a1";
-    expect(a1.__orm.originalData).toEqual({});
+    expect(getOrmField(a1).originalData).toEqual({});
   });
 
   it("ignores date sets of the same value", async () => {
@@ -714,7 +715,7 @@ describe("EntityManager", () => {
     const em = newEntityManager();
     const a1 = await em.load(Author, "1");
     a1.graduated = jan1;
-    expect(a1.__orm.originalData).toEqual({});
+    expect(getOrmField(a1).originalData).toEqual({});
   });
 
   it("cannot flush while another flush is in progress", async () => {
@@ -1400,10 +1401,10 @@ describe("EntityManager", () => {
     expect(a1.isDirtyEntity).toBe(false);
     expect(a1.isNewEntity).toBe(false);
     expect(a1.isDeletedEntity).toBe(false);
-    expect(a1.__orm.isTouched).toBe(true);
+    expect(getOrmField(a1).isTouched).toBe(true);
     const result = await em.flush();
     expect(result).toEqual([a1]);
-    expect(a1.__orm.isTouched).toBe(false);
+    expect(getOrmField(a1).isTouched).toBe(false);
     expect(a1.transientFields).toMatchObject({
       mentorRuleInvoked: 1,
       beforeFlushRan: true,
@@ -1575,7 +1576,8 @@ describe("EntityManager", () => {
       await insertAuthor({ first_name: "f", business_address: { street2: "123 Main" } });
       const em = newEntityManager();
       await expect(async () => {
-        await em.load(Author, "a:1");
+        const a = await em.load(Author, "a:1");
+        console.log(a.businessAddress);
       }).rejects.toThrow(
         JSON.stringify(
           [

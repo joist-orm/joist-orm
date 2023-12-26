@@ -1,14 +1,16 @@
+import { getOrmField } from "../BaseEntity";
 import { Entity } from "../Entity";
 import {
   EntityMetadata,
+  PrimitiveField,
   getBaseAndSelfMetas,
   getBaseSelfAndSubMetas,
   getMetadata,
-  PrimitiveField,
 } from "../EntityMetadata";
+import { Todo } from "../Todo";
+import { getField, isChangeableField } from "../index";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
-import { Todo } from "../Todo";
 
 type Column = { columnName: string; dbType: string };
 export type InsertOp = { tableName: string; columns: Column[]; rows: any[][] };
@@ -29,12 +31,11 @@ type Ops = { inserts: InsertOp[]; updates: UpdateOp[]; deletes: DeleteOp[] };
  *
  * But this should let us experiment with knex vs. raw client/etc.
  */
-export function generateOps(todos: Record<string, Todo>, now: Date): Ops {
+export function generateOps(todos: Record<string, Todo>): Ops {
   const ops: Ops = { inserts: [], updates: [], deletes: [] };
   for (const todo of Object.values(todos)) {
-    const meta = todo.metadata;
     addInserts(ops, todo);
-    addUpdates(ops, todo, now);
+    addUpdates(ops, todo);
     addDeletes(ops, todo);
   }
   return ops;
@@ -61,11 +62,9 @@ function newInsertOp(meta: EntityMetadata, entities: Entity[]): InsertOp {
   return { tableName: meta.tableName, columns, rows };
 }
 
-function addUpdates(ops: Ops, todo: Todo, now: Date): void {
+function addUpdates(ops: Ops, todo: Todo): void {
   if (todo.updates.length > 0) {
     const meta = todo.metadata;
-    // Maybe this should be done in `em.flush`? Odd to have a side-effect here.
-    maybeBumpUpdatedAt(meta, todo, now);
     if (meta.subTypes.length > 0) {
       for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
         const op = newUpdateOp(meta, group);
@@ -78,33 +77,37 @@ function addUpdates(ops: Ops, todo: Todo, now: Date): void {
   }
 }
 
-function maybeBumpUpdatedAt(meta: EntityMetadata, todo: Todo, now: Date): void {
-  const { updatedAt } = todo.metadata.timestampFields;
-  if (updatedAt) {
-    todo.updates.forEach((e) => {
-      // Should we just go through a setter?
-      e.__orm.originalData[updatedAt] = e.__orm.data[updatedAt];
-      e.__orm.data[updatedAt] = now;
-    });
-  }
-}
-
 function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undefined {
   // We only include changed fields in our `UPDATE`--maybe we could change this
   // to always use the same fields, to take advantage of Prepared Statements.
   const changedFields = new Set<string>();
   for (const entity of entities) {
-    Object.keys(entity.__orm.originalData).forEach((key) => changedFields.add(key));
+    Object.keys(getOrmField(entity).originalData).forEach((key) => changedFields.add(key));
   }
   // Sometimes with derived fields, an instance will be marked as an update, but if the derived field hasn't
   // actually changed, it'll be a noop, so just short-circuit if it looks like that happened. Unless touched.
-  if (changedFields.size === 0 && !entities.some((e) => e.__orm.isTouched)) {
+  if (changedFields.size === 0 && !entities.some((e) => getOrmField(e).isTouched)) {
     return undefined;
   }
 
+  // We may have loaded a1 and a2, and changed a1.firstName, and a2.lastName, but either one
+  // might be missing the other's changed fields in it's lazy-initialized data field...
   const { updatedAt } = meta.timestampFields;
+  changedFields.add("id");
+  if (updatedAt) changedFields.add(updatedAt);
+  for (const entity of entities) {
+    const { data } = getOrmField(entity);
+    for (const key of changedFields) {
+      // Check isChangeableField because we might be updating the base `publishers` table
+      // and `originalData` might have fields from a subclass `large_publishers` table.
+      if (!(key in data) && isChangeableField(entity, key)) {
+        getField(entity, key);
+      }
+    }
+  }
+
   const columns: Array<Column & BindingColumn> = Object.values(meta.fields)
-    .filter((f) => changedFields.has(f.fieldName) || f.fieldName === "id" || f.fieldName === updatedAt)
+    .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);
 
@@ -167,9 +170,10 @@ interface BindingColumn {
 function collectBindings(entities: Entity[], columns: BindingColumn[]): any[][] {
   const rows = [];
   for (const entity of entities) {
+    const { data, originalData } = getOrmField(entity);
     const bindings = [];
     for (const column of columns) {
-      bindings.push(column.dbValue(entity.__orm.data, entity.__orm.originalData) ?? null);
+      bindings.push(column.dbValue(data, originalData) ?? null);
     }
     rows.push(bindings);
   }

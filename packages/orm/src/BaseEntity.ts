@@ -4,6 +4,7 @@ import {
   Entity,
   EntityManager,
   EntityOrmField,
+  getField,
   getMetadata,
   isEntity,
   keyToNumber,
@@ -12,34 +13,39 @@ import {
   TaggedId,
 } from "./index";
 
+export let currentlyInstantiatingEntity: Entity | undefined;
+
+export function getOrmField(entity: Entity): EntityOrmField {
+  return BaseEntity.getOrmField(entity);
+}
+
 /**
  * The base class for all entities.
  *
  * Currently, this just adds the `.load(lensFn)` method for declarative reference traversal.
  */
 export abstract class BaseEntity<EM extends EntityManager, I extends IdType = IdType> implements Entity {
-  readonly __orm!: EntityOrmField;
+  public static getOrmField(entity: Entity): EntityOrmField {
+    return (entity as BaseEntity<any>).#orm;
+  }
+  readonly #orm!: EntityOrmField;
+
+  protected constructor(em: EM, metadata: any, defaultValues: object, optsOrId: any) {
+    // Only do em.register for em.create-d entities, otherwise defer to hydrate to em.register
+    if (typeof optsOrId === "string") {
+      this.#orm = new EntityOrmField(em, metadata, undefined);
+    } else {
+      this.#orm = new EntityOrmField(em, metadata, defaultValues);
+      em.register(this);
+    }
+    currentlyInstantiatingEntity = this;
+  }
+
   // This gives rules a way to access the fully typed object instead of their Reacted view.
   // And we make it public so that a function that takes Reacted<...> can accept a Loaded<...>
   // that sufficiently overlaps.
-  readonly fullNonReactiveAccess!: this;
-
-  protected constructor(em: EM, metadata: any, defaultValues: object, optsOrId: any) {
-    Object.defineProperty(this, "__orm", {
-      value: new EntityOrmField(em, metadata, defaultValues),
-      enumerable: false,
-    });
-    Object.defineProperty(this, "fullNonReactiveAccess", {
-      value: this,
-      enumerable: false,
-      writable: false,
-    });
-    // Ensure we have at least id set so the `EntityManager.register` works
-    if (typeof optsOrId === "string") {
-      this.__orm.data["id"] = optsOrId;
-      this.__orm.isNew = false;
-    }
-    em.register(metadata, this);
+  get fullNonReactiveAccess(): this {
+    return this;
   }
 
   /** @returns the entity's id, tagged/untagged based on your config, or a runtime error if it's new/unassigned. */
@@ -73,23 +79,23 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
    * is no longer new; this only flips to `false` after the `flush` transaction has been committed.
    */
   get isNewEntity(): boolean {
-    return this.__orm.isNew;
+    return this.#orm.isNew;
   }
 
   get isDeletedEntity(): boolean {
-    return this.__orm.deleted !== undefined;
+    return this.#orm.deleted !== undefined;
   }
 
   get isDirtyEntity(): boolean {
-    return Object.keys(this.__orm.originalData).length > 0;
+    return Object.keys(this.#orm.originalData).length > 0;
   }
 
   get isPendingFlush(): boolean {
-    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.__orm.isTouched;
+    return this.isNewEntity || this.isDirtyEntity || this.isPendingDelete || this.#orm.isTouched;
   }
 
   get isPendingDelete(): boolean {
-    return this.__orm.deleted === "pending";
+    return this.#orm.deleted === "pending";
   }
 
   toString(): string {
@@ -109,7 +115,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
   }
 
   public get em(): EM {
-    return this.__orm.em as EM;
+    return this.#orm.em as EM;
   }
 
   /**
@@ -134,7 +140,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
             case "primitive":
               if (f.derived === "async") {
                 // Use the raw value instead of the PersistedAsyncProperty
-                return [[f.fieldName, (this as any).__orm.data[f.fieldName] || null]];
+                return [[f.fieldName, getField(this as any, f.fieldName) || null]];
               } else {
                 return [[f.fieldName, (this as any)[f.fieldName] || null]];
               }

@@ -1,3 +1,10 @@
+# [1.136.0](https://github.com/stephenh/joist-ts/compare/v1.135.0...v1.136.0) (2023-12-26)
+
+
+### Features
+
+* Optimize em.hydrate performance ([#920](https://github.com/stephenh/joist-ts/issues/920)) ([1efd026](https://github.com/stephenh/joist-ts/commit/1efd026208e01775b8d732b37d0f0b0acb433be0))
+
 # [1.135.0](https://github.com/stephenh/joist-ts/compare/v1.134.2...v1.135.0) (2023-12-20)
 
 

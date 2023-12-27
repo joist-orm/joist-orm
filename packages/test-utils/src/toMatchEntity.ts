@@ -1,6 +1,4 @@
 import CustomMatcherResult = jest.CustomMatcherResult;
-// @ts-ignore
-import matchers from "expect/build/matchers";
 import {
   AsyncProperty,
   BaseEntity,
@@ -17,6 +15,8 @@ import {
   Reference,
 } from "joist-orm";
 import { isPlainObject } from "joist-utils";
+
+const { matchers } = (globalThis as any)[Symbol.for('$$jest-matchers-object')];
 
 /**
  * Provides convenient `toMatchObject`-style matching for Joist entities.

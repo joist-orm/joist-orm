@@ -5,6 +5,8 @@ module.exports = {
     "^src/(.*)": "<rootDir>/src/$1",
   },
   globalSetup: "<rootDir>/src/setupTestEnv.ts",
+  // Importing testEm from jest-integration-tests also imports setupDbTests, so we can skip this
+  // setupFilesAfterEnv: ["<rootDir>/src/setupDbTests.ts"],
   testMatch: ["<rootDir>/src/**/*.test.(ts|tsx)"],
   testEnvironment: "node",
   reporters: [

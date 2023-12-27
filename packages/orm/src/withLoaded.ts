@@ -20,14 +20,14 @@ export type WithLoaded<T extends Entity, H extends LoadHint<T>, L extends Loaded
       ? U | N
       : L[K]
     : L[K] extends LoadedReference<T, infer U, never>
-    ? U
-    : L[K] extends LoadedReference<T, infer U, undefined>
-    ? U | undefined
-    : L[K] extends LoadedCollection<T, infer U>
-    ? U[]
-    : L[K] extends LoadedProperty<T, infer V>
-    ? V
-    : L[K];
+      ? U
+      : L[K] extends LoadedReference<T, infer U, undefined>
+        ? U | undefined
+        : L[K] extends LoadedCollection<T, infer U>
+          ? U[]
+          : L[K] extends LoadedProperty<T, infer V>
+            ? V
+            : L[K];
 };
 
 /**

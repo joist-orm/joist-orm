@@ -73,18 +73,18 @@ function generateFields(config: Config, dbMetadata: EntityDbMetadata): Record<st
     const serdeType = customSerde
       ? code`new ${CustomSerdeAdapter}("${fieldName}", "${columnName}", "${columnType}", ${customSerde})`
       : superstruct
-      ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
-      : zodSchema
-      ? code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`
-      : columnType === "numeric"
-      ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
-      : columnType === "jsonb"
-      ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
-      : fieldType === "bigint"
-      ? code`new ${BigIntSerde}("${fieldName}", "${columnName}")`
-      : isArray
-      ? code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}[]", true)`
-      : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
+        ? code`new ${SuperstructSerde}("${fieldName}", "${columnName}", ${superstruct})`
+        : zodSchema
+          ? code`new ${ZodSerde}("${fieldName}", "${columnName}", ${zodSchema})`
+          : columnType === "numeric"
+            ? code`new ${DecimalToNumberSerde}("${fieldName}", "${columnName}")`
+            : columnType === "jsonb"
+              ? code`new ${JsonSerde}("${fieldName}", "${columnName}")`
+              : fieldType === "bigint"
+                ? code`new ${BigIntSerde}("${fieldName}", "${columnName}")`
+                : isArray
+                  ? code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}[]", true)`
+                  : code`new ${PrimitiveSerde}("${fieldName}", "${columnName}", "${columnType}")`;
     const extras = columnType === "citext" ? code`citext: true,` : "";
     fields[fieldName] = code`
       {

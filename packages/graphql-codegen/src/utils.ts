@@ -40,15 +40,18 @@ export function newFsImpl(prefix: string): Fs {
 export function sortKeys<T extends object>(o: T): T {
   return Object.keys(o)
     .sort()
-    .reduce((acc, key) => {
-      const value = o[key as keyof T];
-      const newValue =
-        typeof value === "object" && isPlainObject(value)
-          ? sortKeys(value as any as object)
-          : Array.isArray(value)
-          ? (value as any[]).sort()
-          : value;
-      acc[key as keyof T] = newValue as any;
-      return acc;
-    }, {} as any as T);
+    .reduce(
+      (acc, key) => {
+        const value = o[key as keyof T];
+        const newValue =
+          typeof value === "object" && isPlainObject(value)
+            ? sortKeys(value as any as object)
+            : Array.isArray(value)
+              ? (value as any[]).sort()
+              : value;
+        acc[key as keyof T] = newValue as any;
+        return acc;
+      },
+      {} as any as T,
+    );
 }

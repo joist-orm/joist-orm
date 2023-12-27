@@ -131,7 +131,7 @@ Inline conditions can be any of the following formats/operators:
 
 :::tip
 
-The `op` format is useful for frontend UIs where the operator is bound to a drop-down, i.e. select ">=" or "<=" or "=" , as then the select field can be down to the single `op` key, instead of adding/removing the `gt`/`lt`/`eq` keys based on the currently-selected operator.
+The `op` format is useful for frontend UIs where the operator is bound to a drop-down, i.e. select `>=` or `<=` or `=`, as then the select field can be down to the single `op` key, instead of adding/removing the `gt`/`lt`/`eq` keys based on the currently-selected operator.
 
 :::
 

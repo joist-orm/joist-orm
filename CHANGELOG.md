@@ -1,3 +1,10 @@
+# [1.137.0](https://github.com/stephenh/joist-ts/compare/v1.136.0...v1.137.0) (2023-12-27)
+
+
+### Features
+
+* Use the latest pg-types for a timestamp perf fix. ([#921](https://github.com/stephenh/joist-ts/issues/921)) ([51cff3d](https://github.com/stephenh/joist-ts/commit/51cff3dfd8745770b144312434ac675d51966550))
+
 # [1.136.0](https://github.com/stephenh/joist-ts/compare/v1.135.0...v1.136.0) (2023-12-26)
 
 

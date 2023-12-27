@@ -78,7 +78,7 @@ describe("EntityManager", () => {
     await insertAuthor({ first_name: "a1" });
 
     const em = newEntityManager();
-    await expect(em.loadAll(Author, ["a:1", "a:2"])).rejects.toThrowError("a:2 were not found");
+    await expect(em.loadAll(Author, ["a:1", "a:2"])).rejects.toThrow("a:2 were not found");
   });
 
   it("can load all entities by id without throwing an error when any of the ids do not exist", async () => {

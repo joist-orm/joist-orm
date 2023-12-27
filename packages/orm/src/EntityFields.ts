@@ -14,8 +14,8 @@ export type SettableFields<F> = {
   [K in keyof F]: F[K] extends { kind: "primitive"; derived: false }
     ? F[K]
     : F[K] extends { kind: "enum" }
-    ? F[K]
-    : F[K] extends { kind: "m2o"; derived: false }
-    ? F[K]
-    : never;
+      ? F[K]
+      : F[K] extends { kind: "m2o"; derived: false }
+        ? F[K]
+        : never;
 };

@@ -78,7 +78,9 @@ async function mapResultToOriginalEm<R>(em: EntityManager, result: R): Promise<R
     newEmEntities
       .filter(
         (e) =>
-          !em.findExistingInstance(e.idTaggedMaybe ?? fail("Joist 'run' returned an unsaved entity; are you missing an em.flush?")),
+          !em.findExistingInstance(
+            e.idTaggedMaybe ?? fail("Joist 'run' returned an unsaved entity; are you missing an em.flush?"),
+          ),
       )
       .map((e) => em.load(e.idTagged)),
   );

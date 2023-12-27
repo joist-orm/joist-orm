@@ -580,8 +580,8 @@ type AllowRelationsOrPartials<T> = {
         ? Array<FactoryEntityOpt<V>>
         : T[P]
       : U extends Entity
-      ? FactoryEntityOpt<U>
-      : T[P]
+        ? FactoryEntityOpt<U>
+        : T[P]
     : T[P];
 };
 

@@ -32,8 +32,8 @@ type AllowRelationsToBeIdsOrEntitiesOrPartials<T> = {
           > | null
         : T[P]
       : U extends Entity
-      ? U | DeepPartialOrNull<U> | IdOf<U> | null
-      : T[P]
+        ? U | DeepPartialOrNull<U> | IdOf<U> | null
+        : T[P]
     : T[P];
 };
 

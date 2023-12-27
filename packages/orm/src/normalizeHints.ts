@@ -6,8 +6,8 @@ import { ReactiveHint } from "./reactiveHints";
 export type NormalizeHint<T extends Entity, H> = H extends string
   ? Record<DropSuffix<H>, {}>
   : H extends ReadonlyArray<any>
-  ? Record<DropSuffix<H[number]>, {}>
-  : { [K in keyof H as DropSuffix<K>]: H[K] };
+    ? Record<DropSuffix<H[number]>, {}>
+    : { [K in keyof H as DropSuffix<K>]: H[K] };
 
 /** The separator between field names and the modified; we allow `_` for keys in hashes. */
 export type SuffixSeperator = ":" | "_";

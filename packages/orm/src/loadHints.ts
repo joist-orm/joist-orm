@@ -33,37 +33,37 @@ type MaybeBaseType = any;
 export type MarkLoaded<T extends Entity, P, UH = {}> = P extends OneToOneReference<MaybeBaseType, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, UH>>
   : P extends Reference<MaybeBaseType, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, UH>, N>
-  : P extends Collection<MaybeBaseType, infer U>
-  ? LoadedCollection<T, Loaded<U, UH>>
-  : P extends AsyncProperty<MaybeBaseType, infer V>
-  ? // prettier-ignore
-    [V] extends [(infer U extends Entity) | undefined]
+    ? LoadedReference<T, Loaded<U, UH>, N>
+    : P extends Collection<MaybeBaseType, infer U>
+      ? LoadedCollection<T, Loaded<U, UH>>
+      : P extends AsyncProperty<MaybeBaseType, infer V>
+        ? // prettier-ignore
+          [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, UH> | Exclude<V, U>>
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, UH>[]>
     : LoadedProperty<T, V>
-  : P extends AsyncMethod<T, infer A, infer V>
-  ? LoadedMethod<T, A, V>
-  : unknown;
+        : P extends AsyncMethod<T, infer A, infer V>
+          ? LoadedMethod<T, A, V>
+          : unknown;
 
 /** A version of MarkLoaded the uses `DeepLoadHint` for tests. */
 type MarkDeepLoaded<T extends Entity, P> = P extends OneToOneReference<MaybeBaseType, infer U>
   ? LoadedOneToOneReference<T, Loaded<U, DeepLoadHint<U>>>
   : P extends Reference<MaybeBaseType, infer U, infer N>
-  ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
-  : P extends Collection<MaybeBaseType, infer U>
-  ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
-  : P extends AsyncProperty<MaybeBaseType, infer V>
-  ? // prettier-ignore
-    [V] extends [(infer U extends Entity) | undefined]
+    ? LoadedReference<T, Loaded<U, DeepLoadHint<U>>, N>
+    : P extends Collection<MaybeBaseType, infer U>
+      ? LoadedCollection<T, Loaded<U, DeepLoadHint<U>>>
+      : P extends AsyncProperty<MaybeBaseType, infer V>
+        ? // prettier-ignore
+          [V] extends [(infer U extends Entity) | undefined]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>> | Exclude<V, U>>
     : V extends readonly (infer U extends Entity)[]
     ? LoadedProperty<T, Loaded<U, DeepLoadHint<U>>[]>
     : LoadedProperty<T, V>
-  : P extends AsyncMethod<T, infer A, infer V>
-  ? LoadedMethod<T, A, V>
-  : unknown;
+        : P extends AsyncMethod<T, infer A, infer V>
+          ? LoadedMethod<T, A, V>
+          : unknown;
 
 /**
  * A helper type for `New` that marks every `Reference` and `LoadedCollection` in `T` as loaded.
@@ -83,15 +83,15 @@ type MaybeUseOptsType<T extends Entity, O, K extends keyof T & keyof O> = O[K] e
     ? T[K] extends OneToOneReference<T, infer U>
       ? LoadedOneToOneReference<T, U>
       : T[K] extends Reference<T, infer U, infer N>
-      ? LoadedReference<T, OK, N>
-      : never
-    : OK extends Array<infer OU>
-    ? OU extends Entity
-      ? T[K] extends Collection<T, infer U>
-        ? LoadedCollection<T, OU>
+        ? LoadedReference<T, OK, N>
         : never
+    : OK extends Array<infer OU>
+      ? OU extends Entity
+        ? T[K] extends Collection<T, infer U>
+          ? LoadedCollection<T, OU>
+          : never
+        : T[K]
       : T[K]
-    : T[K]
   : never;
 
 /**
@@ -146,14 +146,14 @@ export type Loadable<T extends Entity> = {
 export type LoadableValue<V> = V extends Reference<any, infer U, any>
   ? U
   : V extends Collection<any, infer U>
-  ? U
-  : V extends AsyncMethod<any, any, infer V>
-  ? V
-  : V extends AsyncProperty<any, infer P>
-  ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
-    // prettier-ignore
-    P extends (infer U extends Entity) | undefined ? U : P
-  : never;
+    ? U
+    : V extends AsyncMethod<any, any, infer V>
+      ? V
+      : V extends AsyncProperty<any, infer P>
+        ? // If the AsyncProperty returns `Comment | undefined`, then we want to return `Comment`
+          // prettier-ignore
+          P extends (infer U extends Entity) | undefined ? U : P
+        : never;
 
 /**
  *  A load hint of a single key, multiple keys, or nested keys and sub-hints.
@@ -194,8 +194,8 @@ export function isLoaded<T extends Entity, H extends LoadHint<T>>(entity: T, hin
         return Array.isArray(result)
           ? result.every((entity) => isLoaded(entity, nestedHint))
           : result
-          ? isLoaded(result, nestedHint)
-          : true;
+            ? isLoaded(result, nestedHint)
+            : true;
       } else {
         return false;
       }

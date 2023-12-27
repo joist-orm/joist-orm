@@ -53,12 +53,12 @@ export type Reacted<T extends Entity, H> = Entity & {
   [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
     ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
     : T[K] extends Reference<any, infer U, infer N>
-    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
-    : T[K] extends Collection<any, infer U>
-    ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
-    : T[K] extends AsyncProperty<any, infer V>
-    ? LoadedProperty<any, V>
-    : T[K];
+      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+      : T[K] extends Collection<any, infer U>
+        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+        : T[K] extends AsyncProperty<any, infer V>
+          ? LoadedProperty<any, V>
+          : T[K];
 } & {
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.

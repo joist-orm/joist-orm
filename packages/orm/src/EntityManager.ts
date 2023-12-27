@@ -753,8 +753,8 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
           .filter((original) => entityToClone.has(original))
           .map((original) => entityToClone.get(original) as Loaded<T, H>)
       : clones[0]
-      ? (clones[0][1] as Loaded<T, H>)
-      : fail("no entities were cloned given the provided options");
+        ? (clones[0][1] as Loaded<T, H>)
+        : fail("no entities were cloned given the provided options");
   }
 
   /** Returns an instance of `type` for the given `id`, resolving to an existing instance if in our Unit of Work. */

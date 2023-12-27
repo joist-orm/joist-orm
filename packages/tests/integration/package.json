@@ -13,8 +13,8 @@
   "scripts": {
     "migrate": "DECAMELIZE=false env-cmd tsx ../../migration-utils",
     "test": "yarn test-stock && yarn test-preloading",
-    "test-stock": "PLUGINS= jest --runInBand --detectOpenHandles --logHeapUsage",
-    "test-preloading": "PLUGINS=join-preloading jest --runInBand --detectOpenHandles --logHeapUsage",
+    "test-stock": "PLUGINS= jest --runInBand --logHeapUsage",
+    "test-preloading": "PLUGINS=join-preloading jest --runInBand --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "env-cmd tsx ../../codegen",
     "docker:up": "docker compose up -d db",

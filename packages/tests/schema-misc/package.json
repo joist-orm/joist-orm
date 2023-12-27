@@ -10,7 +10,7 @@
   },
   "scripts": {
     "migrate": "DATABASE_URL=postgres://joist:local@localhost:5435/schema_misc node-pg-migrate up --decamelize=false --migrations-dir=./migrations",
-    "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
+    "test": "jest --runInBand --logHeapUsage",
     "format": "prettier --write '{schema,migrations,src}/**/*.{ts,js,tsx,jsx,graphql}'",
     "codegen": "node ../../codegen"
   },

@@ -13,7 +13,7 @@
   },
   "types": "build/index.d.ts",
   "scripts": {
-    "test": "jest --runInBand --detectOpenHandles --logHeapUsage",
+    "test": "jest --runInBand --logHeapUsage",
     "format": "prettier --write '{src}/**/*.{ts,js,tsx,jsx,graphql}'"
   },
   "files": [

@@ -82,3 +82,33 @@ em.find    348.38 ms/iter (315.17 ms … 414.92 ms) 361.46 ms 414.92 ms 414.92 m
 em.find    184.01 ms/iter  (177.4 ms … 209.01 ms) 184.36 ms 209.01 ms 209.01 ms
 ```
 
+## Use the latest `postgres-date`
+
+Improves authors & books by 50ms.
+
+```
+benchmark        time (avg)             (min … max)       p75       p99      p995
+--------------------------------------------------- -----------------------------
+• loading 50k authors
+--------------------------------------------------- -----------------------------
+postgres.js  157.46 ms/iter (148.25 ms … 180.78 ms) 167.12 ms 180.78 ms 180.78 ms
+knex          99.49 ms/iter  (90.93 ms … 123.83 ms) 100.75 ms 123.83 ms 123.83 ms
+em.find       308.2 ms/iter  (272.56 ms … 385.5 ms) 313.18 ms  385.5 ms  385.5 ms
+
+summary for loading 50k authors
+  knex
+   1.58x faster than postgres.js
+   3.1x faster than em.find
+
+• loading 50k books
+--------------------------------------------------- -----------------------------
+postgres.js   68.64 ms/iter  (60.65 ms … 100.78 ms)  70.78 ms 100.78 ms 100.78 ms
+knex          69.55 ms/iter   (65.91 ms … 89.27 ms)  70.12 ms  89.27 ms  89.27 ms
+em.find       131.2 ms/iter (126.33 ms … 158.74 ms) 131.11 ms 158.74 ms 158.74 ms
+
+summary for loading 50k books
+  postgres.js
+   1.01x faster than knex
+   1.91x faster than em.find
+```
+

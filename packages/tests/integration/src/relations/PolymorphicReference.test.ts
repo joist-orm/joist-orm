@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { AdminUser, Book, BookReview, Comment, SmallPublisher, isCommentParent, newBook } from "../entities";
+import { Book, BookReview, Comment, isCommentParent, newAdminUser, newBook, newSmallPublisher } from "../entities";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -137,9 +137,9 @@ describe("PolymorphicReference", () => {
     const em = newEntityManager();
     // Given an admin user (which extends user)
     // User has a polymorphic reference to a favorite publisher
-    const adminUser = em.createPartial(AdminUser, { name: "a1", email: "test@test.com", role: "admin" });
+    const adminUser = newAdminUser(em);
     // And a small publisher
-    const smallPublisher = em.createPartial(SmallPublisher, { name: "small", city: "city" });
+    const smallPublisher = newSmallPublisher(em);
 
     // When we set the favorite publisher
     adminUser.favoritePublisher.set(smallPublisher);

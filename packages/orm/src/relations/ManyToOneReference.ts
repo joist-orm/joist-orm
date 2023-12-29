@@ -1,6 +1,7 @@
 import { Entity, isEntity, isOrWasNew } from "../Entity";
 import { IdOf, TaggedId, getEmInternalApi, sameEntity } from "../EntityManager";
 import { EntityMetadata, ManyToOneField, getMetadata } from "../EntityMetadata";
+import { getField, setField } from "../fields";
 import {
   BaseEntity,
   OneToManyLargeCollection,
@@ -10,9 +11,7 @@ import {
   ensureNotDeleted,
   ensureTagged,
   fail,
-  getField,
   maybeResolveReferenceToId,
-  setField,
   toIdOf,
   toTaggedId,
 } from "../index";

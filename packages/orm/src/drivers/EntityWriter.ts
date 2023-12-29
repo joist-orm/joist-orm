@@ -8,7 +8,7 @@ import {
   getMetadata,
 } from "../EntityMetadata";
 import { Todo } from "../Todo";
-import { getField, isChangeableField } from "../index";
+import { getField, isChangeableField } from "../fields";
 import { keyToNumber } from "../keys";
 import { hasSerde } from "../serde";
 

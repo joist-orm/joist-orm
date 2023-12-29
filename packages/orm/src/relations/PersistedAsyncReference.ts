@@ -7,18 +7,17 @@ import {
   ensureTagged,
   fail,
   getEmInternalApi,
-  getField,
   getMetadata,
   isEntity,
   isLoaded,
   maybeResolveReferenceToId,
   sameEntity,
-  setField,
   toIdOf,
 } from "..";
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { IdOf } from "../EntityManager";
+import { getField, setField } from "../fields";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";

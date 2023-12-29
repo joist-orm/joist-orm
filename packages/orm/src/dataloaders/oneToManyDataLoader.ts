@@ -1,12 +1,12 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
 import { EntityManager } from "../EntityManager";
+import { getField } from "../fields";
 import {
   abbreviation,
   addTablePerClassJoinsAndClassTag,
   assertIdsAreTagged,
   deTagIds,
-  getField,
   maybeResolveReferenceToId,
   OneToManyCollection,
   ParsedFindQuery,

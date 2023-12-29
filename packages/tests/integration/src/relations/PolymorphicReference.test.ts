@@ -1,6 +1,6 @@
 import { insertAuthor, insertBook, insertBookReview, insertComment, select } from "@src/entities/inserts";
 import { newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
-import { Book, BookReview, Comment, isCommentParent, newBook } from "../entities";
+import { AdminUser, Book, BookReview, Comment, SmallPublisher, isCommentParent, newBook } from "../entities";
 
 describe("PolymorphicReference", () => {
   it("can load a foreign key", async () => {
@@ -131,5 +131,23 @@ describe("PolymorphicReference", () => {
     expect(isCommentParent({})).toBe(false);
     expect(isCommentParent(null)).toBe(false);
     expect(isCommentParent(undefined)).toBe(false);
+  });
+
+  it("can use base class parent", async () => {
+    const em = newEntityManager();
+    // Given an admin user (which extends user)
+    // User has a polymorphic reference to a favorite publisher
+    const adminUser = em.createPartial(AdminUser, { name: "a1", email: "test@test.com", role: "admin" });
+    // And a small publisher
+    const smallPublisher = em.createPartial(SmallPublisher, { name: "small", city: "city" });
+
+    // When we set the favorite publisher
+    adminUser.favoritePublisher.set(smallPublisher);
+
+    // And flush
+    await em.flush();
+
+    // Then the favorite publisher is set
+    expect(await adminUser.favoritePublisher.load()).toEqual(smallPublisher);
   });
 });

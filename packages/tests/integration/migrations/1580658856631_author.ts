@@ -229,6 +229,9 @@ export function up(b: MigrationBuilder): void {
     password: { type: "varchar(255)", notNull: false },
     // For testing `default: ""` should signal to keep empty strings
     bio: { type: "varchar(255)", notNull: true, default: "" },
+    // For testing polymorphic references to subclasses
+    favorite_publisher_small_id: foreignKey("small_publishers", { notNull: false }),
+    favorite_publisher_large_id: foreignKey("large_publishers", { notNull: false }),
   });
 
   // For testing subclasses with their own rules...

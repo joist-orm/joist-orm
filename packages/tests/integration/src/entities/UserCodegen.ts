@@ -17,17 +17,22 @@ import {
   hasMany,
   hasManyToMany,
   hasOne,
+  hasOnePolymorphic,
+  IdOf,
+  isEntity,
   isLoaded,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
   ManyToOneReference,
+  MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PolymorphicReference,
   setField,
   setOpts,
   TaggedId,
@@ -48,12 +53,22 @@ import {
   commentMeta,
   Entity,
   EntityManager,
+  LargePublisher,
   newUser,
+  SmallPublisher,
   User,
   userMeta,
 } from "./entities";
 
 export type UserId = Flavor<string, User>;
+
+export type UserFavoritePublisher = LargePublisher | SmallPublisher;
+export function getUserFavoritePublisherConstructors(): MaybeAbstractEntityConstructor<UserFavoritePublisher>[] {
+  return [LargePublisher, SmallPublisher];
+}
+export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is UserFavoritePublisher {
+  return isEntity(maybeEntity) && getUserFavoritePublisherConstructors().some((type) => maybeEntity instanceof type);
+}
 
 export interface UserFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
@@ -65,6 +80,7 @@ export interface UserFields {
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
 }
 
 export interface UserOpts {
@@ -74,12 +90,14 @@ export interface UserOpts {
   password?: PasswordValue | null;
   bio?: string;
   authorManyToOne?: Author | AuthorId | null;
+  favoritePublisher?: UserFavoritePublisher;
   createdComments?: Comment[];
   likedComments?: Comment[];
 }
 
 export interface UserIdsOpts {
   authorManyToOneId?: AuthorId | null;
+  favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
   createdCommentIds?: CommentId[] | null;
   likedCommentIds?: CommentId[] | null;
 }
@@ -96,6 +114,7 @@ export interface UserFilter {
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null | undefined>;
 }
 
 export interface UserGraphQLFilter {
@@ -110,6 +129,7 @@ export interface UserGraphQLFilter {
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null | undefined>;
 }
 
 export interface UserOrder {
@@ -280,5 +300,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
       "likedByUsers",
       "comment_id",
     );
+  }
+
+  get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
+    const { relations } = this.__orm;
+    return relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
   }
 }

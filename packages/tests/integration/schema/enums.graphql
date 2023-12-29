@@ -53,3 +53,11 @@ type PublisherTypeDetail {
   code: PublisherType!
   name: String!
 }
+
+type AllEnumDetails {
+  advanceStatus: [AdvanceStatusDetail!]!
+  color: [ColorDetail!]!
+  imageType: [ImageTypeDetail!]!
+  publisherSize: [PublisherSizeDetail!]!
+  publisherType: [PublisherTypeDetail!]!
+}

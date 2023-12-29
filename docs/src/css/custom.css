@@ -14,6 +14,12 @@
   --ifm-color-primary-lightest: #fdba7d;
 }
 
+article {
+  max-width: 50em;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .docusaurus-highlight-code-line {
   background-color: rgba(0, 0, 0, 0.1);
   display: block;

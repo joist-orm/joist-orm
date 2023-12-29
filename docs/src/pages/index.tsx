@@ -1,7 +1,8 @@
 import useDocusaurusContext from "@docusaurus/useDocusaurusContext";
+// @ts-ignore
+import JoistLogoUrl from "@site/static/joist-logo-text.png";
 import Layout from "@theme/Layout";
 import clsx from "clsx";
-import React from "react";
 import HomepageFeatures from "../components/HomepageFeatures";
 import styles from "./index.module.css";
 
@@ -20,9 +21,9 @@ export default function Index(): JSX.Element {
 function Header() {
   const { siteConfig } = useDocusaurusContext();
   return (
-    <header className={clsx("hero hero--primary", styles.heroBanner)}>
-      <div className="container m-2">
-        <h1 className="hero__title">{siteConfig.title}</h1>
+    <header className={clsx("hero", styles.heroBanner)}>
+      <div className="container">
+        <img src={JoistLogoUrl} alt={siteConfig.title} />
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className={styles.buttons}>
           <a href="/docs/getting-started/tour" className={styles.button}>

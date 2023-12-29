@@ -70,7 +70,7 @@ const config: Config = {
     prism: {
       theme: lightCodeTheme,
       darkTheme: darkCodeTheme,
-      additionalLanguages: ["ruby"],
+      additionalLanguages: ["ruby", "bash"],
     },
   } satisfies Preset.ThemeConfig,
 

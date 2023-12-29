@@ -52,7 +52,7 @@ You should also set up a migrations library to manage your database schema; the 
 
 If you do use `node-pg-migrate` as well, you can install Joist's `node-pg-migrate`-based helper methods (like `createEntityTable`, `createEnumTable`, `createManyToManyTable`, etc.):
 
-```shell
+```bash
 npm add --save-dev joist-migration-utils
 ```
 
@@ -82,13 +82,13 @@ If you want to invoke `node-pg-migrate`'s [cli](https://salsita.github.io/node-p
 
 Now we can apply migrations by running:
 
-```shell
+```bash
 npm run joist-migrate
 ```
 
 The sample app also supports resetting the database schema (so you can re-run the migrations from scratch) by running:
 
-```shell
+```bash
 docker compose exec db ./reset.sh
 ```
 
@@ -126,7 +126,7 @@ This again uses `env-cmd`, as `joist-codegen` will use the `DATABASE_URL` enviro
 
 Now, anytime you make schema changes (i.e. by running `npm run joist-migrate`), you can also run `joist-codegen` to create/update your domain model:
 
-```shell
+```bash
 npm run joist-codegen
 ```
 
@@ -225,7 +225,7 @@ Finally, you can use the `EntityManager` and your domain objects in your product
 
 First install the `joist-orm` dependency:
 
-```shell
+```bash
 npm add --save-dev joist-orm
 ```
 

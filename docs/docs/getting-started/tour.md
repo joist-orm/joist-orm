@@ -7,7 +7,7 @@ This page gives a quick overview/scan of "what using Joist looks like". Joist's 
 
 With Joist, you start by creating/updating your database schema, using `node-pg-migrate` or whatever migration tool you like:
 
-```shell
+```bash
 # Start your postgres database
 docker-compose up db --wait
 # Apply the latest migrations
@@ -16,7 +16,7 @@ npm run migrate
 
 Then invoke Joist's code generation:
 
-```shell
+```bash
 npm run joist-codegen
 ```
 

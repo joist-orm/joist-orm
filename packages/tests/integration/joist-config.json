@@ -58,6 +58,7 @@
         "ipAddress": { "type": "IpAddress@src/entities/types" },
         "password": { "serde": "PasswordValueSerde@src/entities/types", "type": "PasswordValue@src/entities/types" }
       },
+      "relations": { "favoritePublisher": { "polymorphic": true } },
       "tag": "u"
     }
   },

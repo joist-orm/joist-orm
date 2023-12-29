@@ -1,12 +1,18 @@
 import {
   Changes,
   cleanStringValue,
+  Collection,
   ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
   failNoIdYet,
+  FilterOf,
   Flavor,
   getField,
+  GraphQLFilterOf,
+  hasMany,
   isLoaded,
   Lens,
   Loaded,
@@ -39,6 +45,9 @@ import {
   PublisherOrder,
   SmallPublisher,
   smallPublisherMeta,
+  User,
+  UserId,
+  userMeta,
 } from "./entities";
 
 export type SmallPublisherId = Flavor<string, SmallPublisher> & Flavor<string, "Publisher">;
@@ -51,19 +60,23 @@ export interface SmallPublisherFields extends PublisherFields {
 
 export interface SmallPublisherOpts extends PublisherOpts {
   city: string;
+  users?: User[];
 }
 
 export interface SmallPublisherIdsOpts extends PublisherIdsOpts {
+  userIds?: UserId[] | null;
 }
 
 export interface SmallPublisherFilter extends PublisherFilter {
   city?: ValueFilter<string, never>;
   allAuthorNames?: ValueFilter<string, null>;
+  users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
 }
 
 export interface SmallPublisherGraphQLFilter extends PublisherGraphQLFilter {
   city?: ValueGraphQLFilter<string>;
   allAuthorNames?: ValueGraphQLFilter<string>;
+  users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
 }
 
 export interface SmallPublisherOrder extends PublisherOrder {
@@ -156,5 +169,17 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
 
   isLoaded<H extends LoadHint<SmallPublisher>>(hint: H): this is Loaded<SmallPublisher | Publisher, H> {
     return isLoaded(this as any as SmallPublisher, hint);
+  }
+
+  get users(): Collection<SmallPublisher, User> {
+    const { relations } = this.__orm;
+    return relations.users ??= hasMany(
+      this as any as SmallPublisher,
+      userMeta,
+      "users",
+      "favoritePublisher",
+      "favorite_publisher_small_id",
+      undefined,
+    );
   }
 }

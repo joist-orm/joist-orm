@@ -72,7 +72,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     private fieldName: keyof T & string,
   ) {
     super(entity);
-    this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
+    this.field = getMetadata(entity).allFields[this.fieldName] as PolymorphicField;
     if (isOrWasNew(entity)) {
       this._isLoaded = true;
     }

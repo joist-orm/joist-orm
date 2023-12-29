@@ -1,3 +1,10 @@
+# [1.138.0](https://github.com/stephenh/joist-ts/compare/v1.137.0...v1.138.0) (2023-12-29)
+
+
+### Features
+
+* support baseClass polymorphics ([#919](https://github.com/stephenh/joist-ts/issues/919)) ([424976f](https://github.com/stephenh/joist-ts/commit/424976fd76363ef61f7572da8eca3ee66ac81063))
+
 # [1.137.0](https://github.com/stephenh/joist-ts/compare/v1.136.0...v1.137.0) (2023-12-27)
 
 

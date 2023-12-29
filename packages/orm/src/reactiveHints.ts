@@ -1,9 +1,9 @@
+import { isChangeableField } from "./fields";
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
 import { getProperties } from "./getProperties";
-import { isChangeableField } from "./index";
 import { LoadHint, Loadable, Loaded } from "./loadHints";
 import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
 import {

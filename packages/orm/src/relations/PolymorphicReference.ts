@@ -1,6 +1,7 @@
 import { Entity, isEntity, isOrWasNew } from "../Entity";
 import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
+import { getField, setField } from "../fields";
 import {
   OneToOneReference,
   PolymorphicField,
@@ -8,10 +9,8 @@ import {
   ensureNotDeleted,
   fail,
   getConstructorFromTaggedId,
-  getField,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
-  setField,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";

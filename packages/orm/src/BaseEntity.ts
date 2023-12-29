@@ -1,10 +1,10 @@
 import { IdType } from "./Entity";
+import { getField } from "./fields";
 import {
   deTagId,
   Entity,
   EntityManager,
   EntityOrmField,
-  getField,
   getMetadata,
   isEntity,
   keyToNumber,
@@ -15,6 +15,11 @@ import {
 
 export let currentlyInstantiatingEntity: Entity | undefined;
 
+/**
+ * Returns the internal `#orm` tracking field for `entity`.
+ *
+ * This should be treated as an internal API and may change without notice.
+ */
 export function getOrmField(entity: Entity): EntityOrmField {
   return BaseEntity.getOrmField(entity);
 }

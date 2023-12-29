@@ -1,6 +1,6 @@
 import { Entity } from "./Entity";
 import { Changes, EntityChanges } from "./changes";
-import { getField } from "./index";
+import { getField } from "./fields";
 import { ReactiveHint } from "./reactiveHints";
 import { MaybePromise, groupBy, maybePromiseThen } from "./utils";
 

@@ -1,4 +1,5 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
+import { getField, setField } from "./fields";
 import { Knex } from "knex";
 import { getOrmField } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
@@ -43,14 +44,12 @@ import {
   getBaseAndSelfMetas,
   getBaseMeta,
   getConstructorFromTaggedId,
-  getField,
   getMetadata,
   getRelationEntries,
   getRelations,
   keyToTaggedId,
   loadLens,
   parseFindQuery,
-  setField,
   setOpts,
   tagId,
   toTaggedId,

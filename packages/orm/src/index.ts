@@ -1,15 +1,8 @@
 import { getOrmField } from "./BaseEntity";
-import { Entity, EntityOrmField, isEntity } from "./Entity";
-import {
-  EntityConstructor,
-  EntityManager,
-  MaybeAbstractEntityConstructor,
-  OptsOf,
-  TaggedId,
-  getEmInternalApi,
-} from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { setSyncDefaults } from "./defaults";
+import { Entity, EntityOrmField } from "./Entity";
+import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
+import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
@@ -25,6 +18,10 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity, getOrmField } from "./BaseEntity";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
 export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";
@@ -32,52 +29,49 @@ export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
-export { EntityOrId, HintNode } from "./HintTree";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
+export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
+export { EntityOrId, HintNode } from "./HintTree";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
-  DeepNew,
-  LoadHint,
-  Loadable,
-  Loaded,
-  MarkLoaded,
-  NestedLoadHint,
-  New,
-  RelationsIn,
   assertLoaded,
+  DeepNew,
   ensureLoaded,
   isLoaded,
   isNew,
+  Loadable,
+  Loaded,
+  LoadHint,
+  MarkLoaded,
   maybePopulateThen,
+  NestedLoadHint,
+  New,
+  RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  GenericError,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
   cannotBeUpdated,
+  GenericError,
   maxValueRule,
   minValueRule,
   newRequiredRule,
   rangeValueRule,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+  ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
+export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -85,83 +79,6 @@ interface Flavoring<FlavorT> {
 }
 
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
-
-/**
- * Returns the current value of `fieldName`, this is an internal method that should
- * only be called by the code-generated getters.
- *
- * We skip any typing like `fieldName: keyof T` because this method should only be
- * called by trusted codegen anyway.
- */
-export function getField(entity: Entity, fieldName: string): any {
-  // We may not have converted the database column value into domain values yet
-  const { data, row } = getOrmField(entity);
-  if (fieldName in data) {
-    return data[fieldName];
-  } else {
-    const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-    serde.setOnEntity(data, row);
-    return data[fieldName];
-  }
-}
-
-/** Returns whether `fieldName` is a field/column on `entity` that can be changed. */
-export function isChangeableField(entity: Entity, fieldName: string): boolean {
-  return !!getMetadata(entity).allFields[fieldName]?.serde;
-}
-
-/** Returns whether `fieldName` has been set, even if it's undefined, on `entity`. */
-export function isFieldSet(entity: Entity, fieldName: string): boolean {
-  const { data } = getOrmField(entity);
-  if (fieldName in data) return true;
-  // Avoid calling `getField` on new entities because it populates the field as a side effect.
-  if (entity.isNewEntity) return false;
-  // We may not have converted the database column value into domain values yet.
-  getField(entity, fieldName);
-  return fieldName in data;
-}
-
-/**
- * Sets the current value of `fieldName`, this is an internal method that should
- * only be called by the code-generated setters.
- *
- * We skip any typing like `fieldName: keyof T` because this method should only be
- * called by trusted codegen anyway.
- *
- * Returns `true` if the value was changed, or `false` if it was a noop.
- */
-export function setField(entity: Entity, fieldName: string, newValue: any): boolean {
-  ensureNotDeleted(entity, "pending");
-  const { em } = entity;
-
-  getEmInternalApi(em).checkWritesAllowed();
-
-  const { data, originalData } = getOrmField(entity);
-
-  // "Un-dirty" our originalData if newValue is reverting to originalData
-  if (fieldName in originalData) {
-    if (equalOrSameEntity(originalData[fieldName], newValue)) {
-      data[fieldName] = newValue;
-      delete originalData[fieldName];
-      getEmInternalApi(em).rm.dequeueDownstreamReactiveFields(entity, fieldName);
-      return true;
-    }
-  }
-
-  // Push this logic into a field serde type abstraction?
-  const currentValue = getField(entity, fieldName);
-  if (equalOrSameEntity(currentValue, newValue)) {
-    return false;
-  }
-
-  // Only save the currentValue on the 1st change of this field
-  if (!(fieldName in originalData)) {
-    originalData[fieldName] = currentValue;
-  }
-  getEmInternalApi(em).rm.queueDownstreamReactiveFields(entity, fieldName);
-  data[fieldName] = newValue;
-  return true;
-}
 
 /**
  * Sets each value in `values` on the current entity.
@@ -430,25 +347,6 @@ export function maybeGetConstructorFromReference(
 ): MaybeAbstractEntityConstructor<any> | undefined {
   const id = maybeResolveReferenceToId(value);
   return id ? getConstructorFromTaggedId(id) : undefined;
-}
-
-function equalOrSameEntity(a: any, b: any): boolean {
-  return (
-    equal(a, b) ||
-    (Array.isArray(a) && Array.isArray(b) && equalArrays(a, b)) ||
-    // This is kind of gross, but make sure not to compare two both-new entities
-    (((isEntity(a) && !a.isNewEntity) || (isEntity(b) && !b.isNewEntity)) &&
-      maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
-  );
-}
-
-function equalArrays(a: any[], b: any[]): boolean {
-  if (a.length !== b.length) return false;
-  return a.every((_: any, i) => equal(a[i], b[i]));
-}
-
-function equal(a: any, b: any): boolean {
-  return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
 }
 
 /** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */

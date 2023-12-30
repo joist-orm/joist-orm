@@ -3285,7 +3285,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@docusaurus/types@npm:3.0.1":
+"@docusaurus/types@npm:3.0.1, @docusaurus/types@npm:^3.0.1":
   version: 3.0.1
   resolution: "@docusaurus/types@npm:3.0.1"
   dependencies:
@@ -8577,6 +8577,7 @@ __metadata:
     "@docusaurus/module-type-aliases": ^3.0.1
     "@docusaurus/preset-classic": ^3.0.1
     "@docusaurus/tsconfig": ^3.0.1
+    "@docusaurus/types": ^3.0.1
     "@mdx-js/react": ^3.0.0
     "@svgr/webpack": ^6.5.1
     autoprefixer: ^10.4.16

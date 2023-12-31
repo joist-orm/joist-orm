@@ -13,21 +13,27 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
   hasOne,
+  hasOnePolymorphic,
+  IdOf,
+  isEntity,
   isLoaded,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
   ManyToOneReference,
+  MaybeAbstractEntityConstructor,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
+  PolymorphicReference,
   setField,
   setOpts,
   TaggedId,
@@ -48,23 +54,34 @@ import {
   commentMeta,
   Entity,
   EntityManager,
+  LargePublisher,
   newUser,
+  SmallPublisher,
   User,
   userMeta,
 } from "./entities";
 
 export type UserId = Flavor<string, User>;
 
+export type UserFavoritePublisher = LargePublisher | SmallPublisher;
+export function getUserFavoritePublisherConstructors(): MaybeAbstractEntityConstructor<UserFavoritePublisher>[] {
+  return [LargePublisher, SmallPublisher];
+}
+export function isUserFavoritePublisher(maybeEntity: unknown): maybeEntity is UserFavoritePublisher {
+  return isEntity(maybeEntity) && getUserFavoritePublisherConstructors().some((type) => maybeEntity instanceof type);
+}
+
 export interface UserFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
-  email: { kind: "primitive"; type: string; unique: false; nullable: never };
-  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined };
-  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined };
-  bio: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  email: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  ipAddress: { kind: "primitive"; type: IpAddress; unique: false; nullable: undefined; derived: false };
+  password: { kind: "primitive"; type: PasswordValue; unique: false; nullable: undefined; derived: false };
+  bio: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  authorManyToOne: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  favoritePublisher: { kind: "poly"; type: UserFavoritePublisher; nullable: undefined };
 }
 
 export interface UserOpts {
@@ -74,12 +91,14 @@ export interface UserOpts {
   password?: PasswordValue | null;
   bio?: string;
   authorManyToOne?: Author | AuthorId | null;
+  favoritePublisher?: UserFavoritePublisher;
   createdComments?: Comment[];
   likedComments?: Comment[];
 }
 
 export interface UserIdsOpts {
   authorManyToOneId?: AuthorId | null;
+  favoritePublisherId?: IdOf<UserFavoritePublisher> | null;
   createdCommentIds?: CommentId[] | null;
   likedCommentIds?: CommentId[] | null;
 }
@@ -96,6 +115,7 @@ export interface UserFilter {
   authorManyToOne?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
   createdComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
   likedComments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
+  favoritePublisher?: EntityFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null | undefined>;
 }
 
 export interface UserGraphQLFilter {
@@ -110,6 +130,7 @@ export interface UserGraphQLFilter {
   authorManyToOne?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
   createdComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
   likedComments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
+  favoritePublisher?: EntityGraphQLFilter<UserFavoritePublisher, IdOf<UserFavoritePublisher>, never, null | undefined>;
 }
 
 export interface UserOrder {
@@ -253,7 +274,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get createdComments(): Collection<User, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.createdComments ??= hasMany(
       this as any as User,
       commentMeta,
@@ -265,12 +286,12 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get authorManyToOne(): ManyToOneReference<User, Author, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.authorManyToOne ??= hasOne(this as any as User, authorMeta, "authorManyToOne", "userOneToOne");
   }
 
   get likedComments(): Collection<User, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.likedComments ??= hasManyToMany(
       this as any as User,
       "users_to_comments",
@@ -280,5 +301,10 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
       "likedByUsers",
       "comment_id",
     );
+  }
+
+  get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
+    const { relations } = getOrmField(this);
+    return relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
   }
 }

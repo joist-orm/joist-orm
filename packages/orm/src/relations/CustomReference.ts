@@ -12,7 +12,7 @@ export type CustomReferenceOpts<T extends Entity, U extends Entity, N extends ne
   get: (entity: T) => U | N;
   set?: (entity: T, other: U) => void;
   /** Whether the reference is loaded, even w/o an explicit `.load` call, i.e. for DeepNew test instances. */
-  isLoaded?: () => boolean;
+  isLoaded: () => boolean;
 };
 
 /**
@@ -33,7 +33,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   // We keep both a promise+loaded flag and not an actual `this.loaded = await load` because
   // the value can become stale; we want to each `.get` call to repeatedly evaluate the latest value.
   private loadPromise: Promise<unknown> | undefined;
-  private _isLoaded = false;
 
   constructor(
     entity: T,
@@ -51,7 +50,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
   }
 
   get isLoaded(): boolean {
-    return this._isLoaded;
+    return this.opts.isLoaded();
   }
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<U | N> {
@@ -61,7 +60,6 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
         this.loadPromise = this.opts.load(this.entity, opts);
         await this.loadPromise;
         this.loadPromise = undefined;
-        this._isLoaded = true;
       } else {
         await this.loadPromise;
       }
@@ -144,7 +142,7 @@ export class CustomReference<T extends Entity, U extends Entity, N extends never
 
   private ensureNewOrLoaded() {
     // This should only be callable in the type system if we've already resolved this to an instance
-    if (this.isLoaded || (this.opts.isLoaded && this.opts.isLoaded())) {
+    if (this.isLoaded) {
       return;
     }
     fail(`${this.entity}.${this.fieldName} was not loaded`);

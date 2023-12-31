@@ -15,7 +15,7 @@ module.exports = {
     [
       "jest-junit",
       {
-        outputDirectory: "../../artifacts",
+        outputDirectory: "../../../artifacts",
         outputName: `junit-tests-integration-${process.env.PLUGINS ?? "stock"}.xml`,
         usePathForSuiteName: "true",
       },

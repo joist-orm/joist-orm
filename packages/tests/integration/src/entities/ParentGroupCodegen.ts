@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -49,10 +50,10 @@ import {
 export type ParentGroupId = Flavor<string, ParentGroup>;
 
 export interface ParentGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface ParentGroupOpts {
@@ -183,7 +184,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get childGroups(): Collection<ParentGroup, ChildGroup> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.childGroups ??= hasMany(
       this as any as ParentGroup,
       childGroupMeta,
@@ -195,7 +196,7 @@ export abstract class ParentGroupCodegen extends BaseEntity<EntityManager, strin
   }
 
   get parentItems(): Collection<ParentGroup, ParentItem> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.parentItems ??= hasMany(
       this as any as ParentGroup,
       parentItemMeta,

@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -37,11 +38,11 @@ import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, Entity, Enti
 export type BookId = Flavor<string, Book>;
 
 export interface BookFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: false };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  author: { kind: "m2o"; type: Author; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  author: { kind: "m2o"; type: Author; nullable: never; derived: false };
 }
 
 export interface BookOpts {
@@ -168,7 +169,7 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get author(): ManyToOneReference<Book, Author, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.author ??= hasOne(this as any as Book, authorMeta, "author", "books");
   }
 }

@@ -14,6 +14,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -82,35 +83,42 @@ import {
 export type AuthorId = Flavor<string, Author>;
 
 export interface AuthorFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  ssn: { kind: "primitive"; type: string; unique: true; nullable: undefined };
-  initials: { kind: "primitive"; type: string; unique: false; nullable: never };
-  numberOfBooks: { kind: "primitive"; type: number; unique: false; nullable: never };
-  bookComments: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
-  age: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
-  nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined };
-  wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined };
-  address: { kind: "primitive"; type: Address; unique: false; nullable: undefined };
-  businessAddress: { kind: "primitive"; type: z.input<typeof AddressSchema>; unique: false; nullable: undefined };
-  quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined };
-  numberOfAtoms: { kind: "primitive"; type: bigint; unique: false; nullable: undefined };
-  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined };
-  numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  search: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  ssn: { kind: "primitive"; type: string; unique: true; nullable: undefined; derived: false };
+  initials: { kind: "primitive"; type: string; unique: false; nullable: never; derived: true };
+  numberOfBooks: { kind: "primitive"; type: number; unique: false; nullable: never; derived: true };
+  bookComments: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  isPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  age: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  graduated: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  nickNames: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: false };
+  nickNamesUpper: { kind: "primitive"; type: string[]; unique: false; nullable: undefined; derived: true };
+  wasEverPopular: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
+  address: { kind: "primitive"; type: Address; unique: false; nullable: undefined; derived: false };
+  businessAddress: {
+    kind: "primitive";
+    type: z.input<typeof AddressSchema>;
+    unique: false;
+    nullable: undefined;
+    derived: false;
+  };
+  quotes: { kind: "primitive"; type: Quotes; unique: false; nullable: undefined; derived: false };
+  numberOfAtoms: { kind: "primitive"; type: bigint; unique: false; nullable: undefined; derived: false };
+  deletedAt: { kind: "primitive"; type: Date; unique: false; nullable: undefined; derived: false };
+  numberOfPublicReviews: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
+  numberOfPublicReviews2: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: true };
+  tagsOfAllBooks: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  search: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: true };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   favoriteColors: { kind: "enum"; type: Color[]; nullable: never };
   favoriteShape: { kind: "enum"; type: FavoriteShape; nullable: undefined; native: true };
-  mentor: { kind: "m2o"; type: Author; nullable: undefined };
-  currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined };
-  favoriteBook: { kind: "m2o"; type: Book; nullable: undefined };
-  publisher: { kind: "m2o"; type: Publisher; nullable: undefined };
+  mentor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  currentDraftBook: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
+  favoriteBook: { kind: "m2o"; type: Book; nullable: undefined; derived: true };
+  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
 }
 
 export interface AuthorOpts {
@@ -166,6 +174,7 @@ export interface AuthorFilter {
   age?: ValueFilter<number, null>;
   graduated?: ValueFilter<Date, null>;
   nickNames?: ValueFilter<string[], null>;
+  nickNamesUpper?: ValueFilter<string[], null>;
   wasEverPopular?: BooleanFilter<null>;
   address?: ValueFilter<Address, null>;
   businessAddress?: ValueFilter<z.input<typeof AddressSchema>, null>;
@@ -205,6 +214,7 @@ export interface AuthorGraphQLFilter {
   age?: ValueGraphQLFilter<number>;
   graduated?: ValueGraphQLFilter<Date>;
   nickNames?: ValueGraphQLFilter<string[]>;
+  nickNamesUpper?: ValueGraphQLFilter<string[]>;
   wasEverPopular?: BooleanGraphQLFilter;
   address?: ValueGraphQLFilter<Address>;
   businessAddress?: ValueGraphQLFilter<z.input<typeof AddressSchema>>;
@@ -244,6 +254,7 @@ export interface AuthorOrder {
   age?: OrderBy;
   graduated?: OrderBy;
   nickNames?: OrderBy;
+  nickNamesUpper?: OrderBy;
   wasEverPopular?: OrderBy;
   address?: OrderBy;
   businessAddress?: OrderBy;
@@ -371,6 +382,8 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   set nickNames(nickNames: string[] | undefined) {
     setField(this, "nickNames", nickNames);
   }
+
+  abstract readonly nickNamesUpper: PersistedAsyncProperty<Author, string[] | undefined>;
 
   get wasEverPopular(): boolean | undefined {
     return getField(this, "wasEverPopular");
@@ -503,7 +516,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get isSoftDeletedEntity(): boolean {
-    return this.__orm.data.deletedAt !== undefined;
+    return this.deletedAt !== undefined;
   }
 
   load<U, V>(fn: (lens: Lens<Author>) => Lens<U, V>, opts: { sql?: boolean } = {}): Promise<V> {
@@ -529,7 +542,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get authors(): Collection<Author, Author> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.authors ??= hasMany(
       this as any as Author,
       authorMeta,
@@ -541,7 +554,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get schedules(): Collection<Author, AuthorSchedule> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.schedules ??= hasMany(
       this as any as Author,
       authorScheduleMeta,
@@ -553,7 +566,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get books(): Collection<Author, Book> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", {
       "field": "order",
       "direction": "ASC",
@@ -561,7 +574,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get comments(): Collection<Author, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.comments ??= hasMany(
       this as any as Author,
       commentMeta,
@@ -573,12 +586,12 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get mentor(): ManyToOneReference<Author, Author, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.mentor ??= hasOne(this as any as Author, authorMeta, "mentor", "authors");
   }
 
   get currentDraftBook(): ManyToOneReference<Author, Book, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.currentDraftBook ??= hasOne(
       this as any as Author,
       bookMeta,
@@ -588,17 +601,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get publisher(): ManyToOneReference<Author, Publisher, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.publisher ??= hasOne(this as any as Author, publisherMeta, "publisher", "authors");
   }
 
   get image(): OneToOneReference<Author, Image> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.image ??= hasOneToOne(this as any as Author, imageMeta, "image", "author", "author_id");
   }
 
   get userOneToOne(): OneToOneReference<Author, User> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.userOneToOne ??= hasOneToOne(
       this as any as Author,
       userMeta,
@@ -609,7 +622,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get tags(): Collection<Author, Tag> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.tags ??= hasManyToMany(
       this as any as Author,
       "authors_to_tags",

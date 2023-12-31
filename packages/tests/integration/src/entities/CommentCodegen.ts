@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasManyToMany,
   hasOne,
@@ -66,11 +67,11 @@ export function isCommentParent(maybeEntity: unknown): maybeEntity is CommentPar
 }
 
 export interface CommentFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  text: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  user: { kind: "m2o"; type: User; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  text: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  user: { kind: "m2o"; type: User; nullable: undefined; derived: false };
   parent: { kind: "poly"; type: CommentParent; nullable: never };
 }
 
@@ -208,12 +209,12 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get user(): ManyToOneReference<Comment, User, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.user ??= hasOne(this as any as Comment, userMeta, "user", "createdComments");
   }
 
   get likedByUsers(): Collection<Comment, User> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.likedByUsers ??= hasManyToMany(
       this as any as Comment,
       "users_to_comments",
@@ -226,7 +227,7 @@ export abstract class CommentCodegen extends BaseEntity<EntityManager, string> i
   }
 
   get parent(): PolymorphicReference<Comment, CommentParent, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.parent ??= hasOnePolymorphic(this as any as Comment, "parent");
   }
 }

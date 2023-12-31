@@ -31,21 +31,21 @@ import { AuthorStat, authorStatMeta, Entity, EntityManager, newAuthorStat } from
 export type AuthorStatId = Flavor<string, AuthorStat>;
 
 export interface AuthorStatFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  smallint: { kind: "primitive"; type: number; unique: false; nullable: never };
-  integer: { kind: "primitive"; type: number; unique: false; nullable: never };
-  nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  bigint: { kind: "primitive"; type: bigint; unique: false; nullable: never };
-  decimal: { kind: "primitive"; type: number; unique: false; nullable: never };
-  real: { kind: "primitive"; type: number; unique: false; nullable: never };
-  smallserial: { kind: "primitive"; type: number; unique: false; nullable: never };
-  serial: { kind: "primitive"; type: number; unique: false; nullable: never };
-  bigserial: { kind: "primitive"; type: bigint; unique: false; nullable: never };
-  doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never };
-  nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  json: { kind: "primitive"; type: Object; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  smallint: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  integer: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  nullableInteger: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  bigint: { kind: "primitive"; type: bigint; unique: false; nullable: never; derived: false };
+  decimal: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  real: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  smallserial: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  serial: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  bigserial: { kind: "primitive"; type: bigint; unique: false; nullable: never; derived: false };
+  doublePrecision: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
+  nullableText: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  json: { kind: "primitive"; type: Object; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface AuthorStatOpts {

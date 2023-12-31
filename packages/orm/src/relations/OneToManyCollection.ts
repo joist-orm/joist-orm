@@ -1,18 +1,18 @@
-import { isOrWasNew } from "../Entity";
 import { oneToManyDataLoader } from "../dataloaders/oneToManyDataLoader";
 import { oneToManyFindDataLoader } from "../dataloaders/oneToManyFindDataLoader";
+import { isOrWasNew } from "../Entity";
 import {
   Collection,
+  ensureNotDeleted,
   Entity,
   EntityMetadata,
-  IdOf,
-  OneToManyField,
-  OrderBy,
-  ensureNotDeleted,
   getBaseAndSelfMetas,
   getEmInternalApi,
   getMetadata,
+  IdOf,
   maybeResolveReferenceToId,
+  OneToManyField,
+  OrderBy,
   sameEntity,
 } from "../index";
 import { clear, compareValues, maybeAdd, maybeRemove, remove } from "../utils";
@@ -70,9 +70,18 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
     if (this.loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
       const { findPlugin } = getEmInternalApi(this.entity.em);
       findPlugin?.beforeLoad?.(this.meta, this.entity, this);
-
-      this.loaded =
-        this.getPreloaded() ?? (await oneToManyDataLoader(this.entity.em, this).load(this.entity.idTagged!));
+      // If forceReload=true, the `.load` might return a cached array, which one would think is stale
+      // (i.e. it doesn't have our WIP adds & removes applied to it), _but_ because we've been mutating
+      // our `this.loaded`, really `.load` is a noop, and just gives us back the same list we had before.
+      //
+      // ...although if we'd:
+      // a) created an array in the DL cache
+      // b) em.flushed & reset the dataloaders
+      // c) make WIP changes to our existing array
+      // d) called `forceReload: true`
+      // e) we'll ask the dataloader for a new array, and will be missing our WIP changes
+      const dl = oneToManyDataLoader(this.entity.em, this);
+      this.loaded = this.getPreloaded() ?? (await dl.load(this.entity.idTagged!));
       this.maybeAppendAddedBeforeLoaded();
 
       findPlugin?.afterLoad?.(this.meta, this.entity, this);
@@ -210,8 +219,10 @@ export class OneToManyCollection<T extends Entity, U extends Entity>
   removeIfLoaded(other: U) {
     if (this.loaded !== undefined) {
       remove(this.loaded, other);
-    } else if (this.#addedBeforeLoaded) {
-      remove(this.#addedBeforeLoaded, other);
+    } else {
+      this.#removedBeforeLoaded ??= [];
+      maybeRemove(this.#addedBeforeLoaded, other);
+      maybeAdd(this.#removedBeforeLoaded, other);
     }
   }
 

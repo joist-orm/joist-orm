@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -37,11 +38,11 @@ import { Artist, artistMeta, Entity, EntityManager, newArtist, Painting, Paintin
 export type ArtistId = Flavor<string, Artist>;
 
 export interface ArtistFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: false };
-  firstName: { kind: "primitive"; type: string; unique: false; nullable: never };
-  lastName: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  lastName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
 
 export interface ArtistOpts {
@@ -182,7 +183,7 @@ export abstract class ArtistCodegen extends BaseEntity<EntityManager, string> im
   }
 
   get paintings(): Collection<Artist, Painting> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.paintings ??= hasMany(
       this as any as Artist,
       paintingMeta,

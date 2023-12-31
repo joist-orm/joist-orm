@@ -13,6 +13,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasManyToMany,
@@ -74,16 +75,16 @@ import {
 export type PublisherId = Flavor<string, Publisher>;
 
 export interface PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: never };
-  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  latitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  longitude: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  hugeNumber: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   size: { kind: "enum"; type: PublisherSize; nullable: undefined };
   type: { kind: "enum"; type: PublisherType; nullable: never };
-  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined };
+  group: { kind: "m2o"; type: PublisherGroup; nullable: undefined; derived: false };
 }
 
 export interface PublisherOpts {
@@ -329,7 +330,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get authors(): Collection<Publisher, Author> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.authors ??= hasMany(
       this as any as Publisher,
       authorMeta,
@@ -341,7 +342,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get bookAdvances(): Collection<Publisher, BookAdvance> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.bookAdvances ??= hasMany(
       this as any as Publisher,
       bookAdvanceMeta,
@@ -353,7 +354,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get comments(): Collection<Publisher, Comment> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.comments ??= hasMany(
       this as any as Publisher,
       commentMeta,
@@ -365,7 +366,7 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get images(): Collection<Publisher, Image> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.images ??= hasMany(
       this as any as Publisher,
       imageMeta,
@@ -377,12 +378,12 @@ export abstract class PublisherCodegen extends BaseEntity<EntityManager, string>
   }
 
   get group(): ManyToOneReference<Publisher, PublisherGroup, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.group ??= hasOne(this as any as Publisher, publisherGroupMeta, "group", "publishers");
   }
 
   get tags(): Collection<Publisher, Tag> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.tags ??= hasManyToMany(
       this as any as Publisher,
       "publishers_to_tags",

@@ -14,13 +14,13 @@ const details: Record<AdvanceStatus, AdvanceStatusDetails> = {
   [AdvanceStatus.Paid]: { id: 3, code: AdvanceStatus.Paid, name: "Paid" },
 };
 
-export const AdvanceStatusDetails: Record<AdvanceStatus[0], AdvanceStatusDetails> = {
+export const AdvanceStatusDetails = {
   Pending: details[AdvanceStatus.Pending],
   Signed: details[AdvanceStatus.Signed],
   Paid: details[AdvanceStatus.Paid],
 };
 
-export const AdvanceStatuses: EnumMetadata<AdvanceStatus, AdvanceStatusDetails> = {
+export const AdvanceStatuses: EnumMetadata<AdvanceStatus, AdvanceStatusDetails, number> = {
   name: "AdvanceStatus",
 
   getByCode(code: AdvanceStatus): AdvanceStatusDetails {

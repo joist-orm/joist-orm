@@ -282,7 +282,27 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("skips find by foreign key id is undefined", async () => {
+  it("can find by foreign key is true means not null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const where = { publisher: true } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a2" }]);
+  });
+
+  it("can find by foreign key is false means is null", async () => {
+    await insertPublisher({ id: 1, name: "p1" });
+    await insertAuthor({ id: 2, first_name: "a1" });
+    await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
+    const em = newEntityManager();
+    const where = { publisher: false } satisfies AuthorFilter;
+    const authors = await em.find(Author, where);
+    expect(authors).toMatchEntity([{ firstName: "a1" }]);
+  });
+
+  it("can find by foreign key id is undefined is ignored", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });
@@ -341,7 +361,7 @@ describe("EntityManager.queries", () => {
     });
   });
 
-  it("can find by foreign key is not undefined", async () => {
+  it("can find by foreign key is not undefined is ignored", async () => {
     await insertPublisher({ id: 1, name: "p1" });
     await insertAuthor({ id: 2, first_name: "a1" });
     await insertAuthor({ id: 3, first_name: "a2", publisher_id: 1 });

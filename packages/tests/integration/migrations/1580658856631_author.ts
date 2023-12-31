@@ -90,6 +90,8 @@ export function up(b: MigrationBuilder): void {
     favorite_colors: enumArrayColumn("color"),
     // for testing string[] fields
     nick_names: { type: "varchar[]", notNull: false },
+    // for testing derived string[] fields
+    nick_names_upper: { type: "varchar[]", notNull: false },
     // for testing native enum fields
     favorite_shape: { type: "favorite_shape", notNull: false },
     // for testing protected fields
@@ -227,6 +229,9 @@ export function up(b: MigrationBuilder): void {
     password: { type: "varchar(255)", notNull: false },
     // For testing `default: ""` should signal to keep empty strings
     bio: { type: "varchar(255)", notNull: true, default: "" },
+    // For testing polymorphic references to subclasses
+    favorite_publisher_small_id: foreignKey("small_publishers", { notNull: false }),
+    favorite_publisher_large_id: foreignKey("large_publishers", { notNull: false }),
   });
 
   // For testing subclasses with their own rules...

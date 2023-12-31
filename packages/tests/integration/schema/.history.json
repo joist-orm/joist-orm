@@ -5,6 +5,7 @@
     "createdAt",
     "createdComments",
     "email",
+    "favoritePublisher",
     "id",
     "likedComments",
     "name",
@@ -137,7 +138,8 @@
     "size",
     "tags",
     "type",
-    "updatedAt"
+    "updatedAt",
+    "users"
   ],
   "Mutation": [
     "saveAdminUser",
@@ -186,7 +188,7 @@
     "updatedAt"
   ],
   "PublisherGroup": ["createdAt", "critics", "id", "name", "publishers", "updatedAt"],
-  "SaveAdminUserInput": ["authorManyToOneId", "bio", "email", "id", "name", "role"],
+  "SaveAdminUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name", "role"],
   "SaveAdminUserResult": ["adminUser"],
   "SaveAuthorInput": [
     "address",
@@ -314,7 +316,7 @@
   "SaveSmallPublisherResult": ["smallPublisher"],
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
-  "SaveUserInput": ["authorManyToOneId", "bio", "email", "id", "name"],
+  "SaveUserInput": ["authorManyToOneId", "bio", "email", "favoritePublisherId", "id", "name"],
   "SaveUserResult": ["user"],
   "SmallPublisher": [
     "allAuthorNames",
@@ -333,7 +335,8 @@
     "size",
     "tags",
     "type",
-    "updatedAt"
+    "updatedAt",
+    "users"
   ],
   "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"],
   "User": [
@@ -342,9 +345,11 @@
     "createdAt",
     "createdComments",
     "email",
+    "favoritePublisher",
     "id",
     "likedComments",
     "name",
     "updatedAt"
-  ]
+  ],
+  "UserFavoritePublisher": ["LargePublisher", "SmallPublisher"]
 }

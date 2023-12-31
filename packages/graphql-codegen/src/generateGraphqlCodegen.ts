@@ -31,8 +31,11 @@ export function generateGraphqlCodegen(entities: EntityDbMetadata[], enums: Enum
 function sortObject<T extends object>(obj: T): T {
   return Object.keys(obj)
     .sort()
-    .reduce((acc, key) => {
-      acc[key as keyof T] = obj[key as keyof T];
-      return acc;
-    }, {} as any as T) as T;
+    .reduce(
+      (acc, key) => {
+        acc[key as keyof T] = obj[key as keyof T];
+        return acc;
+      },
+      {} as any as T,
+    ) as T;
 }

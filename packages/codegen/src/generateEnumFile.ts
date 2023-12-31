@@ -8,10 +8,11 @@ import { EnumMetadata } from "./symbols";
 export function generateEnumFile(config: Config, enumData: EnumTableData, enumName: string): Code {
   const { rows, extraPrimitives } = enumData;
   const detailsName = `${enumName}Details`;
+  const idType = enumData.idType === "uuid" ? "string" : "number";
 
   // Create the `const fooDetails = code -> literal` mapping
   const detailsDefinition = [
-    "id: number;",
+    `id: ${idType};`,
     `code: ${enumName};`,
     "name: string;",
     ...extraPrimitives.map((primitive) => {
@@ -42,16 +43,17 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
           const extras = extraPrimitives
             .map((p) => `${p.fieldName}: ${JSON.stringify((row as any)[p.columnName])}`)
             .join(", ");
-          return `[${enumName}.${code}]: { id: ${row.id}, code: ${enumName}.${code}, name: '${safeName}', ${extras} }`;
+          const id = enumData.idType === "uuid" ? `"${row.id}"` : row.id;
+          return `[${enumName}.${code}]: { id: ${id}, code: ${enumName}.${code}, name: '${safeName}', ${extras} }`;
         })
         .join(",")}
     };
     
-    export const ${detailsName}: Record<${enumName}[0], ${detailsName}> = {
+    export const ${detailsName} = {
       ${rows.map((row) => `${pascalCase(row.code)}: details[${enumName}.${pascalCase(row.code)}]`).join(",")}
     };
 
-    export const ${pluralize(enumName)}: ${EnumMetadata}<${enumName}, ${detailsName}> = {
+    export const ${pluralize(enumName)}: ${EnumMetadata}<${enumName}, ${detailsName}, ${idType}> = {
       name: "${enumName}",
 
       getByCode(code: ${enumName}): ${detailsName} {
@@ -62,7 +64,7 @@ export function generateEnumFile(config: Config, enumData: EnumTableData, enumNa
         return details[code as ${enumName}];
       },
 
-      findById(id: number): ${detailsName} | undefined {
+      findById(id: ${idType}): ${detailsName} | undefined {
         return Object.values(details).find(d => d.id === id);
       },
 

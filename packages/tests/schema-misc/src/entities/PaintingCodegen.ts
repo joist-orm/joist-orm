@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -47,11 +48,11 @@ import {
 export type PaintingId = Flavor<string, Painting>;
 
 export interface PaintingFields {
-  id: { kind: "primitive"; type: string; unique: true; nullable: false };
-  title: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  artist: { kind: "m2o"; type: Artist; nullable: never };
+  id: { kind: "primitive"; type: string; unique: true; nullable: never };
+  title: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  artist: { kind: "m2o"; type: Artist; nullable: never; derived: false };
 }
 
 export interface PaintingOpts {
@@ -181,7 +182,7 @@ export abstract class PaintingCodegen extends BaseEntity<EntityManager, string> 
   }
 
   get artist(): ManyToOneReference<Painting, Artist, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.artist ??= hasOne(this as any as Painting, artistMeta, "artist", "paintings");
   }
 }

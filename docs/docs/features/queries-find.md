@@ -103,6 +103,9 @@ Inline conditions can be any of the following formats/operators:
   * `{ firstName: ["a1", "a2"] }` becomes `first_name IN ("a1", "a2")`
 * Just the entity itself, i.e. `{ publisher: p1 }`
   * `{ publisher: [p1, p2] }` becomes `publisher_id IN (1, 2)`
+  * `{ publisher: true }` becomes `publisher_id IS NOT NULL`
+  * `{ publisher: false }` becomes `publisher_id IS NULL`
+  * `{ publisher: undefined }` is ignored
 * A variety of operator literals, i.e.
   * `{ eq: "a1" }`
   * `{ ne: "a1" }`
@@ -128,7 +131,7 @@ Inline conditions can be any of the following formats/operators:
 
 :::tip
 
-The `op` format is useful for frontend UIs where the operator is bound to a drop-down, i.e. select ">=" or "<=" or "=" , as then the select field can be down to the single `op` key, instead of adding/removing the `gt`/`lt`/`eq` keys based on the currently-selected operator.
+The `op` format is useful for frontend UIs where the operator is bound to a drop-down, i.e. select `>=` or `<=` or `=`, as then the select field can be down to the single `op` key, instead of adding/removing the `gt`/`lt`/`eq` keys based on the currently-selected operator.
 
 :::
 
@@ -211,7 +214,31 @@ This approach is admittedly contrary to `null` vs. `undefined` behavior in the r
 
 :::
 
+## Incrementally Building Queries
 
+Joist's filters, specifically the `FilterWithAlias` type, can be used to incrementally create/combine queries, in a fashion similar to Rails relations. For example something like:
+
+```ts
+const where: FilterWithAlias<Book> = {};
+if (authorCondition) {
+  where.author = authorCondition
+}
+if (titleCondition) {
+  where.title = titleCondition;
+}
+return await em.find(Book, where);
+```
+
+Often times it can be most ergonomic to use spreading to do this inline:
+
+```
+return await em.find(Book, {
+  author: { ...authorCondition, title },
+  title,
+});
+```
+
+But, in general, the `FilterWithAlias` type allows you to create/pass around snippets of filters.
 
 ## Methods
 

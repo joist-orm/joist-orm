@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   isLoaded,
@@ -46,32 +47,39 @@ import {
   PublisherIdsOpts,
   PublisherOpts,
   PublisherOrder,
+  User,
+  UserId,
+  userMeta,
 } from "./entities";
 
 export type LargePublisherId = Flavor<string, LargePublisher> & Flavor<string, "Publisher">;
 
 export interface LargePublisherFields extends PublisherFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  country: { kind: "primitive"; type: string; unique: false; nullable: undefined };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  country: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
 }
 
 export interface LargePublisherOpts extends PublisherOpts {
   country?: string | null;
   critics?: Critic[];
+  users?: User[];
 }
 
 export interface LargePublisherIdsOpts extends PublisherIdsOpts {
   criticIds?: CriticId[] | null;
+  userIds?: UserId[] | null;
 }
 
 export interface LargePublisherFilter extends PublisherFilter {
   country?: ValueFilter<string, null>;
   critics?: EntityFilter<Critic, CriticId, FilterOf<Critic>, null | undefined>;
+  users?: EntityFilter<User, UserId, FilterOf<User>, null | undefined>;
 }
 
 export interface LargePublisherGraphQLFilter extends PublisherGraphQLFilter {
   country?: ValueGraphQLFilter<string>;
   critics?: EntityGraphQLFilter<Critic, CriticId, GraphQLFilterOf<Critic>, null | undefined>;
+  users?: EntityGraphQLFilter<User, UserId, GraphQLFilterOf<User>, null | undefined>;
 }
 
 export interface LargePublisherOrder extends PublisherOrder {
@@ -162,13 +170,25 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get critics(): Collection<LargePublisher, Critic> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.critics ??= hasMany(
       this as any as LargePublisher,
       criticMeta,
       "critics",
       "favoriteLargePublisher",
       "favorite_large_publisher_id",
+      undefined,
+    );
+  }
+
+  get users(): Collection<LargePublisher, User> {
+    const { relations } = getOrmField(this);
+    return relations.users ??= hasMany(
+      this as any as LargePublisher,
+      userMeta,
+      "users",
+      "favoritePublisher",
+      "favorite_publisher_large_id",
       undefined,
     );
   }

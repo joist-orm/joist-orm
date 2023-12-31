@@ -254,8 +254,8 @@ describe("EntityManager.joins", () => {
     it("partitions a non-sql hint", () => {
       const [a, b] = partitionHint(Author.metadata, { latestComments: {} });
       // We can't preload publisher b/c it's a CTI
-      expect(a).toEqual({ comments: {} });
-      expect(b).toEqual({ latestComments: {}, publisher: { comments: {} } });
+      expect(a).toEqual(undefined);
+      expect(b).toEqual({ latestComments: {} });
     });
 
     it("partitions a derived fk with no subhint", () => {
@@ -273,7 +273,8 @@ describe("EntityManager.joins", () => {
 
     it("partitions inter-mixed a sql-only hint", () => {
       const [a, b] = partitionHint(Author.metadata, { books: { reviews: "isPublic2" } });
-      expect(a).toEqual({ books: { reviews: { comment: {} } } });
+      // We don't preload into `isPublic2` (i.e. the comment) because it's a persisted field
+      expect(a).toEqual({ books: { reviews: {} } });
       expect(b).toEqual({ books: { reviews: { isPublic2: {} } } });
     });
   });

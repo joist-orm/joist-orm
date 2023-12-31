@@ -1,6 +1,7 @@
 import { Entity, isEntity, isOrWasNew } from "../Entity";
 import { IdOf, TaggedId, sameEntity } from "../EntityManager";
 import { PolymorphicFieldComponent, getMetadata } from "../EntityMetadata";
+import { getField, setField } from "../fields";
 import {
   OneToOneReference,
   PolymorphicField,
@@ -10,7 +11,6 @@ import {
   getConstructorFromTaggedId,
   maybeGetConstructorFromReference,
   maybeResolveReferenceToId,
-  setField,
 } from "../index";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId } from "./ManyToOneReference";
@@ -72,7 +72,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
     private fieldName: keyof T & string,
   ) {
     super(entity);
-    this.field = getMetadata(entity).fields[this.fieldName] as PolymorphicField;
+    this.field = getMetadata(entity).allFields[this.fieldName] as PolymorphicField;
     if (isOrWasNew(entity)) {
       this._isLoaded = true;
     }
@@ -253,7 +253,7 @@ export class PolymorphicReferenceImpl<T extends Entity, U extends Entity, N exte
 
   // We need to keep U in data[fieldName] to handle entities without an id assigned yet.
   current(opts?: { withDeleted?: boolean }): U | TaggedId | N {
-    const current = this.entity.__orm.data[this.fieldName];
+    const current = getField(this.entity, this.fieldName);
     if (current !== undefined && isEntity(current)) {
       return this.filterDeleted(current as U, opts);
     }

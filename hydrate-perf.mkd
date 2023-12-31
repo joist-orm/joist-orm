@@ -1,0 +1,114 @@
+
+## Overview
+
+Optimizations during December 2023 to make loading many rows faster.1
+
+* Changed `em.hydrate` to take an array (minimal)
+* Removed `Object.defineProperties` in `BaseEntity` constructor (~20ms)
+* Moved `register` into `hydrate` / simplify `BaseEntity` constructor (~20ms)
+* Lazy `setOnEntity` (~80ms)
+* `#orm` refactor (~15ms)
+
+Dec 2023
+
+## baseline
+
+```
+benchmark        time (avg)             (min … max)       p75       p99      p995
+--------------------------------------------------- -----------------------------
+• loading 50k authors
+--------------------------------------------------- -----------------------------
+postgres.js  158.63 ms/iter (150.98 ms … 172.03 ms) 167.94 ms 172.03 ms 172.03 ms
+knex         144.05 ms/iter (135.93 ms … 154.91 ms) 146.53 ms 154.91 ms 154.91 ms
+em.find      477.67 ms/iter (448.97 ms … 512.83 ms) 494.55 ms 512.83 ms 512.83 ms
+
+summary for loading 50k authors
+  knex
+   1.1x faster than postgres.js
+   3.32x faster than em.find
+```
+
+## em.hydrate takes an array
+
+```
+benchmark      time (avg)             (min … max)       p75       p99      p995
+------------------------------------------------- -----------------------------
+• loading 50k authors
+------------------------------------------------- -----------------------------
+em.find    487.79 ms/iter (457.63 ms … 555.54 ms) 499.14 ms 555.54 ms 555.54 ms
+```
+
+## Remove Object.defineProperties in BaseEntity cstr
+
+```
+benchmark      time (avg)             (min … max)       p75       p99      p995
+------------------------------------------------- -----------------------------
+• loading 50k authors
+------------------------------------------------- -----------------------------
+em.find    459.16 ms/iter (423.97 ms … 498.02 ms)  482.6 ms 498.02 ms 498.02 ms
+```
+
+## Move register into hydrate
+
+```
+benchmark      time (avg)             (min … max)       p75       p99      p995
+------------------------------------------------- -----------------------------
+• loading 50k authors
+------------------------------------------------- -----------------------------
+em.find    440.07 ms/iter (417.21 ms … 479.77 ms) 440.89 ms 479.77 ms 479.77 ms
+```
+
+## Lazy setOnEntity
+
+```
+benchmark        time (avg)             (min … max)       p75       p99      p995
+--------------------------------------------------- -----------------------------
+• loading 50k authors
+--------------------------------------------------- -----------------------------
+em.find     364.1 ms/iter (331.91 ms … 416.25 ms)  379.3 ms 416.25 ms 416.25 ms
+```
+
+## `#orm` refactor
+
+```
+benchmark      time (avg)             (min … max)       p75       p99      p995
+------------------------------------------------- -----------------------------
+• loading 50k authors
+------------------------------------------------- -----------------------------
+em.find    348.38 ms/iter (315.17 ms … 414.92 ms) 361.46 ms 414.92 ms 414.92 ms
+
+• loading 50k books
+------------------------------------------------- -----------------------------
+em.find    184.01 ms/iter  (177.4 ms … 209.01 ms) 184.36 ms 209.01 ms 209.01 ms
+```
+
+## Use the latest `postgres-date`
+
+Improves authors & books by 50ms.
+
+```
+benchmark        time (avg)             (min … max)       p75       p99      p995
+--------------------------------------------------- -----------------------------
+• loading 50k authors
+--------------------------------------------------- -----------------------------
+postgres.js  157.46 ms/iter (148.25 ms … 180.78 ms) 167.12 ms 180.78 ms 180.78 ms
+knex          99.49 ms/iter  (90.93 ms … 123.83 ms) 100.75 ms 123.83 ms 123.83 ms
+em.find       308.2 ms/iter  (272.56 ms … 385.5 ms) 313.18 ms  385.5 ms  385.5 ms
+
+summary for loading 50k authors
+  knex
+   1.58x faster than postgres.js
+   3.1x faster than em.find
+
+• loading 50k books
+--------------------------------------------------- -----------------------------
+postgres.js   68.64 ms/iter  (60.65 ms … 100.78 ms)  70.78 ms 100.78 ms 100.78 ms
+knex          69.55 ms/iter   (65.91 ms … 89.27 ms)  70.12 ms  89.27 ms  89.27 ms
+em.find       131.2 ms/iter (126.33 ms … 158.74 ms) 131.11 ms 158.74 ms 158.74 ms
+
+summary for loading 50k books
+  postgres.js
+   1.01x faster than knex
+   1.91x faster than em.find
+```
+

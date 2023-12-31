@@ -1,6 +1,6 @@
-import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadata, KeySerde, PrimitiveSerde } from "joist-orm";
+import { configureMetadata, Entity as Entity2, EntityManager as EntityManager1, EntityMetadata, EnumFieldSerde, KeySerde, PrimitiveSerde } from "joist-orm";
 import { Context } from "src/context";
-import { Author, authorConfig, Book, bookConfig, newAuthor, newBook } from "./entities";
+import { Author, authorConfig, Book, bookConfig, BookStatuses, newAuthor, newBook } from "./entities";
 
 export class EntityManager extends EntityManager1<Context, Entity> {}
 
@@ -49,6 +49,7 @@ export const bookMeta: EntityMetadata<Book> = {
     "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "status": { kind: "enum", fieldName: "status", fieldIdName: undefined, required: true, enumDetailType: BookStatuses, serde: new EnumFieldSerde("status", "status_id", "uuid", BookStatuses), immutable: false },
     "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "uuid"), immutable: false },
   },
   allFields: {},

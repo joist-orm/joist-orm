@@ -1,3 +1,4 @@
+import { isChangeableField } from "./fields";
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
@@ -52,12 +53,12 @@ export type Reacted<T extends Entity, H> = Entity & {
   [K in keyof NormalizeHint<T, H> & keyof T]: T[K] extends OneToOneReference<any, infer U>
     ? LoadedOneToOneReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
     : T[K] extends Reference<any, infer U, infer N>
-    ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
-    : T[K] extends Collection<any, infer U>
-    ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
-    : T[K] extends AsyncProperty<any, infer V>
-    ? LoadedProperty<any, V>
-    : T[K];
+      ? LoadedReference<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>, N>
+      : T[K] extends Collection<any, infer U>
+        ? LoadedCollection<T, Entity & Reacted<U, NormalizeHint<T, H>[K]>>
+        : T[K] extends AsyncProperty<any, infer V>
+          ? LoadedProperty<any, V>
+          : T[K];
 } & {
   /**
    * Gives reactive rules & fields a way to get the full entity if they really need it.
@@ -208,8 +209,8 @@ export async function followReverseHint(entities: Entity[], reverseHint: string[
         const fieldKind = getMetadata(c).fields[fieldName]?.kind;
         const isReference = fieldKind === "m2o" || fieldKind === "poly";
         const isManyToMany = fieldKind === "m2m";
-        const changed = c.changes[fieldName] as FieldStatus<any>;
-        if (isReference && changed.hasUpdated && changed.originalValue) {
+        const changed = isChangeableField(c, fieldName) ? (c.changes[fieldName] as FieldStatus<any>) : undefined;
+        if (isReference && changed && changed.hasUpdated && changed.originalValue) {
           return [
             currentValuePromise,
             maybeLoadedPoly((changed as ManyToOneFieldStatus<any>).originalEntity, viaPolyType),
@@ -281,7 +282,7 @@ export interface ReactiveTarget {
 async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string | undefined) {
   if (viaPolyType) {
     const loaded: Entity = await loadPromise;
-    return loaded && loaded.__orm.metadata.type === viaPolyType ? loaded : undefined;
+    return loaded && getMetadata(loaded).type === viaPolyType ? loaded : undefined;
   }
   return loadPromise;
 }

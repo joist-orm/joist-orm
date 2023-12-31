@@ -84,8 +84,6 @@ describe("Entity", () => {
         "bookComments": {
           "fieldName": "bookComments",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "comments": "text",
@@ -116,7 +114,6 @@ describe("Entity", () => {
           "undefined": null,
         },
         "latestComment": {
-          "_isLoaded": false,
           "loadPromise": undefined,
           "opts": {
             "get": {},
@@ -139,11 +136,14 @@ describe("Entity", () => {
           "loaded": false,
           "opts": {},
         },
+        "nickNamesUpper": {
+          "fieldName": "nickNamesUpper",
+          "fn": {},
+          "reactiveHint": "nickNames",
+        },
         "numberOfBooks": {
           "fieldName": "numberOfBooks",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": [
             "books",
             "firstName",
@@ -160,8 +160,6 @@ describe("Entity", () => {
         "numberOfPublicReviews": {
           "fieldName": "numberOfPublicReviews",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "reviews": [
@@ -175,8 +173,6 @@ describe("Entity", () => {
         "numberOfPublicReviews2": {
           "fieldName": "numberOfPublicReviews2",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "reviews": [
@@ -188,7 +184,6 @@ describe("Entity", () => {
           },
         },
         "reviewedBooks": {
-          "_isLoaded": false,
           "loadPromise": undefined,
           "opts": {
             "add": {},
@@ -200,7 +195,6 @@ describe("Entity", () => {
           },
         },
         "reviews": {
-          "_isLoaded": false,
           "loadPromise": undefined,
           "opts": {
             "get": {},
@@ -211,8 +205,6 @@ describe("Entity", () => {
         "search": {
           "fieldName": "search",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": "title",
             "firstName": {},
@@ -221,8 +213,6 @@ describe("Entity", () => {
         "tagsOfAllBooks": {
           "fieldName": "tagsOfAllBooks",
           "fn": {},
-          "loadPromise": undefined,
-          "loaded": false,
           "reactiveHint": {
             "books": {
               "tags": "name",

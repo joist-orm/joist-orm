@@ -12,6 +12,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasMany,
   hasOne,
@@ -56,12 +57,12 @@ import {
 export type ChildGroupId = Flavor<string, ChildGroup>;
 
 export interface ChildGroupFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  name: { kind: "primitive"; type: string; unique: false; nullable: undefined };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  childGroupId: { kind: "m2o"; type: Child; nullable: never };
-  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  name: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  childGroupId: { kind: "m2o"; type: Child; nullable: never; derived: false };
+  parentGroup: { kind: "m2o"; type: ParentGroup; nullable: never; derived: false };
 }
 
 export interface ChildGroupOpts {
@@ -200,7 +201,7 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get childItems(): Collection<ChildGroup, ChildItem> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.childItems ??= hasMany(
       this as any as ChildGroup,
       childItemMeta,
@@ -212,12 +213,12 @@ export abstract class ChildGroupCodegen extends BaseEntity<EntityManager, string
   }
 
   get childGroupId(): ManyToOneReference<ChildGroup, Child, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.childGroupId ??= hasOne(this as any as ChildGroup, childMeta, "childGroupId", "groups");
   }
 
   get parentGroup(): ManyToOneReference<ChildGroup, ParentGroup, never> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.parentGroup ??= hasOne(this as any as ChildGroup, parentGroupMeta, "parentGroup", "childGroups");
   }
 }

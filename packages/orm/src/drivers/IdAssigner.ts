@@ -1,5 +1,6 @@
 import * as crypto from "crypto";
 import { Knex } from "knex";
+import { getOrmField } from "../BaseEntity";
 import { Todo } from "../Todo";
 import { keyToTaggedId } from "../keys";
 
@@ -33,7 +34,7 @@ export class SequenceIdAssigner implements IdAssigner {
       Object.values(todos).forEach((todo) => {
         for (const insert of todo.inserts.filter((e) => e.idMaybe === undefined)) {
           // Use todo.metadata so that all subtypes get their base type's tag
-          insert.__orm.data["id"] = keyToTaggedId(todo.metadata, result.rows![i++]["nextval"]);
+          getOrmField(insert).data["id"] = keyToTaggedId(todo.metadata, result.rows![i++]["nextval"]);
         }
       });
     }
@@ -49,7 +50,7 @@ export class RandomUuidAssigner implements IdAssigner {
   async assignNewIds(knex: Knex, todos: Record<string, Todo>): Promise<void> {
     Object.values(todos).forEach((todo) => {
       for (const insert of todo.inserts) {
-        insert.__orm.data["id"] = keyToTaggedId(todo.metadata, crypto.randomUUID());
+        getOrmField(insert).data["id"] = keyToTaggedId(todo.metadata, crypto.randomUUID());
       }
     });
   }
@@ -82,7 +83,7 @@ export class TestUuidAssigner implements IdAssigner {
         for (const insert of todo.inserts) {
           const id = String(this.nextId[tag]++);
           const uuid = `00000000-0000-0000-${tag}-${id.padStart(12, "0")}`;
-          insert.__orm.data["id"] = keyToTaggedId(todo.metadata, uuid);
+          getOrmField(insert).data["id"] = keyToTaggedId(todo.metadata, uuid);
         }
       }
     });

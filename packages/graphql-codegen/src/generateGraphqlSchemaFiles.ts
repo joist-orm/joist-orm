@@ -60,7 +60,7 @@ export async function generateGraphqlSchemaFiles(fs: Fs, entities: EntityDbMetad
   await writeHistory(fs, history);
 }
 
-/** Make all of the fields for `type Author`, `type Book`, etc. */
+/** Make all the fields for `type Author`, `type Book`, etc. */
 function createPolymorphicUnions(entities: EntityDbMetadata[]): GqlUnion[] {
   return entities.flatMap((e) => {
     const file = fileName(e);
@@ -70,7 +70,7 @@ function createPolymorphicUnions(entities: EntityDbMetadata[]): GqlUnion[] {
   });
 }
 
-/** Make all of the fields for `type Author`, `type Book`, etc. */
+/** Make all the fields for `type Author`, `type Book`, etc. */
 function createEntityFields(entities: EntityDbMetadata[]): GqlField[] {
   return entities.flatMap((e) => {
     const file = fileName(e);
@@ -147,7 +147,7 @@ function createSaveMutation(entities: EntityDbMetadata[]): GqlField[] {
   });
 }
 
-/** Make all of the fields for `type SaveAuthorInput`, `type SaveBookBook`, etc. */
+/** Make all the fields for `type SaveAuthorInput`, `type SaveBookBook`, etc. */
 function createSaveEntityInputFields(entities: EntityDbMetadata[]): GqlField[] {
   return entities.flatMap((e) => {
     const file = fileName(e);

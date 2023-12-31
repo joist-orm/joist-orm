@@ -1,3 +1,108 @@
+# [1.138.0](https://github.com/stephenh/joist-ts/compare/v1.137.0...v1.138.0) (2023-12-29)
+
+
+### Features
+
+* support baseClass polymorphics ([#919](https://github.com/stephenh/joist-ts/issues/919)) ([424976f](https://github.com/stephenh/joist-ts/commit/424976fd76363ef61f7572da8eca3ee66ac81063))
+
+# [1.137.0](https://github.com/stephenh/joist-ts/compare/v1.136.0...v1.137.0) (2023-12-27)
+
+
+### Features
+
+* Use the latest pg-types for a timestamp perf fix. ([#921](https://github.com/stephenh/joist-ts/issues/921)) ([51cff3d](https://github.com/stephenh/joist-ts/commit/51cff3dfd8745770b144312434ac675d51966550))
+
+# [1.136.0](https://github.com/stephenh/joist-ts/compare/v1.135.0...v1.136.0) (2023-12-26)
+
+
+### Features
+
+* Optimize em.hydrate performance ([#920](https://github.com/stephenh/joist-ts/issues/920)) ([1efd026](https://github.com/stephenh/joist-ts/commit/1efd026208e01775b8d732b37d0f0b0acb433be0))
+
+# [1.135.0](https://github.com/stephenh/joist-ts/compare/v1.134.2...v1.135.0) (2023-12-20)
+
+
+### Features
+
+* Add AllEnumDetails to graphql codegen ([#918](https://github.com/stephenh/joist-ts/issues/918)) ([0c342da](https://github.com/stephenh/joist-ts/commit/0c342dad37a38dbcd426d9dda4416d5e89e3831b))
+
+## [1.134.2](https://github.com/stephenh/joist-ts/compare/v1.134.1...v1.134.2) (2023-12-17)
+
+
+### Bug Fixes
+
+* Remove hardcoded db type for enums. ([#917](https://github.com/stephenh/joist-ts/issues/917)) ([1f63bc0](https://github.com/stephenh/joist-ts/commit/1f63bc0146deb985a62ba5fb936f6d5bc315b2e3))
+
+## [1.134.1](https://github.com/stephenh/joist-ts/compare/v1.134.0...v1.134.1) (2023-12-16)
+
+
+### Bug Fixes
+
+* Fix enum defaults. ([#916](https://github.com/stephenh/joist-ts/issues/916)) ([6a5dfd1](https://github.com/stephenh/joist-ts/commit/6a5dfd1e71e89a8b775893fb2844d2d52774d75d))
+
+# [1.134.0](https://github.com/stephenh/joist-ts/compare/v1.133.0...v1.134.0) (2023-12-16)
+
+
+### Features
+
+* Support uuid-based enum tables. ([#914](https://github.com/stephenh/joist-ts/issues/914)) ([769a488](https://github.com/stephenh/joist-ts/commit/769a488a63250accbe69730b580086a2d5cd62f5))
+
+# [1.133.0](https://github.com/stephenh/joist-ts/compare/v1.132.0...v1.133.0) (2023-12-16)
+
+
+### Features
+
+* Add config.setDefault API ([#913](https://github.com/stephenh/joist-ts/issues/913)) ([d68e753](https://github.com/stephenh/joist-ts/commit/d68e753ba39de25fed293234f13de25e5f3e385f))
+
+# [1.132.0](https://github.com/stephenh/joist-ts/compare/v1.131.1...v1.132.0) (2023-12-12)
+
+
+### Features
+
+* Really check if relations are loaded for CustomCollection and CustomReference ([#911](https://github.com/stephenh/joist-ts/issues/911)) ([55b3a6b](https://github.com/stephenh/joist-ts/commit/55b3a6b7d2d987d356c9bddd528316400dd8387d))
+
+## [1.131.1](https://github.com/stephenh/joist-ts/compare/v1.131.0...v1.131.1) (2023-12-09)
+
+
+### Bug Fixes
+
+* Array columns were not deeply dirty checked. ([#907](https://github.com/stephenh/joist-ts/issues/907)) ([f684b83](https://github.com/stephenh/joist-ts/commit/f684b83b72c455edccc2fb5ec3fd3b32250030f5))
+
+# [1.131.0](https://github.com/stephenh/joist-ts/compare/v1.130.0...v1.131.0) (2023-12-08)
+
+
+### Features
+
+* Add getField. ([#906](https://github.com/stephenh/joist-ts/issues/906)) ([9e80f2b](https://github.com/stephenh/joist-ts/commit/9e80f2b336210d4ff22e8bccf1195444424f6fe8))
+
+# [1.130.0](https://github.com/stephenh/joist-ts/compare/v1.129.5...v1.130.0) (2023-12-08)
+
+
+### Features
+
+* Allow filtering on foreign key is boolean. ([#905](https://github.com/stephenh/joist-ts/issues/905)) ([766bf53](https://github.com/stephenh/joist-ts/commit/766bf535386ee7585bacff97e6322d2d65faa633))
+
+## [1.129.5](https://github.com/stephenh/joist-ts/compare/v1.129.4...v1.129.5) (2023-11-30)
+
+
+### Bug Fixes
+
+* fixed ordering of beforeDelete and cleanupOnEntityDeleted so relations will always remain until all beforeDeletes are called ([#902](https://github.com/stephenh/joist-ts/issues/902)) ([19f85d2](https://github.com/stephenh/joist-ts/commit/19f85d25619e1bde3f845afef5b205ee24447ddc))
+
+## [1.129.4](https://github.com/stephenh/joist-ts/compare/v1.129.3...v1.129.4) (2023-11-30)
+
+
+### Bug Fixes
+
+* Fix reactions recalculating after graph mutations. ([#900](https://github.com/stephenh/joist-ts/issues/900)) ([1f62cbf](https://github.com/stephenh/joist-ts/commit/1f62cbfd9aa32cd2e593c74190f14d66a1d2f087))
+
+## [1.129.3](https://github.com/stephenh/joist-ts/compare/v1.129.2...v1.129.3) (2023-11-28)
+
+
+### Bug Fixes
+
+* Fix findOrCreate with unloaded & unset m2o references. ([#899](https://github.com/stephenh/joist-ts/issues/899)) ([0a64ae5](https://github.com/stephenh/joist-ts/commit/0a64ae5bac6a17bba5d27e1c0b12ee8fda36a963))
+
 ## [1.129.2](https://github.com/stephenh/joist-ts/compare/v1.129.1...v1.129.2) (2023-11-24)
 
 

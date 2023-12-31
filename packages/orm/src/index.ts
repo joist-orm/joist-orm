@@ -1,12 +1,7 @@
-import { Entity, EntityOrmField, isEntity } from "./Entity";
-import {
-  EntityConstructor,
-  EntityManager,
-  MaybeAbstractEntityConstructor,
-  OptsOf,
-  TaggedId,
-  getEmInternalApi,
-} from "./EntityManager";
+import { getOrmField } from "./BaseEntity";
+import { setSyncDefaults } from "./defaults";
+import { Entity, EntityOrmField } from "./Entity";
+import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
@@ -22,62 +17,64 @@ export const testing = { isAllSqlPaths };
 export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
-export { BaseEntity } from "./BaseEntity";
+export { BaseEntity, getOrmField } from "./BaseEntity";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
 export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
+export * from "./EntityFields";
 export * from "./EntityFilter";
 export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
-export { EntityOrId, HintNode } from "./HintTree";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
+export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
+export { EntityOrId, HintNode } from "./HintTree";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
+  assertLoaded,
   AsyncMethodsIn,
   DeepNew,
-  LoadHint,
-  Loadable,
-  Loaded,
-  MarkLoaded,
-  NestedLoadHint,
-  New,
-  RelationsIn,
-  assertLoaded,
   ensureLoaded,
   isLoaded,
   isNew,
+  Loadable,
+  Loaded,
+  LoadHint,
+  MarkLoaded,
   maybePopulateThen,
+  NestedLoadHint,
+  New,
+  RelationsIn,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { FindPlugin } from "./plugins/FindPlugin";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export * from "./relations/hasAsyncMethod";
 export {
-  GenericError,
-  ValidationError,
-  ValidationErrors,
-  ValidationRule,
-  ValidationRuleResult,
   cannotBeUpdated,
+  GenericError,
   maxValueRule,
   minValueRule,
   newRequiredRule,
   rangeValueRule,
+  ValidationError,
+  ValidationErrors,
+  ValidationRule,
+  ValidationRuleResult,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
+export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -85,65 +82,6 @@ interface Flavoring<FlavorT> {
 }
 
 export type Flavor<T, FlavorT> = T & Flavoring<FlavorT>;
-
-/**
- * Returns the current value of `fieldName`, this is an internal method that should
- * only be called by the code-generated getters.
- *
- * We skip any typing like `fieldName: keyof T` because this method should only be
- * called by trusted codegen anyway.
- */
-export function getField(entity: Entity, fieldName: string): any {
-  const { findPlugin } = getEmInternalApi(entity.em);
-  findPlugin?.beforeGetField?.(entity, fieldName);
-
-  return entity.__orm.data[fieldName];
-}
-
-/**
- * Sets the current value of `fieldName`, this is an internal method that should
- * only be called by the code-generated setters.
- *
- * We skip any typing like `fieldName: keyof T` because this method should only be
- * called by trusted codegen anyway.
- *
- * Returns `true` if the value was changed, or `false` if it was a noop.
- */
-export function setField(entity: Entity, fieldName: string, newValue: any): boolean {
-  ensureNotDeleted(entity, "pending");
-  const { em } = entity;
-
-  getEmInternalApi(em).checkWritesAllowed();
-
-  const { findPlugin } = getEmInternalApi(em);
-  findPlugin?.beforeSetField?.(entity, fieldName, newValue);
-
-  const { data, originalData } = entity.__orm;
-
-  // "Un-dirty" our originalData if newValue is reverting to originalData
-  if (fieldName in originalData) {
-    if (equalOrSameEntity(originalData[fieldName], newValue)) {
-      data[fieldName] = newValue;
-      delete originalData[fieldName];
-      getEmInternalApi(em).rm.dequeueDownstreamReactiveFields(entity, fieldName);
-      return true;
-    }
-  }
-
-  // Push this logic into a field serde type abstraction?
-  const currentValue = data[fieldName];
-  if (equalOrSameEntity(currentValue, newValue)) {
-    return false;
-  }
-
-  // Only save the currentValue on the 1st change of this field
-  if (!(fieldName in originalData)) {
-    originalData[fieldName] = currentValue;
-  }
-  getEmInternalApi(em).rm.queueDownstreamReactiveFields(entity, fieldName);
-  data[fieldName] = newValue;
-  return true;
-}
 
 /**
  * Sets each value in `values` on the current entity.
@@ -164,96 +102,103 @@ export function setOpts<T extends Entity>(
   values: Partial<OptsOf<T>> | string | undefined,
   opts?: { calledFromConstructor?: boolean; partial?: boolean },
 ): void {
-  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row, so skip all this,
-  // because `hydrate` manually calls `serde.setOnEntity`.
-  // If `values` is undefined, we're being called by `createPartial` that will do its own opt handling.
-  if (values === undefined || typeof values === "string") {
-    return;
-  }
   const { calledFromConstructor, partial } = opts || {};
-  const meta = getMetadata(entity);
 
-  Object.entries(values as {}).forEach(([key, _value]) => {
-    const field = meta.allFields[key];
-    if (!field) {
-      // Allow setting non-field properties like fullName setters
-      const prop = getProperties(meta)[key];
-      if (!prop) {
-        throw new Error(`Unknown field ${key}`);
+  // If `values` is a string (i.e. the id), this instance is being hydrated from a database row,
+  // so skip all this, because `hydrate` manually calls `serde.setOnEntity`.
+  if (typeof values === "string") return;
+
+  // If `values` is undefined, we're being called by `createPartial` that will do its
+  // own opt handling, but we still want the sync defaults applied after this opts handling.
+  if (values !== undefined) {
+    const meta = getMetadata(entity);
+    Object.entries(values as {}).forEach(([key, _value]) => {
+      const field = meta.allFields[key];
+      if (!field) {
+        // Allow setting non-field properties like fullName setters
+        const prop = getProperties(meta)[key];
+        if (!prop) {
+          throw new Error(`Unknown field ${key}`);
+        }
       }
-    }
 
-    // If ignoreUndefined is set, we treat undefined as a noop
-    if (partial && _value === undefined) {
-      return;
-    }
-    // We let optional opts fields be `| null` for convenience, and convert to undefined.
-    const value = _value === null ? undefined : _value;
-    const current = (entity as any)[key];
-    if (current instanceof AbstractRelationImpl) {
-      if (calledFromConstructor) {
-        current.setFromOpts(value);
-      } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
-        const values = value as any[];
+      // If ignoreUndefined is set, we treat undefined as a noop
+      if (partial && _value === undefined) {
+        return;
+      }
+      // We let optional opts fields be `| null` for convenience, and convert to undefined.
+      const value = _value === null ? undefined : _value;
+      const current = (entity as any)[key];
+      if (current instanceof AbstractRelationImpl) {
+        if (calledFromConstructor) {
+          current.setFromOpts(value);
+        } else if (partial && (field.kind === "o2m" || field.kind === "m2m")) {
+          const values = value as any[];
 
-        // For setPartial collections, we used to individually add/remove instead of set, but this
-        // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
-        // you'd still have `[a]` around. Note that we still support `delete: true` command to go
-        // further than "remove from collection" to "actually delete the entity".
-        const allowDelete = !field.otherMetadata().fields["delete"];
-        const allowRemove = !field.otherMetadata().fields["remove"];
+          // For setPartial collections, we used to individually add/remove instead of set, but this
+          // incremental behavior was unintuitive for mutations, i.e. `parent.children = [b, c]` and
+          // you'd still have `[a]` around. Note that we still support `delete: true` command to go
+          // further than "remove from collection" to "actually delete the entity".
+          const allowDelete = !field.otherMetadata().fields["delete"];
+          const allowRemove = !field.otherMetadata().fields["remove"];
 
-        // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
-        // When passed in, all values must have it, and we kick into incremental mode, i.e. we
-        // individually add/remove/delete entities.
-        //
-        // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
-        const allowOp = !field.otherMetadata().fields["op"];
-        const anyValueHasOp = allowOp && values.some((v) => !!v.op);
-        if (anyValueHasOp) {
-          const anyValueMissingOp = values.some((v) => !v.op);
-          if (anyValueMissingOp) {
-            throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+          // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
+          // When passed in, all values must have it, and we kick into incremental mode, i.e. we
+          // individually add/remove/delete entities.
+          //
+          // The old `delete: true / remove: true` behavior is deprecated, and should eventually blow up.
+          const allowOp = !field.otherMetadata().fields["op"];
+          const anyValueHasOp = allowOp && values.some((v) => !!v.op);
+          if (anyValueHasOp) {
+            const anyValueMissingOp = values.some((v) => !v.op);
+            if (anyValueMissingOp) {
+              throw new Error("If any child sets the `op` key, then all children must have the `op` key.");
+            }
+            values.forEach((v) => {
+              if (v.op === "delete") {
+                entity.em.delete(v);
+              } else if (v.op === "remove") {
+                (current as any).remove(v);
+              } else if (v.op === "include") {
+                (current as any).add(v);
+              } else if (v.op === "incremental") {
+                // This is a marker entry to opt-in to incremental behavior, just drop it
+              }
+            });
+            return; // return from the op-based incremental behavior
           }
-          values.forEach((v) => {
-            if (v.op === "delete") {
-              entity.em.delete(v);
-            } else if (v.op === "remove") {
-              (current as any).remove(v);
-            } else if (v.op === "include") {
-              (current as any).add(v);
-            } else if (v.op === "incremental") {
-              // This is a marker entry to opt-in to incremental behavior, just drop it
+
+          const toSet: any[] = [];
+          values.forEach((e) => {
+            if (allowDelete && e.delete === true) {
+              // Delete the entity, but still include it in `toSet` so that `a1.books.getWithDeleted` will still see it.
+              entity.em.delete(e);
+              toSet.push(e);
+            } else if (allowRemove && e.remove === true) {
+              // Just leave out of `toSet`
+            } else {
+              toSet.push(e);
             }
           });
-          return; // return from the op-based incremental behavior
+
+          current.set(toSet);
+        } else {
+          current.set(value);
         }
-
-        const toSet: any[] = [];
-        values.forEach((e) => {
-          if (allowDelete && e.delete === true) {
-            // Delete the entity, but still include it in `toSet` so that `a1.books.getWithDeleted` will still see it.
-            entity.em.delete(e);
-            toSet.push(e);
-          } else if (allowRemove && e.remove === true) {
-            // Just leave out of `toSet`
-          } else {
-            toSet.push(e);
-          }
-        });
-
-        current.set(toSet);
       } else {
-        current.set(value);
+        (entity as any)[key] = value;
       }
-    } else {
-      (entity as any)[key] = value;
-    }
-  });
+    });
+  }
+
+  // Apply any synchronous defaults, after the opts have been applied
+  if (!(entity.em as any).fakeInstance) {
+    setSyncDefaults(entity);
+  }
 }
 
 export function ensureNotDeleted(entity: Entity, ignore?: EntityOrmField["deleted"]): void {
-  if (entity.isDeletedEntity && (ignore === undefined || entity.__orm.deleted !== ignore)) {
+  if (entity.isDeletedEntity && (ignore === undefined || getOrmField(entity).deleted !== ignore)) {
     fail(`${entity} is marked as deleted`);
   }
 }
@@ -406,19 +351,6 @@ export function maybeGetConstructorFromReference(
 ): MaybeAbstractEntityConstructor<any> | undefined {
   const id = maybeResolveReferenceToId(value);
   return id ? getConstructorFromTaggedId(id) : undefined;
-}
-
-function equalOrSameEntity(a: any, b: any): boolean {
-  return (
-    equal(a, b) ||
-    // This is kind of gross, but make sure not to compare two both-new entities
-    (((isEntity(a) && !a.isNewEntity) || (isEntity(b) && !b.isNewEntity)) &&
-      maybeResolveReferenceToId(a) === maybeResolveReferenceToId(b))
-  );
-}
-
-function equal(a: any, b: any): boolean {
-  return a === b || (a instanceof Date && b instanceof Date && a.getTime() == b.getTime());
 }
 
 /** Casts a "maybe abstract" cstr to a concrete cstr when the calling code knows it's safe. */

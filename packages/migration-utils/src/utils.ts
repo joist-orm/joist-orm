@@ -171,8 +171,23 @@ export function enumArrayColumn(enumTable: string, opts?: Pick<ColumnDefinition,
 }
 
 type ManyToManyColumn = {
+  /** The target table for this m2m table, i.e. for a `books_to_tags`, this might be `books`. */
   table: string;
+  /** The column name within the m2m table, i.e. for a `books_to_tags`, this might be `book_id`. */
   column?: string;
+  /**
+   * The name of the collection that *points to* these rows, i.e. for `books_to_tags` and the `book_id`
+   * column, this might be `taggedBooks`, i.e. the name of the collection within `Tag` that loads these
+   * books.
+   *
+   * For self-referential m2m tables, i.e. `author_to_mentors` m2m table, these names can be confusing, i.e.
+   * an `author_to_mentors.author_id` with a `collectionName=mentors` does not mean "my mentors are all rows
+   * where author_id=me", it means "the author_id entities are members of the `mentors` collection of other
+   * authors".
+   *
+   * Granted, using `mentor_id` / `mentee_id` columns names is the best approach here, but in general it
+   * can get confusing if you don't have obvious noun names for each column.
+   */
   collectionName?: string;
 };
 
@@ -185,6 +200,7 @@ function maybeTableOrColumn(maybeTableOrColumn: string | ManyToManyColumn): [str
   }
 }
 
+/** Creates a many-to-many table between `table1` and `table2` with our conventions. */
 export function createManyToManyTable(
   b: MigrationBuilder,
   tableName: string,

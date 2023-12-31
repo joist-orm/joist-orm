@@ -1,4 +1,5 @@
 import { Entity, EntityManager, isEntity } from "joist-orm";
+import { fail } from "joist-utils";
 import { Context } from "./context";
 
 type MaybePromise<T> = T | Promise<T>;
@@ -73,7 +74,16 @@ function gatherEntities(result: any): Entity[] {
 async function mapResultToOriginalEm<R>(em: EntityManager, result: R): Promise<R> {
   const newEmEntities = gatherEntities(result);
   // load any entities that don't exist in the original em
-  await Promise.all(newEmEntities.filter((e) => !em.findExistingInstance(e.idTagged)).map((e) => em.load(e.idTagged)));
+  await Promise.all(
+    newEmEntities
+      .filter(
+        (e) =>
+          !em.findExistingInstance(
+            e.idTaggedMaybe ?? fail("Joist 'run' returned an unsaved entity; are you missing an em.flush?"),
+          ),
+      )
+      .map((e) => em.load(e.idTagged)),
+  );
   // generate a cache of id -> entity in original em
   const cache = Object.fromEntries(newEmEntities.map((e) => [e.id, em.findExistingInstance(e.idTagged) as Entity]));
   function doMap(value: any): any {

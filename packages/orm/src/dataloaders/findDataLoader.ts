@@ -65,7 +65,7 @@ export function findDataLoader<T extends Entity>(
         const preloadHydrator = preloader && hint && preloader.addPreloading(em, meta, buildHintTree(hint), query);
         const rows = await em.driver.executeFind(em, query, opts);
         ensureUnderLimit(em, rows);
-        const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
+        const entities = em.hydrate(type, rows, { overwriteExisting: false });
         findCallback?.(entities);
         preloadHydrator?.(rows, entities);
         return [entities];
@@ -145,7 +145,7 @@ export function findDataLoader<T extends Entity>(
       const rows = await em.driver.executeQuery(em, cleanSql(sql), bindings);
       ensureUnderLimit(em, rows);
 
-      const entities = rows.map((row) => em.hydrate(type, row, { overwriteExisting: false }));
+      const entities = em.hydrate(type, rows, { overwriteExisting: false });
       preloadJoins?.forEach((j) => j.hydrator(rows, entities));
 
       findCallback?.(entities);

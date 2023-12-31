@@ -11,6 +11,7 @@ import {
   FilterOf,
   Flavor,
   getField,
+  getOrmField,
   GraphQLFilterOf,
   hasOne,
   isLoaded,
@@ -58,14 +59,14 @@ import {
 export type ImageId = Flavor<string, Image>;
 
 export interface ImageFields {
-  id: { kind: "primitive"; type: number; unique: true; nullable: false };
-  fileName: { kind: "primitive"; type: string; unique: false; nullable: never };
-  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
-  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never };
+  id: { kind: "primitive"; type: number; unique: true; nullable: never };
+  fileName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
+  createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
+  updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   type: { kind: "enum"; type: ImageType; nullable: never };
-  author: { kind: "m2o"; type: Author; nullable: undefined };
-  book: { kind: "m2o"; type: Book; nullable: undefined };
-  publisher: { kind: "m2o"; type: Publisher; nullable: undefined };
+  author: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
+  book: { kind: "m2o"; type: Book; nullable: undefined; derived: false };
+  publisher: { kind: "m2o"; type: Publisher; nullable: undefined; derived: false };
 }
 
 export interface ImageOpts {
@@ -233,17 +234,17 @@ export abstract class ImageCodegen extends BaseEntity<EntityManager, string> imp
   }
 
   get author(): ManyToOneReference<Image, Author, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.author ??= hasOne(this as any as Image, authorMeta, "author", "image");
   }
 
   get book(): ManyToOneReference<Image, Book, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.book ??= hasOne(this as any as Image, bookMeta, "book", "image");
   }
 
   get publisher(): ManyToOneReference<Image, Publisher, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.publisher ??= hasOne(this as any as Image, publisherMeta, "publisher", "images");
   }
 }

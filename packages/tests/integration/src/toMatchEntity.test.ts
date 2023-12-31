@@ -1,8 +1,7 @@
 import { alignedAnsiStyleSerializer } from "@src/alignedAnsiStyleSerializer";
 import { Author, Book, newAuthor, newBook } from "@src/entities";
-import { jan1 } from "joist-orm";
-
 import { newEntityManager } from "@src/testEm";
+import { getOrmField, jan1 } from "joist-orm";
 
 expect.addSnapshotSerializer(alignedAnsiStyleSerializer as any);
 
@@ -340,7 +339,7 @@ describe("toMatchEntity", () => {
     await em.flush();
     // This test assumes that no Author rules loaded `comments` during
     // flush, and so this is the 1st time comments is being accessed
-    expect(Object.keys(a1.__orm.relations)).toEqual(["books", "publisher", "mentor"]);
+    expect(Object.keys(getOrmField(a1).relations)).toEqual(["books", "publisher", "mentor"]);
     expect(a1).toMatchEntity({ comments: [] });
   });
 

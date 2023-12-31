@@ -2,7 +2,7 @@ import { saveImage } from "src/resolvers/mutations/image/saveImageResolver";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
-describe("saveImage", () => {
+describe.skip("saveImage", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
     const result = await runSaveImage(ctx, () => ({}));

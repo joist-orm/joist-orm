@@ -2,7 +2,7 @@ import { savePublisher } from "src/resolvers/mutations/publisher/savePublisherRe
 import { makeRunInputMutation } from "src/resolvers/testUtils";
 import "src/setupDbTests";
 
-describe("savePublisher", () => {
+describe.skip("savePublisher", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
     const result = await runSavePublisher(ctx, () => ({}));

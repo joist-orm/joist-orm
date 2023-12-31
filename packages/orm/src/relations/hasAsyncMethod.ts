@@ -1,5 +1,5 @@
+import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
-import { currentlyInstantiatingEntity } from "../EntityManager";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
 import { tryResolve } from "../utils";
 

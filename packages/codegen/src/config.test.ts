@@ -49,7 +49,7 @@ describe("config", () => {
           "shouldNotIgnore",
           true,
         ),
-      ).rejects.toThrowError(
+      ).rejects.toThrow(
         "notNull field Author.shouldNotIgnore cannot be ignored. Alter the column to be optional or have a default value prior to ignoring it.",
       );
     });

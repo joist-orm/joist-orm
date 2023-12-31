@@ -37,8 +37,8 @@ export type Lens<T, R = T> = {
   [P in keyof T]: T[P] extends LoadLike<infer U>
     ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
     : T[P] extends PromiseFnLike<infer U>
-    ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
-    : Lens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
+      ? Lens<MaybeDropArray<DropUndefined<U>>, MaybeArray<R, U>>
+      : Lens<MaybeDropArray<DropUndefined<T[P]>>, MaybeArray<R, T[P]>>;
 };
 
 /**

@@ -1,5 +1,5 @@
-import { cannotBeUpdated, Collection, CustomCollection, getEm, Loaded } from "joist-orm";
-import { publisherConfig as config, Image, ImageType, ImageTypes, PublisherCodegen } from "./entities";
+import { cannotBeUpdated, Collection, CustomCollection, getEm, isLoaded, Loaded } from "joist-orm";
+import { publisherConfig as config, Image, ImageType, ImageTypes, PublisherCodegen, PublisherType } from "./entities";
 
 const allImagesHint = { images: [], authors: { image: [], books: "image" } } as const;
 
@@ -36,8 +36,12 @@ export abstract class Publisher extends PublisherCodegen {
         getEm(entity).delete(value);
       }
     },
+    isLoaded: () => isLoaded(this, allImagesHint as any),
   });
 }
+
+/** Test the types for an enum default value (even though it is already matched by the db defaultValues). */
+config.setDefault("type", () => PublisherType.Big);
 
 // Example of a rule against a base type
 config.addRule(cannotBeUpdated("type"));

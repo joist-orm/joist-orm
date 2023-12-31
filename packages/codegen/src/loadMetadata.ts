@@ -7,6 +7,7 @@ import { isEnumTable } from "./utils";
 /** A map from Enum table name to the rows currently in the table. */
 export type EnumTableData = {
   table: Table;
+  idType: "integer" | "uuid";
   // Pascal case version of table name
   name: string;
   rows: EnumRow[];
@@ -37,11 +38,12 @@ export async function loadEnumMetadata(db: Db, client: Client, config: Config): 
         table.name,
         {
           table,
+          idType: table.columns.get("id")!.type.name === "uuid" ? "uuid" : "integer",
           name: pascalCase(table.name), // use tableToEntityName?
           rows,
           extraPrimitives,
         },
-      ] as [string, EnumTableData];
+      ] satisfies [string, EnumTableData];
     });
   return Object.fromEntries(await Promise.all(promises));
 }

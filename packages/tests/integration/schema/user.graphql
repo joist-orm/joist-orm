@@ -12,6 +12,7 @@ type User {
   createdComments: [Comment!]!
   likedComments: [Comment!]!
   bio: String!
+  favoritePublisher: UserFavoritePublisher
 }
 
 input SaveUserInput {
@@ -20,8 +21,11 @@ input SaveUserInput {
   email: String
   authorManyToOneId: ID
   bio: String
+  favoritePublisherId: ID
 }
 
 type SaveUserResult {
   user: User!
 }
+
+union UserFavoritePublisher = LargePublisher | SmallPublisher

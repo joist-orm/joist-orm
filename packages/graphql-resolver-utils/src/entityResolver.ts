@@ -46,20 +46,20 @@ export type EntityResolver<T extends Entity> = {
   [P in keyof T]: P extends "id"
     ? Resolver<T, Record<string, any>, IdOf<T>>
     : T[P] extends GraphQLPrimitive | GraphQLPrimitive[]
-    ? Resolver<T, Record<string, any>, T[P]>
-    : T[P] extends Collection<T, infer U>
-    ? Resolver<T, Record<string, any>, U[]>
-    : T[P] extends Reference<T, infer U, infer N>
-    ? Resolver<T, Record<string, any>, U>
-    : T[P] extends AsyncProperty<T, infer V>
-    ? Resolver<T, Record<string, any>, V>
-    : T[P] extends Promise<infer V>
-    ? Resolver<T, Record<string, any>, V>
-    : T[P] extends () => Promise<infer V>
-    ? Resolver<T, Record<string, any>, V>
-    : T[P] extends () => infer V
-    ? Resolver<T, Record<string, any>, V>
-    : Resolver<T, Record<string, any>, T[P]>;
+      ? Resolver<T, Record<string, any>, T[P]>
+      : T[P] extends Collection<T, infer U>
+        ? Resolver<T, Record<string, any>, U[]>
+        : T[P] extends Reference<T, infer U, infer N>
+          ? Resolver<T, Record<string, any>, U>
+          : T[P] extends AsyncProperty<T, infer V>
+            ? Resolver<T, Record<string, any>, V>
+            : T[P] extends Promise<infer V>
+              ? Resolver<T, Record<string, any>, V>
+              : T[P] extends () => Promise<infer V>
+                ? Resolver<T, Record<string, any>, V>
+                : T[P] extends () => infer V
+                  ? Resolver<T, Record<string, any>, V>
+                  : Resolver<T, Record<string, any>, T[P]>;
 };
 
 /**

@@ -1,7 +1,8 @@
-import { deTagId, ensureNotDeleted, getEmInternalApi, IdOf, LoadedReference, setField, TaggedId } from "../";
+import { deTagId, ensureNotDeleted, getEmInternalApi, IdOf, LoadedReference, TaggedId } from "../";
 import { oneToOneDataLoader } from "../dataloaders/oneToOneDataLoader";
 import { Entity, isOrWasNew } from "../Entity";
 import { EntityMetadata, getMetadata } from "../EntityMetadata";
+import { setField } from "../fields";
 import { AbstractRelationImpl } from "./AbstractRelationImpl";
 import { failIfNewEntity, failNoId, ManyToOneReference } from "./ManyToOneReference";
 import { Reference, ReferenceN } from "./Reference";

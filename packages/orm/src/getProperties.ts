@@ -1,10 +1,7 @@
+import { getOrmField } from "./BaseEntity";
 import { Entity } from "./Entity";
-import * as EM from "./EntityManager";
 import { EntityMetadata } from "./EntityMetadata";
 import { asConcreteCstr } from "./index";
-
-// Hack to make currentlyInstantiatingEntity assignable
-const em = EM;
 
 /**
  * Returns the relations in `meta`, both those defined in the codegen file + any user-defined `CustomReference`s.
@@ -67,10 +64,10 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
   return (fakeInstances[meta.cstr.name] ??= new (asConcreteCstr(meta.cstr))(
     {
       __api: {},
-      register: (metadata: any, entity: any) => {
-        em.currentlyInstantiatingEntity = entity;
-        entity.__orm.metadata = meta;
-        entity.__orm.data = {};
+      register: (entity: any) => {
+        const orm = getOrmField(entity);
+        (orm as any).metadata = meta;
+        orm.data = {};
       },
       // Tell our "cannot instantiate an abstract class" constructor logic check to chill
       fakeInstance: true,

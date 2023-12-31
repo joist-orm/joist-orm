@@ -14,6 +14,8 @@ import {
 } from "joist-tests-integration";
 import { RebacAuthPlugin } from "./RebacAuthPlugin";
 import { AuthRule, parseAuthRule } from "./authRule";
+// Import to get `toMatchEntity` in scope
+import "joist-test-utils";
 
 const um = getMetadata(User);
 const r = "r";

@@ -138,6 +138,10 @@ export function insertAuthorToTag(row: { id?: number; author_id: number; tag_id:
   return testDriver.insert("authors_to_tags", row);
 }
 
+export function insertUserLikedComment(row: { id?: number; liked_by_user_id: number; comment_id: number }) {
+  return testDriver.insert("users_to_comments", row);
+}
+
 export function insertBookReview(row: {
   id?: number;
   book_id: number;

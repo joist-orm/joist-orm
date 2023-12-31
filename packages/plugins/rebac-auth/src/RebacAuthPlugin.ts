@@ -127,6 +127,17 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
           currentMeta = field.otherMetadata();
           break;
         }
+        case "o2m": {
+          // I.e. currentTable is 'users` and we're looking at `User.createdComments`
+          currentTable = aa.findOrCreateOneToManyJoin(query, currentTable.alias, field);
+          currentMeta = field.otherMetadata();
+          break;
+        }
+        case "m2m": {
+          currentTable = aa.findOrCreateManyToManyJoin(query, currentTable.alias, field);
+          currentMeta = field.otherMetadata();
+          break;
+        }
         default:
           throw new Error(`Unsupported kind ${field.kind}`);
       }

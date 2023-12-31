@@ -7,7 +7,9 @@ import {
   insertAuthor,
   insertBook,
   insertBookReview,
+  insertComment,
   insertUser,
+  insertUserLikedComment,
   newEntityManager,
 } from "joist-tests-integration";
 import { RebacAuthPlugin } from "./RebacAuthPlugin";
@@ -55,163 +57,196 @@ const rule: AuthRule<User> = {
 };
 
 describe("rebac-auth", () => {
-  it("can filter em.find with a new o2m join", async () => {
-    // Given two authors with their own books
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 2 });
-    await insertUser({ name: "u1", author_id: 1 });
-    // And the user can only see one book
-    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
-    const em = newEntityManager({
-      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+  describe("o2m", () => {
+    it("can filter em.find with a new o2m join", async () => {
+      // Given two authors with their own books
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertUser({ name: "u1", author_id: 1 });
+      // And the user can only see one book
+      const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      });
+      // When we `em.find` with no existing joins
+      const books = await em.find(Book, {});
+      // Then we only got one back
+      expect(books.length).toBe(1);
+      // And we added a new join
+      expect(finds[0].tables).toEqual([
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+        { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
+      ]);
     });
-    // When we `em.find` with no existing joins
-    const books = await em.find(Book, {});
-    // Then we only got one back
-    expect(books.length).toBe(1);
-    // And we added a new join
-    expect(finds[0].tables).toEqual([
-      { alias: "b", table: "books", join: "primary" },
-      { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
-      { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
-    ]);
-  });
 
-  it("can filter em.find with existing o2m join", async () => {
-    // Given two authors with their own books
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 2 });
-    await insertUser({ name: "u1", author_id: 1 });
-    // And the user can only see their one book
-    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
-    const em = newEntityManager({
-      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    it("can filter em.find with existing o2m join", async () => {
+      // Given two authors with their own books
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      await insertUser({ name: "u1", author_id: 1 });
+      // And the user can only see their one book
+      const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      });
+      // When we `em.find` with an existing book -> author join
+      const books = await em.find(Book, { author: "a:1" });
+      // Then we only got one back
+      expect(books.length).toBe(1);
+      // And we reused the existing authors join
+      expect(finds[0].tables).toEqual([
+        { alias: "b", table: "books", join: "primary" },
+        { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+        { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
+      ]);
     });
-    // When we `em.find` with an existing book -> author join
-    const books = await em.find(Book, { author: "a:1" });
-    // Then we only got one back
-    expect(books.length).toBe(1);
-    // And we reused the existing authors join
-    expect(finds[0].tables).toEqual([
-      { alias: "b", table: "books", join: "primary" },
-      { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
-      { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
-    ]);
-  });
 
-  it("can filter em.find with existing o2m join and existing AND condition", async () => {
-    // Given two authors with their own books
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    await insertBook({ title: "a1", author_id: 1 });
-    await insertBook({ title: "a2", author_id: 1 });
-    await insertBook({ title: "b1", author_id: 2 });
-    await insertUser({ name: "u1", author_id: 1 });
-    // And the user can only see their one book
-    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
-    const em = newEntityManager({
-      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    it("can filter em.find with existing o2m join and existing AND condition", async () => {
+      // Given two authors with their own books
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "a1", author_id: 1 });
+      await insertBook({ title: "a2", author_id: 1 });
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertUser({ name: "u1", author_id: 1 });
+      // And the user can only see their one book
+      const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      });
+      // When we query for books with `1` in the title
+      const books = await em.find(Book, { title: { like: "%1%" } });
+      expect(books.length).toBe(1);
     });
-    // When we query for books with `1` in the title
-    const books = await em.find(Book, { title: { like: "%1%" } });
-    expect(books.length).toBe(1);
-  });
 
-  it("can filter em.find with existing o2m join with 'where' at end of path", async () => {
-    // Given two books
-    await insertAuthor({ first_name: "a1" });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 1 });
-    await insertUser({ name: "u1", author_id: 1 });
-    const rule: AuthRule<User> = {
-      authorManyToOne: {
-        books: {
-          // And the user can only see certain books
-          where: { title: "b2" },
+    it("can filter em.find with existing o2m join with 'where' at end of path", async () => {
+      // Given two books
+      await insertAuthor({ first_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      await insertUser({ name: "u1", author_id: 1 });
+      const rule: AuthRule<User> = {
+        authorManyToOne: {
+          books: {
+            // And the user can only see certain books
+            where: { title: "b2" },
+          },
         },
-      },
-    };
-    const em = newEntityManager({
-      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      });
+      // When we query for books with `b` in the title
+      const books = await em.find(Book, { title: { like: "b%" } });
+      // Then we also limited it to the b2 title
+      expect(books.length).toBe(1);
     });
-    // When we query for books with `b` in the title
-    const books = await em.find(Book, { title: { like: "b%" } });
-    // Then we also limited it to the b2 title
-    expect(books.length).toBe(1);
-  });
 
-  it("can filter em.find with existing o2m join with 'where' in middle of path", async () => {
-    // Given two books
-    await insertAuthor({ first_name: "a1", age: 20 });
-    await insertBook({ title: "b1", author_id: 1 });
-    await insertBook({ title: "b2", author_id: 1 });
-    await insertUser({ name: "u1", author_id: 1 });
-    const rule: AuthRule<User> = {
-      authorManyToOne: {
-        // And the user can only see certain authors
-        where: { age: { gt: 30 } },
-        books: {},
-      },
-    };
-    const em = newEntityManager({
-      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    it("can filter em.find with existing o2m join with 'where' in middle of path", async () => {
+      // Given two books
+      await insertAuthor({ first_name: "a1", age: 20 });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 1 });
+      await insertUser({ name: "u1", author_id: 1 });
+      const rule: AuthRule<User> = {
+        authorManyToOne: {
+          // And the user can only see certain authors
+          where: { age: { gt: 30 } },
+          books: {},
+        },
+      };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      });
+      // When we query for books with `b` in the title
+      const books = await em.find(Book, { title: { like: "b%" } }, { softDeletes: "include" });
+      // Then we didn't get back any books
+      expect(books.length).toBe(0);
+      expect(finds[0].condition).toEqual({
+        op: "and",
+        conditions: [
+          { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b%" } },
+          { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
+          { alias: "a", column: "age", dbType: "int", cond: { kind: "gt", value: 30 } },
+        ],
+      });
     });
-    // When we query for books with `b` in the title
-    const books = await em.find(Book, { title: { like: "b%" } }, { softDeletes: "include" });
-    // Then we didn't get back any books
-    expect(books.length).toBe(0);
-    expect(finds[0].condition).toEqual({
-      op: "and",
-      conditions: [
-        { alias: "b", column: "title", dbType: "character varying", cond: { kind: "like", value: "b%" } },
-        { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
-        { alias: "a", column: "age", dbType: "int", cond: { kind: "gt", value: 30 } },
-      ],
-    });
-  });
 
-  it("can filter em.find with existing o2m join and existing OR condition", async () => {
-    // Given two authors with their own books
-    await insertAuthor({ first_name: "a1" });
-    await insertAuthor({ first_name: "a2" });
-    await insertBook({ title: "a1", author_id: 1 });
-    await insertBook({ title: "a2", author_id: 1 });
-    await insertBook({ title: "b1", author_id: 2 });
-    await insertUser({ name: "u1", author_id: 1 });
-    // And the user can only see their one book
-    const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
-    const em = newEntityManager({
-      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
-    });
-    // When we query for books with `1` in the title
-    const b = alias(Book);
-    const books = await em.find(
-      Book,
-      { as: b },
-      {
-        conditions: { or: [b.title.eq("a1"), b.title.eq("b1")] },
-        softDeletes: "include",
-      },
-    );
-    // Then we only got one back
-    expect(books.length).toBe(1);
-    // And we wrapped the `or` condition with our own `and`
-    expect(finds[0].condition).toEqual({
-      op: "and",
-      conditions: [
+    it("can filter em.find with existing o2m join and existing OR condition", async () => {
+      // Given two authors with their own books
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "a1", author_id: 1 });
+      await insertBook({ title: "a2", author_id: 1 });
+      await insertBook({ title: "b1", author_id: 2 });
+      await insertUser({ name: "u1", author_id: 1 });
+      // And the user can only see their one book
+      const rule: AuthRule<User> = { authorManyToOne: { books: {} } };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+      });
+      // When we query for books with `1` in the title
+      const b = alias(Book);
+      const books = await em.find(
+        Book,
+        { as: b },
         {
-          op: "or",
-          conditions: [
-            { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
-            { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } },
-          ],
+          conditions: { or: [b.title.eq("a1"), b.title.eq("b1")] },
+          softDeletes: "include",
         },
-        { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
-      ],
+      );
+      // Then we only got one back
+      expect(books.length).toBe(1);
+      // And we wrapped the `or` condition with our own `and`
+      expect(finds[0].condition).toEqual({
+        op: "and",
+        conditions: [
+          {
+            op: "or",
+            conditions: [
+              { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "a1" } },
+              { alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } },
+            ],
+          },
+          { alias: "u", column: "id", dbType: "int", cond: { kind: "eq", value: "1" } },
+        ],
+      });
+    });
+  });
+
+  describe("m2o", () => {
+    it("can filter em.find with a new m2o join", async () => {
+      // Given two users with comments
+      await insertAuthor({ first_name: "a1" });
+      await insertUser({ name: "u1" });
+      await insertUser({ name: "u2" });
+      await insertComment({ text: "c1", user_id: 1, parent_author_id: 1 });
+      await insertComment({ text: "c2", user_id: 2, parent_author_id: 1 });
+      // And a 3rd user that liked the 1st comment
+      await insertUser({ name: "u3" });
+      await insertUserLikedComment({ liked_by_user_id: 3, comment_id: 1 });
+      // And the user can only see users of comments they liked
+      const rule: AuthRule<User> = { likedComments: { user: { name: "r" } } };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:3", rule),
+      });
+      // When we `em.find` with no existing joins
+      const users = await em.find(User, {});
+      // Then we only got one back
+      expect(users).toMatchEntity([{ name: "u1" }]);
+      // And we added a new join
+      expect(finds[0].tables).toEqual([
+        { alias: "u", table: "users", join: "primary" },
+        { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id", distinct: false },
+        { alias: "c", table: "comments", join: "inner", col1: "u.id", col2: "c.user_id" },
+        { alias: "utc", table: "users_to_comments", join: "outer", col1: "c.id", col2: "utc.comment_id" },
+        { alias: "u1", table: "users", join: "outer", col1: "utc.liked_by_user_id", col2: "u1.id" },
+      ]);
     });
   });
 

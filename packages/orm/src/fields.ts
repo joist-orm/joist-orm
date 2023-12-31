@@ -11,17 +11,17 @@ import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
  * We skip any typing like `fieldName: keyof T` because this method should only be
  * called by trusted codegen anyway.
  */
-export function getField(entity: Entity, fieldName: string): any {
+export function getField(entity: Entity, fieldName: string, internalCall: boolean = false): any {
   // We may not have converted the database column value into domain values yet
   const { data, row } = getOrmField(entity);
   const { findPlugin } = getEmInternalApi(entity.em);
   if (fieldName in data) {
-    findPlugin?.beforeGetField?.(entity, fieldName);
+    !internalCall && findPlugin?.beforeGetField?.(entity, fieldName);
     return data[fieldName];
   } else {
     const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
     serde.setOnEntity(data, row);
-    findPlugin?.beforeGetField?.(entity, fieldName);
+    !internalCall && findPlugin?.beforeGetField?.(entity, fieldName);
     return data[fieldName];
   }
 }

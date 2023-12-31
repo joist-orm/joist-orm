@@ -50,7 +50,7 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
 
     const entitiesById = groupBy(entities, (entity) => {
       // TODO If this came from the UoW, it may not be an id? I.e. pre-insert.
-      const ownerId = maybeResolveReferenceToId(getField(entity, collection.otherFieldName));
+      const ownerId = maybeResolveReferenceToId(getField(entity, collection.otherFieldName, true));
       // We almost always expect ownerId to be found, b/c normally we just hydrated this entity
       // directly from a SQL row with owner_id=X, however we might be loading this collection
       // (i.e. find all children where owner_id=X) when the SQL thinks a child is still pointing

@@ -356,10 +356,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       : code`return ${toIdOf}(${metadata}, this.idTaggedMaybe);`;
   const idType = getIdType(config);
 
+  // We use `getField` and an internal call to avoid auth checks, i.e. we assume
+  // users don't need explicit access to `deletedAt` to filter by `isSoftDeletedEntity`
   const maybeIsSoftDeleted = meta.deletedAt
     ? code`
     get isSoftDeletedEntity(): boolean {
-      return this.${meta.deletedAt.fieldName} !== undefined;
+      return ${getField}(this, "${meta.deletedAt.fieldName}", true) !== undefined;
     }
   `
     : "";

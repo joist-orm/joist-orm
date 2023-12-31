@@ -40,6 +40,7 @@ export class PostgresTestDriver implements TestDriver {
       recordQuery(e.sql);
     });
     const { knex } = this;
+    // Create a subclass that records all `find` calls for tests to assert against
     this.driver = new (class extends PostgresDriver {
       constructor() {
         super(knex);

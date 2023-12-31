@@ -38,6 +38,17 @@ export class AliasAssigner {
     return i === 0 ? abbrev : `${abbrev}${i}`;
   }
 
+  /**
+   * Given a `ParsedFindQuery` query, adds a new `where` filter for the given
+   * `alias` + `meta`.
+   *
+   * All conditions in the `where` filter will be added to the `inlineConditions`
+   * parameter, which for `em.find` queries are all the "embedded" conditions that
+   * are AND-d together.
+   *
+   * Note that currently we only support primitive `where` filters, i.e. we don't
+   * add new tables/joins to `query`, but in theory we could if implemented.
+   */
   addFilter(
     query: ParsedFindQuery,
     inlineConditions: ColumnCondition[],
@@ -67,6 +78,8 @@ export class AliasAssigner {
           throw new Error(`Unsupported field ${key}`);
         }
       });
+    } else {
+      throw new Error(`Unsupported where ${JSON.stringify(where)}`);
     }
   }
 

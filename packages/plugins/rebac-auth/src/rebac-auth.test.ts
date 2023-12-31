@@ -67,8 +67,9 @@ describe("rebac-auth", () => {
     const em = newEntityManager({
       findPlugin: new RebacAuthPlugin(um, "u:1", rule),
     });
-    // Then we only got one back
+    // When we `em.find` with no existing joins
     const books = await em.find(Book, {});
+    // Then we only got one back
     expect(books.length).toBe(1);
     // And we added a new join
     expect(finds[0].tables).toEqual([
@@ -90,7 +91,7 @@ describe("rebac-auth", () => {
     const em = newEntityManager({
       findPlugin: new RebacAuthPlugin(um, "u:1", rule),
     });
-    // When we query for books of author a:1
+    // When we `em.find` with an existing book -> author join
     const books = await em.find(Book, { author: "a:1" });
     // Then we only got one back
     expect(books.length).toBe(1);
@@ -102,7 +103,7 @@ describe("rebac-auth", () => {
     ]);
   });
 
-  it("can filter em.find with existing o2m join and existing and condition", async () => {
+  it("can filter em.find with existing o2m join and existing AND condition", async () => {
     // Given two authors with their own books
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });
@@ -120,7 +121,7 @@ describe("rebac-auth", () => {
     expect(books.length).toBe(1);
   });
 
-  it("can filter em.find with existing o2m join with where at end of path", async () => {
+  it("can filter em.find with existing o2m join with 'where' at end of path", async () => {
     // Given two books
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
@@ -143,7 +144,7 @@ describe("rebac-auth", () => {
     expect(books.length).toBe(1);
   });
 
-  it("can filter em.find with existing o2m join with where in middle of path", async () => {
+  it("can filter em.find with existing o2m join with 'where' in middle of path", async () => {
     // Given two books
     await insertAuthor({ first_name: "a1", age: 20 });
     await insertBook({ title: "b1", author_id: 1 });
@@ -173,7 +174,7 @@ describe("rebac-auth", () => {
     });
   });
 
-  it("can filter em.find with existing o2m join and existing or condition", async () => {
+  it("can filter em.find with existing o2m join and existing OR condition", async () => {
     // Given two authors with their own books
     await insertAuthor({ first_name: "a1" });
     await insertAuthor({ first_name: "a2" });

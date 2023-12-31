@@ -87,108 +87,65 @@ export class AliasAssigner {
   // to: table + column
   // return the found or created alias
   findOrCreateManyToOneJoin(query: ParsedFindQuery, from: string, field: ManyToOneField): JoinTable {
-    const { tableName } = field.otherMetadata();
-    const col1 = kqDot(from, field.serde.columns[0].columnName);
-    const existing = query.tables.find((t) => {
-      const col2 = kqDot(t.alias, "id");
-      return (
-        t.join === "inner" &&
-        t.table === tableName &&
-        ((t.col1 === col1 && t.col2 === col2) || (t.col1 === col2 && t.col2 === col1))
-      );
-    });
-    if (existing) {
-      return existing as JoinTable;
-    } else {
-      const alias = this.getAlias(tableName);
-      const col2 = kqDot(alias, "id");
-      const table = { alias, table: tableName, join: "inner", col1, col2 } satisfies JoinTable;
-      query.tables.push(table);
-      return table;
-    }
+    return this.findOrCreateTable(
+      query,
+      field.otherMetadata().tableName,
+      "inner",
+      kqDot(from, field.serde.columns[0].columnName),
+      "id",
+    );
   }
 
   findOrCreateOneToOneJoin(query: ParsedFindQuery, from: string, field: OneToOneField): JoinTable {
-    const { tableName } = field.otherMetadata();
-    const col1 = kqDot(from, "id");
     const columnName = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
-    const existing = query.tables.find((t) => {
-      const col2 = kqDot(t.alias, columnName);
-      return (
-        t.join === "inner" &&
-        t.table === tableName &&
-        ((t.col1 === col1 && t.col2 === col2) || (t.col1 === col2 && t.col2 === col1))
-      );
-    });
-    if (existing) {
-      return existing as JoinTable;
-    } else {
-      const alias = this.getAlias(tableName);
-      const col2 = kqDot(alias, columnName);
-      const table = { alias, table: tableName, join: "inner", col1, col2 } satisfies JoinTable;
-      query.tables.push(table);
-      return table;
-    }
+    return this.findOrCreateTable(query, field.otherMetadata().tableName, "inner", kqDot(from, "id"), columnName);
   }
 
   findOrCreateOneToManyJoin(query: ParsedFindQuery, from: string, field: OneToManyField): JoinTable {
     // ...this is a 1-1 copy/paste of findOrCreateOneToOneJoin...
-    const { tableName } = field.otherMetadata();
-    const col1 = kqDot(from, "id");
     const columnName = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
-    const existing = query.tables.find((t) => {
-      const col2 = kqDot(t.alias, columnName);
-      return (
-        t.join === "inner" &&
-        t.table === tableName &&
-        ((t.col1 === col1 && t.col2 === col2) || (t.col1 === col2 && t.col2 === col1))
-      );
-    });
-    if (existing) {
-      return existing as JoinTable;
-    } else {
-      const alias = this.getAlias(tableName);
-      const col2 = kqDot(alias, columnName);
-      const table = { alias, table: tableName, join: "inner", col1, col2 } satisfies JoinTable;
-      query.tables.push(table);
-      return table;
-    }
+    return this.findOrCreateTable(query, field.otherMetadata().tableName, "inner", kqDot(from, "id"), columnName);
   }
 
   findOrCreateManyToManyJoin(query: ParsedFindQuery, from: string, field: ManyToManyField): JoinTable {
     // Always join into the m2m table
-    let col1 = kqDot(from, "id");
-    let joinTable = query.tables.find((t) => {
-      const col2 = kqDot(t.alias, field.columnNames[0]);
-      return (
-        t.join === "outer" &&
-        t.table === field.joinTableName &&
-        ((t.col1 === col1 && t.col2 === col2) || (t.col1 === col2 && t.col2 === col1))
-      );
-    });
-    if (!joinTable) {
-      const alias = this.getAlias(field.joinTableName);
-      const col2 = kqDot(alias, field.columnNames[0]);
-      const table = { alias, table: field.joinTableName, join: "outer", col1, col2 } satisfies JoinTable;
-      query.tables.push(table);
-      joinTable = table;
-    }
-
+    const joinTable = this.findOrCreateTable(
+      query,
+      field.joinTableName,
+      "outer",
+      kqDot(from, "id"),
+      field.columnNames[0],
+    );
     // Now look for the actual other side
-    const { tableName } = field.otherMetadata();
-    col1 = kqDot(joinTable.alias, field.columnNames[1]);
+    return this.findOrCreateTable(
+      query,
+      field.otherMetadata().tableName,
+      "outer",
+      kqDot(joinTable.alias, field.columnNames[1]),
+      "id",
+    );
+  }
+
+  /** Looks in `query` for a table that matches the join/col1/col2 conditions. */
+  private findOrCreateTable(
+    query: ParsedFindQuery,
+    tableName: string,
+    join: "inner" | "outer",
+    col1: string,
+    col2Name: string,
+  ): JoinTable {
     let otherTable = query.tables.find((t) => {
-      const col2 = kqDot(t.alias, "id");
+      const col2 = kqDot(t.alias, col2Name);
       return (
-        t.join === "outer" &&
+        t.join === join &&
         t.table === tableName &&
         ((t.col1 === col1 && t.col2 === col2) || (t.col1 === col2 && t.col2 === col1))
       );
     });
     if (!otherTable) {
       const alias = this.getAlias(tableName);
-      const col2 = kqDot(alias, "id");
-      const table = { alias, table: tableName, join: "outer", col1, col2 } satisfies JoinTable;
+      const col2 = kqDot(alias, col2Name);
+      const table = { alias, table: tableName, join, col1, col2 } satisfies JoinTable;
       query.tables.push(table);
       otherTable = table;
     }

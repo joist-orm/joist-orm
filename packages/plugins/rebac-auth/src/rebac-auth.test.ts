@@ -245,7 +245,36 @@ describe("rebac-auth", () => {
       expect(finds[0].tables).toEqual([
         { alias: "u", table: "users", join: "primary" },
         { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id", distinct: false },
-        { alias: "c", table: "comments", join: "inner", col1: "u.id", col2: "c.user_id" },
+        { alias: "c", table: "comments", join: "outer", col1: "u.id", col2: "c.user_id" },
+        { alias: "utc", table: "users_to_comments", join: "outer", col1: "c.id", col2: "utc.comment_id" },
+        { alias: "u1", table: "users", join: "outer", col1: "utc.liked_by_user_id", col2: "u1.id" },
+      ]);
+    });
+
+    it("can filter em.find with existing m2o join", async () => {
+      // Given two users with comments
+      await insertAuthor({ first_name: "a1" });
+      await insertUser({ name: "u1" });
+      await insertUser({ name: "u2" });
+      await insertComment({ text: "c1", user_id: 1, parent_author_id: 1 });
+      await insertComment({ text: "c2", user_id: 2, parent_author_id: 1 });
+      // And a 3rd user that liked the 1st comment
+      await insertUser({ name: "u3" });
+      await insertUserLikedComment({ liked_by_user_id: 3, comment_id: 1 });
+      // And the user can only see users of comments they liked
+      const rule: AuthRule<User> = { likedComments: { user: { name: "r" } } };
+      const em = newEntityManager({
+        findPlugin: new RebacAuthPlugin(um, "u:3", rule),
+      });
+      // When we `em.find` with an existing join from u1 -> comments
+      const users = await em.find(User, { createdComments: { text: "c1" } });
+      // Then we only got one back
+      expect(users).toMatchEntity([{ name: "u1" }]);
+      // And we reused the `u` -> `c` join
+      expect(finds[0].tables).toEqual([
+        { alias: "u", table: "users", join: "primary" },
+        { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id", distinct: false },
+        { alias: "c", table: "comments", join: "outer", col1: "u.id", col2: "c.user_id" },
         { alias: "utc", table: "users_to_comments", join: "outer", col1: "c.id", col2: "utc.comment_id" },
         { alias: "u1", table: "users", join: "outer", col1: "utc.liked_by_user_id", col2: "u1.id" },
       ]);

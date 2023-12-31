@@ -6,7 +6,6 @@ import {
   EntityMetadata,
   FindPlugin,
   isLoadedCollection,
-  JoinTable,
   OneToManyCollection,
   ParsedFindQuery,
   Relation,
@@ -95,7 +94,6 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     const [rule] = rules;
 
     const aa = new AliasAssigner(query);
-    const joins: JoinTable[] = [];
 
     // We've got basically a lens from `meta` --> our `rootMeta`, so we
     // want to add a WHERE clause
@@ -166,8 +164,6 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
       };
     }
     query.condition.conditions.push(...inlineConditions);
-
-    query.tables.push(...joins);
 
     // After the entities are loaded, record where in the auth graph they came from
     return (entities) => {

@@ -102,9 +102,8 @@ export class AliasAssigner {
   }
 
   findOrCreateOneToManyJoin(query: ParsedFindQuery, from: string, field: OneToManyField): JoinTable {
-    // ...this is a 1-1 copy/paste of findOrCreateOneToOneJoin...
     const columnName = field.otherMetadata().allFields[field.otherFieldName].serde!.columns[0].columnName;
-    return this.findOrCreateTable(query, field.otherMetadata().tableName, "inner", kqDot(from, "id"), columnName);
+    return this.findOrCreateTable(query, field.otherMetadata().tableName, "outer", kqDot(from, "id"), columnName);
   }
 
   findOrCreateManyToManyJoin(query: ParsedFindQuery, from: string, field: ManyToManyField): JoinTable {

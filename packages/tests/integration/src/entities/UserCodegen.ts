@@ -304,7 +304,7 @@ export abstract class UserCodegen extends BaseEntity<EntityManager, string> impl
   }
 
   get favoritePublisher(): PolymorphicReference<User, UserFavoritePublisher, undefined> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.favoritePublisher ??= hasOnePolymorphic(this as any as User, "favoritePublisher");
   }
 }

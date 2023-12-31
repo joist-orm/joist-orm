@@ -182,7 +182,7 @@ export abstract class LargePublisherCodegen extends Publisher implements Entity 
   }
 
   get users(): Collection<LargePublisher, User> {
-    const { relations } = this.__orm;
+    const { relations } = getOrmField(this);
     return relations.users ??= hasMany(
       this as any as LargePublisher,
       userMeta,

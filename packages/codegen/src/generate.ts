@@ -21,7 +21,7 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
   // Find existing entities so that, besides just using `overwrite: false`, we can completely
   // skip making test files except for the _first_ time we create an entity. This achieves
   // `.history`-like "create once" behavior without the need for the `.history` file.
-  const files = await readdir(config.entitiesDirectory);
+  const files = await readExistingFiles(config);
 
   const entityFiles = entities
     .map((meta) => {
@@ -136,4 +136,13 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     indexFile,
     ...pluginFiles,
   ];
+}
+
+/** Reads the `entitiesDirectory` but just ignores if it doesn't exist yet. */
+async function readExistingFiles(config: Config): Promise<string[]> {
+  try {
+    return await readdir(config.entitiesDirectory);
+  } catch (e) {
+    return [];
+  }
 }

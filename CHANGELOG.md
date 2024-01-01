@@ -1,3 +1,10 @@
+# [1.139.0](https://github.com/stephenh/joist-ts/compare/v1.138.1...v1.139.0) (2024-01-01)
+
+
+### Features
+
+* Scaffold test files. ([#926](https://github.com/stephenh/joist-ts/issues/926)) ([b7c6cd6](https://github.com/stephenh/joist-ts/commit/b7c6cd6d14100b4fa6f030e966bd5b36e5107453))
+
 ## [1.138.1](https://github.com/stephenh/joist-ts/compare/v1.138.0...v1.138.1) (2024-01-01)
 
 

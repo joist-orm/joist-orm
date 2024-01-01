@@ -1,3 +1,10 @@
+## [1.138.1](https://github.com/stephenh/joist-ts/compare/v1.138.0...v1.138.1) (2024-01-01)
+
+
+### Bug Fixes
+
+* Skip AllEnumDetails if no enums. ([b3b1905](https://github.com/stephenh/joist-ts/commit/b3b190512a403363a2d96cb5e7b89dfb235b9e65))
+
 # [1.138.0](https://github.com/stephenh/joist-ts/compare/v1.137.0...v1.138.0) (2023-12-29)
 
 

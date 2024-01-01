@@ -25,13 +25,16 @@ export async function generateEnumsGraphql(enums: EnumMetadata): Promise<Codegen
     })
     .flat();
 
-  const allEnumDetailsResult = `type AllEnumDetails {
+  const allEnumDetails =
+    Object.values(enums).length > 0
+      ? `type AllEnumDetails {
       ${Object.values(enums)
         .map(({ name }) => `${camelCase(name)}: [${name}Detail!]!`)
         .join("\n")} 
-    }`;
+    }`
+      : "";
 
-  const formatted = await formatGraphQL([...contents, allEnumDetailsResult].join("\n"));
+  const formatted = await formatGraphQL([...contents, allEnumDetails].join("\n"));
 
   return { name: "../../schema/enums.graphql", overwrite: true, contents: formatted };
 }

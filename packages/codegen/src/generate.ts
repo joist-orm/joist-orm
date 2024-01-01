@@ -1,9 +1,11 @@
+import { readdir } from "fs/promises";
 import { code, CodegenFile, def, imp } from "ts-poet";
 import { generateEntitiesFile } from "./generateEntitiesFile";
 import { generateEntityCodegenFile, getIdType } from "./generateEntityCodegenFile";
+import { generateEntityFile } from "./generateEntityFile";
+import { generateEntityTestFile } from "./generateEntityTestFile";
 import { generateEnumFile } from "./generateEnumFile";
 import { generateFactoriesFiles } from "./generateFactoriesFiles";
-import { generateInitialEntityFile } from "./generateInitialEntityFile";
 import { generateMetadataFile } from "./generateMetadataFile";
 import { generatePgEnumFile } from "./generatePgEnumFile";
 import { Config, DbMetadata } from "./index";
@@ -15,16 +17,28 @@ export type DPrintOptions = Record<string, unknown>;
 /** Generates our `${Entity}` and `${Entity}Codegen` files based on the `db` schema. */
 export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise<CodegenFile[]> {
   const { entities, enums, pgEnums } = dbMeta;
+
+  // Find existing entities so that, besides just using `overwrite: false`, we can completely
+  // skip making test files except for the _first_ time we create an entity. This achieves
+  // `.history`-like "create once" behavior without the need for the `.history` file.
+  const files = await readExistingFiles(config);
+
   const entityFiles = entities
     .map((meta) => {
       const entityName = meta.entity.name;
+      const hasEntityFile = files.includes(`${entityName}.ts`);
       return [
         {
           name: `${entityName}Codegen.ts`,
           contents: generateEntityCodegenFile(config, dbMeta, meta),
           overwrite: true,
         },
-        { name: `${entityName}.ts`, contents: generateInitialEntityFile(meta), overwrite: false },
+        ...(hasEntityFile
+          ? []
+          : [
+              { name: `${entityName}.ts`, contents: generateEntityFile(meta), overwrite: false },
+              { name: `${entityName}.test.ts`, contents: generateEntityTestFile(meta), overwrite: false },
+            ]),
       ];
     })
     .reduce(merge, []);
@@ -122,4 +136,13 @@ export async function generateFiles(config: Config, dbMeta: DbMetadata): Promise
     indexFile,
     ...pluginFiles,
   ];
+}
+
+/** Reads the `entitiesDirectory` but just ignores if it doesn't exist yet. */
+async function readExistingFiles(config: Config): Promise<string[]> {
+  try {
+    return await readdir(config.entitiesDirectory);
+  } catch (e) {
+    return [];
+  }
 }

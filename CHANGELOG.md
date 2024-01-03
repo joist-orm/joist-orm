@@ -1,3 +1,10 @@
+## [1.139.1](https://github.com/stephenh/joist-ts/compare/v1.139.0...v1.139.1) (2024-01-03)
+
+
+### Bug Fixes
+
+* Fix transient m2m rows on transient entities. ([#927](https://github.com/stephenh/joist-ts/issues/927)) ([bd68181](https://github.com/stephenh/joist-ts/commit/bd68181fb0f3de11c4db71cab826f5d9a2bcc147))
+
 # [1.139.0](https://github.com/stephenh/joist-ts/compare/v1.138.1...v1.139.0) (2024-01-01)
 
 

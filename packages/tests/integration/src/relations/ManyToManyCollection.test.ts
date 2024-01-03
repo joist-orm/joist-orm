@@ -320,6 +320,20 @@ describe("ManyToManyCollection", () => {
     expect((await select("books_to_tags")).length).toEqual(0);
   });
 
+  it("can remove a newly-added tag that was added to a new entity", async () => {
+    await insertTag({ id: 1, name: `t1` });
+    // Given we create a new book
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    const t1 = await em.load(Tag, "1");
+    // And add-then-remove the tag
+    b1.tags.add(t1);
+    b1.tags.remove(t1);
+    // And the book itself is pruned
+    em.delete(b1);
+    await em.flush();
+  });
+
   it("cannot add to a deleted entity's m2m", async () => {
     await insertAuthor({ id: 1, first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });

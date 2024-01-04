@@ -8,6 +8,14 @@ export interface FindPlugin {
   // beforeDelete
   // beforeCreate
 
+  // How should beforeCreate work?
+  // Should we call beforeCreate(meta, opts) and see if the opts "match" a slot in the auth rule?
+  // Currently, calling `setField` during the entity creation/setOpts handling will fail.
+  // So ideally we would bless the entity's location/fields in the graph pre-setOpts.
+  // Except is the user really going to have write access to every field?
+  // Maybe once em.create detects they are hooking the entity up to a blessed spot in the graph,
+  // the user should be allowed to write any fields? Or at least any fields can be set.
+
   // Also for AsyncMethods/PotentialOperations/Operations
   // beforeInvoke
   // isAllowed

@@ -1018,7 +1018,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     );
   }
 
-  /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors. */
+  /** Registers a newly-instantiated entity with our EntityManager; only called by entity constructors of new entities. */
   register(entity: Entity): void {
     if (entity.idTaggedMaybe) {
       if (this.findExistingInstance(entity.idTagged) !== undefined) {

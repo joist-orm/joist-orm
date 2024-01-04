@@ -2,6 +2,7 @@ import { alias, getMetadata } from "joist-orm";
 import {
   Author,
   Book,
+  Comment,
   User,
   finds,
   insertAuthor,
@@ -431,6 +432,30 @@ describe("rebac-auth", () => {
         },
       ],
     });
+  });
+
+  it("can filter in findOrCreate", async () => {
+    // Given two users and the 2nd user has a comment
+    await insertAuthor({ first_name: "a1" });
+    await insertUser({ name: "u1", author_id: 1 });
+    await insertUser({ name: "u2" });
+    await insertComment({ text: "c1", user_id: 2 });
+    // And u1 can only see comments they've created
+    const rule: AuthRule<User> = { createdComments: { text: r } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we `em.findOrCreate` a comment with text: c1
+    const a1 = await em.load(Author, "a:1");
+    const comment = await em.findOrCreate(Comment, { text: "c1" }, { parent: a1 });
+    // Then we created a new comment
+    expect(comment.isNewEntity).toBe(true);
+    // And we added a new join
+    expect(finds[0].tables).toEqual([
+      { alias: "b", table: "books", join: "primary" },
+      { alias: "a", table: "authors", join: "inner", col1: "b.author_id", col2: "a.id" },
+      { alias: "u", table: "users", join: "inner", col1: "a.id", col2: "u.author_id" },
+    ]);
   });
 });
 

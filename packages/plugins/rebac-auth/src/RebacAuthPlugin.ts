@@ -4,13 +4,13 @@ import {
   deTagId,
   Entity,
   EntityMetadata,
+  FindCallback,
   FindPlugin,
   isLoadedCollection,
   OneToManyCollection,
   ParsedFindQuery,
   Relation,
 } from "joist-orm";
-import { FindCallback } from "joist-orm/build/plugins/FindPlugin";
 import { AuthRule, parseAuthRule, ParsedAuthRule } from "./authRule";
 
 /**

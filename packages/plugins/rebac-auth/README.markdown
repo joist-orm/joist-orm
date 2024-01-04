@@ -10,7 +10,7 @@ As such, everything in this directory is not MIT licensed, but is "wip commercia
 ## Todo
 
 * Finish adding `beforeFind` calls to dataloaders
-  * findOrCreateDataloader
+  * findOrCreateDataloader (WIP, goes through em.find already)
   * findCountDataloader
   * findByUniqueDataloader
   * manyToManyFindLoader

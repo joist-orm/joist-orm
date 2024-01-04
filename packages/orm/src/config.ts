@@ -27,6 +27,12 @@ type HookFn<T extends Entity, C> = (entity: T, ctx: C) => MaybePromise<void>;
 
 export const constraintNameToValidationError: Record<string, string> = {};
 
+let booted = false;
+
+export function setBooted(): void {
+  booted = true;
+}
+
 /** The public API to configure an Entity's hooks & validation rules. */
 export class ConfigApi<T extends Entity, C> {
   __data = new ConfigData<T, C>();
@@ -39,6 +45,7 @@ export class ConfigApi<T extends Entity, C> {
    * need to check the constraint by hand ahead of time, before calling `em.flush`.
    */
   addConstraintMessage(constraintName: string, validationError: string) {
+    this.ensurePreBoot();
     constraintNameToValidationError[constraintName] = validationError;
   }
 
@@ -56,6 +63,7 @@ export class ConfigApi<T extends Entity, C> {
   addRule<H extends ReactiveHint<T>>(hint: H, rule: ValidationRule<Reacted<T, H>>): void;
   addRule(rule: ValidationRule<T>): void;
   addRule(ruleOrHint: ValidationRule<T> | any, maybeRule?: ValidationRule<any>): void {
+    this.ensurePreBoot();
     // Keep the name for easy debugging/tracing later
     const name = getCallerName();
     if (typeof ruleOrHint === "function") {
@@ -78,10 +86,12 @@ export class ConfigApi<T extends Entity, C> {
 
   /** Deletes any entity/entities pointed to by `relation` when this entity is deleted. */
   cascadeDelete(relation: keyof RelationsIn<T> & LoadHint<T>): void {
+    this.ensurePreBoot();
     this.__data.cascadeDeleteFields.push(relation);
   }
 
   private addHook(hook: EntityHook, ruleOrHint: HookFn<T, C> | any, maybeFn?: HookFn<Loaded<T, any>, C>) {
+    this.ensurePreBoot();
     if (typeof ruleOrHint === "function") {
       this.__data.hooks[hook].push(ruleOrHint);
     } else {
@@ -151,6 +161,7 @@ export class ConfigApi<T extends Entity, C> {
     ) => FieldsOf<T>[K] extends EntityField ? MaybePromise<FieldsOf<T>[K]["type"] | undefined> : never,
   ): void;
   setDefault<K extends keyof SettableFields<FieldsOf<T>> & string>(fieldName: K, hintOrFn: any, fn?: any): void {
+    this.ensurePreBoot();
     if (fn) {
       this.__data.asyncDefaults[fieldName] = async (entity: T, ctx: C) => {
         // Ideally we'd convert this once outside `fn`, but we don't have `metadata` yet
@@ -167,6 +178,12 @@ export class ConfigApi<T extends Entity, C> {
    * A noop method that exists solely to keep the `config.placeholder()` line in the initial entity file,
    * until the user is ready to use it. */
   placeholder(): void {}
+
+  private ensurePreBoot(): void {
+    if (booted) {
+      throw new Error("This call must be made before calling `configureMetadata`");
+    }
+  }
 }
 
 /**

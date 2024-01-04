@@ -1,3 +1,10 @@
+# [1.140.0](https://github.com/stephenh/joist-ts/compare/v1.139.2...v1.140.0) (2024-01-04)
+
+
+### Features
+
+* Ensure that rules/hooks aren't added post-boot. ([#930](https://github.com/stephenh/joist-ts/issues/930)) ([50a5a54](https://github.com/stephenh/joist-ts/commit/50a5a54c4c8e49af3ecd8ad1239b26c386a635f7)), closes [#928](https://github.com/stephenh/joist-ts/issues/928)
+
 ## [1.139.2](https://github.com/stephenh/joist-ts/compare/v1.139.1...v1.139.2) (2024-01-04)
 
 

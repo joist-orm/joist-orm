@@ -1,3 +1,10 @@
+## [1.139.2](https://github.com/stephenh/joist-ts/compare/v1.139.1...v1.139.2) (2024-01-04)
+
+
+### Bug Fixes
+
+* Change m2m.get ensureNotDeleted to ignore pending. ([#929](https://github.com/stephenh/joist-ts/issues/929)) ([768d3e7](https://github.com/stephenh/joist-ts/commit/768d3e73833701398d5f94101652950672f9483a))
+
 ## [1.139.1](https://github.com/stephenh/joist-ts/compare/v1.139.0...v1.139.1) (2024-01-03)
 
 

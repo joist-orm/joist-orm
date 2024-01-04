@@ -1,8 +1,9 @@
 import { getOrmField } from "./BaseEntity";
-import { setSyncDefaults } from "./defaults";
 import { Entity, EntityOrmField } from "./Entity";
 import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
 import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { setBooted } from "./config";
+import { setSyncDefaults } from "./defaults";
 import { getFakeInstance, getProperties } from "./getProperties";
 import { maybeResolveReferenceToId, tagFromId } from "./keys";
 import { isAllSqlPaths } from "./loadLens";
@@ -18,10 +19,6 @@ export { newPgConnectionConfig } from "joist-utils";
 export { AliasAssigner } from "./AliasAssigner";
 export * from "./Aliases";
 export { BaseEntity, getOrmField } from "./BaseEntity";
-export * from "./changes";
-export { ConfigApi, EntityHook } from "./config";
-export { DeepPartialOrNull } from "./createOrUpdatePartial";
-export * from "./drivers";
 export { Entity, EntityOrmField, IdType, isEntity } from "./Entity";
 export * from "./EntityFields";
 export * from "./EntityFilter";
@@ -29,49 +26,53 @@ export * from "./EntityGraphQLFilter";
 export * from "./EntityManager";
 export * from "./EntityMetadata";
 export { EnumMetadata } from "./EnumMetadata";
+export { EntityOrId, HintNode } from "./HintTree";
+export * from "./QueryBuilder";
+export * from "./QueryParser";
+export * from "./changes";
+export { ConfigApi, EntityHook } from "./config";
+export { DeepPartialOrNull } from "./createOrUpdatePartial";
+export * from "./drivers";
 export { getField, isChangeableField, isFieldSet, setField } from "./fields";
 export * from "./getProperties";
-export { EntityOrId, HintNode } from "./HintTree";
 export * from "./keys";
 export { kq, kqDot, kqStar } from "./keywords";
 export {
-  assertLoaded,
   DeepNew,
-  ensureLoaded,
-  isLoaded,
-  isNew,
+  LoadHint,
   Loadable,
   Loaded,
-  LoadHint,
   MarkLoaded,
-  maybePopulateThen,
   NestedLoadHint,
   New,
   RelationsIn,
+  assertLoaded,
+  ensureLoaded,
+  isLoaded,
+  isNew,
+  maybePopulateThen,
 } from "./loadHints";
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
-export * from "./QueryBuilder";
-export * from "./QueryParser";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
 export {
-  cannotBeUpdated,
   GenericError,
-  maxValueRule,
-  minValueRule,
-  newRequiredRule,
-  rangeValueRule,
   ValidationError,
   ValidationErrors,
   ValidationRule,
   ValidationRuleResult,
+  cannotBeUpdated,
+  maxValueRule,
+  minValueRule,
+  newRequiredRule,
+  rangeValueRule,
 } from "./rules";
 export * from "./serde";
 export { asNew, assertNever, cleanStringValue, fail, indexBy } from "./utils";
-export { ensureWithLoaded, WithLoaded, withLoaded } from "./withLoaded";
+export { WithLoaded, ensureWithLoaded, withLoaded } from "./withLoaded";
 
 // https://spin.atomicobject.com/2018/01/15/typescript-flexible-nominal-typing/
 interface Flavoring<FlavorT> {
@@ -218,6 +219,8 @@ const tableToMetaMap = new Map<string, EntityMetadata>();
 
 /** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
 export function configureMetadata(metas: EntityMetadata[]): void {
+  setBooted();
+
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
     if (!meta.baseType) {

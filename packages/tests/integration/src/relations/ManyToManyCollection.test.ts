@@ -165,6 +165,21 @@ describe("ManyToManyCollection", () => {
     expect(rows).toMatchObject([]);
   });
 
+  it("can get on a pending delete entity", async () => {
+    // Not being able to m2m.get on a pending delete entity caused a flakey test
+    // due to a CustomReference checking .isLoaded which wanted to check that a
+    // pending-delete entity included in the CustomReference's sub-graph was loaded.
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: "t1" });
+    await insertBookToTag({ id: 4, book_id: 2, tag_id: 3 });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "2", "tags");
+    em.delete(book);
+    expect(book.tags.get.length).toBe(1);
+  });
+
   it("can add a new book to a tag", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });

@@ -1,3 +1,10 @@
+## [1.140.1](https://github.com/stephenh/joist-ts/compare/v1.140.0...v1.140.1) (2024-01-05)
+
+
+### Bug Fixes
+
+* IncrementalCollectionOp on soft-deletable ([#931](https://github.com/stephenh/joist-ts/issues/931)) ([91e638a](https://github.com/stephenh/joist-ts/commit/91e638a7787b1434280c1756cbc669e8debdc0b7))
+
 # [1.140.0](https://github.com/stephenh/joist-ts/compare/v1.139.2...v1.140.0) (2024-01-04)
 
 

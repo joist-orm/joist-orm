@@ -1,7 +1,7 @@
 import { getOrmField } from "./BaseEntity";
 import { Entity, EntityOrmField } from "./Entity";
 import { EntityConstructor, EntityManager, MaybeAbstractEntityConstructor, OptsOf, TaggedId } from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getBaseMeta, getMetadata } from "./EntityMetadata";
 import { setBooted } from "./config";
 import { setSyncDefaults } from "./defaults";
 import { getFakeInstance, getProperties } from "./getProperties";
@@ -140,6 +140,8 @@ export function setOpts<T extends Entity>(
           const allowDelete = !field.otherMetadata().fields["delete"];
           const allowRemove = !field.otherMetadata().fields["remove"];
 
+          const maybeSoftDelete = getBaseMeta(field.otherMetadata()).timestampFields.deletedAt;
+
           // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
           // When passed in, all values must have it, and we kick into incremental mode, i.e. we
           // individually add/remove/delete entities.
@@ -154,7 +156,12 @@ export function setOpts<T extends Entity>(
             }
             values.forEach((v) => {
               if (v.op === "delete") {
-                entity.em.delete(v);
+                // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
+                if (maybeSoftDelete) {
+                  v.set({ [maybeSoftDelete]: new Date() });
+                } else {
+                  entity.em.delete(v);
+                }
               } else if (v.op === "remove") {
                 (current as any).remove(v);
               } else if (v.op === "include") {

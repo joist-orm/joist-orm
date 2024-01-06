@@ -1370,8 +1370,17 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   }
 
   /**
-   * Recalculates the reactive fields for an entity, i.e. in case the values have
-   * drifted from underlying data.
+   * Recalculates the reactive fields for an entity, and any downstream reactive fields that depend on them.
+   *
+   * You shouldn't need to call this unless the derived fields have drifted from the underlying data, which
+   * should only happen if:
+   *
+   * - The underlying data was changed by a raw SQL query, or
+   * - You've changed the field's business logic and want to update the database to the latest value.
+   *
+   * You can also trigger a recalc for specific fields by calling `.load()` on the property, i.e.
+   * `author.numberOfBooks.load()`. This `recalc` method is just a helper method to call `load` for
+   * all derived fields on the given entity/entities.
    */
   public recalc(entity: EntityW): Promise<void>;
   public recalc(entities: EntityW[]): Promise<void>;

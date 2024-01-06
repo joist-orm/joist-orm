@@ -1382,6 +1382,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
         .map((field) => (entity as any)[field.fieldName]),
     );
     await Promise.all(relations.map((r: any) => r.load()));
+    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields
     await this.#rm.recalcPendingDerivedValues();
   }
 

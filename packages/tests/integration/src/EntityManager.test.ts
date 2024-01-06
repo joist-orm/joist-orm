@@ -291,23 +291,6 @@ describe("EntityManager", () => {
     expect(a3.updatedAt).toEqual(a1.updatedAt);
   });
 
-  it("updatedAt changes if em.touched", async () => {
-    const em = newEntityManager();
-    const a1 = em.create(Author, { firstName: "a1" });
-    await em.flush();
-
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    const em2 = newEntityManager();
-    const a2 = await em2.load(Author, "1");
-    em2.touch(a2);
-    await em2.flush();
-
-    const em3 = newEntityManager();
-    const a3 = await em3.load(Author, "1");
-    expect(a3.updatedAt).not.toEqual(a1.updatedAt);
-  });
-
   it("can insert falsey values", async () => {
     const em = newEntityManager();
     em.create(Author, { firstName: "a1", isPopular: false });
@@ -1392,26 +1375,60 @@ describe("EntityManager", () => {
     expect(result).toEqual(a1);
   });
 
-  it("can touch an entity to force it to be flushed", async () => {
-    await insertAuthor({ first_name: "a1" });
-    const em = newEntityManager();
-    const a1 = await em.load(Author, "1");
-    em.touch(a1);
-    const { updatedAt } = a1;
-    expect(a1.isDirtyEntity).toBe(false);
-    expect(a1.isNewEntity).toBe(false);
-    expect(a1.isDeletedEntity).toBe(false);
-    expect(getOrmField(a1).isTouched).toBe(true);
-    const result = await em.flush();
-    expect(result).toEqual([a1]);
-    expect(getOrmField(a1).isTouched).toBe(false);
-    expect(a1.transientFields).toMatchObject({
-      mentorRuleInvoked: 1,
-      beforeFlushRan: true,
-      beforeUpdateRan: true,
-      beforeCreateRan: false,
+  describe("touch", () => {
+    it("can touch an entity to force it to be flushed", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      // Given an existing author
+      const a1 = await em.load(Author, "1");
+      // When we touch it
+      em.touch(a1);
+      // Then it's not considered dirty
+      const { updatedAt } = a1;
+      expect(a1.isDirtyEntity).toBe(false);
+      expect(a1.isNewEntity).toBe(false);
+      expect(a1.isDeletedEntity).toBe(false);
+      expect(getOrmField(a1).isTouched).toBe(true);
+      // But when we flush
+      const result = await em.flush();
+      expect(result).toEqual([a1]);
+      expect(getOrmField(a1).isTouched).toBe(false);
+      // Then the hooks were ran
+      expect(a1.transientFields).toMatchObject({
+        beforeFlushRan: true,
+        beforeUpdateRan: true,
+        beforeCreateRan: false,
+        mentorRuleInvoked: 0,
+      });
+      // And updatedAt bumped
+      expect(a1.updatedAt).not.toEqual(updatedAt);
     });
-    expect(a1.updatedAt).not.toEqual(updatedAt);
+
+    it("does not rerun validation rules", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      // Given a touched author
+      const a1 = await em.load(Author, "1");
+      em.touch(a1);
+      // When we flush
+      await em.flush();
+      // Then we ran the simple validation rules (because updatedAt changed)
+      expect(a1.transientFields.firstIsNotLastNameRuleInvoked).toBe(1);
+      // But did not run reactive validation rules
+      expect(a1.transientFields.mentorRuleInvoked).toBe(0);
+    });
+
+    it("does not recalc derived fields", async () => {
+      await insertAuthor({ first_name: "a1" });
+      const em = newEntityManager();
+      // Given a touched author
+      const a1 = await em.load(Author, "1");
+      em.touch(a1);
+      // When we flush
+      await em.flush();
+      // Then we didn't recalc the derived fields
+      expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(0);
+    });
   });
 
   it("can load a null enum array", async () => {

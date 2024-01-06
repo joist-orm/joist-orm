@@ -118,6 +118,7 @@ export class Author extends AuthorCodegen {
     afterCommitIsNewEntity: false,
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
+    firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
     numberOfBooksCalcInvoked: 0,
@@ -252,7 +253,9 @@ export class Author extends AuthorCodegen {
 config.cascadeDelete("books");
 config.cascadeDelete("image");
 
+// Example of a simple rule that runs on every flush
 config.addRule((a) => {
+  a.transientFields.firstIsNotLastNameRuleInvoked++;
   if (a.firstName && a.firstName === a.lastName) {
     return "firstName and lastName must be different";
   }

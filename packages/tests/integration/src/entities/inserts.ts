@@ -49,7 +49,13 @@ export function insertAuthor(row: {
   });
 }
 
-export function insertBook(row: { id?: number; title: string; author_id: number | null; deleted_at?: Date }) {
+export function insertBook(row: {
+  id?: number;
+  title: string;
+  author_id: number | null;
+  deleted_at?: Date;
+  order?: number;
+}) {
   return testDriver.insert("books", row);
 }
 

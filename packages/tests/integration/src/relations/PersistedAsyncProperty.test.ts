@@ -87,6 +87,12 @@ describe("PersistedAsyncProperty", () => {
     // Then the value is updated on both the book review AND its dependent field on the author
     expect(br2.isTest.get).toEqual(true);
     expect(a2.numberOfPublicReviews2.get).toEqual(0);
+
+    // And when we flush, both entities were committed
+    const entities = await em2.flush();
+    expect(entities).toMatchEntity([a2, br2]);
+    // Then the author's hooks ran as expected
+    expect(a2.transientFields.beforeFlushRan).toBe(true);
   });
 
   it("can load derived fields that depend on derived fields", async () => {

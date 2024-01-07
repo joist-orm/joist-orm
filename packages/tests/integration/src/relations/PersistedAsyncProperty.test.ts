@@ -58,7 +58,7 @@ describe("PersistedAsyncProperty", () => {
     expect(rows[0].number_of_books).toEqual(1);
   });
 
-  it("has async derived values automatically updated when dependency touched and updated", async () => {
+  it("has async derived values automatically updated when dependency recalculated", async () => {
     const em = newEntityManager();
     // Given an author with a book that has a review that should be public
     const a1 = new Author(em, { firstName: "a1", age: 22, graduated: new Date() });
@@ -69,7 +69,7 @@ describe("PersistedAsyncProperty", () => {
     expect(a1.numberOfPublicReviews2.get).toEqual(1);
     expect(br.isTest.get).toEqual(false);
 
-    // And the comment is set to be Test, but not calculuted
+    // And the comment is set to be Test, but not calculated
     await knex.raw(`UPDATE comments SET text = 'Test' WHERE id = ${comment.idUntagged}`);
 
     // When the objects are loaded into a new Entity Manager
@@ -82,12 +82,17 @@ describe("PersistedAsyncProperty", () => {
     expect(br2.isTest.get).toEqual(false);
 
     // And when the book review object is touched and flushed to have its fields recalculated
-    em2.touch(br2);
-    await em2.flush();
+    await em2.recalc(br2);
 
     // Then the value is updated on both the book review AND its dependent field on the author
     expect(br2.isTest.get).toEqual(true);
     expect(a2.numberOfPublicReviews2.get).toEqual(0);
+
+    // And when we flush, both entities were committed
+    const entities = await em2.flush();
+    expect(entities).toMatchEntity([a2, br2]);
+    // Then the author's hooks ran as expected
+    expect(a2.transientFields.beforeFlushRan).toBe(true);
   });
 
   it("can load derived fields that depend on derived fields", async () => {
@@ -133,7 +138,7 @@ describe("PersistedAsyncProperty", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
   });
 
-  it("can force async derived values to recalc on touch", async () => {
+  it("can force async derived values to recalc", async () => {
     const em = newEntityManager();
     // Given an author with a book
     const a1 = newAuthor(em, { firstName: "a1" });
@@ -141,8 +146,7 @@ describe("PersistedAsyncProperty", () => {
     expect(a1.numberOfBooks.get).toEqual(0);
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(2);
     // When we touch the author
-    em.touch(a1);
-    await em.flush();
+    await em.recalc(a1);
     // Then the derived value was recalculated
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
     // Even though it didn't technically change

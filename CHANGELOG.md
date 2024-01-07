@@ -1,3 +1,10 @@
+# [1.141.0](https://github.com/stephenh/joist-ts/compare/v1.140.1...v1.141.0) (2024-01-07)
+
+
+### Features
+
+* Add em.recalc, simplify em.touch. ([#933](https://github.com/stephenh/joist-ts/issues/933)) ([5bb92b3](https://github.com/stephenh/joist-ts/commit/5bb92b39079485d8babb8b8049d3b452aafb178e)), closes [#4](https://github.com/stephenh/joist-ts/issues/4)
+
 ## [1.140.1](https://github.com/stephenh/joist-ts/compare/v1.140.0...v1.140.1) (2024-01-05)
 
 

@@ -197,7 +197,9 @@ export function setOpts<T extends Entity>(
   }
 
   // Apply any synchronous defaults, after the opts have been applied
-  if (!(entity.em as any).fakeInstance) {
+  if (calledFromConstructor && !(entity.em as any).fakeInstance) {
+    // If calledFromConstructor=true, this must be a new entity because we've got
+    // an early-return up above that checks for `em.hydrate` passing in ids
     setSyncDefaults(entity);
   }
 }

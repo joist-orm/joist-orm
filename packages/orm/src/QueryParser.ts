@@ -695,6 +695,8 @@ export function parseValueFilter<V>(filter: ValueFilter<V, any>): ParsedValueFil
             case "overlaps":
             case "containedBy":
               return { kind: key, value: filter[key] };
+            case "search":
+              return { kind: "ilike" as const, value: makeLike(filter[key]) };
             case "between":
               return { kind: key, value: filter[key] };
             default:
@@ -887,4 +889,8 @@ export function joinClauses(joins: ParsedTable[]): string[] {
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {
   return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
+}
+
+export function makeLike(search: any | undefined): any {
+  return search ? `%${search.replace(/\s+/g, "%")}%` : undefined;
 }

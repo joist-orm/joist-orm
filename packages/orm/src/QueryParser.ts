@@ -891,6 +891,7 @@ function needsClassPerTableJoins(meta: EntityMetadata): boolean {
   return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
 }
 
+/** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */
 export function makeLike(search: any | undefined): any {
   return search ? `%${search.replace(/\s+/g, "%")}%` : undefined;
 }

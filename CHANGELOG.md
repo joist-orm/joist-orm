@@ -1,3 +1,10 @@
+# [1.142.0](https://github.com/stephenh/joist-ts/compare/v1.141.0...v1.142.0) (2024-01-10)
+
+
+### Features
+
+* Add 'search' operator that translates to ilikes. ([#938](https://github.com/stephenh/joist-ts/issues/938)) ([510d5fb](https://github.com/stephenh/joist-ts/commit/510d5fbe5d477ab4fd36b734151b6e5f1c961bd1))
+
 # [1.141.0](https://github.com/stephenh/joist-ts/compare/v1.140.1...v1.141.0) (2024-01-07)
 
 

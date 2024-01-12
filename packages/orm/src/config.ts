@@ -187,6 +187,20 @@ export class ConfigApi<T extends Entity, C> {
 }
 
 /**
+ * Allows projects to manually reset the internal `booted` flag.
+ *
+ * This is only necessary if they're using hot-reloading and reloading their entity files
+ * without restarting the server.
+ *
+ * Generally most tools like tsx or ts-node-dev reload the whole process, so don't need
+ * to call this, but if Joist is used in a framework that does actual-hot-reloading, this
+ * it will be necessary.
+ */
+export function resetBootFlag(): void {
+  booted = false;
+}
+
+/**
  * Stores a path back to a reactive rule.
  *
  * I.e. if `Book` has a `ruleFn` that reacts to `Author.title`, then `Author`'s config will have

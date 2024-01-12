@@ -1,3 +1,10 @@
+## [1.142.2](https://github.com/stephenh/joist-ts/compare/v1.142.1...v1.142.2) (2024-01-12)
+
+
+### Bug Fixes
+
+* Add resetBootFlag for projects that hot reload. ([#941](https://github.com/stephenh/joist-ts/issues/941)) ([5727804](https://github.com/stephenh/joist-ts/commit/5727804a1a32ee5355999056fbe82718dc300178))
+
 ## [1.142.1](https://github.com/stephenh/joist-ts/compare/v1.142.0...v1.142.1) (2024-01-12)
 
 

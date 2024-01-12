@@ -232,10 +232,9 @@ export function configureMetadata(metas: EntityMetadata[]): void {
 
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
-    if (!meta.baseType) {
-      // Add each constructor into our tag -> constructor map for future lookups
-      tagToConstructorMap.set(meta.tagName, meta.cstr);
-    }
+    // Add each (root) constructor into our tag -> constructor map for future lookups
+    if (!meta.baseType) tagToConstructorMap.set(meta.tagName, meta.cstr);
+    // Same for tables, but include subclass tables
     tableToMetaMap.set(meta.tableName, meta);
     // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {

@@ -17,6 +17,8 @@ export class JoinRows {
 
   /** Adds a new join row to this table. */
   addNew(m2m: ManyToManyCollection<any, any>, e1: Entity, e2: Entity): void {
+    if (!e1) throw new Error(`Cannot add a m2m row with an entity that is ${e1}`);
+    if (!e2) throw new Error(`Cannot add a m2m row with an entity that is ${e2}`);
     const { columnName, otherColumnName } = m2m;
     const existing = this.rows.find((r) => r[columnName] === e1 && r[otherColumnName] === e2);
     if (existing) {

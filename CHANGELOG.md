@@ -1,3 +1,10 @@
+## [1.142.1](https://github.com/stephenh/joist-ts/compare/v1.142.0...v1.142.1) (2024-01-12)
+
+
+### Bug Fixes
+
+* Add better error message when adding invalid m2m rows. ([#940](https://github.com/stephenh/joist-ts/issues/940)) ([a409667](https://github.com/stephenh/joist-ts/commit/a409667bc9309e45004da1a0c24d491e5eabc8f8))
+
 # [1.142.0](https://github.com/stephenh/joist-ts/compare/v1.141.0...v1.142.0) (2024-01-10)
 
 

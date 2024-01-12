@@ -165,6 +165,14 @@ describe("ManyToManyCollection", () => {
     expect(rows).toMatchObject([]);
   });
 
+  it("cannot add undefined", async () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+    expect(() => {
+      book.set({ tags: [undefined as any] });
+    }).toThrow("Cannot add a m2m row with an entity that is undefined");
+  });
+
   it("can get on a pending delete entity", async () => {
     // Not being able to m2m.get on a pending delete entity caused a flakey test
     // due to a CustomReference checking .isLoaded which wanted to check that a

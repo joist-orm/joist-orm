@@ -11,6 +11,7 @@ export function getMetadata<T extends Entity>(meta: EntityMetadata): EntityMetad
 export function getMetadata<T extends Entity>(
   param: T | MaybeAbstractEntityConstructor<T> | EntityMetadata,
 ): EntityMetadata {
+  if (!param) throw new Error(`Cannot getMetadata of ${param}`);
   return (
     typeof param === "function" ? (param as any).metadata : "cstr" in param ? param : getOrmField(param).metadata
   ) as EntityMetadata;

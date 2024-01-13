@@ -95,6 +95,9 @@ export const config = z
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
+
+    // The version of Joist that generated this config.
+    version: z.string().default("0.0.0"),
   })
   .strict();
 
@@ -106,7 +109,7 @@ export type Config = z.infer<typeof config> & {
 export const ormMaintainedFields = ["createdAt", "updatedAt"];
 
 /** Ensure the user doesn't have any typos in their config. */
-export function warnInvalidEntries(config: Config, db: DbMetadata): void {
+export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
   const entitiesByName = groupBy(db.entities, (e) => e.name);
   for (const [entityName, entityConfig] of Object.entries(config.entities)) {
     const entities = entitiesByName[entityName];

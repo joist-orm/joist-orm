@@ -12500,6 +12500,7 @@ __metadata:
     "@swc/jest": ^0.2.29
     "@types/jest": ^29.5.11
     jest: 30.0.0-alpha.2
+    joist-orm: "workspace:*"
     joist-utils: "workspace:*"
     prettier: ^3.1.1
     prettier-plugin-organize-imports: ^3.2.4

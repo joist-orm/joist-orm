@@ -50,7 +50,7 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
     console.log(`Running ${transformPath} against ${paths.length} files`);
     console.log(`There will be a lot of jscodeshift output after this...\n\n\n`);
     await jscodeshift(transformPath, paths, {
-      // verbose: true,
+      verbose: true,
       parser: "ts",
     });
   }

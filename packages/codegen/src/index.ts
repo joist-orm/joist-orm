@@ -3,6 +3,7 @@ import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
 import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames } from "./EntityDbMetadata";
+import { maybeAdjustForLocalDevelopment } from "./adjustVersion";
 import { assignTags } from "./assignTags";
 import { runTransforms } from "./codemods";
 import { Config, loadConfig, warnInvalidConfigEntries, writeConfig } from "./config";
@@ -45,7 +46,7 @@ async function main() {
 
   // Assign any new tags and write them back to the config file
   const prevVersion = config.version;
-  const thisVersion = require("../package.json").version;
+  const thisVersion = maybeAdjustForLocalDevelopment(require("../package.json").version);
   await runTransforms(prevVersion, thisVersion);
   // config.version = thisVersion;
 

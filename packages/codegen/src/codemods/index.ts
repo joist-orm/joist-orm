@@ -24,7 +24,7 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
     `Your project is on Joist ${confVersion} and there are ${todo.length} codemods to help upgrade to ${thisVersion}.`,
   );
 
-  const { run } = await inquirer.prompt([{ name: "run", type: "confirm", message: `Would you like to run them?` }]);
+  const run = await inquirer.prompt({ type: "confirm", message: `Would you like to run them?` });
 
   // They opted out
   if (!run) {
@@ -34,19 +34,14 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
 
   // Otherwise run them
   for await (const t of todo) {
-    const { run } = await inquirer.prompt([
-      {
-        name: "run",
-        type: "confirm",
-        message: `Do you want to run ${t.description}?`,
-      },
-    ]);
+    const run = await inquirer.prompt({ type: "confirm", message: `Do you want to run ${t.description}?` });
+    if (!run) continue;
 
     const transformPath = path.resolve(`${__dirname}/${t.name}.js`);
     const paths = await fastglob(t.glob);
     console.log(`Running ${transformPath} against ${paths.length} files`);
     console.log(`There will be a lot of jscodeshift output after this...\n\n\n`);
-    const res = await jscodeshift(transformPath, paths, {
+    await jscodeshift(transformPath, paths, {
       // verbose: true,
       parser: "ts",
     });

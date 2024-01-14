@@ -30,7 +30,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncProperty,
+  ReactiveField,
   PersistedAsyncReference,
   PolymorphicReference,
   ProjectEntity,
@@ -81,7 +81,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     let getter: Code;
     if (p.derived === "async") {
       getter = code`
-        abstract readonly ${fieldName}: ${PersistedAsyncProperty}<${entity.name}, ${p.fieldType}${maybeOptional}>;
+        abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${p.fieldType}${maybeOptional}>;
      `;
     } else if (p.derived === "sync") {
       getter = code`

@@ -4,7 +4,7 @@ import {
   isLoadedAsyncProperty,
   isLoadedCollection,
   isLoadedReference,
-  isPersistedAsyncProperty,
+  isReactiveField,
   LoadedCollection,
   LoadedProperty,
   LoadedReference,
@@ -68,7 +68,7 @@ export function withLoaded<T extends Entity, H extends LoadHint<T>, L extends Lo
           return isLoadedReference(value) ||
             isLoadedCollection(value) ||
             isLoadedAsyncProperty(value) ||
-            isPersistedAsyncProperty(value)
+            isReactiveField(value)
             ? value.get
             : value;
         },

@@ -63,9 +63,9 @@ We'll now set up the `Book.search` field as an [Asynchronous Persisted Derived F
 And then implement our logic in the `Book` domain model. This will keep the values we want indexed for search for the `Book` in sync:
 
 ```typescript
-import { PersistedAsyncProperty, hasPersistedAsyncProperty } from "joist-orm";
+import { ReactiveField, hasReactiveField } from "joist-orm";
 
-readonly search: PersistedAsyncProperty<Book, string> = hasPersistedAsyncProperty(
+readonly search: ReactiveField<Book, string> = hasReactiveField(
   "search",
   { author: ["firstName", "lastName"], title: {} },
   (book) => {

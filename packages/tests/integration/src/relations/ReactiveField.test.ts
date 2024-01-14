@@ -2,7 +2,7 @@ import { insertAuthor, insertBook, insertBookReview, select } from "@src/entitie
 import { knex, newEntityManager } from "@src/testEm";
 import { Author, Book, BookReview, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
-describe("PersistedAsyncProperty", () => {
+describe("ReactiveField", () => {
   it("can repopulate a changed tree", async () => {
     // Given a tree of Author (that can have public reviews)/Book/Review
     await insertAuthor({ first_name: "a1", age: 21, graduated: new Date() });

@@ -10,7 +10,7 @@ import {
   isCollection,
   isDefined,
   isEntity,
-  isPersistedAsyncProperty,
+  isReactiveField,
   isReference,
   Reference,
 } from "joist-orm";
@@ -140,7 +140,7 @@ function maybeGetRelation(actualValue: unknown): unknown {
     isReference(actualValue) ||
     isCollection(actualValue) ||
     isAsyncProperty(actualValue) ||
-    isPersistedAsyncProperty(actualValue)
+    isReactiveField(actualValue)
   ) {
     return getWithSoftDeleted(actualValue);
   }

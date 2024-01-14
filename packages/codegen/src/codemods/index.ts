@@ -2,6 +2,15 @@ import fastglob from "fast-glob";
 import { run as jscodeshift } from "jscodeshift/src/Runner";
 import path from "path";
 import semver from "semver";
+import { maybeAdjustForLocalDevelopment } from "../adjustVersion";
+import { Config } from "../config";
+
+export async function maybeRunTransforms(config: Config): Promise<void> {
+  const prevVersion = config.version;
+  const thisVersion = maybeAdjustForLocalDevelopment(require("../package.json").version);
+  await runTransforms(prevVersion, thisVersion);
+  // config.version = thisVersion;
+}
 
 export async function runTransforms(prevVersion: string, thisVersion: string): Promise<void> {
   console.log({ prevVersion, thisVersion });

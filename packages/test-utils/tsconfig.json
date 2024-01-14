@@ -6,7 +6,5 @@
     "baseUrl": "./"
   },
   "include": ["./src"],
-  "references": [
-    { "path": "../orm" },
-  ]
+  "references": [{ "path": "../orm" }, { "path": "../utils" }]
 }

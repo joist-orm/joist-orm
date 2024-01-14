@@ -24,7 +24,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncProperty,
+  ReactiveField,
   setField,
   setOpts,
   TaggedId,
@@ -134,7 +134,7 @@ export abstract class SmallPublisherCodegen extends Publisher implements Entity 
     setField(this, "city", cleanStringValue(city));
   }
 
-  abstract readonly allAuthorNames: PersistedAsyncProperty<SmallPublisher, string | undefined>;
+  abstract readonly allAuthorNames: ReactiveField<SmallPublisher, string | undefined>;
 
   set(opts: Partial<SmallPublisherOpts>): void {
     setOpts(this as any as SmallPublisher, opts);

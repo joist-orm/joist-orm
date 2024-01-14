@@ -102,56 +102,6 @@ export const adminUserMeta: EntityMetadata<AdminUser> = {
 
 (AdminUser as any).metadata = adminUserMeta;
 
-export const largePublisherMeta: EntityMetadata<LargePublisher> = {
-  cstr: LargePublisher,
-  type: "LargePublisher",
-  baseType: "Publisher",
-  idType: "tagged-string",
-  idDbType: "int",
-  tagName: "p",
-  tableName: "large_publishers",
-  fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
-    "country": { kind: "primitive", fieldName: "country", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("country", "country", "text"), immutable: false },
-    "critics": { kind: "o2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "favoriteLargePublisher", serde: undefined, immutable: false },
-    "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
-  },
-  allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
-  config: largePublisherConfig,
-  factory: newLargePublisher,
-  baseTypes: [],
-  subTypes: [],
-};
-
-(LargePublisher as any).metadata = largePublisherMeta;
-
-export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
-  cstr: SmallPublisher,
-  type: "SmallPublisher",
-  baseType: "Publisher",
-  idType: "tagged-string",
-  idDbType: "int",
-  tagName: "p",
-  tableName: "small_publishers",
-  fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
-    "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false },
-    "allAuthorNames": { kind: "primitive", fieldName: "allAuthorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("allAuthorNames", "all_author_names", "text"), immutable: false },
-    "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
-  },
-  allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
-  config: smallPublisherConfig,
-  factory: newSmallPublisher,
-  baseTypes: [],
-  subTypes: [],
-};
-
-(SmallPublisher as any).metadata = smallPublisherMeta;
-
 export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
   cstr: AuthorSchedule,
   type: "AuthorSchedule",
@@ -569,6 +519,31 @@ export const imageMeta: EntityMetadata<Image> = {
 
 (Image as any).metadata = imageMeta;
 
+export const largePublisherMeta: EntityMetadata<LargePublisher> = {
+  cstr: LargePublisher,
+  type: "LargePublisher",
+  baseType: "Publisher",
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "p",
+  tableName: "large_publishers",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
+    "country": { kind: "primitive", fieldName: "country", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("country", "country", "text"), immutable: false },
+    "critics": { kind: "o2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "favoriteLargePublisher", serde: undefined, immutable: false },
+    "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
+  config: largePublisherConfig,
+  factory: newLargePublisher,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(LargePublisher as any).metadata = largePublisherMeta;
+
 export const parentGroupMeta: EntityMetadata<ParentGroup> = {
   cstr: ParentGroup,
   type: "ParentGroup",
@@ -686,6 +661,31 @@ export const publisherMeta: EntityMetadata<Publisher> = {
 
 (Publisher as any).metadata = publisherMeta;
 
+export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
+  cstr: SmallPublisher,
+  type: "SmallPublisher",
+  baseType: "Publisher",
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "p",
+  tableName: "small_publishers",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("p", "id", "id", "int"), immutable: true },
+    "city": { kind: "primitive", fieldName: "city", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("city", "city", "text"), immutable: false },
+    "allAuthorNames": { kind: "primitive", fieldName: "allAuthorNames", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("allAuthorNames", "all_author_names", "text"), immutable: false },
+    "users": { kind: "o2m", fieldName: "users", fieldIdName: "userIds", required: false, otherMetadata: () => userMeta, otherFieldName: "favoritePublisher", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: undefined, updatedAt: undefined, deletedAt: undefined },
+  config: smallPublisherConfig,
+  factory: newSmallPublisher,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(SmallPublisher as any).metadata = smallPublisherMeta;
+
 export const tagMeta: EntityMetadata<Tag> = {
   cstr: Tag,
   type: "Tag",
@@ -754,5 +754,5 @@ export const userMeta: EntityMetadata<User> = {
 
 (User as any).metadata = userMeta;
 
-export const allMetadata = [adminUserMeta, largePublisherMeta, smallPublisherMeta, authorScheduleMeta, authorStatMeta, authorMeta, bookAdvanceMeta, bookReviewMeta, bookMeta, childGroupMeta, childItemMeta, childMeta, commentMeta, criticColumnMeta, criticMeta, imageMeta, parentGroupMeta, parentItemMeta, publisherGroupMeta, publisherMeta, tagMeta, userMeta];
+export const allMetadata = [adminUserMeta, authorScheduleMeta, authorStatMeta, authorMeta, bookAdvanceMeta, bookReviewMeta, bookMeta, childGroupMeta, childItemMeta, childMeta, commentMeta, criticColumnMeta, criticMeta, imageMeta, largePublisherMeta, parentGroupMeta, parentItemMeta, publisherGroupMeta, publisherMeta, smallPublisherMeta, tagMeta, userMeta];
 configureMetadata(allMetadata);

@@ -9,7 +9,7 @@ export async function createFlushFunction(client: Client, db: DbMetadata): Promi
 export function generateFlushFunction(db: DbMetadata): string {
   // Leave code/enum tables alone
   const tables = [
-    ...db.entities
+    ...[...db.entities]
       // Flush base tables before sub-tables.
       .sort((a, b) => {
         const i = a.baseClassName ? 1 : -1;

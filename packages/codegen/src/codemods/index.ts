@@ -24,7 +24,11 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
     `Your project is on Joist ${confVersion} and there are ${todo.length} codemods to help upgrade to ${thisVersion}.`,
   );
 
-  const run = await inquirer.prompt({ type: "confirm", message: `Would you like to run them?` });
+  const run = await inquirer.prompt({
+    name: "run",
+    type: "confirm",
+    message: `Would you like to run them?`,
+  });
 
   // They opted out
   if (!run) {
@@ -34,7 +38,11 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
 
   // Otherwise run them
   for await (const t of todo) {
-    const run = await inquirer.prompt({ type: "confirm", message: `Do you want to run ${t.description}?` });
+    const run = await inquirer.prompt({
+      name: "run",
+      type: "confirm",
+      message: `Do you want to run ${t.description}?`,
+    });
     if (!run) continue;
 
     const transformPath = path.resolve(`${__dirname}/${t.name}.js`);

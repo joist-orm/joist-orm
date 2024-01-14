@@ -4,6 +4,7 @@ import { DbMetadata, Entity } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
 import { z } from "zod";
+import { getThisVersion } from "./codemods";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());
@@ -207,7 +208,10 @@ export async function loadConfig(): Promise<Config> {
     }
     return result.data;
   }
-  return config.parse({});
+  // This will create the initial `joist-config.json` on the first run, and
+  // initialize it with our current Joist version, so that they're not prompted
+  // to run any historical codemods.
+  return config.parse({ version: getThisVersion() });
 }
 
 /**

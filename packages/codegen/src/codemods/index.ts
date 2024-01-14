@@ -8,7 +8,7 @@ import { Config } from "../config";
 
 export async function maybeRunTransforms(config: Config): Promise<void> {
   const confVersion = config.version;
-  const thisVersion = maybeAdjustForLocalDevelopment(require("../../package.json").version);
+  const thisVersion = getThisVersion();
   if (semver.eq(confVersion, thisVersion)) {
     return;
   }
@@ -51,6 +51,10 @@ export async function maybeRunTransforms(config: Config): Promise<void> {
 
   // Now that all codemods they wanted to run have passed, bump the version
   config.version = thisVersion;
+}
+
+export function getThisVersion(): string {
+  return maybeAdjustForLocalDevelopment(require("../../package.json").version);
 }
 
 function findPotentialTransforms(config: Config, prevVersion: string): Codemod[] {

@@ -101,7 +101,6 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
   const pgEnums = await loadPgEnumMetadata(db, client, config);
   const entities = db.tables
     .filter((t) => isEntityTable(config, t))
-    .sortBy("name")
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);

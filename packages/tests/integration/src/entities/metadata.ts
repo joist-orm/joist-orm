@@ -152,64 +152,6 @@ export const smallPublisherMeta: EntityMetadata<SmallPublisher> = {
 
 (SmallPublisher as any).metadata = smallPublisherMeta;
 
-export const authorMeta: EntityMetadata<Author> = {
-  cstr: Author,
-  type: "Author",
-  baseType: undefined,
-  idType: "tagged-string",
-  idDbType: "int",
-  tagName: "a",
-  tableName: "authors",
-  fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("a", "id", "id", "int"), immutable: true },
-    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying"), immutable: false },
-    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "last_name", "character varying"), immutable: false },
-    "ssn": { kind: "primitive", fieldName: "ssn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("ssn", "ssn", "character varying"), immutable: false },
-    "initials": { kind: "primitive", fieldName: "initials", fieldIdName: undefined, derived: "sync", required: false, protected: false, type: "string", serde: new PrimitiveSerde("initials", "initials", "character varying"), immutable: false },
-    "numberOfBooks": { kind: "primitive", fieldName: "numberOfBooks", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfBooks", "number_of_books", "int"), immutable: false },
-    "bookComments": { kind: "primitive", fieldName: "bookComments", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("bookComments", "book_comments", "text"), immutable: false },
-    "isPopular": { kind: "primitive", fieldName: "isPopular", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("isPopular", "is_popular", "boolean"), immutable: false },
-    "age": { kind: "primitive", fieldName: "age", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("age", "age", "int"), immutable: false },
-    "graduated": { kind: "primitive", fieldName: "graduated", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("graduated", "graduated", "date"), immutable: false },
-    "nickNames": { kind: "primitive", fieldName: "nickNames", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNames", "nick_names", "character varying[]", true), immutable: false },
-    "nickNamesUpper": { kind: "primitive", fieldName: "nickNamesUpper", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNamesUpper", "nick_names_upper", "character varying[]", true), immutable: false },
-    "wasEverPopular": { kind: "primitive", fieldName: "wasEverPopular", fieldIdName: undefined, derived: false, required: false, protected: true, type: "boolean", serde: new PrimitiveSerde("wasEverPopular", "was_ever_popular", "boolean"), immutable: false },
-    "address": { kind: "primitive", fieldName: "address", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new SuperstructSerde("address", "address", address), immutable: false },
-    "businessAddress": { kind: "primitive", fieldName: "businessAddress", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new ZodSerde("businessAddress", "business_address", AddressSchema), immutable: false },
-    "quotes": { kind: "primitive", fieldName: "quotes", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new SuperstructSerde("quotes", "quotes", quotes), immutable: false },
-    "numberOfAtoms": { kind: "primitive", fieldName: "numberOfAtoms", fieldIdName: undefined, derived: false, required: false, protected: false, type: "bigint", serde: new BigIntSerde("numberOfAtoms", "number_of_atoms"), immutable: false },
-    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("deletedAt", "deleted_at", "timestamp with time zone"), immutable: false },
-    "numberOfPublicReviews": { kind: "primitive", fieldName: "numberOfPublicReviews", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews", "number_of_public_reviews", "int"), immutable: false },
-    "numberOfPublicReviews2": { kind: "primitive", fieldName: "numberOfPublicReviews2", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews2", "numberOfPublicReviews2", "int"), immutable: false },
-    "tagsOfAllBooks": { kind: "primitive", fieldName: "tagsOfAllBooks", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("tagsOfAllBooks", "tags_of_all_books", "character varying"), immutable: false },
-    "search": { kind: "primitive", fieldName: "search", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("search", "search", "text"), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "favoriteShape": { kind: "primitive", fieldName: "favoriteShape", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("favoriteShape", "favorite_shape", "favorite_shape"), immutable: false },
-    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, enumDetailType: Colors, serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", "int[]", Colors), immutable: false },
-    "mentor": { kind: "m2o", fieldName: "mentor", fieldIdName: "mentorId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "authors", serde: new KeySerde("a", "mentor", "mentor_id", "int"), immutable: false },
-    "currentDraftBook": { kind: "m2o", fieldName: "currentDraftBook", fieldIdName: "currentDraftBookId", derived: false, required: false, otherMetadata: () => bookMeta, otherFieldName: "currentDraftAuthor", serde: new KeySerde("b", "currentDraftBook", "current_draft_book_id", "int"), immutable: false },
-    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: "async", required: false, otherMetadata: () => bookMeta, otherFieldName: "favoriteBookAuthors", serde: new KeySerde("b", "favoriteBook", "favorite_book_id", "int"), immutable: false },
-    "publisher": { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", derived: false, required: false, otherMetadata: () => publisherMeta, otherFieldName: "authors", serde: new KeySerde("p", "publisher", "publisher_id", "int"), immutable: false },
-    "authors": { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "mentor", serde: undefined, immutable: false },
-    "schedules": { kind: "o2m", fieldName: "schedules", fieldIdName: "scheduleIds", required: false, otherMetadata: () => authorScheduleMeta, otherFieldName: "author", serde: undefined, immutable: false },
-    "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
-    "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
-    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "authors_to_tags", columnNames: ["author_id", "tag_id"] },
-    "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", serde: undefined, immutable: false },
-    "userOneToOne": { kind: "o2o", fieldName: "userOneToOne", fieldIdName: "userOneToOneId", required: false, otherMetadata: () => userMeta, otherFieldName: "authorManyToOne", serde: undefined, immutable: false },
-  },
-  allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
-  config: authorConfig,
-  factory: newAuthor,
-  baseTypes: [],
-  subTypes: [],
-};
-
-(Author as any).metadata = authorMeta;
-
 export const authorScheduleMeta: EntityMetadata<AuthorSchedule> = {
   cstr: AuthorSchedule,
   type: "AuthorSchedule",
@@ -272,40 +214,63 @@ export const authorStatMeta: EntityMetadata<AuthorStat> = {
 
 (AuthorStat as any).metadata = authorStatMeta;
 
-export const bookMeta: EntityMetadata<Book> = {
-  cstr: Book,
-  type: "Book",
+export const authorMeta: EntityMetadata<Author> = {
+  cstr: Author,
+  type: "Author",
   baseType: undefined,
   idType: "tagged-string",
   idDbType: "int",
-  tagName: "b",
-  tableName: "books",
+  tagName: "a",
+  tableName: "authors",
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int"), immutable: true },
-    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
-    "order": { kind: "primitive", fieldName: "order", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("order", "order", "int"), immutable: false },
-    "notes": { kind: "primitive", fieldName: "notes", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("notes", "notes", "text"), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("a", "id", "id", "int"), immutable: true },
+    "firstName": { kind: "primitive", fieldName: "firstName", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("firstName", "first_name", "character varying"), immutable: false },
+    "lastName": { kind: "primitive", fieldName: "lastName", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("lastName", "last_name", "character varying"), immutable: false },
+    "ssn": { kind: "primitive", fieldName: "ssn", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("ssn", "ssn", "character varying"), immutable: false },
+    "initials": { kind: "primitive", fieldName: "initials", fieldIdName: undefined, derived: "sync", required: false, protected: false, type: "string", serde: new PrimitiveSerde("initials", "initials", "character varying"), immutable: false },
+    "numberOfBooks": { kind: "primitive", fieldName: "numberOfBooks", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfBooks", "number_of_books", "int"), immutable: false },
+    "bookComments": { kind: "primitive", fieldName: "bookComments", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("bookComments", "book_comments", "text"), immutable: false },
+    "isPopular": { kind: "primitive", fieldName: "isPopular", fieldIdName: undefined, derived: false, required: false, protected: false, type: "boolean", serde: new PrimitiveSerde("isPopular", "is_popular", "boolean"), immutable: false },
+    "age": { kind: "primitive", fieldName: "age", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("age", "age", "int"), immutable: false },
+    "graduated": { kind: "primitive", fieldName: "graduated", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("graduated", "graduated", "date"), immutable: false },
+    "nickNames": { kind: "primitive", fieldName: "nickNames", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNames", "nick_names", "character varying[]", true), immutable: false },
+    "nickNamesUpper": { kind: "primitive", fieldName: "nickNamesUpper", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("nickNamesUpper", "nick_names_upper", "character varying[]", true), immutable: false },
+    "wasEverPopular": { kind: "primitive", fieldName: "wasEverPopular", fieldIdName: undefined, derived: false, required: false, protected: true, type: "boolean", serde: new PrimitiveSerde("wasEverPopular", "was_ever_popular", "boolean"), immutable: false },
+    "address": { kind: "primitive", fieldName: "address", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new SuperstructSerde("address", "address", address), immutable: false },
+    "businessAddress": { kind: "primitive", fieldName: "businessAddress", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new ZodSerde("businessAddress", "business_address", AddressSchema), immutable: false },
+    "quotes": { kind: "primitive", fieldName: "quotes", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Object", serde: new SuperstructSerde("quotes", "quotes", quotes), immutable: false },
+    "numberOfAtoms": { kind: "primitive", fieldName: "numberOfAtoms", fieldIdName: undefined, derived: false, required: false, protected: false, type: "bigint", serde: new BigIntSerde("numberOfAtoms", "number_of_atoms"), immutable: false },
     "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("deletedAt", "deleted_at", "timestamp with time zone"), immutable: false },
+    "numberOfPublicReviews": { kind: "primitive", fieldName: "numberOfPublicReviews", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews", "number_of_public_reviews", "int"), immutable: false },
+    "numberOfPublicReviews2": { kind: "primitive", fieldName: "numberOfPublicReviews2", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "number", serde: new PrimitiveSerde("numberOfPublicReviews2", "numberOfPublicReviews2", "int"), immutable: false },
+    "tagsOfAllBooks": { kind: "primitive", fieldName: "tagsOfAllBooks", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("tagsOfAllBooks", "tags_of_all_books", "character varying"), immutable: false },
+    "search": { kind: "primitive", fieldName: "search", fieldIdName: undefined, derived: "async", required: false, protected: false, type: "string", serde: new PrimitiveSerde("search", "search", "text"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int"), immutable: false },
-    "advances": { kind: "o2m", fieldName: "advances", fieldIdName: "advanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "book", serde: undefined, immutable: false },
-    "reviews": { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined, immutable: false },
+    "favoriteShape": { kind: "primitive", fieldName: "favoriteShape", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("favoriteShape", "favorite_shape", "favorite_shape"), immutable: false },
+    "favoriteColors": { kind: "enum", fieldName: "favoriteColors", fieldIdName: undefined, required: false, enumDetailType: Colors, serde: new EnumArrayFieldSerde("favoriteColors", "favorite_colors", "int[]", Colors), immutable: false },
+    "mentor": { kind: "m2o", fieldName: "mentor", fieldIdName: "mentorId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "authors", serde: new KeySerde("a", "mentor", "mentor_id", "int"), immutable: false },
+    "currentDraftBook": { kind: "m2o", fieldName: "currentDraftBook", fieldIdName: "currentDraftBookId", derived: false, required: false, otherMetadata: () => bookMeta, otherFieldName: "currentDraftAuthor", serde: new KeySerde("b", "currentDraftBook", "current_draft_book_id", "int"), immutable: false },
+    "favoriteBook": { kind: "m2o", fieldName: "favoriteBook", fieldIdName: "favoriteBookId", derived: "async", required: false, otherMetadata: () => bookMeta, otherFieldName: "favoriteBookAuthors", serde: new KeySerde("b", "favoriteBook", "favorite_book_id", "int"), immutable: false },
+    "publisher": { kind: "m2o", fieldName: "publisher", fieldIdName: "publisherId", derived: false, required: false, otherMetadata: () => publisherMeta, otherFieldName: "authors", serde: new KeySerde("p", "publisher", "publisher_id", "int"), immutable: false },
+    "authors": { kind: "o2m", fieldName: "authors", fieldIdName: "authorIds", required: false, otherMetadata: () => authorMeta, otherFieldName: "mentor", serde: undefined, immutable: false },
+    "schedules": { kind: "o2m", fieldName: "schedules", fieldIdName: "scheduleIds", required: false, otherMetadata: () => authorScheduleMeta, otherFieldName: "author", serde: undefined, immutable: false },
+    "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
-    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined, immutable: false, joinTableName: "books_to_tags", columnNames: ["book_id", "tag_id"] },
-    "currentDraftAuthor": { kind: "o2o", fieldName: "currentDraftAuthor", fieldIdName: "currentDraftAuthorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "currentDraftBook", serde: undefined, immutable: false },
-    "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "book", serde: undefined, immutable: false },
+    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "authors_to_tags", columnNames: ["author_id", "tag_id"] },
+    "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", serde: undefined, immutable: false },
+    "userOneToOne": { kind: "o2o", fieldName: "userOneToOne", fieldIdName: "userOneToOneId", required: false, otherMetadata: () => userMeta, otherFieldName: "authorManyToOne", serde: undefined, immutable: false },
   },
   allFields: {},
-  orderBy: "title",
+  orderBy: undefined,
   timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
-  config: bookConfig,
-  factory: newBook,
+  config: authorConfig,
+  factory: newAuthor,
   baseTypes: [],
   subTypes: [],
 };
 
-(Book as any).metadata = bookMeta;
+(Author as any).metadata = authorMeta;
 
 export const bookAdvanceMeta: EntityMetadata<BookAdvance> = {
   cstr: BookAdvance,
@@ -364,31 +329,40 @@ export const bookReviewMeta: EntityMetadata<BookReview> = {
 
 (BookReview as any).metadata = bookReviewMeta;
 
-export const childMeta: EntityMetadata<Child> = {
-  cstr: Child,
-  type: "Child",
+export const bookMeta: EntityMetadata<Book> = {
+  cstr: Book,
+  type: "Book",
   baseType: undefined,
   idType: "tagged-string",
   idDbType: "int",
-  tagName: "child",
-  tableName: "children",
+  tagName: "b",
+  tableName: "books",
   fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("child", "id", "id", "int"), immutable: true },
-    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("b", "id", "id", "int"), immutable: true },
+    "title": { kind: "primitive", fieldName: "title", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("title", "title", "character varying"), immutable: false },
+    "order": { kind: "primitive", fieldName: "order", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("order", "order", "int"), immutable: false },
+    "notes": { kind: "primitive", fieldName: "notes", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("notes", "notes", "text"), immutable: false },
+    "deletedAt": { kind: "primitive", fieldName: "deletedAt", fieldIdName: undefined, derived: false, required: false, protected: false, type: "Date", serde: new PrimitiveSerde("deletedAt", "deleted_at", "timestamp with time zone"), immutable: false },
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "groups": { kind: "o2m", fieldName: "groups", fieldIdName: "groupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "childGroupId", serde: undefined, immutable: false },
+    "author": { kind: "m2o", fieldName: "author", fieldIdName: "authorId", derived: false, required: true, otherMetadata: () => authorMeta, otherFieldName: "books", serde: new KeySerde("a", "author", "author_id", "int"), immutable: false },
+    "advances": { kind: "o2m", fieldName: "advances", fieldIdName: "advanceIds", required: false, otherMetadata: () => bookAdvanceMeta, otherFieldName: "book", serde: undefined, immutable: false },
+    "reviews": { kind: "o2m", fieldName: "reviews", fieldIdName: "reviewIds", required: false, otherMetadata: () => bookReviewMeta, otherFieldName: "book", serde: undefined, immutable: false },
+    "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
+    "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "books", serde: undefined, immutable: false, joinTableName: "books_to_tags", columnNames: ["book_id", "tag_id"] },
+    "currentDraftAuthor": { kind: "o2o", fieldName: "currentDraftAuthor", fieldIdName: "currentDraftAuthorId", required: false, otherMetadata: () => authorMeta, otherFieldName: "currentDraftBook", serde: undefined, immutable: false },
+    "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "book", serde: undefined, immutable: false },
   },
   allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
-  config: childConfig,
-  factory: newChild,
+  orderBy: "title",
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: "deletedAt" },
+  config: bookConfig,
+  factory: newBook,
   baseTypes: [],
   subTypes: [],
 };
 
-(Child as any).metadata = childMeta;
+(Book as any).metadata = bookMeta;
 
 export const childGroupMeta: EntityMetadata<ChildGroup> = {
   cstr: ChildGroup,
@@ -445,6 +419,32 @@ export const childItemMeta: EntityMetadata<ChildItem> = {
 
 (ChildItem as any).metadata = childItemMeta;
 
+export const childMeta: EntityMetadata<Child> = {
+  cstr: Child,
+  type: "Child",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "child",
+  tableName: "children",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("child", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "groups": { kind: "o2m", fieldName: "groups", fieldIdName: "groupIds", required: false, otherMetadata: () => childGroupMeta, otherFieldName: "childGroupId", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: childConfig,
+  factory: newChild,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(Child as any).metadata = childMeta;
+
 export const commentMeta: EntityMetadata<Comment> = {
   cstr: Comment,
   type: "Comment",
@@ -485,6 +485,32 @@ export const commentMeta: EntityMetadata<Comment> = {
 
 (Comment as any).metadata = commentMeta;
 
+export const criticColumnMeta: EntityMetadata<CriticColumn> = {
+  cstr: CriticColumn,
+  type: "CriticColumn",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "cc",
+  tableName: "critic_columns",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("cc", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "critic": { kind: "m2o", fieldName: "critic", fieldIdName: "criticId", derived: false, required: true, otherMetadata: () => criticMeta, otherFieldName: "criticColumn", serde: new KeySerde("c", "critic", "critic_id", "int"), immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: criticColumnConfig,
+  factory: newCriticColumn,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(CriticColumn as any).metadata = criticColumnMeta;
+
 export const criticMeta: EntityMetadata<Critic> = {
   cstr: Critic,
   type: "Critic",
@@ -513,32 +539,6 @@ export const criticMeta: EntityMetadata<Critic> = {
 };
 
 (Critic as any).metadata = criticMeta;
-
-export const criticColumnMeta: EntityMetadata<CriticColumn> = {
-  cstr: CriticColumn,
-  type: "CriticColumn",
-  baseType: undefined,
-  idType: "tagged-string",
-  idDbType: "int",
-  tagName: "cc",
-  tableName: "critic_columns",
-  fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("cc", "id", "id", "int"), immutable: true },
-    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: true, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "character varying"), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "critic": { kind: "m2o", fieldName: "critic", fieldIdName: "criticId", derived: false, required: true, otherMetadata: () => criticMeta, otherFieldName: "criticColumn", serde: new KeySerde("c", "critic", "critic_id", "int"), immutable: false },
-  },
-  allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
-  config: criticColumnConfig,
-  factory: newCriticColumn,
-  baseTypes: [],
-  subTypes: [],
-};
-
-(CriticColumn as any).metadata = criticColumnMeta;
 
 export const imageMeta: EntityMetadata<Image> = {
   cstr: Image,
@@ -623,6 +623,33 @@ export const parentItemMeta: EntityMetadata<ParentItem> = {
 
 (ParentItem as any).metadata = parentItemMeta;
 
+export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
+  cstr: PublisherGroup,
+  type: "PublisherGroup",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "pg",
+  tableName: "publisher_groups",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pg", "id", "id", "int"), immutable: true },
+    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "group", serde: undefined, immutable: false },
+    "critics": { kind: "lo2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "group", serde: undefined, immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: publisherGroupConfig,
+  factory: newPublisherGroup,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(PublisherGroup as any).metadata = publisherGroupMeta;
+
 export const publisherMeta: EntityMetadata<Publisher> = {
   cstr: Publisher,
   type: "Publisher",
@@ -658,33 +685,6 @@ export const publisherMeta: EntityMetadata<Publisher> = {
 };
 
 (Publisher as any).metadata = publisherMeta;
-
-export const publisherGroupMeta: EntityMetadata<PublisherGroup> = {
-  cstr: PublisherGroup,
-  type: "PublisherGroup",
-  baseType: undefined,
-  idType: "tagged-string",
-  idDbType: "int",
-  tagName: "pg",
-  tableName: "publisher_groups",
-  fields: {
-    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("pg", "id", "id", "int"), immutable: true },
-    "name": { kind: "primitive", fieldName: "name", fieldIdName: undefined, derived: false, required: false, protected: false, type: "string", serde: new PrimitiveSerde("name", "name", "text"), immutable: false },
-    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
-    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
-    "publishers": { kind: "o2m", fieldName: "publishers", fieldIdName: "publisherIds", required: false, otherMetadata: () => publisherMeta, otherFieldName: "group", serde: undefined, immutable: false },
-    "critics": { kind: "lo2m", fieldName: "critics", fieldIdName: "criticIds", required: false, otherMetadata: () => criticMeta, otherFieldName: "group", serde: undefined, immutable: false },
-  },
-  allFields: {},
-  orderBy: undefined,
-  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
-  config: publisherGroupConfig,
-  factory: newPublisherGroup,
-  baseTypes: [],
-  subTypes: [],
-};
-
-(PublisherGroup as any).metadata = publisherGroupMeta;
 
 export const tagMeta: EntityMetadata<Tag> = {
   cstr: Tag,
@@ -754,5 +754,5 @@ export const userMeta: EntityMetadata<User> = {
 
 (User as any).metadata = userMeta;
 
-export const allMetadata = [adminUserMeta, largePublisherMeta, smallPublisherMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, childMeta, childGroupMeta, childItemMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, parentGroupMeta, parentItemMeta, publisherMeta, publisherGroupMeta, tagMeta, userMeta];
+export const allMetadata = [adminUserMeta, largePublisherMeta, smallPublisherMeta, authorScheduleMeta, authorStatMeta, authorMeta, bookAdvanceMeta, bookReviewMeta, bookMeta, childGroupMeta, childItemMeta, childMeta, commentMeta, criticColumnMeta, criticMeta, imageMeta, parentGroupMeta, parentItemMeta, publisherGroupMeta, publisherMeta, tagMeta, userMeta];
 configureMetadata(allMetadata);

@@ -23,6 +23,7 @@
     "@types/pluralize": "0.0.33",
     "@types/semver": "^7.5.6",
     "change-case": "^4.1.2",
+    "fast-glob": "^3.3.2",
     "inquirer": "^8.2.6",
     "joist-utils": "workspace:*",
     "jscodeshift": "^0.15.1",

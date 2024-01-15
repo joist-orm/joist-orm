@@ -14,7 +14,7 @@ export {
   isLoadedOneToOneReference,
   isOneToOneReference,
 } from "./OneToOneReference";
-export { PersistedAsyncProperty, hasPersistedAsyncProperty, isPersistedAsyncProperty } from "./PersistedAsyncProperty";
+export { ReactiveField, hasReactiveField, isReactiveField } from "./ReactiveField";
 export {
   PersistedAsyncReference,
   PersistedAsyncReferenceImpl,

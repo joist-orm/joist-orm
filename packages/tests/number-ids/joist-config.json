@@ -3,5 +3,6 @@
   "contextType": "Context@src/context",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
   "entitiesDirectory": "./src/entities",
-  "idType": "number"
+  "idType": "number",
+  "version": "1.143.0"
 }

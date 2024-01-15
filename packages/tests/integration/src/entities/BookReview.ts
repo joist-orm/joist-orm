@@ -3,9 +3,9 @@ import {
   cannotBeUpdated,
   hasOneDerived,
   hasOneThrough,
-  hasPersistedAsyncProperty,
+  hasReactiveField,
   hasReactiveAsyncProperty,
-  PersistedAsyncProperty,
+  ReactiveField,
   Reference,
 } from "joist-orm";
 import { Author, BookReviewCodegen, bookReviewConfig as config, Publisher } from "./entities";
@@ -23,7 +23,7 @@ export class BookReview extends BookReviewCodegen {
   );
 
   // Reviews are only public if the author is over the age of 21 and graduated (checking graduated b/c age is immutable)
-  readonly isPublic: PersistedAsyncProperty<BookReview, boolean> = hasPersistedAsyncProperty(
+  readonly isPublic: ReactiveField<BookReview, boolean> = hasReactiveField(
     "isPublic",
     { book: { author: ["age", "graduated"] } },
     (review) => {
@@ -39,7 +39,7 @@ export class BookReview extends BookReviewCodegen {
   );
 
   // Used to test dependent reactivity
-  readonly isTest: PersistedAsyncProperty<BookReview, boolean> = hasPersistedAsyncProperty(
+  readonly isTest: ReactiveField<BookReview, boolean> = hasReactiveField(
     "isTest",
     { comment: "text" },
     (review) => {

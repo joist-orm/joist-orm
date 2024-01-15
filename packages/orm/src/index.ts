@@ -10,7 +10,7 @@ import { isAllSqlPaths } from "./loadLens";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { PersistedAsyncPropertyImpl } from "./relations/PersistedAsyncProperty";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -302,10 +302,10 @@ export function configureMetadata(metas: EntityMetadata[]): void {
       .filter((f) => f.kind === "primitive" || (f.kind === "m2o" && f.derived === "async"))
       .forEach((field) => {
         const ap = (getFakeInstance(meta) as any)[field.fieldName] as
-          | PersistedAsyncPropertyImpl<any, any, any>
+          | ReactiveFieldImpl<any, any, any>
           | undefined;
         // We might have an async property configured in joist-config.json that has not yet
-        // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
+        // been made a `hasReactiveField` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
         if (ap?.reactiveHint) {
           // Cache the load hint so that we don't constantly re-calc it on instantiation.

@@ -32,8 +32,8 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncProperty,
   PersistedAsyncReference,
+  ReactiveField,
   setField,
   setOpts,
   TaggedId,
@@ -347,9 +347,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract get initials(): string;
 
-  abstract readonly numberOfBooks: PersistedAsyncProperty<Author, number>;
+  abstract readonly numberOfBooks: ReactiveField<Author, number>;
 
-  abstract readonly bookComments: PersistedAsyncProperty<Author, string | undefined>;
+  abstract readonly bookComments: ReactiveField<Author, string | undefined>;
 
   get isPopular(): boolean | undefined {
     return getField(this, "isPopular");
@@ -383,7 +383,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "nickNames", nickNames);
   }
 
-  abstract readonly nickNamesUpper: PersistedAsyncProperty<Author, string[] | undefined>;
+  abstract readonly nickNamesUpper: ReactiveField<Author, string[] | undefined>;
 
   get wasEverPopular(): boolean | undefined {
     return getField(this, "wasEverPopular");
@@ -443,13 +443,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "deletedAt", deletedAt);
   }
 
-  abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;
+  abstract readonly numberOfPublicReviews: ReactiveField<Author, number | undefined>;
 
-  abstract readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number | undefined>;
+  abstract readonly numberOfPublicReviews2: ReactiveField<Author, number | undefined>;
 
-  abstract readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string | undefined>;
+  abstract readonly tagsOfAllBooks: ReactiveField<Author, string | undefined>;
 
-  abstract readonly search: PersistedAsyncProperty<Author, string | undefined>;
+  abstract readonly search: ReactiveField<Author, string | undefined>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

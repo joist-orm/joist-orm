@@ -1,4 +1,4 @@
-/** A base class for relations & non-relation (i.e. `PersistedAsyncProperty) properties. */
+/** A base class for relations & non-relation (i.e. `ReactiveField) properties. */
 export abstract class AbstractPropertyImpl<T> {
   #entity: T;
 

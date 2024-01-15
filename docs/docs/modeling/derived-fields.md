@@ -104,21 +104,21 @@ For async, persisted fields, there will be a column in the database to hold the 
 And then implement a property in the `Author` domain model with the same name:
 
 ```typescript
-import { PersistedAsyncProperty, hasPersistedAsyncProperty } from "joist-orm";
+import { ReactiveField, hasReactiveField } from "joist-orm";
 
 class Author extends AuthorCodegen {
-  readonly numberOfBooks: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+  readonly numberOfBooks: ReactiveField<Author, number> = hasReactiveField(
     "numberOfBooks",
     "books",
     (author) => author.books.get.length,
   );
 }
 ```
-The readonly property must be of type `PersistedAsyncProperty`, which has two type arguments:
+The readonly property must be of type `ReactiveField`, which has two type arguments:
 1. The type of the entity
 2. The type of the property
 
-The value is the result of the method `hasPersistedAsyncProperty` that has three arguments:
+The value is the result of the method `hasReactiveField` that has three arguments:
 * `fieldName`: The name of the property, this should match the name of the field in the entity and in joist-config.json.
 * `reactiveHint`: The name of the fields on the entity that should trigger a recalculation of the derived field. This can be a string(`"books"`), an array of strings (`["books", "someOtherRelationship"]`) or an object of nested relationships (`{books: ["reviews"]}`).
 * `fn` The function that calculates the value of the derived field. This function will be called with the entity as the only argument. All of the fields in the reactiveHint will be loaded before this function is called and can be accessed syncronously using `get`.

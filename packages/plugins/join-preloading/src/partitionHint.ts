@@ -38,7 +38,7 @@ export function partitionHint(
         } else {
           // It's not clear what to do with the subHint here, if anything--ideally it could stitch
           // on top of load hint but only in the places that made sense. But we'd risk over-fetching.
-          // ...also we don't want to preload PersistedAsyncProperty full hint vs. just using their
+          // ...also we don't want to preload ReactiveField full hint vs. just using their
           // calculated values.
           // const [_sql, _non] = partitionHint(meta, p.loadHint);
           // if (_sql) deepMerge((sql ??= {}), _sql);

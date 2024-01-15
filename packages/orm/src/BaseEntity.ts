@@ -144,7 +144,7 @@ export abstract class BaseEntity<EM extends EntityManager, I extends IdType = Id
               return [[f.fieldName, (this as any)[f.fieldName] || null]];
             case "primitive":
               if (f.derived === "async") {
-                // Use the raw value instead of the PersistedAsyncProperty
+                // Use the raw value instead of the ReactiveField
                 return [[f.fieldName, getField(this as any, f.fieldName) || null]];
               } else {
                 return [[f.fieldName, (this as any)[f.fieldName] || null]];

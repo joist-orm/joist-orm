@@ -66,8 +66,8 @@ Or derived fields that will be reactively calculated (and updated in the databas
 
 ```typescript
 class Author extends AuthorCodegen {
-  readonly numberOfBooks: PersistedAsyncProperty<Author, number> =
-    hasPersistedAsyncProperty(
+  readonly numberOfBooks: ReactiveField<Author, number> =
+    hasReactiveField(
      "numberOfBooks",
      ["books"],
      (a) => a.books.get.length,

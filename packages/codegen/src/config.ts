@@ -4,6 +4,7 @@ import { DbMetadata, Entity } from "EntityDbMetadata";
 import { promises as fs } from "fs";
 import { groupBy } from "joist-utils";
 import { z } from "zod";
+import { getThisVersion } from "./codemods";
 import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());
@@ -95,6 +96,9 @@ export const config = z
     ignoredTables: z.optional(z.array(z.string())),
     /** The type of entity `id` fields; defaults to `tagged-string`. */
     idType: z.optional(z.union([z.literal("tagged-string"), z.literal("untagged-string"), z.literal("number")])),
+
+    // The version of Joist that generated this config.
+    version: z.string().default("0.0.0"),
   })
   .strict();
 
@@ -106,7 +110,7 @@ export type Config = z.infer<typeof config> & {
 export const ormMaintainedFields = ["createdAt", "updatedAt"];
 
 /** Ensure the user doesn't have any typos in their config. */
-export function warnInvalidEntries(config: Config, db: DbMetadata): void {
+export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
   const entitiesByName = groupBy(db.entities, (e) => e.name);
   for (const [entityName, entityConfig] of Object.entries(config.entities)) {
     const entities = entitiesByName[entityName];
@@ -204,7 +208,10 @@ export async function loadConfig(): Promise<Config> {
     }
     return result.data;
   }
-  return config.parse({});
+  // This will create the initial `joist-config.json` on the first run, and
+  // initialize it with our current Joist version, so that they're not prompted
+  // to run any historical codemods.
+  return config.parse({ version: getThisVersion() });
 }
 
 /**

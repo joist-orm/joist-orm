@@ -4,7 +4,7 @@ import { EntityMetadata } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
 import { AliasAssigner, EntityManager, ParsedFindQuery, getEmInternalApi, indexBy, keyToNumber, kqDot } from "../index";
 import { LoadHint } from "../loadHints";
-import { PersistedAsyncPropertyImpl } from "../relations/PersistedAsyncProperty";
+import { ReactiveFieldImpl } from "../relations/ReactiveField";
 import { toArray } from "../utils";
 
 export function populateDataLoader(
@@ -82,7 +82,7 @@ export function populateDataLoader(
             if (!relation || typeof relation.load !== "function") {
               throw new Error(`Invalid load hint '${key}' on ${entity}`);
             }
-            // If we're populating a hasPersistedAsyncProperty, don't bother loading it
+            // If we're populating a hasReactiveField, don't bother loading it
             // if it's already been calculated (i.e. we have no reason to believe its value
             // is stale, so we should avoid pulling all of its data into memory).
             // _Unless_ the ReactionsManager has noticed a change that might have invalidated it.
@@ -92,7 +92,7 @@ export function populateDataLoader(
             // So we go ahead and call `.load()`, assuming it will just load its cached value, but it
             // will also check internally if it's marked for recalc, and load its load hint if necessary.
             if (
-              relation instanceof PersistedAsyncPropertyImpl &&
+              relation instanceof ReactiveFieldImpl &&
               relation.isSet &&
               !getEmInternalApi(em).rm.isMaybePendingRecalc(entity, key)
             )

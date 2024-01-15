@@ -31,10 +31,11 @@ import {
 
 /** All the entities + enums in our database. */
 export interface DbMetadata {
-  entityTables: Table[];
   entities: EntityDbMetadata[];
   enums: EnumMetadata;
   pgEnums: PgEnumMetadata;
+  joinTables: string[];
+  totalTables: number;
 }
 
 /** Codegen-time metadata about a given domain entity. */
@@ -144,6 +145,7 @@ export type ManyToOneField = Field & {
   otherFieldName: string;
   otherEntity: Entity;
   notNull: boolean;
+  isDeferredAndDeferrable: boolean;
   derived: "async" | false;
 };
 
@@ -223,7 +225,6 @@ export class EntityDbMetadata {
 
   constructor(config: Config, table: Table, enums: EnumMetadata = {}) {
     this.entity = makeEntity(tableToEntityName(config, table));
-    this.invalidDeferredFK = false;
 
     if (isSubClassTable(table)) {
       this.baseClassName = tableToEntityName(config, table.columns.get("id").foreignKeys[0].referencedTable);
@@ -263,14 +264,10 @@ export class EntityDbMetadata {
       .filter((r) => !isMultiColumnForeignKey(r))
       .filter((r) => !isComponentOfPolymorphicRelation(config, r))
       .filter((r) => !isBaseClassForeignKey(r))
-      .map((r) => {
-        const { field, invalid } = newManyToOneField(config, this.entity, r);
-        if (invalid) {
-          this.invalidDeferredFK = true;
-        }
-        return field;
-      })
+      .map((r) => newManyToOneField(config, this.entity, r))
       .filter((f) => !f.ignore);
+
+    this.invalidDeferredFK = this.manyToOnes.some((r) => !r.isDeferredAndDeferrable);
 
     // We split these into regular/large...
     const allOneToManys = table.o2mRelations
@@ -514,11 +511,7 @@ function newPgEnumField(config: Config, entity: Entity, column: Column): PgEnumF
   };
 }
 
-function newManyToOneField(
-  config: Config,
-  entity: Entity,
-  r: M2ORelation,
-): { field: ManyToOneField; invalid: boolean } {
+function newManyToOneField(config: Config, entity: Entity, r: M2ORelation): ManyToOneField {
   let invalid = false;
   const column = r.foreignKey.columns[0];
   const columnName = column.name;
@@ -531,17 +524,19 @@ function newManyToOneField(
     : collectionName(config, otherEntity, entity, r).fieldName;
   const notNull = column.notNull;
   const ignore = isFieldIgnored(config, entity, fieldName, notNull, column.default !== null);
-  // Make sure the constraint is deferrable
-  if (!r.foreignKey.isDeferred || !r.foreignKey.isDeferrable) {
-    console.warn(
-      `WARNING: Foreign key ${r.foreignKey.name} is not DEFERRABLE/INITIALLY DEFERRED, see https://joist-orm.io/docs/getting-started/schema-assumptions#deferred-constraints`,
-    );
-    invalid = true;
-  }
+  const isDeferredAndDeferrable = r.foreignKey.isDeferred && r.foreignKey.isDeferrable;
   const derived = fkFieldDerived(config, entity, fieldName);
   return {
-    field: { kind: "m2o", fieldName, columnName, otherEntity, otherFieldName, notNull, ignore, derived, dbType },
-    invalid,
+    kind: "m2o",
+    fieldName,
+    columnName,
+    otherEntity,
+    otherFieldName,
+    notNull,
+    ignore,
+    derived,
+    dbType,
+    isDeferredAndDeferrable,
   };
 }
 

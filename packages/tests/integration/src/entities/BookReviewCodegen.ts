@@ -28,7 +28,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncProperty,
+  ReactiveField,
   setField,
   setOpts,
   TaggedId,
@@ -170,9 +170,9 @@ export abstract class BookReviewCodegen extends BaseEntity<EntityManager, string
     setField(this, "rating", rating);
   }
 
-  abstract readonly isPublic: PersistedAsyncProperty<BookReview, boolean>;
+  abstract readonly isPublic: ReactiveField<BookReview, boolean>;
 
-  abstract readonly isTest: PersistedAsyncProperty<BookReview, boolean>;
+  abstract readonly isTest: ReactiveField<BookReview, boolean>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

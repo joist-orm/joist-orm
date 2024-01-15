@@ -1,3 +1,10 @@
+## [1.143.1](https://github.com/stephenh/joist-ts/compare/v1.143.0...v1.143.1) (2024-01-15)
+
+
+### Bug Fixes
+
+* Add fast-glob dependency. ([#943](https://github.com/stephenh/joist-ts/issues/943)) ([98fcc20](https://github.com/stephenh/joist-ts/commit/98fcc208fb3c6059ff33645dc0d7e82fef13420b))
+
 # [1.143.0](https://github.com/stephenh/joist-ts/compare/v1.142.2...v1.143.0) (2024-01-15)
 
 

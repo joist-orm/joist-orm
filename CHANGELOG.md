@@ -1,3 +1,10 @@
+# [1.143.0](https://github.com/stephenh/joist-ts/compare/v1.142.2...v1.143.0) (2024-01-15)
+
+
+### Features
+
+* Rename hasPersistedAsyncProperty to hasReactiveField ([#942](https://github.com/stephenh/joist-ts/issues/942)) ([7294754](https://github.com/stephenh/joist-ts/commit/7294754ec20eef06e38a7d8a95e5343b56d56fda))
+
 ## [1.142.2](https://github.com/stephenh/joist-ts/compare/v1.142.1...v1.142.2) (2024-01-12)
 
 

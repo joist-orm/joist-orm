@@ -1,4 +1,4 @@
-import { insertAuthor, insertBook, insertBookReview, select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, select, update } from "@src/entities/inserts";
 import { knex, newEntityManager } from "@src/testEm";
 import { Author, Book, BookReview, newAuthor, newBook, newBookReview, newComment } from "../entities";
 
@@ -151,6 +151,22 @@ describe("ReactiveField", () => {
     expect(a1.transientFields.numberOfBooksCalcInvoked).toBe(3);
     // Even though it didn't technically change
     expect(a1.numberOfBooks.get).toEqual(0);
+  });
+
+  it("can force sync derived values to recalc", async () => {
+    // Given an author
+    const em = newEntityManager();
+    newAuthor(em);
+    await em.flush();
+    // And their initials have drifted out of sync
+    await update("authors", { id: 1, initials: "bad" });
+    // When we call recalc
+    const em2 = newEntityManager();
+    const a2 = await em2.load(Author, "a:1");
+    await em2.recalc(a2);
+    await em2.flush();
+    // Then it's been updated
+    expect(await select("authors")).toMatchObject([{ initials: "a" }]);
   });
 
   it("can force async derived values to recalc on load", async () => {

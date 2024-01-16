@@ -1,3 +1,10 @@
+## [1.143.3](https://github.com/stephenh/joist-ts/compare/v1.143.2...v1.143.3) (2024-01-16)
+
+
+### Bug Fixes
+
+* Fix em.recalc for synchronous fields. ([#946](https://github.com/stephenh/joist-ts/issues/946)) ([0b874a9](https://github.com/stephenh/joist-ts/commit/0b874a9729eb6e29011c1aa02e623f6b592c3fb6))
+
 ## [1.143.2](https://github.com/stephenh/joist-ts/compare/v1.143.1...v1.143.2) (2024-01-16)
 
 

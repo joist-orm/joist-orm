@@ -1,3 +1,10 @@
+## [1.143.2](https://github.com/stephenh/joist-ts/compare/v1.143.1...v1.143.2) (2024-01-16)
+
+
+### Bug Fixes
+
+* Fix m2m over reactivity ([#945](https://github.com/stephenh/joist-ts/issues/945)) ([3950674](https://github.com/stephenh/joist-ts/commit/3950674f5a38bd1ea3bf27974d82ee4b7620e634))
+
 ## [1.143.1](https://github.com/stephenh/joist-ts/compare/v1.143.0...v1.143.1) (2024-01-15)
 
 

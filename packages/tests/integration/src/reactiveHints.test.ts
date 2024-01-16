@@ -61,7 +61,7 @@ describe("reactiveHints", () => {
   it("can do child m2m with primitive field names", () => {
     expect(reverseReactiveHint(Book, Book, { tags: "name" })).toEqual([
       { entity: Book, fields: ["tags"], path: [] },
-      { entity: Tag, fields: ["books", "name"], path: ["books"] },
+      { entity: Tag, fields: ["name"], path: ["books"] },
     ]);
   });
 
@@ -69,7 +69,7 @@ describe("reactiveHints", () => {
     expect(reverseReactiveHint(Author, Author, { books: { tags: "name" } })).toEqual([
       { entity: Author, fields: [], path: [] },
       { entity: Book, fields: ["author", "tags"], path: ["author"] },
-      { entity: Tag, fields: ["books", "name"], path: ["books", "author"] },
+      { entity: Tag, fields: ["name"], path: ["books", "author"] },
     ]);
   });
 

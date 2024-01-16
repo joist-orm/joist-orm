@@ -91,6 +91,17 @@ describe("ManyToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
   });
 
+  it("can add an existing tag to an existing book and then load", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    const em = newEntityManager();
+    const book = await em.load(Book, "2");
+    const tag = await em.load(Tag, "3");
+    book.tags.add(tag);
+    expect(await book.tags.load()).toMatchEntity([tag]);
+  });
+
   it("can add a new tag tag to a new book", async () => {
     const em = newEntityManager();
     const book = newBook(em);
@@ -231,8 +242,7 @@ describe("ManyToManyCollection", () => {
 
     book.tags.add(tag);
     expect(tag.books.get).toContain(book);
-    expect((await book.tags.load()).length).toBe(1);
-
+    expect((await book.tags.load()).length).toBe(2);
     await em.flush();
 
     expect(await countOfBookToTags()).toEqual(2);

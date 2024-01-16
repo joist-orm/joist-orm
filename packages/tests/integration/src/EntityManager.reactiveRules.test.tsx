@@ -120,7 +120,7 @@ describe("EntityManager.reactiveRules", () => {
       ]);
     });
 
-    it.withCtx("does not over calc on change", async ({ em }) => {
+    it.withCtx("does not trigger over reactivity on change", async ({ em }) => {
       // Given two authors that have books
       await insertAuthor({ first_name: "a1" });
       await insertAuthor({ first_name: "a2" });

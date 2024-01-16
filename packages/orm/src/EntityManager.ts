@@ -1385,12 +1385,24 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
   public recalc(entity: EntityW): Promise<void>;
   public recalc(entities: EntityW[]): Promise<void>;
   public async recalc(entityOrEntities: EntityW | EntityW[]): Promise<void> {
+    // Look for async reactive fields
     const relations = toArray(entityOrEntities).flatMap((entity) =>
       Object.values(getMetadata(entity).allFields)
         .filter((f) => "derived" in f && f.derived === "async")
         .map((field) => (entity as any)[field.fieldName]),
     );
     await Promise.all(relations.map((r: any) => r.load()));
+
+    // And also sync reactive fields
+    toArray(entityOrEntities).flatMap((entity) =>
+      Object.values(getMetadata(entity).allFields)
+        .filter((f) => "derived" in f && f.derived === "sync")
+        .forEach((field) => {
+          // This will be a noop if the value is the same
+          setField(entity, field.fieldName, (entity as any)[field.fieldName]);
+        }),
+    );
+
     // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields
     await this.#rm.recalcPendingDerivedValues();
   }

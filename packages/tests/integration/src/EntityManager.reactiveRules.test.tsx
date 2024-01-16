@@ -10,8 +10,9 @@ import {
   newPublisher,
   newTag,
   SmallPublisher,
+  Tag,
 } from "@src/entities";
-import { select } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookToTag, insertTag, select } from "@src/entities/inserts";
 import { newEntityManager } from "@src/testEm";
 import { getMetadata } from "joist-orm";
 
@@ -117,6 +118,31 @@ describe("EntityManager.reactiveRules", () => {
           tags_of_all_books: "1, 3",
         },
       ]);
+    });
+
+    it.withCtx("does not over calc on change", async ({ em }) => {
+      // Given two authors that have books
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "b2", author_id: 2 });
+      // And the 1st author's book has tag t1
+      await insertTag({ name: "t1" });
+      await insertBookToTag({ book_id: 1, tag_id: 1 });
+
+      // When we add book2 to t1
+      const b2 = await em.load(Book, "b:2");
+      const t1 = await em.load(Tag, "t:1");
+      b2.tags.add(t1);
+      await em.flush();
+
+      // Then we updated only the a:2 field
+      expect(await select("authors")).toMatchObject([
+        { id: 1, tags_of_all_books: "" },
+        { id: 2, tags_of_all_books: "t1" },
+      ]);
+      // And we only needed to do 1 recalc
+      expect(em.entities.filter((e) => e instanceof Author).length).toBe(1);
     });
   });
 

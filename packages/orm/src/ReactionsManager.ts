@@ -54,6 +54,8 @@ export class ReactionsManager {
         //   dirty, otherwise it will be left out of any INSERTs/UPDATEs.
         this.getPending(rf).todo.add(entity);
         this.getDirtyFields(getMetadata(rf.cstr)).add(rf.name);
+        // Keep for future debugging...
+        // console.log(`${entity}.${fieldName} changed, queuing ${rf.name} walk from ${entity} -> ${rf.path}`);
       }
     }
   }
@@ -134,10 +136,13 @@ export class ReactionsManager {
           }
           for (const doing of todo) pending.done.add(doing);
           // Walk back from the source to any downstream fields
-          return (await followReverseHint(todo, rf.path))
+          const relations = (await followReverseHint(todo, rf.path))
             .filter((entity) => !entity.isDeletedEntity)
             .filter((e) => e instanceof rf.cstr)
             .map((entity) => (entity as any)[rf.name]);
+          // Keep for future debugging...
+          // console.log(`Recalc-ing ${todo} -> ${rf.path} -> ${rf.cstr.name}.${rf.name} for found ${relations.length}`);
+          return relations;
         }),
       );
       // Multiple reactions could have pointed back to the same reactive field, so

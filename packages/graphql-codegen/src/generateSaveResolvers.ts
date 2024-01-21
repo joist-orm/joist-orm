@@ -23,7 +23,7 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
     const type = imp(`${name}@src/entities`);
     const contents = code`
       export const save${name}: Pick<${mutationResolvers}, "save${name}"> = {
-        async save${name}(root, args, ctx) {
+        async save${name}(_, args, ctx) {
           return { ${camelName}: await ${saveEntity}(ctx, ${type}, args.input) };
         },
       };

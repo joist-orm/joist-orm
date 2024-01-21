@@ -1,3 +1,10 @@
+# [1.144.0](https://github.com/stephenh/joist-ts/compare/v1.143.3...v1.144.0) (2024-01-21)
+
+
+### Features
+
+* Fix graphql test scaffolding ([#948](https://github.com/stephenh/joist-ts/issues/948)) ([6f24f56](https://github.com/stephenh/joist-ts/commit/6f24f5690b62b3a61cec158f39d93683bc5e2338))
+
 ## [1.143.3](https://github.com/stephenh/joist-ts/compare/v1.143.2...v1.143.3) (2024-01-16)
 
 

@@ -28,6 +28,8 @@ export type Resolver<R, A, T> = (root: R, args: A, ctx: Context, info: any) => M
 
 export type AuthorResolvers = {
   firstName: Resolver<Author, any, string>;
+  lastName: Resolver<Author, any, string | undefined>;
+  graphqlOnlyField: Resolver<Author, number, number>;
 };
 export type AuthorStatResolvers = {
   smallint: Resolver<AuthorStat, any, number>;
@@ -42,7 +44,7 @@ export type BookReviewResolvers = {
   rating: Resolver<BookReview, any, number>;
 };
 export type CommentResolvers = {
-  comment: Resolver<Comment, any, string | undefined | null>;
+  text: Resolver<Comment, any, string | undefined | null>;
 };
 export type ImageResolvers = {
   fileName: Resolver<Image, any, string>;

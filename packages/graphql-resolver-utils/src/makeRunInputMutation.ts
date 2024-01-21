@@ -1,6 +1,5 @@
-import { Context, ContextFn, run } from "joist-test-utils";
 import { Resolver } from "./context";
-import { ResolverResult } from "./typeUtils";
+import { ResolverResult, RunFn } from "./typeUtils";
 
 /**
  * Creates a `makeRunInputMutation` function for each project's `testUtils` file.
@@ -8,22 +7,18 @@ import { ResolverResult } from "./typeUtils";
  * This is called `makeMake` because it's a factory for each project's `testUtils` to make its own factory
  * that is customized (basically curried) to their own `newContext` function.
  */
-export function makeMakeRunInputMutation<C extends Context>(newContext: ContextFn<C>): MakeRunInputMutation<C> {
+export function makeMakeRunInputMutation<C>(runFn: RunFn<C>): MakeRunInputMutation<C> {
   return (resolver) => {
     return (ctx, args) =>
-      run(
-        ctx,
-        async (ctx) => {
-          const key = Object.keys(resolver)[0];
-          return ((resolver as any)[key] as any)(
-            {},
-            { input: args instanceof Function ? args() : args ?? {} },
-            ctx,
-            undefined!,
-          );
-        },
-        newContext,
-      );
+      runFn(ctx, async (ctx) => {
+        const key = Object.keys(resolver)[0];
+        return ((resolver as any)[key] as any)(
+          {},
+          { input: args instanceof Function ? args() : args ?? {} },
+          ctx,
+          undefined!,
+        );
+      });
   };
 }
 
@@ -32,7 +27,7 @@ export function makeMakeRunInputMutation<C extends Context>(newContext: ContextF
  *
  * Following our `mutation / foo` conventions, `resolver` will have a single `fooResolver.foo` method.
  */
-export type MakeRunInputMutation<C extends Context> = <T extends object>(resolver: T) => RunInputMutationMethod<C, T>;
+export type MakeRunInputMutation<C> = <T extends object>(resolver: T) => RunInputMutationMethod<C, T>;
 
 type RunInputMutationMethod<C, T> = <I extends MutationInput<T>, R = ResolverResult<T, keyof T>>(
   ctx: C,

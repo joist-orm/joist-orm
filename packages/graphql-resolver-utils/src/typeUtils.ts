@@ -1,5 +1,7 @@
 import { Resolver } from "./context";
 
+export type RunFn<C> = <T>(ctx: C, fn: (ctx: C) => Promise<T>) => Promise<T>;
+
 /** Infers the root type of the given resolver, by assuming it's always the first arg. */
 export type ResolverRoot<T> = T extends { [key in keyof T]: infer F }
   ? F extends Resolver<infer R, any, any>

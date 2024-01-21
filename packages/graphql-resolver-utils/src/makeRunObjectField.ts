@@ -1,6 +1,5 @@
 import { isEntity } from "joist-orm";
-import { Context, ContextFn, run } from "joist-test-utils";
-import { ResolverArgs, ResolverResult, ResolverRoot } from "./typeUtils";
+import { ResolverArgs, ResolverResult, ResolverRoot, RunFn } from "./typeUtils";
 
 /**
  * Creates a `makeRunObjectField` function for each project's `testUtils` file.
@@ -8,17 +7,14 @@ import { ResolverArgs, ResolverResult, ResolverRoot } from "./typeUtils";
  * This is called `makeMake` because it's a factory for each project's `testUtils` to make its own factory
  * that is customized (basically curried) to their own `newContext` function.
  */
-export function makeMakeRunObjectField<C extends Context>(newContext: ContextFn<C>): MakeRunObjectField<C> {
+export function makeMakeRunObjectField<C>(runFn: RunFn<C>): MakeRunObjectField<C> {
   return (resolvers) => {
     return (ctx, root, key, args) =>
-      run(
-        ctx,
-        async (ctx) => {
-          const _root = isEntity(root) ? await ctx.em.load((root as any).id) : root;
-          return (resolvers[key] as any)(_root, args instanceof Function ? args() : args ?? {}, ctx, undefined!);
-        },
-        newContext,
-      );
+      runFn(ctx, async (ctx) => {
+        // Sneak in a Joist-ism that will load the entity in the new em
+        const _root = isEntity(root) ? await (ctx as any).em.load((root as any).id) : root;
+        return (resolvers[key] as any)(_root, args instanceof Function ? args() : args ?? {}, ctx, undefined!);
+      });
   };
 }
 

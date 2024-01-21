@@ -1,5 +1,4 @@
-import { Context, ContextFn, run } from "joist-test-utils";
-import { ResolverArgs, ResolverResult } from "./typeUtils";
+import { ResolverArgs, ResolverResult, RunFn } from "./typeUtils";
 
 /**
  * Creates a `makeRunQuery` function for each project's `testUtils` file.
@@ -7,17 +6,13 @@ import { ResolverArgs, ResolverResult } from "./typeUtils";
  * This is called `makeMake` because it's a factory for each project's `testUtils` to make its own factory
  * that is customized (basically curried) to their own `newContext` function.
  */
-export function makeMakeRunQuery<C extends Context>(newContext: ContextFn<C>): MakeRunQuery<C> {
+export function makeMakeRunQuery<C>(runFn: RunFn<C>): MakeRunQuery<C> {
   return (resolver) => {
     return (ctx, args) =>
-      run(
-        ctx,
-        async (ctx) => {
-          const key = Object.keys(resolver)[0];
-          return ((resolver as any)[key] as any)({}, args instanceof Function ? args() : args ?? {}, ctx, undefined!);
-        },
-        newContext,
-      );
+      runFn(ctx, async (ctx) => {
+        const key = Object.keys(resolver)[0];
+        return ((resolver as any)[key] as any)({}, args instanceof Function ? args() : args ?? {}, ctx, undefined!);
+      });
   };
 }
 
@@ -26,7 +21,7 @@ export function makeMakeRunQuery<C extends Context>(newContext: ContextFn<C>): M
  *
  * Following our `query / foo` conventions, query resolver will have a single `fooResolver.foo` method.
  */
-export type MakeRunQuery<C extends Context> = <T extends object>(resolver: T) => RunQueryMethod<C, T>;
+export type MakeRunQuery<C> = <T extends object>(resolver: T) => RunQueryMethod<C, T>;
 
 /** The return type of `makeRunQuery`. */
 type RunQueryMethod<C, T> = <A extends ResolverArgs<T, keyof T>>(

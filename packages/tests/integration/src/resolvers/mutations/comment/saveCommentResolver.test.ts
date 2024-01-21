@@ -1,13 +1,14 @@
+import { newAuthor } from "src/entities";
 import { saveComment } from "src/resolvers/mutations/comment/saveCommentResolver";
 import { makeRunInputMutation } from "src/resolvers/testUtils";
-import "src/setupDbTests";
 
-describe.skip("saveComment", () => {
+describe("saveComment", () => {
   it.withCtx("can create", async (ctx) => {
     const { em } = ctx;
-    const result = await runSaveComment(ctx, () => ({}));
-    // const comment = await em.load(Comment, result.comment);
+    const a = newAuthor(em);
+    const result = await runSave(ctx, () => ({ parent: a.id }));
+    expect(result).toBeDefined();
   });
 });
 
-const runSaveComment = makeRunInputMutation(saveComment);
+const runSave = makeRunInputMutation(saveComment);

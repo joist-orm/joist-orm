@@ -5,6 +5,12 @@ export async function saveEntities<T extends Entity>(
   ctx: Context,
   type: EntityConstructor<T>,
   inputs: DeepPartialOrNull<T>[],
+  opts: {
+    flush?: boolean;
+  } = {},
 ): Promise<T[]> {
-  return Promise.all(inputs.map((input) => ctx.em.createOrUpdatePartial(type, input)));
+  const { flush = true } = opts;
+  const entities = await Promise.all(inputs.map((input) => ctx.em.createOrUpdatePartial(type, input)));
+  if (flush) await ctx.em.flush();
+  return entities;
 }

@@ -44,7 +44,7 @@ export type BookReviewResolvers = {
   rating: Resolver<BookReview, any, number>;
 };
 export type CommentResolvers = {
-  comment: Resolver<Comment, any, string | undefined | null>;
+  text: Resolver<Comment, any, string | undefined | null>;
 };
 export type ImageResolvers = {
   fileName: Resolver<Image, any, string>;

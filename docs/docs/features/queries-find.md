@@ -3,24 +3,29 @@ title: Find Queries
 sidebar_position: 3
 ---
 
-Find queries are Joist's minimalist syntax for building `SELECT` queries that load entities.
-
-They look like this:
+Find queries are Joist's ergonomic API for issuing `SELECT` queries to load entities from your database. They look like this:
 
 ```ts
 // Find all BookReviews for a given Publisher
 const reviews1 = await em.find(BookReview, {
-  book: { author: { publisher: p1 } }
+  book: { author: { publisher: "p:1" } }
 });
 
 // Find all BookReviews of Books with foo in the title
 const reviews2 = await em.find(BookReview, {
   book: { title: { like: "%foo%" } }
 });
-
 ```
 
-All `find` queries are executed via Joist's [EntityManager](./entity-manager).
+:::tip
+
+You can watch this overview of `em.find` on our YouTube channel:
+
+<div style={{display:"grid", placeContent:"center"}}>
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/59TA8_OjvK0?si=tj7o0OBqa74n5fwc" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
+
+:::
 
 :::info
 

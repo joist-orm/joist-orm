@@ -1,3 +1,10 @@
+## [1.144.1](https://github.com/stephenh/joist-ts/compare/v1.144.0...v1.144.1) (2024-01-21)
+
+
+### Bug Fixes
+
+* Fix small scaffolding nits ([#949](https://github.com/stephenh/joist-ts/issues/949)) ([770dd68](https://github.com/stephenh/joist-ts/commit/770dd689ac140610e50c0c388b96d901b157da39))
+
 # [1.144.0](https://github.com/stephenh/joist-ts/compare/v1.143.3...v1.144.0) (2024-01-21)
 
 

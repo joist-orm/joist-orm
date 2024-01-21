@@ -28,6 +28,8 @@ export type Resolver<R, A, T> = (root: R, args: A, ctx: Context, info: any) => M
 
 export type AuthorResolvers = {
   firstName: Resolver<Author, any, string>;
+  lastName: Resolver<Author, any, string | undefined>;
+  graphqlOnlyField: Resolver<Author, number, number>;
 };
 export type AuthorStatResolvers = {
   smallint: Resolver<AuthorStat, any, number>;

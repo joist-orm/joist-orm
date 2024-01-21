@@ -51,7 +51,8 @@ export function makeRunEach<C extends Context>(
   return (ctx, valuesFn, fn) => runEach(ctx, valuesFn, fn, contextFn);
 }
 
-function newContext<C extends Context>(ctx: C): C {
+/** A default `newContext` that assumes `ctx.em` is where the `EntityManager` lives. */
+export function newContext<C extends Context>(ctx: C): C {
   const { em } = ctx;
   const newCtx = { ...ctx };
   const newEm = new EntityManager(newCtx, em.driver);

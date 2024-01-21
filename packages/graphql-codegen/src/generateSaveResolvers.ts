@@ -34,15 +34,11 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
   const testFiles = entities.map((e) => {
     const { name } = e;
     const camelName = camelCase(name);
-    const type = imp(`${e.name}@src/entities`);
-    const inputType = imp(`Save${name}Input@src/generated/graphql-types`);
     const resolverConst = imp(`save${name}@src/resolvers/mutations/${camelName}/save${name}Resolver`);
-    const tagName = config.entities[name].tag || "entity";
 
     const contents = code`
       describe("save${name}", () => {
         it.withCtx("can create", async (ctx) => {
-          const { em } = ctx;
           const result = await runSave(ctx, () => ({}));
           expect(result).toBeDefined()
         });

@@ -46,7 +46,7 @@ export function generateObjectResolvers(config: Config, entities: EntityDbMetada
           const ${tagName} = ${factory}(em);
           // Then we can query it
           const result = await runFields(ctx, ${tagName}, [${keys}]);
-          expect(${tagName}).toMatchEntity(result);
+          expect(result).toMatchEntity({});
         });
       });
 

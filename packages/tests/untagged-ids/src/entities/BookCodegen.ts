@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Changes,
   cleanStringValue,
+  Collection,
   ConfigApi,
   EntityFilter,
   EntityGraphQLFilter,
@@ -13,6 +14,7 @@ import {
   getField,
   getOrmField,
   GraphQLFilterOf,
+  hasMany,
   hasOne,
   isLoaded,
   Lens,
@@ -33,7 +35,20 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Author, AuthorId, authorMeta, AuthorOrder, Book, bookMeta, Entity, EntityManager, newBook } from "./entities";
+import {
+  Author,
+  AuthorId,
+  authorMeta,
+  AuthorOrder,
+  Book,
+  bookMeta,
+  Comment,
+  CommentId,
+  commentMeta,
+  Entity,
+  EntityManager,
+  newBook,
+} from "./entities";
 
 export type BookId = Flavor<string, Book>;
 
@@ -48,10 +63,12 @@ export interface BookFields {
 export interface BookOpts {
   title: string;
   author: Author | AuthorId;
+  comments?: Comment[];
 }
 
 export interface BookIdsOpts {
   authorId?: AuthorId | null;
+  commentIds?: CommentId[] | null;
 }
 
 export interface BookFilter {
@@ -60,6 +77,7 @@ export interface BookFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   author?: EntityFilter<Author, AuthorId, FilterOf<Author>, never>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface BookGraphQLFilter {
@@ -68,6 +86,7 @@ export interface BookGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   author?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, never>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
 export interface BookOrder {
@@ -166,6 +185,18 @@ export abstract class BookCodegen extends BaseEntity<EntityManager, string> impl
 
   isLoaded<H extends LoadHint<Book>>(hint: H): this is Loaded<Book, H> {
     return isLoaded(this as any as Book, hint);
+  }
+
+  get comments(): Collection<Book, Comment> {
+    const { relations } = getOrmField(this);
+    return relations.comments ??= hasMany(
+      this as any as Book,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_book_id",
+      undefined,
+    );
   }
 
   get author(): ManyToOneReference<Book, Author, never> {

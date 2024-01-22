@@ -15,13 +15,13 @@ describe("Book", () => {
     // And after we flush
     await em.flush();
     expect(queries).toMatchInlineSnapshot(`
-      [
-        "BEGIN;",
-        "select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('book_id_seq') from generate_series(1, 1)",
-        "INSERT INTO "authors" ("id", "firstName", "lastName", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5)",
-        "INSERT INTO "book" ("id", "title", "authorId") VALUES ($1, $2, $3)",
-        "COMMIT;",
-      ]
+     [
+       "BEGIN;",
+       "select nextval('authors_id_seq') from generate_series(1, 1) UNION ALL select nextval('book_id_seq') from generate_series(1, 1)",
+       "INSERT INTO "authors" ("id", "firstName", "lastName", "delete", "createdAt", "updatedAt") VALUES ($1, $2, $3, $4, $5, $6)",
+       "INSERT INTO "book" ("id", "title", "authorId") VALUES ($1, $2, $3)",
+       "COMMIT;",
+     ]
     `);
     // Then we still don't see any values
     expect(getOrmField(b).data).toEqual({

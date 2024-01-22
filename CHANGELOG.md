@@ -1,3 +1,10 @@
+## [1.144.3](https://github.com/stephenh/joist-ts/compare/v1.144.2...v1.144.3) (2024-01-22)
+
+
+### Bug Fixes
+
+* Fix em.find on poly with untagged ids. ([#951](https://github.com/stephenh/joist-ts/issues/951)) ([73be96d](https://github.com/stephenh/joist-ts/commit/73be96d875229489e0b35aa2c67c90be07f95866))
+
 ## [1.144.2](https://github.com/stephenh/joist-ts/compare/v1.144.1...v1.144.2) (2024-01-22)
 
 

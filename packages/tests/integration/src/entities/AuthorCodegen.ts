@@ -397,22 +397,22 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "address");
   }
 
-  set address(_address: Address | undefined) {
-    if (_address) {
-      assert(_address, address);
+  set address(value: Address | undefined) {
+    if (value) {
+      assert(value, address);
     }
-    setField(this, "address", _address);
+    setField(this, "address", value);
   }
 
   get businessAddress(): z.output<typeof AddressSchema> | undefined {
     return getField(this, "businessAddress");
   }
 
-  set businessAddress(_businessAddress: z.input<typeof AddressSchema> | undefined) {
-    if (_businessAddress) {
-      setField(this, "businessAddress", AddressSchema.parse(_businessAddress));
+  set businessAddress(value: z.input<typeof AddressSchema> | undefined) {
+    if (value) {
+      setField(this, "businessAddress", AddressSchema.parse(value));
     } else {
-      setField(this, "businessAddress", _businessAddress);
+      setField(this, "businessAddress", value);
     }
   }
 
@@ -420,11 +420,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "quotes");
   }
 
-  set quotes(_quotes: Quotes | undefined) {
-    if (_quotes) {
-      assert(_quotes, quotes);
+  set quotes(value: Quotes | undefined) {
+    if (value) {
+      assert(value, quotes);
     }
-    setField(this, "quotes", _quotes);
+    setField(this, "quotes", value);
   }
 
   get numberOfAtoms(): bigint | undefined {

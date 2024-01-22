@@ -1,5 +1,7 @@
 import {
   BaseEntity,
+  BooleanFilter,
+  BooleanGraphQLFilter,
   Changes,
   cleanStringValue,
   Collection,
@@ -41,6 +43,7 @@ export interface AuthorFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   firstName: { kind: "primitive"; type: string; unique: false; nullable: never; derived: false };
   lastName: { kind: "primitive"; type: string; unique: false; nullable: undefined; derived: false };
+  delete: { kind: "primitive"; type: boolean; unique: false; nullable: undefined; derived: false };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
 }
@@ -48,6 +51,7 @@ export interface AuthorFields {
 export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
+  delete?: boolean | null;
   books?: Book[];
 }
 
@@ -59,6 +63,7 @@ export interface AuthorFilter {
   id?: ValueFilter<AuthorId, never> | null;
   firstName?: ValueFilter<string, never>;
   lastName?: ValueFilter<string, null>;
+  delete?: BooleanFilter<null>;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
@@ -68,6 +73,7 @@ export interface AuthorGraphQLFilter {
   id?: ValueGraphQLFilter<AuthorId>;
   firstName?: ValueGraphQLFilter<string>;
   lastName?: ValueGraphQLFilter<string>;
+  delete?: BooleanGraphQLFilter;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
@@ -77,6 +83,7 @@ export interface AuthorOrder {
   id?: OrderBy;
   firstName?: OrderBy;
   lastName?: OrderBy;
+  delete?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
 }
@@ -137,6 +144,14 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   set lastName(lastName: string | undefined) {
     setField(this, "lastName", cleanStringValue(lastName));
+  }
+
+  get delete(): boolean | undefined {
+    return getField(this, "delete");
+  }
+
+  set delete(value: boolean | undefined) {
+    setField(this, "delete", value);
   }
 
   get createdAt(): Date {

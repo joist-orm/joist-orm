@@ -4,6 +4,7 @@ exports.up = (b) => {
     id: { type: "id", primaryKey: true },
     firstName: { type: "varchar(255)", notNull: true },
     lastName: { type: "varchar(255)", notNull: false },
+    delete: { type: "boolean", notNull: false },
     createdAt: { type: "timestamptz", notNull: true },
     updatedAt: { type: "timestamptz", notNull: true },
   });

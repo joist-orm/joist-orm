@@ -1,3 +1,10 @@
+## [1.144.2](https://github.com/stephenh/joist-ts/compare/v1.144.1...v1.144.2) (2024-01-22)
+
+
+### Bug Fixes
+
+* Fix setter param names cannot be JS keywords. ([#950](https://github.com/stephenh/joist-ts/issues/950)) ([9623130](https://github.com/stephenh/joist-ts/commit/9623130549e5eaa87671005b0bacead0efc6158a))
+
 ## [1.144.1](https://github.com/stephenh/joist-ts/compare/v1.144.0...v1.144.1) (2024-01-21)
 
 

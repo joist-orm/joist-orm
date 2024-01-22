@@ -215,6 +215,7 @@ export function parseFindQuery(
             // We're left with basically a ValueFilter against the ids
             // For now only support eq/ne/in/is-null
             if (f.kind === "eq" || f.kind === "ne") {
+              if (isNilIdValue(f.value)) return;
               const comp =
                 field.components.find(
                   (p) => p.otherMetadata().cstr === getConstructorFromTaggedId(f.value as string),
@@ -533,11 +534,11 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     return {
       kind: "in",
       value: filter.map((v: string | number | Entity) => {
-        return isEntity(v) ? v.idMaybe ?? nilIdValue(meta) : v;
+        return isEntity(v) ? v.idTaggedMaybe ?? nilIdValue(meta) : v;
       }),
     };
   } else if (isEntity(filter)) {
-    return { kind: "eq", value: filter.idMaybe || nilIdValue(meta) };
+    return { kind: "eq", value: filter.idTaggedMaybe || nilIdValue(meta) };
   } else if (typeof filter === "object") {
     // Looking for `{ firstName: "f1" }` or `{ ne: "f1" }`
     const keys = Object.keys(filter);
@@ -551,7 +552,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "ne", value };
       } else if (isEntity(value)) {
-        return { kind: "ne", value: value.idMaybe || nilIdValue(meta) };
+        return { kind: "ne", value: value.idTaggedMaybe || nilIdValue(meta) };
       } else {
         throw new Error(`Unsupported "ne" value ${value}`);
       }
@@ -566,7 +567,7 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
       } else if (typeof value === "string" || typeof value === "number") {
         return { kind: "eq", value };
       } else if (isEntity(value)) {
-        return { kind: "eq", value: value.idMaybe || nilIdValue(meta) };
+        return { kind: "eq", value: value.idTaggedMaybe || nilIdValue(meta) };
       } else {
         return parseValueFilter(value)[0] as any;
       }
@@ -575,8 +576,8 @@ export function parseEntityFilter(meta: EntityMetadata, filter: any): ParsedEnti
     // that have an id, and so structurally match the entity filter without really being filters,
     // and convert them over here before getting into parseValueFilter.
     for (const [key, value] of Object.entries(filter)) {
-      if (value && typeof value === "object" && !isPlainObject(value) && "idMaybe" in value) {
-        filter[key] = value.idMaybe || nilIdValue(meta);
+      if (value && typeof value === "object" && !isPlainObject(value) && "idTaggedMaybe" in value) {
+        filter[key] = value.idTaggedMaybe || nilIdValue(meta);
       }
     }
     return { kind: "join", subFilter: filter };
@@ -607,6 +608,10 @@ function nilIdValue(meta: EntityMetadata): any {
     default:
       return assertNever(meta.idDbType);
   }
+}
+
+function isNilIdValue(value: any): boolean {
+  return value === -1 || value === "00000000-0000-0000-0000-000000000000";
 }
 
 /**

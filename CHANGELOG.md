@@ -1,3 +1,10 @@
+## [1.144.4](https://github.com/stephenh/joist-ts/compare/v1.144.3...v1.144.4) (2024-01-23)
+
+
+### Bug Fixes
+
+* Implement not null checks on polymorphic references. ([#953](https://github.com/stephenh/joist-ts/issues/953)) ([be50769](https://github.com/stephenh/joist-ts/commit/be50769beb677993bbdb3e0d191c9b10402fe3ef))
+
 ## [1.144.3](https://github.com/stephenh/joist-ts/compare/v1.144.2...v1.144.3) (2024-01-22)
 
 

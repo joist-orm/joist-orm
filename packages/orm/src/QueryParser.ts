@@ -238,6 +238,17 @@ export function parseFindQuery(
                   cond: f,
                 });
               });
+            } else if (f.kind === "not-null") {
+              const conditions = field.components.map((comp) => {
+                const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
+                return {
+                  alias: fa,
+                  column: comp.columnName,
+                  dbType: column.dbType,
+                  cond: { kind: "not-null" },
+                };
+              }) satisfies ColumnCondition[];
+              inlineExpressions.push({ op: "or", conditions });
             } else if (f.kind === "in") {
               // Split up the ids by constructor
               const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);

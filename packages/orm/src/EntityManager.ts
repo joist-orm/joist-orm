@@ -59,6 +59,7 @@ import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from "./utils";
 
 /**
@@ -951,7 +952,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
     // Tell `AsyncMethodImpl.load` to not invoke its function
-    (opts as any)["populate"] = true;
+    (opts as any)[AsyncMethodPopulateSecret] = true;
 
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.

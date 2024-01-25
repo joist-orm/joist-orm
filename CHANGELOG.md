@@ -1,3 +1,10 @@
+## [1.144.5](https://github.com/stephenh/joist-ts/compare/v1.144.4...v1.144.5) (2024-01-25)
+
+
+### Bug Fixes
+
+* fixed AsyncMethod not working when its first argument is an entity ([#954](https://github.com/stephenh/joist-ts/issues/954)) ([65703f6](https://github.com/stephenh/joist-ts/commit/65703f69526c2732189eee7e9e3391559c28ed2c))
+
 ## [1.144.4](https://github.com/stephenh/joist-ts/compare/v1.144.3...v1.144.4) (2024-01-23)
 
 

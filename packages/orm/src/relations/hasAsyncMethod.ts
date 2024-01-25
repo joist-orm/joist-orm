@@ -1,7 +1,6 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { tryResolve } from "../utils";
 
 const AsyncMethodM = Symbol();
 export const AsyncMethodPopulateSecret = Symbol();
@@ -29,7 +28,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   implements AsyncMethod<T, A, V>
 {
   private loaded = false;
-  private loadPromise: any;
+  private loadPromise: Promise<any> | undefined;
 
   readonly #entity: T;
   readonly #hint: H;
@@ -43,17 +42,14 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
   }
 
   /** Args might be either the user-provided args, or the populate `opts` if we're being preloaded. */
-  load(...args: A): Promise<V> {
+  async load(...args: A): Promise<V> {
     // Are we being called by `em.populate`? If so, we don't have the real args, so avoid invoking fn
     const isPopulate = args && typeof args[0] === "object" && AsyncMethodPopulateSecret in (args as any)[0];
-    const { fn } = this;
     if (!this.loaded) {
-      return (this.loadPromise ??= this.#entity.em.populate(this.#entity, this.#hint!).then((loaded) => {
-        this.loaded = true;
-        return isPopulate ? undefined : fn(loaded, ...args);
-      }));
+      this.loadPromise ??= this.#entity.em.populate(this.#entity, this.#hint!).then((loaded) => (this.loaded = true));
+      await this.loadPromise;
     }
-    return isPopulate ? (undefined as any) : tryResolve(() => this.call(...args));
+    return isPopulate ? (undefined as any) : this.call(...args);
   }
 
   call(...args: A): V {

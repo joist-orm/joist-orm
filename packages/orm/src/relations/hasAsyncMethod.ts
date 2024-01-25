@@ -1,7 +1,6 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { LoadHint, Loaded, isLoaded } from "../loadHints";
-import { tryResolve } from "../utils";
 
 const AsyncMethodM = Symbol();
 export const AsyncMethodPopulateSecret = Symbol();
@@ -50,7 +49,7 @@ export class AsyncMethodImpl<T extends Entity, H extends LoadHint<T>, A extends 
       this.loadPromise ??= this.#entity.em.populate(this.#entity, this.#hint!).then((loaded) => (this.loaded = true));
       await this.loadPromise;
     }
-    return isPopulate ? (undefined as any) : tryResolve(() => this.call(...args));
+    return isPopulate ? (undefined as any) : this.call(...args);
   }
 
   call(...args: A): V {

@@ -1,3 +1,10 @@
+## [1.144.6](https://github.com/stephenh/joist-ts/compare/v1.144.5...v1.144.6) (2024-01-25)
+
+
+### Bug Fixes
+
+* Fixed async method when load is called in a loop with different args ([#955](https://github.com/stephenh/joist-ts/issues/955)) ([877a363](https://github.com/stephenh/joist-ts/commit/877a3638dbbd45c3428f2487c4b0c227aea33424))
+
 ## [1.144.5](https://github.com/stephenh/joist-ts/compare/v1.144.4...v1.144.5) (2024-01-25)
 
 

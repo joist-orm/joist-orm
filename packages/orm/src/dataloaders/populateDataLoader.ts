@@ -14,31 +14,27 @@ export function populateDataLoader(
   mode: "preload" | "intermixed",
   opts: { forceReload?: boolean } = {},
 ): DataLoader<{ entity: Entity; hint: LoadHint<any> }, any> {
-  // For batching populates, we want different levels of course-ness:
-  // - preloading populates that are only SQL should be batched together as much as possible, but
-  // - intermixed populates (some with custom relations) should be batched as separately as possible
-  //   (while still batching identical populates together) to reduce the chance of promise deadlocks.
+  // Ideally this calls directly into o2mLoads(entities, field), no more dataloader-ing, we're dataloader-ed
   //
-  // I.e. if we know this is a sql-only hint, we can batch all loads for a given entity
-  // together do leverage join-based preloading.
-  //
-  // However, intermixed batches can be prone to promise deadlocking (one relation .load getting
-  // stuck in a batch that is asking for its own dependencies to load), so if this is an intermixed
-  // hint, then use a batch key that includes the hint itself, which will make it unlikely
-  // for non-sql relations to deadlock on each other/themselves.
-  const batchKey =
-    mode === "preload"
-      ? `${meta.tagName}:${opts.forceReload}`
-      : `${meta.tagName}:${JSON.stringify(hint)}:${opts.forceReload}`;
+  // How to handle hasReactiveReferences? Can we statically know their load hint? I guess so.
+
+  const batchKey = `${meta.tagName}:${opts.forceReload}`;
   return em.getLoader(
     "populate",
     batchKey,
     async (populates) => {
+      // We fundamentally need to load a layer at a time.
+      // Maybe each layer has dirty fields in it. That's fine, maybe we load them...
+      // ...we could skip preloading AsyncReferences that we know are dirty, and instead
+      // first load their full hint, calc it, and then load the rest of the hint that
+      // drills through the AsyncReference.
+
+
       async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
         const { preloader } = getEmInternalApi(em);
-        // We may not have a layerMeta if we're going through non-field properties
+        // We may not have a layerMeta if we're going through non-field properties like custom fields
         if (preloader && layerMeta) {
           const preloadThisLayer = Object.entries(layerNode.subHints).some(([key, hint]) => {
             return [...hint.entities].some(

@@ -57,10 +57,13 @@ export class JsonAggregatePreloader implements PreloadPlugin {
     };
 
     return (rows, entities) => {
-      rows.forEach((row, i) => {
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
         const parent = entities[i];
-        joins.forEach((join) => join.hydrator(parent, parent, row[join.alias] ?? []));
-      });
+        for (const join of joins) {
+          join.hydrator(parent, parent, row[join.alias] ?? []);
+        }
+      }
     };
   }
 

@@ -44,6 +44,7 @@ export function buildHintTree<E extends EntityOrId>(
   hints: readonly { entity: E; hint: LoadHint<any> | undefined }[] | LoadHint<any>,
 ): HintNode<E> {
   if (Array.isArray(hints)) {
+    // Sometimes our bookkeeping is "entity instances", sometimes its "entity ids"
     const entitiesKind = typeof hints[0].entity === "string" ? ("ids" as const) : ("instances" as const);
     const root: HintNode<E> = { entitiesKind, entities: new Set(), subHints: {} };
     for (const { entity, hint } of hints) {

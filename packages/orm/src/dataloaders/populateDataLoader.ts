@@ -74,16 +74,23 @@ export function populateDataLoader(
         // this, we need our `layerNode` hint to get the NON load hints merged in to it.
 
         const entities = [...layerNode.entities].filter((e) => !e.isNewEntity);
-        const entityIds = entities.map((e) => e.idTagged);
         // Make 1 promise per SQL call at this layer
         await Promise.all(
           sql.map(async (fieldName) => {
             const field = getProperties(layerMeta!)[fieldName];
             // These instanceofs match the isSqlField check
             if (field instanceof OneToManyCollection) {
-              const children = await oneToManyBatchFn(em, field, entityIds);
-              for (let i = 0; i < children.length; i++) {
-                getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, children[i]);
+              const loadIds: string[] = [];
+              for (const entity of entities) {
+                if (!(entity as any)[fieldName].isLoaded) {
+                  loadIds.push(entity.idTagged);
+                }
+              }
+              if (loadIds.length > 0) {
+                const children = await oneToManyBatchFn(em, field, loadIds);
+                for (let i = 0; i < children.length; i++) {
+                  getEmInternalApi(em).setPreloadedRelation(loadIds[i], fieldName, children[i]);
+                }
               }
               for (const entity of entities) {
                 (entity as any)[fieldName].preload();
@@ -94,23 +101,33 @@ export function populateDataLoader(
               const loads: any[] = [];
               for (const entity of entities) {
                 const otherId = (entity as any)[fieldName].idTaggedMaybe;
-                if (otherId) loads.push({ entity: otherId, hint: undefined });
+                if (otherId && !em.getEntity(otherId)) {
+                  loads.push({ entity: otherId, hint: undefined });
+                }
               }
-              await loadBatchFn(em, field.otherMeta, loads);
+              if (loads.length > 0) {
+                await loadBatchFn(em, field.otherMeta, loads);
+              }
               for (const entity of entities) {
                 (entity as any)[fieldName].preload();
               }
             } else if (field instanceof ManyToManyCollection) {
+              const entityIds: string[] = [];
               const m2mIds: string[] = [];
               for (const entity of entities) {
-                m2mIds.push(`${field.columnName}=${entity.idTagged}`);
+                if (!(entity as any)[fieldName].isLoaded) {
+                  entityIds.push(entity.idTagged);
+                  m2mIds.push(`${field.columnName}=${entity.idTagged}`);
+                }
               }
-              const children = await manyToManyBatchFn(em, field, m2mIds);
-              for (let i = 0; i < children.length; i++) {
-                getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, children[i]);
-              }
-              for (const entity of entities) {
-                (entity as any)[fieldName].preload();
+              if (m2mIds.length > 0) {
+                const children = await manyToManyBatchFn(em, field, m2mIds);
+                for (let i = 0; i < children.length; i++) {
+                  getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, children[i]);
+                }
+                for (const entity of entities) {
+                  (entity as any)[fieldName].preload();
+                }
               }
             } else {
               throw new Error(`Not implemented yet ${field}`);

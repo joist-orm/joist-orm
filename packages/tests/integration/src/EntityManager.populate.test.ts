@@ -66,7 +66,6 @@ describe("EntityManager.populate", () => {
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
     const pub = await em.populate(asyncPub, { authors: ["books", "publisher"] });
-    console.log(queries);
     expect(numberOfQueries).toEqual(isPreloadingEnabled ? 1 : 2);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);

@@ -19,10 +19,11 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
   // The metadata for the entity that contains the collection
   const { meta: oneMeta, fieldName } = collection;
   const batchKey = `${oneMeta.tableName}-${fieldName}`;
-  return em.getLoader("o2m-load", batchKey, (ids) => oneToManyBatchFn(collection, ids));
+  return em.getLoader("o2m-load", batchKey, (ids) => oneToManyBatchFn(em, collection, ids));
 }
 
 export async function oneToManyBatchFn<T extends Entity, U extends Entity>(
+  em: EntityManager,
   collection: OneToManyCollection<T, U>,
   ids: readonly string[],
 ): Promise<U[][]> {
@@ -46,7 +47,6 @@ export async function oneToManyBatchFn<T extends Entity, U extends Entity>(
   // Skip maybeAddOrderBy b/c we'll sort in memory anyway
   // maybeAddNotSoftDeleted(conditions, meta, alias, "include");
 
-  const { em } = collection.entity;
   const rows = await em.driver.executeFind(em, query, {});
 
   const entities = em.hydrate(meta.cstr, rows, { overwriteExisting: false });

@@ -1,7 +1,6 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { setDefaultEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
-
 import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 
 describe("EntityManager.populate", () => {
@@ -14,7 +13,7 @@ describe("EntityManager.populate", () => {
     expect(bookb.author.get.firstName).toEqual("a1");
   });
 
-  it("can populate many-to-one with multiple keys", async () => {
+  it("can populate many-to-one and many-to-many with multiple keys", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });
     const em = newEntityManager();

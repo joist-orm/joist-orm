@@ -70,6 +70,7 @@ export function getFakeInstance(meta: EntityMetadata): Entity {
       },
       // Tell our "cannot instantiate an abstract class" constructor logic check to chill
       fakeInstance: true,
+      entities: [],
     } as any,
     {},
   ));

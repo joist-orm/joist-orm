@@ -12,7 +12,7 @@ export let testDriver: TestDriver = inMemory ? new InMemoryTestDriver() : new Po
 export let knex: Knex = testDriver.knex;
 export let numberOfQueries = 0;
 export let queries: string[] = [];
-const plugins = (process.env.PLUGINS ?? "join-preloading").split(",");
+const plugins = (process.env.PLUGINS ?? "").split(",");
 export const isPreloadingEnabled = plugins.includes("join-preloading");
 
 let makeApiCall: Function = null!;

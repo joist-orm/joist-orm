@@ -50,7 +50,7 @@ export function populateDataLoader(
         // Partition the hint into fundamental vs. derived relations
         const [sql, non] = partition(
           Object.keys(layerNode.subHints),
-          (key) => !!layerMeta && isSqlField(layerMeta, layerMeta.allFields[key]),
+          (key) => !!layerMeta && isSqlField(layerMeta.allFields[key]),
         );
 
         // Fundamental relations are loaded via SQL, i.e. `author.books` or `author.publisher`.
@@ -73,7 +73,9 @@ export function populateDataLoader(
         // JS code eval what subset of entities we need to keep going. For the preloader to know
         // this, we need our `layerNode` hint to get the NON load hints merged in to it.
 
-        const entities = [...layerNode.entities].filter((e) => !e.isNewEntity);
+        const allEntities = [...layerNode.entities];
+        const nonNewEntities = allEntities.filter((e) => !e.isNewEntity);
+
         // Make 1 promise per SQL call at this layer
         await Promise.all(
           sql.map(async (fieldName) => {
@@ -81,7 +83,7 @@ export function populateDataLoader(
             // These instanceofs match the isSqlField check
             if (field instanceof OneToManyCollection) {
               const loadIds: string[] = [];
-              for (const entity of entities) {
+              for (const entity of nonNewEntities) {
                 if (!(entity as any)[fieldName].isLoaded) {
                   loadIds.push(entity.idTagged);
                 }
@@ -92,14 +94,14 @@ export function populateDataLoader(
                   getEmInternalApi(em).setPreloadedRelation(loadIds[i], fieldName, children[i]);
                 }
               }
-              for (const entity of entities) {
+              for (const entity of allEntities) {
                 (entity as any)[fieldName].preload();
               }
               // TODO Need to mark new entities as well.
               // TODO What if the field is already loaded, or preloaded? Should skip.
             } else if (field instanceof ManyToOneReferenceImpl) {
               const loads: any[] = [];
-              for (const entity of entities) {
+              for (const entity of nonNewEntities) {
                 const otherId = (entity as any)[fieldName].idTaggedMaybe;
                 if (otherId && !em.getEntity(otherId)) {
                   loads.push({ entity: otherId, hint: undefined });
@@ -108,13 +110,13 @@ export function populateDataLoader(
               if (loads.length > 0) {
                 await loadBatchFn(em, field.otherMeta, loads);
               }
-              for (const entity of entities) {
+              for (const entity of allEntities) {
                 (entity as any)[fieldName].preload();
               }
             } else if (field instanceof ManyToManyCollection) {
               const entityIds: string[] = [];
               const m2mIds: string[] = [];
-              for (const entity of entities) {
+              for (const entity of nonNewEntities) {
                 if (!(entity as any)[fieldName].isLoaded) {
                   entityIds.push(entity.idTagged);
                   m2mIds.push(`${field.columnName}=${entity.idTagged}`);
@@ -125,7 +127,7 @@ export function populateDataLoader(
                 for (let i = 0; i < children.length; i++) {
                   getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, children[i]);
                 }
-                for (const entity of entities) {
+                for (const entity of allEntities) {
                   (entity as any)[fieldName].preload();
                 }
               }
@@ -184,10 +186,9 @@ function getEvenDeleted(relation: any): any {
 
 // Copy/pasted from canPreload
 export function isSqlField(
-  meta: EntityMetadata,
-  field: Field,
+  field: Field | undefined,
 ): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
-  if (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") {
+  if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
     const otherMeta = field.otherMetadata();
     // If `otherField` is missing, this could be a large collection which can't be loaded...
     return !!otherMeta.allFields[field.otherFieldName];

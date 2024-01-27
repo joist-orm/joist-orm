@@ -1,7 +1,7 @@
-import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
+import { insertAuthor, insertBook, insertBookReview, insertPublisher } from "@src/entities/inserts";
+import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
 import { setDefaultEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
-import {isPreloadingEnabled, newEntityManager, numberOfQueries, queries, resetQueryCount} from "@src/testEm";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
@@ -222,5 +222,15 @@ describe("EntityManager.populate", () => {
     // @ts-expect-error
     const p = em.load(Author, "a:1", { publisher: "size" });
     await expect(p).rejects.toThrow("Invalid load hint 'size' on SmallPublisher:1");
+  });
+
+  it("can populate m2o and hasManyThrough", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertBookReview({ book_id: 1, rating: 5 });
+    const em = newEntityManager();
+    const a1 = await em.load(Author, "1");
+    const ap = await em.populate(a1, { publisher: {}, reviews: {} });
+    expect(ap.reviews.get).toHaveLength(1);
   });
 });

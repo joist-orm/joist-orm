@@ -110,7 +110,7 @@ export function entityResolver<T extends Entity, A extends Record<string, keyof 
         if (isLoadedReference(reference)) {
           return reference.get;
         }
-        // We skip polys b/c they can't have load hints anyway
+        // We skentitmanaip polys b/c they can't have load hints anyway
         if (info && (isManyToOneField(ormField) || isOneToManyField(ormField))) {
           // See if we can populate the collection from the GraphQL selection set
           const loadHint = convertInfoToLoadHint(ormField.otherMetadata(), info);

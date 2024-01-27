@@ -1,11 +1,29 @@
 import DataLoader from "dataloader";
 import { Entity } from "../Entity";
-import { EntityMetadata } from "../EntityMetadata";
+import {
+  EntityMetadata,
+  Field,
+  ManyToManyField,
+  ManyToOneField,
+  OneToManyField,
+  OneToOneField,
+} from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { AliasAssigner, EntityManager, ParsedFindQuery, getEmInternalApi, indexBy, keyToNumber, kqDot } from "../index";
+import {
+  AliasAssigner,
+  EntityManager,
+  OneToManyCollection,
+  ParsedFindQuery,
+  getEmInternalApi,
+  getProperties,
+  indexBy,
+  keyToNumber,
+  kqDot,
+} from "../index";
 import { LoadHint } from "../loadHints";
 import { ReactiveFieldImpl } from "../relations/ReactiveField";
-import { toArray } from "../utils";
+import { partition, toArray } from "../utils";
+import { oneToManyBatchFn } from "./oneToManyDataLoader";
 
 export function populateDataLoader(
   em: EntityManager,
@@ -29,8 +47,30 @@ export function populateDataLoader(
       // first load their full hint, calc it, and then load the rest of the hint that
       // drills through the AsyncReference.
 
-
       async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
+        // Partition the hint into fundamental vs. derived relations
+
+        const [sql, non] = partition(
+          Object.keys(layerNode.subHints),
+          (key) => !!layerMeta && isSqlField(layerMeta, layerMeta.allFields[key]),
+        );
+
+        // Make 1 promise per SQL call at this layer
+        const entityIds = [...layerNode.entities].filter((e) => !e.isNewEntity).map((e) => e.idTagged);
+        await Promise.all(
+          sql.map(async (fieldName) => {
+            const field = getProperties(layerMeta!)[fieldName];
+            // These instanceofs match the isSqlField check
+            if (field instanceof OneToManyCollection) {
+              // Need to get back key -> entities
+              const entities = await oneToManyBatchFn(field, entityIds);
+              for (let i = 0; i < entities.length; i++) {
+                getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, entities[i]);
+              }
+            }
+          }),
+        );
+
         // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
         // needs loading, just load everything
         const { preloader } = getEmInternalApi(em);
@@ -154,4 +194,23 @@ export function populateDataLoader(
 /** Probes `relation` to see if it's a m2o/o2m/m2m relation that supports `getWithDeleted`, otherwise calls `get`. */
 function getEvenDeleted(relation: any): any {
   return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
+}
+
+// Copy/pasted from canPreload
+export function isSqlField(
+  meta: EntityMetadata,
+  field: Field,
+): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
+  if (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") {
+    const otherMeta = field.otherMetadata();
+    // We don't support preloading tables with inheritance yet
+    if (!!otherMeta.baseType || otherMeta.subTypes.length > 0) return false;
+    // If `otherField` is missing, this could be a large collection which currently can't be loaded...
+    const otherField = otherMeta.allFields[field.otherFieldName];
+    if (!otherField) return false;
+    // If otherField is a poly that points to a sub/base component, we don't support that yet
+    if (otherField.kind === "poly" && !otherField.components.some((c) => c.otherMetadata() === meta)) return false;
+    return true;
+  }
+  return false;
 }

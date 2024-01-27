@@ -14,7 +14,7 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
   // which side of the relation the `collection` is coming from, so
   // the `load` impl will have to handle keys that come from either
   // side of the relation.
-  return em.getLoader("m2m-load", collection.joinTableName, (keys) => load(collection, keys));
+  return em.getLoader("m2m-load", collection.joinTableName, (keys) => manyToManyBatchFn(em, collection, keys));
 }
 
 /**
@@ -23,12 +23,12 @@ export function manyToManyDataLoader<T extends Entity, U extends Entity>(
  * I.e. we can load the `books_to_tags` join rows for multiple `Book`s at a time, or even
  * load `books_to_tags` for several `Book`s and several `Tag`s in a single SQL query.
  */
-async function load<T extends Entity, U extends Entity>(
+export async function manyToManyBatchFn<T extends Entity, U extends Entity>(
+  em: EntityManager,
   collection: ManyToManyCollection<T, U>,
+  /** I.e. `book_id=2` or `tag_id=3` */
   keys: ReadonlyArray<string>,
 ): Promise<U[][]> {
-  const { em } = collection.entity;
-
   // Make a map that will be both `tag_id=t:2 -> [...]` and `book_id=b:3 -> [...]`
   const rowsByKey: Record<string, JoinRow[]> = {};
   // Keep a reference to our row to track updates/deletes

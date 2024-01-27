@@ -1,7 +1,7 @@
 import { insertAuthor, insertBook, insertPublisher } from "@src/entities/inserts";
 import { setDefaultEntityLimit } from "joist-orm";
 import { Author, Book, Publisher, newAuthor, newBook, newPublisher } from "./entities";
-import { isPreloadingEnabled, newEntityManager, numberOfQueries, resetQueryCount } from "@src/testEm";
+import {isPreloadingEnabled, newEntityManager, numberOfQueries, queries, resetQueryCount} from "@src/testEm";
 
 describe("EntityManager.populate", () => {
   it("can populate many-to-one", async () => {
@@ -56,7 +56,7 @@ describe("EntityManager.populate", () => {
   it("can populate one-to-many with nested keys as an array", async () => {
     await insertPublisher({ name: "p1" });
     await insertAuthor({ first_name: "a1", publisher_id: 1 });
-    await insertAuthor({ first_name: "a1", publisher_id: 1 });
+    await insertAuthor({ first_name: "a2", publisher_id: 1 });
     await insertBook({ title: "b1", author_id: 1 });
     await insertBook({ title: "b2", author_id: 1 });
     await insertBook({ title: "b3", author_id: 2 });
@@ -66,6 +66,7 @@ describe("EntityManager.populate", () => {
     const asyncPub = await em.load(Publisher, "1");
     resetQueryCount();
     const pub = await em.populate(asyncPub, { authors: ["books", "publisher"] });
+    console.log(queries);
     expect(numberOfQueries).toEqual(isPreloadingEnabled ? 1 : 2);
     expect(pub.authors.get.length).toEqual(2);
     expect(pub.authors.get[0].books.get.length).toEqual(2);

@@ -9,10 +9,18 @@ import {
   OneToOneField,
 } from "../EntityMetadata";
 import { HintNode, buildHintTree } from "../HintTree";
-import { EntityManager, ManyToOneReferenceImpl, OneToManyCollection, getEmInternalApi, getProperties } from "../index";
+import {
+  EntityManager,
+  ManyToManyCollection,
+  ManyToOneReferenceImpl,
+  OneToManyCollection,
+  getEmInternalApi,
+  getProperties,
+} from "../index";
 import { LoadHint } from "../loadHints";
 import { partition, toArray } from "../utils";
 import { loadBatchFn } from "./loadDataLoader";
+import { manyToManyBatchFn } from "./manyToManyDataLoader";
 import { oneToManyBatchFn } from "./oneToManyDataLoader";
 
 export function populateDataLoader(
@@ -89,6 +97,18 @@ export function populateDataLoader(
                 if (otherId) loads.push({ entity: otherId, hint: undefined });
               }
               await loadBatchFn(em, field.otherMeta, loads);
+              for (const entity of entities) {
+                (entity as any)[fieldName].preload();
+              }
+            } else if (field instanceof ManyToManyCollection) {
+              const m2mIds: string[] = [];
+              for (const entity of entities) {
+                m2mIds.push(`${field.columnName}=${entity.idTagged}`);
+              }
+              const children = await manyToManyBatchFn(em, field, m2mIds);
+              for (let i = 0; i < children.length; i++) {
+                getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, children[i]);
+              }
               for (const entity of entities) {
                 (entity as any)[fieldName].preload();
               }

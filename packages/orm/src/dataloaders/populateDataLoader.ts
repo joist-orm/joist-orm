@@ -18,7 +18,7 @@ import {
   getProperties,
 } from "../index";
 import { LoadHint } from "../loadHints";
-import { partition, toArray } from "../utils";
+import { toArray } from "../utils";
 import { loadBatchFn } from "./loadDataLoader";
 import { manyToManyBatchFn } from "./manyToManyDataLoader";
 import { oneToManyBatchFn } from "./oneToManyDataLoader";
@@ -48,10 +48,14 @@ export function populateDataLoader(
 
       async function populateLayer(layerMeta: EntityMetadata | undefined, layerNode: HintNode<Entity>): Promise<any[]> {
         // Partition the hint into fundamental vs. derived relations
-        const [sql, non] = partition(
-          Object.keys(layerNode.subHints),
-          (key) => !!layerMeta && isSqlField(layerMeta.allFields[key]),
-        );
+        const [sql, non] = partitionHint(layerMeta, layerNode);
+
+        // ^ will have all the available nested SQL hints, which is good for preloading (if enabled).
+        // However, `non` isn't guaranteed to have all of its data loaded in a single SQL, due to either:
+        // - No preloading enabled/available, or
+        // - Hitting a derived relation, which needs to invoke JS filtering before further loading
+        //
+        // And we can't continue to the next layer until `non`s data is fully loaded.
 
         // Fundamental relations are loaded via SQL, i.e. `author.books` or `author.publisher`.
         // Derived relations will be like `author.reviews` which is a `hasManyThrough`. We need
@@ -59,7 +63,7 @@ export function populateDataLoader(
         //
         // What if we see `{ author: { reviews: comments, publisher: comments } }` we could
         // - load publisher with SQL call
-        // - resolve `reviews` -> `books: reviews`
+        // - rewrite `reviews` -> `books: reviews`
         // - load `books` with SQL call
         // - Should we go ahead and load `publisher` comments, or wait for the books call to return,
         //   and then do the 3rd level all at once?
@@ -78,7 +82,7 @@ export function populateDataLoader(
 
         // Make 1 promise per SQL call at this layer
         await Promise.all(
-          sql.map(async (fieldName) => {
+          Object.keys(sql.subHints).map(async (fieldName) => {
             const field = getProperties(layerMeta!)[fieldName];
             // These instanceofs match the isSqlField check
             if (field instanceof OneToManyCollection) {
@@ -94,11 +98,6 @@ export function populateDataLoader(
                   getEmInternalApi(em).setPreloadedRelation(loadIds[i], fieldName, children[i]);
                 }
               }
-              for (const entity of allEntities) {
-                (entity as any)[fieldName].preload();
-              }
-              // TODO Need to mark new entities as well.
-              // TODO What if the field is already loaded, or preloaded? Should skip.
             } else if (field instanceof ManyToOneReferenceImpl) {
               const loads: any[] = [];
               for (const entity of nonNewEntities) {
@@ -109,9 +108,6 @@ export function populateDataLoader(
               }
               if (loads.length > 0) {
                 await loadBatchFn(em, field.otherMeta, loads);
-              }
-              for (const entity of allEntities) {
-                (entity as any)[fieldName].preload();
               }
             } else if (field instanceof ManyToManyCollection) {
               const entityIds: string[] = [];
@@ -127,12 +123,13 @@ export function populateDataLoader(
                 for (let i = 0; i < children.length; i++) {
                   getEmInternalApi(em).setPreloadedRelation(entityIds[i], fieldName, children[i]);
                 }
-                for (const entity of allEntities) {
-                  (entity as any)[fieldName].preload();
-                }
               }
             } else {
               throw new Error(`Not implemented yet ${field}`);
+            }
+            // This marks all the relations as loaded, without needing the `.load()` promise/DL overhead
+            for (const entity of allEntities) {
+              (entity as any)[fieldName].preload();
             }
           }),
         );
@@ -184,16 +181,15 @@ function getEvenDeleted(relation: any): any {
   return "getWithDeleted" in relation ? relation.getWithDeleted : relation.get;
 }
 
-// Copy/pasted from canPreload
 export function isSqlField(
   field: Field | undefined,
 ): field is OneToManyField | ManyToOneField | ManyToManyField | OneToOneField {
-  if (field && (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m")) {
-    const otherMeta = field.otherMetadata();
+  return (
+    !!field &&
+    (field.kind === "o2m" || field.kind === "o2o" || field.kind === "m2o" || field.kind === "m2m") &&
     // If `otherField` is missing, this could be a large collection which can't be loaded...
-    return !!otherMeta.allFields[field.otherFieldName];
-  }
-  return false;
+    !!field.otherMetadata().allFields[field.otherFieldName]
+  );
 }
 
 // Skip join-based preloading if nothing in this layer needs loading. If any entity in the list
@@ -233,3 +229,58 @@ export function isSqlField(
 //     }
 //   }
 // }
+
+/** Partitions a hint into SQL-able and non-SQL-able hints. */
+function partitionHint(meta: EntityMetadata | undefined, hint: HintNode<any>): [HintNode<any>, HintNode<any>] {
+  let sql: HintNode<any> = { entities: new Set(), entitiesKind: "instances", subHints: {} };
+  let non: HintNode<any> = { entities: new Set(), entitiesKind: "instances", subHints: {} };
+  for (const [key, subHint] of Object.entries(hint.subHints)) {
+    const field = meta?.allFields[key];
+    if (field && isSqlField(field)) {
+      const [_sql, _non] = partitionHint(field.otherMetadata(), subHint);
+      deepMerge(sql, key, _sql);
+      deepMerge(non, key, _non);
+    } else {
+      // If this isn't a raw SQL relation, but it exposes a load-hint, inline that into our SQL.
+      // This will get the non-SQL relation's underlying SQL data preloaded.
+      const p = meta && getProperties(meta)[key];
+      const loadHint = p?.loadHint;
+      if (loadHint) {
+        // This is something like `hasManyThrough`, so the load hint will be rooted
+        // at our meta, so let it resolve...
+        const h2 = buildHintTree([...subHint.entities].map((entity) => ({ entity, hint: loadHint })));
+        const [_sql, _non] = partitionHint(meta, h2);
+        deepMerge2(sql, _sql);
+        // ...what if this loadHint has nons that themselves could be rewritten
+        // into this pass's SQL loads? Like `Author.foo` relies on `Author.bar` relies on `Author.books`.
+      } else {
+        throw new Error(`Invalid load hint '${key}' on ${meta?.cstr.name}`);
+      }
+      deepMerge(non, key, subHint);
+    }
+  }
+  return [sql, non];
+}
+
+function deepMerge(node: HintNode<any>, key: string, other: HintNode<any>): void {
+  if (!node.subHints[key]) {
+    node.subHints[key] = { entitiesKind: node.entitiesKind, entities: new Set(), subHints: {} };
+  }
+  const sub = node.subHints[key];
+  for (const entity of other.entities) {
+    sub.entities.add(entity);
+  }
+  for (const key in other.subHints) {
+    deepMerge(sub, key, other.subHints[key]);
+  }
+}
+
+function deepMerge2(node: HintNode<any>, other: HintNode<any>): void {
+  for (const entity of other.entities) {
+    node.entities.add(entity);
+  }
+  for (const key in other.subHints) {
+    node.subHints[key] ??= { entitiesKind: node.entitiesKind, entities: new Set(), subHints: {} };
+    deepMerge2(node.subHints[key], other.subHints[key]);
+  }
+}

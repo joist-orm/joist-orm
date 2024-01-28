@@ -221,7 +221,7 @@ describe("EntityManager.populate", () => {
     const em = newEntityManager();
     // @ts-expect-error
     const p = em.load(Author, "a:1", { publisher: "size" });
-    await expect(p).rejects.toThrow("Invalid load hint 'size' on SmallPublisher:1");
+    await expect(p).rejects.toThrow("Invalid load hint 'size' on Publisher");
   });
 
   it("can populate m2o and hasManyThrough", async () => {

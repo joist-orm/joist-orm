@@ -1,6 +1,7 @@
 import { lensDataLoader } from "./dataloaders/lensDataLoader";
 import { Entity, isEntity } from "./Entity";
 import { EntityMetadata, Field, getMetadata } from "./EntityMetadata";
+import { LoadHint } from "./loadHints";
 
 /** Generically matches on a Reference/Collection's load method. */
 type LoadLike<U> = { load(): Promise<U> };
@@ -225,4 +226,17 @@ function collectPaths(fn: Function): string[] {
   // Invoke the lens function to record the navigation path on our proxy
   fn(proxy as any);
   return paths;
+}
+
+export function convertLensToLoadHint<T extends Entity, U extends Entity>(
+  lens: (lens: Lens<T>) => Lens<U, U[]>,
+): LoadHint<T> {
+  const paths = collectPaths(lens);
+  const hint = {};
+  let curr: any = hint;
+  for (const path of paths) {
+    curr[path] = {};
+    curr = curr[path];
+  }
+  return hint;
 }

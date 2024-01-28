@@ -1,5 +1,14 @@
 import { currentlyInstantiatingEntity } from "../BaseEntity";
-import { Collection, CustomCollection, Entity, getLens, isLensLoaded, Lens, loadLens } from "../index";
+import {
+  Collection,
+  convertLensToLoadHint,
+  CustomCollection,
+  Entity,
+  getLens,
+  isLensLoaded,
+  Lens,
+  loadLens,
+} from "../index";
 
 /**
  * Creates a CustomCollection that will walk across references in the object graph.
@@ -16,5 +25,6 @@ export function hasManyThrough<T extends Entity, U extends Entity>(
     load: (entity, opts) => loadLens(entity, lens, opts),
     get: () => getLens(entity, lens),
     isLoaded: () => isLensLoaded(entity, lens),
+    loadHint: convertLensToLoadHint(lens),
   });
 }

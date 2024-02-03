@@ -23,6 +23,17 @@ import { loadBatchFn } from "./loadDataLoader";
 import { manyToManyBatchFn } from "./manyToManyDataLoader";
 import { oneToManyBatchFn } from "./oneToManyDataLoader";
 
+// Really the only goal is to reduce promise creation.
+// Instead of doing `relation.load` -> 1 promise per relation instance,
+// We really want `load(relations)` -> 1 promise per relation identity.
+// Ideally grouped by entity so we can preload
+//
+// We should strive to complete a request with as few event loops ticks as
+// possible. Chunkier ticks, to reduce the overhead per tick.
+//
+// In GraphQL ideally we do a populate as high as possible, and the rest of
+// the leaf behavior is synchronous accesses.
+
 export function populateDataLoader(
   em: EntityManager,
   meta: EntityMetadata,

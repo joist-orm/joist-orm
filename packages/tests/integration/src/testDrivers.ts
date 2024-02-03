@@ -35,7 +35,7 @@ export class PostgresTestDriver implements TestDriver {
       client: "pg",
       connection: newPgConnectionConfig() as any,
       debug: false,
-      asyncStackTraces: true,
+      asyncStackTraces: false,
     }).on("query", (e: any) => {
       recordQuery(e.sql);
     });

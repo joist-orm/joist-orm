@@ -274,6 +274,11 @@ export class ConfigData<T extends Entity, C> {
   cachedReactiveLoadHints: Record<string, any> = {};
 }
 
+// i.e. `Foo.ts:123:4`
+// (Make sure to drop lines that don't end with '...Foo.ts:123:3' b/c the stack format can differ
+// const lineNumber = /s:\d+:\d+/;
+// const line = err.stack!.split("\n").filter((line) => line.match(lineNumber))[3];
+
 function getCallerName(): string {
   const err = getErrorObject();
   // E.g. at Object.<anonymous> (/home/stephen/homebound/graphql-service/src/entities/Activity.ts:86:8)

@@ -33,6 +33,7 @@
     "@swc/jest": "^0.2.36",
     "@types/jest": "^29.5.12",
     "@types/node": "^20.10.5",
+    "bun-types": "^1.1.0",
     "env-cmd": "^10.1.0",
     "jest": "30.0.0-alpha.3",
     "jest-junit": "^16.0.0",

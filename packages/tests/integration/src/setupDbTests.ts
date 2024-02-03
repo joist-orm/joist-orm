@@ -1,9 +1,9 @@
 import { resetQueryCount, setApiCallMock, testDriver } from "@src/testEm";
-import { toMatchEntity } from "joist-test-utils";
+import { afterAll, beforeEach, jest } from "bun:test";
 
 export const makeApiCall = jest.fn();
 
-expect.extend({ toMatchEntity });
+// expect.extend({ toMatchEntity });
 
 beforeEach(async () => {
   setApiCallMock(makeApiCall);

@@ -4,10 +4,11 @@
     "outDir": "./build",
     "rootDir": "./",
     "baseUrl": "./",
+    "types": ["jest", "node", "bun-types"],
     "paths": {
       "@src/*": ["src/*"],
       "src/*": ["src/*"]
-    },
+    }
   },
   "include": ["./src", "./migrations"],
   "references": [

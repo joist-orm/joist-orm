@@ -16,7 +16,7 @@ import {
 } from "joist-orm";
 import { isPlainObject } from "joist-utils";
 
-const { matchers } = (globalThis as any)[Symbol.for("$$jest-matchers-object")];
+// const { matchers } = (globalThis as any)[Symbol.for("$$jest-matchers-object")];
 
 /**
  * Provides convenient `toMatchObject`-style matching for Joist entities.

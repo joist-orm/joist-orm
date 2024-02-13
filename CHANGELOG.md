@@ -1,3 +1,10 @@
+## [1.144.8](https://github.com/stephenh/joist-ts/compare/v1.144.7...v1.144.8) (2024-02-13)
+
+
+### Bug Fixes
+
+* Bump pg-structure for security warning. ([#958](https://github.com/stephenh/joist-ts/issues/958)) ([260dee7](https://github.com/stephenh/joist-ts/commit/260dee77a7701ab443347e338d26009b6cea9b97))
+
 ## [1.144.7](https://github.com/stephenh/joist-ts/compare/v1.144.6...v1.144.7) (2024-02-13)
 
 

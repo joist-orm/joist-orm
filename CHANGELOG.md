@@ -1,3 +1,10 @@
+## [1.144.7](https://github.com/stephenh/joist-ts/compare/v1.144.6...v1.144.7) (2024-02-13)
+
+
+### Bug Fixes
+
+* nin any -> all operator in buildKnexQuery ([#957](https://github.com/stephenh/joist-ts/issues/957)) ([4cf71cc](https://github.com/stephenh/joist-ts/commit/4cf71ccc71883adcdf1495f76f2135b035302e0d))
+
 ## [1.144.6](https://github.com/stephenh/joist-ts/compare/v1.144.5...v1.144.6) (2024-01-25)
 
 

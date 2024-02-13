@@ -9651,14 +9651,14 @@ __metadata:
   languageName: node
   linkType: hard
 
-"indexable-array@npm:^0.7.0":
-  version: 0.7.0
-  resolution: "indexable-array@npm:0.7.0"
+"indexable-array@npm:^0.7.4":
+  version: 0.7.4
+  resolution: "indexable-array@npm:0.7.4"
   dependencies:
-    lodash.set: ^4.3.2
+    dot-prop: ^6.0.1
     sorted-array-functions: ^1.2.0
     tslib: ^2.1.0
-  checksum: 301f114ca093d605350af9dc12ec8059f9f51a9b7fdb96f52411d5ae7bf2b20092650445c0129e89d715ad58315986e2e37593f8b0982a6fa848fa80f8f63e3d
+  checksum: daa9031f63c8a422b76324578776e7956d52285cc1310997ce773fce0d39cf83ea69b2c02be0b474968677a30de98982b39ce6f1dd38280a6698a99fc7f749e6
   languageName: node
   linkType: hard
 
@@ -10914,7 +10914,7 @@ __metadata:
     jscodeshift: ^0.15.1
     knex: ^3.1.0
     pg: ^8.11.3
-    pg-structure: ^7.15.0
+    pg-structure: ^7.15.2
     pluralize: ^8.0.0
     prettier: ^3.1.1
     prettier-plugin-organize-imports: ^3.2.4
@@ -10986,7 +10986,7 @@ __metadata:
     joist-utils: "workspace:*"
     node-pg-migrate: ^6.2.2
     pg: ^8.11.3
-    pg-structure: ^7.15.0
+    pg-structure: ^7.15.2
     pluralize: ^8.0.0
     prettier: ^3.1.1
     prettier-plugin-organize-imports: ^3.2.4
@@ -11832,13 +11832,6 @@ __metadata:
   version: 4.1.2
   resolution: "lodash.memoize@npm:4.1.2"
   checksum: 9ff3942feeccffa4f1fafa88d32f0d24fdc62fd15ded5a74a5f950ff5f0c6f61916157246744c620173dddf38d37095a92327d5fd3861e2063e736a5c207d089
-  languageName: node
-  linkType: hard
-
-"lodash.set@npm:^4.3.2":
-  version: 4.3.2
-  resolution: "lodash.set@npm:4.3.2"
-  checksum: a9122f49eef9f2d0fc9061a33d87f8e5b8c6b23d46e8b9e9ce1529d3588d79741bd1145a3abdfa3b13082703e65af27ff18d8a07bfc22b9be32f3fc36f763f70
   languageName: node
   linkType: hard
 
@@ -14378,20 +14371,20 @@ __metadata:
   languageName: node
   linkType: hard
 
-"pg-structure@npm:^7.15.0":
-  version: 7.15.0
-  resolution: "pg-structure@npm:7.15.0"
+"pg-structure@npm:^7.15.2":
+  version: 7.15.2
+  resolution: "pg-structure@npm:7.15.2"
   dependencies:
     "@typescript-plus/fast-memoize-decorator": ^0.1.0
     dotenv: ^8.2.0
     fast-memoize: ^2.5.2
-    indexable-array: ^0.7.0
+    indexable-array: ^0.7.4
     inflection: ^1.12.0
     json5: ^2.1.3
     lodash.get: ^4.4.2
     pg: ^8.0.3
     pg-connection-string: ^2.2.1
-  checksum: d8aab55f30ae5d00312aa36122e4995d15630b8e07930b66436ed493bfbcf90783ee729eeb9bef68724164987c9fb18c28a92fb451eebcd576809db23186b389
+  checksum: 7197a37ad254f2cd9d2214e4185a92f9a9d7d58b8ffef601b340674922c8c0537a735836a3ccf3e2797e5a2dd7274811468bd137b4eb3f7419e5d3e3d49ddf23
   languageName: node
   linkType: hard
 

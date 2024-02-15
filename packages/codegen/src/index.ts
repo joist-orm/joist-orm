@@ -95,8 +95,10 @@ async function maybeGenerateFlushFunctions(config: Config, client: Client, pgCon
 }
 
 async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMetadata> {
-  // Assume other schemas are things like cyanaudit/graphile-worker, that we don't want entity for
-  const db = await pgStructure(client, { includeSchemas: "public" });
+  // Here we load all schemas, to avoid pg-structure failing on cross-schema foreign keys
+  // like our cyanaudit triggers (https://github.com/ozum/pg-structure/issues/85), and then
+  // later filter them non-public schema tables out.
+  const db = await pgStructure(client);
   const enums = await loadEnumMetadata(db, client, config);
   const pgEnums = await loadPgEnumMetadata(db, client, config);
   const entities = db.tables

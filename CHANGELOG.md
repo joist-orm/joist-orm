@@ -1,3 +1,10 @@
+## [1.144.9](https://github.com/stephenh/joist-ts/compare/v1.144.8...v1.144.9) (2024-02-15)
+
+
+### Bug Fixes
+
+* Fix findByCode type to be just string. ([#959](https://github.com/stephenh/joist-ts/issues/959)) ([15d51a2](https://github.com/stephenh/joist-ts/commit/15d51a2f4c0a1ab87b955537a6c6db5a4d1dd706))
+
 ## [1.144.8](https://github.com/stephenh/joist-ts/compare/v1.144.7...v1.144.8) (2024-02-13)
 
 

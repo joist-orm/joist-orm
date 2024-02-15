@@ -1,3 +1,10 @@
+## [1.144.10](https://github.com/stephenh/joist-ts/compare/v1.144.9...v1.144.10) (2024-02-15)
+
+
+### Bug Fixes
+
+* Avoid failing on cross-schema triggers. ([#960](https://github.com/stephenh/joist-ts/issues/960)) ([2bb17f0](https://github.com/stephenh/joist-ts/commit/2bb17f01ab86599fcf7f8074c264e58f2359f3d3))
+
 ## [1.144.9](https://github.com/stephenh/joist-ts/compare/v1.144.8...v1.144.9) (2024-02-15)
 
 

@@ -2,7 +2,7 @@ import { getOrmField } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ensureNotDeleted, fail, maybeResolveReferenceToId } from "./index";
+import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should
@@ -11,19 +11,26 @@ import { ensureNotDeleted, fail, maybeResolveReferenceToId } from "./index";
  * We skip any typing like `fieldName: keyof T` because this method should only be
  * called by trusted codegen anyway.
  */
-export function getField(entity: Entity, fieldName: string, internalCall: boolean = false): any {
+export function getField(
+  entity: Entity,
+  fieldName: string,
+  internalCall: boolean = false,
+  /** If true, return the AbstractRelationImpl wrapper instead of the raw db value. */
+  maybeRelation: boolean = false,
+): any {
   // We may not have converted the database column value into domain values yet
   const { data, row } = getOrmField(entity);
   const { findPlugin } = getEmInternalApi(entity.em);
-  if (fieldName in data) {
-    !internalCall && findPlugin?.beforeGetField?.(entity, fieldName);
-    return data[fieldName];
-  } else {
-    const serde = getMetadata(entity).allFields[fieldName].serde ?? fail(`Missing serde for ${fieldName}`);
-    serde.setOnEntity(data, row);
-    !internalCall && findPlugin?.beforeGetField?.(entity, fieldName);
-    return data[fieldName];
+  if (!(fieldName in data)) {
+    // We may not have a serde if this is a collection like `Author.books`, and the caller just wants our ManyToOneReference
+    const serde = getMetadata(entity).allFields[fieldName].serde;
+    if (serde) {
+      serde.setOnEntity(data, row);
+    }
   }
+  !internalCall && findPlugin?.beforeGetField?.(entity, fieldName);
+  if (maybeRelation) return (entity as any)[fieldName];
+  return data[fieldName];
 }
 
 /** Returns whether `fieldName` is a field/column on `entity` that can be changed. */

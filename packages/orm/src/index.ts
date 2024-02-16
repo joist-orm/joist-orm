@@ -137,7 +137,7 @@ export function setOpts<T extends Entity>(
       }
       // We let optional opts fields be `| null` for convenience, and convert to undefined.
       const value = _value === null ? undefined : _value;
-      const current = getField(entity as any, key, true);
+      const current = getField(entity as any, key, true, true);
       if (current instanceof AbstractRelationImpl) {
         if (calledFromConstructor) {
           current.setFromOpts(value);

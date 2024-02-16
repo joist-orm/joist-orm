@@ -33,7 +33,19 @@ import {
   ValueGraphQLFilter,
 } from "joist-orm";
 import { Context } from "src/context";
-import { Author, authorMeta, Book, BookId, bookMeta, Entity, EntityManager, newAuthor } from "./entities";
+import {
+  Author,
+  authorMeta,
+  Book,
+  BookId,
+  bookMeta,
+  Comment,
+  CommentId,
+  commentMeta,
+  Entity,
+  EntityManager,
+  newAuthor,
+} from "./entities";
 
 export type AuthorId = Flavor<string, Author>;
 
@@ -49,10 +61,12 @@ export interface AuthorOpts {
   firstName: string;
   lastName?: string | null;
   books?: Book[];
+  comments?: Comment[];
 }
 
 export interface AuthorIdsOpts {
   bookIds?: BookId[] | null;
+  commentIds?: CommentId[] | null;
 }
 
 export interface AuthorFilter {
@@ -62,6 +76,7 @@ export interface AuthorFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   books?: EntityFilter<Book, BookId, FilterOf<Book>, null | undefined>;
+  comments?: EntityFilter<Comment, CommentId, FilterOf<Comment>, null | undefined>;
 }
 
 export interface AuthorGraphQLFilter {
@@ -71,6 +86,7 @@ export interface AuthorGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   books?: EntityGraphQLFilter<Book, BookId, GraphQLFilterOf<Book>, null | undefined>;
+  comments?: EntityGraphQLFilter<Comment, CommentId, GraphQLFilterOf<Comment>, null | undefined>;
 }
 
 export interface AuthorOrder {
@@ -184,5 +200,17 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
   get books(): Collection<Author, Book> {
     const { relations } = getOrmField(this);
     return relations.books ??= hasMany(this as any as Author, bookMeta, "books", "author", "author_id", undefined);
+  }
+
+  get comments(): Collection<Author, Comment> {
+    const { relations } = getOrmField(this);
+    return relations.comments ??= hasMany(
+      this as any as Author,
+      commentMeta,
+      "comments",
+      "parent",
+      "parent_author_id",
+      undefined,
+    );
   }
 }

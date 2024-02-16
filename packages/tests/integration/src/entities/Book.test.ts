@@ -1,4 +1,5 @@
 import { newEntityManager } from "@src/testEm";
+import { insertAuthor, insertBook } from "src/entities/inserts";
 import { Author, Book, newAuthor, newBook } from "../entities";
 
 describe("Book", () => {
@@ -15,6 +16,14 @@ describe("Book", () => {
     const a1 = em.create(Author, { firstName: "a1" });
     const b1 = em.create(Book, { title: "b1", author: a1 });
     expect(b1.order).toEqual(1);
+  });
+
+  it("does not reset default values on load", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1, order: 2 });
+    const em = newEntityManager();
+    const b1 = await em.load(Book, "b:1");
+    expect(b1.order).toEqual(2);
   });
 
   it("can update without the order field causing syntax errors", async () => {

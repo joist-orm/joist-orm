@@ -15,6 +15,7 @@ set_version() {
   sed -i.bak "s/${pattern}/\"version\": \"${version}\"/" "${file}"
 }
 
+// Maybe use https://github.com/yarnpkg/yarn/issues/6066#issuecomment-1907033865
 for dir in . ./packages/codegen \
   ./packages/graphql-codegen \
   ./packages/graphql-resolver-utils \

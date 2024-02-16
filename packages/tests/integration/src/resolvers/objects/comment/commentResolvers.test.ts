@@ -1,16 +1,17 @@
 import { newComment } from "src/entities";
 import { commentResolvers } from "src/resolvers/objects/comment/commentResolvers";
-import { makeRunObjectFields } from "src/resolvers/testUtils";
+import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("commentResolvers", () => {
   it.withCtx("can return", async (ctx) => {
     const { em } = ctx;
     // Given a Comment
-    const comment = newComment(em, { text: "foo" });
+    const comment = newComment(em);
     // Then we can query it
-    const result = await runComment(ctx, comment, ["comment"]);
-    expect(result.comment).toBe("foo");
+    const result = await runFields(ctx, comment, ["text"]);
+    expect(comment).toMatchEntity(result);
   });
 });
 
-const runComment = makeRunObjectFields(commentResolvers);
+const runFields = makeRunObjectFields(commentResolvers);
+const runField = makeRunObjectField(commentResolvers);

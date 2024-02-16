@@ -233,6 +233,7 @@ describe("Entity", () => {
           "beforeUpdateRan": false,
           "bookCommentsCalcInvoked": 0,
           "deleteDuringFlush": false,
+          "firstIsNotLastNameRuleInvoked": 0,
           "graduatedRuleInvoked": 0,
           "mentorRuleInvoked": 0,
           "numberOfBooksCalcInvoked": 0,

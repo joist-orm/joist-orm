@@ -49,7 +49,13 @@ export function insertAuthor(row: {
   });
 }
 
-export function insertBook(row: { id?: number; title: string; author_id: number | null; deleted_at?: Date }) {
+export function insertBook(row: {
+  id?: number;
+  title: string;
+  author_id: number | null;
+  deleted_at?: Date;
+  order?: number;
+}) {
   return testDriver.insert("books", row);
 }
 
@@ -65,7 +71,15 @@ export function insertComment(row: {
   return testDriver.insert("comments", row);
 }
 
-export function insertUser(row: { id?: number; name: string; email?: string; password?: string; author_id?: number }) {
+export function insertUser(row: {
+  id?: number;
+  name: string;
+  email?: string;
+  password?: string;
+  author_id?: number;
+  favorite_publisher_small_id?: number;
+  favorite_publisher_large_id?: number;
+}) {
   return testDriver.insert("users", {
     email: `${row.name}@example.com`,
     password: "password",

@@ -2,5 +2,6 @@
   "codegenPlugins": [],
   "contextType": "Context@src/context",
   "entities": { "Author": { "tag": "a" }, "Book": { "tag": "b" } },
-  "entitiesDirectory": "./src/entities"
+  "entitiesDirectory": "./src/entities",
+  "version": "1.144.2"
 }

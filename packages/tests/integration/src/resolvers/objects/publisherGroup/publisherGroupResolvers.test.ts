@@ -1,6 +1,6 @@
 import { newPublisherGroup } from "src/entities";
 import { publisherGroupResolvers } from "src/resolvers/objects/publisherGroup/publisherGroupResolvers";
-import { makeRunObject, makeRunObjectFields } from "src/resolvers/testUtils";
+import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("publisherGroupResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -14,4 +14,4 @@ describe("publisherGroupResolvers", () => {
 });
 
 const runPublisherGroupKeys = makeRunObjectFields(publisherGroupResolvers);
-const runPublisherGroup = makeRunObject(publisherGroupResolvers);
+const runPublisherGroup = makeRunObjectField(publisherGroupResolvers);

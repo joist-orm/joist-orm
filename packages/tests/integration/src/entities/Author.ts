@@ -3,7 +3,7 @@ import {
   AsyncProperty,
   Collection,
   Loaded,
-  PersistedAsyncProperty,
+  ReactiveField,
   PersistedAsyncReference,
   Reference,
   cannotBeUpdated,
@@ -13,7 +13,7 @@ import {
   hasManyDerived,
   hasManyThrough,
   hasOneDerived,
-  hasPersistedAsyncProperty,
+  hasReactiveField,
   hasPersistedAsyncReference,
   hasReactiveAsyncProperty,
   isDefined,
@@ -58,7 +58,7 @@ export class Author extends AuthorCodegen {
 
   // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity
   // as well as a non-persisted property (isPublic2) and a regular primitive (rating)
-  readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+  readonly numberOfPublicReviews: ReactiveField<Author, number> = hasReactiveField(
     "numberOfPublicReviews",
     { books: { reviews: ["isPublic", "isPublic2", "rating"] } },
     (a) => {
@@ -74,14 +74,14 @@ export class Author extends AuthorCodegen {
   // Example of persisted property depending on another persisted property (isPublic) that is triggered off of this entity
   // another persisted property (isTest) that is triggered off of a related entity (Review.comment.text)
   // as well as a regular primitive (rating)
-  readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+  readonly numberOfPublicReviews2: ReactiveField<Author, number> = hasReactiveField(
     "numberOfPublicReviews2",
     { books: { reviews: ["isPublic", "isTest", "rating"] } },
     (a) =>
       a.books.get.flatMap((b) => b.reviews.get).filter((r) => r.isPublic.get && !r.isTest.get && r.rating > 0).length,
   );
 
-  readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+  readonly tagsOfAllBooks: ReactiveField<Author, string> = hasReactiveField(
     "tagsOfAllBooks",
     { books: { tags: "name" } },
     (a) =>
@@ -91,7 +91,7 @@ export class Author extends AuthorCodegen {
         .join(", "),
   );
 
-  readonly search: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+  readonly search: ReactiveField<Author, string> = hasReactiveField(
     "search",
     { books: "title", firstName: {} },
     (a) => {
@@ -100,7 +100,7 @@ export class Author extends AuthorCodegen {
     },
   );
 
-  readonly nickNamesUpper: PersistedAsyncProperty<Author, string[]> = hasPersistedAsyncProperty(
+  readonly nickNamesUpper: ReactiveField<Author, string[]> = hasReactiveField(
     "nickNamesUpper",
     "nickNames",
     (a) => (a.nickNames ?? []).map((n) => n.toUpperCase()),
@@ -118,6 +118,7 @@ export class Author extends AuthorCodegen {
     afterCommitIsNewEntity: false,
     afterCommitIsDeletedEntity: false,
     setGraduatedInFlush: false,
+    firstIsNotLastNameRuleInvoked: 0,
     mentorRuleInvoked: 0,
     ageRuleInvoked: 0,
     numberOfBooksCalcInvoked: 0,
@@ -174,7 +175,7 @@ export class Author extends AuthorCodegen {
   }
 
   /** Example of a derived async property that can be calculated via a populate hint. */
-  readonly numberOfBooks: PersistedAsyncProperty<Author, number> = hasPersistedAsyncProperty(
+  readonly numberOfBooks: ReactiveField<Author, number> = hasReactiveField(
     "numberOfBooks",
     // Include firstName to ensure `.get` uses the load hint (and not the full reactive hint)
     // when evaluating whether to eval our lambda during pre-flush calls.
@@ -186,7 +187,7 @@ export class Author extends AuthorCodegen {
   );
 
   /** Example of a derived async property that can be calculated via a populate hint through a polymorphic reference. */
-  readonly bookComments: PersistedAsyncProperty<Author, string> = hasPersistedAsyncProperty(
+  readonly bookComments: ReactiveField<Author, string> = hasReactiveField(
     "bookComments",
     { books: { comments: "text" } },
     (a) => {
@@ -252,7 +253,9 @@ export class Author extends AuthorCodegen {
 config.cascadeDelete("books");
 config.cascadeDelete("image");
 
+// Example of a simple rule that runs on every flush
 config.addRule((a) => {
+  a.transientFields.firstIsNotLastNameRuleInvoked++;
   if (a.firstName && a.firstName === a.lastName) {
     return "firstName and lastName must be different";
   }

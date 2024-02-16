@@ -122,7 +122,7 @@ function buildCondition(cc: ColumnCondition): [string, any[]] {
     case "in":
       return [`${columnName} = any(?)`, [cond.value]];
     case "nin":
-      return [`${columnName} != any(?)`, [cond.value]];
+      return [`${columnName} != all(?)`, [cond.value]];
     case "between":
       return [`${columnName} between ? and ?`, cond.value];
     default:

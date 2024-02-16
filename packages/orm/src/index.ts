@@ -8,7 +8,8 @@ import {
   TaggedId,
   getEmInternalApi,
 } from "./EntityManager";
-import { EntityMetadata, getBaseAndSelfMetas, getMetadata } from "./EntityMetadata";
+import { EntityMetadata, getBaseAndSelfMetas, getBaseMeta, getMetadata } from "./EntityMetadata";
+import { setBooted } from "./config";
 import { setSyncDefaults } from "./defaults";
 import { getField } from "./fields";
 import { getFakeInstance, getProperties } from "./getProperties";
@@ -17,7 +18,7 @@ import { isAllSqlPaths } from "./loadLens";
 import { convertToLoadHint, reverseReactiveHint } from "./reactiveHints";
 import { Reference } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
-import { PersistedAsyncPropertyImpl } from "./relations/PersistedAsyncProperty";
+import { ReactiveFieldImpl } from "./relations/ReactiveField";
 import { isCannotBeUpdatedRule } from "./rules";
 import { fail } from "./utils";
 
@@ -63,7 +64,7 @@ export {
 export * from "./loadLens";
 export * from "./newTestInstance";
 export { deepNormalizeHint, normalizeHint } from "./normalizeHints";
-export { FindPlugin, FindCallback } from "./plugins/FindPlugin";
+export { FindCallback, FindPlugin } from "./plugins/FindPlugin";
 export { JoinResult, PreloadHydrator, PreloadPlugin } from "./plugins/PreloadPlugin";
 export { Reactable, Reacted, ReactiveHint, reverseReactiveHint } from "./reactiveHints";
 export * from "./relations";
@@ -150,6 +151,8 @@ export function setOpts<T extends Entity>(
           const allowDelete = !field.otherMetadata().fields["delete"];
           const allowRemove = !field.otherMetadata().fields["remove"];
 
+          const maybeSoftDelete = getBaseMeta(field.otherMetadata()).timestampFields.deletedAt;
+
           // We're replacing the old `delete: true` / `remove: true` behavior with `op` (i.e. operation).
           // When passed in, all values must have it, and we kick into incremental mode, i.e. we
           // individually add/remove/delete entities.
@@ -164,7 +167,12 @@ export function setOpts<T extends Entity>(
             }
             values.forEach((v) => {
               if (v.op === "delete") {
-                entity.em.delete(v);
+                // We need to check if this is a soft-deletable entity, and if so, we will soft-delete it.
+                if (maybeSoftDelete) {
+                  v.set({ [maybeSoftDelete]: new Date() });
+                } else {
+                  entity.em.delete(v);
+                }
               } else if (v.op === "remove") {
                 (current as any).remove(v);
               } else if (v.op === "include") {
@@ -207,7 +215,7 @@ export function setOpts<T extends Entity>(
 
     // See if the user is allowed to create this entity
     const { findPlugin } = getEmInternalApi(entity.em);
-    findPlugin?.beforeCreate(entity);
+    // findPlugin?.beforeCreate(entity);
   }
 }
 
@@ -235,12 +243,13 @@ const tableToMetaMap = new Map<string, EntityMetadata>();
 
 /** Processes the metas for rules/reactivity based on the user's `config.*` calls. */
 export function configureMetadata(metas: EntityMetadata[]): void {
+  setBooted();
+
   // Do a first pass to flag immutable fields (which we'll use in reverseReactiveHint)
   metas.forEach((meta) => {
-    if (!meta.baseType) {
-      // Add each constructor into our tag -> constructor map for future lookups
-      tagToConstructorMap.set(meta.tagName, meta.cstr);
-    }
+    // Add each (root) constructor into our tag -> constructor map for future lookups
+    if (!meta.baseType) tagToConstructorMap.set(meta.tagName, meta.cstr);
+    // Same for tables, but include subclass tables
     tableToMetaMap.set(meta.tableName, meta);
     // Scan rules for cannotBeUpdated so that we can set `field.immutable`
     meta.config.__data.rules.forEach((rule) => {
@@ -307,11 +316,9 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     Object.values(meta.fields)
       .filter((f) => f.kind === "primitive" || (f.kind === "m2o" && f.derived === "async"))
       .forEach((field) => {
-        const ap = (getFakeInstance(meta) as any)[field.fieldName] as
-          | PersistedAsyncPropertyImpl<any, any, any>
-          | undefined;
+        const ap = (getFakeInstance(meta) as any)[field.fieldName] as ReactiveFieldImpl<any, any, any> | undefined;
         // We might have an async property configured in joist-config.json that has not yet
-        // been made a `hasPersistedAsyncProperty` in the entity file, so avoid continuing
+        // been made a `hasReactiveField` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.
         if (ap?.reactiveHint) {
           // Cache the load hint so that we don't constantly re-calc it on instantiation.

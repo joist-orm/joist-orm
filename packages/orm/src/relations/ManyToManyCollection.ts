@@ -42,9 +42,9 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   implements Collection<T, U>
 {
   readonly #fieldName: keyof T & string;
-  private loaded: U[] | undefined;
-  private addedBeforeLoaded: U[] | undefined;
-  private removedBeforeLoaded: U[] | undefined;
+  #loaded: U[] | undefined;
+  #addedBeforeLoaded: U[] | undefined;
+  #removedBeforeLoaded: U[] | undefined;
 
   constructor(
     public joinTableName: string,
@@ -63,7 +63,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
     super(entity);
     this.#fieldName = fieldName;
     if (isOrWasNew(entity)) {
-      this.loaded = [];
+      this.#loaded = [];
     }
   }
 
@@ -76,20 +76,20 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   async load(opts: { withDeleted?: boolean; forceReload?: boolean } = {}): Promise<ReadonlyArray<U>> {
     ensureNotDeleted(this.entity, "pending");
-    if (this.loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
+    if (this.#loaded === undefined || (opts.forceReload && !this.entity.isNewEntity)) {
       const key = `${this.columnName}=${this.entity.id}`;
-      this.loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.entity.em, this).load(key));
+      this.#loaded = this.getPreloaded() ?? (await manyToManyDataLoader(this.entity.em, this).load(key));
       this.maybeApplyAddedAndRemovedBeforeLoaded();
     }
-    return this.filterDeleted(this.loaded!, opts) as ReadonlyArray<U>;
+    return this.filterDeleted(this.#loaded!, opts) as ReadonlyArray<U>;
   }
 
   async find(id: IdOf<U>): Promise<U | undefined> {
     ensureNotDeleted(this.entity, "pending");
-    if (this.loaded !== undefined) {
-      return this.loaded.find((u) => u.id === id);
+    if (this.#loaded !== undefined) {
+      return this.#loaded.find((u) => u.id === id);
     } else {
-      const added = this.addedBeforeLoaded?.find((u) => u.id === id);
+      const added = this.#addedBeforeLoaded?.find((u) => u.id === id);
       if (added) {
         return added;
       }
@@ -103,10 +103,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   async includes(other: U): Promise<boolean> {
     ensureNotDeleted(this.entity, "pending");
-    if (this.loaded !== undefined) {
-      return this.loaded.includes(other);
+    if (this.#loaded !== undefined) {
+      return this.#loaded.includes(other);
     } else {
-      if (this.addedBeforeLoaded?.includes(other)) {
+      if (this.#addedBeforeLoaded?.includes(other)) {
         return true;
       } else if (other.isNewEntity) {
         return false;
@@ -120,12 +120,12 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   add(other: U, percolated = false): void {
     ensureNotDeleted(this.entity);
 
-    if (this.loaded !== undefined) {
-      if (this.loaded.includes(other)) return;
-      this.loaded.push(other);
+    if (this.#loaded !== undefined) {
+      if (this.#loaded.includes(other)) return;
+      this.#loaded.push(other);
     } else {
-      if (this.removedBeforeLoaded) remove(this.removedBeforeLoaded, other);
-      if (!(this.addedBeforeLoaded ??= []).includes(other)) this.addedBeforeLoaded.push(other);
+      if (this.#removedBeforeLoaded) remove(this.#removedBeforeLoaded, other);
+      if (!(this.#addedBeforeLoaded ??= []).includes(other)) this.#addedBeforeLoaded.push(other);
     }
 
     if (!percolated) {
@@ -142,16 +142,16 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       (other[this.otherFieldName] as any as ManyToManyCollection<U, T>).remove(this.entity, true);
     }
 
-    if (this.loaded !== undefined) {
-      remove(this.loaded, other);
+    if (this.#loaded !== undefined) {
+      remove(this.#loaded, other);
     } else {
-      maybeRemove(this.addedBeforeLoaded, other);
-      maybeAdd((this.removedBeforeLoaded ??= []), other);
+      maybeRemove(this.#addedBeforeLoaded, other);
+      maybeAdd((this.#removedBeforeLoaded ??= []), other);
     }
   }
 
   get isLoaded(): boolean {
-    return this.loaded !== undefined;
+    return this.#loaded !== undefined;
   }
 
   get isPreloaded(): boolean {
@@ -159,17 +159,17 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   }
 
   preload(): void {
-    this.loaded = this.getPreloaded();
+    this.#loaded = this.getPreloaded();
     this.maybeApplyAddedAndRemovedBeforeLoaded();
   }
 
   private doGet(): U[] {
-    ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
+    ensureNotDeleted(this.entity, "pending");
+    if (this.#loaded === undefined) {
       // This should only be callable in the type system if we've already resolved this to an instance
       throw new Error("get was called when not loaded");
     }
-    return this.loaded;
+    return this.#loaded;
   }
 
   get getWithDeleted(): U[] {
@@ -182,11 +182,11 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   set(values: U[]): void {
     ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
+    if (this.#loaded === undefined) {
       throw new Error("set was called when not loaded");
     }
     // Make a copy for safe iteration
-    const loaded = [...this.loaded];
+    const loaded = [...this.#loaded];
     // Remove old values
     for (const other of loaded) {
       if (!values.includes(other)) this.remove(other);
@@ -199,10 +199,10 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
 
   removeAll(): void {
     ensureNotDeleted(this.entity);
-    if (this.loaded === undefined) {
+    if (this.#loaded === undefined) {
       throw new Error("removeAll was called when not loaded");
     }
-    for (const other of [...this.loaded]) {
+    for (const other of [...this.#loaded]) {
       this.remove(other);
     }
   }
@@ -210,7 +210,7 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
   // impl details
 
   setFromOpts(others: U[]): void {
-    this.loaded = [];
+    this.#loaded = [];
     others.forEach((o) => this.add(o));
   }
 
@@ -228,23 +228,28 @@ export class ManyToManyCollection<T extends Entity, U extends Entity>
       const m2m = other[this.otherFieldName] as any as ManyToManyCollection<U, T>;
       m2m.remove(this.entity);
     });
-    this.loaded = [];
+    this.#loaded = [];
   }
 
   private maybeApplyAddedAndRemovedBeforeLoaded(): void {
-    if (this.loaded) {
-      // this.loaded.unshift(...this.addedBeforeLoaded);
-      // this.addedBeforeLoaded = [];
-      this.removedBeforeLoaded?.forEach((other) => {
-        remove(this.loaded!, other);
-        getEmInternalApi(this.entity.em).joinRows(this).addRemove(this, this.entity, other);
+    if (this.#loaded) {
+      this.#addedBeforeLoaded?.forEach((e) => {
+        if (!this.#loaded?.includes(e)) {
+          // Push on the end to better match the db order of "newer things come last"
+          this.#loaded?.unshift(e);
+          getEmInternalApi(this.entity.em).joinRows(this).addNew(this, this.entity, e);
+        }
       });
-      this.removedBeforeLoaded = [];
+      this.#removedBeforeLoaded?.forEach((e) => {
+        remove(this.#loaded!, e);
+        getEmInternalApi(this.entity.em).joinRows(this).addRemove(this, this.entity, e);
+      });
+      this.#removedBeforeLoaded = undefined;
     }
   }
 
   current(opts?: { withDeleted?: boolean }): U[] {
-    return this.filterDeleted(this.loaded ?? this.addedBeforeLoaded ?? [], opts);
+    return this.filterDeleted(this.#loaded ?? this.#addedBeforeLoaded ?? [], opts);
   }
 
   public get meta(): EntityMetadata {

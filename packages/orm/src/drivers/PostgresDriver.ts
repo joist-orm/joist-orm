@@ -169,14 +169,20 @@ export class PostgresDriver implements Driver {
         }
 
         if (noIds.length > 0) {
-          const data = noIds.map(
-            (e) =>
-              [
-                deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName] as any)!),
-                deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName] as any)!),
-              ] as any,
-          );
-          await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
+          const data = noIds
+            .map(
+              (e) =>
+                [
+                  deTagId(m2m.meta, maybeResolveReferenceToId(e[m2m.columnName] as any)!),
+                  deTagId(m2m.otherMeta, maybeResolveReferenceToId(e[m2m.otherColumnName] as any)!),
+                ] as any,
+            )
+            // Watch for m2m rows that got added-then-removed to entities that were themselves added-then-removed,
+            // as the deTagId will be undefined for those, as we're skipping adding them to the database.
+            .filter(([id1, id2]) => id1 !== undefined && id2 !== undefined);
+          if (data.length > 0) {
+            await knex(joinTableName).del().whereIn([m2m.columnName, m2m.otherColumnName], data);
+          }
         }
       }
     }

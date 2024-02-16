@@ -1,8 +1,8 @@
 import DataLoader, { BatchLoadFn, Options } from "dataloader";
-import { getField, setField } from "./fields";
 import { Knex } from "knex";
 import { getOrmField } from "./BaseEntity";
 import { setAsyncDefaults } from "./defaults";
+import { getField, setField } from "./fields";
 // We alias `Entity => EntityW` to denote "Entity wide" i.e. the non-narrowed Entity
 import { Entity, EntityOrmField, Entity as EntityW, IdType, isEntity } from "./Entity";
 import { FlushLock } from "./FlushLock";
@@ -60,6 +60,7 @@ import { PreloadPlugin } from "./plugins/PreloadPlugin";
 import { followReverseHint } from "./reactiveHints";
 import { ManyToOneReferenceImpl, OneToOneReferenceImpl, PersistedAsyncReferenceImpl } from "./relations";
 import { AbstractRelationImpl } from "./relations/AbstractRelationImpl";
+import { AsyncMethodPopulateSecret } from "./relations/hasAsyncMethod";
 import { MaybePromise, assertNever, fail, getOrSet, partition, toArray } from "./utils";
 
 /**
@@ -958,7 +959,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       typeof hintOrOpts === "object" && "hint" in hintOrOpts ? hintOrOpts : { hint: hintOrOpts };
 
     // Tell `AsyncMethodImpl.load` to not invoke its function
-    (opts as any)["populate"] = true;
+    (opts as any)[AsyncMethodPopulateSecret] = true;
 
     // I'm tempted to throw an error here, because at least internal callers should ideally pre-check
     // that `list > 0` and `Object.keys(hint).length > 0` before calling `populate`, just as an optimization.
@@ -1096,11 +1097,6 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
     this.#fl.startLock();
 
     await this.#fl.allowWrites(async () => {
-      // Recalc any touched entities
-      const touched = this.entities.filter((e) => getOrmField(e).isTouched);
-      if (touched.length > 0) {
-        await recalcTouchedEntities(touched);
-      }
       // Cascade deletes now that we're async (i.e. to keep `em.delete` synchronous).
       // Also do this before calling `recalcPendingDerivedValues` to avoid recalculating
       // fields on entities that will be deleted (and probably have unset/invalid FKs
@@ -1372,13 +1368,51 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
    *
    * This will:
    *
-   * - Run `beforeUpdate` and `beforeFlush` hooks,
-   * - Bump the entities `updated_at` timestamp,
-   * - Recalc all async derived fields stored on the entity, and
-   * - Rerun all simple & reactive rules on the entity.
+   * - Bump the entity's `updated_at` timestamp (if available),
+   * - Run `beforeUpdate` and `beforeFlush` hooks.
    */
-  public touch(entity: EntityW) {
-    getOrmField(entity).isTouched = true;
+  public touch(entity: EntityW): void;
+  public touch(entities: EntityW[]): void;
+  public touch(entityOrEntities: EntityW | EntityW[]): void {
+    for (const entity of toArray(entityOrEntities)) getOrmField(entity).isTouched = true;
+  }
+
+  /**
+   * Recalculates the reactive fields for an entity, and any downstream reactive fields that depend on them.
+   *
+   * You shouldn't need to call this unless the derived fields have drifted from the underlying data, which
+   * should only happen if:
+   *
+   * - The underlying data was changed by a raw SQL query, or
+   * - You've changed the field's business logic and want to update the database to the latest value.
+   *
+   * You can also trigger a recalc for specific fields by calling `.load()` on the property, i.e.
+   * `author.numberOfBooks.load()`. This `recalc` method is just a helper method to call `load` for
+   * all derived fields on the given entity/entities.
+   */
+  public recalc(entity: EntityW): Promise<void>;
+  public recalc(entities: EntityW[]): Promise<void>;
+  public async recalc(entityOrEntities: EntityW | EntityW[]): Promise<void> {
+    // Look for async reactive fields
+    const relations = toArray(entityOrEntities).flatMap((entity) =>
+      Object.values(getMetadata(entity).allFields)
+        .filter((f) => "derived" in f && f.derived === "async")
+        .map((field) => (entity as any)[field.fieldName]),
+    );
+    await Promise.all(relations.map((r: any) => r.load()));
+
+    // And also sync reactive fields
+    toArray(entityOrEntities).flatMap((entity) =>
+      Object.values(getMetadata(entity).allFields)
+        .filter((f) => "derived" in f && f.derived === "sync")
+        .forEach((field) => {
+          // This will be a noop if the value is the same
+          setField(entity, field.fieldName, (entity as any)[field.fieldName]);
+        }),
+    );
+
+    // `.load()` recalculated the immediate relations, go ahead and recalc any downstream fields
+    await this.#rm.recalcPendingDerivedValues();
   }
 
   public beforeTransaction(fn: HookFn) {
@@ -1509,16 +1543,6 @@ export class TooManyError extends Error {
   }
 }
 
-/** Force recalc all async fields on entities that were `em.touch`-d. */
-async function recalcTouchedEntities(touched: Entity[]): Promise<void> {
-  const relations = touched.flatMap((entity) =>
-    Object.values(getMetadata(entity).allFields)
-      .filter((f) => "derived" in f && f.derived === "async")
-      .map((field) => (entity as any)[field.fieldName]),
-  );
-  await Promise.all(relations.map((r: any) => r.load()));
-}
-
 /**
  * For the entities currently in `todos`, find any reactive validation rules that point
  * from the currently-changed entities back to each rule's originally-defined-in entity,
@@ -1590,26 +1614,6 @@ async function validateReactiveRules(
   });
 
   await Promise.all([...p1, ...p2]);
-
-  // Also re-validate anything that is touched
-  for (const todo of Object.values(todos)) {
-    // Get the dummy reactive rules that point to the owning entity itself, which are usually triggered on new
-    const rules = getBaseAndSelfMetas(todo.metadata)
-      .flatMap((m) => m.config.__data.reactiveRules)
-      .filter((r) => r.path.length === 0);
-    for (const entity of todo.updates) {
-      if (getOrmField(entity).isTouched) {
-        for (const rule of rules) {
-          let entities = fns.get(rule.fn);
-          if (!entities) {
-            entities = new Set();
-            fns.set(rule.fn, entities);
-          }
-          entities.add(entity);
-        }
-      }
-    }
-  }
 
   // Now that we've found the fn+entities to run, run them and collect any errors
   const p3 = [...fns.entries()].flatMap(([fn, entities]) =>

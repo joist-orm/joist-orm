@@ -91,6 +91,17 @@ describe("ManyToManyCollection", () => {
     expect(rows[0]).toEqual(expect.objectContaining({ id: 1, book_id: 2, tag_id: 3 }));
   });
 
+  it("can add an existing tag to an existing book and then load", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: `t1` });
+    const em = newEntityManager();
+    const book = await em.load(Book, "2");
+    const tag = await em.load(Tag, "3");
+    book.tags.add(tag);
+    expect(await book.tags.load()).toMatchEntity([tag]);
+  });
+
   it("can add a new tag tag to a new book", async () => {
     const em = newEntityManager();
     const book = newBook(em);
@@ -165,6 +176,29 @@ describe("ManyToManyCollection", () => {
     expect(rows).toMatchObject([]);
   });
 
+  it("cannot add undefined", async () => {
+    const em = newEntityManager();
+    const book = newBook(em);
+    expect(() => {
+      book.set({ tags: [undefined as any] });
+    }).toThrow("Cannot add a m2m row with an entity that is undefined");
+  });
+
+  it("can get on a pending delete entity", async () => {
+    // Not being able to m2m.get on a pending delete entity caused a flakey test
+    // due to a CustomReference checking .isLoaded which wanted to check that a
+    // pending-delete entity included in the CustomReference's sub-graph was loaded.
+    await insertAuthor({ id: 1, first_name: "a1" });
+    await insertBook({ id: 2, title: "b1", author_id: 1 });
+    await insertTag({ id: 3, name: "t1" });
+    await insertBookToTag({ id: 4, book_id: 2, tag_id: 3 });
+
+    const em = newEntityManager();
+    const book = await em.load(Book, "2", "tags");
+    em.delete(book);
+    expect(book.tags.get.length).toBe(1);
+  });
+
   it("can add a new book to a tag", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ id: 2, title: "b1", author_id: 1 });
@@ -208,8 +242,7 @@ describe("ManyToManyCollection", () => {
 
     book.tags.add(tag);
     expect(tag.books.get).toContain(book);
-    expect((await book.tags.load()).length).toBe(1);
-
+    expect((await book.tags.load()).length).toBe(2);
     await em.flush();
 
     expect(await countOfBookToTags()).toEqual(2);
@@ -318,6 +351,20 @@ describe("ManyToManyCollection", () => {
     expect(b1.tags.get.length).toEqual(0);
     // And the join table rows were deleted
     expect((await select("books_to_tags")).length).toEqual(0);
+  });
+
+  it("can remove a newly-added tag that was added to a new entity", async () => {
+    await insertTag({ id: 1, name: `t1` });
+    // Given we create a new book
+    const em = newEntityManager();
+    const b1 = newBook(em);
+    const t1 = await em.load(Tag, "1");
+    // And add-then-remove the tag
+    b1.tags.add(t1);
+    b1.tags.remove(t1);
+    // And the book itself is pruned
+    em.delete(b1);
+    await em.flush();
   });
 
   it("cannot add to a deleted entity's m2m", async () => {

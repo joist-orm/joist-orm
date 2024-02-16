@@ -6,5 +6,6 @@
     "baseUrl": "./src"
   },
   "include": ["./src"],
+  "exclude": ["./src/codemods/__testfixtures__"],
   "references": [{ "path": "../utils" }]
 }

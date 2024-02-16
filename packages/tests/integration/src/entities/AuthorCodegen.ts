@@ -32,8 +32,8 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncProperty,
   PersistedAsyncReference,
+  ReactiveField,
   setField,
   setOpts,
   TaggedId,
@@ -347,9 +347,9 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
 
   abstract get initials(): string;
 
-  abstract readonly numberOfBooks: PersistedAsyncProperty<Author, number>;
+  abstract readonly numberOfBooks: ReactiveField<Author, number>;
 
-  abstract readonly bookComments: PersistedAsyncProperty<Author, string | undefined>;
+  abstract readonly bookComments: ReactiveField<Author, string | undefined>;
 
   get isPopular(): boolean | undefined {
     return getField(this, "isPopular");
@@ -383,7 +383,7 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "nickNames", nickNames);
   }
 
-  abstract readonly nickNamesUpper: PersistedAsyncProperty<Author, string[] | undefined>;
+  abstract readonly nickNamesUpper: ReactiveField<Author, string[] | undefined>;
 
   get wasEverPopular(): boolean | undefined {
     return getField(this, "wasEverPopular");
@@ -397,22 +397,22 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "address");
   }
 
-  set address(_address: Address | undefined) {
-    if (_address) {
-      assert(_address, address);
+  set address(value: Address | undefined) {
+    if (value) {
+      assert(value, address);
     }
-    setField(this, "address", _address);
+    setField(this, "address", value);
   }
 
   get businessAddress(): z.output<typeof AddressSchema> | undefined {
     return getField(this, "businessAddress");
   }
 
-  set businessAddress(_businessAddress: z.input<typeof AddressSchema> | undefined) {
-    if (_businessAddress) {
-      setField(this, "businessAddress", AddressSchema.parse(_businessAddress));
+  set businessAddress(value: z.input<typeof AddressSchema> | undefined) {
+    if (value) {
+      setField(this, "businessAddress", AddressSchema.parse(value));
     } else {
-      setField(this, "businessAddress", _businessAddress);
+      setField(this, "businessAddress", value);
     }
   }
 
@@ -420,11 +420,11 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     return getField(this, "quotes");
   }
 
-  set quotes(_quotes: Quotes | undefined) {
-    if (_quotes) {
-      assert(_quotes, quotes);
+  set quotes(value: Quotes | undefined) {
+    if (value) {
+      assert(value, quotes);
     }
-    setField(this, "quotes", _quotes);
+    setField(this, "quotes", value);
   }
 
   get numberOfAtoms(): bigint | undefined {
@@ -443,13 +443,13 @@ export abstract class AuthorCodegen extends BaseEntity<EntityManager, string> im
     setField(this, "deletedAt", deletedAt);
   }
 
-  abstract readonly numberOfPublicReviews: PersistedAsyncProperty<Author, number | undefined>;
+  abstract readonly numberOfPublicReviews: ReactiveField<Author, number | undefined>;
 
-  abstract readonly numberOfPublicReviews2: PersistedAsyncProperty<Author, number | undefined>;
+  abstract readonly numberOfPublicReviews2: ReactiveField<Author, number | undefined>;
 
-  abstract readonly tagsOfAllBooks: PersistedAsyncProperty<Author, string | undefined>;
+  abstract readonly tagsOfAllBooks: ReactiveField<Author, string | undefined>;
 
-  abstract readonly search: PersistedAsyncProperty<Author, string | undefined>;
+  abstract readonly search: ReactiveField<Author, string | undefined>;
 
   get createdAt(): Date {
     return getField(this, "createdAt");

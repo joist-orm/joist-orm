@@ -30,7 +30,7 @@ import {
   OptsOf,
   OrderBy,
   PartialOrNull,
-  PersistedAsyncProperty,
+  ReactiveField,
   PersistedAsyncReference,
   PolymorphicReference,
   ProjectEntity,
@@ -81,7 +81,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     let getter: Code;
     if (p.derived === "async") {
       getter = code`
-        abstract readonly ${fieldName}: ${PersistedAsyncProperty}<${entity.name}, ${p.fieldType}${maybeOptional}>;
+        abstract readonly ${fieldName}: ${ReactiveField}<${entity.name}, ${p.fieldType}${maybeOptional}>;
      `;
     } else if (p.derived === "sync") {
       getter = code`
@@ -102,10 +102,12 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
     }
 
     let setter: Code | string;
+    // ...technically we should be checking a list of JS keywords
+    const paramName = keywords.includes(fieldName) ? "value" : fieldName;
     const setterValue =
       p.fieldType === "string" && p.columnDefault !== "''"
-        ? code`${cleanStringValue}(${fieldName})`
-        : code`${fieldName}`;
+        ? code`${cleanStringValue}(${paramName})`
+        : code`${paramName}`;
     if (p.protected) {
       // TODO Allow making the getter to be protected as well. And so probably remove it
       // from the Opts as well. Wonder how that works for required protected fields?
@@ -113,34 +115,38 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
       // We have to use a method of `set${fieldName}` because TS enforces getters/setters to have
       // same access level and currently we're leaving the getter as public.
       setter = code`
-        protected set${pascalCase(fieldName)}(${fieldName}: ${fieldType}${maybeOptional}) {
+        protected set${pascalCase(fieldName)}(${paramName}: ${fieldType}${maybeOptional}) {
           ${setField}(this, "${fieldName}", ${setterValue});
         }
       `;
     } else if (p.derived) {
       setter = "";
     } else if (p.superstruct) {
+      // We use `value` as the param name to not potentially conflict with the
+      // name of the imported superstruct const that is passed to assert.
       setter = code`
-        set ${fieldName}(_${fieldName}: ${fieldType}${maybeOptional}) {
-          if (_${fieldName}) {
-            ${SSAssert}(_${fieldName}, ${p.superstruct});
+        set ${fieldName}(value: ${fieldType}${maybeOptional}) {
+          if (value) {
+            ${SSAssert}(value, ${p.superstruct});
           }
-          ${setField}(this, "${fieldName}", _${fieldName});
+          ${setField}(this, "${fieldName}", value);
         }
       `;
     } else if (p.zodSchema) {
+      // We use `value` as the param name to not potentially conflict with the
+      // name of the imported zod schema that is passed to parse.
       setter = code`
-        set ${fieldName}(_${fieldName}: ${Zod}.input<typeof ${p.zodSchema}>${maybeOptional}) {
-          if (_${fieldName}) {
-            ${setField}(this, "${fieldName}", ${p.zodSchema}.parse(_${fieldName}));
+        set ${fieldName}(value: ${Zod}.input<typeof ${p.zodSchema}>${maybeOptional}) {
+          if (value) {
+            ${setField}(this, "${fieldName}", ${p.zodSchema}.parse(value));
           } else {
-            ${setField}(this, "${fieldName}", _${fieldName});
+            ${setField}(this, "${fieldName}", value);
           }
         }
       `;
     } else {
       setter = code`
-        set ${fieldName}(${fieldName}: ${fieldType}${maybeOptional}) {
+        set ${fieldName}(${paramName}: ${fieldType}${maybeOptional}) {
           ${setField}(this, "${fieldName}", ${setterValue});
         }
       `;

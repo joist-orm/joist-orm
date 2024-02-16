@@ -1,8 +1,8 @@
-import { isChangeableField } from "./fields";
 import { Entity } from "./Entity";
 import { FieldsOf, MaybeAbstractEntityConstructor, getEmInternalApi } from "./EntityManager";
 import { EntityMetadata, getMetadata } from "./EntityMetadata";
 import { Changes, FieldStatus, ManyToOneFieldStatus } from "./changes";
+import { isChangeableField } from "./fields";
 import { getProperties } from "./getProperties";
 import { LoadHint, Loadable, Loaded } from "./loadHints";
 import { NormalizeHint, SuffixSeperator, normalizeHint, suffixRe } from "./normalizeHints";
@@ -120,7 +120,27 @@ export function reverseReactiveHint<T extends Entity>(
             },
           );
         }
-        case "m2m":
+        case "m2m": {
+          const otherFieldName =
+            field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
+              ? `${field.otherFieldName}@${meta.type}`
+              : field.otherFieldName;
+          // While o2m and o2o can watch for just FK changes by passing `reactForOtherSide` (the FK lives in the other
+          // table), for m2m reactivity we push the collection name into the reactive hint, because it's effectively
+          // "the other/reverse side", and JoinRows will trigger it explicitly instead of `setField` for non-m2m keys.
+          fields.push(field.fieldName);
+          return reverseReactiveHint(
+            rootType,
+            field.otherMetadata().cstr,
+            subHint,
+            // For m2m, we can always pass undefined here, as otherwise having the opposite m2m collection
+            // recalc all of its children will cause over-reactivity
+            undefined,
+            false,
+          ).map(({ entity, fields, path }) => {
+            return { entity, fields, path: [...path, otherFieldName] };
+          });
+        }
         case "o2m":
         case "o2o": {
           const isOtherReadOnly = field.otherMetadata().allFields[field.otherFieldName].immutable;
@@ -128,17 +148,12 @@ export function reverseReactiveHint<T extends Entity>(
             field.otherMetadata().allFields[field.otherFieldName].kind === "poly"
               ? `${field.otherFieldName}@${meta.type}`
               : field.otherFieldName;
-          // While o2m and o2o can watch for just FK changes, for m2m reactivity we push the
-          // collection name into the reactive hint as well, for JoinRows to trigger.
-          if (field.kind === "m2m") {
-            fields.push(field.fieldName);
-          }
           // This is not a field, but we want our reverse side to be reactive, so pass reactForOtherSide
           return reverseReactiveHint(
             rootType,
             field.otherMetadata().cstr,
             subHint,
-            // For o2m/o2o/m2m, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
+            // For o2m/o2o, isReadOnly will only be true if the hint is using a `:ro` / `_ro` suffix,
             // in which case we really do want to be read-only. But if isOtherReadOnly is true, then we
             // don't need to "react to the field changing" (which can't happen for immutable fields), but
             // we do need to react to children being created/deleted.

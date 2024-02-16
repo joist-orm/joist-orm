@@ -2,10 +2,9 @@ import { camelCase } from "change-case";
 import { Config, EntityDbMetadata } from "joist-codegen";
 import { CodegenFile, code, imp } from "ts-poet";
 
-const context = imp("Context@src/context");
 const saveEntity = imp("saveEntity@src/resolvers/utils");
 const mutationResolvers = imp("MutationResolvers@src/generated/graphql-types");
-const run = imp("run@src/resolvers/testUtils");
+const makeRunInputMutation = imp("makeRunInputMutation@src/resolvers/testUtils");
 
 /**
  * Generates a save resolver.
@@ -24,7 +23,7 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
     const type = imp(`${name}@src/entities`);
     const contents = code`
       export const save${name}: Pick<${mutationResolvers}, "save${name}"> = {
-        async save${name}(root, args, ctx) {
+        async save${name}(_, args, ctx) {
           return { ${camelName}: await ${saveEntity}(ctx, ${type}, args.input) };
         },
       };
@@ -35,23 +34,17 @@ export function generateSaveResolvers(config: Config, entities: EntityDbMetadata
   const testFiles = entities.map((e) => {
     const { name } = e;
     const camelName = camelCase(name);
-    const type = imp(`${e.name}@src/entities`);
-    const inputType = imp(`Save${name}Input@src/generated/graphql-types`);
     const resolverConst = imp(`save${name}@src/resolvers/mutations/${camelName}/save${name}Resolver`);
-    const tagName = config.entities[name].tag || "entity";
 
     const contents = code`
       describe("save${name}", () => {
         it.withCtx("can create", async (ctx) => {
-          const { em } = ctx;
-          const result = await runSave${name}(ctx, () => ({}));
+          const result = await runSave(ctx, () => ({}));
           expect(result).toBeDefined()
         });
       });
-
-      function runSave${name}(ctx: ${context}, inputFn: () => ${inputType}) {
-        return ${run}(ctx, (ctx) => ${resolverConst}.save${name}({}, { input: inputFn() }, ctx, undefined!));
-      }
+      
+      const runSave = ${makeRunInputMutation}(${resolverConst});
     `;
     return { name: `resolvers/mutations/${camelName}/save${name}Resolver.test.ts`, overwrite: false, contents };
   });

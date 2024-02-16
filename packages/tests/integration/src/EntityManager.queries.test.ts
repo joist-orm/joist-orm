@@ -9,6 +9,7 @@ import {
   insertLargePublisher,
   insertPublisher,
   insertTag,
+  insertUser,
   update,
 } from "@src/entities/inserts";
 import {
@@ -47,6 +48,8 @@ import {
   PublisherSize,
   SmallPublisher,
   Tag,
+  User,
+  UserFilter,
   newAuthor,
   newBook,
 } from "./entities";
@@ -57,6 +60,7 @@ const am = getMetadata(Author);
 const bm = getMetadata(Book);
 const pm = getMetadata(Publisher);
 const cm = getMetadata(Comment);
+const um = getMetadata(User);
 const criticMeta = getMetadata(Critic);
 const opts = { softDeletes: "include" } as const;
 
@@ -1299,6 +1303,29 @@ describe("EntityManager.queries", () => {
     });
   });
 
+  it("can find by search", async () => {
+    await insertAuthor({ first_name: "a1" });
+    await insertAuthor({ first_name: "2a2" });
+    await insertAuthor({ first_name: "b" });
+
+    const em = newEntityManager();
+    const where = { firstName: { search: "A" } };
+    const authors = await em.find(Author, where);
+    expect(authors.length).toEqual(2);
+
+    expect(parseFindQuery(am, where, opts)).toEqual({
+      selects: [`a.*`],
+      tables: [{ alias: "a", table: "authors", join: "primary" }],
+      condition: {
+        op: "and",
+        conditions: [
+          { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%A%" } },
+        ],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
   it("can find by like and join with not equal enum", async () => {
     await insertPublisher({ name: "p1", size_id: 1 });
     await insertPublisher({ id: 2, name: "p2", size_id: 2 });
@@ -1807,6 +1834,35 @@ describe("EntityManager.queries", () => {
       condition: {
         op: "and",
         conditions: [{ alias: "c", column: "parent_book_id", dbType: "int", cond: { kind: "ne", value: 1 } }],
+      },
+      orderBys: [expect.anything()],
+    });
+  });
+
+  it("can find through polymorphic reference by not null", async () => {
+    await insertPublisher({ id: 1, name: "lp" });
+    await insertLargePublisher({ id: 2, name: "lp" });
+    await insertUser({ id: 1, name: "u1", favorite_publisher_small_id: 1 });
+    await insertUser({ id: 2, name: "u2", favorite_publisher_large_id: 2 });
+    await insertUser({ id: 3, name: "u3" });
+
+    const em = newEntityManager();
+    const where = { favoritePublisher: { ne: null } } satisfies UserFilter;
+    const users = await em.find(User, where);
+    expect(users.length).toEqual(2);
+
+    expect(parseFindQuery(um, where)).toEqual({
+      selects: [`u.*`, "u_s0.*", "u.id as id", expect.anything()],
+      tables: [
+        { alias: "u", table: "users", join: "primary" },
+        { alias: "u_s0", table: "admin_users", join: "outer", col1: "u.id", col2: "u_s0.id", distinct: false },
+      ],
+      condition: {
+        op: "or",
+        conditions: [
+          { alias: "u", column: "favorite_publisher_large_id", dbType: "int", cond: { kind: "not-null" } },
+          { alias: "u", column: "favorite_publisher_small_id", dbType: "int", cond: { kind: "not-null" } },
+        ],
       },
       orderBys: [expect.anything()],
     });
@@ -2348,6 +2404,31 @@ describe("EntityManager.queries", () => {
           conditions: [{ alias: "b", column: "title", dbType: "character varying", cond: { kind: "eq", value: "b1" } }],
         },
 
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can use aliases for search", async () => {
+      await insertAuthor({ first_name: "a1" });
+      await insertAuthor({ first_name: "a2" });
+      await insertAuthor({ first_name: "a3" });
+
+      const em = newEntityManager();
+      const a = alias(Author);
+      const conditions = { or: [a.firstName.search("a1"), a.firstName.search("a2")] };
+      const authors = await em.find(Author, { as: a }, { ...opts, conditions });
+      expect(authors.length).toEqual(2);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toEqual({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "or",
+          conditions: [
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%a1%" } },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "ilike", value: "%a2%" } },
+          ],
+        },
         orderBys: [expect.anything()],
       });
     });

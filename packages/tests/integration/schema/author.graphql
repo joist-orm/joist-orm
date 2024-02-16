@@ -31,6 +31,7 @@ type Author {
   numberOfAtoms: Int
   tagsOfAllBooks: String!
   nickNames: String
+  graphqlOnlyField(arg: Int): Int!
 }
 
 input SaveAuthorInput {

@@ -1,3 +1,178 @@
+## [1.144.10](https://github.com/stephenh/joist-ts/compare/v1.144.9...v1.144.10) (2024-02-15)
+
+
+### Bug Fixes
+
+* Avoid failing on cross-schema triggers. ([#960](https://github.com/stephenh/joist-ts/issues/960)) ([2bb17f0](https://github.com/stephenh/joist-ts/commit/2bb17f01ab86599fcf7f8074c264e58f2359f3d3))
+
+## [1.144.9](https://github.com/stephenh/joist-ts/compare/v1.144.8...v1.144.9) (2024-02-15)
+
+
+### Bug Fixes
+
+* Fix findByCode type to be just string. ([#959](https://github.com/stephenh/joist-ts/issues/959)) ([15d51a2](https://github.com/stephenh/joist-ts/commit/15d51a2f4c0a1ab87b955537a6c6db5a4d1dd706))
+
+## [1.144.8](https://github.com/stephenh/joist-ts/compare/v1.144.7...v1.144.8) (2024-02-13)
+
+
+### Bug Fixes
+
+* Bump pg-structure for security warning. ([#958](https://github.com/stephenh/joist-ts/issues/958)) ([260dee7](https://github.com/stephenh/joist-ts/commit/260dee77a7701ab443347e338d26009b6cea9b97))
+
+## [1.144.7](https://github.com/stephenh/joist-ts/compare/v1.144.6...v1.144.7) (2024-02-13)
+
+
+### Bug Fixes
+
+* nin any -> all operator in buildKnexQuery ([#957](https://github.com/stephenh/joist-ts/issues/957)) ([4cf71cc](https://github.com/stephenh/joist-ts/commit/4cf71ccc71883adcdf1495f76f2135b035302e0d))
+
+## [1.144.6](https://github.com/stephenh/joist-ts/compare/v1.144.5...v1.144.6) (2024-01-25)
+
+
+### Bug Fixes
+
+* Fixed async method when load is called in a loop with different args ([#955](https://github.com/stephenh/joist-ts/issues/955)) ([877a363](https://github.com/stephenh/joist-ts/commit/877a3638dbbd45c3428f2487c4b0c227aea33424))
+
+## [1.144.5](https://github.com/stephenh/joist-ts/compare/v1.144.4...v1.144.5) (2024-01-25)
+
+
+### Bug Fixes
+
+* fixed AsyncMethod not working when its first argument is an entity ([#954](https://github.com/stephenh/joist-ts/issues/954)) ([65703f6](https://github.com/stephenh/joist-ts/commit/65703f69526c2732189eee7e9e3391559c28ed2c))
+
+## [1.144.4](https://github.com/stephenh/joist-ts/compare/v1.144.3...v1.144.4) (2024-01-23)
+
+
+### Bug Fixes
+
+* Implement not null checks on polymorphic references. ([#953](https://github.com/stephenh/joist-ts/issues/953)) ([be50769](https://github.com/stephenh/joist-ts/commit/be50769beb677993bbdb3e0d191c9b10402fe3ef))
+
+## [1.144.3](https://github.com/stephenh/joist-ts/compare/v1.144.2...v1.144.3) (2024-01-22)
+
+
+### Bug Fixes
+
+* Fix em.find on poly with untagged ids. ([#951](https://github.com/stephenh/joist-ts/issues/951)) ([73be96d](https://github.com/stephenh/joist-ts/commit/73be96d875229489e0b35aa2c67c90be07f95866))
+
+## [1.144.2](https://github.com/stephenh/joist-ts/compare/v1.144.1...v1.144.2) (2024-01-22)
+
+
+### Bug Fixes
+
+* Fix setter param names cannot be JS keywords. ([#950](https://github.com/stephenh/joist-ts/issues/950)) ([9623130](https://github.com/stephenh/joist-ts/commit/9623130549e5eaa87671005b0bacead0efc6158a))
+
+## [1.144.1](https://github.com/stephenh/joist-ts/compare/v1.144.0...v1.144.1) (2024-01-21)
+
+
+### Bug Fixes
+
+* Fix small scaffolding nits ([#949](https://github.com/stephenh/joist-ts/issues/949)) ([770dd68](https://github.com/stephenh/joist-ts/commit/770dd689ac140610e50c0c388b96d901b157da39))
+
+# [1.144.0](https://github.com/stephenh/joist-ts/compare/v1.143.3...v1.144.0) (2024-01-21)
+
+
+### Features
+
+* Fix graphql test scaffolding ([#948](https://github.com/stephenh/joist-ts/issues/948)) ([6f24f56](https://github.com/stephenh/joist-ts/commit/6f24f5690b62b3a61cec158f39d93683bc5e2338))
+
+## [1.143.3](https://github.com/stephenh/joist-ts/compare/v1.143.2...v1.143.3) (2024-01-16)
+
+
+### Bug Fixes
+
+* Fix em.recalc for synchronous fields. ([#946](https://github.com/stephenh/joist-ts/issues/946)) ([0b874a9](https://github.com/stephenh/joist-ts/commit/0b874a9729eb6e29011c1aa02e623f6b592c3fb6))
+
+## [1.143.2](https://github.com/stephenh/joist-ts/compare/v1.143.1...v1.143.2) (2024-01-16)
+
+
+### Bug Fixes
+
+* Fix m2m over reactivity ([#945](https://github.com/stephenh/joist-ts/issues/945)) ([3950674](https://github.com/stephenh/joist-ts/commit/3950674f5a38bd1ea3bf27974d82ee4b7620e634))
+
+## [1.143.1](https://github.com/stephenh/joist-ts/compare/v1.143.0...v1.143.1) (2024-01-15)
+
+
+### Bug Fixes
+
+* Add fast-glob dependency. ([#943](https://github.com/stephenh/joist-ts/issues/943)) ([98fcc20](https://github.com/stephenh/joist-ts/commit/98fcc208fb3c6059ff33645dc0d7e82fef13420b))
+
+# [1.143.0](https://github.com/stephenh/joist-ts/compare/v1.142.2...v1.143.0) (2024-01-15)
+
+
+### Features
+
+* Rename hasPersistedAsyncProperty to hasReactiveField ([#942](https://github.com/stephenh/joist-ts/issues/942)) ([7294754](https://github.com/stephenh/joist-ts/commit/7294754ec20eef06e38a7d8a95e5343b56d56fda))
+
+## [1.142.2](https://github.com/stephenh/joist-ts/compare/v1.142.1...v1.142.2) (2024-01-12)
+
+
+### Bug Fixes
+
+* Add resetBootFlag for projects that hot reload. ([#941](https://github.com/stephenh/joist-ts/issues/941)) ([5727804](https://github.com/stephenh/joist-ts/commit/5727804a1a32ee5355999056fbe82718dc300178))
+
+## [1.142.1](https://github.com/stephenh/joist-ts/compare/v1.142.0...v1.142.1) (2024-01-12)
+
+
+### Bug Fixes
+
+* Add better error message when adding invalid m2m rows. ([#940](https://github.com/stephenh/joist-ts/issues/940)) ([a409667](https://github.com/stephenh/joist-ts/commit/a409667bc9309e45004da1a0c24d491e5eabc8f8))
+
+# [1.142.0](https://github.com/stephenh/joist-ts/compare/v1.141.0...v1.142.0) (2024-01-10)
+
+
+### Features
+
+* Add 'search' operator that translates to ilikes. ([#938](https://github.com/stephenh/joist-ts/issues/938)) ([510d5fb](https://github.com/stephenh/joist-ts/commit/510d5fbe5d477ab4fd36b734151b6e5f1c961bd1))
+
+# [1.141.0](https://github.com/stephenh/joist-ts/compare/v1.140.1...v1.141.0) (2024-01-07)
+
+
+### Features
+
+* Add em.recalc, simplify em.touch. ([#933](https://github.com/stephenh/joist-ts/issues/933)) ([5bb92b3](https://github.com/stephenh/joist-ts/commit/5bb92b39079485d8babb8b8049d3b452aafb178e)), closes [#4](https://github.com/stephenh/joist-ts/issues/4)
+
+## [1.140.1](https://github.com/stephenh/joist-ts/compare/v1.140.0...v1.140.1) (2024-01-05)
+
+
+### Bug Fixes
+
+* IncrementalCollectionOp on soft-deletable ([#931](https://github.com/stephenh/joist-ts/issues/931)) ([91e638a](https://github.com/stephenh/joist-ts/commit/91e638a7787b1434280c1756cbc669e8debdc0b7))
+
+# [1.140.0](https://github.com/stephenh/joist-ts/compare/v1.139.2...v1.140.0) (2024-01-04)
+
+
+### Features
+
+* Ensure that rules/hooks aren't added post-boot. ([#930](https://github.com/stephenh/joist-ts/issues/930)) ([50a5a54](https://github.com/stephenh/joist-ts/commit/50a5a54c4c8e49af3ecd8ad1239b26c386a635f7)), closes [#928](https://github.com/stephenh/joist-ts/issues/928)
+
+## [1.139.2](https://github.com/stephenh/joist-ts/compare/v1.139.1...v1.139.2) (2024-01-04)
+
+
+### Bug Fixes
+
+* Change m2m.get ensureNotDeleted to ignore pending. ([#929](https://github.com/stephenh/joist-ts/issues/929)) ([768d3e7](https://github.com/stephenh/joist-ts/commit/768d3e73833701398d5f94101652950672f9483a))
+
+## [1.139.1](https://github.com/stephenh/joist-ts/compare/v1.139.0...v1.139.1) (2024-01-03)
+
+
+### Bug Fixes
+
+* Fix transient m2m rows on transient entities. ([#927](https://github.com/stephenh/joist-ts/issues/927)) ([bd68181](https://github.com/stephenh/joist-ts/commit/bd68181fb0f3de11c4db71cab826f5d9a2bcc147))
+
+# [1.139.0](https://github.com/stephenh/joist-ts/compare/v1.138.1...v1.139.0) (2024-01-01)
+
+
+### Features
+
+* Scaffold test files. ([#926](https://github.com/stephenh/joist-ts/issues/926)) ([b7c6cd6](https://github.com/stephenh/joist-ts/commit/b7c6cd6d14100b4fa6f030e966bd5b36e5107453))
+
+## [1.138.1](https://github.com/stephenh/joist-ts/compare/v1.138.0...v1.138.1) (2024-01-01)
+
+
+### Bug Fixes
+
+* Skip AllEnumDetails if no enums. ([b3b1905](https://github.com/stephenh/joist-ts/commit/b3b190512a403363a2d96cb5e7b89dfb235b9e65))
+
 # [1.138.0](https://github.com/stephenh/joist-ts/compare/v1.137.0...v1.138.0) (2023-12-29)
 
 

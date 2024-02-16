@@ -9,7 +9,7 @@ import {
   getBaseAndSelfMetas,
   getMetadata,
 } from "./EntityMetadata";
-import { ColumnCondition, ParsedValueFilter, mapToDb, skipCondition } from "./QueryParser";
+import { ColumnCondition, ParsedValueFilter, makeLike, mapToDb, skipCondition } from "./QueryParser";
 import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
 import { fail } from "./utils";
@@ -46,6 +46,7 @@ export interface PrimitiveAlias<V, N extends null | never> {
   lte(value: V | undefined): ColumnCondition;
   like(value: V | undefined): ColumnCondition;
   ilike(value: V | undefined): ColumnCondition;
+  search(value: V | undefined): ColumnCondition;
   between(v1: V | undefined, v2: V | undefined): ColumnCondition;
 }
 
@@ -178,6 +179,11 @@ class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V,
   ilike(value: V | undefined): ColumnCondition {
     if (value === undefined) return skipCondition;
     return this.addCondition({ kind: "ilike", value });
+  }
+
+  search(value: V | undefined): ColumnCondition {
+    if (value === undefined) return skipCondition;
+    return this.addCondition({ kind: "ilike", value: makeLike(value) });
   }
 
   in(values: V[] | undefined): ColumnCondition {

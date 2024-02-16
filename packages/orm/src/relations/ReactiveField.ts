@@ -10,7 +10,7 @@ import { AbstractPropertyImpl } from "./AbstractPropertyImpl";
 import { AsyncPropertyT } from "./hasAsyncProperty";
 
 /**
- * A `PersistedAsyncProperty` is a value that is derived from other entities/values,
+ * A `ReactiveField` is a value that is derived from other entities/values,
  * similar to an `AsyncProperty`, but it is also persisted in the database.
  *
  * This allows callers (or SQL queries) to access the value without first calling
@@ -22,7 +22,7 @@ import { AsyncPropertyT } from "./hasAsyncProperty";
  * that you can observe the latest & greatest value w/o waiting for `em.flush` to
  * re-calc the value while persisting to the database.
  */
-export interface PersistedAsyncProperty<T extends Entity, V> {
+export interface ReactiveField<T extends Entity, V> {
   [AsyncPropertyT]: T;
   isLoaded: boolean;
   isSet: boolean;
@@ -66,18 +66,18 @@ export interface PersistedAsyncProperty<T extends Entity, V> {
  * But if `someProperty` is used as a populate hint, then it can be accessed synchronously,
  * with `someProperty.get`.
  */
-export function hasPersistedAsyncProperty<T extends Entity, const H extends ReactiveHint<T>, V>(
+export function hasReactiveField<T extends Entity, const H extends ReactiveHint<T>, V>(
   fieldName: keyof T & string,
   hint: H,
   fn: (entity: Reacted<T, H>) => V,
-): PersistedAsyncProperty<T, V> {
+): ReactiveField<T, V> {
   const entity = currentlyInstantiatingEntity as T;
-  return new PersistedAsyncPropertyImpl(entity, fieldName, hint, fn);
+  return new ReactiveFieldImpl(entity, fieldName, hint, fn);
 }
 
-export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint<T>, V>
+export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
   extends AbstractPropertyImpl<T>
-  implements PersistedAsyncProperty<T, V>
+  implements ReactiveField<T, V>
 {
   readonly #reactiveHint: H;
   #loadPromise: any;
@@ -151,13 +151,13 @@ export class PersistedAsyncPropertyImpl<T extends Entity, H extends ReactiveHint
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isPersistedAsyncProperty(
+export function isReactiveField(
   maybeAsyncProperty: any,
-): maybeAsyncProperty is PersistedAsyncProperty<any, any> {
-  return maybeAsyncProperty instanceof PersistedAsyncPropertyImpl;
+): maybeAsyncProperty is ReactiveField<any, any> {
+  return maybeAsyncProperty instanceof ReactiveFieldImpl;
 }
 
 /** Type guard utility for determining if an entity field is a loaded AsyncProperty. */
-export function isLoadedAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is PersistedAsyncProperty<any, any> {
-  return isPersistedAsyncProperty(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
+export function isLoadedAsyncProperty(maybeAsyncProperty: any): maybeAsyncProperty is ReactiveField<any, any> {
+  return isReactiveField(maybeAsyncProperty) && maybeAsyncProperty.isLoaded;
 }

@@ -1,6 +1,6 @@
 import { newLargePublisher } from "src/entities";
 import { largePublisherResolvers } from "src/resolvers/objects/largePublisher/largePublisherResolvers";
-import { makeRunObject, makeRunObjectFields } from "src/resolvers/testUtils";
+import { makeRunObjectField, makeRunObjectFields } from "src/resolvers/testUtils";
 
 describe("largePublisherResolvers", () => {
   it.withCtx("can return", async (ctx) => {
@@ -14,4 +14,4 @@ describe("largePublisherResolvers", () => {
 });
 
 const runLargePublisherKeys = makeRunObjectFields(largePublisherResolvers);
-const runLargePublisher = makeRunObject(largePublisherResolvers);
+const runLargePublisher = makeRunObjectField(largePublisherResolvers);

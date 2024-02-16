@@ -2,7 +2,7 @@ import { getOrmField } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { getEmInternalApi } from "./EntityManager";
 import { getMetadata } from "./EntityMetadata";
-import { ensureNotDeleted, maybeResolveReferenceToId } from "./index";
+import { ensureNotDeleted, fail, maybeResolveReferenceToId } from "./index";
 
 /**
  * Returns the current value of `fieldName`, this is an internal method that should

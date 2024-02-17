@@ -4,9 +4,11 @@ import {
   Collection,
   Entity,
   EntityMetadata,
+  FieldProperty,
   FieldsOf,
   FilterWithAlias,
   getProperties,
+  Loadable,
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
@@ -55,6 +57,7 @@ export type AuthRule<T extends Entity> = {
     | keyof FieldsOf<T>
     | keyof RelationsIn<T>
     | keyof AsyncMethodsIn<T>
+    | keyof Loadable<T>
     | "entity"
     | "*"
     | "where"]?: K extends keyof RelationsIn<T>
@@ -69,13 +72,16 @@ export type AuthRule<T extends Entity> = {
         ? FieldsOf<T>[K] extends { kind: "primitive" }
           ? FieldAccess
           : never
-        : K extends "*"
+        : // Look for AsyncProperties, which we can't sql-join through, so leave as FieldAccess
+          K extends keyof Loadable<T>
           ? FieldAccess
-          : K extends "entity"
-            ? CrudValue
-            : K extends "where"
-              ? FilterWithAlias<T>
-              : never;
+          : K extends "*"
+            ? FieldAccess
+            : K extends "entity"
+              ? CrudValue
+              : K extends "where"
+                ? FilterWithAlias<T>
+                : never;
 };
 
 /** The Auth rule for a specific entity, i.e. the root User or a child node, within the overall tree. */
@@ -126,7 +132,6 @@ function parse(
       // Resolve star to all fields?
       fields[key] = value as unknown as FieldAccess;
     } else if (key in properties) {
-      console.log({ properties });
       const property = properties[key];
       if (
         property instanceof ManyToOneReferenceImpl ||
@@ -142,11 +147,11 @@ function parse(
         methods[key] = value as unknown as MethodAccess;
       } else if (property instanceof AsyncPropertyImpl) {
         methods[key] = value as unknown as MethodAccess;
+      } else if (property instanceof FieldProperty) {
+        fields[key] = value as unknown as FieldAccess;
       } else {
         throw new Error(`Unsupported property ${key} on ${meta.cstr.name}`);
       }
-    } else if (key in meta.allFields) {
-      fields[key] = value as unknown as FieldAccess;
     } else {
       throw new Error(`Unsupported key ${key} on ${meta.cstr.name}`);
     }

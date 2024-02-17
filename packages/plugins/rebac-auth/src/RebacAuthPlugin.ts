@@ -65,9 +65,13 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     const field = rule?.fields[fieldName];
     if (field === "r" || field === "rw") {
       return;
-    } else {
-      throw new Error(`Access denied to ${entity}.${fieldName}`);
     }
+    // Assume any relation mapping means they can at least read the value
+    const relation = rule?.relations[fieldName];
+    if (relation) {
+      return;
+    }
+    throw new Error(`Access denied to ${entity}.${fieldName}`);
   }
 
   beforeSetField(entity: Entity, fieldName: string, newValue: unknown) {

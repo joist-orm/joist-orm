@@ -1,7 +1,7 @@
-import { getField, isChangeableField } from "./fields";
 import { getOrmField } from "./BaseEntity";
 import { Entity, isEntity } from "./Entity";
 import { FieldsOf, IdOf, OptsOf, isId } from "./EntityManager";
+import { getField, isChangeableField } from "./fields";
 import { Field, getConstructorFromTaggedId, getMetadata } from "./index";
 
 /** Exposes a field's changed/original value in each entity's `this.changes` property. */

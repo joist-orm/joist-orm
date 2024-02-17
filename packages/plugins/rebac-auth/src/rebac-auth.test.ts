@@ -320,6 +320,24 @@ describe("rebac-auth", () => {
     await expect(books[0].comments.load()).rejects.toThrow("Access denied to Book:1.comments");
   });
 
+  it("can load async property", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And they can read their first name, ssn, but not age
+    const rule: AuthRule<User> = { authorManyToOne: { allPublisherAuthorNames: "r", publisher: { name: "r" } } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the author
+    const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, { populate: "allPublisherAuthorNames" });
+    // Then they can read the async property
+    noop(a.allPublisherAuthorNames.get);
+    // But not their age
+    expect(() => noop(a.age)).toThrow("Access denied to Author:1.age");
+  });
+
   it("can auth field reads", async () => {
     // Given a user that's an author
     await insertAuthor({ first_name: "a1" });

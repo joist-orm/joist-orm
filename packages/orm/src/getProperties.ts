@@ -1,6 +1,6 @@
 import { getOrmField } from "./BaseEntity";
 import { Entity } from "./Entity";
-import { EntityMetadata } from "./EntityMetadata";
+import { EntityMetadata, Field } from "./EntityMetadata";
 import { asConcreteCstr } from "./index";
 
 /**
@@ -24,13 +24,25 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
   if (propertiesCache[key]) {
     return propertiesCache[key];
   }
+
   const instance = getFakeInstance(meta);
+
+  // Fields won't have a wrapper relation, but include them as a FieldProperty. We didn't previously
+  // consider "fields" to be "properties", but if we don't include all fields, then a subset of them
+  // can accidentally leak in, i.e. if the user defines getters/setters for a field, it will get caught
+  // in our property detection, so we might as well handle it correctly.
+  const fieldProperties = Object.fromEntries(
+    Object.values(meta.allFields)
+      .filter((f) => f.kind !== "primaryKey" && (f.kind === "primitive" || f.kind === "enum"))
+      .map((f) => [f.fieldName, new FieldProperty(f)]),
+  );
+
   propertiesCache[key] = Object.fromEntries(
     [
-      ...Object.values(meta.allFields)
-        .filter((f) => f.kind !== "primaryKey" && f.kind !== "primitive" && f.kind !== "enum")
-        .map((f) => f.fieldName),
+      ...Object.values(meta.allFields).map((f) => f.fieldName),
+      // Look for lazy relation getters on the prototype
       ...Object.getOwnPropertyNames(meta.cstr.prototype),
+      // Look for user-defined relations on the instance
       ...Object.keys(instance),
     ]
       .filter((key) => key !== "constructor" && !key.startsWith("__"))
@@ -38,8 +50,9 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
         // Return the value of `instance[key]` but wrap it in a try/catch in case it's
         // a getter that runs code that fails b/c of the dummy state we're in.
         try {
-          return [key, (instance as any)[key] ?? unknown];
-        } catch {
+          return [key, fieldProperties[key] ?? (instance as any)[key] ?? unknown];
+        } catch (e) {
+          console.log(`${meta.tableName}.${key}`, e);
           return [key, unknown];
         }
       })
@@ -51,6 +64,10 @@ export function getProperties(meta: EntityMetadata): Record<string, any> {
 
 export class UnknownProperty {}
 const unknown = new UnknownProperty();
+
+export class FieldProperty {
+  constructor(field: Field) {}
+}
 
 const propertiesCache: Record<string, any> = {};
 const fakeInstances: Record<string, Entity> = {};

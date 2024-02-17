@@ -8,7 +8,7 @@ import {
   OneToManyCollection,
   OneToOneReferenceImpl,
   UnknownProperty,
-  getProperties,
+  getProperties, FieldProperty,
 } from "joist-orm";
 
 describe("getProperties", () => {
@@ -29,6 +29,12 @@ describe("getProperties", () => {
       rulesInvoked: 0,
       numberOfBooks2RuleInvoked: 0,
     });
+  });
+
+  it("does not include getters", () => {
+    const p = getProperties(authorMeta);
+    expect(p["fullName"]).toEqual("undefined");
+    expect(p["firstName"]).toBeInstanceOf(FieldProperty);
   });
 
   it("works for custom references", () => {

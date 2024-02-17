@@ -188,7 +188,8 @@ export function reverseReactiveHint<T extends Entity>(
         }
         return reverseReactiveHint(rootType, meta.cstr, p.reactiveHint, undefined, false);
       } else {
-        throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)}`);
+        console.log(p);
+        throw new Error(`Invalid hint in ${rootType.name}.ts ${JSON.stringify(hint)} key ${key}`);
       }
     }
   });

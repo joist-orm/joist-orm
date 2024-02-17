@@ -10,9 +10,11 @@ import {
   ManyToManyCollection,
   ManyToOneReferenceImpl,
   OneToManyCollection,
+  OneToOneReferenceImpl,
   Reference,
   RelationsIn,
 } from "joist-orm";
+import { AsyncPropertyImpl } from "joist-orm/build/relations/hasAsyncProperty";
 
 export type FieldAccess = "r" | "rw" | "w";
 export type MethodAccess = "i";
@@ -59,21 +61,21 @@ export type AuthRule<T extends Entity> = {
     ? T[K] extends Reference<T, infer U, any>
       ? AuthRule<U>
       : T[K] extends Collection<T, infer U>
-      ? AuthRule<U>
-      : never
+        ? AuthRule<U>
+        : never
     : K extends keyof AsyncMethodsIn<T>
-    ? MethodAccess
-    : K extends keyof FieldsOf<T>
-    ? FieldsOf<T>[K] extends { kind: "primitive" }
-      ? FieldAccess
-      : never
-    : K extends "*"
-    ? FieldAccess
-    : K extends "entity"
-    ? CrudValue
-    : K extends "where"
-    ? FilterWithAlias<T>
-    : never;
+      ? MethodAccess
+      : K extends keyof FieldsOf<T>
+        ? FieldsOf<T>[K] extends { kind: "primitive" }
+          ? FieldAccess
+          : never
+        : K extends "*"
+          ? FieldAccess
+          : K extends "entity"
+            ? CrudValue
+            : K extends "where"
+              ? FilterWithAlias<T>
+              : never;
 };
 
 /** The Auth rule for a specific entity, i.e. the root User or a child node, within the overall tree. */
@@ -124,11 +126,13 @@ function parse(
       // Resolve star to all fields?
       fields[key] = value as unknown as FieldAccess;
     } else if (key in properties) {
+      console.log({ properties });
       const property = properties[key];
       if (
         property instanceof ManyToOneReferenceImpl ||
         property instanceof ManyToManyCollection ||
-        property instanceof OneToManyCollection
+        property instanceof OneToManyCollection ||
+        property instanceof OneToOneReferenceImpl
       ) {
         relations[key] = parse(result, property.otherMeta, value as any, [
           ...pathToUser,
@@ -136,13 +140,15 @@ function parse(
         ]);
       } else if (property instanceof AsyncMethodImpl) {
         methods[key] = value as unknown as MethodAccess;
+      } else if (property instanceof AsyncPropertyImpl) {
+        methods[key] = value as unknown as MethodAccess;
       } else {
         throw new Error(`Unsupported property ${key} on ${meta.cstr.name}`);
       }
     } else if (key in meta.allFields) {
       fields[key] = value as unknown as FieldAccess;
     } else {
-      throw new Error(`Unsupported key ${key}`);
+      throw new Error(`Unsupported key ${key} on ${meta.cstr.name}`);
     }
   }
 

@@ -127,7 +127,7 @@ function parse(
 
   for (const [key, value] of Object.entries(hint)) {
     if (key === "where") {
-      where = value;
+      where = value as any; // TODO revisit
     } else if (key === "*") {
       // Resolve star to all fields?
       fields[key] = value as unknown as FieldAccess;

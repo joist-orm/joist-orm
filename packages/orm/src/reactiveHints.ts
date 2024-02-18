@@ -205,7 +205,8 @@ export function reverseReactiveHint<T extends Entity>(
 /**
  * Walks `reverseHint` for every entity in `entities`.
  *
- * I.e. given `[book1, book2]` and `["author", 'publisher"]`, will return all the books' authors' publishers.
+ * I.e. given set of entities like `[book1, book2]` that just changed, and a path `["author", 'publisher"]` that
+ * points to the `Publisher` entity that has reactive behavior, returns all the books' authors' publishers.
  */
 export async function followReverseHint(entities: Entity[], reverseHint: string[]): Promise<Entity[]> {
   // Start at the current entities
@@ -295,6 +296,10 @@ export interface ReactiveTarget {
   path: string[];
 }
 
+/**
+ * When traversing back through a hint, if we hint a poly, the subsequent steps of the path
+ * will only be valid if the poly is the correct type.
+ */
 async function maybeLoadedPoly(loadPromise: Promise<Entity>, viaPolyType: string | undefined) {
   if (viaPolyType) {
     const loaded: Entity = await loadPromise;

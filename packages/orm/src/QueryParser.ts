@@ -135,6 +135,7 @@ export function parseFindQuery(
     col1: string,
     col2: string,
     filter: any,
+    distinct?: boolean,
   ): void {
     // look at filter, is it `{ book: "b2" }` or `{ book: { ... } }`
     const ef = parseEntityFilter(meta, filter);
@@ -145,7 +146,7 @@ export function parseFindQuery(
     if (join === "primary") {
       tables.push({ alias, table: meta.tableName, join });
     } else {
-      tables.push({ alias, table: meta.tableName, join, col1, col2 });
+      tables.push({ alias, table: meta.tableName, join, col1, col2, distinct });
     }
 
     // Maybe only do this if we're the primary, or have a field that needs it?
@@ -280,6 +281,7 @@ export function parseFindQuery(
             kqDot(alias, "id"),
             kqDot(a, otherColumn),
             (ef.subFilter as any)[key],
+            false,
           );
         } else if (field.kind === "o2m") {
           const a = getAlias(field.otherMetadata().tableName);

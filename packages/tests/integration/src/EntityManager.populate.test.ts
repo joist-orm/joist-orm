@@ -73,6 +73,19 @@ describe("EntityManager.populate", () => {
     expect(pub.authors.get[0].publisher.get!.id).toEqual("p:1");
   });
 
+  it("can populate one-to-many when filtering on a o2o", async () => {
+    const em = newEntityManager();
+    // The userOneToOne will do a `left outer join` from `authors` -> `users`,
+    // which usually we do for "the author has lots of children" and so throw on
+    // a `distinct`. However, because we know this is an o2o, we can still do the
+    // `left outer join` to handle the conditional-ness of the o2o, but we don't
+    // need a distinct. ...and the distinct breaks the aggregation approach.
+    //
+    // Maybe we need to revisit the splitter approach to avoid distincts...
+    // https://github.com/stephenh/joist-ts/pull/835
+    await em.find(Author, { userOneToOne: "u:1" }, { populate: { comments: "user" } });
+  });
+
   it("can populate via load", async () => {
     await insertAuthor({ first_name: "a1" });
     await insertBook({ title: "b1", author_id: 1 });

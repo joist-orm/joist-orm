@@ -693,7 +693,7 @@ describe("EntityManager.queries", () => {
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
+        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id", distinct: false },
       ],
       condition: {
         op: "and",
@@ -724,7 +724,7 @@ describe("EntityManager.queries", () => {
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
-        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id" },
+        { alias: "i", table: "images", join: "outer", col1: "b.id", col2: "i.book_id", distinct: false },
       ],
       condition: {
         op: "and",

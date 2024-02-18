@@ -50,6 +50,14 @@ export function isFieldSet(entity: Entity, fieldName: string): boolean {
 }
 
 /**
+ * Returns whether `newValue` is different from the current value of `fieldName`.
+ */
+export function isChangedValue(entity: Entity, fieldName: string, newValue: any): boolean {
+  const currentValue = getField(entity, fieldName);
+  return !equalOrSameEntity(currentValue, newValue);
+}
+
+/**
  * Sets the current value of `fieldName`, this is an internal method that should
  * only be called by the code-generated setters.
  *

@@ -2,7 +2,7 @@ import { currentlyInstantiatingEntity } from "../BaseEntity";
 import { Entity } from "../Entity";
 import { getEmInternalApi } from "../EntityManager";
 import { getMetadata } from "../EntityMetadata";
-import { getField, isFieldSet, setField } from "../fields";
+import { getField, isChangedValue, isFieldSet, setField } from "../fields";
 import { isLoaded } from "../index";
 import { Reacted, ReactiveHint } from "../reactiveHints";
 import { tryResolve } from "../utils";
@@ -20,7 +20,7 @@ import { AsyncPropertyT } from "./hasAsyncProperty";
  * then `.get` will return the last-calculated value, but if the property is loaded,
  * then it will go ahead and invoke function to calculate the latest value (i.e. so
  * that you can observe the latest & greatest value w/o waiting for `em.flush` to
- * re-calc the value while persisting to the database.
+ * re-calc the value while persisting to the database).
  */
 export interface ReactiveField<T extends Entity, V> {
   [AsyncPropertyT]: T;
@@ -117,7 +117,12 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
       // during the validate phase of `em.flush`, then skip it to avoid tripping up
       // the "cannot change entities during flush" logic.)
       if (!getEmInternalApi(this.entity.em).isValidating) {
-        setField(this.entity, this.fieldName, newValue);
+        // ...we used to call this all the time, even if the value hadn't changed, but that
+        // can trigger reads of the value to look like it's causing writes, which is odd and
+        // can mess up auth logic.
+        if (isChangedValue(this.entity, this.fieldName, newValue)) {
+          setField(this.entity, this.fieldName, newValue);
+        }
       }
       return newValue;
     } else if (this.isSet) {
@@ -151,9 +156,7 @@ export class ReactiveFieldImpl<T extends Entity, H extends ReactiveHint<T>, V>
 }
 
 /** Type guard utility for determining if an entity field is an AsyncProperty. */
-export function isReactiveField(
-  maybeAsyncProperty: any,
-): maybeAsyncProperty is ReactiveField<any, any> {
+export function isReactiveField(maybeAsyncProperty: any): maybeAsyncProperty is ReactiveField<any, any> {
   return maybeAsyncProperty instanceof ReactiveFieldImpl;
 }
 

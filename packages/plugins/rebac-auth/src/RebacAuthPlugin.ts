@@ -32,6 +32,35 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     this.#rules = parseAuthRule(rootMeta, rule);
   }
 
+  /**
+   * Initialize the auth rules for an `entity` loaded before the auth plugin was created.
+   *
+   * I.e. typically you need to load the user, to know who/what role they are, to get the
+   * shape necessary to create the RebacAuthPlugin. */
+  seed(entity: Entity): void {
+    const rules = this.#rules[getMetadata(entity).cstr.name];
+
+    if (!rules) return;
+    // Work with just one rule for now
+    const [rule] = rules;
+    this.#entities.set(entity, rule);
+
+    // Scan the entity for loaded relations
+    for (const [relationName, nextRule] of Object.entries(rule.relations)) {
+      if (isLoadedCollection((entity as any)[relationName])) {
+        const entities = (entity as any)[relationName].get;
+        for (const entity of entities) {
+          console.log("Adding rule", entity.toString(), nextRule.fields);
+          this.#entities.set(entity, nextRule);
+        }
+      } else if (isLoadedReference((entity as any)[relationName])) {
+        const child = (entity as any)[relationName].get;
+        console.log("Adding rule", child.toString(), nextRule.fields);
+        this.#entities.set(child, nextRule);
+      }
+    }
+  }
+
   beforeLoad(meta: EntityMetadata, entity: Entity, relation: Relation<any, any>): void {
     // What rule loaded this entity into the graph?
     const rule = this.#entities.get(entity);

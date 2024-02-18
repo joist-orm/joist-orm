@@ -6,7 +6,10 @@ import {
   EntityMetadata,
   FindCallback,
   FindPlugin,
+  getMetadata,
   isLoadedCollection,
+  isLoadedReference,
+  kqDot,
   OneToManyCollection,
   ParsedFindQuery,
   Relation,
@@ -14,7 +17,7 @@ import {
 import { AuthRule, parseAuthRule, ParsedAuthRule } from "./authRule";
 
 /**
- * Implements a `FindPlugin` that injects ReBAC-style auth rules into the query.
+ * Implements a `FindPlugin` that injects Relationship-based (ReBAC) auth rules into the query.
  */
 export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
   #rootMeta: EntityMetadata<T>;
@@ -140,8 +143,23 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
           currentMeta = field.otherMetadata();
           break;
         }
+        case "poly": {
+          // If we're on `comments.parent`, which is a poly of Author|Book|Etc, but we know the pathToUser
+          // is drilling up to the Author->User, we can use `meta` to find the right component/FK of the
+          // poly we should join through.
+          const component = field.components.find((c) => c.otherMetadata() === meta)!;
+          currentTable = aa.findOrCreateTable(
+            query,
+            component.otherMetadata().tableName,
+            "inner",
+            kqDot(currentTable.alias, field.serde.columns[0].columnName),
+            "id",
+          );
+          currentMeta = component.otherMetadata();
+          break;
+        }
         default:
-          throw new Error(`Unsupported kind ${field.kind}`);
+          throw new Error(`Unsupported kind ${field.kind} of ${currentMeta.tableName}.${relation} ${meta.tableName}`);
       }
 
       if (where) {

@@ -51,7 +51,7 @@ export interface ManyToOneReference<T extends Entity, U extends Entity, N extend
 
   idUntaggedIfSet: string | undefined;
 
-  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved. */
+  /** Returns `true` if this relation is currently set (i.e. regardless of whether it's loaded, or if it is set but the assigned entity doesn't have an id saved). */
   readonly isSet: boolean;
 }
 

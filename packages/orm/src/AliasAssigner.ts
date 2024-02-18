@@ -126,7 +126,7 @@ export class AliasAssigner {
   }
 
   /** Looks in `query` for a table that matches the join/col1/col2 conditions. */
-  private findOrCreateTable(
+  public findOrCreateTable(
     query: ParsedFindQuery,
     tableName: string,
     join: "inner" | "outer",

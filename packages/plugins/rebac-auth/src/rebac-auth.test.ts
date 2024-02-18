@@ -338,6 +338,27 @@ describe("rebac-auth", () => {
     expect(() => noop(a.age)).toThrow("Access denied to Author:1.age");
   });
 
+  it("can navigate through a poly", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    await insertUser({ name: "u2" });
+    await insertComment({ text: "c1", user_id: 2, parent_author_id: 1 });
+    await insertComment({ text: "c2", user_id: 2, parent_author_id: 1 });
+    await insertComment({ text: "c3", user_id: 2, parent_book_id: 1 });
+    // And u1 can read the user's of comments on their author
+    const rule: AuthRule<User> = { authorManyToOne: { comments: { user: { name: "r" } } } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the comments
+    const comments = await em.find(Comment, {}, { populate: "user" });
+    // Then we only found the two attached to the Author
+    expect(comments.length).toBe(2);
+    expect(comments[0].user.get?.name).toBe("adsf");
+  });
+
   it("can auth field reads", async () => {
     // Given a user that's an author
     await insertAuthor({ first_name: "a1" });

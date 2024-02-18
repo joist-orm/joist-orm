@@ -399,6 +399,22 @@ describe("rebac-auth", () => {
     expect(() => (a.age = 30)).toThrow("Access denied to Author:1.age");
   });
 
+  it("can auth field reads of getters", async () => {
+    // Given a user that's an author
+    await insertAuthor({ first_name: "a1" });
+    await insertBook({ title: "b1", author_id: 1 });
+    await insertUser({ name: "u1", author_id: 1 });
+    // And they can read their first name, ssn, but not age
+    const rule: AuthRule<User> = { authorManyToOne: { isPopular: "rw" } };
+    const em = newEntityManager({
+      findPlugin: new RebacAuthPlugin(um, "u:1", rule),
+    });
+    // When we load the author
+    const a = await em.findOneOrFail(Author, { userOneToOne: "u:1" }, {});
+    // Then they can read their firstName
+    noop(a.isPopular);
+  });
+
   it("can parse star field rules", () => {
     // Given a rule that uses `*` to mean "all fields"
     const rule: AuthRule<User> = {

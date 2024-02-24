@@ -30,6 +30,9 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     this.#rootMeta = rootMeta;
     this.#rootId = rootId;
     this.#rules = parseAuthRule(rootMeta, rule);
+    for (const [name, rule] of Object.entries(this.#rules)) {
+      console.log("RebacAuthPlugin.rule", name, rule);
+    }
   }
 
   /**
@@ -73,6 +76,10 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         }
       }
     } else {
+      // If this type has literally no rules setup, it's okay (should be configurable)
+      if (this.#rules[getMetadata(entity).cstr.name] === undefined) {
+        return;
+      }
       throw new Error(`Access denied to ${relation}`);
     }
   }
@@ -85,6 +92,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
         const entities = relation.get;
         const nextRule = rule.relations[(relation as any).fieldName];
         for (const entity of entities) {
+          console.log("Adding rule", entity.toString(), nextRule.fields);
           this.#entities.set(entity, nextRule);
         }
       }
@@ -94,6 +102,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
   beforeGetField(entity: Entity, fieldName: string) {
     if (fieldName === "id") return;
     const rule = this.#entities.get(entity);
+    // If no rules are defined for this entity type, assume it's okay
     const field = rule?.fields[fieldName];
     if (field === "r" || field === "rw") {
       return;
@@ -103,6 +112,12 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     if (relation) {
       return;
     }
+    // If this type has literally no rules setup, it's okay (should be configurable)
+    if (this.#rules[getMetadata(entity).cstr.name] === undefined) {
+      return;
+    }
+    // Otherwise deny
+    console.log({ entity, rule });
     throw new Error(`Access denied to ${entity}.${fieldName}`);
   }
 
@@ -138,6 +153,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
 
     const inlineConditions: ColumnCondition[] = [];
 
+    // The rule can declare a `where: { ... }` clause, that currently must be just simple column conditions
     if (rule.where) {
       aa.addFilter(query, inlineConditions, currentTable.alias, rule.meta, rule.where);
     }
@@ -219,6 +235,7 @@ export class RebacAuthPlugin<T extends Entity> implements FindPlugin {
     // After the entities are loaded, record where in the auth graph they came from
     return (entities) => {
       for (const entity of entities) {
+        console.log("Adding rule", entity.toString(), rule.fields);
         this.#entities.set(entity, rule);
       }
     };

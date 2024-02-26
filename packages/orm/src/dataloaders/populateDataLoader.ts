@@ -58,8 +58,11 @@ export function populateDataLoader(
               selects: [kqDot(alias, "id")],
               tables: [{ alias, join: "primary", table: meta.tableName }],
               condition: {
+                kind: "exp",
                 op: "and",
-                conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: ids } }],
+                conditions: [
+                  { kind: "column", alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: ids } },
+                ],
               },
               orderBys: [],
             };

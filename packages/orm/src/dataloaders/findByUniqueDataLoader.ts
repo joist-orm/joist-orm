@@ -27,7 +27,7 @@ export function findByUniqueDataLoader<T extends Entity>(
     const query: ParsedFindQuery = {
       selects: [`${alias}.*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
-      condition: { op: "and", conditions },
+      condition: { kind: "exp", op: "and", conditions },
       orderBys: [],
     };
 
@@ -39,6 +39,7 @@ export function findByUniqueDataLoader<T extends Entity>(
       case "primitive":
         column = field.serde.columns[0];
         conditions.push({
+          kind: "column",
           alias,
           column: column.columnName,
           dbType: column.dbType,

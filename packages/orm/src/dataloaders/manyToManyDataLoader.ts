@@ -47,11 +47,13 @@ async function load<T extends Entity, U extends Entity>(
     tables: [{ alias, join: "primary", table: collection.joinTableName }],
     // Or together `where tag_id in (...)` or `book_id in (...)` if we're loading both sides simultaneously
     condition: {
+      kind: "exp",
       op: "or",
       conditions: Object.entries(columns).map(([columnId, values]) => {
         // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
         const meta = collection.columnName == columnId ? getMetadata(collection.entity) : collection.otherMeta;
         return {
+          kind: "column",
           alias,
           column: columnId,
           dbType: meta.idDbType,

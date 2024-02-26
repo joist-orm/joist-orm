@@ -1,7 +1,7 @@
 import { Alias } from "./Aliases";
 import { Entity } from "./Entity";
 import { FieldsOf, FilterOf, IdOf, OrderOf } from "./EntityManager";
-import { ColumnCondition } from "./QueryParser";
+import { ColumnCondition, RawCondition } from "./QueryParser";
 
 /** Combines a `where` filter with optional `orderBy`, `limit`, and `offset` settings. */
 export type FilterAndSettings<T extends Entity> = {
@@ -83,8 +83,12 @@ export type ValueFilter<V, N> =
   | { gte: V | undefined; lte: V | undefined }
   | { between: [V, V] | undefined };
 
-/** Filters against complex expressions of filters. */
+/**
+ * Filters against complex expressions of filters.
+ *
+ * This is the user-facing DSL that internally will be converted to `ParsedExpressionFilter.
+ */
 export type ExpressionFilter = (
-  | { and: Array<ExpressionFilter | ColumnCondition | undefined>; or?: never }
-  | { or: Array<ExpressionFilter | ColumnCondition | undefined>; and?: never }
+  | { and: Array<ExpressionFilter | ColumnCondition | RawCondition | undefined>; or?: never }
+  | { or: Array<ExpressionFilter | ColumnCondition | RawCondition | undefined>; and?: never }
 ) & { pruneIfUndefined?: "any" | "all" };

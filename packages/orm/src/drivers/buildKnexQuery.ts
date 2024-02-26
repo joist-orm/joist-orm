@@ -1,7 +1,7 @@
 import { Knex } from "knex";
 import { opToFn } from "../EntityGraphQLFilter";
 import { isDefined } from "../EntityManager";
-import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, ParsedTable } from "../QueryParser";
+import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, ParsedTable, RawCondition } from "../QueryParser";
 import { kq, kqDot } from "../keywords";
 import { assertNever, fail } from "../utils";
 import QueryBuilder = Knex.QueryBuilder;
@@ -86,13 +86,30 @@ export function buildKnexQuery(
 
 /** Returns a tuple of `["cond AND (cond OR cond)", bindings]`. */
 function buildWhereClause(exp: ParsedExpressionFilter, topLevel = false): [string, any[]] | undefined {
-  const tuples = exp.conditions.map((c) => ("op" in c ? buildWhereClause(c) : buildCondition(c))).filter(isDefined);
+  const tuples = exp.conditions
+    .map((c) => {
+      return c.kind === "exp"
+        ? buildWhereClause(c)
+        : c.kind === "column"
+          ? buildCondition(c)
+          : c.kind === "raw"
+            ? buildRawCondition(c)
+            : fail(`Invalid condition ${c}`);
+    })
+    .filter(isDefined);
   // If we don't have any conditions to combine, just return undefined;
   if (tuples.length === 0) return undefined;
   // Wrap/join the sql strings together first, and then flatten the bindings.
   let sql = tuples.map(([sql]) => sql).join(` ${exp.op} `);
   if (!topLevel) sql = `(${sql})`;
   return [sql, tuples.flatMap(([, bindings]) => bindings)];
+}
+
+function buildRawCondition(raw: RawCondition): [string, any[]] {
+  if (raw.bindings.length > 0) {
+    throw new Error("Not implemented");
+  }
+  return [raw.condition, []];
 }
 
 /** Returns a tuple of `["column op ?"`, bindings]`. */

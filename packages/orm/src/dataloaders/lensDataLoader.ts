@@ -62,7 +62,7 @@ export function lensDataLoader<T extends Entity>(
     const tables: ParsedTable[] = [{ alias, join: "primary", table: target.tableName }];
     const conditions: ColumnCondition[] = [];
     const orderBys: ParsedOrderBy[] = [];
-    const query: ParsedFindQuery = { selects, tables, condition: { op: "and", conditions }, orderBys };
+    const query: ParsedFindQuery = { selects, tables, condition: { kind: "exp", op: "and", conditions }, orderBys };
     addTablePerClassJoinsAndClassTag(query, target, alias, true);
     maybeAddOrderBy(query, target, alias);
 
@@ -70,6 +70,7 @@ export function lensDataLoader<T extends Entity>(
       if (other.timestampFields.deletedAt) {
         const column = other.allFields[other.timestampFields.deletedAt].serde?.columns[0]!;
         conditions.push({
+          kind: "column",
           alias,
           column: column.columnName,
           dbType: column.dbType,
@@ -100,6 +101,7 @@ export function lensDataLoader<T extends Entity>(
           if (isLast) {
             selects.push(`"${alias}".id as __source_id`);
             conditions.push({
+              kind: "column",
               alias,
               column: "id",
               dbType: other.idDbType,
@@ -126,6 +128,7 @@ export function lensDataLoader<T extends Entity>(
           } else {
             selects.push(`"${lastAlias}".${field.serde.columns[0].columnName} as __source_id`);
             conditions.push({
+              kind: "column",
               alias: lastAlias,
               column: field.serde.columns[0].columnName,
               dbType: field.serde.columns[0].dbType,
@@ -160,6 +163,7 @@ export function lensDataLoader<T extends Entity>(
           if (isLast) {
             selects.push(`"${alias}".id as __source_id`);
             conditions.push({
+              kind: "column",
               alias,
               column: "id",
               dbType: other.idDbType,

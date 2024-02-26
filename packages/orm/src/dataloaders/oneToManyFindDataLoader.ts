@@ -27,6 +27,7 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
       tables: [{ alias, join: "primary", table: meta.tableName }],
       // Or together `where (id = X and book_id = Y)`
       condition: {
+        kind: "exp",
         op: "or",
         conditions: keys.map((key) => {
           const [one, two] = key.split(",");
@@ -36,15 +37,18 @@ export function oneToManyFindDataLoader<T extends Entity, U extends Entity>(
           const [meta1, meta2] = [collection.otherMeta, collection.meta];
           // Pick the right meta i.e. tag_id --> TagMeta or book_id --> BookMeta
           return {
+            kind: "exp",
             op: "and",
             conditions: [
               {
+                kind: "column",
                 alias,
                 column: columnOne,
                 dbType: meta1.idDbType,
                 cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
               },
               {
+                kind: "column",
                 alias,
                 column: columnTwo,
                 dbType: meta2.idDbType,

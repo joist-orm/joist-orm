@@ -16,12 +16,15 @@ import {
 import { kq, kqDot } from "./keywords";
 import { assertNever, fail, partition } from "./utils";
 
+/** A tree of ANDs/ORs with conditions or nested conditions. */
 export interface ParsedExpressionFilter {
+  kind: "exp";
   op: "and" | "or";
-  conditions: (ParsedExpressionFilter | ColumnCondition)[];
+  conditions: (ParsedExpressionFilter | ColumnCondition | RawCondition)[];
 }
 
 export interface ColumnCondition {
+  kind: "column";
   alias: string;
   column: string;
   dbType: string;
@@ -33,8 +36,22 @@ export interface ColumnCondition {
   pruneable?: boolean;
 }
 
+/** A user-provided condition like `SUM(${alias}.amount) > 1000` or `a1.last_name = b1.title`. */
+export interface RawCondition {
+  kind: "raw";
+  /** The aliases, i.e. `[a, b]`, used within the condition, to ensure we don't prune them. */
+  aliases: string[];
+  /** The condition itself, i.e. `SUM(a.age) DESC`. */
+  condition: string;
+  /** The bindings within `condition`, i.e. `SUM(${alias}.amount) > ?`. */
+  bindings: any[];
+  /** We assume raw conditions are never system-added, so can't be pruned. */
+  pruneable: false;
+}
+
 /** A marker condition for alias methods to indicate they should be skipped/pruned. */
 export const skipCondition: ColumnCondition = {
+  kind: "column",
   alias: "skip",
   column: "skip",
   dbType: "skip",
@@ -119,6 +136,7 @@ export function parseFindQuery(
     if (filterSoftDeletes(meta)) {
       const column = meta.allFields[meta.timestampFields.deletedAt!].serde?.columns[0]!;
       inlineConditions.push({
+        kind: "column",
         alias,
         column: column.columnName,
         dbType: column.dbType,
@@ -176,6 +194,7 @@ export function parseFindQuery(
           const column = field.serde.columns[0];
           parseValueFilter((ef.subFilter as any)[key]).forEach((filter) => {
             inlineConditions.push({
+              kind: "column",
               alias: fa,
               column: column.columnName,
               dbType: column.dbType,
@@ -199,6 +218,7 @@ export function parseFindQuery(
             addTable(field.otherMetadata(), a, joinKind, kqDot(fa, column.columnName), kqDot(a, "id"), sub);
           } else {
             inlineConditions.push({
+              kind: "column",
               alias: fa,
               column: column.columnName,
               dbType: column.dbType,
@@ -222,6 +242,7 @@ export function parseFindQuery(
                 ) || fail(`Could not find component for ${f.value}`);
               const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
               inlineConditions.push({
+                kind: "column",
                 alias: fa,
                 column: comp.columnName,
                 dbType: column.dbType,
@@ -232,6 +253,7 @@ export function parseFindQuery(
               field.components.forEach((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                 inlineConditions.push({
+                  kind: "column",
                   alias: fa,
                   column: comp.columnName,
                   dbType: column.dbType,
@@ -242,13 +264,14 @@ export function parseFindQuery(
               const conditions = field.components.map((comp) => {
                 const column = field.serde.columns.find((c) => c.columnName === comp.columnName)!;
                 return {
+                  kind: "column",
                   alias: fa,
                   column: comp.columnName,
                   dbType: column.dbType,
                   cond: { kind: "not-null" },
                 };
               }) satisfies ColumnCondition[];
-              inlineExpressions.push({ op: "or", conditions });
+              inlineExpressions.push({ kind: "exp", op: "or", conditions });
             } else if (f.kind === "in") {
               // Split up the ids by constructor
               const idsByConstructor = groupBy(f.value, (id) => getConstructorFromTaggedId(id as string).name);
@@ -256,14 +279,15 @@ export function parseFindQuery(
               const conditions = Object.entries(idsByConstructor).map(([cstrName, ids]) => {
                 const column = field.serde.columns.find((c) => c.otherMetadata().cstr.name === cstrName)!;
                 return {
+                  kind: "column",
                   alias: fa,
                   column: column.columnName,
                   dbType: column.dbType,
                   cond: mapToDb(column, { kind: "in", value: ids }),
-                };
+                } satisfies ColumnCondition;
               });
               if (conditions.length > 0) {
-                inlineExpressions.push({ op: "or", conditions });
+                inlineExpressions.push({ kind: "exp", op: "or", conditions });
               }
             } else {
               throw new Error(`Filters on polys for ${f.kind} are not supported`);
@@ -339,6 +363,7 @@ export function parseFindQuery(
               },
             };
             inlineConditions.push({
+              kind: "column",
               alias: ja,
               column: field.columnNames[1],
               dbType: meta.idDbType,
@@ -351,7 +376,13 @@ export function parseFindQuery(
       });
     } else if (ef) {
       const column = meta.fields["id"].serde!.columns[0];
-      inlineConditions.push({ alias, column: "id", dbType: meta.idDbType, cond: mapToDb(column, ef) });
+      inlineConditions.push({
+        kind: "column",
+        alias,
+        column: "id",
+        dbType: meta.idDbType,
+        cond: mapToDb(column, ef),
+      });
     }
   }
 
@@ -454,9 +485,19 @@ function maybeAddIdNotNulls(query: ParsedFindQuery): void {
       if (table && table.join === "outer") {
         const meta = getMetadataForTable(table.table);
         return {
+          kind: "exp",
           op: "and",
-          conditions: [c, { alias: c.alias, column: "id", dbType: meta.idDbType, cond: { kind: "not-null" } }],
-        };
+          conditions: [
+            c,
+            {
+              kind: "column",
+              alias: c.alias,
+              column: "id",
+              dbType: meta.idDbType,
+              cond: { kind: "not-null" },
+            },
+          ],
+        } satisfies ParsedExpressionFilter;
       }
       return c;
     },
@@ -470,9 +511,22 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   parsed.selects.forEach((s) => used.add(parseAlias(s)));
   parsed.orderBys.forEach((o) => used.add(o.alias));
   keepAliases.forEach((a) => used.add(a));
-  flattenComplexConditions(parsed.condition)
+  deepFindConditions(parsed.condition)
     .filter((c) => !c.pruneable)
-    .forEach((c) => used.add(c.alias));
+    .forEach((c) => {
+      switch (c.kind) {
+        case "column":
+          used.add(c.alias);
+          break;
+        case "raw":
+          for (const alias of c.aliases) {
+            used.add(alias);
+          }
+          break;
+        default:
+          assertNever(c);
+      }
+    });
   // Mark all usages via joins
   for (let i = 0; i < parsed.tables.length; i++) {
     const t = parsed.tables[i];
@@ -492,20 +546,24 @@ function pruneUnusedJoins(parsed: ParsedFindQuery, keepAliases: string[]): void 
   // And then remove any inline soft-delete conditions we don't need anymore
   if (parsed.condition && parsed.condition.op === "and") {
     parsed.condition.conditions = parsed.condition.conditions.filter((c) => {
-      if ("op" in c) return c;
-      const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
-      return !prune;
+      if (c.kind === "column") {
+        const prune = c.pruneable && !parsed.tables.some((t) => t.alias === c.alias);
+        return !prune;
+      } else {
+        return c;
+      }
     });
   }
 }
 
-function flattenComplexConditions(condition: ParsedExpressionFilter | undefined): ColumnCondition[] {
+/** Pulls out a flat list of all `ColumnCondition`s from a `ParsedExpressionFilter` tree. */
+function deepFindConditions(condition: ParsedExpressionFilter | undefined): (ColumnCondition | RawCondition)[] {
   const todo = condition ? [condition] : [];
-  const result: ColumnCondition[] = [];
+  const result: (ColumnCondition | RawCondition)[] = [];
   while (todo.length !== 0) {
     const cc = todo.pop()!;
     for (const c of cc.conditions) {
-      if ("op" in c) {
+      if (c.kind === "exp") {
         todo.push(c);
       } else {
         result.push(c);
@@ -855,6 +913,7 @@ export function maybeAddNotSoftDeleted(
   if (softDeletes === "exclude" && meta.timestampFields.deletedAt) {
     const column = meta.allFields[meta.timestampFields.deletedAt].serde?.columns[0]!;
     conditions.push({
+      kind: "column",
       alias,
       column: column.columnName,
       dbType: column.dbType,
@@ -875,7 +934,7 @@ function parseExpression(expression: ExpressionFilter): ParsedExpressionFilter |
   if ((skip.length > 0 && expression.pruneIfUndefined === "any") || valid.length === 0) {
     return undefined;
   }
-  return { op, conditions: valid.filter(isDefined) };
+  return { kind: "exp", op, conditions: valid.filter(isDefined) };
 }
 
 export function getTables(query: ParsedFindQuery): [PrimaryTable, JoinTable[]] {

@@ -22,8 +22,9 @@ export function loadDataLoader<T extends Entity>(
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       condition: {
+        kind: "exp",
         op: "and",
-        conditions: [{ alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: keys } }],
+        conditions: [{ kind: "column", alias, column: "id", dbType: meta.idDbType, cond: { kind: "in", value: keys } }],
       },
       orderBys: [{ alias, column: "id", order: "ASC" }],
     };

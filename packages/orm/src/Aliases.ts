@@ -1,5 +1,5 @@
 import { groupBy } from "joist-utils";
-import { Entity } from "./Entity";
+import { Entity, IdType } from "./Entity";
 import { FieldsOf, IdOf, MaybeAbstractEntityConstructor, TaggedId } from "./EntityManager";
 import {
   EntityMetadata,
@@ -9,7 +9,7 @@ import {
   getBaseAndSelfMetas,
   getMetadata,
 } from "./EntityMetadata";
-import { ColumnCondition, ParsedValueFilter, makeLike, mapToDb, skipCondition } from "./QueryParser";
+import { ColumnCondition, ParsedValueFilter, RawCondition, makeLike, mapToDb, skipCondition } from "./QueryParser";
 import { ExpressionFilter, getConstructorFromTaggedId, maybeResolveReferenceToId } from "./index";
 import { Column } from "./serde";
 import { fail } from "./utils";
@@ -37,13 +37,13 @@ export type Alias<T extends Entity> = {
 };
 
 export interface PrimitiveAlias<V, N extends null | never> {
-  eq(value: V | N | undefined): ColumnCondition;
-  ne(value: V | N | undefined): ColumnCondition;
+  eq(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  ne(value: V | N | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
   in(values: V[] | undefined): ColumnCondition;
-  gt(value: V | undefined): ColumnCondition;
-  gte(value: V | undefined): ColumnCondition;
-  lt(value: V | undefined): ColumnCondition;
-  lte(value: V | undefined): ColumnCondition;
+  gt(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  gte(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  lt(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
+  lte(value: V | undefined | PrimitiveAlias<V, any>): ColumnCondition | RawCondition;
   like(value: V | undefined): ColumnCondition;
   ilike(value: V | undefined): ColumnCondition;
   search(value: V | undefined): ColumnCondition;
@@ -66,29 +66,20 @@ export interface AliasMgmt {
 
 type ConditionAndAlias = { cond: ColumnCondition; field: Field & { aliasSuffix: string } };
 
+/** Called when `em.find` binds a pre-created `alias(...)` to a concrete join-tree location. */
+type BindCallback = (newMeta: EntityMetadata, newAlias: string) => void;
+
 export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstructor<T>): Alias<T> {
   const meta = getMetadata(cstr);
-  // Keeps a list of conditions we've created for this specific proxy, so that parseFindQuery
+  // Keeps a list of callbacks we've created for this specific proxy, so that parseFindQuery
   // can tell us, after we've been creating via the `const a = alias(Author)` command, which
   // alias we're actually bound to in the join literal.
-  const conditions: ConditionAndAlias[] = [];
+  const callbacks: BindCallback[] = [];
   // Give QueryBuilder a hook to assign our actual alias
   const mgmt: AliasMgmt = {
     tableName: meta.tableName,
     setAlias(newMeta: EntityMetadata, newAlias: string) {
-      conditions.forEach(({ cond, field }) => {
-        // Do we have mismatched `em.find(ChildMeta)` with a `alias(BaseMeta)`? If so, the
-        // usual `${field.aliasSuffix}` won't know it should have a suffix, so we need to calc it.
-        if (newMeta !== meta) {
-          const bases = getBaseAndSelfMetas(newMeta);
-          const fieldIsFromBase = bases.includes(newMeta);
-          if (fieldIsFromBase) {
-            cond.alias = `${newAlias}_b0`;
-            return;
-          }
-        }
-        cond.alias = `${newAlias}${field.aliasSuffix}`;
-      });
+      for (const callback of callbacks) callback(newMeta, newAlias);
     },
   };
   return new Proxy(cstr, {
@@ -102,11 +93,11 @@ export function newAliasProxy<T extends Entity>(cstr: MaybeAbstractEntityConstru
         case "primaryKey":
         case "primitive":
         case "enum":
-          return new PrimitiveAliasImpl(field, conditions, field.serde!.columns[0]);
+          return new PrimitiveAliasImpl(meta, field, callbacks, field.serde!.columns[0]);
         case "m2o":
-          return new EntityAliasImpl(field, conditions, field.serde!.columns[0]);
+          return new EntityAliasImpl(meta, field, callbacks, field.serde!.columns[0]);
         case "poly":
-          return new PolyReferenceAlias(conditions, field);
+          return new PolyReferenceAlias(meta, callbacks, field);
         default:
           throw new Error(`Unsupported alias field kind ${field.kind}`);
       }
@@ -119,26 +110,73 @@ export function isAlias(obj: any): obj is Alias<any> & { [aliasMgmt]: AliasMgmt 
   return obj && typeof obj === "function" && obj[aliasMgmt] !== undefined;
 }
 
-class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V, N> {
+class AbstractAliasColumn<V> {
   public constructor(
-    private field: Field & { aliasSuffix: string },
-    private conditions: ConditionAndAlias[],
-    private column: Column,
+    protected meta: EntityMetadata,
+    protected field: Field & { aliasSuffix: string },
+    protected callbacks: BindCallback[],
+    protected column: Column,
   ) {}
 
-  eq(value: V | N | undefined): ColumnCondition {
+  protected addCondition(value: ParsedValueFilter<V>): ColumnCondition {
+    const cond: ColumnCondition = {
+      kind: "column",
+      alias: "unset",
+      column: this.column.columnName,
+      dbType: this.column.dbType,
+      cond: mapToDb(this.column, value),
+    };
+    this.callbacks.push((newMeta, newAlias) => {
+      cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+    });
+    return cond;
+  }
+
+  protected addCrossColumnRawCondition(otherColumn: AbstractAliasColumn<V>, op: string): RawCondition {
+    const cond = {
+      kind: "raw",
+      aliases: [] as string[],
+      condition: `unset1.${this.column.columnName} ${op} unset2.${otherColumn.column.columnName}`,
+      pruneable: false,
+      bindings: [],
+    } satisfies RawCondition;
+    // Update `unset1` placeholder when we're bound
+    this.callbacks.push((newMeta, newAlias) => {
+      // Add a base-table/sub-table alias if needed
+      const alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
+      cond.condition = cond.condition.replace("unset1", alias);
+    });
+    // Update `unset2` placeholder when we're bound
+    otherColumn.callbacks.push((newMeta, newAlias) => {
+      // Add a base-table/sub-table alias if needed
+      const alias = getMaybeCtiAlias(otherColumn.meta, otherColumn.field, newMeta, newAlias);
+      // Kinda weird, we can get bound a few times
+      if (!cond.aliases.includes(alias)) cond.aliases.push(alias);
+      cond.condition = cond.condition.replace("unset2", alias);
+    });
+    return cond;
+  }
+}
+
+class PrimitiveAliasImpl<V, N extends null | never> extends AbstractAliasColumn<V> implements PrimitiveAlias<V, N> {
+  eq(value: V | N | PrimitiveAlias<V, any> | undefined): ColumnCondition | RawCondition {
     if (value === undefined) {
       return skipCondition;
+    } else if (value instanceof PrimitiveAliasImpl) {
+      return this.addCrossColumnRawCondition(value, "=");
     } else if (value === null) {
       return this.addCondition({ kind: "is-null" });
     } else {
-      return this.addCondition({ kind: "eq", value });
+      return this.addCondition({ kind: "eq", value: value as any });
     }
   }
 
-  ne(value: V | N | undefined): ColumnCondition {
+  ne(value: V | N | undefined): ColumnCondition | RawCondition {
     if (value === undefined) {
       return skipCondition;
+    } else if (value instanceof PrimitiveAliasImpl) {
+      return this.addCrossColumnRawCondition(value, "!=");
     } else if (value === null) {
       return this.addCondition({ kind: "not-null" });
     } else {
@@ -146,24 +184,44 @@ class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V,
     }
   }
 
-  gt(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
-    return this.addCondition({ kind: "gt", value });
+  gt(value: V | undefined): ColumnCondition | RawCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value instanceof PrimitiveAliasImpl) {
+      return this.addCrossColumnRawCondition(value, ">");
+    } else {
+      return this.addCondition({ kind: "gt", value });
+    }
   }
 
-  gte(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
-    return this.addCondition({ kind: "gte", value });
+  gte(value: V | undefined): ColumnCondition | RawCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value instanceof PrimitiveAliasImpl) {
+      return this.addCrossColumnRawCondition(value, ">=");
+    } else {
+      return this.addCondition({ kind: "gte", value });
+    }
   }
 
-  lt(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
-    return this.addCondition({ kind: "lt", value });
+  lt(value: V | undefined): ColumnCondition | RawCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value instanceof PrimitiveAliasImpl) {
+      return this.addCrossColumnRawCondition(value, "<");
+    } else {
+      return this.addCondition({ kind: "lt", value });
+    }
   }
 
-  lte(value: V | undefined): ColumnCondition {
-    if (value === undefined) return skipCondition;
-    return this.addCondition({ kind: "lte", value });
+  lte(value: V | undefined): ColumnCondition | RawCondition {
+    if (value === undefined) {
+      return skipCondition;
+    } else if (value instanceof PrimitiveAliasImpl) {
+      return this.addCrossColumnRawCondition(value, "<=");
+    } else {
+      return this.addCondition({ kind: "lte", value });
+    }
   }
 
   between(v1: V | undefined, v2: V | undefined): ColumnCondition {
@@ -190,33 +248,16 @@ class PrimitiveAliasImpl<V, N extends null | never> implements PrimitiveAlias<V,
     if (values === undefined) return skipCondition;
     return this.addCondition({ kind: "in", value: values });
   }
-
-  private addCondition(value: ParsedValueFilter<V>): ColumnCondition {
-    const cond: ColumnCondition = {
-      alias: "unset",
-      column: this.column.columnName,
-      dbType: this.column.dbType,
-      cond: mapToDb(this.column, value),
-    };
-    this.conditions.push({ cond, field: this.field });
-    return cond;
-  }
 }
 
-class EntityAliasImpl<T> implements EntityAlias<T> {
-  public constructor(
-    private field: Field & { aliasSuffix: string },
-    private conditions: ConditionAndAlias[],
-    private column: Column,
-  ) {}
-
+class EntityAliasImpl<T> extends AbstractAliasColumn<IdType> implements EntityAlias<T> {
   eq(value: T | IdOf<T> | null | undefined): ColumnCondition {
     if (value === undefined) {
       return skipCondition;
     } else if (value === null) {
       return this.addCondition({ kind: "is-null" });
     } else {
-      return this.addCondition({ kind: "eq", value });
+      return this.addCondition({ kind: "eq", value: value as any });
     }
   }
 
@@ -226,30 +267,20 @@ class EntityAliasImpl<T> implements EntityAlias<T> {
     } else if (value === null) {
       return this.addCondition({ kind: "not-null" });
     } else {
-      return this.addCondition({ kind: "ne", value });
+      return this.addCondition({ kind: "ne", value: value as any });
     }
   }
 
   in(values: Array<T | IdOf<T>> | undefined): ColumnCondition {
     if (values === undefined) return skipCondition;
-    return this.addCondition({ kind: "in", value: values });
-  }
-
-  private addCondition(value: ParsedValueFilter<T | IdOf<T>>): ColumnCondition {
-    const cond: ColumnCondition = {
-      alias: "unset",
-      column: this.column.columnName,
-      dbType: this.column.dbType,
-      cond: mapToDb(this.column, value),
-    };
-    this.conditions.push({ cond, field: this.field });
-    return cond;
+    return this.addCondition({ kind: "in", value: values as any });
   }
 }
 
 class PolyReferenceAlias<T extends Entity> {
   public constructor(
-    private conditions: ConditionAndAlias[],
+    private meta: EntityMetadata,
+    private callbacks: BindCallback[],
     private field: PolymorphicField & { aliasSuffix: string },
   ) {}
 
@@ -299,12 +330,37 @@ class PolyReferenceAlias<T extends Entity> {
   private addCondition(comp: PolymorphicFieldComponent, value: ParsedValueFilter<T | TaggedId>): ColumnCondition {
     const column = this.field.serde.columns.find((c) => c.columnName === comp.columnName) ?? fail("Missing column");
     const cond: ColumnCondition = {
+      kind: "column",
       alias: "unset",
       column: comp.columnName,
       dbType: this.field.serde.columns[0].dbType,
       cond: mapToDb(column, value),
     };
-    this.conditions.push({ cond, field: this.field });
+    this.callbacks.push((newMeta, newAlias) => {
+      cond.alias = getMaybeCtiAlias(this.meta, this.field, newMeta, newAlias);
+    });
     return cond;
   }
+}
+
+/**
+ * Given an alias created for `meta`, adjusts the alias if it's bound to a potentially
+ * different parent-/sub-meta in the join tree.
+ */
+function getMaybeCtiAlias(
+  meta: EntityMetadata,
+  field: Field & { aliasSuffix: string },
+  newMeta: EntityMetadata,
+  newAlias: string,
+): string {
+  // Do we have mismatched `em.find(ChildMeta)` with a `alias(BaseMeta)`? If so, the
+  // usual `${field.aliasSuffix}` won't know it should have a suffix, so we need to calc it.
+  if (newMeta !== meta) {
+    const bases = getBaseAndSelfMetas(newMeta);
+    const fieldIsFromBase = bases.includes(newMeta);
+    if (fieldIsFromBase) {
+      return `${newAlias}_b0`;
+    }
+  }
+  return `${newAlias}${field.aliasSuffix}`;
 }

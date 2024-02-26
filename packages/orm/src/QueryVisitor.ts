@@ -1,8 +1,9 @@
-import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery } from "./QueryParser";
+import { ColumnCondition, ParsedExpressionFilter, ParsedFindQuery, RawCondition } from "./QueryParser";
 
 /** A generic visitor over the simple & complex conditions of a query. */
 interface Visitor {
   visitExp?(c: ParsedExpressionFilter): ParsedExpressionFilter | void;
+  visitRaw?(c: RawCondition): RawCondition | ParsedExpressionFilter | void;
   visitCond(c: ColumnCondition): ColumnCondition | ParsedExpressionFilter | void;
 }
 
@@ -15,13 +16,22 @@ interface Visitor {
 export function visitConditions(query: ParsedFindQuery, visitor: Visitor): void {
   function visit(ef: ParsedExpressionFilter) {
     ef.conditions.forEach((c, i) => {
-      if ("cond" in c) {
+      if (c.kind === "column") {
         const result = visitor.visitCond(c);
-        if (result) ef.conditions[i] = result;
-      } else {
+        if (result) {
+          ef.conditions[i] = result;
+        }
+      } else if (c.kind === "exp") {
         const result = visitor.visitExp?.(c);
         if (result) ef.conditions[i] = result;
         visit(result ?? c);
+      } else if (c.kind === "raw") {
+        const result = visitor.visitRaw?.(c);
+        if (result) {
+          ef.conditions[i] = result;
+        }
+      } else {
+        throw new Error(`Unsupported kind ${c}`);
       }
     });
   }

@@ -93,7 +93,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -116,7 +116,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -153,7 +153,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -194,7 +194,7 @@ describe("EntityManager.queries", () => {
     expect(books[0].title).toEqual("b2");
     expect(books[1].title).toEqual("b3");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
@@ -224,7 +224,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
@@ -253,7 +253,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       condition: {
@@ -275,7 +275,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -332,7 +332,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -354,7 +354,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -395,7 +395,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -418,7 +418,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -440,7 +440,7 @@ describe("EntityManager.queries", () => {
     expect(comments.length).toEqual(1);
     expect(comments[0].text).toEqual("comment");
 
-    expect(parseFindQuery(cm, where, opts)).toEqual({
+    expect(parseFindQuery(cm, where, opts)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
@@ -482,7 +482,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -523,7 +523,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -546,7 +546,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -598,7 +598,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -634,7 +634,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, { publisher: { ne: publisherId } });
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -660,7 +660,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
@@ -689,7 +689,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
@@ -720,7 +720,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b1");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [
         { alias: "b", table: "books", join: "primary" },
@@ -749,7 +749,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       condition: {
@@ -772,7 +772,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       condition: {
@@ -795,7 +795,7 @@ describe("EntityManager.queries", () => {
     expect(books.length).toEqual(1);
     expect(books[0].title).toEqual("b2");
 
-    expect(parseFindQuery(bm, where, opts)).toEqual({
+    expect(parseFindQuery(bm, where, opts)).toMatchObject({
       selects: [`b.*`],
       tables: [{ alias: "b", table: "books", join: "primary" }],
       condition: {
@@ -815,7 +815,7 @@ describe("EntityManager.queries", () => {
     const pubs = await em.find(Publisher, where);
     expect(pubs.length).toEqual(2);
 
-    expect(parseFindQuery(pm, where)).toEqual({
+    expect(parseFindQuery(pm, where)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       condition: {
@@ -835,7 +835,7 @@ describe("EntityManager.queries", () => {
     const pubs = await em.find(Publisher, where);
     expect(pubs.length).toEqual(2);
 
-    expect(parseFindQuery(pm, where)).toEqual({
+    expect(parseFindQuery(pm, where)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
@@ -859,7 +859,7 @@ describe("EntityManager.queries", () => {
     const pubs = await em.find(Publisher, where);
     expect(pubs.length).toEqual(2);
 
-    expect(parseFindQuery(pm, where)).toEqual({
+    expect(parseFindQuery(pm, where)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [{ alias: "p", table: "publishers", join: "primary" }, expect.anything(), expect.anything()],
       condition: {
@@ -880,7 +880,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p2");
 
-    expect(parseFindQuery(pm, where)).toEqual({
+    expect(parseFindQuery(pm, where)).toMatchObject({
       selects: [
         `p.*`,
         "p_s0.*",
@@ -911,7 +911,7 @@ describe("EntityManager.queries", () => {
     expect(pubs.length).toEqual(1);
     expect(pubs[0].name).toEqual("p1");
 
-    expect(parseFindQuery(pm, where)).toEqual({
+    expect(parseFindQuery(pm, where)).toMatchObject({
       selects: [`p.*`, "p_s0.*", "p_s1.*", `p.id as id`, expect.anything()],
       tables: [
         { alias: "p", table: "publishers", join: "primary" },
@@ -936,7 +936,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -957,7 +957,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -977,7 +977,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -998,7 +998,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: { op: "and", conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "is-null" } }] },
@@ -1016,7 +1016,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: { op: "and", conditions: [{ alias: "a", column: "age", dbType: "int", cond: { kind: "is-null" } }] },
@@ -1034,7 +1034,7 @@ describe("EntityManager.queries", () => {
     expect(authors).toHaveLength(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1055,7 +1055,7 @@ describe("EntityManager.queries", () => {
     expect(authors).toHaveLength(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1074,7 +1074,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors).toHaveLength(1);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1095,7 +1095,7 @@ describe("EntityManager.queries", () => {
     expect(authors).toHaveLength(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1116,7 +1116,7 @@ describe("EntityManager.queries", () => {
     expect(authors).toHaveLength(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1140,7 +1140,7 @@ describe("EntityManager.queries", () => {
     expect(authors[0].firstName).toEqual("a2");
     expect(authors[1].firstName).toEqual("a3");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1160,7 +1160,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors).toHaveLength(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1184,7 +1184,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1204,7 +1204,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1226,7 +1226,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1246,7 +1246,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1268,7 +1268,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1290,7 +1290,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1313,7 +1313,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(2);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1343,7 +1343,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -1514,7 +1514,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, gqlFilter, opts)).toEqual({
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1536,7 +1536,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a2");
 
-    expect(parseFindQuery(am, gqlFilter, opts)).toEqual({
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1587,7 +1587,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.findGql(Author, gqlFilter);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, gqlFilter, opts)).toEqual({
+    expect(parseFindQuery(am, gqlFilter, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [{ alias: "a", table: "authors", join: "primary" }],
       condition: {
@@ -1719,7 +1719,7 @@ describe("EntityManager.queries", () => {
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t1");
 
-    expect(parseFindQuery(cm, where)).toEqual({
+    expect(parseFindQuery(cm, where)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
@@ -1744,7 +1744,7 @@ describe("EntityManager.queries", () => {
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t1");
 
-    expect(parseFindQuery(cm, where)).toEqual({
+    expect(parseFindQuery(cm, where)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
@@ -1768,7 +1768,7 @@ describe("EntityManager.queries", () => {
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t2");
 
-    expect(parseFindQuery(cm, where)).toEqual({
+    expect(parseFindQuery(cm, where)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
@@ -1800,7 +1800,7 @@ describe("EntityManager.queries", () => {
     expect(c1.text).toEqual("t1");
     expect(c2.text).toEqual("t2");
 
-    expect(parseFindQuery(cm, where)).toEqual({
+    expect(parseFindQuery(cm, where)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
@@ -1828,7 +1828,7 @@ describe("EntityManager.queries", () => {
     expect(comments.length).toEqual(1);
     expect(comment.text).toEqual("t2");
 
-    expect(parseFindQuery(cm, where)).toEqual({
+    expect(parseFindQuery(cm, where)).toMatchObject({
       selects: [`c.*`],
       tables: [{ alias: "c", table: "comments", join: "primary" }],
       condition: {
@@ -1851,7 +1851,7 @@ describe("EntityManager.queries", () => {
     const users = await em.find(User, where);
     expect(users.length).toEqual(2);
 
-    expect(parseFindQuery(um, where)).toEqual({
+    expect(parseFindQuery(um, where)).toMatchObject({
       selects: [`u.*`, "u_s0.*", "u.id as id", expect.anything()],
       tables: [
         { alias: "u", table: "users", join: "primary" },
@@ -1905,7 +1905,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -1930,7 +1930,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -1969,7 +1969,7 @@ describe("EntityManager.queries", () => {
     expect(authors.length).toEqual(1);
     expect(authors[0].firstName).toEqual("a1");
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -1997,7 +1997,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(0);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -2021,7 +2021,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     expect(authors.length).toEqual(1);
 
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -2047,7 +2047,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     // Then we only get back the 1st author
     expect(authors).toMatchEntity([{ firstName: "a1" }]);
-    expect(parseFindQuery(am, where)).toEqual({
+    expect(parseFindQuery(am, where)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -2095,7 +2095,7 @@ describe("EntityManager.queries", () => {
     const authors = await em.find(Author, where);
     // Then we only get back 2nd author
     expect(authors).toMatchEntity([{ firstName: "a2" }]);
-    expect(parseFindQuery(am, where, opts)).toEqual({
+    expect(parseFindQuery(am, where, opts)).toMatchObject({
       selects: [`a.*`],
       tables: [
         { alias: "a", table: "authors", join: "primary" },
@@ -2116,7 +2116,7 @@ describe("EntityManager.queries", () => {
     const critics = await em.find(Critic, where);
     expect(critics.length).toEqual(1);
 
-    expect(parseFindQuery(criticMeta, where, opts)).toEqual({
+    expect(parseFindQuery(criticMeta, where, opts)).toMatchObject({
       selects: [`c.*`],
       tables: [
         { alias: "c", table: "critics", join: "primary" },
@@ -2167,7 +2167,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(Author, { as: a }, { ...opts, conditions });
       expect(authors.length).toEqual(2);
 
-      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toEqual({
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
@@ -2335,7 +2335,7 @@ describe("EntityManager.queries", () => {
       const books = await em.find(Book, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] } });
       expect(books.length).toEqual(1);
 
-      expect(parseFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] }, ...opts })).toEqual({
+      expect(parseFindQuery(bm, { author: { tags: t } }, { conditions: { or: [t.id.eq(1)] }, ...opts })).toMatchObject({
         selects: [`b.*`],
         tables: [
           { alias: "b", table: "books", join: "primary" },
@@ -2393,7 +2393,7 @@ describe("EntityManager.queries", () => {
           { publisher: { as: p }, books: { as: b } },
           { ...opts, conditions: { and: [b.title.eq("b1")] } },
         ),
-      ).toEqual({
+      ).toMatchObject({
         selects: [`a.*`],
         tables: [
           { alias: "a", table: "authors", join: "primary" },
@@ -2419,7 +2419,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(Author, { as: a }, { ...opts, conditions });
       expect(authors.length).toEqual(2);
 
-      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toEqual({
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
@@ -2444,7 +2444,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(Author, { as: a }, { conditions });
       expect(authors.length).toEqual(1);
 
-      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toEqual({
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
@@ -2505,7 +2505,7 @@ describe("EntityManager.queries", () => {
       const authors = await em.find(Author, where);
       expect(authors.length).toEqual(1);
 
-      expect(parseFindQuery(am, where, { softDeletes: "exclude" })).toEqual({
+      expect(parseFindQuery(am, where, { softDeletes: "exclude" })).toMatchObject({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
@@ -2532,7 +2532,7 @@ describe("EntityManager.queries", () => {
         parseFindQuery(am, where, {
           conditions: { and: [a.firstName.eq("a"), undefined] },
         }),
-      ).toEqual({
+      ).toMatchObject({
         selects: [`a.*`],
         tables: [{ alias: "a", table: "authors", join: "primary" }],
         condition: {
@@ -2589,6 +2589,7 @@ describe("EntityManager.queries", () => {
     it("can eq", async () => {
       const a = alias(Author);
       expect(a.firstName.eq("a1")).toEqual({
+        kind: "column",
         alias: "unset",
         column: "first_name",
         dbType: "character varying",
@@ -2599,6 +2600,7 @@ describe("EntityManager.queries", () => {
     it("can ne", async () => {
       const a = alias(Author);
       expect(a.firstName.ne("a1")).toEqual({
+        kind: "column",
         alias: "unset",
         column: "first_name",
         dbType: "character varying",
@@ -2609,6 +2611,7 @@ describe("EntityManager.queries", () => {
     it("can eq a native enum", async () => {
       const a = alias(Author);
       expect(a.favoriteShape.ne(FavoriteShape.Square)).toEqual({
+        kind: "column",
         alias: "unset",
         column: "favorite_shape",
         dbType: "favorite_shape",
@@ -2619,6 +2622,7 @@ describe("EntityManager.queries", () => {
     it("can eq an enum", async () => {
       const p = alias(Publisher);
       expect(p.size.eq(PublisherSize.Large)).toEqual({
+        kind: "column",
         alias: "unset",
         column: "size_id",
         dbType: "int",
@@ -2629,6 +2633,7 @@ describe("EntityManager.queries", () => {
     it("can eq an foreign key", async () => {
       const b = alias(Book);
       expect(b.author.eq("a:1")).toEqual({
+        kind: "column",
         alias: "unset",
         column: "author_id",
         dbType: "int",
@@ -2639,6 +2644,7 @@ describe("EntityManager.queries", () => {
     it("can eq null a foreign key", async () => {
       const b = alias(Book);
       expect(b.author.eq(null)).toEqual({
+        kind: "column",
         alias: "unset",
         column: "author_id",
         dbType: "int",
@@ -2652,11 +2658,145 @@ describe("EntityManager.queries", () => {
       const a1 = await em.load(Author, "a:1");
       const b = alias(Book);
       expect(b.author.in([a1, "a:2"])).toEqual({
+        kind: "column",
         alias: "unset",
         column: "author_id",
         dbType: "int",
         cond: { kind: "in", value: [1, 2] },
       });
+    });
+  });
+
+  describe("aliases against other columns", () => {
+    it("can eq", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const conditions = { or: [a.lastName.eq(b.title), a.firstName.eq("a2")] };
+      const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions });
+      expect(books.length).toEqual(1);
+
+      expect(parseFindQuery(am, { as: a }, { ...opts, conditions })).toMatchObject({
+        selects: [`a.*`],
+        tables: [{ alias: "a", table: "authors", join: "primary" }],
+        condition: {
+          op: "or",
+          conditions: [
+            { aliases: ["b", "a"], condition: "a.last_name = b.title", bindings: [], pruneable: false },
+            { alias: "a", column: "first_name", dbType: "character varying", cond: { kind: "eq", value: "a2" } },
+          ],
+        },
+        orderBys: [expect.anything()],
+      });
+    });
+
+    it("can eq in a loop", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      resetQueryCount();
+      const [p1, p2] = await Promise.all([
+        em.find(
+          Book,
+          { as: b, author: a },
+          { ...opts, conditions: { or: [a.lastName.eq(b.title), b.title.eq("b0")] } },
+        ),
+        em.find(
+          Book,
+          { as: b, author: a },
+          { ...opts, conditions: { or: [a.lastName.eq(b.title), b.title.eq("b1")] } },
+        ),
+      ]);
+      // expect(queries).toEqual("");
+      expect(p1.length).toEqual(1);
+      expect(p2.length).toEqual(2);
+    });
+
+    it("can eq ids", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(Book, { as: b, author: a }, { ...opts, conditions: { and: [a.id.eq(b.id)] } });
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("can ne", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a1" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.ne(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("can gt", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.gt(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "a1" }]);
+    });
+
+    it("can gte", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.gte(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "a1" }]);
+    });
+
+    it("can lt", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.lt(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "b1" }]);
+    });
+
+    it("can lte", async () => {
+      await insertAuthor({ first_name: "a1", last_name: "a11" });
+      await insertBook({ title: "b1", author_id: 1 });
+      await insertBook({ title: "a1", author_id: 1 });
+      const em = newEntityManager();
+      const [a, b] = aliases(Author, Book);
+      const books = await em.find(
+        Book,
+        { as: b, author: a },
+        { ...opts, conditions: { and: [a.lastName.lte(b.title)] } },
+      );
+      expect(books).toMatchEntity([{ title: "b1" }]);
     });
   });
 

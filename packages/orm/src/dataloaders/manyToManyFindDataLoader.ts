@@ -31,6 +31,7 @@ async function load<T extends Entity, U extends Entity>(
     tables: [{ alias, join: "primary", table: joinTableName }],
     // Or together `where (tag_id = X and book_id = Y)` or `(book_id = B and tag_id = A)`
     condition: {
+      kind: "exp",
       op: "or",
       conditions: keys.map((key) => {
         const [one, two] = key.split(",");
@@ -42,15 +43,18 @@ async function load<T extends Entity, U extends Entity>(
             ? [collection.meta, collection.otherMeta]
             : [collection.otherMeta, collection.meta];
         return {
+          kind: "exp",
           op: "and",
           conditions: [
             {
+              kind: "column",
               alias,
               column: columnOne,
               dbType: meta1.idDbType,
               cond: { kind: "eq", value: keyToNumber(meta1, idOne) },
             },
             {
+              kind: "column",
               alias,
               column: columnTwo,
               dbType: meta2.idDbType,

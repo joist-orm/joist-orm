@@ -31,9 +31,16 @@ export function oneToManyDataLoader<T extends Entity, U extends Entity>(
       selects: [`"${alias}".*`],
       tables: [{ alias, join: "primary", table: meta.tableName }],
       condition: {
+        kind: "exp",
         op: "and",
         conditions: [
-          { alias, column: collection.otherColumnName, dbType: meta.idDbType, cond: { kind: "in", value: keys } },
+          {
+            kind: "column",
+            alias,
+            column: collection.otherColumnName,
+            dbType: meta.idDbType,
+            cond: { kind: "in", value: keys },
+          },
         ],
       },
       orderBys: [{ alias, column: "id", order: "ASC" }],

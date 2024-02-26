@@ -1,3 +1,10 @@
+# [1.145.0](https://github.com/stephenh/joist-ts/compare/v1.144.10...v1.145.0) (2024-02-26)
+
+
+### Features
+
+* Support filtering on other columns. ([#964](https://github.com/stephenh/joist-ts/issues/964)) ([6f53fb6](https://github.com/stephenh/joist-ts/commit/6f53fb61767329e992701c9db559adea8b31ccea)), closes [#793](https://github.com/stephenh/joist-ts/issues/793)
+
 ## [1.144.10](https://github.com/stephenh/joist-ts/compare/v1.144.9...v1.144.10) (2024-02-15)
 
 

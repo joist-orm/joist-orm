@@ -5,7 +5,7 @@ import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 describe("SingleTableInheritance", () => {
   it("can create a TaskOld", async () => {
     const em = newEntityManager();
-    newTaskOld(em, { type: TaskType.Old, specialOldField: 1 });
+    newTaskOld(em, { specialOldField: 1 });
     await em.flush();
     const [row] = await select("tasks");
     expect(row).toMatchObject({
@@ -19,7 +19,7 @@ describe("SingleTableInheritance", () => {
 
   it("can create a TaskNew", async () => {
     const em = newEntityManager();
-    newTaskNew(em, { type: TaskType.New, specialNewField: 1 });
+    newTaskNew(em, { specialNewField: 1 });
     await em.flush();
     const [row] = await select("tasks");
     expect(row).toMatchObject({

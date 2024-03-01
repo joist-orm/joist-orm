@@ -663,7 +663,10 @@ function generateOptsFields(config: Config, meta: EntityDbMetadata): Code[] {
   });
   const enums = meta.enums.map((field) => {
     const { fieldName, enumType, notNull, isArray } = field;
-    if (isArray) {
+    if (meta.stiDiscriminatorField === fieldName) {
+      // Don't include the discriminator as an opt b/c we'll infer it from the instance type
+      return code``;
+    } else if (isArray) {
       // Arrays are always optional and we'll default to `[]`
       return code`${fieldName}?: ${enumType}[];`;
     } else {

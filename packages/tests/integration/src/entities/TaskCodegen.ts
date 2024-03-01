@@ -52,7 +52,6 @@ export interface TaskFields {
 
 export interface TaskOpts {
   durationInDays: number;
-  type?: TaskType | null;
 }
 
 export interface TaskIdsOpts {

@@ -128,7 +128,7 @@ export function warnInvalidConfigEntries(config: Config, db: DbMetadata): void {
     const [entity] = entities;
 
     // Check fields
-    const fields = [...entity.primitives, ...entity.manyToOnes];
+    const fields = [...entity.primitives, ...entity.manyToOnes, ...entity.enums];
     for (const [name, config] of Object.entries(entityConfig.fields || {})) {
       if (config.ignore) continue;
       const field = fields.find((f) => f.fieldName === name);

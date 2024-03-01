@@ -67,6 +67,7 @@ export {
   cannotBeUpdated,
   maxValueRule,
   minValueRule,
+  mustBeSubType,
   newRequiredRule,
   rangeValueRule,
 } from "./rules";
@@ -305,9 +306,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
     Object.values(meta.fields)
       .filter((f) => f.kind === "primitive" || (f.kind === "m2o" && f.derived === "async"))
       .forEach((field) => {
-        const ap = (getFakeInstance(meta) as any)[field.fieldName] as
-          | ReactiveFieldImpl<any, any, any>
-          | undefined;
+        const ap = (getFakeInstance(meta) as any)[field.fieldName] as ReactiveFieldImpl<any, any, any> | undefined;
         // We might have an async property configured in joist-config.json that has not yet
         // been made a `hasReactiveField` in the entity file, so avoid continuing
         // if we don't actually have a property/loadHint available.

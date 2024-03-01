@@ -65,11 +65,8 @@
       "tag": "task"
     },
     "TaskItem": {
-      "tag": "ti",
-      "relations": {
-        "newTask": { "stiType": "NewTask" },
-        "oldTask": { "stiType": "OldTask" }
-      }
+      "relations": { "newTask": { "stiType": "TaskNew" }, "oldTask": { "stiType": "TaskOld" } },
+      "tag": "ti"
     },
     "TaskNew": { "tag": "task" },
     "TaskOld": { "tag": "task" },

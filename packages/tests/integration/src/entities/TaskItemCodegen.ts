@@ -19,6 +19,7 @@ import {
   LoadHint,
   loadLens,
   ManyToOneReference,
+  mustBeSubType,
   newChangesProxy,
   newRequiredRule,
   OptsOf,
@@ -40,6 +41,14 @@ import {
   TaskItem,
   taskItemMeta,
   taskMeta,
+  TaskNew,
+  TaskNewId,
+  taskNewMeta,
+  TaskNewOrder,
+  TaskOld,
+  TaskOldId,
+  taskOldMeta,
+  TaskOldOrder,
   TaskOrder,
 } from "./entities";
 
@@ -49,20 +58,20 @@ export interface TaskItemFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   createdAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
   updatedAt: { kind: "primitive"; type: Date; unique: false; nullable: never; derived: true };
-  newTask: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
-  oldTask: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
+  newTask: { kind: "m2o"; type: TaskNew; nullable: undefined; derived: false };
+  oldTask: { kind: "m2o"; type: TaskOld; nullable: undefined; derived: false };
   task: { kind: "m2o"; type: Task; nullable: undefined; derived: false };
 }
 
 export interface TaskItemOpts {
-  newTask?: Task | TaskId | null;
-  oldTask?: Task | TaskId | null;
+  newTask?: TaskNew | TaskNewId | null;
+  oldTask?: TaskOld | TaskOldId | null;
   task?: Task | TaskId | null;
 }
 
 export interface TaskItemIdsOpts {
-  newTaskId?: TaskId | null;
-  oldTaskId?: TaskId | null;
+  newTaskId?: TaskNewId | null;
+  oldTaskId?: TaskOldId | null;
   taskId?: TaskId | null;
 }
 
@@ -70,8 +79,8 @@ export interface TaskItemFilter {
   id?: ValueFilter<TaskItemId, never> | null;
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
-  newTask?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
-  oldTask?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
+  newTask?: EntityFilter<TaskNew, TaskNewId, FilterOf<TaskNew>, null>;
+  oldTask?: EntityFilter<TaskOld, TaskOldId, FilterOf<TaskOld>, null>;
   task?: EntityFilter<Task, TaskId, FilterOf<Task>, null>;
 }
 
@@ -79,8 +88,8 @@ export interface TaskItemGraphQLFilter {
   id?: ValueGraphQLFilter<TaskItemId>;
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
-  newTask?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
-  oldTask?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
+  newTask?: EntityGraphQLFilter<TaskNew, TaskNewId, GraphQLFilterOf<TaskNew>, null>;
+  oldTask?: EntityGraphQLFilter<TaskOld, TaskOldId, GraphQLFilterOf<TaskOld>, null>;
   task?: EntityGraphQLFilter<Task, TaskId, GraphQLFilterOf<Task>, null>;
 }
 
@@ -88,8 +97,8 @@ export interface TaskItemOrder {
   id?: OrderBy;
   createdAt?: OrderBy;
   updatedAt?: OrderBy;
-  newTask?: TaskOrder;
-  oldTask?: TaskOrder;
+  newTask?: TaskNewOrder;
+  oldTask?: TaskOldOrder;
   task?: TaskOrder;
 }
 
@@ -97,6 +106,8 @@ export const taskItemConfig = new ConfigApi<TaskItem, Context>();
 
 taskItemConfig.addRule(newRequiredRule("createdAt"));
 taskItemConfig.addRule(newRequiredRule("updatedAt"));
+taskItemConfig.addRule("newTask", mustBeSubType("newTask"));
+taskItemConfig.addRule("oldTask", mustBeSubType("oldTask"));
 
 export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};
@@ -176,14 +187,14 @@ export abstract class TaskItemCodegen extends BaseEntity<EntityManager, string> 
     return isLoaded(this as any as TaskItem, hint);
   }
 
-  get newTask(): ManyToOneReference<TaskItem, Task, undefined> {
+  get newTask(): ManyToOneReference<TaskItem, TaskNew, undefined> {
     const { relations } = getOrmField(this);
-    return relations.newTask ??= hasOne(this as any as TaskItem, taskMeta, "newTask", "newTaskTaskItems");
+    return relations.newTask ??= hasOne(this as any as TaskItem, taskNewMeta, "newTask", "newTaskTaskItems");
   }
 
-  get oldTask(): ManyToOneReference<TaskItem, Task, undefined> {
+  get oldTask(): ManyToOneReference<TaskItem, TaskOld, undefined> {
     const { relations } = getOrmField(this);
-    return relations.oldTask ??= hasOne(this as any as TaskItem, taskMeta, "oldTask", "oldTaskTaskItems");
+    return relations.oldTask ??= hasOne(this as any as TaskItem, taskOldMeta, "oldTask", "oldTaskTaskItems");
   }
 
   get task(): ManyToOneReference<TaskItem, Task, undefined> {

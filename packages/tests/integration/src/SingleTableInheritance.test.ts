@@ -183,4 +183,16 @@ describe("SingleTableInheritance", () => {
     expect(ti.oldTask.get!.specialOldField).toBe(1);
     expect(ti.newTask.get!.specialNewField).toBe(2);
   });
+
+  it("cannot use the wrong task type", async () => {
+    const em = newEntityManager();
+    const t = newTask(em);
+    const ot = newTaskOld(em, { specialOldField: 1 });
+    const nt = newTaskNew(em, { specialNewField: 2 });
+    // @ts-expect-error
+    newTaskItem(em, { task: t, newTask: ot, oldTask: ot });
+    // @ts-expect-error
+    newTaskItem(em, { task: t, newTask: nt, oldTask: nt });
+    await expect(em.flush()).rejects.toThrow("TaskItem#1 TaskOld#1 must be a TaskNew, TaskItem#2 TaskNew#1 must be a TaskOld");
+  });
 });

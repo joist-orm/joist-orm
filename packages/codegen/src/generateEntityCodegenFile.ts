@@ -2,6 +2,7 @@ import { camelCase, pascalCase } from "change-case";
 import { Code, code, imp, joinCode } from "ts-poet";
 import { DbMetadata, EntityDbMetadata, EnumField, PrimitiveField, PrimitiveTypescriptType } from "./EntityDbMetadata";
 import { Config } from "./config";
+import { getStiEntities } from "./index";
 import { keywords } from "./keywords";
 import {
   BaseEntity,
@@ -54,6 +55,7 @@ import {
   isEntity,
   isLoaded,
   loadLens,
+  mustBeSubType,
   newChangesProxy,
   newRequiredRule,
   setField,
@@ -481,7 +483,7 @@ export function generateEntityCodegenFile(config: Config, dbMeta: DbMetadata, me
 
     export const ${configName} = new ${ConfigApi}<${entity.type}, ${contextType}>();
 
-    ${generateDefaultValidationRules(meta, configName)}
+    ${generateDefaultValidationRules(dbMeta, meta, configName)}
     
     export abstract class ${entityName}Codegen extends ${base} implements ${ProjectEntity} {
       static defaultValues: object = {
@@ -636,7 +638,7 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
   return [...primitives, ...enums, ...pgEnums];
 }
 
-function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
+function generateDefaultValidationRules(db: DbMetadata, meta: EntityDbMetadata, configName: string): Code[] {
   // Add required rules for all not-null columns
   const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes, ...meta.polymorphics];
   const rules = fields
@@ -648,6 +650,17 @@ function generateDefaultValidationRules(meta: EntityDbMetadata, configName: stri
   if (meta.stiDiscriminatorField) {
     const field = meta.enums.find((e) => e.fieldName === meta.stiDiscriminatorField) ?? fail("STI field not found");
     rules.push(code`${configName}.addRule(${cannotBeUpdated}("${field.fieldName}"));`);
+  }
+  // Add STI type must match
+  const stiEntities = getStiEntities(db.entities);
+  if (stiEntities.size > 0) {
+    for (const m2o of meta.manyToOnes) {
+      // The `m2o.otherEntity` may already be pointing at the subtype, but stiEntities has subtypes in it as well...
+      const target = stiEntities.get(m2o.otherEntity.name);
+      if (target && m2o.otherEntity.name !== target.base.name) {
+        rules.push(code`${configName}.addRule("${m2o.fieldName}" ,${mustBeSubType}("${m2o.fieldName}"));`);
+      }
+    }
   }
   return rules;
 }

@@ -1,5 +1,6 @@
 import {
   BaseEntity,
+  cannotBeUpdated,
   Changes,
   ConfigApi,
   EntityMetadata,
@@ -86,6 +87,7 @@ export const taskConfig = new ConfigApi<Task, Context>();
 taskConfig.addRule(newRequiredRule("durationInDays"));
 taskConfig.addRule(newRequiredRule("createdAt"));
 taskConfig.addRule(newRequiredRule("updatedAt"));
+taskConfig.addRule(cannotBeUpdated("type"));
 
 export abstract class TaskCodegen extends BaseEntity<EntityManager, string> implements Entity {
   static defaultValues: object = {};

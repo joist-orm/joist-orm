@@ -39,6 +39,7 @@ import {
   ValueFilter,
   ValueGraphQLFilter,
   Zod,
+  cannotBeUpdated,
   cleanStringValue,
   failNoIdYet,
   getField,
@@ -636,12 +637,19 @@ function generateDefaultValues(config: Config, meta: EntityDbMetadata): Code[] {
 }
 
 function generateDefaultValidationRules(meta: EntityDbMetadata, configName: string): Code[] {
+  // Add required rules for all not-null columns
   const fields = [...meta.primitives, ...meta.enums, ...meta.manyToOnes, ...meta.polymorphics];
-  return fields
+  const rules = fields
     .filter((p) => p.notNull)
     .map(({ fieldName }) => {
       return code`${configName}.addRule(${newRequiredRule}("${fieldName}"));`;
     });
+  // Add STI discriminator cannot change
+  if (meta.stiDiscriminatorField) {
+    const field = meta.enums.find((e) => e.fieldName === meta.stiDiscriminatorField) ?? fail("STI field not found");
+    rules.push(code`${configName}.addRule(${cannotBeUpdated}("${field.fieldName}"));`);
+  }
+  return rules;
 }
 
 // Make our opts type

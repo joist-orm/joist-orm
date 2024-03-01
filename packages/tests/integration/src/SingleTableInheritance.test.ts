@@ -165,5 +165,11 @@ describe("SingleTableInheritance", () => {
     ]);
   });
 
-  it("prevents the discriminator column from being updated", async () => {});
+  it("prevents the discriminator column from being updated", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    const em = newEntityManager();
+    const t1 = await em.load(Task, "task:1");
+    t1.type = TaskType.Old;
+    await expect(em.flush()).rejects.toThrow("type cannot be updated");
+  });
 });

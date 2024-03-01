@@ -20,6 +20,7 @@ import {
   PublisherType,
   SmallPublisher,
   Tag,
+  TaskType,
   User,
 } from "@src/entities";
 
@@ -134,5 +135,10 @@ export type Resolvers = {
   ColorDetail: {
     code: (root: Color) => string;
     name: (root: Color) => string;
+  };
+
+  TaskTypeDetail: {
+    code: (root: TaskType) => string;
+    name: (root: TaskType) => string;
   };
 };

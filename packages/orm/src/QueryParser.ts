@@ -963,7 +963,11 @@ export function joinClauses(joins: ParsedTable[]): string[] {
 }
 
 function needsClassPerTableJoins(meta: EntityMetadata): boolean {
-  return meta.subTypes.length > 0 || meta.baseTypes.length > 0;
+  return meta.inheritanceType === "cti" && (meta.subTypes.length > 0 || meta.baseTypes.length > 0);
+}
+
+function needsStiDiscriminator(meta: EntityMetadata): boolean {
+  return meta.inheritanceType === "sti";
 }
 
 /** Converts a search term like `foo bar` into a SQL `like` pattern like `%foo%bar%`. */

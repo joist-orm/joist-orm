@@ -2,14 +2,14 @@ import { ConnectionConfig, newPgConnectionConfig } from "joist-utils";
 import { Client } from "pg";
 import pgStructure from "pg-structure";
 import { saveFiles } from "ts-poet";
-import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames } from "./EntityDbMetadata";
+import { DbMetadata, EntityDbMetadata, failIfOverlappingFieldNames, makeEntity } from "./EntityDbMetadata";
 import { assignTags } from "./assignTags";
 import { maybeRunTransforms } from "./codemods";
 import { Config, loadConfig, warnInvalidConfigEntries, writeConfig } from "./config";
 import { generateFiles } from "./generate";
 import { createFlushFunction } from "./generateFlushFunction";
 import { loadEnumMetadata, loadPgEnumMetadata } from "./loadMetadata";
-import { isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
+import { fail, isEntityTable, isJoinTable, mapSimpleDbTypeToTypescriptType } from "./utils";
 
 export {
   DbMetadata,
@@ -107,7 +107,69 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
+  expandSingleTableInheritance(config, entities);
   return { entities, enums, pgEnums, totalTables, joinTables };
+}
+
+// Expand STI tables into multiple entities
+function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata[]): void {
+  for (const entity of entities) {
+    const [fieldName, stiField] =
+      Object.entries(config.entities[entity.name]?.fields || {}).find(([, f]) => !!f.singleTableInheritance) ?? [];
+    if (fieldName && stiField && stiField.singleTableInheritance) {
+      entity.inheritanceType = "sti";
+      // Ensure we have an enum field so that we can bake the STI discriminators into the metadata.ts file
+      const enumField =
+        entity.enums.find((e) => e.fieldName === fieldName) ??
+        fail(`No enum column found for ${entity.name}.${fieldName}, which is required to use singleTableInheritance`);
+      entity.stiDiscriminatorField = enumField.fieldName;
+      for (const [enumCode, config] of Object.entries(stiField.singleTableInheritance)) {
+        // Synthesize an entity for this STI sub-entity
+        const subEntity: EntityDbMetadata = {
+          name: config.entityName,
+          entity: makeEntity(config.entityName),
+          tableName: entity.tableName,
+          primaryKey: entity.primaryKey,
+          primitives: entity.primitives.filter((f) => config.fields.includes(f.fieldName)),
+          enums: entity.enums.filter((f) => config.fields.includes(f.fieldName)),
+          pgEnums: entity.pgEnums.filter((f) => config.fields.includes(f.fieldName)),
+          manyToOnes: entity.manyToOnes.filter((f) => config.fields.includes(f.fieldName)),
+          oneToManys: entity.oneToManys.filter((f) => config.fields.includes(f.fieldName)),
+          largeOneToManys: entity.largeOneToManys.filter((f) => config.fields.includes(f.fieldName)),
+          oneToOnes: entity.oneToOnes.filter((f) => config.fields.includes(f.fieldName)),
+          manyToManys: entity.manyToManys.filter((f) => config.fields.includes(f.fieldName)),
+          largeManyToManys: entity.largeManyToManys.filter((f) => config.fields.includes(f.fieldName)),
+          polymorphics: entity.polymorphics.filter((f) => config.fields.includes(f.fieldName)),
+          tagName: entity.tagName,
+          createdAt: undefined,
+          updatedAt: undefined,
+          deletedAt: undefined,
+          baseClassName: entity.name,
+          inheritanceType: "sti",
+          stiDiscriminatorValue: (
+            enumField.enumRows.find((r) => r.code === enumCode) ??
+            fail(`No enum row found for ${entity.name}.${fieldName}.${enumCode}`)
+          ).id,
+          abstract: false,
+          invalidDeferredFK: false,
+        };
+
+        // Now strip all the subclass fields from the base class
+        entity.primitives = entity.primitives.filter((f) => !config.fields.includes(f.fieldName));
+        entity.enums = entity.enums.filter((f) => !config.fields.includes(f.fieldName));
+        entity.pgEnums = entity.pgEnums.filter((f) => !config.fields.includes(f.fieldName));
+        entity.manyToOnes = entity.manyToOnes.filter((f) => !config.fields.includes(f.fieldName));
+        entity.oneToManys = entity.oneToManys.filter((f) => !config.fields.includes(f.fieldName));
+        entity.largeOneToManys = entity.largeOneToManys.filter((f) => !config.fields.includes(f.fieldName));
+        entity.oneToOnes = entity.oneToOnes.filter((f) => !config.fields.includes(f.fieldName));
+        entity.manyToManys = entity.manyToManys.filter((f) => !config.fields.includes(f.fieldName));
+        entity.largeManyToManys = entity.largeManyToManys.filter((f) => !config.fields.includes(f.fieldName));
+        entity.polymorphics = entity.polymorphics.filter((f) => !config.fields.includes(f.fieldName));
+
+        entities.push(subEntity);
+      }
+    }
+  }
 }
 
 function maybeSetDatabaseUrl(config: Config): void {

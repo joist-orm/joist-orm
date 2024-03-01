@@ -25,6 +25,10 @@ const mappers = {
   PublisherTypeDetail: "src/entities#PublisherType",
   SmallPublisher: "src/entities#SmallPublisher",
   Tag: "src/entities#Tag",
+  Task: "src/entities#Task",
+  TaskNew: "src/entities#TaskNew",
+  TaskOld: "src/entities#TaskOld",
+  TaskTypeDetail: "src/entities#TaskType",
   User: "src/entities#User",
 };
 
@@ -34,6 +38,7 @@ const enumValues = {
   ImageType: "src/entities#ImageType",
   PublisherSize: "src/entities#PublisherSize",
   PublisherType: "src/entities#PublisherType",
+  TaskType: "src/entities#TaskType",
 };
 
 module.exports = { mappers, enumValues };

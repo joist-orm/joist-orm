@@ -1,0 +1,17 @@
+extend type Mutation {
+  saveNewTask(input: SaveNewTaskInput!): SaveNewTaskResult!
+}
+
+type NewTask {
+  id: ID!
+  specialNewField: Int
+}
+
+input SaveNewTaskInput {
+  id: ID
+  specialNewField: Int
+}
+
+type SaveNewTaskResult {
+  newTask: NewTask!
+}

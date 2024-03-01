@@ -9,6 +9,11 @@ import { fail, sortKeys, trueIfResolved } from "./utils";
 
 const jsonFormatter = createFromBuffer(getBuffer());
 
+const stiConfig = z.object({
+  entityName: z.string(),
+  fields: z.array(z.string()),
+});
+
 const fieldConfig = z
   .object({
     derived: z.optional(z.union([z.literal("sync"), z.literal("async")])),
@@ -18,6 +23,7 @@ const fieldConfig = z
     zodSchema: z.optional(z.string()),
     type: z.optional(z.string()),
     serde: z.optional(z.string()),
+    singleTableInheritance: z.optional(z.record(z.string(), stiConfig)),
   })
   .strict();
 

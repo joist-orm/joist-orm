@@ -124,6 +124,10 @@ export function setOpts<T extends Entity>(
       if (partial && _value === undefined) {
         return;
       }
+      // Ignore the STI discriminator, em.register will set this accordingly
+      if (meta.inheritanceType === "sti" && getBaseMeta(meta).stiDiscriminatorField === key) {
+        return;
+      }
       // We let optional opts fields be `| null` for convenience, and convert to undefined.
       const value = _value === null ? undefined : _value;
       const current = (entity as any)[key];

@@ -220,6 +220,11 @@ export class EntityDbMetadata {
   updatedAt: PrimitiveField | undefined;
   deletedAt: PrimitiveField | undefined;
   baseClassName: string | undefined;
+  inheritanceType: "sti" | "cti" | undefined;
+  /** This will only be set on the base meta. */
+  stiDiscriminatorField?: string;
+  /** This will only be set on the sub metas. */
+  stiDiscriminatorValue?: number;
   abstract: boolean;
   invalidDeferredFK: boolean;
 
@@ -228,6 +233,7 @@ export class EntityDbMetadata {
 
     if (isSubClassTable(table)) {
       this.baseClassName = tableToEntityName(config, table.columns.get("id").foreignKeys[0].referencedTable);
+      this.inheritanceType = "cti";
     }
 
     this.primaryKey =

@@ -26,12 +26,16 @@ export function generateMetadataFile(config: Config, dbMeta: DbMetadata, meta: E
   Object.values(fields).forEach((code) => code.asOneline());
 
   const maybeBaseType = meta.baseClassName ? `"${meta.baseClassName}"` : undefined;
+  // We want to put inheritanceType: sti/cti onto base classes as well
+  const maybeInheritanceType = meta.inheritanceType ? `inheritanceType: "${meta.inheritanceType}",` : "";
+  const maybeStiColumn = meta.stiDiscriminatorField ? `stiDiscriminatorField: "${meta.stiDiscriminatorField}",` : "";
+  const maybeStiValue = meta.stiDiscriminatorValue ? `stiDiscriminatorValue: ${meta.stiDiscriminatorValue},` : "";
 
   return code`
     export const ${entity.metaName}: ${EntityMetadata}<${entity.name}> = {
       cstr: ${entity.type},
       type: "${entity.name}",
-      baseType: ${maybeBaseType},
+      baseType: ${maybeBaseType}, ${maybeInheritanceType} ${maybeStiColumn} ${maybeStiValue}
       idType: "${config.idType ?? "tagged-string"}",
       idDbType: "${meta.primaryKey.columnType}",
       tagName: "${meta.tagName}",

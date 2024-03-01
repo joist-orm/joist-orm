@@ -54,10 +54,21 @@ type PublisherTypeDetail {
   name: String!
 }
 
+enum TaskType {
+  OLD
+  NEW
+}
+
+type TaskTypeDetail {
+  code: TaskType!
+  name: String!
+}
+
 type AllEnumDetails {
   advanceStatus: [AdvanceStatusDetail!]!
   color: [ColorDetail!]!
   imageType: [ImageTypeDetail!]!
   publisherSize: [PublisherSizeDetail!]!
   publisherType: [PublisherTypeDetail!]!
+  taskType: [TaskTypeDetail!]!
 }

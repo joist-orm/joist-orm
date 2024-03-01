@@ -26,6 +26,7 @@ import {
   DeepPartialOrNull,
   EntityHook,
   EntityMetadata,
+  EnumField,
   ExpressionFilter,
   FilterWithAlias,
   GraphQLFilterWithAlias,
@@ -1028,10 +1029,23 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
 
     // Set a default createdAt/updatedAt that we'll keep if this is a new entity, or over-write if we're loaded an existing row
     if (entity.isNewEntity) {
-      const { createdAt, updatedAt } = getBaseMeta(getMetadata(entity)).timestampFields;
+      const baseMeta = getBaseMeta(getMetadata(entity));
+      const { createdAt, updatedAt } = baseMeta.timestampFields;
       const { data } = getOrmField(entity);
       if (createdAt) data[createdAt] = new Date();
       if (updatedAt) data[updatedAt] = new Date();
+      // Set the discriminator for STI
+      if (baseMeta.inheritanceType === "sti") {
+        const typeName = entity.constructor.name;
+        const st = baseMeta.subTypes.find((st) => st.type === typeName);
+        if (st) {
+          const field = baseMeta.fields[baseMeta.stiDiscriminatorField!] as EnumField;
+          const code = (field.enumDetailType.findById(st.stiDiscriminatorValue!) as any).code;
+          (entity as any)[baseMeta.stiDiscriminatorField!] = code;
+        } else {
+          (entity as any)[baseMeta.stiDiscriminatorField!] = undefined;
+        }
+      }
       this.#rm.queueAllDownstreamFields(entity);
     }
   }
@@ -1327,9 +1341,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       let entity = this.findExistingInstance(taggedId) as T;
       if (!entity) {
         // Look for __class from the driver telling us which subtype to instantiate
-        const meta = row.__class
-          ? maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta
-          : maybeBaseMeta;
+        const meta = findConcreteMeta(maybeBaseMeta, row);
         // Pass id as a hint that we're in hydrate mode
         entity = new (asConcreteCstr(meta.cstr))(this, taggedId) as T;
         getOrmField(entity).row = row;
@@ -1838,4 +1850,24 @@ function getNow(): Date {
   }
   lastNow = now;
   return now;
+}
+
+function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetadata {
+  if (!row.__class && maybeBaseMeta.inheritanceType !== "sti") {
+    return maybeBaseMeta;
+  }
+  if (row.__class) {
+    // Look for the CTI __class from the driver telling us which subtype to instantiate
+    return maybeBaseMeta.subTypes.find((st) => st.type === row.__class) ?? maybeBaseMeta;
+  } else if (maybeBaseMeta.inheritanceType === "sti") {
+    // Look for the STI discriminator value
+    const baseMeta = getBaseMeta(maybeBaseMeta);
+    const field = baseMeta.fields[baseMeta.stiDiscriminatorField!];
+    if (field.kind !== "enum") throw new Error("Discriminator field must be an enum");
+    const columnName = field.serde.columns[0].columnName;
+    const value = row[columnName];
+    return baseMeta.subTypes.find((st) => st.stiDiscriminatorValue === value) ?? baseMeta;
+  } else {
+    throw new Error("Unknown inheritance type");
+  }
 }

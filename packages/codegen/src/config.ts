@@ -34,6 +34,7 @@ const relationConfig = z
     polymorphic: z.optional(z.union([z.literal("notNull"), z.literal(true)])),
     large: z.optional(z.boolean()),
     orderBy: z.optional(z.string()),
+    stiType: z.optional(z.string()),
   })
   .strict();
 

@@ -9,6 +9,9 @@ type TaskOld {
   durationInDays: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
+  newTaskTaskItems: [TaskItem!]!
+  oldTaskTaskItems: [TaskItem!]!
+  taskTaskItems: [TaskItem!]!
 }
 
 input SaveTaskOldInput {

@@ -108,10 +108,11 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
   expandSingleTableInheritance(config, entities);
+  rewriteSingleTableForeignKeys(config, entities);
   return { entities, enums, pgEnums, totalTables, joinTables };
 }
 
-// Expand STI tables into multiple entities
+/** Expands STI tables into multiple entities, so they get separate `SubTypeCodegen.ts` & `SubType.ts` files. */
 function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata[]): void {
   for (const entity of entities) {
     const [fieldName, stiField] =
@@ -167,6 +168,33 @@ function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata
         entity.polymorphics = entity.polymorphics.filter((f) => !config.fields.includes(f.fieldName));
 
         entities.push(subEntity);
+      }
+    }
+  }
+}
+
+/** Finds FKs pointing to the base table and, if configured, rewrites them to point to the sub-tables. */
+function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadata[]): void {
+  // See if we even have any STI tables
+  const stiEntities: Map<string, { base: EntityDbMetadata; subTypes: EntityDbMetadata[] }> = new Map();
+  for (const entity of entities) {
+    if (entity.inheritanceType === "sti" && entity.stiDiscriminatorField) {
+      const base = entity;
+      const subTypes = entities.filter((s) => s.baseClassName === entity.name && s !== entity);
+      stiEntities.set(entity.name, { base, subTypes });
+    }
+  }
+
+  if (stiEntities.size === 0) return;
+
+  for (const entity of entities) {
+    for (const m2o of entity.manyToOnes) {
+      const target = stiEntities.get(m2o.otherEntity.name);
+      // See if the user has configured this to a different subtype
+      const stiType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.stiType;
+      if (target && stiType) {
+        const { base, subTypes } = target;
+        m2o.otherEntity = (subTypes.find((s) => s.name === stiType) ?? base).entity;
       }
     }
   }

@@ -64,6 +64,13 @@
       },
       "tag": "task"
     },
+    "TaskItem": {
+      "tag": "ti",
+      "relations": {
+        "newTask": { "stiType": "NewTask" },
+        "oldTask": { "stiType": "OldTask" }
+      }
+    },
     "TaskNew": { "tag": "task" },
     "TaskOld": { "tag": "task" },
     "User": {
@@ -76,5 +83,5 @@
     }
   },
   "entitiesDirectory": "./src/entities",
-  "version": "1.145.1"
+  "version": "1.146.0"
 }

@@ -10,6 +10,9 @@ type Task {
   specialOldField: Int
   createdAt: DateTime!
   updatedAt: DateTime!
+  newTaskTaskItems: [TaskItem!]!
+  oldTaskTaskItems: [TaskItem!]!
+  taskTaskItems: [TaskItem!]!
 }
 
 input SaveTaskInput {

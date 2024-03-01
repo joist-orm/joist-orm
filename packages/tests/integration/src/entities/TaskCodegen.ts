@@ -2,13 +2,20 @@ import {
   BaseEntity,
   cannotBeUpdated,
   Changes,
+  Collection,
   ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
   failNoIdYet,
   FieldsOf,
+  FilterOf,
   Flavor,
   getField,
+  getOrmField,
+  GraphQLFilterOf,
+  hasMany,
   isLoaded,
   Lens,
   Loaded,
@@ -32,6 +39,9 @@ import {
   EntityManager,
   newTask,
   Task,
+  TaskItem,
+  TaskItemId,
+  taskItemMeta,
   taskMeta,
   TaskNew,
   TaskOld,
@@ -52,9 +62,15 @@ export interface TaskFields {
 
 export interface TaskOpts {
   durationInDays: number;
+  newTaskTaskItems?: TaskItem[];
+  oldTaskTaskItems?: TaskItem[];
+  taskTaskItems?: TaskItem[];
 }
 
 export interface TaskIdsOpts {
+  newTaskTaskItemIds?: TaskItemId[] | null;
+  oldTaskTaskItemIds?: TaskItemId[] | null;
+  taskTaskItemIds?: TaskItemId[] | null;
 }
 
 export interface TaskFilter {
@@ -63,6 +79,9 @@ export interface TaskFilter {
   createdAt?: ValueFilter<Date, never>;
   updatedAt?: ValueFilter<Date, never>;
   type?: ValueFilter<TaskType, null>;
+  newTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
+  oldTaskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
+  taskTaskItems?: EntityFilter<TaskItem, TaskItemId, FilterOf<TaskItem>, null | undefined>;
 }
 
 export interface TaskGraphQLFilter {
@@ -71,6 +90,9 @@ export interface TaskGraphQLFilter {
   createdAt?: ValueGraphQLFilter<Date>;
   updatedAt?: ValueGraphQLFilter<Date>;
   type?: ValueGraphQLFilter<TaskType>;
+  newTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
+  oldTaskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
+  taskTaskItems?: EntityGraphQLFilter<TaskItem, TaskItemId, GraphQLFilterOf<TaskItem>, null | undefined>;
 }
 
 export interface TaskOrder {
@@ -197,5 +219,41 @@ export abstract class TaskCodegen extends BaseEntity<EntityManager, string> impl
 
   isLoaded<H extends LoadHint<Task>>(hint: H): this is Loaded<Task, H> {
     return isLoaded(this as any as Task, hint);
+  }
+
+  get newTaskTaskItems(): Collection<Task, TaskItem> {
+    const { relations } = getOrmField(this);
+    return relations.newTaskTaskItems ??= hasMany(
+      this as any as Task,
+      taskItemMeta,
+      "newTaskTaskItems",
+      "newTask",
+      "new_task_id",
+      undefined,
+    );
+  }
+
+  get oldTaskTaskItems(): Collection<Task, TaskItem> {
+    const { relations } = getOrmField(this);
+    return relations.oldTaskTaskItems ??= hasMany(
+      this as any as Task,
+      taskItemMeta,
+      "oldTaskTaskItems",
+      "oldTask",
+      "old_task_id",
+      undefined,
+    );
+  }
+
+  get taskTaskItems(): Collection<Task, TaskItem> {
+    const { relations } = getOrmField(this);
+    return relations.taskTaskItems ??= hasMany(
+      this as any as Task,
+      taskItemMeta,
+      "taskTaskItems",
+      "task",
+      "task_id",
+      undefined,
+    );
   }
 }

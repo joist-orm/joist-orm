@@ -303,4 +303,11 @@ export function up(b: MigrationBuilder): void {
     // OldTask columns
     special_old_field: { type: "int", notNull: false },
   });
+
+  // For testing single-table inheritance
+  createEntityTable(b, "task_items", {
+    old_task_id: foreignKey("tasks", { notNull: false }),
+    new_task_id: foreignKey("tasks", { notNull: false }),
+    task_id: foreignKey("tasks", { notNull: false }),
+  });
 }

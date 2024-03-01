@@ -166,6 +166,7 @@
     "saveSmallPublisher",
     "saveTag",
     "saveTask",
+    "saveTaskItem",
     "saveTaskNew",
     "saveTaskOld",
     "saveUser"
@@ -328,6 +329,8 @@
   "SaveTagInput": ["createdAt", "id", "name", "updatedAt"],
   "SaveTagResult": ["tag"],
   "SaveTaskInput": ["durationInDays", "id", "specialNewField", "specialOldField", "type"],
+  "SaveTaskItemInput": ["id", "newTaskId", "oldTaskId", "taskId"],
+  "SaveTaskItemResult": ["taskItem"],
   "SaveTaskNewInput": ["durationInDays", "id", "specialNewField", "type"],
   "SaveTaskNewResult": ["taskNew"],
   "SaveTaskOldInput": ["durationInDays", "id", "specialOldField", "type"],
@@ -356,9 +359,41 @@
     "users"
   ],
   "Tag": ["books", "createdAt", "id", "name", "publishers", "updatedAt"],
-  "Task": ["createdAt", "durationInDays", "id", "specialNewField", "specialOldField", "type", "updatedAt"],
-  "TaskNew": ["createdAt", "durationInDays", "id", "specialNewField", "type", "updatedAt"],
-  "TaskOld": ["createdAt", "durationInDays", "id", "specialOldField", "type", "updatedAt"],
+  "Task": [
+    "createdAt",
+    "durationInDays",
+    "id",
+    "newTaskTaskItems",
+    "oldTaskTaskItems",
+    "specialNewField",
+    "specialOldField",
+    "taskTaskItems",
+    "type",
+    "updatedAt"
+  ],
+  "TaskItem": ["createdAt", "id", "newTask", "oldTask", "task", "updatedAt"],
+  "TaskNew": [
+    "createdAt",
+    "durationInDays",
+    "id",
+    "newTaskTaskItems",
+    "oldTaskTaskItems",
+    "specialNewField",
+    "taskTaskItems",
+    "type",
+    "updatedAt"
+  ],
+  "TaskOld": [
+    "createdAt",
+    "durationInDays",
+    "id",
+    "newTaskTaskItems",
+    "oldTaskTaskItems",
+    "specialOldField",
+    "taskTaskItems",
+    "type",
+    "updatedAt"
+  ],
   "User": [
     "authorManyToOne",
     "bio",

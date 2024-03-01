@@ -20,6 +20,7 @@ export * from "./PublisherGroup.factories";
 export * from "./SmallPublisher.factories";
 export * from "./Tag.factories";
 export * from "./Task.factories";
+export * from "./TaskItem.factories";
 export * from "./User.factories";
 export * from "./TaskNew.factories";
 export * from "./TaskOld.factories";

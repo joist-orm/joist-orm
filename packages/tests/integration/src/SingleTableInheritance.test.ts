@@ -1,4 +1,4 @@
-import { newTask, newTaskNew, newTaskOld, Task, TaskNew, TaskOld, TaskType } from "src/entities";
+import { newTask, newTaskItem, newTaskNew, newTaskOld, Task, TaskNew, TaskOld, TaskType } from "src/entities";
 import { insertTask, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
@@ -171,5 +171,16 @@ describe("SingleTableInheritance", () => {
     const t1 = await em.load(Task, "task:1");
     t1.type = TaskType.Old;
     await expect(em.flush()).rejects.toThrow("type cannot be updated");
+  });
+
+  it("can differentiate between old and new tasks", async () => {
+    const em = newEntityManager();
+    const t = newTask(em);
+    const ot = newTaskOld(em, { specialOldField: 1 });
+    const nt = newTaskNew(em, { specialNewField: 2 });
+    const ti = newTaskItem(em, { task: t, newTask: nt, oldTask: ot });
+    await em.flush();
+    expect(ti.oldTask.get!.specialOldField).toBe(1);
+    expect(ti.newTask.get!.specialNewField).toBe(2);
   });
 });

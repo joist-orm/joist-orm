@@ -57,6 +57,7 @@ import {
   newSmallPublisher,
   newTag,
   newTask,
+  newTaskItem,
   newTaskNew,
   newTaskOld,
   newUser,
@@ -76,6 +77,8 @@ import {
   tagConfig,
   Task,
   taskConfig,
+  TaskItem,
+  taskItemConfig,
   TaskNew,
   taskNewConfig,
   TaskOld,
@@ -742,6 +745,9 @@ export const taskMeta: EntityMetadata<Task> = {
     "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
     "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
     "type": { kind: "enum", fieldName: "type", fieldIdName: undefined, required: false, enumDetailType: TaskTypes, serde: new EnumFieldSerde("type", "type_id", "int", TaskTypes), immutable: false },
+    "newTaskTaskItems": { kind: "o2m", fieldName: "newTaskTaskItems", fieldIdName: "newTaskTaskItemIds", required: false, otherMetadata: () => taskItemMeta, otherFieldName: "newTask", serde: undefined, immutable: false },
+    "oldTaskTaskItems": { kind: "o2m", fieldName: "oldTaskTaskItems", fieldIdName: "oldTaskTaskItemIds", required: false, otherMetadata: () => taskItemMeta, otherFieldName: "oldTask", serde: undefined, immutable: false },
+    "taskTaskItems": { kind: "o2m", fieldName: "taskTaskItems", fieldIdName: "taskTaskItemIds", required: false, otherMetadata: () => taskItemMeta, otherFieldName: "task", serde: undefined, immutable: false },
   },
   allFields: {},
   orderBy: undefined,
@@ -753,6 +759,33 @@ export const taskMeta: EntityMetadata<Task> = {
 };
 
 (Task as any).metadata = taskMeta;
+
+export const taskItemMeta: EntityMetadata<TaskItem> = {
+  cstr: TaskItem,
+  type: "TaskItem",
+  baseType: undefined,
+  idType: "tagged-string",
+  idDbType: "int",
+  tagName: "ti",
+  tableName: "task_items",
+  fields: {
+    "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("ti", "id", "id", "int"), immutable: true },
+    "createdAt": { kind: "primitive", fieldName: "createdAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("createdAt", "created_at", "timestamp with time zone"), immutable: false },
+    "updatedAt": { kind: "primitive", fieldName: "updatedAt", fieldIdName: undefined, derived: "orm", required: false, protected: false, type: "Date", serde: new PrimitiveSerde("updatedAt", "updated_at", "timestamp with time zone"), immutable: false },
+    "newTask": { kind: "m2o", fieldName: "newTask", fieldIdName: "newTaskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "newTaskTaskItems", serde: new KeySerde("task", "newTask", "new_task_id", "int"), immutable: false },
+    "oldTask": { kind: "m2o", fieldName: "oldTask", fieldIdName: "oldTaskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "oldTaskTaskItems", serde: new KeySerde("task", "oldTask", "old_task_id", "int"), immutable: false },
+    "task": { kind: "m2o", fieldName: "task", fieldIdName: "taskId", derived: false, required: false, otherMetadata: () => taskMeta, otherFieldName: "taskTaskItems", serde: new KeySerde("task", "task", "task_id", "int"), immutable: false },
+  },
+  allFields: {},
+  orderBy: undefined,
+  timestampFields: { createdAt: "createdAt", updatedAt: "updatedAt", deletedAt: undefined },
+  config: taskItemConfig,
+  factory: newTaskItem,
+  baseTypes: [],
+  subTypes: [],
+};
+
+(TaskItem as any).metadata = taskItemMeta;
 
 export const userMeta: EntityMetadata<User> = {
   cstr: User,
@@ -845,5 +878,32 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
 
 (TaskOld as any).metadata = taskOldMeta;
 
-export const allMetadata = [adminUserMeta, authorMeta, authorScheduleMeta, authorStatMeta, bookMeta, bookAdvanceMeta, bookReviewMeta, childMeta, childGroupMeta, childItemMeta, commentMeta, criticMeta, criticColumnMeta, imageMeta, largePublisherMeta, parentGroupMeta, parentItemMeta, publisherMeta, publisherGroupMeta, smallPublisherMeta, tagMeta, taskMeta, userMeta, taskNewMeta, taskOldMeta];
+export const allMetadata = [
+  adminUserMeta,
+  authorMeta,
+  authorScheduleMeta,
+  authorStatMeta,
+  bookMeta,
+  bookAdvanceMeta,
+  bookReviewMeta,
+  childMeta,
+  childGroupMeta,
+  childItemMeta,
+  commentMeta,
+  criticMeta,
+  criticColumnMeta,
+  imageMeta,
+  largePublisherMeta,
+  parentGroupMeta,
+  parentItemMeta,
+  publisherMeta,
+  publisherGroupMeta,
+  smallPublisherMeta,
+  tagMeta,
+  taskMeta,
+  taskItemMeta,
+  userMeta,
+  taskNewMeta,
+  taskOldMeta,
+];
 configureMetadata(allMetadata);

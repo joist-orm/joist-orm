@@ -3,7 +3,7 @@ title: Single Table Inheritance
 sidebar_position: 7
 ---
 
-Joist supports [Single Table Inheritance](https://www.martinfowler.com/eaaCatalog/singleTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), by automatically mapping multiple logical polymorphic entities into a single physical SQL table.
+Joist supports [Single Table Inheritance](https://www.martinfowler.com/eaaCatalog/singleTableInheritance.html), which allows inheritance/subtyping of entities (like `class Dog extends Animal`), by automatically mapping multiple logical polymorphic entities (`Dog`, `Cat`, and `Animal`) into a single physical SQL table (`animals`).
 
 ## Database Representation
 
@@ -12,12 +12,13 @@ For example, lets say we have a `Dog` entity and a `Cat` entity, and we want the
 For single table inheritance, we represent this in Postgres by having a single table: `animals`.
 
 - The `animals` table has all columns for `Animal`s, `Dog`s, or `Cat`s
-- A discriminator column, i.e. `type`, tells Joist whether a given row is a `Dog` or a `Cat`
+- A discriminator column, i.e. `type_id`, tells Joist whether a given row is a `Dog` or a `Cat`
   - We currently require the discriminator field to be an enum column
-- Any `Dog`-only columns are configured in `joist-codegen.json`
-- Any `Cat`-only columns are configured in `joist-codegen.json`
+- Any `Dog`-only columns are configured in `joist-config.json`
+- Any `Cat`-only columns are configured in `joist-config.json`
+- Any `Dog`- or `Cat`-only columns must be nullable
 
-The`joist-codegen.json` might look like:
+The`joist-config.json` might look like:
 
 ```json
 {
@@ -26,7 +27,7 @@ The`joist-codegen.json` might look like:
       "fields": {
         "type": { "stiDiscriminator": { "DOG": "Dog", "CAT": "Cat" } },
         "canBark": { "stiType": "Dog" },
-        "canMeow": { "stiNotNull": true, "stiType": "Cat" }
+        "canMeow": { "stiType": "Cat", "stiNotNull": true }
       },
       "tag": "a"
     },
@@ -42,19 +43,14 @@ The`joist-codegen.json` might look like:
 
 ## Entity Representation
 
-When `joist-codegen` sees the above `joist-codegen.json` setup, Joist will ensure that the `Dog` model extends the `Animal` model.
+When `joist-codegen` sees the above `joist-config.json` setup, Joist will ensure that the `Dog` model extends the `Animal` model.
 
 Note that because of the codegen entities, it will actually end up looking like:
 
 ```typescript
-// in AnimalCodegen.ts
-abstract class AnimalCodegen extends BaseEntity {
-  name: string;
-}
-
-// in Animal.ts
-class Animal extends AnimalCodegen {
-  // any custom logic
+// in Dog.ts
+class Dog extends DogCodegen {
+   // any custom logic
 }
 
 // in DogCodegen.ts
@@ -62,30 +58,42 @@ abstract class DogCodegen extends Animal {
   can_bark: boolean;
 }
 
-// in Dog.ts
-class Dog extends DogCodegen {
-  // any custom logic
+// in Animal.ts
+class Animal extends AnimalCodegen {
+   // any custom logic
+}
+
+// in AnimalCodegen.ts
+abstract class AnimalCodegen extends BaseEntity {
+   name: string;
 }
 ```
 
-And when you load several `Animal`s, Joist will automatically read the `type` column and create entities of the right type:
+And when you load several `Animal`s, Joist will automatically read the `type_id` column and create the respective subtype:
 
 ```typescript
 const [a1, a2] = await em.loadAll(Animal, ["a:1", "a:2"]);
 // If a1 was saved as a dog, it will be a Dog
 expect(a1).toBeInstanceOf(Dog);
-// if a2 was saved as a cit, it will be a Cat
+// if a2 was saved as a cat, it will be a Cat
 expect(a2).toBeInstanceOf(Cat);
 ```
 
-## SubType Configuration in joist-config.json
+## SubType Configuration
 
-Due to STI's lack of schema-based encoding, you need to manually configure the `joist-config.json`, by:
+Due to STI's lack of schema-based encoding (see Pros/Cons section below), you may often need to manually configure the `joist-config.json` to give Joist hints about "which subtype" a given relation should be.
 
-1. Adding an `stiDiscriminator` field to your `type_id` (or similar) which Joist will use to know "which subtype is this"
-2. Adding `stiType: "SubType"` to any fields in the table that should be in the given SubType.
-   - Currently we only support a field being in a single subtype
+For example, instead of the `DogPack.leader` relation (from the `dog_packers.leader_id` FK) being typed as `Animal` (which is the `animals` table that the `leader_id` FK points to in the database schema), you want it to be typed as `Dog` because you know all `DogPack` leader's should be `Dog`s.
+
+These hints in `joist-config.json` generally look like:
+
+1. Adding an `stiDiscriminator` mapping to the `type` field that Joist will use to know "which subtype is this?"
+2. Adding `stiType: "Dog"` or `stiType: "Cat"` to any field (like `canBark` or `canMeow`) in the `animals` table that should be limited to a specific subtype
+   - The value of `"Dog"` or `"Cat"` should match a name in the `stiDiscriminator` mapping
+   - Currently, we only support a field being in a single subtype
 3. Adding `stiNotNull: true` to any fields that you want Joist to enforce as not null
+   - For example, if you want `canMewo` to be required for all `Cat`s, you can add `stiNotNull: true` to the `canMeow` field
+   - Without an explicit `stiNotNull` set, we assume subtype fields are nullable, which is how they're represented in the database
    - See the "Pros/Cons" section later for why this can't be encoded in the database
 4. On any FKs that point _to_ your base type, add `stiType: "SubType"` to indicate that the FK is only valid for the given subtype.
    - See the `DogPack` example in the above example config
@@ -123,13 +131,13 @@ For example, if an `em.load(Animal, "a:1")` finds a row only in the `animals` ta
 
 ## Pros/Cons to Single Table Inheritance
 
-Besides Single Table Inheritance (STI) and [Class Table Inheritance](./class-table-inheritance.md) (CTI), Joist generally recommends using CTI over STI for the following reasons:
+Between Single Table Inheritance (STI) and [Class Table Inheritance](./class-table-inheritance.md) (CTI), Joist generally recommends using CTI over STI for the following reasons:
 
 1. With CTI, the database schema makes it obvious what the class hierarchy should be.
 
-   Given the schema itself already has the per-type fields split out (into separate tables), there is very little configuration for CTI, and instead the generated output is basically "automatically correct".
+   Given the schema itself already has the per-type fields split out (into separate tables), there is very little configuration for CTI, and instead the generated entities are basically "automatically correct".
 
-   With STI, this sort of schema-based encoding does not exist, so we have to configure items like the discriminator value, and which fields belong to which type, in the `joist-config.json`. This is doable, but tedious.
+   With STI, this schema-based encoding does not exist, so we have to configure items like the discriminator value, and which fields belong to which subtype, in the `joist-config.json`. This is doable, but tedious.
 
 2. With CTI, the schema is safer, because the subtype-only columns can have not-null constraints.
 
@@ -137,19 +145,21 @@ Besides Single Table Inheritance (STI) and [Class Table Inheritance](./class-tab
 
    Instead, we have to indicate in `joist-config.json` that Joist should enforce model-level not-null constraints, which is okay, but not as good as database-level enforcement.
 
-3. With CTI, we can have foreign keys directly to subtypes.
+3. With CTI, we can have foreign keys point directly to subtypes.
 
-   For example, we could have a `DogCollar` entity that had a `dog_collars.dog_id` foreign key that points _only_ to `dogs`, and is fundamentally unable to point to `Cat`s.
+   For example, we could have a `DogPack` entity with a `dog_packs.leader_id` foreign key that references the `dogs` subtype table, and so points _only_ to `Dog`s, and is fundamentally unable to point to `Cat`s (even at the database level, this is enforced b/c the `dogs` table will not have any ids of `Cat` entities).
 
-   With STI, it's not possible in the database to represent/enforce that FKs are only valid for a specific subtype.
+   With STI, it's not possible in the database to represent/enforce that FKs are only valid for a specific subtype (`dog_packs.leader_id` can only point to the `animals` table).
 
-That said, the pro of STI is that you don't need `LEFT OUTER JOIN`s to load entities, b/c all data for all subtypes is a single table, so Joist could likely support STI someday, it just does not currently.
+That said, the pro of STI is that you don't need `LEFT OUTER JOIN`s to load entities (see the [CTI](./class-table-inheritance.md) docs), b/c all data for all subtypes is a single table.
 
 ## When to Choose STI/CTI
 
-To application code, the STI and CTI approach can look near identical.
+To application code, the STI and CTI approach can look near identical, because both approaches result in the same `Dog`, `Cat`, and `Animal` type hierarchy.
 
 But, generally Joist recommends:
 
-- Use CTI when the polymorphism is an integral part of your domain model, i.e. you have "true" `Cat` and `Dog` entities
+- Use CTI when the polymorphism is an integral part of your domain model, i.e. you have "true" `Cat` and `Dog` entities as separate concepts you want to model in your domain
 - Use STI when the polymorphism is for a transient implementation detail, i.e. migrating your `Cat` model to a `CatV2` model.
+
+And, either way, use both approaches judiciously; in a system of 50-100 entities, you should probably be using CTI/STI only a handful of times.

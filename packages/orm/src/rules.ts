@@ -90,6 +90,7 @@ export function isCannotBeUpdatedRule(rule: Function): rule is CannotBeUpdatedRu
   return "field" in rule && "immutable" in rule;
 }
 
+/** For STI, enforces subtype-specific relations/FKs at runtime. */
 export function mustBeSubType<T extends Entity, K extends keyof Changes<T> & string>(
   relationName: K,
 ): ValidationRule<T> {

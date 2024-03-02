@@ -312,8 +312,10 @@ export function getBatchKeyFromGenericStructure(meta: EntityMetadata, query: Par
   // Clone b/c parseFindQuery does not deep copy complex conditions, i.e. `a.firstName.eq(...)`
   const clone = structuredClone(query);
   stripValues(clone);
-  // Include the meta b/c STI queries for different subtypes will look identical
-  (clone as any).meta = meta.type;
+  if (meta.stiDiscriminatorValue) {
+    // Include the meta b/c STI queries for different subtypes will look identical
+    (clone as any).meta = meta.type;
+  }
   // We could use `whereFilterHash` too if it's faster?
   return JSON.stringify(clone);
 }

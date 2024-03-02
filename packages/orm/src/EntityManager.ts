@@ -1036,15 +1036,7 @@ export class EntityManager<C = unknown, Entity extends EntityW = EntityW> {
       if (updatedAt) data[updatedAt] = new Date();
       // Set the discriminator for STI
       if (baseMeta.inheritanceType === "sti") {
-        const typeName = entity.constructor.name;
-        const st = baseMeta.subTypes.find((st) => st.type === typeName);
-        if (st) {
-          const field = baseMeta.fields[baseMeta.stiDiscriminatorField!] as EnumField;
-          const code = (field.enumDetailType.findById(st.stiDiscriminatorValue!) as any).code;
-          (entity as any)[baseMeta.stiDiscriminatorField!] = code;
-        } else {
-          (entity as any)[baseMeta.stiDiscriminatorField!] = undefined;
-        }
+        setStiDiscriminatorValue(baseMeta, entity);
       }
       this.#rm.queueAllDownstreamFields(entity);
     }
@@ -1852,7 +1844,9 @@ function getNow(): Date {
   return now;
 }
 
+/** Given a `row` from the db, resolves the CTI/STI subtype, if applicable. */
 function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetadata {
+  // Common case of no CTI or STI inheritance
   if (!row.__class && maybeBaseMeta.inheritanceType !== "sti") {
     return maybeBaseMeta;
   }
@@ -1869,5 +1863,18 @@ function findConcreteMeta(maybeBaseMeta: EntityMetadata, row: any): EntityMetada
     return baseMeta.subTypes.find((st) => st.stiDiscriminatorValue === value) ?? baseMeta;
   } else {
     throw new Error("Unknown inheritance type");
+  }
+}
+
+/** Sets the `Animal.type` enum to the right subtype value. */
+function setStiDiscriminatorValue(baseMeta: EntityMetadata, entity: Entity): void {
+  const typeName = entity.constructor.name;
+  const st = baseMeta.subTypes.find((st) => st.type === typeName);
+  if (st) {
+    const field = baseMeta.fields[baseMeta.stiDiscriminatorField!] as EnumField;
+    const code = (field.enumDetailType.findById(st.stiDiscriminatorValue!) as any).code;
+    (entity as any)[baseMeta.stiDiscriminatorField!] = code;
+  } else {
+    (entity as any)[baseMeta.stiDiscriminatorField!] = undefined;
   }
 }

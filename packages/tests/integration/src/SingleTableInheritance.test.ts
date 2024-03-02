@@ -1,3 +1,4 @@
+import { getProperties } from "joist-orm";
 import {
   newAuthor,
   newTask,
@@ -224,6 +225,31 @@ describe("SingleTableInheritance", () => {
 
     const rows = await select("tasks");
     expect(rows).toMatchObject([]);
+  });
+
+  it("reports the right properties", () => {
+    expect(Object.keys(getProperties(Task.metadata))).toMatchInlineSnapshot(`
+     [
+       "newTaskTaskItems",
+       "oldTaskTaskItems",
+       "taskTaskItems",
+     ]
+    `);
+    expect(Object.keys(getProperties(TaskNew.metadata))).toMatchInlineSnapshot(`
+     [
+       "specialNewAuthor",
+       "newTaskTaskItems",
+       "oldTaskTaskItems",
+       "taskTaskItems",
+     ]
+    `);
+    expect(Object.keys(getProperties(TaskOld.metadata))).toMatchInlineSnapshot(`
+     [
+       "newTaskTaskItems",
+       "oldTaskTaskItems",
+       "taskTaskItems",
+     ]
+    `);
   });
 
   it("prevents the discriminator column from being updated", async () => {

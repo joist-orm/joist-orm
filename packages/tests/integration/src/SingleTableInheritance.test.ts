@@ -1,4 +1,14 @@
-import {newAuthor, newTask, newTaskItem, newTaskNew, newTaskOld, Task, TaskNew, TaskOld, TaskType} from "src/entities";
+import {
+  newAuthor,
+  newTask,
+  newTaskItem,
+  newTaskNew,
+  newTaskOld,
+  Task,
+  TaskNew,
+  TaskOld,
+  TaskType,
+} from "src/entities";
 import { insertTask, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
@@ -211,5 +221,18 @@ describe("SingleTableInheritance", () => {
     expect(a.tasks.get).toHaveLength(2);
     expect(a.tasks.get[0].specialNewField).toBe(1);
     expect(a.tasks.get[1].specialNewField).toBe(2);
+  });
+
+  it("can mark subtype fields as required", async () => {
+    const em = newEntityManager();
+    // Given we've configured specialOldField to be stiNotNull
+    const ot = newTaskOld(em, {});
+    // Then we can access it without a null check
+    expect(ot.specialOldField.toString()).toBe("0");
+    // But fields without the stiNotNull
+    const nt = newTaskNew(em, { specialNewField: 2 });
+    // Do require the null check
+    // @ts-expect-error
+    expect(nt.specialNewField.toString()).toBe("2");
   });
 });

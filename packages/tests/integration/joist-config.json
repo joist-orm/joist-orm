@@ -55,13 +55,11 @@
     "Tag": { "relations": { "authors": { "large": true } }, "tag": "t" },
     "Task": {
       "fields": {
-        "type": {
-          "singleTableInheritance": {
-            "NEW": { "entityName": "TaskNew", "fields": ["specialNewField", "specialNewAuthor"] },
-            "OLD": { "entityName": "TaskOld", "fields": ["specialOldField"] }
-          }
-        }
+        "specialNewField": { "stiType": "TaskNew" },
+        "specialOldField": { "stiNotNull": true, "stiType": "TaskOld" },
+        "type": { "stiDiscriminator": { "NEW": "TaskNew", "OLD": "TaskOld" } }
       },
+      "relations": { "specialNewAuthor": { "stiType": "TaskNew" } },
       "tag": "task"
     },
     "TaskItem": {

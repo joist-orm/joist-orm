@@ -128,31 +128,45 @@ function setClassTableInheritance(entities: EntityDbMetadata[]): void {
 function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata[]): void {
   for (const entity of entities) {
     const [fieldName, stiField] =
-      Object.entries(config.entities[entity.name]?.fields || {}).find(([, f]) => !!f.singleTableInheritance) ?? [];
-    if (fieldName && stiField && stiField.singleTableInheritance) {
+      Object.entries(config.entities[entity.name]?.fields || {}).find(([, f]) => !!f.stiDiscriminator) ?? [];
+    if (fieldName && stiField && stiField.stiDiscriminator) {
       entity.inheritanceType = "sti";
       // Ensure we have an enum field so that we can bake the STI discriminators into the metadata.ts file
       const enumField =
         entity.enums.find((e) => e.fieldName === fieldName) ??
         fail(`No enum column found for ${entity.name}.${fieldName}, which is required to use singleTableInheritance`);
       entity.stiDiscriminatorField = enumField.fieldName;
-      for (const [enumCode, config] of Object.entries(stiField.singleTableInheritance)) {
+      for (const [enumCode, subTypeName] of Object.entries(stiField.stiDiscriminator)) {
+        // Find all the base entity's fields that belong to us
+        const subTypeFields = [
+          ...Object.entries(config.entities[entity.name]?.fields ?? {}),
+          ...Object.entries(config.entities[entity.name]?.relations ?? {}),
+        ].filter(([, f]) => f.stiType === subTypeName);
+        const subTypeFieldNames = subTypeFields.map(([name]) => name);
+
+        // Make fields as required
+        function maybeRequired<T extends { notNull: boolean; fieldName: string }>(field: T): T {
+          const config = subTypeFields.find(([name]) => name === field.fieldName)?.[1]!;
+          if (config.stiNotNull) field.notNull = true;
+          return field;
+        }
+
         // Synthesize an entity for this STI sub-entity
         const subEntity: EntityDbMetadata = {
-          name: config.entityName,
-          entity: makeEntity(config.entityName),
+          name: subTypeName,
+          entity: makeEntity(subTypeName),
           tableName: entity.tableName,
           primaryKey: entity.primaryKey,
-          primitives: entity.primitives.filter((f) => config.fields.includes(f.fieldName)),
-          enums: entity.enums.filter((f) => config.fields.includes(f.fieldName)),
-          pgEnums: entity.pgEnums.filter((f) => config.fields.includes(f.fieldName)),
-          manyToOnes: entity.manyToOnes.filter((f) => config.fields.includes(f.fieldName)),
-          oneToManys: entity.oneToManys.filter((f) => config.fields.includes(f.fieldName)),
-          largeOneToManys: entity.largeOneToManys.filter((f) => config.fields.includes(f.fieldName)),
-          oneToOnes: entity.oneToOnes.filter((f) => config.fields.includes(f.fieldName)),
-          manyToManys: entity.manyToManys.filter((f) => config.fields.includes(f.fieldName)),
-          largeManyToManys: entity.largeManyToManys.filter((f) => config.fields.includes(f.fieldName)),
-          polymorphics: entity.polymorphics.filter((f) => config.fields.includes(f.fieldName)),
+          primitives: entity.primitives.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          enums: entity.enums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          pgEnums: entity.pgEnums.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          manyToOnes: entity.manyToOnes.filter((f) => subTypeFieldNames.includes(f.fieldName)).map(maybeRequired),
+          oneToManys: entity.oneToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          largeOneToManys: entity.largeOneToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          oneToOnes: entity.oneToOnes.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          manyToManys: entity.manyToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          largeManyToManys: entity.largeManyToManys.filter((f) => subTypeFieldNames.includes(f.fieldName)),
+          polymorphics: entity.polymorphics.filter((f) => subTypeFieldNames.includes(f.fieldName)),
           tagName: entity.tagName,
           createdAt: undefined,
           updatedAt: undefined,
@@ -168,16 +182,16 @@ function expandSingleTableInheritance(config: Config, entities: EntityDbMetadata
         };
 
         // Now strip all the subclass fields from the base class
-        entity.primitives = entity.primitives.filter((f) => !config.fields.includes(f.fieldName));
-        entity.enums = entity.enums.filter((f) => !config.fields.includes(f.fieldName));
-        entity.pgEnums = entity.pgEnums.filter((f) => !config.fields.includes(f.fieldName));
-        entity.manyToOnes = entity.manyToOnes.filter((f) => !config.fields.includes(f.fieldName));
-        entity.oneToManys = entity.oneToManys.filter((f) => !config.fields.includes(f.fieldName));
-        entity.largeOneToManys = entity.largeOneToManys.filter((f) => !config.fields.includes(f.fieldName));
-        entity.oneToOnes = entity.oneToOnes.filter((f) => !config.fields.includes(f.fieldName));
-        entity.manyToManys = entity.manyToManys.filter((f) => !config.fields.includes(f.fieldName));
-        entity.largeManyToManys = entity.largeManyToManys.filter((f) => !config.fields.includes(f.fieldName));
-        entity.polymorphics = entity.polymorphics.filter((f) => !config.fields.includes(f.fieldName));
+        entity.primitives = entity.primitives.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.enums = entity.enums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.pgEnums = entity.pgEnums.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.manyToOnes = entity.manyToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.oneToManys = entity.oneToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.largeOneToManys = entity.largeOneToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.oneToOnes = entity.oneToOnes.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.manyToManys = entity.manyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.largeManyToManys = entity.largeManyToManys.filter((f) => !subTypeFieldNames.includes(f.fieldName));
+        entity.polymorphics = entity.polymorphics.filter((f) => !subTypeFieldNames.includes(f.fieldName));
 
         entities.push(subEntity);
       }

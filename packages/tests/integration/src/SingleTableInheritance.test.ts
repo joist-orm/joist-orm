@@ -139,7 +139,7 @@ describe("SingleTableInheritance", () => {
         type_id: 1,
         duration_in_days: 0,
         special_new_field: null,
-        special_old_field: null,
+        special_old_field: 0,
       },
       {
         id: 4,

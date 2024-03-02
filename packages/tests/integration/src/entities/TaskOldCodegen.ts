@@ -12,6 +12,7 @@ import {
   LoadHint,
   loadLens,
   newChangesProxy,
+  newRequiredRule,
   OptsOf,
   OrderBy,
   PartialOrNull,
@@ -42,18 +43,18 @@ export type TaskOldId = Flavor<string, TaskOld> & Flavor<string, "Task">;
 
 export interface TaskOldFields extends TaskFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
-  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  specialOldField: { kind: "primitive"; type: number; unique: false; nullable: never; derived: false };
 }
 
 export interface TaskOldOpts extends TaskOpts {
-  specialOldField?: number | null;
+  specialOldField: number;
 }
 
 export interface TaskOldIdsOpts extends TaskIdsOpts {
 }
 
 export interface TaskOldFilter extends TaskFilter {
-  specialOldField?: ValueFilter<number, null>;
+  specialOldField?: ValueFilter<number, never>;
 }
 
 export interface TaskOldGraphQLFilter extends TaskGraphQLFilter {
@@ -65,6 +66,8 @@ export interface TaskOldOrder extends TaskOrder {
 }
 
 export const taskOldConfig = new ConfigApi<TaskOld, Context>();
+
+taskOldConfig.addRule(newRequiredRule("specialOldField"));
 
 export abstract class TaskOldCodegen extends Task implements Entity {
   static defaultValues: object = {};
@@ -103,11 +106,11 @@ export abstract class TaskOldCodegen extends Task implements Entity {
     return getField(this, "id");
   }
 
-  get specialOldField(): number | undefined {
+  get specialOldField(): number {
     return getField(this, "specialOldField");
   }
 
-  set specialOldField(specialOldField: number | undefined) {
+  set specialOldField(specialOldField: number) {
     setField(this, "specialOldField", specialOldField);
   }
 

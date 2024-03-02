@@ -869,7 +869,7 @@ export const taskOldMeta: EntityMetadata<TaskOld> = {
   tableName: "tasks",
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("task", "id", "id", "int"), immutable: true },
-    "specialOldField": { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("specialOldField", "special_old_field", "int"), immutable: false },
+    "specialOldField": { kind: "primitive", fieldName: "specialOldField", fieldIdName: undefined, derived: false, required: true, protected: false, type: "number", serde: new PrimitiveSerde("specialOldField", "special_old_field", "int"), immutable: false },
   },
   allFields: {},
   orderBy: undefined,

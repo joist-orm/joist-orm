@@ -199,9 +199,10 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
   const stiEntities = getStiEntities(entities);
   if (stiEntities.size === 0) return;
   for (const entity of entities) {
+    // m2os
     for (const m2o of entity.manyToOnes) {
       const target = stiEntities.get(m2o.otherEntity.name);
-      // See if the user has configured this to a different subtype
+      // See if the user has configured this specific m2o FK as a different subtype
       const stiType = config.entities[entity.name]?.relations?.[m2o.fieldName]?.stiType;
       if (target && stiType) {
         const { subTypes } = target;
@@ -209,6 +210,22 @@ function rewriteSingleTableForeignKeys(config: Config, entities: EntityDbMetadat
           subTypes.find((s) => s.name === stiType) ??
           fail(`Could not find STI type '${stiType}' in ${subTypes.map((s) => s.name)}`)
         ).entity;
+      }
+    }
+    // o2ms
+    for (const o2m of entity.oneToManys) {
+      // See if our otherField is only in a specific STI subtype
+      const target = stiEntities.get(o2m.otherEntity.name);
+      if (target && target.base.inheritanceType === "sti") {
+        // Ensure the incoming FK is not in the base type, and find the 1st subtype (eventually N subtypes?)
+        const otherField = target.subTypes.find(
+          (st) =>
+            !target.base.manyToOnes.some((m) => m.fieldName === o2m.otherFieldName) &&
+            st.manyToOnes.some((m) => m.fieldName === o2m.otherFieldName),
+        );
+        if (otherField) {
+          o2m.otherEntity = otherField.entity;
+        }
       }
     }
   }

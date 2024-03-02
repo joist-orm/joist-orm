@@ -300,6 +300,7 @@ export function up(b: MigrationBuilder): void {
     duration_in_days: { type: "int", notNull: true },
     // NewTask columns
     special_new_field: { type: "int", notNull: false },
+    special_new_author_id: foreignKey("authors", { notNull: false }),
     // OldTask columns
     special_old_field: { type: "int", notNull: false },
   });

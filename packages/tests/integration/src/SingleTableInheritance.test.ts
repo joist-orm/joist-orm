@@ -1,4 +1,4 @@
-import { newTask, newTaskItem, newTaskNew, newTaskOld, Task, TaskNew, TaskOld, TaskType } from "src/entities";
+import {newAuthor, newTask, newTaskItem, newTaskNew, newTaskOld, Task, TaskNew, TaskOld, TaskType} from "src/entities";
 import { insertTask, select } from "src/entities/inserts";
 import { newEntityManager, queries, resetQueryCount } from "src/testEm";
 
@@ -173,18 +173,20 @@ describe("SingleTableInheritance", () => {
     await expect(em.flush()).rejects.toThrow("type cannot be updated");
   });
 
-  it("can differentiate between old and new tasks", async () => {
+  it("can use hints to differentiate between old and new task m2o FKs", async () => {
     const em = newEntityManager();
     const t = newTask(em);
     const ot = newTaskOld(em, { specialOldField: 1 });
     const nt = newTaskNew(em, { specialNewField: 2 });
+    // Given ti.newTask points to TaskNew, and ti.oldTask points to TaskOld
     const ti = newTaskItem(em, { task: t, newTask: nt, oldTask: ot });
     await em.flush();
+    // Then we can access those with the right types
     expect(ti.oldTask.get!.specialOldField).toBe(1);
     expect(ti.newTask.get!.specialNewField).toBe(2);
   });
 
-  it("cannot use the wrong task type", async () => {
+  it("cannot use the wrong task type for a m2o FK", async () => {
     const em = newEntityManager();
     const t = newTask(em);
     const ot = newTaskOld(em, { specialOldField: 1 });
@@ -193,6 +195,21 @@ describe("SingleTableInheritance", () => {
     newTaskItem(em, { task: t, newTask: ot, oldTask: ot });
     // @ts-expect-error
     newTaskItem(em, { task: t, newTask: nt, oldTask: nt });
-    await expect(em.flush()).rejects.toThrow("TaskItem#1 TaskOld#1 must be a TaskNew, TaskItem#2 TaskNew#1 must be a TaskOld");
+    await expect(em.flush()).rejects.toThrow(
+      "TaskItem#1 TaskOld#1 must be a TaskNew, TaskItem#2 TaskNew#1 must be a TaskOld",
+    );
+  });
+
+  it("can use hints to differentiate o2m collections", async () => {
+    const em = newEntityManager();
+    const a = newAuthor(em);
+    // Given only a TaskNew can point to an Author
+    newTaskNew(em, { specialNewField: 1, specialNewAuthor: a });
+    newTaskNew(em, { specialNewField: 2, specialNewAuthor: a });
+    await em.flush();
+    // Then we can access it with the right types
+    expect(a.tasks.get).toHaveLength(2);
+    expect(a.tasks.get[0].specialNewField).toBe(1);
+    expect(a.tasks.get[1].specialNewField).toBe(2);
   });
 });

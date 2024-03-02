@@ -12,6 +12,7 @@ type TaskOld {
   newTaskTaskItems: [TaskItem!]!
   oldTaskTaskItems: [TaskItem!]!
   taskTaskItems: [TaskItem!]!
+  specialNewAuthor: Author
 }
 
 input SaveTaskOldInput {
@@ -19,6 +20,7 @@ input SaveTaskOldInput {
   specialOldField: Int
   type: String
   durationInDays: Int
+  specialNewAuthorId: ID
 }
 
 type SaveTaskOldResult {

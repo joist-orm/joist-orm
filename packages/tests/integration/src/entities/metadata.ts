@@ -159,6 +159,7 @@ export const authorMeta: EntityMetadata<Author> = {
     "schedules": { kind: "o2m", fieldName: "schedules", fieldIdName: "scheduleIds", required: false, otherMetadata: () => authorScheduleMeta, otherFieldName: "author", serde: undefined, immutable: false },
     "books": { kind: "o2m", fieldName: "books", fieldIdName: "bookIds", required: false, otherMetadata: () => bookMeta, otherFieldName: "author", serde: undefined, immutable: false },
     "comments": { kind: "o2m", fieldName: "comments", fieldIdName: "commentIds", required: false, otherMetadata: () => commentMeta, otherFieldName: "parent", serde: undefined, immutable: false },
+    "tasks": { kind: "o2m", fieldName: "tasks", fieldIdName: "taskIds", required: false, otherMetadata: () => taskNewMeta, otherFieldName: "specialNewAuthor", serde: undefined, immutable: false },
     "tags": { kind: "m2m", fieldName: "tags", fieldIdName: "tagIds", required: false, otherMetadata: () => tagMeta, otherFieldName: "authors", serde: undefined, immutable: false, joinTableName: "authors_to_tags", columnNames: ["author_id", "tag_id"] },
     "image": { kind: "o2o", fieldName: "image", fieldIdName: "imageId", required: false, otherMetadata: () => imageMeta, otherFieldName: "author", serde: undefined, immutable: false },
     "userOneToOne": { kind: "o2o", fieldName: "userOneToOne", fieldIdName: "userOneToOneId", required: false, otherMetadata: () => userMeta, otherFieldName: "authorManyToOne", serde: undefined, immutable: false },
@@ -841,6 +842,7 @@ export const taskNewMeta: EntityMetadata<TaskNew> = {
   fields: {
     "id": { kind: "primaryKey", fieldName: "id", fieldIdName: undefined, required: true, serde: new KeySerde("task", "id", "id", "int"), immutable: true },
     "specialNewField": { kind: "primitive", fieldName: "specialNewField", fieldIdName: undefined, derived: false, required: false, protected: false, type: "number", serde: new PrimitiveSerde("specialNewField", "special_new_field", "int"), immutable: false },
+    "specialNewAuthor": { kind: "m2o", fieldName: "specialNewAuthor", fieldIdName: "specialNewAuthorId", derived: false, required: false, otherMetadata: () => authorMeta, otherFieldName: "tasks", serde: new KeySerde("a", "specialNewAuthor", "special_new_author_id", "int"), immutable: false },
   },
   allFields: {},
   orderBy: undefined,

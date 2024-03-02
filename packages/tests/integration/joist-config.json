@@ -57,7 +57,7 @@
       "fields": {
         "type": {
           "singleTableInheritance": {
-            "NEW": { "entityName": "TaskNew", "fields": ["specialNewField"] },
+            "NEW": { "entityName": "TaskNew", "fields": ["specialNewField", "specialNewAuthor"] },
             "OLD": { "entityName": "TaskOld", "fields": ["specialOldField"] }
           }
         }

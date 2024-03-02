@@ -1,16 +1,23 @@
 import {
   Changes,
   ConfigApi,
+  EntityFilter,
+  EntityGraphQLFilter,
   EntityMetadata,
   EntityOrmField,
   failNoIdYet,
+  FilterOf,
   Flavor,
   getField,
+  getOrmField,
+  GraphQLFilterOf,
+  hasOne,
   isLoaded,
   Lens,
   Loaded,
   LoadHint,
   loadLens,
+  ManyToOneReference,
   newChangesProxy,
   OptsOf,
   OrderBy,
@@ -24,6 +31,10 @@ import {
 } from "joist-orm";
 import { Context } from "src/context";
 import {
+  Author,
+  AuthorId,
+  authorMeta,
+  AuthorOrder,
   Entity,
   EntityManager,
   newTaskNew,
@@ -43,25 +54,31 @@ export type TaskNewId = Flavor<string, TaskNew> & Flavor<string, "Task">;
 export interface TaskNewFields extends TaskFields {
   id: { kind: "primitive"; type: number; unique: true; nullable: never };
   specialNewField: { kind: "primitive"; type: number; unique: false; nullable: undefined; derived: false };
+  specialNewAuthor: { kind: "m2o"; type: Author; nullable: undefined; derived: false };
 }
 
 export interface TaskNewOpts extends TaskOpts {
   specialNewField?: number | null;
+  specialNewAuthor?: Author | AuthorId | null;
 }
 
 export interface TaskNewIdsOpts extends TaskIdsOpts {
+  specialNewAuthorId?: AuthorId | null;
 }
 
 export interface TaskNewFilter extends TaskFilter {
   specialNewField?: ValueFilter<number, null>;
+  specialNewAuthor?: EntityFilter<Author, AuthorId, FilterOf<Author>, null>;
 }
 
 export interface TaskNewGraphQLFilter extends TaskGraphQLFilter {
   specialNewField?: ValueGraphQLFilter<number>;
+  specialNewAuthor?: EntityGraphQLFilter<Author, AuthorId, GraphQLFilterOf<Author>, null>;
 }
 
 export interface TaskNewOrder extends TaskOrder {
   specialNewField?: OrderBy;
+  specialNewAuthor?: AuthorOrder;
 }
 
 export const taskNewConfig = new ConfigApi<TaskNew, Context>();
@@ -143,5 +160,10 @@ export abstract class TaskNewCodegen extends Task implements Entity {
 
   isLoaded<H extends LoadHint<TaskNew>>(hint: H): this is Loaded<TaskNew | Task, H> {
     return isLoaded(this as any as TaskNew, hint);
+  }
+
+  get specialNewAuthor(): ManyToOneReference<TaskNew, Author, undefined> {
+    const { relations } = getOrmField(this);
+    return relations.specialNewAuthor ??= hasOne(this as any as TaskNew, authorMeta, "specialNewAuthor", "tasks");
   }
 }

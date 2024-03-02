@@ -32,6 +32,7 @@ type Author {
   tagsOfAllBooks: String!
   nickNames: String
   graphqlOnlyField(arg: Int): Int!
+  tasks: [Task!]!
 }
 
 input SaveAuthorInput {

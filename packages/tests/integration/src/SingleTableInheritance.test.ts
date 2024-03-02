@@ -109,6 +109,14 @@ describe("SingleTableInheritance", () => {
     expect(tasks).toHaveLength(1);
   });
 
+  it("can query for sub-types and get implicit filters", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1 });
+    const em = newEntityManager();
+    const tasks = await em.find(TaskNew, {});
+    expect(tasks).toMatchEntity([{ type: TaskType.New }]);
+  });
+
   it("can have subtype-specific hooks", async () => {
     const em = newEntityManager();
     newTask(em);
@@ -197,6 +205,25 @@ describe("SingleTableInheritance", () => {
       { id: 3, type_id: 1, special_old_field: 2 },
       { id: 4, type_id: 1, special_old_field: 2 },
     ]);
+  });
+
+  it("can bulk-delete tasks of each type", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1 });
+
+    const em = newEntityManager();
+    const [nt1, nt2] = await em.find(TaskNew, { type: TaskType.New });
+    const [ot1, ot2] = await em.find(TaskOld, { type: TaskType.Old });
+    em.delete(nt1);
+    em.delete(nt2);
+    em.delete(ot1);
+    em.delete(ot2);
+    await em.flush();
+
+    const rows = await select("tasks");
+    expect(rows).toMatchObject([]);
   });
 
   it("prevents the discriminator column from being updated", async () => {

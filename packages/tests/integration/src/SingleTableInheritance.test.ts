@@ -190,8 +190,8 @@ describe("SingleTableInheritance", () => {
     await insertTask({ type: "OLD", special_old_field: 1 });
 
     const em = newEntityManager();
-    const [nt1, nt2] = await em.find(TaskNew, { type: TaskType.New });
-    const [ot1, ot2] = await em.find(TaskOld, { type: TaskType.Old });
+    const [nt1, nt2] = await em.find(TaskNew, {});
+    const [ot1, ot2] = await em.find(TaskOld, {});
     nt1.specialNewField = 2;
     nt2.specialNewField = 2;
     ot1.specialOldField++;

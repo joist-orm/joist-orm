@@ -283,7 +283,7 @@ export function configureMetadata(metas: EntityMetadata[]): void {
       // clauses.
       Object.entries(b.fields).forEach(([name, field]) => {
         // We use `b0` because that is what addTablePerClassJoinsAndClassTag uses to join in the base table
-        m.allFields[name] = { ...field, aliasSuffix: "_b0" };
+        m.allFields[name] = { ...field, aliasSuffix: b.inheritanceType === "cti" ? "_b0" : "" };
       });
     }
   });

@@ -95,9 +95,16 @@ function addUpdates(ops: Ops, todo: Todo): void {
   if (todo.updates.length > 0) {
     const meta = todo.metadata;
     if (meta.subTypes.length > 0) {
-      for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
-        const op = newUpdateOp(meta, group);
+      if (meta.inheritanceType === "cti") {
+        for (const [meta, group] of groupEntitiesByTable(todo.updates)) {
+          const op = newUpdateOp(meta, group);
+          if (op) ops.updates.push(op);
+        }
+      } else if (meta.inheritanceType === "sti") {
+        const op = newUpdateOp(meta, todo.updates);
         if (op) ops.updates.push(op);
+      } else {
+        throw new Error(`Found ${meta.tableName} subTypes without a known inheritanceType ${meta.inheritanceType}`);
       }
     } else {
       const op = newUpdateOp(meta, todo.updates);
@@ -135,7 +142,16 @@ function newUpdateOp(meta: EntityMetadata, entities: Entity[]): UpdateOp | undef
     }
   }
 
-  const columns: Array<Column & BindingColumn> = Object.values(meta.fields)
+  const columns: Array<Column & BindingColumn> = (
+    meta.inheritanceType === "sti"
+      ? // Hack this one handling of STI into here...
+        getBaseSelfAndSubMetas(meta).flatMap((meta) =>
+          meta.stiDiscriminatorField
+            ? Object.values(meta.fields)
+            : Object.values(meta.fields).filter((f) => f.fieldName !== "id"),
+        )
+      : Object.values(meta.fields)
+  )
     .filter((f) => changedFields.has(f.fieldName))
     .filter(hasSerde)
     .flatMap((f) => f.serde.columns);

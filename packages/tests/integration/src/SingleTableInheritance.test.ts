@@ -175,6 +175,30 @@ describe("SingleTableInheritance", () => {
     ]);
   });
 
+  it("can bulk-update tasks of each type", async () => {
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    await insertTask({ type: "NEW", special_new_field: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1 });
+    await insertTask({ type: "OLD", special_old_field: 1 });
+
+    const em = newEntityManager();
+    const [nt1, nt2] = await em.find(TaskNew, { type: TaskType.New });
+    const [ot1, ot2] = await em.find(TaskOld, { type: TaskType.Old });
+    nt1.specialNewField = 2;
+    nt2.specialNewField = 2;
+    ot1.specialOldField++;
+    ot2.specialOldField++;
+    await em.flush();
+
+    const rows = await select("tasks");
+    expect(rows).toMatchObject([
+      { id: 1, type_id: 2, special_new_field: 2 },
+      { id: 2, type_id: 2, special_new_field: 2 },
+      { id: 3, type_id: 1, special_old_field: 2 },
+      { id: 4, type_id: 1, special_old_field: 2 },
+    ]);
+  });
+
   it("prevents the discriminator column from being updated", async () => {
     await insertTask({ type: "NEW", special_new_field: 1 });
     const em = newEntityManager();

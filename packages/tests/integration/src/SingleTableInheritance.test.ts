@@ -53,7 +53,7 @@ describe("SingleTableInheritance", () => {
     });
     expect(queries).toMatchInlineSnapshot(`
      [
-       "select t.* from tasks as t order by t.id ASC limit $1",
+       "select t.* from tasks as t where t.type_id = $1 order by t.id ASC limit $2",
      ]
     `);
   });

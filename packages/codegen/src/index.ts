@@ -107,9 +107,21 @@ async function loadSchemaMetadata(config: Config, client: Client): Promise<DbMet
     .map((table) => new EntityDbMetadata(config, table, enums));
   const totalTables = db.tables.length;
   const joinTables = db.tables.filter((t) => isJoinTable(config, t)).map((t) => t.name);
+  setClassTableInheritance(entities);
   expandSingleTableInheritance(config, entities);
   rewriteSingleTableForeignKeys(config, entities);
   return { entities, enums, pgEnums, totalTables, joinTables };
+}
+
+/** Ensure CTI base types have their inheritanceType set. */
+function setClassTableInheritance(entities: EntityDbMetadata[]): void {
+  const ctiBaseNames: string[] = [];
+  for (const entity of entities) {
+    if (entity.baseClassName) ctiBaseNames.push(entity.baseClassName);
+  }
+  for (const entity of entities) {
+    if (ctiBaseNames.includes(entity.name)) entity.inheritanceType = "cti";
+  }
 }
 
 /** Expands STI tables into multiple entities, so they get separate `SubTypeCodegen.ts` & `SubType.ts` files. */

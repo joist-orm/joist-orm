@@ -1,3 +1,10 @@
+# [1.146.0](https://github.com/stephenh/joist-ts/compare/v1.145.0...v1.146.0) (2024-03-03)
+
+
+### Features
+
+* Add Single Table Inheritance support ([#966](https://github.com/stephenh/joist-ts/issues/966)) ([8019e5b](https://github.com/stephenh/joist-ts/commit/8019e5b5e2683e8b1f2c9033912ec83cbc80d2fb))
+
 # [1.145.0](https://github.com/stephenh/joist-ts/compare/v1.144.10...v1.145.0) (2024-02-26)
 
 
